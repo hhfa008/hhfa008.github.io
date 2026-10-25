@@ -158,7 +158,7 @@ function canBuyOnGumroad(product) {
   }
 
   // Never send a buyer to Gumroad at a price different from the one shown here.
-  // compareAt is marketing copy; the price that matters is what Gumroad charges.
+  // The price shown on this site must match what Gumroad charges.
   return Number(product.gumroadPrice) === Number(product.price);
 }
 
@@ -625,14 +625,6 @@ function hydrateHome() {
       price.textContent = money(product.price);
     }
 
-    const compare = card.querySelector("[data-price-after]");
-    if (compare) {
-      compare.textContent = product.compareAt
-        ? `from ${product.priceAfterFrom}: ${money(product.compareAt)}`
-        : "";
-      compare.hidden = !product.compareAt;
-    }
-
     const points = card.querySelector("[data-product-points]");
     if (points) {
       points.replaceChildren();
@@ -700,15 +692,15 @@ function renderProductPage() {
 
   document.title = `${product.name} — Devin`;
 
-  const metaDescription = `${product.name} — ${product.tagline} $1 through 2026-11-08, then ${money(product.compareAt)}. ${product.files || product.format}.`;
+  const metaDescription = `${product.name} — ${product.tagline} $1, one-time purchase, no end date. ${product.files || product.format}.`;
   const pageUrl = `${SITE_ORIGIN}/product.html?id=${encodeURIComponent(product.id)}`;
   [
     ['meta[name="description"]', metaDescription],
     ['meta[property="og:title"]', `${product.name} — Devin`],
-    ['meta[property="og:description"]', `${product.tagline} $1 through 2026-11-08, then ${money(product.compareAt)}.`],
+    ['meta[property="og:description"]', `${product.tagline} $1, one-time purchase, no end date.`],
     ['meta[property="og:url"]', pageUrl],
     ['meta[name="twitter:title"]', `${product.name} — Devin`],
-    ['meta[name="twitter:description"]', `${product.tagline} $1 through 2026-11-08, then ${money(product.compareAt)}.`]
+    ['meta[name="twitter:description"]', `${product.tagline} $1, one-time purchase, no end date.`]
   ].forEach(([selector, content]) => {
     const node = document.querySelector(selector);
     if (node) {
@@ -743,13 +735,6 @@ function renderProductPage() {
   document.querySelectorAll("[data-product-price]").forEach((node) => {
     node.textContent = money(product.price);
   });
-  document.querySelectorAll("[data-price-after]").forEach((node) => {
-    node.textContent = product.compareAt
-      ? `from ${product.priceAfterFrom}: ${money(product.compareAt)}`
-      : "";
-    node.hidden = !product.compareAt;
-  });
-
   const tagline = document.querySelector("[data-product-tagline]");
   if (tagline) {
     tagline.textContent = product.tagline;
