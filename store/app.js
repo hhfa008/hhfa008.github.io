@@ -1,7 +1,7 @@
 "use strict";
 
 const CART_KEY = "devin.cart.v1";
-const CART_MAX_QTY = 99;
+const CART_MAX_QTY = 1;
 const SUPPORT_EMAIL = "superapp.devin@gmail.com";
 const SITE_ORIGIN = "https://hhfa008.github.io/store";
 const currency = new Intl.NumberFormat("en-US", {
@@ -176,7 +176,7 @@ function singleItemBuyUrl(items) {
   return canBuyOnGumroad(product) ? product.buyUrl : "";
 }
 
-function buildManualCheckoutUrl(items) {
+function buildOrderSummary(items) {
   const lines = [];
   const subjectItems = [];
   let total = 0;
@@ -198,25 +198,40 @@ function buildManualCheckoutUrl(items) {
   });
 
   if (!lines.length) {
+    return null;
+  }
+
+  return { subjectItems, lines, total };
+}
+
+function buildOrderText(summary) {
+  if (!summary) {
     return "";
   }
 
-  const subject = `Purchase: ${subjectItems.join(", ")}`;
-  const body = [
+  return [
     "Order summary",
     "",
-    ...lines,
+    ...summary.lines,
     "",
-    `Total: ${money(total)}`,
+    `Total: ${money(summary.total)}`,
     "",
     "Please reply with an invoice (PayPal or bank transfer). I'll send payment right away.",
     "",
     "Thanks!"
   ].join("\n");
+}
 
+function buildManualCheckoutUrl(items) {
+  const summary = buildOrderSummary(items);
+  if (!summary) {
+    return "";
+  }
+
+  const subject = `Purchase: ${summary.subjectItems.join(", ")}`;
   return `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(
     subject
-  )}&body=${encodeURIComponent(body)}`;
+  )}&body=${encodeURIComponent(buildOrderText(summary))}`;
 }
 
 function addToCart(id) {
@@ -260,6 +275,44 @@ function removeCartItem(id) {
   if (product) {
     announce(`${product.name} removed from your cart.`);
   }
+}
+
+function copyOrderText(button) {
+  const node = document.getElementById("order-copy-text");
+  const text = node ? node.textContent.trim() : "";
+  if (!text) {
+    return;
+  }
+
+  const done = () => {
+    const original = button.textContent;
+    button.textContent = "Copied";
+    window.setTimeout(() => {
+      button.textContent = original;
+    }, 1800);
+  };
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(done).catch(() => {
+      selectOrderText(node);
+      done();
+    });
+  } else {
+    selectOrderText(node);
+    done();
+  }
+}
+
+function selectOrderText(node) {
+  if (!node || !window.getSelection || !document.createRange) {
+    return;
+  }
+
+  const range = document.createRange();
+  range.selectNodeContents(node);
+  const selection = window.getSelection();
+  selection.removeAllRanges();
+  selection.addRange(range);
 }
 
 function announce(message) {
@@ -492,34 +545,15 @@ function renderCartDrawer(items) {
     const name = createElement("h3", "cart-item-name", product.name);
 
     const controls = createElement("div", "cart-item-controls");
-    const stepper = createElement("div", "stepper");
-    stepper.setAttribute("aria-label", `Quantity for ${product.name}`);
-
-    const minus = createElement("button", "stepper-button", "−");
-    minus.type = "button";
-    minus.dataset.qtyStep = "-1";
-    minus.dataset.productId = product.id;
-    minus.disabled = item.qty <= 1;
-    minus.setAttribute("aria-label", `Decrease quantity for ${product.name}`);
-
-    const quantity = createElement("span", "stepper-value", String(item.qty));
-    quantity.setAttribute("aria-live", "polite");
-
-    const plus = createElement("button", "stepper-button", "+");
-    plus.type = "button";
-    plus.dataset.qtyStep = "1";
-    plus.dataset.productId = product.id;
-    plus.disabled = item.qty >= CART_MAX_QTY;
-    plus.setAttribute("aria-label", `Increase quantity for ${product.name}`);
-
-    stepper.append(minus, quantity, plus);
+    // Digital files are one copy per kit: the cart carries distinct kits, not quantities.
+    const oneCopy = createElement("span", "cart-item-onecopy", "One copy");
 
     const remove = createElement("button", "text-button", "Remove");
     remove.type = "button";
     remove.dataset.remove = product.id;
     remove.setAttribute("aria-label", `Remove ${product.name} from cart`);
 
-    controls.append(stepper, remove);
+    controls.append(oneCopy, remove);
     info.append(type, name, controls);
 
     const price = createElement(
@@ -591,10 +625,10 @@ function hydrateHome() {
       price.textContent = money(product.price);
     }
 
-    const compare = card.querySelector("[data-price-compare]");
+    const compare = card.querySelector("[data-price-after]");
     if (compare) {
       compare.textContent = product.compareAt
-        ? `reg. ${money(product.compareAt)}`
+        ? `from ${product.priceAfterFrom}: ${money(product.compareAt)}`
         : "";
       compare.hidden = !product.compareAt;
     }
@@ -602,9 +636,24 @@ function hydrateHome() {
     const points = card.querySelector("[data-product-points]");
     if (points) {
       points.replaceChildren();
-      product.highlights.forEach((highlight) => {
-        points.append(createElement("li", "", highlight));
+      [
+        ["Solves", product.problem || product.tagline],
+        ["You get", product.files || product.format],
+        ["Best for", product.fit]
+      ].forEach(([label, text]) => {
+        const item = createElement("li", "product-point");
+        item.append(
+          createElement("span", "point-label", label),
+          createElement("span", "", text || "")
+        );
+        points.append(item);
       });
+    }
+
+    const directBuy = card.querySelector("[data-product-buy-link]");
+    if (directBuy) {
+      directBuy.href = product.buyUrl;
+      directBuy.textContent = `or buy now on Gumroad — ${money(product.price)}`;
     }
 
     const addButton = card.querySelector("[data-add]");
@@ -650,6 +699,23 @@ function renderProductPage() {
   }
 
   document.title = `${product.name} — Devin`;
+
+  const metaDescription = `${product.name} — ${product.tagline} $1 through 2026-11-08, then ${money(product.compareAt)}. ${product.files || product.format}.`;
+  const pageUrl = `${SITE_ORIGIN}/product.html?id=${encodeURIComponent(product.id)}`;
+  [
+    ['meta[name="description"]', metaDescription],
+    ['meta[property="og:title"]', `${product.name} — Devin`],
+    ['meta[property="og:description"]', `${product.tagline} $1 through 2026-11-08, then ${money(product.compareAt)}.`],
+    ['meta[property="og:url"]', pageUrl],
+    ['meta[name="twitter:title"]', `${product.name} — Devin`],
+    ['meta[name="twitter:description"]', `${product.tagline} $1 through 2026-11-08, then ${money(product.compareAt)}.`]
+  ].forEach(([selector, content]) => {
+    const node = document.querySelector(selector);
+    if (node) {
+      node.setAttribute("content", content);
+    }
+  });
+
   missing.hidden = true;
   view.hidden = false;
 
@@ -677,9 +743,9 @@ function renderProductPage() {
   document.querySelectorAll("[data-product-price]").forEach((node) => {
     node.textContent = money(product.price);
   });
-  document.querySelectorAll("[data-price-compare]").forEach((node) => {
+  document.querySelectorAll("[data-price-after]").forEach((node) => {
     node.textContent = product.compareAt
-      ? `reg. ${money(product.compareAt)}`
+      ? `from ${product.priceAfterFrom}: ${money(product.compareAt)}`
       : "";
     node.hidden = !product.compareAt;
   });
@@ -770,6 +836,15 @@ function renderCheckout(items) {
   const totals = cartTotals(items);
   const isEmpty = items.length === 0;
   const directBuyUrl = singleItemBuyUrl(items);
+  const summary = buildOrderSummary(items);
+  const showOrderCopy = !isEmpty && !directBuyUrl;
+
+  const orderCopy = document.getElementById("order-copy");
+  const orderCopyText = document.getElementById("order-copy-text");
+  if (orderCopy && orderCopyText) {
+    orderCopy.hidden = !showOrderCopy;
+    orderCopyText.textContent = showOrderCopy ? buildOrderText(summary) : "";
+  }
 
   list.replaceChildren();
   list.hidden = isEmpty;
@@ -895,6 +970,13 @@ function setupGlobalActions() {
     if (removeButton) {
       event.preventDefault();
       removeCartItem(removeButton.dataset.remove);
+      return;
+    }
+
+    const copyButton = event.target.closest("[data-copy-order]");
+    if (copyButton) {
+      event.preventDefault();
+      copyOrderText(copyButton);
     }
   });
 

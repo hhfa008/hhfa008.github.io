@@ -7,6 +7,7 @@ const PRODUCTS = [
     type: "Checklist",
     price: 1,
     compareAt: 39,
+    priceAfterFrom: "2026-11-09",
     gumroadPrice: 1,
     promo: "Launch promo",
     buyUrl: "https://devinspire734.gumroad.com/l/perf-audit-checklist",
@@ -16,6 +17,8 @@ const PRODUCTS = [
     updated: "Oct 2026",
     support: "Xcode with Instruments; no fixed iOS version",
     tagline: "Find the launch, memory, scrolling, and package-size problems users feel first.",
+    problem:
+      "Late-stage launch, memory, scrolling, and app-size regressions that happy-path testing misses.",
     description:
       "A repeatable audit for the performance issues that escape happy-path testing. Each of the 60 checks names what to measure, how to measure it, and what a healthy result looks like, so findings turn into fixes instead of a folder of screenshots.",
     highlights: [
@@ -42,6 +45,7 @@ const PRODUCTS = [
     type: "Template + guide",
     price: 1,
     compareAt: 59,
+    priceAfterFrom: "2026-11-09",
     gumroadPrice: 1,
     promo: "Launch promo",
     buyUrl: "https://devinspire734.gumroad.com/l/spm-modularization-starter-kit",
@@ -51,6 +55,8 @@ const PRODUCTS = [
     updated: "Oct 2026",
     support: "Xcode 15+ / Swift 5.9+ · iOS 16+ or macOS 13+",
     tagline: "Turn one app target into a modular Swift package without slowing the team down.",
+    problem:
+      "An app target that has become the default home for every new file.",
     description:
       "A buildable four-layer Swift package plus the six-step migration playbook behind it. See how App, Feature, Core, and DesignSystem connect, then move your code one boundary at a time with dependency rules that keep the graph clean.",
     highlights: [
@@ -65,7 +71,7 @@ const PRODUCTS = [
       "Package.swift target setup, platform requirements, and release-surface notes for targets, schemes, extensions, and test targets",
       "A cycle checklist and a CI gate (check-layering.sh) that fails a pull request with a forbidden dependency"
     ],
-    fit: "Teams whose app target has become the default home for every new file.",
+    fit: "iOS teams moving an existing app target into modules without slowing delivery.",
     license:
       "Personal use. Use and modify the sample in apps you own or deliver to clients; do not resell, sublicense, or redistribute the package or the playbook. See LICENSE.txt in the download for the full terms."
   },
@@ -77,6 +83,7 @@ const PRODUCTS = [
     type: "Checklist",
     price: 1,
     compareAt: 19,
+    priceAfterFrom: "2026-11-09",
     gumroadPrice: 1,
     promo: "Launch promo",
     buyUrl: "https://devinspire734.gumroad.com/l/app-store-release-checklist",
@@ -86,6 +93,8 @@ const PRODUCTS = [
     updated: "Oct 2026",
     support: "Xcode for archive validation; no fixed iOS version",
     tagline: "A calm, 40-point pass through everything App Review checks before you hit Submit.",
+    problem:
+      "App Review rejections and missing pre-submit checks found after the build is already uploaded.",
     description:
       "A pre-flight checklist for release owners who would rather find the problem now. Cover build settings, privacy, metadata, screenshots, review notes, and the rejection patterns that send builds back.",
     highlights: [
@@ -112,6 +121,7 @@ const PRODUCTS = [
     type: "Design kit",
     price: 1,
     compareAt: 29,
+    priceAfterFrom: "2026-11-09",
     gumroadPrice: 1,
     promo: "Launch promo",
     buyUrl: "https://devinspire734.gumroad.com/l/ios-design-starter",
@@ -121,6 +131,8 @@ const PRODUCTS = [
     updated: "Oct 2026",
     support: "Xcode 15+ / Swift 5.9+ · iOS 15+ or macOS 12+",
     tagline: "Start a consistent SwiftUI surface with 160 icons, four checked palettes, and fixtures that decode.",
+    problem:
+      "Inconsistent icons, colours, and sample data every time a new SwiftUI surface starts.",
     description:
       "A small, buildable SwiftUI starter: 160 normalized vector icons with a Swift enum, four semantic palettes in light and dark, synthetic fixtures with Codable models, and three utilities you can lift into a real project. The fixtures and utilities are original; icons and palettes come from permissively licensed sources, and every upstream is recorded in ATTRIBUTION.md.",
     highlights: [
