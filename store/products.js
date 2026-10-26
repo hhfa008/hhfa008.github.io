@@ -140,6 +140,41 @@ const PRODUCTS = [
     fit: "SwiftUI developers who want a coherent starting point for icons, colour, and sample data.",
     license:
       "Personal use. Use it in unlimited apps you own or deliver to clients; do not resell the kit itself. Includes MIT-licensed icons and color palettes — keep the notices in ATTRIBUTION.md. See LICENSE.txt in the download for the full terms."
+  },
+  {
+    id: "spm-migration-kit",
+    code: "MIG",
+    index: "05",
+    name: "CocoaPods to SPM Migration Kit",
+    type: "Checklist",
+    price: 1,
+    gumroadPrice: 1,
+    buyUrl: "https://devinspire734.gumroad.com/l/spm-migration-kit",
+    format: "PDF",
+    files: "1 file · PDF 9 pages (A4)",
+    version: "1.0 · First edition",
+    updated: "Oct 2026",
+    support: "Xcode with CocoaPods and Swift Package Manager; no fixed iOS version",
+    tagline: "Move a 20+ dependency iOS project from CocoaPods to Swift Package Manager without freezing delivery.",
+    problem:
+      "A large CocoaPods setup that everyone wants to migrate but nobody wants to break.",
+    description:
+      "A migration checklist for older iOS projects with 20+ dependencies: what to confirm before you touch the project, the order to move pods to Swift Package Manager, when to roll back, and the pitfalls that cost a release if you meet them unprepared. Every deadline and source is dated and linked, so the plan survives the next announcement.",
+    highlights: [
+      "A migration timeline, an assessment table, and a step-by-step order",
+      "A rollback plan and eight pitfalls written as phenomenon → cause → fix"
+    ],
+    includes: [
+      "The three dates that matter — October 2026, November 1–7, and December 2 — with the official wording from Firebase and CocoaPods",
+      "A pre-migration assessment table covering dependency count, binary dependencies, private pods, resource bundles, and subspec usage",
+      "A step-by-step migration order: freeze, map, pod deintegrate, Package.swift, Package.resolved, and CI caching",
+      "A rollback plan for before and after shipping, with suggested numeric triggers",
+      "Eight common pitfalls, each written as phenomenon → cause → fix",
+      "A sources page with every official link and the access date"
+    ],
+    fit: "iOS teams with 20+ CocoaPods dependencies planning a migration without stopping feature work.",
+    license:
+      "Personal use. Use the checklist in your own apps and in client projects you deliver; do not resell, sublicense, or redistribute the files. See LICENSE.txt in the download for the full terms."
   }
 ];
 
