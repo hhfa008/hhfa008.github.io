@@ -786,6 +786,11 @@
             I reply within one business day.
           </p>
 
+          <p class="form-cn" lang="zh-CN">
+            如未收到回复，请直接
+            <a href="mailto:superapp.devin&#64;gmail.com?subject=iOS%20%E5%AE%A1%E8%AE%A1%E5%92%A8%E8%AF%A2%20%E2%80%94%20hhfa008.github.io%2Fios">发邮件</a>。
+          </p>
+
           <p class="form-fallback">
             <a class="btn btn-band-ghost form-fallback-link" href="mailto:superapp.devin&#64;gmail.com?subject=iOS%20%E5%AE%A1%E8%AE%A1%E5%92%A8%E8%AF%A2%20%E2%80%94%20hhfa008.github.io%2Fios">Or email me directly</a>
             <span>Opens your mail app with the subject filled in.</span>
@@ -796,7 +801,7 @@
             <span>I reply within one business day.</span>
           </div>
 
-          <form action="https://formsubmit.co/superapp.devin&#64;gmail.com" method="POST">
+          <form id="contact-form" action="https://formsubmit.co/superapp.devin&#64;gmail.com" method="POST">
             <input type="hidden" name="_subject" value="Scoping request — hhfa008.github.io/ios">
             <input type="hidden" name="_template" value="table">
             <input type="hidden" name="_next" value="https://hhfa008.github.io/ios/#thanks">
@@ -865,6 +870,7 @@
             </div>
 
             <button class="btn btn-primary btn-submit" type="submit">Send the request</button>
+            <p class="form-status" id="form-status" role="status" aria-live="polite" hidden></p>
             <p class="form-note">
               I reply within one business day. No newsletter and no follow-up sequence. Your
               details are used only to scope this request.
@@ -892,5 +898,65 @@
       </nav>
     </div>
   </footer>
+
+  <script>
+  (function () {
+    var form = document.getElementById('contact-form');
+    if (!form || !window.fetch) return;
+
+    var status = document.getElementById('form-status');
+    var button = form.querySelector('button[type="submit"]');
+    var endpoint = 'https://formsubmit.co/ajax/superapp.devin@gmail.com';
+    var mailto = 'mailto:superapp.devin@gmail.com?subject=iOS%20%E5%AE%A1%E8%AE%A1%E5%92%A8%E8%AF%A2%20%E2%80%94%20hhfa008.github.io%2Fios';
+    var label = button ? button.textContent : '';
+
+    function show(message, ok) {
+      if (!status) return;
+      status.innerHTML = message;
+      status.className = 'form-status ' + (ok ? 'is-ok' : 'is-error');
+      status.hidden = false;
+    }
+
+    form.addEventListener('submit', function (event) {
+      event.preventDefault();
+      if (button && button.disabled) return;
+      if (button) {
+        button.disabled = true;
+        button.textContent = 'Sending…';
+      }
+
+      var data = {};
+      new FormData(form).forEach(function (value, key) {
+        data[key] = value;
+      });
+
+      fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json; charset=utf-8', 'Accept': 'application/json' },
+        body: JSON.stringify(data)
+      })
+        .then(function (response) {
+          return response.text().then(function (text) {
+            var body = {};
+            try { body = JSON.parse(text); } catch (err) {}
+            if (!response.ok || String(body.success) !== 'true') throw new Error('form rejected');
+          });
+        })
+        .then(function () {
+          form.reset();
+          show('已收到，会尽快回复。', true);
+        })
+        .catch(function () {
+          show('发送失败，请改用邮件联系：<a href="' + mailto + '">superapp.devin@gmail.com</a>。', false);
+        })
+        .then(function () {
+          if (button) {
+            button.disabled = false;
+            button.textContent = label;
+          }
+        });
+    });
+  })();
+  </script>
 </body>
 </html>
