@@ -1,0 +1,1577 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Screen sharing latency calculator — encode budget, bitrate, degradation</title>
+  <meta name="description" content="Estimate per-frame encode budget, bitrate requirements, end-to-end latency, and the resolution-versus-frame-rate trade-off for screen sharing. Every figure is an estimate, and the formulas are shown.">
+  <meta name="author" content="Devin">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta name="theme-color" content="#f2efe7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#101316" media="(prefers-color-scheme: dark)">
+  <link rel="canonical" href="https://hhfa008.github.io/tools/screen-share-calc/">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23b93d12'/%3E%3Cpath d='M8 20h16v3H8zM8 13h10v3H8zM8 9h16v2H8z' fill='%23fbf9f4'/%3E%3C/svg%3E">
+
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Devin">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:title" content="Screen sharing latency calculator — encode budget, bitrate, degradation">
+  <meta property="og:description" content="Estimate encode budget per frame, bitrate needs, end-to-end latency, and what degrades first when bandwidth is tight. All figures are estimates; formulas included.">
+  <meta property="og:url" content="https://hhfa008.github.io/tools/screen-share-calc/">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Screen sharing latency calculator">
+  <meta name="twitter:description" content="Encode budget, bitrate, latency split, and the resolution-versus-frame-rate trade-off. Estimates only; formulas shown.">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Screen Sharing Latency & Bandwidth Calculator",
+    "url": "https://hhfa008.github.io/tools/screen-share-calc/",
+    "applicationCategory": "UtilitiesApplication",
+    "operatingSystem": "Any",
+    "browserRequirements": "Requires JavaScript",
+    "description": "A free planning calculator for screen sharing: per-frame encode budget, estimated bitrate, an end-to-end latency split, and resolution-versus-frame-rate degradation trade-offs. All outputs are estimates.",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    }
+  }
+  </script>
+
+  <style>
+    :root {
+      --paper: #f2efe7;
+      --paper-2: #fbf9f4;
+      --panel: #ffffff;
+      --ink: #14171a;
+      --muted: #5b615c;
+      --muted-2: #7b807a;
+      --line: #d5d0c4;
+      --line-strong: #bcb5a7;
+      --accent: #b93d12;
+      --accent-soft: #f2a07a;
+      --accent-wash: #f7e5da;
+      --ok: #2f6b3c;
+      --ok-wash: #e8f2e7;
+      --warn: #8a5a00;
+      --warn-wash: #fbf1db;
+      --bad: #a32216;
+      --bad-wash: #fbe7e3;
+      --c-capture: #8c7a5b;
+      --c-encode: #b93d12;
+      --c-network: #2f6f8f;
+      --c-jitter: #7d5f91;
+      --c-decode: #4f7d4a;
+      --c-render: #6b6f75;
+      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+      --radius: 16px;
+      --max: 1120px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --paper: #101316;
+        --paper-2: #171b1f;
+        --panel: #1a1f23;
+        --ink: #f2efe7;
+        --muted: #b7b3a8;
+        --muted-2: #948f85;
+        --line: #333a40;
+        --line-strong: #4a535b;
+        --accent: #f08a5d;
+        --accent-soft: #f2a07a;
+        --accent-wash: #2b211c;
+        --ok: #8fd19e;
+        --ok-wash: #1b2b1e;
+        --warn: #f0c36a;
+        --warn-wash: #2d2618;
+        --bad: #ff8a7a;
+        --bad-wash: #321d1a;
+        --c-capture: #b0a184;
+        --c-encode: #f08a5d;
+        --c-network: #6fb6d6;
+        --c-jitter: #bfa1d4;
+        --c-decode: #8fbf86;
+        --c-render: #9aa1a8;
+      }
+      .btn { color: #14171a; }
+      :focus-visible { outline-color: rgba(240, 138, 93, 0.65); }
+      .btn:focus-visible { outline-color: #f2efe7; }
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    html {
+      -webkit-text-size-adjust: 100%;
+      color-scheme: light dark;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--sans);
+      font-size: 16px;
+      line-height: 1.6;
+      overflow-x: clip;
+      text-rendering: optimizeLegibility;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    [hidden] { display: none !important; }
+
+    a { color: inherit; }
+    p { margin: 0 0 1em; }
+    p:last-child { margin-bottom: 0; }
+    code { font-family: var(--mono); }
+
+    .wrap {
+      width: 100%;
+      max-width: var(--max);
+      margin: 0 auto;
+      padding-left: 18px;
+      padding-right: 18px;
+    }
+
+    @media (min-width: 720px) {
+      .wrap { padding-left: 32px; padding-right: 32px; }
+    }
+
+    .skip-link {
+      position: absolute;
+      left: 12px;
+      top: -60px;
+      z-index: 100;
+      padding: 12px 16px;
+      background: var(--ink);
+      color: var(--paper);
+      border-radius: 8px;
+      text-decoration: none;
+    }
+    .skip-link:focus { top: 12px; }
+
+    :focus-visible {
+      outline: 3px solid rgba(185, 61, 18, 0.5);
+      outline-offset: 3px;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* Header */
+
+    .site-header {
+      border-bottom: 1px solid var(--line);
+      background: var(--paper);
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      min-height: 64px;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      text-decoration: none;
+    }
+
+    .brand-mark {
+      width: 26px;
+      height: 26px;
+      border-radius: 7px;
+      background: var(--accent);
+      display: inline-block;
+      position: relative;
+    }
+    .brand-mark::before,
+    .brand-mark::after {
+      content: "";
+      position: absolute;
+      left: 6px;
+      right: 6px;
+      height: 2px;
+      background: var(--paper-2);
+      border-radius: 1px;
+    }
+    .brand-mark::before { top: 9px; }
+    .brand-mark::after { top: 15px; right: 10px; }
+
+    .site-nav {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      font-size: 14px;
+    }
+    .site-nav a {
+      text-decoration: none;
+      color: var(--muted);
+    }
+    .site-nav a:hover { color: var(--accent); }
+    .site-nav .nav-cta {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    @media (max-width: 520px) {
+      .header-inner {
+        flex-wrap: wrap;
+        padding-top: 10px;
+        padding-bottom: 10px;
+      }
+      .site-nav {
+        gap: 14px;
+        font-size: 13px;
+      }
+    }
+
+    /* Hero */
+
+    .hero {
+      padding: 48px 0 30px;
+    }
+    @media (min-width: 720px) {
+      .hero { padding: 68px 0 38px; }
+    }
+
+    .eyebrow {
+      margin: 0 0 12px;
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    h1 {
+      margin: 0 0 16px;
+      max-width: 18ch;
+      font-size: clamp(2rem, 6vw, 3.4rem);
+      line-height: 1.08;
+      letter-spacing: -0.035em;
+      font-weight: 700;
+    }
+
+    .lede {
+      max-width: 70ch;
+      margin: 0 0 18px;
+      font-size: clamp(1rem, 2vw, 1.15rem);
+      color: var(--muted);
+    }
+
+    .notice {
+      max-width: 78ch;
+      margin: 0;
+      padding: 12px 16px;
+      border-left: 4px solid var(--accent);
+      background: var(--accent-wash);
+      border-radius: 0 10px 10px 0;
+      font-size: 14px;
+    }
+
+    /* Cards and sections */
+
+    section { margin: 0 0 18px; }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 22px;
+    }
+
+    @media (min-width: 720px) {
+      .card { padding: 26px 28px; }
+    }
+
+    .card-kicker {
+      margin: 0 0 8px;
+      font-family: var(--mono);
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: 0.11em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    .card h2 {
+      margin: 0 0 10px;
+      font-size: clamp(1.2rem, 2.4vw, 1.45rem);
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+    }
+
+    .card-lede {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 14.5px;
+    }
+
+    /* Inputs */
+
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .field label {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .field input,
+    .field select {
+      width: 100%;
+      min-height: 44px;
+      padding: 9px 12px;
+      font: inherit;
+      font-size: 15px;
+      color: var(--ink);
+      background: var(--paper-2);
+      border: 1px solid var(--line-strong);
+      border-radius: 10px;
+      appearance: none;
+    }
+
+    .field select {
+      padding-right: 34px;
+      background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+      background-position: calc(100% - 18px) 50%, calc(100% - 13px) 50%;
+      background-size: 5px 5px, 5px 5px;
+      background-repeat: no-repeat;
+    }
+
+    .field input:focus,
+    .field select:focus {
+      border-color: var(--accent);
+      outline: 3px solid rgba(185, 61, 18, 0.3);
+      outline-offset: 1px;
+    }
+
+    .input-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .input-row input { flex: 1 1 auto; min-width: 0; }
+    .unit {
+      flex: 0 0 auto;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .custom-res {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      grid-column: 1 / -1;
+    }
+    @media (max-width: 420px) {
+      .custom-res { grid-template-columns: 1fr; }
+    }
+
+    .hint {
+      margin: 14px 0 0;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: var(--warn-wash);
+      color: var(--warn);
+      font-size: 13px;
+    }
+
+    /* Results */
+
+    .results {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 18px;
+    }
+
+    @media (min-width: 860px) {
+      .results { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .card--wide { grid-column: 1 / -1; }
+    }
+
+    .big {
+      margin: 4px 0 2px;
+      font-family: var(--mono);
+      font-size: clamp(2rem, 7vw, 2.9rem);
+      font-weight: 600;
+      line-height: 1.05;
+      letter-spacing: -0.04em;
+      color: var(--accent);
+    }
+    .big small {
+      margin-left: 6px;
+      font-family: var(--sans);
+      font-size: 0.42em;
+      font-weight: 600;
+      letter-spacing: 0;
+      color: var(--muted);
+    }
+
+    .sub {
+      margin: 0 0 14px;
+      font-size: 13.5px;
+      color: var(--muted);
+    }
+
+    .stat-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 9px 0;
+      border-top: 1px solid var(--line);
+      font-size: 13.5px;
+    }
+    .stat-row span { color: var(--muted); }
+    .stat-row strong {
+      font-family: var(--mono);
+      font-weight: 600;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .verdict {
+      margin: 14px 0 0;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-left-width: 4px;
+      border-radius: 8px;
+      background: var(--paper-2);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+    .verdict.ok { border-left-color: var(--ok); background: var(--ok-wash); }
+    .verdict.warn { border-left-color: var(--warn); background: var(--warn-wash); }
+    .verdict.bad { border-left-color: var(--bad); background: var(--bad-wash); }
+
+    /* Latency bar */
+
+    .latency-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 6px 14px;
+    }
+    .latency-head .sub { margin: 0 0 10px; }
+
+    .bar {
+      display: flex;
+      height: 22px;
+      margin: 8px 0 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      overflow: hidden;
+      background: var(--paper-2);
+    }
+    .bar-seg {
+      display: block;
+      height: 100%;
+      min-width: 1px;
+      box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.35);
+    }
+    .bar-seg--capture { background: var(--c-capture); }
+    .bar-seg--encode { background: var(--c-encode); }
+    .bar-seg--network { background: var(--c-network); }
+    .bar-seg--jitter { background: var(--c-jitter); }
+    .bar-seg--decode { background: var(--c-decode); }
+    .bar-seg--render { background: var(--c-render); }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 16px;
+      margin: 0 0 14px;
+      font-family: var(--mono);
+      font-size: 11.5px;
+      color: var(--muted);
+    }
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .swatch {
+      width: 10px;
+      height: 10px;
+      border-radius: 3px;
+      display: inline-block;
+      flex: 0 0 auto;
+    }
+    .swatch--capture { background: var(--c-capture); }
+    .swatch--encode { background: var(--c-encode); }
+    .swatch--network { background: var(--c-network); }
+    .swatch--jitter { background: var(--c-jitter); }
+    .swatch--decode { background: var(--c-decode); }
+    .swatch--render { background: var(--c-render); }
+
+    /* Tables */
+
+    .table-wrap {
+      margin-top: 14px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    table {
+      width: 100%;
+      min-width: 560px;
+      border-collapse: collapse;
+      font-size: 13.5px;
+    }
+
+    table.compare { min-width: 700px; }
+
+    caption {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      font-family: var(--mono);
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    th, td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    thead th {
+      background: var(--paper-2);
+      font-family: var(--mono);
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    tbody th {
+      font-family: var(--sans);
+      font-size: 13.5px;
+      font-weight: 600;
+      letter-spacing: 0;
+      text-transform: none;
+      color: var(--ink);
+      background: transparent;
+    }
+
+    tbody tr:last-child th,
+    tbody tr:last-child td { border-bottom: 0; }
+
+    td.num {
+      font-family: var(--mono);
+      white-space: nowrap;
+    }
+
+    tr.is-over td,
+    tr.is-over th {
+      background: var(--bad-wash);
+    }
+
+    /* Recommendation */
+
+    .recommend {
+      margin-top: 16px;
+      padding: 16px 18px;
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--accent);
+      border-radius: 8px;
+      background: var(--paper-2);
+      font-size: 14px;
+    }
+    .recommend h3 {
+      margin: 0 0 6px;
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    /* Formulas */
+
+    details {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 0 22px;
+    }
+
+    summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 18px 0;
+      cursor: pointer;
+      font-weight: 650;
+      list-style: none;
+    }
+    summary::-webkit-details-marker { display: none; }
+    summary::after {
+      content: "+";
+      flex: 0 0 auto;
+      font-family: var(--mono);
+      font-size: 20px;
+      line-height: 1;
+      color: var(--accent);
+    }
+    details[open] summary::after { content: "\2212"; }
+
+    .formula-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 12px;
+      padding-bottom: 18px;
+    }
+    @media (min-width: 760px) {
+      .formula-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    .formula {
+      min-width: 0;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--paper-2);
+    }
+    .formula h3 {
+      margin: 0 0 7px;
+      font-family: var(--mono);
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .formula code {
+      display: inline-block;
+      max-width: 100%;
+      padding: 2px 6px;
+      border-radius: 5px;
+      background: var(--accent-wash);
+      font-size: 12.5px;
+      line-height: 1.5;
+      overflow-wrap: anywhere;
+    }
+    .formula p {
+      margin: 7px 0 0;
+      font-size: 12.5px;
+      color: var(--muted);
+    }
+
+    .assumptions {
+      margin: 0;
+      padding: 0 0 20px 20px;
+      font-size: 13.5px;
+      color: var(--muted);
+    }
+    .assumptions li { margin: 0 0 8px; }
+
+    .fine {
+      font-size: 12px;
+      color: var(--muted-2);
+    }
+
+    /* CTA */
+
+    .cta {
+      margin-top: 22px;
+      padding: 28px 24px;
+      border: 1px solid var(--accent);
+      border-radius: var(--radius);
+      background: var(--accent-wash);
+    }
+    @media (min-width: 720px) {
+      .cta { padding: 32px 36px; }
+    }
+    .cta h2 {
+      max-width: 30ch;
+      margin: 0 0 14px;
+      font-size: clamp(1.4rem, 3.2vw, 2rem);
+      line-height: 1.18;
+      letter-spacing: -0.025em;
+    }
+    .cta p { max-width: 70ch; color: var(--muted); font-size: 14.5px; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 48px;
+      margin: 4px 0 12px;
+      padding: 12px 22px;
+      border-radius: 999px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 650;
+      text-decoration: none;
+    }
+    .btn:hover { filter: brightness(1.06); }
+    .btn:focus-visible { outline-color: var(--ink); }
+
+    /* Footer */
+
+    .site-footer {
+      margin-top: 28px;
+      padding: 22px 0 34px;
+      border-top: 1px solid var(--line);
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .footer-inner {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px 20px;
+    }
+    .site-footer a { color: var(--accent); text-decoration: none; }
+    .site-footer a:hover { text-decoration: underline; }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .btn:hover { filter: none; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#calculator">Skip to calculator</a>
+
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="/" aria-label="Devin, back to the home page">
+        <span class="brand-mark" aria-hidden="true"></span>
+        Devin
+      </a>
+      <nav class="site-nav" aria-label="Site">
+        <a href="/">Home</a>
+        <a class="nav-cta" href="#checklist">Checklist &amp; scripts</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="wrap">
+      <section class="hero" aria-labelledby="page-title">
+        <p class="eyebrow">Free tool · screen sharing and remote desktop</p>
+        <h1 id="page-title">Screen sharing latency &amp; bandwidth calculator</h1>
+        <p class="lede">
+          Plan a screen-share pipeline before you ship it. Set the resolution, frame rate, codec,
+          available bandwidth, and round-trip time; the page returns the per-frame encode budget,
+          an estimated bitrate, a latency split, and what to downgrade when the link is tight.
+        </p>
+        <p class="notice">
+          <strong>Every number on this page is an estimate.</strong> The figures come from the
+          formulas shown below, not from a measurement of your encoder, network, or device.
+          Treat them as planning inputs, then verify against your own pipeline.
+        </p>
+      </section>
+
+      <section id="calculator" aria-labelledby="calc-title">
+        <div class="card">
+          <p class="card-kicker">Inputs</p>
+          <h2 id="calc-title">Describe the stream</h2>
+          <form id="calc-form" class="controls">
+            <div class="field">
+              <label for="resolution">Resolution preset</label>
+              <select id="resolution" name="resolution">
+                <option value="1080p" selected>1080p — 1920 × 1080</option>
+                <option value="1440p">1440p — 2560 × 1440</option>
+                <option value="4k">4K — 3840 × 2160</option>
+                <option value="custom">Custom</option>
+              </select>
+            </div>
+
+            <div class="custom-res" id="custom-res" hidden>
+              <div class="field">
+                <label for="width">Width (px)</label>
+                <input id="width" name="width" type="number" inputmode="numeric" min="320" max="7680" step="2" value="1920">
+              </div>
+              <div class="field">
+                <label for="height">Height (px)</label>
+                <input id="height" name="height" type="number" inputmode="numeric" min="240" max="4320" step="2" value="1080">
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="fps">Frame rate</label>
+              <select id="fps" name="fps">
+                <option value="15">15 fps</option>
+                <option value="24">24 fps</option>
+                <option value="30" selected>30 fps</option>
+                <option value="60">60 fps</option>
+                <option value="90">90 fps</option>
+                <option value="120">120 fps</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="codec">Codec</label>
+              <select id="codec" name="codec">
+                <option value="h264" selected>H.264</option>
+                <option value="hevc">HEVC (H.265)</option>
+                <option value="av1">AV1</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="bandwidth">Available bandwidth</label>
+              <div class="input-row">
+                <input id="bandwidth" name="bandwidth" type="number" inputmode="decimal" min="0.1" max="100000" step="0.1" value="20">
+                <span class="unit">Mbps</span>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="rtt">Round-trip time (RTT)</label>
+              <div class="input-row">
+                <input id="rtt" name="rtt" type="number" inputmode="numeric" min="0" max="5000" step="1" value="50">
+                <span class="unit">ms</span>
+              </div>
+            </div>
+          </form>
+          <p class="hint" id="av1-note" hidden>
+            AV1 hardware encoding is not available on every GPU or mobile SoC. The estimate below
+            assumes hardware encoding; a software fallback can be several times slower and may
+            miss the frame budget.
+          </p>
+        </div>
+      </section>
+
+      <h2 class="sr-only">Results</h2>
+      <div class="results">
+        <article class="card" aria-labelledby="encode-title">
+          <p class="card-kicker">1 · Encode budget</p>
+          <h2 id="encode-title">Per-frame budget</h2>
+          <p class="big"><span id="frame-budget">33.3</span><small>ms per frame</small></p>
+          <p class="sub">1000 ÷ <span id="fps-out">30</span> fps</p>
+          <div class="stat-row">
+            <span>Typical hardware encode time</span>
+            <strong id="encode-time">~5 ms</strong>
+          </div>
+          <div class="stat-row">
+            <span>Headroom inside the frame</span>
+            <strong id="encode-headroom">28.3 ms</strong>
+          </div>
+          <p class="verdict ok" id="encode-verdict"></p>
+        </article>
+
+        <article class="card" aria-labelledby="bitrate-title">
+          <p class="card-kicker">2 · Bitrate need</p>
+          <h2 id="bitrate-title">Estimated bitrate</h2>
+          <p class="big"><span id="bitrate-mid">6.8</span><small>Mbps</small></p>
+          <p class="sub">
+            Range <span id="bitrate-low">5</span>–<span id="bitrate-high">8.7</span> Mbps,
+            at a mid assumption of <span id="bpp-mid">0.11</span> bits per pixel per frame (bpp).
+          </p>
+          <div class="stat-row">
+            <span>Available bandwidth</span>
+            <strong id="bw-out">20 Mbps</strong>
+          </div>
+          <div class="stat-row">
+            <span>Headroom over the upper estimate</span>
+            <strong id="bw-headroom">11.3 Mbps</strong>
+          </div>
+          <p class="verdict ok" id="bw-verdict"></p>
+        </article>
+
+        <article class="card card--wide" aria-labelledby="latency-title">
+          <p class="card-kicker">3 · Latency budget</p>
+          <h2 id="latency-title">End-to-end estimate</h2>
+          <div class="latency-head">
+            <p class="big"><span id="latency-total">150</span><small>ms</small></p>
+            <p class="sub" id="latency-reference">around the 150 ms interactive reference</p>
+          </div>
+          <div class="bar" id="latency-bar" aria-hidden="true"></div>
+          <div class="legend" id="latency-legend"></div>
+          <div class="table-wrap">
+            <table>
+              <caption>Latency split — estimates, not benchmarks</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Stage</th>
+                  <th scope="col">Estimate</th>
+                  <th scope="col">Share</th>
+                  <th scope="col">Allowance</th>
+                  <th scope="col">Flag</th>
+                </tr>
+              </thead>
+              <tbody id="latency-body"></tbody>
+            </table>
+          </div>
+          <p class="verdict" id="latency-verdict"></p>
+        </article>
+
+        <article class="card card--wide" aria-labelledby="degradation-title">
+          <p class="card-kicker">4 · Degradation trade-off</p>
+          <h2 id="degradation-title">Keep resolution, or keep frame rate?</h2>
+          <p class="card-lede">
+            At <strong id="deg-bw">20 Mbps</strong> with the mid bpp assumption for
+            <strong id="deg-codec">H.264</strong>, the two downgrade strategies land here:
+          </p>
+          <div class="table-wrap">
+            <table class="compare">
+              <caption>Estimated outcome at the given bandwidth</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Metric</th>
+                  <th scope="col">A · Keep resolution, drop fps</th>
+                  <th scope="col">B · Keep fps, drop resolution</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">Frame rate</th>
+                  <td id="deg-a-fps">30 fps</td>
+                  <td id="deg-b-fps">30 fps</td>
+                </tr>
+                <tr>
+                  <th scope="row">Resolution</th>
+                  <td id="deg-a-res">1920 × 1080</td>
+                  <td id="deg-b-res">1920 × 1080</td>
+                </tr>
+                <tr>
+                  <th scope="row">Scale vs input</th>
+                  <td id="deg-a-scale">100%</td>
+                  <td id="deg-b-scale">100%</td>
+                </tr>
+                <tr>
+                  <th scope="row">Estimated bitrate</th>
+                  <td class="num" id="deg-a-bitrate">~6.8 Mbps</td>
+                  <td class="num" id="deg-b-bitrate">~6.8 Mbps</td>
+                </tr>
+                <tr>
+                  <th scope="row">Estimated encode time</th>
+                  <td class="num" id="deg-a-encode">~5 ms</td>
+                  <td class="num" id="deg-b-encode">~5 ms</td>
+                </tr>
+                <tr>
+                  <th scope="row">Encode vs frame budget</th>
+                  <td id="deg-a-budget">—</td>
+                  <td id="deg-b-budget">—</td>
+                </tr>
+                <tr>
+                  <th scope="row">Binding limit</th>
+                  <td id="deg-a-limit">—</td>
+                  <td id="deg-b-limit">—</td>
+                </tr>
+                <tr>
+                  <th scope="row">Estimated end-to-end latency</th>
+                  <td class="num" id="deg-a-latency">~150 ms</td>
+                  <td class="num" id="deg-b-latency">~150 ms</td>
+                </tr>
+                <tr>
+                  <th scope="row">Motion</th>
+                  <td id="deg-a-motion">Smooth at the target rate.</td>
+                  <td id="deg-b-motion">Keeps the target cadence.</td>
+                </tr>
+                <tr>
+                  <th scope="row">Text and fine detail</th>
+                  <td id="deg-a-detail">Full resolution; text and UI stay sharp.</td>
+                  <td id="deg-b-detail">Unchanged.</td>
+                </tr>
+                <tr>
+                  <th scope="row">Best for</th>
+                  <td>Documents, code, dashboards, slides.</td>
+                  <td>Video, animation, cursor motion, cloud gaming.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="recommend" id="recommendation">
+            <h3>Recommendation</h3>
+            <p></p>
+          </div>
+        </article>
+      </div>
+
+      <section aria-labelledby="formulas-title" style="margin-top: 22px;">
+        <details>
+          <summary id="formulas-title">Formulas and assumptions — open to check the math</summary>
+          <div class="formula-grid">
+            <div class="formula">
+              <h3>Frame budget</h3>
+              <code>budget_ms = 1000 / fps</code>
+              <p>The time each frame may spend in an encode step before the next frame is due.</p>
+            </div>
+            <div class="formula">
+              <h3>Bitrate</h3>
+              <code>Mbps = width × height × fps × bpp / 1,000,000</code>
+              <p>A coarse planning estimate. Screen content with large static regions can cost far less; noise, motion, and 4:4:4 chroma can cost more.</p>
+            </div>
+            <div class="formula">
+              <h3>Max fps at full resolution</h3>
+              <code>max_fps = bandwidth_bps / (width × height × bpp)</code>
+              <p>Column A holds the input resolution and solves for the frame rate the link can carry.</p>
+            </div>
+            <div class="formula">
+              <h3>Downscale factor</h3>
+              <code>scale = √( bandwidth_bps / (width × height × fps × bpp) )</code>
+              <p>Column B holds the target frame rate and solves for the pixel count. The linear scale is the square root of the area ratio.</p>
+            </div>
+            <div class="formula">
+              <h3>Encode-fit scale</h3>
+              <code>scale_enc = √( 2,073,600 × (budget_ms / base_ms)^(1 / 0.85) / pixels )</code>
+              <p>Column B takes the smaller of the bandwidth scale and the encode-fit scale, so the target frame rate also fits the encoder. If the input already fits, the scale is capped at 100%.</p>
+            </div>
+            <div class="formula">
+              <h3>Encode time</h3>
+              <code>t ≈ base_ms × (pixels / 2,073,600)^0.85</code>
+              <p>Planning estimate for a hardware encoder. Base at 1080p: H.264 5 ms, HEVC 8 ms, AV1 11 ms. Device, preset, content, and thermal state move this a lot.</p>
+            </div>
+            <div class="formula">
+              <h3>Decode time</h3>
+              <code>decode ≈ 0.6 × encode</code>
+              <p>A rough asymmetry factor; hardware decoders usually run ahead of encoders.</p>
+            </div>
+            <div class="formula">
+              <h3>Total latency</h3>
+              <code>capture + encode + RTT/2 + 2 × frame + decode + render</code>
+              <p>Capture is one frame interval. Network is one one-way trip. Jitter buffer is two frames. Render is 16.7 ms for a 60 Hz display.</p>
+            </div>
+            <div class="formula">
+              <h3>bpp assumptions</h3>
+              <code>H.264 0.08–0.14 · HEVC 0.05–0.09 · AV1 0.035–0.07</code>
+              <p>Bits per pixel per frame. The calculator uses the midpoint for single-value outputs and the ends of the range for the bitrate band.</p>
+            </div>
+          </div>
+
+          <ul class="assumptions">
+            <li><strong>These are estimates, not measurements.</strong> No encoder, device, or network is benchmarked here.</li>
+            <li>The bpp bands are planning assumptions for interactive video and screen content. They are not codec guarantees and do not include rate-control behavior.</li>
+            <li>Encode and decode times assume hardware acceleration. AV1 in particular may fall back to software, where encode time can be several times higher.</li>
+            <li>Column A is capped by the lower of the bandwidth limit and the encoder throughput (1000 / encode time). Column B downscales until both the bitrate and the per-frame encode time fit.</li>
+            <li>Network latency is modeled as RTT ÷ 2, with no retransmission, queueing, or congestion. Wi-Fi, relays, and busy uplinks add real delay.</li>
+            <li>The jitter buffer is fixed at two frames. Real implementations often use one to five frames, or adapt the buffer at runtime.</li>
+            <li>The 150 ms line is a common interactive reference, not a requirement. Cloud gaming often targets lower; remote support and presentations tolerate higher.</li>
+            <li>Raising the frame rate shrinks the frame-interval and jitter terms but increases the bitrate. Lowering the frame rate does the opposite.</li>
+          </ul>
+        </details>
+      </section>
+
+      <section class="cta" id="checklist" aria-labelledby="cta-title">
+        <p class="card-kicker">Next step</p>
+        <h2 id="cta-title">Want the full checklist and the measurement scripts?</h2>
+        <p>
+          The checklist covers the pipeline stages above, the signals worth capturing, and how to
+          read them without guessing. The scripts are the ones to run on your own build.
+        </p>
+        <a class="btn" href="https://devinspire734.gumroad.com/l/xejxsp/FIRST50" target="_blank" rel="noopener noreferrer">Get the checklist — code FIRST50 →</a>
+        <p class="fine">The link carries discount code FIRST50. No tracking script is used on this page.</p>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <p>Free tool · estimates only · formulas and assumptions are shown on this page.</p>
+      <p><a href="/">← Back to the site</a></p>
+    </div>
+  </footer>
+
+  <script>
+  (function () {
+    'use strict';
+
+    var PRESETS = {
+      '1080p': { w: 1920, h: 1080 },
+      '1440p': { w: 2560, h: 1440 },
+      '4k': { w: 3840, h: 2160 }
+    };
+
+    var CODECS = {
+      h264: { label: 'H.264', lo: 0.08, hi: 0.14, base: 5.0 },
+      hevc: { label: 'HEVC', lo: 0.05, hi: 0.09, base: 8.0 },
+      av1: { label: 'AV1', lo: 0.035, hi: 0.07, base: 11.0 }
+    };
+
+    var STANDARDS = [
+      [3840, 2160, '4K UHD'],
+      [2560, 1440, '1440p'],
+      [1920, 1080, '1080p'],
+      [1600, 900, '900p'],
+      [1280, 720, '720p'],
+      [960, 540, '540p'],
+      [854, 480, '480p'],
+      [640, 360, '360p'],
+      [426, 240, '240p']
+    ];
+
+    function $(id) { return document.getElementById(id); }
+
+    var el = {
+      form: $('calc-form'),
+      resolution: $('resolution'),
+      custom: $('custom-res'),
+      width: $('width'),
+      height: $('height'),
+      fps: $('fps'),
+      codec: $('codec'),
+      bandwidth: $('bandwidth'),
+      rtt: $('rtt'),
+      av1Note: $('av1-note'),
+      frameBudget: $('frame-budget'),
+      fpsOut: $('fps-out'),
+      encodeTime: $('encode-time'),
+      encodeHeadroom: $('encode-headroom'),
+      encodeVerdict: $('encode-verdict'),
+      bitrateMid: $('bitrate-mid'),
+      bitrateLow: $('bitrate-low'),
+      bitrateHigh: $('bitrate-high'),
+      bppMid: $('bpp-mid'),
+      bwOut: $('bw-out'),
+      bwHeadroom: $('bw-headroom'),
+      bwVerdict: $('bw-verdict'),
+      latencyTotal: $('latency-total'),
+      latencyReference: $('latency-reference'),
+      latencyBar: $('latency-bar'),
+      latencyLegend: $('latency-legend'),
+      latencyBody: $('latency-body'),
+      latencyVerdict: $('latency-verdict'),
+      degBw: $('deg-bw'),
+      degCodec: $('deg-codec'),
+      degAFps: $('deg-a-fps'),
+      degARes: $('deg-a-res'),
+      degAScale: $('deg-a-scale'),
+      degABitrate: $('deg-a-bitrate'),
+      degAEncode: $('deg-a-encode'),
+      degABudget: $('deg-a-budget'),
+      degALimit: $('deg-a-limit'),
+      degALatency: $('deg-a-latency'),
+      degAMotion: $('deg-a-motion'),
+      degADetail: $('deg-a-detail'),
+      degBFps: $('deg-b-fps'),
+      degBRes: $('deg-b-res'),
+      degBScale: $('deg-b-scale'),
+      degBBitrate: $('deg-b-bitrate'),
+      degBEncode: $('deg-b-encode'),
+      degBBudget: $('deg-b-budget'),
+      degBLimit: $('deg-b-limit'),
+      degBLatency: $('deg-b-latency'),
+      degBMotion: $('deg-b-motion'),
+      degBDetail: $('deg-b-detail'),
+      recommendation: $('recommendation')
+    };
+
+    function fmt(n, decimals) {
+      if (!isFinite(n)) { return '—'; }
+      var d = (decimals === undefined) ? 1 : decimals;
+      var s = n.toFixed(d);
+      if (s.indexOf('.') !== -1) {
+        s = s.replace(/0+$/, '').replace(/\.$/, '');
+      }
+      return s;
+    }
+
+    function readNumber(input, fallback, min, max) {
+      var raw = parseFloat(input.value);
+      if (!isFinite(raw)) { return fallback; }
+      return Math.min(max, Math.max(min, raw));
+    }
+
+    function setVerdict(node, text, cls) {
+      node.textContent = text;
+      node.className = 'verdict' + (cls ? ' ' + cls : '');
+    }
+
+    function nearestLabel(w, h) {
+      var area = w * h;
+      var best = null;
+      var bestDiff = Infinity;
+      for (var i = 0; i < STANDARDS.length; i++) {
+        var sw = STANDARDS[i][0];
+        var sh = STANDARDS[i][1];
+        var diff = Math.abs(sw * sh - area) / area;
+        if (diff < bestDiff) {
+          bestDiff = diff;
+          best = STANDARDS[i][2];
+        }
+      }
+      return bestDiff <= 0.12 ? best : null;
+    }
+
+    function syncCustom() {
+      el.custom.hidden = el.resolution.value !== 'custom';
+    }
+
+    function compute() {
+      var presetKey = el.resolution.value;
+      var w;
+      var h;
+      if (presetKey === 'custom') {
+        w = Math.round(readNumber(el.width, 1920, 320, 7680));
+        h = Math.round(readNumber(el.height, 1080, 240, 4320));
+      } else {
+        var preset = PRESETS[presetKey] || PRESETS['1080p'];
+        w = preset.w;
+        h = preset.h;
+      }
+
+      var fps = readNumber(el.fps, 30, 1, 240);
+      var codecKey = el.codec.value;
+      var codec = CODECS[codecKey] || CODECS.h264;
+      var bandwidth = readNumber(el.bandwidth, 20, 0.1, 100000);
+      var rtt = readNumber(el.rtt, 50, 0, 5000);
+
+      el.av1Note.hidden = codecKey !== 'av1';
+
+      var pixels = w * h;
+      var frameBudget = 1000 / fps;
+      var t = pixels / 2073600;
+      var encode = codec.base * Math.pow(t, 0.85);
+      var decode = encode * 0.6;
+      var capture = frameBudget;
+      var network = rtt / 2;
+      var jitter = 2 * frameBudget;
+      var render = 16.7;
+      var total = capture + encode + network + jitter + decode + render;
+
+      var bppMid = (codec.lo + codec.hi) / 2;
+      var bitrateLow = pixels * fps * codec.lo / 1e6;
+      var bitrateMid = pixels * fps * bppMid / 1e6;
+      var bitrateHigh = pixels * fps * codec.hi / 1e6;
+
+      /* Encode budget card */
+      el.frameBudget.textContent = fmt(frameBudget);
+      el.fpsOut.textContent = fmt(fps);
+      el.encodeTime.textContent = '~' + fmt(encode) + ' ms';
+
+      var encodeHeadroom = frameBudget - encode;
+      el.encodeHeadroom.textContent = (encodeHeadroom >= 0 ? '' : '-') + fmt(Math.abs(encodeHeadroom)) + ' ms';
+
+      if (encode > frameBudget) {
+        setVerdict(
+          el.encodeVerdict,
+          'Over budget: the estimate runs about ' + fmt(encode - frameBudget) +
+            ' ms past the ' + fmt(frameBudget) + ' ms frame interval. Expect dropped frames or a lower effective frame rate.',
+          'bad'
+        );
+      } else if (encode > frameBudget * 0.7) {
+        setVerdict(
+          el.encodeVerdict,
+          'Tight: it fits the frame interval, but only ' + fmt(encodeHeadroom) +
+            ' ms is left for scheduling jitter and thermal slowdown.',
+          'warn'
+        );
+      } else {
+        setVerdict(
+          el.encodeVerdict,
+          'Fits with headroom: about ' + fmt(encodeHeadroom) +
+            ' ms remains inside the ' + fmt(frameBudget) + ' ms frame interval.',
+          'ok'
+        );
+      }
+
+      /* Bitrate card */
+      el.bitrateMid.textContent = fmt(bitrateMid);
+      el.bitrateLow.textContent = fmt(bitrateLow);
+      el.bitrateHigh.textContent = fmt(bitrateHigh);
+      el.bppMid.textContent = fmt(bppMid, 3);
+      el.bwOut.textContent = fmt(bandwidth) + ' Mbps';
+
+      var bwHeadroom = bandwidth - bitrateHigh;
+      el.bwHeadroom.textContent = (bwHeadroom >= 0 ? '' : '-') + fmt(Math.abs(bwHeadroom)) + ' Mbps';
+
+      if (bandwidth >= bitrateHigh) {
+        setVerdict(
+          el.bwVerdict,
+          'Covers the upper estimate at this resolution and frame rate. No forced downgrade is implied by the bitrate model.',
+          'ok'
+        );
+      } else if (bandwidth >= bitrateMid) {
+        setVerdict(
+          el.bwVerdict,
+          'Covers the mid estimate but not the top of the range. High-motion scenes may exceed the link and trigger rate control.',
+          'warn'
+        );
+      } else if (bandwidth >= bitrateLow) {
+        setVerdict(
+          el.bwVerdict,
+          'Only the low end of the bpp range fits. Expect visible quality drops, or a downgrade, once the content moves.',
+          'warn'
+        );
+      } else {
+        setVerdict(
+          el.bwVerdict,
+          'Below the low estimate. These settings cannot be held on this link without visible artifacts or a forced downgrade.',
+          'bad'
+        );
+      }
+
+      /* Latency card */
+      var stages = [
+        { key: 'capture', label: 'Capture', ms: capture, allowance: frameBudget, allowanceText: '1 frame', flag: '—' },
+        { key: 'encode', label: 'Encode', ms: encode, allowance: frameBudget, allowanceText: '1 frame', flag: encode > frameBudget ? 'Over budget' : (encode > frameBudget * 0.7 ? 'Tight' : 'Fits') },
+        { key: 'network', label: 'Network one-way', ms: network, allowance: network, allowanceText: 'RTT ÷ 2', flag: '—' },
+        { key: 'jitter', label: 'Jitter buffer', ms: jitter, allowance: jitter, allowanceText: '2 frames', flag: '—' },
+        { key: 'decode', label: 'Decode', ms: decode, allowance: frameBudget, allowanceText: '1 frame', flag: '—' },
+        { key: 'render', label: 'Render / composite', ms: render, allowance: render, allowanceText: '1 refresh', flag: '—' }
+      ];
+
+      el.latencyTotal.textContent = fmt(total);
+
+      var delta = total - 150;
+      if (delta > 15) {
+        el.latencyReference.textContent = '≈ ' + fmt(delta) + ' ms above the 150 ms interactive reference';
+      } else if (delta < -15) {
+        el.latencyReference.textContent = '≈ ' + fmt(-delta) + ' ms below the 150 ms interactive reference';
+      } else {
+        el.latencyReference.textContent = 'around the 150 ms interactive reference';
+      }
+
+      el.latencyBar.innerHTML = stages.map(function (s) {
+        var width = total > 0 ? (s.ms / total * 100) : 0;
+        return '<span class="bar-seg bar-seg--' + s.key + '" style="width:' + width.toFixed(2) +
+          '%" title="' + s.label + ': ~' + fmt(s.ms) + ' ms"></span>';
+      }).join('');
+
+      el.latencyLegend.innerHTML = stages.map(function (s) {
+        return '<span><i class="swatch swatch--' + s.key + '" aria-hidden="true"></i>' +
+          s.label + ' ' + fmt(s.ms) + ' ms</span>';
+      }).join('');
+
+      el.latencyBody.innerHTML = stages.map(function (s) {
+        var share = total > 0 ? (s.ms / total * 100) : 0;
+        var over = s.key === 'encode' && s.ms > s.allowance;
+        return '<tr' + (over ? ' class="is-over"' : '') + '>' +
+          '<th scope="row">' + s.label + '</th>' +
+          '<td class="num">' + fmt(s.ms) + ' ms</td>' +
+          '<td class="num">' + fmt(share) + '%</td>' +
+          '<td>' + s.allowanceText + '</td>' +
+          '<td>' + s.flag + '</td>' +
+          '</tr>';
+      }).join('');
+
+      var largest = stages[0];
+      for (var i = 1; i < stages.length; i++) {
+        if (stages[i].ms > largest.ms) { largest = stages[i]; }
+      }
+
+      var riskText;
+      var latencyClass;
+      if (encode > frameBudget) {
+        riskText = 'Most likely to miss its budget: encode. The estimate is about ' + fmt(encode) +
+          ' ms against a ' + fmt(frameBudget) + ' ms frame interval.';
+        latencyClass = 'bad';
+      } else if (largest.key === 'jitter') {
+        riskText = 'Encode fits its frame interval. The largest single stage is the jitter buffer (' +
+          fmt(jitter) + ' ms, ' + fmt(jitter / total * 100) + '% of the total); with a ' + fmt(rtt) +
+          ' ms RTT, buffer policy and RTT are the main levers.';
+        latencyClass = total > 165 ? 'warn' : 'ok';
+      } else if (largest.key === 'network') {
+        riskText = 'Encode fits its frame interval. Network transit is the largest stage (' +
+          fmt(network) + ' ms, ' + fmt(network / total * 100) + '%); a closer relay or lower RTT cuts the total directly.';
+        latencyClass = total > 165 ? 'warn' : 'ok';
+      } else {
+        riskText = 'Encode fits its frame interval. The largest stage is ' + largest.label.toLowerCase() +
+          ' at about ' + fmt(largest.ms) + ' ms (' + fmt(largest.ms / total * 100) + '% of the total).';
+        latencyClass = total > 165 ? 'warn' : 'ok';
+      }
+
+      riskText += ' Capture plus jitter alone are ' + fmt(capture + jitter) + ' ms at ' + fmt(fps) + ' fps.';
+      if (total > 150) {
+        riskText += ' The total is above the 150 ms reference; defend that number first.';
+        if (latencyClass === 'ok') { latencyClass = 'warn'; }
+      } else {
+        riskText += ' The total is at or below the 150 ms reference.';
+      }
+      setVerdict(el.latencyVerdict, riskText, latencyClass);
+
+      /* Degradation */
+      var availableBps = bandwidth * 1e6;
+      var maxFpsFull = availableBps / (pixels * bppMid);
+      var maxPixelsForFps = availableBps / (fps * bppMid);
+      var bandwidthScale = Math.sqrt(maxPixelsForFps / pixels);
+      var encoderMaxFps = encode > 0 ? 1000 / encode : Infinity;
+      var aFps = Math.min(fps, maxFpsFull, encoderMaxFps);
+
+      /* Pixels the encoder can finish inside one frame interval. */
+      var encodeFitPixels = 2073600 * Math.pow(frameBudget / codec.base, 1 / 0.85);
+      var encodeScale = Math.sqrt(encodeFitPixels / pixels);
+
+      var bScale = Math.min(1, bandwidthScale, encodeScale);
+      var bW = w;
+      var bH = h;
+      if (bScale < 1) {
+        bW = Math.max(2, Math.floor((w * bScale) / 2) * 2);
+        bH = Math.max(2, Math.floor((h * bScale) / 2) * 2);
+      }
+
+      var aBitrate = pixels * aFps * bppMid / 1e6;
+      var bBitrate = bW * bH * fps * bppMid / 1e6;
+      var bEncode = codec.base * Math.pow((bW * bH) / 2073600, 0.85);
+      var bDecode = bEncode * 0.6;
+      var aFrame = aFps > 0 ? 1000 / aFps : Infinity;
+      var aLatency = aFps >= 1 ? aFrame + encode + network + 2 * aFrame + decode + render : Infinity;
+      var bLatency = frameBudget + bEncode + network + 2 * frameBudget + bDecode + render;
+
+      function budgetCheck(ms, allowance) {
+        if (!isFinite(ms) || !isFinite(allowance)) { return '—'; }
+        var ratio = allowance > 0 ? ms / allowance : Infinity;
+        var word = ratio > 1.02 ? 'over' : (ratio > 0.9 ? 'at the limit' : 'fits');
+        return '~' + fmt(ms) + ' ms / ' + fmt(allowance) + ' ms — ' + word;
+      }
+
+      el.degBw.textContent = fmt(bandwidth) + ' Mbps';
+      el.degCodec.textContent = codec.label;
+
+      var bindingA;
+      if (aFps >= fps) {
+        el.degAFps.textContent = fmt(fps) + ' fps (target met)';
+        bindingA = 'None at these settings';
+      } else if (encoderMaxFps <= maxFpsFull) {
+        el.degAFps.textContent = '~' + fmt(aFps) + ' fps (encode-limited)';
+        bindingA = 'Encoder throughput';
+      } else {
+        el.degAFps.textContent = '~' + fmt(aFps) + ' fps (bandwidth-limited)';
+        bindingA = 'Bandwidth';
+      }
+      el.degARes.textContent = w + ' × ' + h;
+      el.degAScale.textContent = '100%';
+      el.degABitrate.textContent = aFps >= 1 ? '~' + fmt(aBitrate) + ' Mbps' : '—';
+      el.degAEncode.textContent = '~' + fmt(encode) + ' ms';
+      el.degABudget.textContent = aFps >= 1 ? budgetCheck(encode, aFrame) : '—';
+      el.degALimit.textContent = bindingA;
+      el.degALatency.textContent = isFinite(aLatency) ? '~' + fmt(aLatency) + ' ms' : '—';
+
+      if (aFps >= fps) {
+        el.degAMotion.textContent = 'Smooth at the target rate.';
+      } else if (aFps >= 24) {
+        el.degAMotion.textContent = 'Smooth enough for most motion at this rate.';
+      } else if (aFps >= 15) {
+        el.degAMotion.textContent = 'Noticeably choppy; usable for mostly static screens.';
+      } else if (aFps >= 1) {
+        el.degAMotion.textContent = 'Very choppy; static screens only.';
+      } else {
+        el.degAMotion.textContent = 'Not viable at full resolution.';
+      }
+      el.degADetail.textContent = 'Full resolution; text and UI stay sharp.';
+
+      el.degBFps.textContent = fmt(fps) + ' fps (target kept)';
+      if (bScale >= 1) {
+        el.degBRes.textContent = w + ' × ' + h + ' (no downscale needed)';
+        el.degBScale.textContent = '100% (no downscale)';
+      } else {
+        var label = nearestLabel(bW, bH);
+        el.degBRes.textContent = bW + ' × ' + bH + (label ? ' (≈ ' + label + ')' : '');
+        el.degBScale.textContent = '~' + fmt(bScale * 100) + '% of input';
+      }
+      el.degBBitrate.textContent = '~' + fmt(bBitrate) + ' Mbps';
+      el.degBEncode.textContent = '~' + fmt(bEncode) + ' ms';
+      el.degBBudget.textContent = budgetCheck(bEncode, frameBudget);
+      if (bScale >= 1) {
+        el.degBLimit.textContent = 'None at these settings';
+      } else if (encodeScale < bandwidthScale) {
+        el.degBLimit.textContent = 'Encoder throughput';
+      } else if (encodeScale > bandwidthScale) {
+        el.degBLimit.textContent = 'Bandwidth';
+      } else {
+        el.degBLimit.textContent = 'Bandwidth + encoder';
+      }
+      el.degBLatency.textContent = '~' + fmt(bLatency) + ' ms';
+      el.degBMotion.textContent = 'Keeps the ' + fmt(fps) + ' fps cadence.';
+      if (bScale >= 1) {
+        el.degBDetail.textContent = 'Unchanged.';
+      } else if (bScale >= 0.7) {
+        el.degBDetail.textContent = 'Slight softening; small text stays readable.';
+      } else if (bScale >= 0.5) {
+        el.degBDetail.textContent = 'Text softens but remains readable.';
+      } else {
+        el.degBDetail.textContent = 'Text and fine UI become hard to read.';
+      }
+
+      var rec;
+      var encodeBound = encode > frameBudget;
+      var aLatencyText = isFinite(aLatency) ? '~' + fmt(aLatency) + ' ms' : 'not viable';
+      if (encodeBound) {
+        if (aFps >= 24) {
+          rec = 'Encoding, not bandwidth, is the binding constraint at the input: about ' + fmt(encode) +
+            ' ms against a ' + fmt(frameBudget) + ' ms frame interval. Column A keeps full resolution and caps near ' +
+            fmt(aFps) + ' fps (' + aLatencyText + ' end to end). Column B drops to about ' + bW + ' × ' + bH +
+            ' (' + fmt(bScale * 100) + '%) to hold ' + fmt(fps) + ' fps at about ' + fmt(bLatency) +
+            ' ms. For text-heavy screens A stays sharp; for motion or lower latency, B is the better trade.';
+        } else {
+          rec = 'Encoding is the binding constraint, and full resolution cannot reach 24 fps (about ' + fmt(aFps) +
+            ' fps). Column B downscales to about ' + bW + ' × ' + bH + ' (' + fmt(bScale * 100) +
+            '%) to hold ' + fmt(fps) + ' fps at about ' + fmt(bLatency) +
+            ' ms. Prefer B unless the content is mostly static text.';
+        }
+      } else if (bandwidth >= bitrateHigh) {
+        rec = 'No hard downgrade is needed under the mid bpp assumption: available bandwidth covers the upper estimate and encoding fits the frame budget. Keep the input settings and use the numbers as a starting point for your own encoder.';
+      } else if (bandwidth >= bitrateMid) {
+        rec = 'Bandwidth covers the mid estimate but not the top of the range. Start without a downgrade, cap the encoder bitrate, and watch high-motion scenes; if artifacts appear, apply the resolution cap in column B.';
+      } else if (aFps >= 24) {
+        rec = 'Bandwidth is the binding constraint. Column A keeps full resolution and lands near ' + fmt(aFps) +
+          ' fps; column B downscales to about ' + bW + ' × ' + bH + ' (' + fmt(bScale * 100) +
+          '%) to hold ' + fmt(fps) + ' fps. For text use A; for motion use B, which also lowers the end-to-end estimate to about ' +
+          fmt(bLatency) + ' ms versus ' + aLatencyText + ' for A.';
+      } else if (bScale >= 0.5) {
+        rec = 'Bandwidth is the binding constraint. Column B holds ' + fmt(fps) + ' fps at about ' + bW + ' × ' + bH +
+          ' (' + fmt(bScale * 100) + '%) and roughly ' + fmt(bLatency) + ' ms end to end; column A keeps text sharp but motion falls to about ' +
+          fmt(aFps) + ' fps (roughly ' + aLatencyText + '). Prefer B for motion; use A only for static screens.';
+      } else {
+        rec = 'Both levers are near their limit: full resolution supports only about ' + fmt(maxFpsFull) +
+          ' fps, and holding ' + fmt(fps) + ' fps needs about ' + fmt(bScale * 100) + '% scale (' + bW + ' × ' + bH +
+          '). Lower the target frame rate or accept both a resolution and a cadence loss.';
+      }
+      rec += ' Content rule of thumb: prefer A for documents, code, UI, and slides; prefer B for video, animation, and cloud gaming.';
+      el.recommendation.querySelector('p').textContent = rec;
+    }
+
+    el.form.addEventListener('input', compute);
+    el.form.addEventListener('change', function (event) {
+      if (event.target === el.resolution) { syncCustom(); }
+      compute();
+    });
+
+    syncCustom();
+    compute();
+  }());
+  </script>
+</body>
+</html>
