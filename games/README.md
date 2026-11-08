@@ -1,6 +1,6 @@
 # 游戏集合维护说明
 
-17 款纯静态网页桌游/棋牌：免费、免登录、单文件，打开即玩。
+18 款纯静态网页桌游/棋牌：免费、免登录、单文件，打开即玩。
 
 ## 游戏清单
 
@@ -20,6 +20,7 @@
 | 空当接龙 | FreeCell | /games/freecell/ | 纸牌 | 1 | — | rules.html | 45 |
 | 蜘蛛纸牌 | Spider | /games/spider/ | 纸牌 | 1 | — | rules.html | 60 |
 | 24 点 | 24 Game | /games/24game/ | 纸牌 | 1 | — | rules.html | 51 |
+| 斗地主 | Dou Dizhu | /games/doudizhu/ | 卡牌 | 3 | 单档·规则式 | rules.html | 110 |
 | 拓荒者：九岛 | Pioneers of Nine Isles | /games/pioneers/ | 德式 | 2–4 | 单档·贪心 | rules.html | 52 |
 | 谁是卧底 | Undercover | /games/undercover/ | 聚会 | 4–12 | — | rules.html | 50 |
 | 飞行棋 | Aeroplane | /games/aeroplane/ | 聚会 | 2–4 | 单档·简单 | rules.html | 36 |
@@ -31,7 +32,7 @@
 - 单文件：CSS/JS 内联在 `index.html`；唯一例外是 `pioneers/engine.js`，同目录同源加载，仍无外部依赖。
 - 无外部依赖：不引 CDN、字体、图标库；棋盘与棋子用内联 SVG/CSS 自绘。
 - 无追踪：不接 analytics、不上报；最高分与战绩只写 `localStorage`。
-- 三语：14 款走 EN／简中／ID 字典与切换；Tap Match 为 EN／ID／FIL；中国象棋、语音房暂为中文单语，改版时应优先补齐。
+- 三语：15 款走 EN／简中／ID 字典与切换；Tap Match 为 EN／ID／FIL；中国象棋、语音房暂为中文单语，改版时应优先补齐。
 - 触控优先：以手机竖屏为基准，点按目标不小于 32px，棋盘随视口缩放。
 
 ## 质量约定
