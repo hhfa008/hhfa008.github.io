@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#10141c">
-<title>语音房 · 井字棋</title>
+<title>语音房 · 井字棋 / 五子棋 / 四子棋</title>
 <style>
 :root{
   --bg:#0d1117; --card:#161d27; --card2:#1d2633; --line:#2a3646;
@@ -80,15 +80,26 @@ label{display:block;font-size:13px;color:var(--muted);margin:14px 0 6px}
 .turn small{display:block;font-weight:400;color:var(--muted);font-size:12px;margin-top:3px}
 .scores{font-variant-numeric:tabular-nums;font-size:14px;color:var(--muted)}
 .scores b{color:var(--text);font-size:17px}
-.board{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:min(100%,390px);margin:0 auto;
-  aspect-ratio:1/1}
+.board{display:grid;gap:8px;width:min(100%,390px);margin:0 auto;aspect-ratio:1/1}
+.board.ttt{grid-template-columns:repeat(3,1fr)}
+.board.gomoku{grid-template-columns:repeat(15,1fr);gap:2px;width:min(100%,560px)}
+.board.connect4{grid-template-columns:repeat(7,1fr);gap:6px;width:min(100%,470px);aspect-ratio:7/6}
 .cell{background:#0f1620;border:1px solid var(--line);border-radius:12px;display:grid;place-items:center;
   font-size:clamp(34px,12vw,58px);font-weight:800;line-height:1;transition:background .12s,border-color .12s}
+.board.gomoku .cell{font-size:clamp(7px,1.7vw,19px);border-radius:50%;border-color:#223044}
+.board.connect4 .cell{font-size:clamp(18px,5vw,38px);border-radius:50%;border-color:#223044;background:#091018}
 .cell:not(:disabled):active{background:#1a2533}
 .cell.x{color:var(--x)}
 .cell.o{color:var(--o)}
-.cell.win{background:rgba(255,209,102,.14);border-color:rgba(255,209,102,.65)}
+.cell.win{background:rgba(90,210,165,.2)!important;border-color:rgba(90,210,165,.8)!important}
 .cell:disabled{cursor:default}
+.game-pick{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.pick-btn{min-height:44px;padding:0 16px;border-radius:999px;border:1px solid var(--line);
+  background:var(--card2);font-size:14px;font-weight:600;color:var(--muted)}
+.pick-btn.active{background:rgba(255,180,84,.16);border-color:rgba(255,180,84,.6);color:var(--accent)}
+.pick-btn:disabled{opacity:.55;cursor:not-allowed}
+.pick-hint{font-size:12px;color:var(--muted);margin:8px 0 0}
+.game-label{font-size:12px;color:var(--muted);letter-spacing:.06em}
 .game-foot{display:flex;justify-content:center;margin-top:14px}
 details{margin-top:18px;border-top:1px solid var(--line);padding-top:12px}
 summary{cursor:pointer;color:var(--muted);font-size:13px;padding:4px 0}
@@ -106,8 +117,8 @@ summary{cursor:pointer;color:var(--muted);font-size:13px;padding:4px 0}
 <body>
 <div class="wrap">
   <section id="lobby" class="card">
-    <h1>语音房 <span>·</span> 井字棋</h1>
-    <p class="sub">4 位房号进房，最多 4 人。开麦就能互相听见，然后轮流落子。</p>
+    <h1>语音房 <span>·</span> 在线棋局</h1>
+    <p class="sub">4 位房号进房，最多 4 人。开麦就能互相听见，房主可选井字棋、五子棋或四子棋，轮流落子。</p>
     <label for="name">你的昵称</label>
     <input id="name" class="input" maxlength="12" autocomplete="nickname" placeholder="怎么称呼你">
     <div class="row" style="margin-top:16px">
@@ -141,6 +152,12 @@ summary{cursor:pointer;color:var(--muted);font-size:13px;padding:4px 0}
         <button id="micBtn" class="btn primary">开麦</button>
         <button id="resetBtn" class="btn">新一局</button>
       </div>
+      <div class="game-pick" id="gamePicker" role="group" aria-label="选择要对战的游戏">
+        <button class="pick-btn" type="button" data-kind="ttt">井字棋</button>
+        <button class="pick-btn" type="button" data-kind="gomoku">五子棋</button>
+        <button class="pick-btn" type="button" data-kind="connect4">四子棋</button>
+      </div>
+      <p class="pick-hint" id="pickHint">房主选择游戏，所有人看到同一个棋盘。</p>
       <p class="sub" style="margin:10px 0 0;font-size:12px">iOS Safari 如果听不到声音，点一下页面任意位置即可解锁音频播放。</p>
     </div>
 
@@ -149,7 +166,7 @@ summary{cursor:pointer;color:var(--muted);font-size:13px;padding:4px 0}
         <div class="turn" id="turnText">等待房间状态…</div>
         <div class="scores" id="scores"></div>
       </div>
-      <div class="board" id="board" aria-label="井字棋棋盘"></div>
+      <div class="board ttt" id="board" aria-label="多人棋局棋盘"></div>
       <div class="game-foot"><span id="seatHint" class="sub" style="margin:0;font-size:12px"></span></div>
     </div>
 
@@ -175,6 +192,26 @@ const WS_BASE = API_BASE.replace(/^http/i, 'ws');
 const FORCE_RELAY = params.get('relay') === '1';
 const MAX_MEMBERS = 4;
 const NAME_KEY = 'vr_name';
+const PID_KEY = 'vr_pid';
+
+const KIND_META = {
+  ttt: { label: '井字棋', cols: 3, rows: 3, size: 9 },
+  gomoku: { label: '五子棋', cols: 15, rows: 15, size: 225 },
+  connect4: { label: '四子棋', cols: 7, rows: 6, size: 42 },
+};
+
+function getPid(){
+  let pid = '';
+  try{ pid = sessionStorage.getItem(PID_KEY) || ''; }catch(e){}
+  if (!pid){
+    pid = (window.crypto && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : 'p' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    try{ sessionStorage.setItem(PID_KEY, pid); }catch(e){}
+  }
+  return pid;
+}
+const PID = getPid();
 
 const S = {
   name: '',
@@ -190,6 +227,7 @@ const S = {
   reconnectTimer: null,
   heartbeatTimer: null,
   ice: null,
+  iceFallbackWarned: false,
   iceTimer: null,
   pcs: new Map(),
   pendingSignals: new Map(),
@@ -454,25 +492,60 @@ function updateMicUI(){
   btn.classList.toggle('danger', S.micOn);
 }
 
+function currentKind(){
+  return S.game && KIND_META[S.game.kind] ? S.game.kind : 'ttt';
+}
+
+let boardKind = null;
+function buildBoard(kind){
+  const meta = KIND_META[kind];
+  const board = $('board');
+  board.textContent = '';
+  board.className = 'board ' + kind;
+  board.setAttribute('aria-label', meta.label + '棋盘');
+  const total = meta.cols * meta.rows;
+  for (let i=0;i<total;i++){
+    const b = document.createElement('button');
+    b.className = 'cell';
+    b.type = 'button';
+    b.dataset.index = String(i);
+    const col = i % meta.cols, row = Math.floor(i / meta.cols);
+    b.setAttribute('aria-label', kind === 'connect4'
+      ? '第 ' + (col + 1) + ' 列'
+      : '第 ' + (row + 1) + ' 行第 ' + (col + 1) + ' 列');
+    b.addEventListener('click', () => onCell(i));
+    board.appendChild(b);
+  }
+  boardKind = kind;
+}
+
+function renderPicker(){
+  const kind = currentKind();
+  const isHost = !!S.selfId && S.selfId === S.hostId;
+  for (const b of $('gamePicker').querySelectorAll('button')){
+    const k = b.dataset.kind;
+    b.classList.toggle('active', k === kind);
+    b.setAttribute('aria-pressed', k === kind ? 'true' : 'false');
+    b.disabled = !isHost;
+  }
+  $('pickHint').textContent = isHost
+    ? '你是房主：点上面的游戏名切换，切换后棋盘重置。'
+    : '房主选择游戏；轮到你时点棋盘落子。';
+}
+
 function renderGame(){
   const board = $('board');
   const g = S.game;
-  if (board.childElementCount !== 9){
-    board.textContent = '';
-    for (let i=0;i<9;i++){
-      const b = document.createElement('button');
-      b.className = 'cell';
-      b.type = 'button';
-      b.dataset.index = String(i);
-      b.setAttribute('aria-label', '第 ' + (i+1) + ' 格');
-      b.addEventListener('click', () => onCell(i));
-      board.appendChild(b);
-    }
-  }
+  const kind = currentKind();
+  if (boardKind !== kind) buildBoard(kind);
+
   const turnText = $('turnText');
   const scores = $('scores');
   const seatHint = $('seatHint');
   const reset = $('resetBtn');
+  const meta = KIND_META[kind];
+
+  renderPicker();
 
   if (!g){
     turnText.textContent = '等待房间状态…';
@@ -487,9 +560,9 @@ function renderGame(){
   const xName = nameOf(g.xId);
   const oName = nameOf(g.oId);
   scores.textContent = '';
-  const sx = document.createElement('span'); sx.innerHTML = 'X <b>'+g.scores.X+'</b>';
+  const sx = document.createElement('span'); sx.innerHTML = 'X <b>'+Number(g.scores.X||0)+'</b>';
   const sep = document.createElement('span'); sep.textContent = ' : ';
-  const so = document.createElement('span'); so.innerHTML = 'O <b>'+g.scores.O+'</b>';
+  const so = document.createElement('span'); so.innerHTML = 'O <b>'+Number(g.scores.O||0)+'</b>';
   scores.appendChild(sx); scores.appendChild(sep); scores.appendChild(so);
 
   if (g.winner === 'draw'){
@@ -503,7 +576,9 @@ function renderGame(){
     turnText.appendChild(document.createElement('small')).textContent = '至少 2 人才能开始，房主执 X 先手';
   }else if (r && g.turn === r){
     turnText.textContent = '轮到你（' + r + '）落子';
-    turnText.appendChild(document.createElement('small')).textContent = '点一个空格';
+    turnText.appendChild(document.createElement('small')).textContent =
+      kind === 'connect4' ? '点一列，棋子会落到最下面' :
+      kind === 'gomoku' ? '点一个空点，横竖斜五连即胜' : '点一个空格';
   }else{
     const turnId = g.turn === 'X' ? g.xId : g.oId;
     turnText.textContent = '等待 ' + nameOf(turnId) + '（' + g.turn + '）落子';
@@ -511,26 +586,45 @@ function renderGame(){
   }
 
   seatHint.textContent = !g.oId ? '' :
-    ('房主 ' + xName + ' 执 X 先手 · ' + (oName ? oName + ' 执 O' : '等待对手') + ' · 第 ' + (g.round || 1) + ' 局');
+    ('房主 ' + xName + ' 执 X 先手 · ' + (oName ? oName + ' 执 O' : '等待对手') +
+     ' · ' + meta.label + ' · 第 ' + (g.round || 1) + ' 局');
 
-  for (let i=0;i<9;i++){
+  for (let i=0;i<meta.size;i++){
     const b = board.children[i];
     const v = g.board[i];
-    b.textContent = v || '';
+    b.textContent = v ? (kind === 'ttt' ? v : '●') : '';
     b.className = 'cell' + (v === 'X' ? ' x' : v === 'O' ? ' o' : '') +
       (g.line && g.line.indexOf(i) !== -1 ? ' win' : '');
-    const mine = r && g.turn === r && !g.winner && !g.line && !v && !!g.oId;
+    let mine = false;
+    if (r && g.turn === r && !g.winner && g.oId){
+      if (kind === 'connect4') mine = g.board[i % meta.cols] == null;
+      else mine = !v;
+    }
     b.disabled = !mine;
   }
-  reset.disabled = !(S.selfId && g.xId === S.selfId);
+  reset.disabled = !(S.selfId && S.selfId === S.hostId);
 }
 
 function onCell(i){
-  if (!S.game || !S.selfId) return;
-  if (myRole() !== S.game.turn) return;
-  if (S.game.winner || S.game.line) return;
-  if (S.game.board[i]) return;
-  send({ type:'game_move', room:S.room, index:i });
+  const g = S.game;
+  if (!g || !S.selfId) return;
+  if (myRole() !== g.turn) return;
+  if (g.winner || g.line) return;
+  const kind = currentKind();
+  if (kind === 'connect4'){
+    const col = i % KIND_META.connect4.cols;
+    if (g.board[col] != null) return; // top cell occupied = column full
+    send({ type:'game_move', room:S.room, x:col, y:0 });
+    return;
+  }
+  if (g.board[i]) return;
+  if (kind === 'gomoku'){
+    const cols = KIND_META.gomoku.cols;
+    send({ type:'game_move', room:S.room, x:i % cols, y:Math.floor(i / cols) });
+    return;
+  }
+  const cols = KIND_META.ttt.cols;
+  send({ type:'game_move', room:S.room, x:i % cols, y:Math.floor(i / cols) });
 }
 
 function renderAll(){
@@ -556,7 +650,8 @@ function connectWS(){
   cleanupWS();
   S.wsState = 'connecting';
   renderAll();
-  const url = WS_BASE + '/ws?room=' + encodeURIComponent(S.room) + '&name=' + encodeURIComponent(S.name);
+  const url = WS_BASE + '/ws?room=' + encodeURIComponent(S.room) +
+    '&name=' + encodeURIComponent(S.name) + '&pid=' + encodeURIComponent(PID);
   let ws;
   try{ ws = new WebSocket(url); }catch(e){ S.wsState='closed'; scheduleReconnect(); return; }
   S.ws = ws;
@@ -585,6 +680,10 @@ function connectWS(){
     renderAll();
     if (ev.code === 4001 || ev.reason === 'room_full'){
       leaveToLobby('房间已满（最多 4 人），换一个房号试试。');
+      return;
+    }
+    if (ev.code === 4003 || ev.reason === 'replaced'){
+      leaveToLobby('这个房间已在另一个标签页重新连接，本页已退出。');
       return;
     }
     setBanner('连接断开，正在重连…（房间 ' + S.room + '）');
@@ -686,16 +785,23 @@ async function createPeer(peerId){
   if (!S.selfId || !S.room || S.pcs.has(peerId)) return S.pcs.get(peerId) || null;
   if (!S.members.some((m) => m.id === peerId)) return null;
 
-  let ice;
+  let ice = null;
   try{ ice = await fetchIce(false); }
-  catch(e){ toast('无法获取 TURN 凭据，重试中'); setTimeout(() => createPeer(peerId), 3000); return null; }
+  catch(e){
+    // TURN is optional for same-network peers: keep the room usable with
+    // direct host candidates instead of blocking the call forever.
+    if (!S.iceFallbackWarned){
+      S.iceFallbackWarned = true;
+      toast('TURN 服务不可用，先尝试点对点直连', 5000);
+    }
+  }
   if (!S.selfId || S.pcs.has(peerId)) return S.pcs.get(peerId) || null;
   if (!S.members.some((m) => m.id === peerId)) return null;
 
   let pc;
   try{
     pc = new RTCPeerConnection(Object.assign({
-      iceServers: ice.iceServers,
+      iceServers: ice && ice.iceServers ? ice.iceServers : [],
       iceCandidatePoolSize: 4,
     }, FORCE_RELAY ? { iceTransportPolicy: 'relay' } : {}));
   }catch(e){ toast('浏览器不支持 WebRTC'); return null; }
@@ -1066,6 +1172,14 @@ function init(){
   $('name').addEventListener('keydown', (e) => { if (e.key === 'Enter'){ if ($('code').value) joinRoom(); else createRoom(); } });
   $('micBtn').addEventListener('click', () => setMic(!S.micOn));
   $('resetBtn').addEventListener('click', () => { send({ type:'game_reset', room:S.room }); });
+  $('gamePicker').addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-kind]');
+    if (!btn || btn.disabled) return;
+    if (!S.selfId || S.selfId !== S.hostId) return;
+    const kind = btn.dataset.kind;
+    if (!KIND_META[kind] || currentKind() === kind) return;
+    send({ type:'game_select', room:S.room, kind });
+  });
   $('leaveBtn').addEventListener('click', () => leaveToLobby(''));
   $('copyBtn').addEventListener('click', copyInvite);
   document.addEventListener('pointerdown', unlockAudio, { passive:true });
@@ -1077,9 +1191,19 @@ function init(){
     get room(){ return S.room; },
     get selfId(){ return S.selfId; },
     get hostId(){ return S.hostId; },
+    get pid(){ return PID; },
+    get gameKind(){ return currentKind(); },
     get members(){ return S.members.map((m) => ({ id:m.id, name:m.name, mic:m.mic, host:m.host })); },
     get game(){ return S.game; },
     get micOn(){ return S.micOn; },
+    get micInfo(){
+      return S.micTrack ? {
+        readyState: S.micTrack.readyState,
+        muted: S.micTrack.muted,
+        enabled: S.micTrack.enabled,
+        label: S.micTrack.label,
+      } : null;
+    },
     get wsState(){ return S.wsState; },
     get wsReadyState(){ return S.ws ? S.ws.readyState : 3; },
     get peerCount(){ return S.pcs.size; },
@@ -1092,10 +1216,20 @@ function init(){
       for (const [id, peer] of S.pcs){
         const pc = peer.pc;
         let pair = null, local = null, remote = null;
+        let bytesReceived = 0, bytesSent = 0, packetsReceived = 0, packetsSent = 0, mediaLevel = null;
         try{
           const stats = await pc.getStats();
           stats.forEach((r) => {
             if (r.type === 'transport' && r.selectedCandidatePairId) pair = stats.get(r.selectedCandidatePairId) || null;
+            if (r.type === 'inbound-rtp' && r.kind === 'audio'){
+              bytesReceived += r.bytesReceived || 0;
+              packetsReceived += r.packetsReceived || 0;
+            }
+            if (r.type === 'outbound-rtp' && r.kind === 'audio'){
+              bytesSent += r.bytesSent || 0;
+              packetsSent += r.packetsSent || 0;
+            }
+            if (r.type === 'media-source' && r.kind === 'audio') mediaLevel = r.audioLevel;
           });
           if (!pair) stats.forEach((r) => {
             if (r.type === 'candidate-pair' && r.state === 'succeeded' && (r.nominated || r.selected)) pair = r;
@@ -1113,6 +1247,11 @@ function init(){
           localCandidateType: local ? local.candidateType : null,
           remoteCandidateType: remote ? remote.candidateType : null,
           protocol: local ? local.protocol : null,
+          bytesReceived,
+          bytesSent,
+          packetsReceived,
+          packetsSent,
+          mediaLevel,
         });
       }
       return out;

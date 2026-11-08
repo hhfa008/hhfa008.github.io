@@ -25,11 +25,11 @@
 | 谁是卧底 | Undercover | /games/undercover/ | 聚会 | 4–12 | — | rules.html | 50 |
 | 飞行棋 | Aeroplane | /games/aeroplane/ | 聚会 | 2–4 | 单档·简单 | rules.html | 36 |
 | Tap Match | Tap Match | /games/tap-match/ | 小游戏 | 1 | — | rules.html | 9（E2E） |
-| 语音房 | Voice Room | /games/voice-room/ | 在线联机 | 2–4 | — | guide.html | 8（E2E） |
+| 语音房 | Voice Room | /games/voice-room/ | 在线联机 · 井字棋/五子棋/四子棋 | 2–4 | — | guide.html | 14（E2E） |
 
 ## 技术约定
 
-- 单文件：CSS/JS 内联在 `index.html`；唯一例外是 `pioneers/engine.js`，同目录同源加载，仍无外部依赖。
+- 单文件：CSS/JS 内联在 `index.html`；唯一例外是 `pioneers/engine.js` 与 `shared/rules.js`（五子棋/四子棋单机版与语音房服务端共用规则），同目录同源加载，仍无外部依赖。
 - 无外部依赖：不引 CDN、字体、图标库；棋盘与棋子用内联 SVG/CSS 自绘。
 - 无追踪：不接 analytics、不上报；最高分与战绩只写 `localStorage`。
 - 三语：15 款走 EN／简中／ID 字典与切换；Tap Match 为 EN／ID／FIL；中国象棋、语音房暂为中文单语，改版时应优先补齐。
