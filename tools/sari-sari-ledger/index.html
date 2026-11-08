@@ -1,0 +1,917 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sari-sari store credit ledger (utang) — free, offline, no account</title>
+<meta name="description" content="Free offline credit ledger for sari-sari stores and warung: record utang (credit), record payments, see each customer's balance, and copy a WhatsApp or SMS reminder list. English, Bahasa Indonesia, Filipino. Data stays on your phone; nothing is uploaded.">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="author" content="Devin">
+<meta name="theme-color" content="#f2efe7">
+<link rel="canonical" href="https://hhfa008.github.io/tools/sari-sari-ledger/">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23101316'/%3E%3Cpath d='M9 7h12a2 2 0 0 1 2 2v16H11a2 2 0 0 1-2-2V7z' fill='%23fbf9f4'/%3E%3Cpath d='M12 12h8M12 16h8M12 20h5' stroke='%23101316' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Devin">
+<meta property="og:title" content="Sari-sari store credit ledger — free and offline">
+<meta property="og:description" content="Track utang and payments, see every balance, and copy a reminder list. Works offline. Data stays on your phone.">
+<meta property="og:url" content="https://hhfa008.github.io/tools/sari-sari-ledger/">
+<meta property="og:locale" content="en_US">
+<meta property="og:locale:alternate" content="id_ID">
+<meta property="og:locale:alternate" content="fil_PH">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Sari-sari store credit ledger (utang)">
+<meta name="twitter:description" content="Free offline utang ledger: balances, payments, reminder list. No account, no upload.">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Sari-Sari Credit Ledger",
+  "url": "https://hhfa008.github.io/tools/sari-sari-ledger/",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Any",
+  "browserRequirements": "Requires JavaScript",
+  "isAccessibleForFree": true,
+  "inLanguage": ["en", "id", "fil"],
+  "description": "An offline credit ledger for sari-sari stores and warung. Record utang and payments per customer, see balances and totals, and copy a reminder list for WhatsApp or SMS. All data stays in the browser.",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "featureList": [
+    "Record credit (utang) with an amount and note",
+    "Record repayments",
+    "Per-customer balance and total owed",
+    "Copy a reminder list for WhatsApp or SMS",
+    "JSON backup and restore",
+    "Offline via service worker"
+  ]
+}
+</script>
+
+<style>
+:root{
+  --paper:#f2efe7;--paper-2:#fbf9f4;--ink:#14171a;--muted:#5b615c;--muted-2:#7b807a;
+  --line:#d5d0c4;--line-strong:#bcb5a7;--accent:#b93d12;--accent-soft:#f7e5da;
+  --dark:#101316;--on-dark:#f2efe7;--on-dark-muted:#b7b3a8;--danger:#a32b1c;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --radius:16px;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.55 var(--sans);
+  padding-bottom:calc(22px + env(safe-area-inset-bottom));-webkit-font-smoothing:antialiased}
+.wrap{max-width:660px;margin:0 auto;padding:0 16px}
+h1,h2,h3,p,ul{margin:0}
+button,input,textarea,select{font:inherit;color:inherit}
+a{color:inherit}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+.site-header{background:var(--dark);color:var(--on-dark);padding:12px 0}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:9px;font-weight:650;text-decoration:none;letter-spacing:.01em}
+.brand-mark{width:22px;height:22px;border-radius:6px;background:var(--accent);flex:none}
+.langs{display:flex;gap:4px}
+.langs button{min-width:44px;min-height:40px;padding:0 8px;border:1px solid #343b40;border-radius:9px;
+  background:transparent;color:var(--on-dark-muted);font-size:13px;font-weight:600;cursor:pointer}
+.langs button[aria-pressed="true"]{background:var(--on-dark);color:var(--dark);border-color:var(--on-dark)}
+
+.hero{padding:24px 0 6px}
+.eyebrow{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--accent);margin-bottom:8px}
+.hero h1{font-size:clamp(1.65rem,6.2vw,2.15rem);line-height:1.15;letter-spacing:-.02em;margin-bottom:10px}
+.lede{color:var(--muted);font-size:16px}
+.privacy{display:flex;gap:9px;align-items:flex-start;margin:16px 0 4px;padding:12px 14px;
+  background:var(--accent-soft);border:1px solid #e9c9b6;border-radius:12px;font-size:14px;font-weight:550}
+.privacy svg{width:18px;height:18px;flex:none;margin-top:2px}
+
+.card{background:var(--paper-2);border:1px solid var(--line);border-radius:var(--radius);
+  padding:18px;margin-top:14px}
+.card h2{font-size:1.06rem;letter-spacing:-.01em;margin-bottom:12px}
+.muted{color:var(--muted);font-size:14px}
+.hint{color:var(--muted-2);font-size:12.5px;margin-top:10px}
+
+.total-card{background:var(--dark);color:var(--on-dark);border-color:var(--dark)}
+.total-card .label{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--on-dark-muted);margin-bottom:2px}
+.total{font-size:clamp(2.3rem,10vw,3rem);font-weight:650;letter-spacing:-.03em;line-height:1.1}
+.total-sub{color:var(--on-dark-muted);font-size:14px;margin-top:2px}
+.curr{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:16px;
+  padding-top:14px;border-top:1px solid #2b3237;font-size:14px;color:var(--on-dark-muted)}
+.curr select{min-height:42px;padding:0 10px;border-radius:9px;border:1px solid #3a4247;
+  background:#1a2024;color:var(--on-dark);font-size:14px}
+
+label.fld{display:block;font-size:13px;font-weight:600;margin:0 0 6px}
+input[type="text"],input[type="number"],input[type="search"],textarea{
+  width:100%;min-height:52px;padding:12px 14px;border:1px solid var(--line-strong);border-radius:12px;
+  background:#fff;font-size:17px}
+textarea{min-height:auto;resize:vertical;line-height:1.5}
+input:focus,textarea:focus,select:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.field{margin-bottom:12px}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;
+  min-height:52px;padding:0 18px;border:1px solid var(--line-strong);border-radius:12px;
+  background:#fff;font-size:16px;font-weight:600;cursor:pointer;text-decoration:none}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.dark{background:var(--dark);border-color:var(--dark);color:var(--on-dark)}
+.btn.ghost{background:transparent}
+.btn.danger{background:transparent;border-color:#e0b9b2;color:var(--danger)}
+.btn small{font-weight:500;opacity:.85}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap}
+.btn-row .btn{flex:1 1 140px;width:auto}
+.btn + .btn{margin-top:0}
+.stack > * + *{margin-top:10px}
+
+.customers{list-style:none;padding:0}
+.customers li + li{margin-top:8px}
+.cust{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;
+  min-height:62px;padding:10px 14px;border:1px solid var(--line);border-radius:12px;
+  background:#fff;text-align:left;cursor:pointer}
+.cust-name{font-weight:600;overflow-wrap:anywhere}
+.cust-bal{font-variant-numeric:tabular-nums;font-weight:650;color:var(--accent);white-space:nowrap}
+.cust-bal.zero{color:var(--muted-2);font-weight:500;font-size:14px}
+.cust-go{color:var(--muted-2);font-size:18px;line-height:1}
+.empty{color:var(--muted);font-size:14px}
+hr{border:0;border-top:1px solid var(--line);margin:16px 0}
+
+.detail-head{display:flex;flex-direction:column;gap:10px}
+.back{align-self:flex-start;width:auto;min-height:44px;padding:0 14px;border-radius:10px;font-size:14px}
+.detail-head h2{font-size:1.5rem;line-height:1.2;overflow-wrap:anywhere;margin:0}
+.bal-line{display:flex;align-items:baseline;gap:8px;color:var(--muted);font-size:14px}
+.bal-line strong{font-size:1.7rem;color:var(--accent);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.bal-line strong.zero{color:var(--muted-2);font-size:1.1rem}
+
+.tx-list{list-style:none;padding:0}
+.tx{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;
+  padding:11px 0;border-bottom:1px solid var(--line)}
+.tx:last-child{border-bottom:0}
+.tx-main{min-width:0}
+.tx-note{display:block;font-weight:550;overflow-wrap:anywhere}
+.tx-date{display:block;color:var(--muted-2);font-size:12px;margin-top:1px}
+.tx-amt{font-variant-numeric:tabular-nums;font-weight:650;white-space:nowrap}
+.tx-amt.credit{color:var(--accent)}
+.tx-amt.payment{color:#3f7a2e}
+.tx-del{width:44px;height:44px;border:1px solid var(--line);border-radius:10px;background:transparent;
+  color:var(--muted-2);font-size:20px;line-height:1;cursor:pointer}
+.tx-del:active{background:var(--paper)}
+
+#reminder-text{font-family:var(--mono);font-size:13px;background:#fff;margin-bottom:10px}
+
+.site-footer{max-width:660px;margin:26px auto 0;padding:0 16px;font-size:12.5px;color:var(--muted-2)}
+.site-footer a{text-decoration:none;border-bottom:1px solid var(--line-strong)}
+.site-footer a:hover{color:var(--accent)}
+
+#toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translate(-50%,12px);
+  z-index:20;max-width:calc(100vw - 32px);padding:12px 18px;border-radius:12px;
+  background:var(--dark);color:var(--on-dark);font-size:14px;font-weight:550;text-align:center;
+  box-shadow:0 8px 24px rgb(0 0 0 / .22);opacity:0;pointer-events:none;transition:opacity .16s,transform .16s}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+  .btn:active{transform:none}
+}
+@media (min-width:560px){
+  .card{padding:22px}
+  .detail-head{flex-direction:row;align-items:center;justify-content:space-between;flex-wrap:wrap}
+  .detail-head h2{order:-1;flex:1 1 100%}
+}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true"></span>Devin</a>
+    <nav class="langs" aria-label="Language">
+      <button type="button" data-lang="en">EN</button>
+      <button type="button" data-lang="id">ID</button>
+      <button type="button" data-lang="fil">FIL</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="hero" aria-labelledby="page-title">
+    <p class="eyebrow">Free tool · sari-sari &amp; warung</p>
+    <h1 id="page-title" data-i="appTitle">Sari-sari store credit ledger</h1>
+    <p class="lede" data-i="tagline">Track utang in seconds. Works offline.</p>
+    <p class="privacy">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+      <span data-i="privacy">Your data stays on your phone. Nothing is uploaded.</span>
+    </p>
+  </section>
+
+  <div id="home">
+
+    <section class="card total-card" aria-labelledby="total-label">
+      <p class="label" id="total-label" data-i="totalOwed">Total owed</p>
+      <p class="total" id="total">₱0</p>
+      <p class="total-sub" id="count"></p>
+      <label class="curr" for="currency">
+        <span data-i="currency">Currency</span>
+        <select id="currency">
+          <option value="PHP">PHP ₱</option>
+          <option value="IDR">IDR Rp</option>
+          <option value="USD">USD $</option>
+          <option value="MYR">MYR RM</option>
+        </select>
+      </label>
+    </section>
+
+    <form class="card" id="customer-form" autocomplete="off">
+      <h2 data-i="addCustomer">Add a customer</h2>
+      <div class="field">
+        <label class="fld" for="new-name" data-i="nameLabel">Customer name</label>
+        <input id="new-name" type="text" maxlength="40" data-i-ph="namePh" placeholder="e.g. Aling Nena" enterkeyhint="done">
+      </div>
+      <button class="btn dark" type="submit" data-i="add">Add</button>
+    </form>
+
+    <section class="card" aria-labelledby="customers-title">
+      <h2 id="customers-title" data-i="customers">Customers</h2>
+      <ul class="customers" id="customer-list"></ul>
+      <p class="empty" id="empty" hidden data-i="noCustomers">No customers yet. Add your first one above.</p>
+    </section>
+
+    <section class="card" aria-labelledby="reminder-title">
+      <h2 id="reminder-title" data-i="collection">Reminder list</h2>
+      <p class="muted" data-i="reminderHint">One message with every open balance, ready for WhatsApp or SMS.</p>
+      <button class="btn" type="button" id="make-reminder" style="margin-top:12px" data-i="makeReminder">Draft a reminder list</button>
+      <div id="reminder-box" hidden style="margin-top:10px">
+        <label class="sr-only" for="reminder-text" data-i="collection">Reminder list</label>
+        <textarea id="reminder-text" rows="8" readonly></textarea>
+        <div class="btn-row">
+          <button class="btn primary" type="button" id="copy-reminder" data-i="copy">Copy list</button>
+          <button class="btn ghost" type="button" id="close-reminder" data-i="close">Close</button>
+        </div>
+      </div>
+      <hr>
+      <div class="btn-row">
+        <button class="btn ghost" type="button" id="export" data-i="export">Back up (JSON)</button>
+        <button class="btn ghost" type="button" id="import" data-i="import">Restore backup</button>
+      </div>
+      <input id="import-file" type="file" accept="application/json,.json" hidden>
+      <p class="hint" data-i="backupHint">Backups are a JSON file. Keep it somewhere safe, or move it to a new phone.</p>
+    </section>
+
+  </div>
+
+  <div id="detail" hidden>
+    <section class="card detail-head" aria-labelledby="cust-name">
+      <button class="btn ghost back" type="button" id="back">← <span data-i="back">Back</span></button>
+      <h2 id="cust-name"></h2>
+      <p class="bal-line"><span data-i="owes">Balance</span> <strong id="cust-balance"></strong></p>
+    </section>
+
+    <form class="card" id="tx-form" autocomplete="off">
+      <h2 data-i="addEntry">Add an entry</h2>
+      <div class="field">
+        <label class="fld" for="amount" data-i="amount">Amount</label>
+        <input id="amount" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00">
+      </div>
+      <div class="field">
+        <label class="fld" for="note" data-i="note">Note (optional)</label>
+        <input id="note" type="text" maxlength="80" data-i-ph="notePh" placeholder="e.g. rice, 2 cans of sardines">
+      </div>
+      <div class="btn-row">
+        <button class="btn primary" type="button" id="save-credit" data-i="saveCredit">Add utang</button>
+        <button class="btn" type="button" id="save-payment" data-i="savePayment">Record payment</button>
+      </div>
+    </form>
+
+    <section class="card" aria-labelledby="history-title">
+      <h2 id="history-title" data-i="history">History</h2>
+      <ul class="tx-list" id="tx-list"></ul>
+      <p class="empty" id="tx-empty" hidden data-i="noHistory">No entries yet.</p>
+      <button class="btn danger" type="button" id="delete-customer" style="margin-top:16px" data-i="deleteCustomer">Delete this customer</button>
+    </section>
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <a href="https://hhfa008.github.io/" data-i="more">Built by an indie developer — more tools here</a>
+</footer>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<noscript>
+  <div class="wrap"><p class="card" style="margin-top:16px">This ledger needs JavaScript. Everything runs on your device; nothing is sent anywhere.</p></div>
+</noscript>
+
+<script>
+(function () {
+  'use strict';
+
+  var DATA_KEY = 'sari-ledger-v1';
+  var SET_KEY = 'sari-ledger-settings-v1';
+  var CUR = {
+    PHP: { sym: '₱', dec: 2, loc: 'en-PH' },
+    IDR: { sym: 'Rp ', dec: 0, loc: 'id-ID' },
+    USD: { sym: '$', dec: 2, loc: 'en-US' },
+    MYR: { sym: 'RM ', dec: 2, loc: 'ms-MY' }
+  };
+
+  var I18N = {
+    en: {
+      appTitle: 'Sari-sari store credit ledger',
+      tagline: 'Track utang in seconds. Works offline.',
+      privacy: 'Your data stays on your phone. Nothing is uploaded.',
+      totalOwed: 'Total owed',
+      customersWord: 'customers',
+      customersWord1: 'customer',
+      currency: 'Currency',
+      addCustomer: 'Add a customer',
+      nameLabel: 'Customer name',
+      namePh: 'e.g. Aling Nena',
+      add: 'Add',
+      customers: 'Customers',
+      noCustomers: 'No customers yet. Add your first one above.',
+      paidUp: 'paid up',
+      back: 'Back',
+      owes: 'Balance',
+      addEntry: 'Add an entry',
+      amount: 'Amount',
+      note: 'Note (optional)',
+      notePh: 'e.g. rice, 2 cans of sardines',
+      saveCredit: 'Add utang',
+      savePayment: 'Record payment',
+      history: 'History',
+      noHistory: 'No entries yet.',
+      deleteCustomer: 'Delete this customer',
+      confirmDeleteCustomer: 'Delete this customer and all their entries?',
+      deleteEntry: 'Delete entry',
+      confirmDeleteEntry: 'Delete this entry?',
+      collection: 'Reminder list',
+      reminderHint: 'One message with every open balance, ready for WhatsApp or SMS.',
+      makeReminder: 'Draft a reminder list',
+      copy: 'Copy list',
+      close: 'Close',
+      copied: 'Copied. Paste it into WhatsApp or SMS.',
+      copyFail: 'Could not copy automatically. Select the text above.',
+      nothingOwed: 'Nothing owed right now.',
+      export: 'Back up (JSON)',
+      import: 'Restore backup',
+      importConfirm: 'Replace all current data with this backup?',
+      importBad: 'That file is not a valid backup.',
+      imported: 'Backup restored.',
+      exported: 'Backup saved.',
+      amountInvalid: 'Enter an amount greater than zero.',
+      nameInvalid: 'Enter a customer name.',
+      storageFail: 'Could not save. Your browser storage may be full.',
+      reminderTitle: 'Sari-sari ledger',
+      reminderFooter: 'Salamat! Thank you!',
+      backupHint: 'Backups are a JSON file. Keep it somewhere safe, or move it to a new phone.',
+      more: 'Built by an indie developer — more tools here',
+      creditLabel: 'Utang',
+      paymentLabel: 'Payment'
+    },
+    id: {
+      appTitle: 'Buku utang warung (sari-sari)',
+      tagline: 'Catat utang dalam hitungan detik. Bisa offline.',
+      privacy: 'Data hanya tersimpan di HP Anda. Tidak ada yang diunggah.',
+      totalOwed: 'Total utang',
+      customersWord: 'pelanggan',
+      customersWord1: 'pelanggan',
+      currency: 'Mata uang',
+      addCustomer: 'Tambah pelanggan',
+      nameLabel: 'Nama pelanggan',
+      namePh: 'mis. Bu Siti',
+      add: 'Tambah',
+      customers: 'Pelanggan',
+      noCustomers: 'Belum ada pelanggan. Tambahkan yang pertama di atas.',
+      paidUp: 'lunas',
+      back: 'Kembali',
+      owes: 'Sisa',
+      addEntry: 'Tambah catatan',
+      amount: 'Jumlah',
+      note: 'Catatan (opsional)',
+      notePh: 'mis. beras, 2 kaleng sarden',
+      saveCredit: 'Tambah utang',
+      savePayment: 'Catat pembayaran',
+      history: 'Riwayat',
+      noHistory: 'Belum ada catatan.',
+      deleteCustomer: 'Hapus pelanggan ini',
+      confirmDeleteCustomer: 'Hapus pelanggan ini dan semua catatannya?',
+      deleteEntry: 'Hapus catatan',
+      confirmDeleteEntry: 'Hapus catatan ini?',
+      collection: 'Daftar tagihan',
+      reminderHint: 'Satu pesan berisi semua utang, siap untuk WhatsApp atau SMS.',
+      makeReminder: 'Buat daftar tagihan',
+      copy: 'Salin daftar',
+      close: 'Tutup',
+      copied: 'Tersalin. Tempel di WhatsApp atau SMS.',
+      copyFail: 'Tidak bisa menyalin otomatis. Pilih teks di atas.',
+      nothingOwed: 'Tidak ada utang saat ini.',
+      export: 'Cadangkan (JSON)',
+      import: 'Pulihkan cadangan',
+      importConfirm: 'Ganti semua data dengan cadangan ini?',
+      importBad: 'File cadangan tidak valid.',
+      imported: 'Cadangan dipulihkan.',
+      exported: 'Cadangan disimpan.',
+      amountInvalid: 'Masukkan jumlah lebih dari nol.',
+      nameInvalid: 'Masukkan nama pelanggan.',
+      storageFail: 'Gagal menyimpan. Penyimpanan browser mungkin penuh.',
+      reminderTitle: 'Buku utang warung',
+      reminderFooter: 'Terima kasih!',
+      backupHint: 'Cadangan berupa file JSON. Simpan di tempat aman, atau pindahkan ke HP baru.',
+      more: 'Dibuat oleh indie developer — alat lain di sini',
+      creditLabel: 'Utang',
+      paymentLabel: 'Pembayaran'
+    },
+    fil: {
+      appTitle: 'Talaan ng utang ng sari-sari store',
+      tagline: 'I-track ang utang sa ilang segundo. Gumagana offline.',
+      privacy: 'Nasa phone mo lang ang datos. Walang ipinapadala.',
+      totalOwed: 'Kabuuang utang',
+      customersWord: 'customer',
+      customersWord1: 'customer',
+      currency: 'Pera',
+      addCustomer: 'Magdagdag ng customer',
+      nameLabel: 'Pangalan ng customer',
+      namePh: 'hal. Aling Nena',
+      add: 'Idagdag',
+      customers: 'Mga customer',
+      noCustomers: 'Wala pang customer. Idagdag ang una sa itaas.',
+      paidUp: 'bayad na',
+      back: 'Bumalik',
+      owes: 'Balanse',
+      addEntry: 'Magdagdag ng entry',
+      amount: 'Halaga',
+      note: 'Tandaan (opsyonal)',
+      notePh: 'hal. bigas, 2 de-lata ng sardinas',
+      saveCredit: 'Idagdag sa utang',
+      savePayment: 'I-record ang bayad',
+      history: 'Kasaysayan',
+      noHistory: 'Wala pang entry.',
+      deleteCustomer: 'Burahin ang customer',
+      confirmDeleteCustomer: 'Burahin ang customer at lahat ng entry?',
+      deleteEntry: 'Burahin ang entry',
+      confirmDeleteEntry: 'Burahin ang entry na ito?',
+      collection: 'Listahan ng paalala',
+      reminderHint: 'Isang mensahe na may lahat ng utang, para sa WhatsApp o SMS.',
+      makeReminder: 'Gumawa ng listahan',
+      copy: 'Kopyahin ang listahan',
+      close: 'Isara',
+      copied: 'Nakopya. I-paste sa WhatsApp o SMS.',
+      copyFail: 'Hindi makopya nang awtomatiko. Piliin ang teksto sa itaas.',
+      nothingOwed: 'Walang utang sa ngayon.',
+      export: 'I-back up (JSON)',
+      import: 'I-restore ang backup',
+      importConfirm: 'Palitan ang lahat ng datos ng backup na ito?',
+      importBad: 'Hindi valid na backup ang file.',
+      imported: 'Na-restore ang backup.',
+      exported: 'Na-save ang backup.',
+      amountInvalid: 'Maglagay ng halagang mas malaki sa zero.',
+      nameInvalid: 'Maglagay ng pangalan ng customer.',
+      storageFail: 'Hindi na-save. Baka puno na ang storage ng browser.',
+      reminderTitle: 'Talaan ng utang',
+      reminderFooter: 'Salamat!',
+      backupHint: 'Ang backup ay isang JSON file. Itago ito, o ilipat sa bagong phone.',
+      more: 'Ginawa ng isang indie developer — mas maraming tool dito',
+      creditLabel: 'Utang',
+      paymentLabel: 'Bayad'
+    }
+  };
+
+  var ui = { lang: 'en', currency: 'PHP', openId: null };
+  var data = { customers: [] };
+
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  };
+  var uid = function () {
+    if (window.crypto && crypto.randomUUID) { try { return crypto.randomUUID(); } catch (e) {} }
+    return 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+  };
+  var round = function (n) { return Math.round((Number(n) + Number.EPSILON) * 100) / 100; };
+  var t = function (k) {
+    var d = I18N[ui.lang] || I18N.en;
+    return d[k] != null ? d[k] : (I18N.en[k] != null ? I18N.en[k] : k);
+  };
+  var locale = function () {
+    return ui.lang === 'id' ? 'id-ID' : ui.lang === 'fil' ? 'fil-PH' : 'en-PH';
+  };
+  var fmt = function (n) {
+    var c = CUR[ui.currency] || CUR.PHP;
+    var val = new Intl.NumberFormat(c.loc, {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: c.dec
+    }).format(round(n));
+    return c.sym + val;
+  };
+  var dateStr = function (iso) {
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: 'numeric' });
+  };
+
+  function balanceOf(c) {
+    var b = 0;
+    for (var i = 0; i < c.txs.length; i++) {
+      b += c.txs[i].type === 'credit' ? c.txs[i].amount : -c.txs[i].amount;
+    }
+    return round(b);
+  }
+
+  function loadData() {
+    try {
+      var raw = localStorage.getItem(DATA_KEY);
+      if (!raw) return;
+      var parsed = JSON.parse(raw);
+      if (parsed && Array.isArray(parsed.customers)) {
+        data.customers = parsed.customers.map(function (c) {
+          return {
+            id: c && c.id ? String(c.id) : uid(),
+            name: c && c.name ? String(c.name).slice(0, 40) : '',
+            txs: Array.isArray(c && c.txs) ? c.txs.filter(function (x) {
+              return x && (x.type === 'credit' || x.type === 'payment') && isFinite(x.amount) && x.amount > 0;
+            }).map(function (x) {
+              return {
+                id: x.id ? String(x.id) : uid(),
+                type: x.type,
+                amount: round(x.amount),
+                note: x.note ? String(x.note).slice(0, 80) : '',
+                at: x.at || new Date().toISOString()
+              };
+            }) : []
+          };
+        });
+      }
+    } catch (e) { /* start empty */ }
+  }
+
+  function loadSettings() {
+    var found = false;
+    try {
+      var raw = localStorage.getItem(SET_KEY);
+      if (raw) {
+        found = true;
+        var s = JSON.parse(raw) || {};
+        if (s.currency && CUR[s.currency]) ui.currency = s.currency;
+        if (s.lang === 'en' || s.lang === 'id' || s.lang === 'fil') ui.lang = s.lang;
+      }
+    } catch (e) {}
+    if (!found) ui.lang = detectLang();
+  }
+
+  function detectLang() {
+    var l = (navigator.language || 'en').toLowerCase();
+    if (l.indexOf('id') === 0 || l.indexOf('in') === 0) return 'id';
+    if (l.indexOf('fil') === 0 || l.indexOf('tl') === 0) return 'fil';
+    return 'en';
+  }
+
+  function saveData() {
+    try {
+      localStorage.setItem(DATA_KEY, JSON.stringify(data));
+    } catch (e) {
+      toast(t('storageFail'));
+    }
+  }
+  function saveSettings() {
+    try {
+      localStorage.setItem(SET_KEY, JSON.stringify({ lang: ui.lang, currency: ui.currency }));
+    } catch (e) {}
+  }
+
+  var toastTimer = null;
+  function toast(msg) {
+    var el = $('toast');
+    el.textContent = msg;
+    el.classList.add('on');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove('on'); }, 2600);
+  }
+
+  function applyLang() {
+    document.documentElement.lang = ui.lang;
+    var nodes = document.querySelectorAll('[data-i]');
+    for (var i = 0; i < nodes.length; i++) {
+      var k = nodes[i].getAttribute('data-i');
+      if (I18N[ui.lang][k] != null) nodes[i].textContent = I18N[ui.lang][k];
+    }
+    var phs = document.querySelectorAll('[data-i-ph]');
+    for (var j = 0; j < phs.length; j++) {
+      var pk = phs[j].getAttribute('data-i-ph');
+      if (I18N[ui.lang][pk] != null) phs[j].setAttribute('placeholder', I18N[ui.lang][pk]);
+    }
+    var langs = document.querySelectorAll('.langs button');
+    for (var n = 0; n < langs.length; n++) {
+      langs[n].setAttribute('aria-pressed', langs[n].getAttribute('data-lang') === ui.lang ? 'true' : 'false');
+    }
+    $('currency').value = ui.currency;
+    if (!$('reminder-box').hidden) {
+      var fresh = reminderText();
+      if (fresh) $('reminder-text').value = fresh;
+    }
+    renderHome();
+    if (ui.openId) renderDetail();
+  }
+
+  function renderHome() {
+    var total = 0;
+    for (var i = 0; i < data.customers.length; i++) {
+      var b = balanceOf(data.customers[i]);
+      if (b > 0.004) total += b;
+    }
+    $('total').textContent = fmt(total);
+    var n = data.customers.length;
+    $('count').textContent = n + ' ' + t(n === 1 ? 'customersWord1' : 'customersWord');
+
+    var list = $('customer-list');
+    if (!data.customers.length) {
+      list.innerHTML = '';
+      $('empty').hidden = false;
+      return;
+    }
+    $('empty').hidden = true;
+    list.innerHTML = data.customers.map(function (c) {
+      var bal = balanceOf(c);
+      var cls = bal > 0.004 ? '' : ' zero';
+      var val = bal > 0.004 ? fmt(bal) : t('paidUp');
+      return '<li><button type="button" class="cust" data-id="' + esc(c.id) + '">' +
+        '<span class="cust-name">' + esc(c.name) + '</span>' +
+        '<span class="cust-bal' + cls + '">' + esc(val) + '</span>' +
+        '<span class="cust-go" aria-hidden="true">›</span></button></li>';
+    }).join('');
+  }
+
+  function renderDetail() {
+    var c = null;
+    for (var i = 0; i < data.customers.length; i++) {
+      if (data.customers[i].id === ui.openId) { c = data.customers[i]; break; }
+    }
+    if (!c) { showHome(); return; }
+    $('cust-name').textContent = c.name;
+    var bal = balanceOf(c);
+    var balEl = $('cust-balance');
+    balEl.textContent = bal > 0.004 ? fmt(bal) : t('paidUp');
+    balEl.classList.toggle('zero', bal <= 0.004);
+
+    var txs = c.txs.slice().sort(function (a, b) {
+      return String(b.at).localeCompare(String(a.at));
+    });
+    $('tx-empty').hidden = txs.length > 0;
+    $('tx-list').innerHTML = txs.map(function (x) {
+      var isCredit = x.type === 'credit';
+      var label = x.note ? x.note : t(isCredit ? 'creditLabel' : 'paymentLabel');
+      return '<li class="tx">' +
+        '<div class="tx-main"><span class="tx-note">' + esc(label) + '</span>' +
+        '<span class="tx-date">' + esc(dateStr(x.at)) + '</span></div>' +
+        '<span class="tx-amt ' + (isCredit ? 'credit' : 'payment') + '">' +
+        (isCredit ? '+' : '−') + esc(fmt(x.amount)) + '</span>' +
+        '<button type="button" class="tx-del" data-tx="' + esc(x.id) + '" aria-label="' + esc(t('deleteEntry')) + '">×</button></li>';
+    }).join('');
+  }
+
+  function showHome() {
+    ui.openId = null;
+    $('home').hidden = false;
+    $('detail').hidden = true;
+    $('reminder-box').hidden = true;
+    window.scrollTo(0, 0);
+    renderHome();
+  }
+
+  function openCustomer(id) {
+    ui.openId = id;
+    $('home').hidden = true;
+    $('detail').hidden = false;
+    renderDetail();
+    window.scrollTo(0, 0);
+    $('amount').focus({ preventScroll: true });
+  }
+
+  function addCustomer() {
+    var input = $('new-name');
+    var name = input.value.trim();
+    if (!name) { toast(t('nameInvalid')); input.focus(); return; }
+    data.customers.unshift({ id: uid(), name: name.slice(0, 40), txs: [] });
+    input.value = '';
+    saveData();
+    renderHome();
+    input.focus();
+  }
+
+  function addTx(type) {
+    var c = null;
+    for (var i = 0; i < data.customers.length; i++) {
+      if (data.customers[i].id === ui.openId) { c = data.customers[i]; break; }
+    }
+    if (!c) return;
+    var amount = parseFloat($('amount').value);
+    if (!isFinite(amount) || amount <= 0) {
+      toast(t('amountInvalid'));
+      $('amount').focus();
+      return;
+    }
+    var note = $('note').value.trim().slice(0, 80);
+    c.txs.push({ id: uid(), type: type, amount: round(amount), note: note, at: new Date().toISOString() });
+    saveData();
+    $('amount').value = '';
+    $('note').value = '';
+    renderDetail();
+    $('amount').focus({ preventScroll: true });
+  }
+
+  function deleteCustomer() {
+    var c = null;
+    for (var i = 0; i < data.customers.length; i++) {
+      if (data.customers[i].id === ui.openId) { c = data.customers[i]; break; }
+    }
+    if (!c) return;
+    if (!confirm(t('confirmDeleteCustomer'))) return;
+    data.customers = data.customers.filter(function (x) { return x.id !== c.id; });
+    saveData();
+    showHome();
+  }
+
+  function deleteTx(id) {
+    var c = null;
+    for (var i = 0; i < data.customers.length; i++) {
+      if (data.customers[i].id === ui.openId) { c = data.customers[i]; break; }
+    }
+    if (!c) return;
+    if (!confirm(t('confirmDeleteEntry'))) return;
+    c.txs = c.txs.filter(function (x) { return x.id !== id; });
+    saveData();
+    renderDetail();
+  }
+
+  function reminderText() {
+    var owing = data.customers.filter(function (c) { return balanceOf(c) > 0.004; });
+    if (!owing.length) return '';
+    var total = owing.reduce(function (s, c) { return s + balanceOf(c); }, 0);
+    var lines = [t('reminderTitle'), dateStr(new Date().toISOString()), '', t('totalOwed') + ': ' + fmt(total), ''];
+    owing.forEach(function (c) { lines.push('• ' + c.name + ' — ' + fmt(balanceOf(c))); });
+    lines.push('', t('reminderFooter'));
+    return lines.join('\n');
+  }
+
+  function makeReminder() {
+    var text = reminderText();
+    if (!text) { toast(t('nothingOwed')); return; }
+    $('reminder-text').value = text;
+    $('reminder-box').hidden = false;
+    $('reminder-text').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+
+  function copyReminder() {
+    var text = $('reminder-text').value;
+    var done = function () { toast(t('copied')); };
+    var fail = function () { toast(t('copyFail')); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(function () {
+        legacyCopy(text) ? done() : fail();
+      });
+    } else {
+      legacyCopy(text) ? done() : fail();
+    }
+  }
+
+  function legacyCopy(text) {
+    var ta = $('reminder-text');
+    ta.focus();
+    ta.select();
+    try { return document.execCommand('copy'); } catch (e) { return false; }
+  }
+
+  function exportData() {
+    var payload = {
+      app: 'sari-sari-ledger',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      customers: data.customers
+    };
+    var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'sari-sari-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    toast(t('exported'));
+  }
+
+  function importData(file) {
+    var reader = new FileReader();
+    reader.onload = function () {
+      var parsed;
+      try { parsed = JSON.parse(String(reader.result)); } catch (e) { toast(t('importBad')); return; }
+      if (!parsed || !Array.isArray(parsed.customers)) { toast(t('importBad')); return; }
+      var clean = parsed.customers.map(function (c) {
+        return {
+          id: c && c.id ? String(c.id) : uid(),
+          name: c && c.name ? String(c.name).slice(0, 40) : '',
+          txs: Array.isArray(c && c.txs) ? c.txs.filter(function (x) {
+            return x && (x.type === 'credit' || x.type === 'payment') && isFinite(x.amount) && x.amount > 0;
+          }).map(function (x) {
+            return {
+              id: x.id ? String(x.id) : uid(),
+              type: x.type,
+              amount: round(x.amount),
+              note: x.note ? String(x.note).slice(0, 80) : '',
+              at: x.at || new Date().toISOString()
+            };
+          }) : []
+        };
+      });
+      if (!confirm(t('importConfirm'))) return;
+      data.customers = clean;
+      saveData();
+      showHome();
+      toast(t('imported'));
+    };
+    reader.onerror = function () { toast(t('importBad')); };
+    reader.readAsText(file);
+  }
+
+  function bind() {
+    var langBtns = document.querySelectorAll('.langs button');
+    for (var i = 0; i < langBtns.length; i++) {
+      langBtns[i].addEventListener('click', function () {
+        ui.lang = this.getAttribute('data-lang');
+        saveSettings();
+        applyLang();
+      });
+    }
+
+    $('currency').addEventListener('change', function () {
+      ui.currency = this.value;
+      saveSettings();
+      renderHome();
+      if (ui.openId) renderDetail();
+    });
+
+    $('customer-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      addCustomer();
+    });
+
+    $('customer-list').addEventListener('click', function (e) {
+      var btn = e.target.closest('.cust');
+      if (btn) openCustomer(btn.getAttribute('data-id'));
+    });
+
+    $('tx-form').addEventListener('submit', function (e) { e.preventDefault(); });
+    $('back').addEventListener('click', showHome);
+    $('save-credit').addEventListener('click', function () { addTx('credit'); });
+    $('save-payment').addEventListener('click', function () { addTx('payment'); });
+    $('amount').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); addTx('credit'); }
+    });
+    $('tx-list').addEventListener('click', function (e) {
+      var btn = e.target.closest('.tx-del');
+      if (btn) deleteTx(btn.getAttribute('data-tx'));
+    });
+    $('delete-customer').addEventListener('click', deleteCustomer);
+
+    $('make-reminder').addEventListener('click', makeReminder);
+    $('copy-reminder').addEventListener('click', copyReminder);
+    $('close-reminder').addEventListener('click', function () { $('reminder-box').hidden = true; });
+    $('export').addEventListener('click', exportData);
+    $('import').addEventListener('click', function () { $('import-file').click(); });
+    $('import-file').addEventListener('change', function () {
+      var f = this.files && this.files[0];
+      if (f) importData(f);
+      this.value = '';
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape') return;
+      if (!$('reminder-box').hidden) { $('reminder-box').hidden = true; return; }
+      if (!$('detail').hidden) showHome();
+    });
+  }
+
+  function init() {
+    loadData();
+    loadSettings();
+    bind();
+    applyLang();
+    renderHome();
+    if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
+      navigator.serviceWorker.register('./sw.js').catch(function () {});
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>
