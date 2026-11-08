@@ -1,0 +1,1694 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>เครื่องคำนวณ latency การแชร์หน้าจอ — งบ encode, bitrate, การลดคุณภาพ</title>
+  <meta name="description" content="ประเมินงบ encode ต่อเฟรม ความต้องการ bitrate, latency แบบ end-to-end และการแลกเปลี่ยนระหว่างความละเอียดกับ frame rate สำหรับการแชร์หน้าจอ ตัวเลขทุกตัวเป็นการประเมิน และแสดงสูตรไว้ในหน้า">
+  <meta name="author" content="Devin">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta name="theme-color" content="#f2efe7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#101316" media="(prefers-color-scheme: dark)">
+  <link rel="canonical" href="https://hhfa008.github.io/tools/screen-share-calc/th/">
+  <link rel="alternate" hreflang="en" href="https://hhfa008.github.io/tools/screen-share-calc/">
+  <link rel="alternate" hreflang="id" href="https://hhfa008.github.io/tools/screen-share-calc/id/">
+  <link rel="alternate" hreflang="vi" href="https://hhfa008.github.io/tools/screen-share-calc/vi/">
+  <link rel="alternate" hreflang="th" href="https://hhfa008.github.io/tools/screen-share-calc/th/">
+  <link rel="alternate" hreflang="x-default" href="https://hhfa008.github.io/tools/screen-share-calc/">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23b93d12'/%3E%3Cpath d='M8 20h16v3H8zM8 13h10v3H8zM8 9h16v2H8z' fill='%23fbf9f4'/%3E%3C/svg%3E">
+
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Devin">
+  <meta property="og:locale" content="th_TH">
+  <meta property="og:title" content="เครื่องคำนวณ latency การแชร์หน้าจอ — งบ encode, bitrate, การลดคุณภาพ">
+  <meta property="og:description" content="ประเมินงบ encode ต่อเฟรม ความต้องการ bitrate, latency end-to-end และสิ่งที่ลดคุณภาพก่อนเมื่อ bandwidth ตึง ตัวเลขทั้งหมดเป็นการประเมิน พร้อมสูตร">
+  <meta property="og:url" content="https://hhfa008.github.io/tools/screen-share-calc/th/">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="เครื่องคำนวณ latency การแชร์หน้าจอ">
+  <meta name="twitter:description" content="งบ encode, bitrate, การแบ่ง latency และการแลกเปลี่ยนความละเอียดกับ frame rate เป็นเพียงการประเมิน พร้อมสูตร">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "เครื่องคำนวณ Latency การแชร์หน้าจอ",
+    "url": "https://hhfa008.github.io/tools/screen-share-calc/th/",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Any",
+    "browserRequirements": "Requires JavaScript",
+    "description": "เครื่องมือฟรีที่ประเมินงบ encode ต่อเฟรม, bitrate, latency แบบ end-to-end และการแลกเปลี่ยนระหว่างความละเอียดกับ frame rate สำหรับการแชร์หน้าจอ",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    }
+  }
+  </script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "ทำไมการแชร์หน้าจอของฉันกระตุกทั้งที่ packet loss 0%?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Packet loss เป็นเพียงแหล่งหน่วงแหล่งหนึ่ง โมเดลนี้แยกเวลา encode, bitrate และ jitter ออกจากกัน: หากเวลา encode เกินงบต่อเฟรมที่ 1000 ÷ fps ให้คาดว่าจะมีเฟรมหลุดหรืออัตราเฟรมจริงต่ำลง; เมื่อ bandwidth เป็นข้อจำกัด สตรีมจะลดคุณภาพแทน Jitter buffer ถูกตรึงไว้ที่สองเฟรม และการประเมิน latency ไม่รวมการส่งซ้ำ การเข้าคิว และความแออัด ดังนั้น Wi-Fi, relay และ uplink ที่ทำงานหนักสามารถเพิ่มความหน่วงจริงได้"
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "การแชร์หน้าจอควรตั้งเป้างบ latency เท่าไร?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "เส้น 150 ms เป็นค่าอ้างอิงการโต้ตอบที่ใช้กันทั่วไป ไม่ใช่ข้อบังคับ cloud gaming มักตั้งเป้าต่ำกว่า ขณะที่การซัพพอร์ตระยะไกลและงานนำเสนอรับค่าที่สูงกว่าได้ ให้ถือเป็นข้อมูลตั้งต้นแล้วตรวจสอบกับไปป์ไลน์ของคุณ"
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "ความละเอียดหรือ frame rate สำคัญกว่ากันสำหรับการแชร์หน้าจอ?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "ขึ้นกับเนื้อหา การคงความละเอียดและลด frame rate เหมาะกับเอกสาร โค้ด แดชบอร์ด และสไลด์; การคง frame rate และลดความละเอียดเหมาะกับวิดีโอ แอนิเมชัน การเคลื่อนไหวเคอร์เซอร์ และ cloud gaming สำหรับตัวอักษรใช้แบบแรก สำหรับการเคลื่อนไหวใช้แบบหลัง"
+        }
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    :root {
+      --paper: #f2efe7;
+      --paper-2: #fbf9f4;
+      --panel: #ffffff;
+      --ink: #14171a;
+      --muted: #5b615c;
+      --muted-2: #7b807a;
+      --line: #d5d0c4;
+      --line-strong: #bcb5a7;
+      --accent: #b93d12;
+      --accent-soft: #f2a07a;
+      --accent-wash: #f7e5da;
+      --ok: #2f6b3c;
+      --ok-wash: #e8f2e7;
+      --warn: #8a5a00;
+      --warn-wash: #fbf1db;
+      --bad: #a32216;
+      --bad-wash: #fbe7e3;
+      --c-capture: #8c7a5b;
+      --c-encode: #b93d12;
+      --c-network: #2f6f8f;
+      --c-jitter: #7d5f91;
+      --c-decode: #4f7d4a;
+      --c-render: #6b6f75;
+      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+      --radius: 16px;
+      --max: 1120px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --paper: #101316;
+        --paper-2: #171b1f;
+        --panel: #1a1f23;
+        --ink: #f2efe7;
+        --muted: #b7b3a8;
+        --muted-2: #948f85;
+        --line: #333a40;
+        --line-strong: #4a535b;
+        --accent: #f08a5d;
+        --accent-soft: #f2a07a;
+        --accent-wash: #2b211c;
+        --ok: #8fd19e;
+        --ok-wash: #1b2b1e;
+        --warn: #f0c36a;
+        --warn-wash: #2d2618;
+        --bad: #ff8a7a;
+        --bad-wash: #321d1a;
+        --c-capture: #b0a184;
+        --c-encode: #f08a5d;
+        --c-network: #6fb6d6;
+        --c-jitter: #bfa1d4;
+        --c-decode: #8fbf86;
+        --c-render: #9aa1a8;
+      }
+      .btn { color: #14171a; }
+      :focus-visible { outline-color: rgba(240, 138, 93, 0.65); }
+      .btn:focus-visible { outline-color: #f2efe7; }
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    html {
+      -webkit-text-size-adjust: 100%;
+      color-scheme: light dark;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--sans);
+      font-size: 16px;
+      line-height: 1.6;
+      overflow-x: clip;
+      text-rendering: optimizeLegibility;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    [hidden] { display: none !important; }
+
+    a { color: inherit; }
+    p { margin: 0 0 1em; }
+    p:last-child { margin-bottom: 0; }
+    code { font-family: var(--mono); }
+
+    .wrap {
+      width: 100%;
+      max-width: var(--max);
+      margin: 0 auto;
+      padding-left: 18px;
+      padding-right: 18px;
+    }
+
+    @media (min-width: 720px) {
+      .wrap { padding-left: 32px; padding-right: 32px; }
+    }
+
+    .skip-link {
+      position: absolute;
+      left: 12px;
+      top: -60px;
+      z-index: 100;
+      padding: 12px 16px;
+      background: var(--ink);
+      color: var(--paper);
+      border-radius: 8px;
+      text-decoration: none;
+    }
+    .skip-link:focus { top: 12px; }
+
+    :focus-visible {
+      outline: 3px solid rgba(185, 61, 18, 0.5);
+      outline-offset: 3px;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* Header */
+
+    .site-header {
+      border-bottom: 1px solid var(--line);
+      background: var(--paper);
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      min-height: 64px;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      text-decoration: none;
+    }
+
+    .brand-mark {
+      width: 26px;
+      height: 26px;
+      border-radius: 7px;
+      background: var(--accent);
+      display: inline-block;
+      position: relative;
+    }
+    .brand-mark::before,
+    .brand-mark::after {
+      content: "";
+      position: absolute;
+      left: 6px;
+      right: 6px;
+      height: 2px;
+      background: var(--paper-2);
+      border-radius: 1px;
+    }
+    .brand-mark::before { top: 9px; }
+    .brand-mark::after { top: 15px; right: 10px; }
+
+    .site-nav {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      font-size: 14px;
+    }
+    .site-nav a {
+      text-decoration: none;
+      color: var(--muted);
+    }
+    .site-nav a:hover { color: var(--accent); }
+    .site-nav .nav-cta {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .header-tools {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+
+    .lang-switch {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+    }
+    .lang-switch a {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 0 8px;
+      border-radius: 8px;
+      text-decoration: none;
+      color: var(--muted);
+    }
+    .lang-switch a:hover { color: var(--accent); }
+    .lang-switch a[aria-current="page"] {
+      color: var(--accent);
+      background: var(--accent-wash);
+    }
+
+    @media (max-width: 520px) {
+      .header-inner {
+        flex-wrap: wrap;
+        padding-top: 10px;
+        padding-bottom: 10px;
+      }
+      .header-tools {
+        gap: 10px;
+      }
+      .site-nav {
+        gap: 14px;
+        font-size: 13px;
+      }
+    }
+
+    /* Hero */
+
+    .hero {
+      padding: 48px 0 30px;
+    }
+    @media (min-width: 720px) {
+      .hero { padding: 68px 0 38px; }
+    }
+
+    .eyebrow {
+      margin: 0 0 12px;
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    h1 {
+      margin: 0 0 16px;
+      max-width: 18ch;
+      font-size: clamp(2rem, 6vw, 3.4rem);
+      line-height: 1.08;
+      letter-spacing: -0.035em;
+      font-weight: 700;
+    }
+
+    .lede {
+      max-width: 70ch;
+      margin: 0 0 18px;
+      font-size: clamp(1rem, 2vw, 1.15rem);
+      color: var(--muted);
+    }
+
+    .notice {
+      max-width: 78ch;
+      margin: 0;
+      padding: 12px 16px;
+      border-left: 4px solid var(--accent);
+      background: var(--accent-wash);
+      border-radius: 0 10px 10px 0;
+      font-size: 14px;
+    }
+
+    /* Cards and sections */
+
+    section { margin: 0 0 18px; }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 22px;
+    }
+
+    @media (min-width: 720px) {
+      .card { padding: 26px 28px; }
+    }
+
+    .card-kicker {
+      margin: 0 0 8px;
+      font-family: var(--mono);
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: 0.11em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    .card h2 {
+      margin: 0 0 10px;
+      font-size: clamp(1.2rem, 2.4vw, 1.45rem);
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+    }
+
+    .card-lede {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 14.5px;
+    }
+
+    /* Inputs */
+
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .field label {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .field input,
+    .field select {
+      width: 100%;
+      min-height: 44px;
+      padding: 9px 12px;
+      font: inherit;
+      font-size: 15px;
+      color: var(--ink);
+      background: var(--paper-2);
+      border: 1px solid var(--line-strong);
+      border-radius: 10px;
+      appearance: none;
+    }
+
+    .field select {
+      padding-right: 34px;
+      background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+      background-position: calc(100% - 18px) 50%, calc(100% - 13px) 50%;
+      background-size: 5px 5px, 5px 5px;
+      background-repeat: no-repeat;
+    }
+
+    .field input:focus,
+    .field select:focus {
+      border-color: var(--accent);
+      outline: 3px solid rgba(185, 61, 18, 0.3);
+      outline-offset: 1px;
+    }
+
+    .input-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .input-row input { flex: 1 1 auto; min-width: 0; }
+    .unit {
+      flex: 0 0 auto;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .custom-res {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      grid-column: 1 / -1;
+    }
+    @media (max-width: 420px) {
+      .custom-res { grid-template-columns: 1fr; }
+    }
+
+    .hint {
+      margin: 14px 0 0;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: var(--warn-wash);
+      color: var(--warn);
+      font-size: 13px;
+    }
+
+    /* Results */
+
+    .results {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 18px;
+    }
+
+    @media (min-width: 860px) {
+      .results { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .card--wide { grid-column: 1 / -1; }
+    }
+
+    .big {
+      margin: 4px 0 2px;
+      font-family: var(--mono);
+      font-size: clamp(2rem, 7vw, 2.9rem);
+      font-weight: 600;
+      line-height: 1.05;
+      letter-spacing: -0.04em;
+      color: var(--accent);
+    }
+    .big small {
+      margin-left: 6px;
+      font-family: var(--sans);
+      font-size: 0.42em;
+      font-weight: 600;
+      letter-spacing: 0;
+      color: var(--muted);
+    }
+
+    .sub {
+      margin: 0 0 14px;
+      font-size: 13.5px;
+      color: var(--muted);
+    }
+
+    .stat-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 9px 0;
+      border-top: 1px solid var(--line);
+      font-size: 13.5px;
+    }
+    .stat-row span { color: var(--muted); }
+    .stat-row strong {
+      font-family: var(--mono);
+      font-weight: 600;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .verdict {
+      margin: 14px 0 0;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-left-width: 4px;
+      border-radius: 8px;
+      background: var(--paper-2);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+    .verdict.ok { border-left-color: var(--ok); background: var(--ok-wash); }
+    .verdict.warn { border-left-color: var(--warn); background: var(--warn-wash); }
+    .verdict.bad { border-left-color: var(--bad); background: var(--bad-wash); }
+
+    /* Latency bar */
+
+    .latency-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 6px 14px;
+    }
+    .latency-head .sub { margin: 0 0 10px; }
+
+    .bar {
+      display: flex;
+      height: 22px;
+      margin: 8px 0 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      overflow: hidden;
+      background: var(--paper-2);
+    }
+    .bar-seg {
+      display: block;
+      height: 100%;
+      min-width: 1px;
+      box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.35);
+    }
+    .bar-seg--capture { background: var(--c-capture); }
+    .bar-seg--encode { background: var(--c-encode); }
+    .bar-seg--network { background: var(--c-network); }
+    .bar-seg--jitter { background: var(--c-jitter); }
+    .bar-seg--decode { background: var(--c-decode); }
+    .bar-seg--render { background: var(--c-render); }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 16px;
+      margin: 0 0 14px;
+      font-family: var(--mono);
+      font-size: 11.5px;
+      color: var(--muted);
+    }
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .swatch {
+      width: 10px;
+      height: 10px;
+      border-radius: 3px;
+      display: inline-block;
+      flex: 0 0 auto;
+    }
+    .swatch--capture { background: var(--c-capture); }
+    .swatch--encode { background: var(--c-encode); }
+    .swatch--network { background: var(--c-network); }
+    .swatch--jitter { background: var(--c-jitter); }
+    .swatch--decode { background: var(--c-decode); }
+    .swatch--render { background: var(--c-render); }
+
+    /* Tables */
+
+    .table-wrap {
+      margin-top: 14px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    table {
+      width: 100%;
+      min-width: 560px;
+      border-collapse: collapse;
+      font-size: 13.5px;
+    }
+
+    table.compare { min-width: 700px; }
+
+    caption {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      font-family: var(--mono);
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    th, td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    thead th {
+      background: var(--paper-2);
+      font-family: var(--mono);
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    tbody th {
+      font-family: var(--sans);
+      font-size: 13.5px;
+      font-weight: 600;
+      letter-spacing: 0;
+      text-transform: none;
+      color: var(--ink);
+      background: transparent;
+    }
+
+    tbody tr:last-child th,
+    tbody tr:last-child td { border-bottom: 0; }
+
+    td.num {
+      font-family: var(--mono);
+      white-space: nowrap;
+    }
+
+    tr.is-over td,
+    tr.is-over th {
+      background: var(--bad-wash);
+    }
+
+    /* Recommendation */
+
+    .recommend {
+      margin-top: 16px;
+      padding: 16px 18px;
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--accent);
+      border-radius: 8px;
+      background: var(--paper-2);
+      font-size: 14px;
+    }
+    .recommend h3 {
+      margin: 0 0 6px;
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    /* Formulas */
+
+    details {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 0 22px;
+    }
+
+    summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 18px 0;
+      cursor: pointer;
+      font-weight: 650;
+      list-style: none;
+    }
+    summary::-webkit-details-marker { display: none; }
+    summary::after {
+      content: "+";
+      flex: 0 0 auto;
+      font-family: var(--mono);
+      font-size: 20px;
+      line-height: 1;
+      color: var(--accent);
+    }
+    details[open] summary::after { content: "\2212"; }
+
+    .formula-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 12px;
+      padding-bottom: 18px;
+    }
+    @media (min-width: 760px) {
+      .formula-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    .formula {
+      min-width: 0;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--paper-2);
+    }
+    .formula h3 {
+      margin: 0 0 7px;
+      font-family: var(--mono);
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .formula code {
+      display: inline-block;
+      max-width: 100%;
+      padding: 2px 6px;
+      border-radius: 5px;
+      background: var(--accent-wash);
+      font-size: 12.5px;
+      line-height: 1.5;
+      overflow-wrap: anywhere;
+    }
+    .formula p {
+      margin: 7px 0 0;
+      font-size: 12.5px;
+      color: var(--muted);
+    }
+
+    .assumptions {
+      margin: 0;
+      padding: 0 0 20px 20px;
+      font-size: 13.5px;
+      color: var(--muted);
+    }
+    .assumptions li { margin: 0 0 8px; }
+
+    .fine {
+      font-size: 12px;
+      color: var(--muted-2);
+    }
+
+    /* CTA */
+
+    .cta {
+      margin-top: 22px;
+      padding: 28px 24px;
+      border: 1px solid var(--accent);
+      border-radius: var(--radius);
+      background: var(--accent-wash);
+    }
+    @media (min-width: 720px) {
+      .cta { padding: 32px 36px; }
+    }
+    .cta h2 {
+      max-width: 30ch;
+      margin: 0 0 14px;
+      font-size: clamp(1.4rem, 3.2vw, 2rem);
+      line-height: 1.18;
+      letter-spacing: -0.025em;
+    }
+    .cta p { max-width: 70ch; color: var(--muted); font-size: 14.5px; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 48px;
+      margin: 4px 0 12px;
+      padding: 12px 22px;
+      border-radius: 999px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 650;
+      text-decoration: none;
+    }
+    .btn:hover { filter: brightness(1.06); }
+    .btn:focus-visible { outline-color: var(--ink); }
+
+    /* FAQ */
+
+    .faq {
+      margin-top: 22px;
+    }
+    .faq h2 {
+      margin: 0 0 12px;
+      font-size: clamp(1.35rem, 3vw, 1.75rem);
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+    }
+    .faq details + details { margin-top: 10px; }
+    .faq details p {
+      margin: 0;
+      padding: 0 0 18px;
+      max-width: 80ch;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    /* Footer */
+
+    .site-footer {
+      margin-top: 28px;
+      padding: 22px 0 34px;
+      border-top: 1px solid var(--line);
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .footer-inner {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px 20px;
+    }
+    .site-footer a { color: var(--accent); text-decoration: none; }
+    .site-footer a:hover { text-decoration: underline; }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .btn:hover { filter: none; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#calculator">ข้ามไปที่เครื่องคำนวณ</a>
+
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="/" aria-label="Devin กลับไปหน้าแรก">
+        <span class="brand-mark" aria-hidden="true"></span>
+        Devin
+      </a>
+      <div class="header-tools">
+        <nav class="lang-switch" aria-label="ภาษา">
+          <a href="/tools/screen-share-calc/" hreflang="en" lang="en">EN</a>
+          <a href="/tools/screen-share-calc/id/" hreflang="id" lang="id">ID</a>
+          <a href="/tools/screen-share-calc/vi/" hreflang="vi" lang="vi">VI</a>
+          <a href="/tools/screen-share-calc/th/" hreflang="th" lang="th" aria-current="page">TH</a>
+        </nav>
+        <nav class="site-nav" aria-label="เว็บไซต์">
+          <a href="/">หน้าแรก</a>
+          <a class="nav-cta" href="#checklist">Checklist &amp; สคริปต์</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="wrap">
+      <section class="hero" aria-labelledby="page-title">
+        <p class="eyebrow">เครื่องมือฟรี · การแชร์หน้าจอและรีโมตเดสก์ท็อป</p>
+        <h1 id="page-title">เครื่องคำนวณ latency &amp; bandwidth สำหรับการแชร์หน้าจอ</h1>
+        <p class="lede">
+          วางแผนไปป์ไลน์การแชร์หน้าจอก่อนเปิดใช้งาน ตั้งค่าความละเอียด, frame rate, codec,
+          bandwidth ที่มี และ round-trip time; หน้าจะคืนงบ encode ต่อเฟรม,
+          bitrate โดยประมาณ, การแบ่ง latency และสิ่งที่ควรลดเมื่อลิงก์ตึง
+        </p>
+        <p class="notice">
+          <strong>ตัวเลขทุกตัวในหน้านี้เป็นการประเมิน</strong> ตัวเลขมาจาก
+          สูตรที่แสดงด้านล่าง ไม่ได้มาจากการวัด encoder, เครือข่าย หรืออุปกรณ์ของคุณ
+          ให้ถือเป็นข้อมูลตั้งต้นในการวางแผน แล้วตรวจสอบกับไปป์ไลน์ของคุณเอง
+        </p>
+      </section>
+
+      <section id="calculator" aria-labelledby="calc-title">
+        <div class="card">
+          <p class="card-kicker">ข้อมูลนำเข้า</p>
+          <h2 id="calc-title">อธิบายสตรีม</h2>
+          <form id="calc-form" class="controls">
+            <div class="field">
+              <label for="resolution">ความละเอียดที่ตั้งไว้</label>
+              <select id="resolution" name="resolution">
+                <option value="1080p" selected>1080p — 1920 × 1080</option>
+                <option value="1440p">1440p — 2560 × 1440</option>
+                <option value="4k">4K — 3840 × 2160</option>
+                <option value="custom">กำหนดเอง</option>
+              </select>
+            </div>
+
+            <div class="custom-res" id="custom-res" hidden>
+              <div class="field">
+                <label for="width">ความกว้าง (px)</label>
+                <input id="width" name="width" type="number" inputmode="numeric" min="320" max="7680" step="2" value="1920">
+              </div>
+              <div class="field">
+                <label for="height">ความสูง (px)</label>
+                <input id="height" name="height" type="number" inputmode="numeric" min="240" max="4320" step="2" value="1080">
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="fps">Frame rate</label>
+              <select id="fps" name="fps">
+                <option value="15">15 fps</option>
+                <option value="24">24 fps</option>
+                <option value="30" selected>30 fps</option>
+                <option value="60">60 fps</option>
+                <option value="90">90 fps</option>
+                <option value="120">120 fps</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="codec">Codec</label>
+              <select id="codec" name="codec">
+                <option value="h264" selected>H.264</option>
+                <option value="hevc">HEVC (H.265)</option>
+                <option value="av1">AV1</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="bandwidth">Bandwidth ที่มี</label>
+              <div class="input-row">
+                <input id="bandwidth" name="bandwidth" type="number" inputmode="decimal" min="0.1" max="100000" step="0.1" value="20">
+                <span class="unit">Mbps</span>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="rtt">Round-trip time (RTT)</label>
+              <div class="input-row">
+                <input id="rtt" name="rtt" type="number" inputmode="numeric" min="0" max="5000" step="1" value="50">
+                <span class="unit">ms</span>
+              </div>
+            </div>
+          </form>
+          <p class="hint" id="av1-note" hidden>
+            การ encode ด้วยฮาร์ดแวร์ AV1 ไม่มีใน GPU หรือ SoC มือถือทุกรุ่น การประเมินด้านล่าง
+            ถือว่าใช้ฮาร์ดแวร์ encode; การ fallback ไปซอฟต์แวร์อาจช้ากว่าหลายเท่าและอาจ
+            เกินงบเฟรม
+          </p>
+        </div>
+      </section>
+
+      <h2 class="sr-only">ผลลัพธ์</h2>
+      <div class="results">
+        <article class="card" aria-labelledby="encode-title">
+          <p class="card-kicker">1 · งบ encode</p>
+          <h2 id="encode-title">งบต่อเฟรม</h2>
+          <p class="big"><span id="frame-budget">33.3</span><small>ms ต่อเฟรม</small></p>
+          <p class="sub">1000 ÷ <span id="fps-out">30</span> fps</p>
+          <div class="stat-row">
+            <span>เวลา encode ด้วยฮาร์ดแวร์ทั่วไป</span>
+            <strong id="encode-time">~5 ms</strong>
+          </div>
+          <div class="stat-row">
+            <span>ส่วนที่เหลือภายในเฟรม</span>
+            <strong id="encode-headroom">28.3 ms</strong>
+          </div>
+          <p class="verdict ok" id="encode-verdict"></p>
+        </article>
+
+        <article class="card" aria-labelledby="bitrate-title">
+          <p class="card-kicker">2 · ความต้องการ bitrate</p>
+          <h2 id="bitrate-title">bitrate โดยประมาณ</h2>
+          <p class="big"><span id="bitrate-mid">6.8</span><small>Mbps</small></p>
+          <p class="sub">
+            ช่วง <span id="bitrate-low">5</span>–<span id="bitrate-high">8.7</span> Mbps
+            โดยสมมติค่ากลาง <span id="bpp-mid">0.11</span> bits per pixel per frame (bpp)
+          </p>
+          <div class="stat-row">
+            <span>Bandwidth ที่มี</span>
+            <strong id="bw-out">20 Mbps</strong>
+          </div>
+          <div class="stat-row">
+            <span>ส่วนที่เหลือเหนือค่าประเมินบน</span>
+            <strong id="bw-headroom">11.3 Mbps</strong>
+          </div>
+          <p class="verdict ok" id="bw-verdict"></p>
+        </article>
+
+        <article class="card card--wide" aria-labelledby="latency-title">
+          <p class="card-kicker">3 · งบ latency</p>
+          <h2 id="latency-title">ค่าประเมิน end-to-end</h2>
+          <div class="latency-head">
+            <p class="big"><span id="latency-total">150</span><small>ms</small></p>
+            <p class="sub" id="latency-reference">ราวกับค่าอ้างอิงการโต้ตอบ 150 ms</p>
+          </div>
+          <div class="bar" id="latency-bar" aria-hidden="true"></div>
+          <div class="legend" id="latency-legend"></div>
+          <div class="table-wrap">
+            <table>
+              <caption>การแบ่ง latency — เป็นการประเมิน ไม่ใช่ benchmark</caption>
+              <thead>
+                <tr>
+                  <th scope="col">ขั้น</th>
+                  <th scope="col">ค่าประเมิน</th>
+                  <th scope="col">สัดส่วน</th>
+                  <th scope="col">เกณฑ์</th>
+                  <th scope="col">สถานะ</th>
+                </tr>
+              </thead>
+              <tbody id="latency-body"></tbody>
+            </table>
+          </div>
+          <p class="verdict" id="latency-verdict"></p>
+        </article>
+
+        <article class="card card--wide" aria-labelledby="degradation-title">
+          <p class="card-kicker">4 · การแลกเปลี่ยนเมื่อลดคุณภาพ</p>
+          <h2 id="degradation-title">รักษาความละเอียด หรือรักษา frame rate?</h2>
+          <p class="card-lede">
+            ที่ <strong id="deg-bw">20 Mbps</strong> ด้วยสมมติฐาน bpp กลางสำหรับ
+            <strong id="deg-codec">H.264</strong> กลยุทธ์ลดคุณภาพสองแบบให้ผลดังนี้:
+          </p>
+          <div class="table-wrap">
+            <table class="compare">
+              <caption>ผลลัพธ์โดยประมาณที่ bandwidth ที่กำหนด</caption>
+              <thead>
+                <tr>
+                  <th scope="col">ตัวชี้วัด</th>
+                  <th scope="col">A · รักษาความละเอียด ลด fps</th>
+                  <th scope="col">B · รักษา fps ลดความละเอียด</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">Frame rate</th>
+                  <td id="deg-a-fps">30 fps</td>
+                  <td id="deg-b-fps">30 fps</td>
+                </tr>
+                <tr>
+                  <th scope="row">ความละเอียด</th>
+                  <td id="deg-a-res">1920 × 1080</td>
+                  <td id="deg-b-res">1920 × 1080</td>
+                </tr>
+                <tr>
+                  <th scope="row">สเกลเทียบกับอินพุต</th>
+                  <td id="deg-a-scale">100%</td>
+                  <td id="deg-b-scale">100%</td>
+                </tr>
+                <tr>
+                  <th scope="row">bitrate โดยประมาณ</th>
+                  <td class="num" id="deg-a-bitrate">~6.8 Mbps</td>
+                  <td class="num" id="deg-b-bitrate">~6.8 Mbps</td>
+                </tr>
+                <tr>
+                  <th scope="row">เวลา encode โดยประมาณ</th>
+                  <td class="num" id="deg-a-encode">~5 ms</td>
+                  <td class="num" id="deg-b-encode">~5 ms</td>
+                </tr>
+                <tr>
+                  <th scope="row">encode เทียบกับงบเฟรม</th>
+                  <td id="deg-a-budget">—</td>
+                  <td id="deg-b-budget">—</td>
+                </tr>
+                <tr>
+                  <th scope="row">ข้อจำกัดที่ผูกอยู่</th>
+                  <td id="deg-a-limit">—</td>
+                  <td id="deg-b-limit">—</td>
+                </tr>
+                <tr>
+                  <th scope="row">latency end-to-end โดยประมาณ</th>
+                  <td class="num" id="deg-a-latency">~150 ms</td>
+                  <td class="num" id="deg-b-latency">~150 ms</td>
+                </tr>
+                <tr>
+                  <th scope="row">การเคลื่อนไหว</th>
+                  <td id="deg-a-motion">ลื่นไหลที่อัตราเป้าหมาย</td>
+                  <td id="deg-b-motion">คงจังหวะเป้าหมายไว้</td>
+                </tr>
+                <tr>
+                  <th scope="row">ตัวอักษรและรายละเอียดเล็ก</th>
+                  <td id="deg-a-detail">ความละเอียดเต็ม; ตัวอักษรและ UI ยังคมชัด</td>
+                  <td id="deg-b-detail">ไม่เปลี่ยนแปลง</td>
+                </tr>
+                <tr>
+                  <th scope="row">เหมาะที่สุดสำหรับ</th>
+                  <td>เอกสาร โค้ด แดชบอร์ด สไลด์</td>
+                  <td>วิดีโอ แอนิเมชัน การเคลื่อนไหวเคอร์เซอร์ cloud gaming</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="recommend" id="recommendation">
+            <h3>คำแนะนำ</h3>
+            <p></p>
+          </div>
+        </article>
+      </div>
+
+      <section aria-labelledby="formulas-title" style="margin-top: 22px;">
+        <details>
+          <summary id="formulas-title">สูตรและสมมติฐาน — เปิดเพื่อตรวจสอบการคำนวณ</summary>
+          <div class="formula-grid">
+            <div class="formula">
+              <h3>งบเฟรม</h3>
+              <code>budget_ms = 1000 / fps</code>
+              <p>เวลาที่แต่ละเฟรมใช้ในขั้น encode ได้ก่อนเฟรมถัดไปจะครบกำหนด</p>
+            </div>
+            <div class="formula">
+              <h3>Bitrate</h3>
+              <code>Mbps = width × height × fps × bpp / 1,000,000</code>
+              <p>การประเมินคร่าว ๆ เพื่อวางแผน เนื้อหาหน้าจอที่มีพื้นที่นิ่งขนาดใหญ่อาจใช้ต่ำกว่านี้มาก; noise, การเคลื่อนไหว และ chroma 4:4:4 อาจใช้สูงกว่า</p>
+            </div>
+            <div class="formula">
+              <h3>fps สูงสุดที่ความละเอียดเต็ม</h3>
+              <code>max_fps = bandwidth_bps / (width × height × bpp)</code>
+              <p>คอลัมน์ A คงความละเอียดอินพุตและแก้หาอัตราเฟรมที่ลิงก์รับได้</p>
+            </div>
+            <div class="formula">
+              <h3>ตัวคูณลดสเกล</h3>
+              <code>scale = √( bandwidth_bps / (width × height × fps × bpp) )</code>
+              <p>คอลัมน์ B คงอัตราเฟรมเป้าหมายและแก้หาจำนวนพิกเซล สเกลเชิงเส้นคือรากที่สองของอัตราส่วนพื้นที่</p>
+            </div>
+            <div class="formula">
+              <h3>สเกลที่พอดีกับ encode</h3>
+              <code>scale_enc = √( 2,073,600 × (budget_ms / base_ms)^(1 / 0.85) / pixels )</code>
+              <p>คอลัมน์ B ใช้ค่าที่น้อยกว่าระหว่างสเกล bandwidth และสเกลที่พอดีกับ encode เพื่อให้อัตราเฟรมเป้าหมายพอดีกับ encoder ด้วย หากอินพุตพอดีอยู่แล้ว สเกลจะถูกจำกัดที่ 100%</p>
+            </div>
+            <div class="formula">
+              <h3>เวลา encode</h3>
+              <code>t ≈ base_ms × (pixels / 2,073,600)^0.85</code>
+              <p>การประเมินเพื่อวางแผนสำหรับ encoder ฮาร์ดแวร์ ค่าฐานที่ 1080p: H.264 5 ms, HEVC 8 ms, AV1 11 ms อุปกรณ์ preset เนื้อหา และอุณหภูมิเปลี่ยนค่านี้มาก</p>
+            </div>
+            <div class="formula">
+              <h3>เวลา decode</h3>
+              <code>decode ≈ 0.6 × encode</code>
+              <p>ตัวคูณความไม่สมมาตรคร่าว ๆ; decoder ฮาร์ดแวร์มักเร็วกว่า encoder</p>
+            </div>
+            <div class="formula">
+              <h3>latency รวม</h3>
+              <code>capture + encode + RTT/2 + 2 × frame + decode + render</code>
+              <p>Capture คือหนึ่งช่วงเฟรม เครือข่ายคือการเดินทางขาเดียว Jitter buffer คือสองเฟรม Render คือ 16.7 ms สำหรับจอ 60 Hz</p>
+            </div>
+            <div class="formula">
+              <h3>สมมติฐาน bpp</h3>
+              <code>H.264 0.08–0.14 · HEVC 0.05–0.09 · AV1 0.035–0.07</code>
+              <p>Bits per pixel per frame เครื่องคำนวณใช้ค่ากลางสำหรับผลลัพธ์ค่าเดียว และใช้ปลายทั้งสองของช่วงสำหรับแถบ bitrate</p>
+            </div>
+          </div>
+
+          <ul class="assumptions">
+            <li><strong>นี่คือการประเมิน ไม่ใช่การวัด</strong> ไม่มี encoder อุปกรณ์ หรือเครือข่ายใดถูก benchmark ที่นี่</li>
+            <li>แถบ bpp เป็นสมมติฐานเพื่อวางแผนสำหรับวิดีโอโต้ตอบและเนื้อหาหน้าจอ ไม่ใช่การรับประกันของ codec และไม่รวมพฤติกรรม rate control</li>
+            <li>เวลา encode และ decode ถือว่าใช้ฮาร์ดแวร์เร่ง โดยเฉพาะ AV1 อาจ fallback ไปซอฟต์แวร์ ซึ่งเวลา encode อาจสูงกว่าหลายเท่า</li>
+            <li>คอลัมน์ A ถูกจำกัดด้วยค่าที่ต่ำกว่าระหว่างขีดจำกัด bandwidth และ throughput ของ encoder (1000 / เวลา encode) คอลัมน์ B ลดสเกลจนทั้ง bitrate และเวลา encode ต่อเฟรมพอดี</li>
+            <li>latency เครือข่ายจำลองเป็น RTT ÷ 2 โดยไม่มีการส่งซ้ำ การเข้าคิว หรือความแออัด Wi-Fi, relay และ uplink ที่ทำงานหนักเพิ่มความหน่วงจริง</li>
+            <li>Jitter buffer ถูกตรึงไว้ที่สองเฟรม การใช้งานจริงมักใช้หนึ่งถึงห้าเฟรม หรือปรับ buffer ระหว่างรัน</li>
+            <li>เส้น 150 ms เป็นค่าอ้างอิงการโต้ตอบทั่วไป ไม่ใช่ข้อบังคับ cloud gaming มักตั้งเป้าต่ำกว่า; การซัพพอร์ตระยะไกลและงานนำเสนอรับค่าที่สูงกว่าได้</li>
+            <li>การเพิ่ม frame rate ทำให้ช่วงเฟรมและพจน์ jitter เล็กลงแต่เพิ่ม bitrate การลด frame rate ให้ผลตรงกันข้าม</li>
+          </ul>
+        </details>
+      </section>
+
+      <section class="cta" id="checklist" aria-labelledby="cta-title">
+        <p class="card-kicker">ขั้นต่อไป</p>
+        <h2 id="cta-title">ต้องการ checklist ฉบับเต็มและสคริปต์วัดค่าหรือไม่?</h2>
+        <p>
+          Checklist ครอบคลุมขั้นของไปป์ไลน์ข้างต้น สัญญาณที่ควรเก็บ และวิธี
+          อ่านโดยไม่เดา สคริปต์คือสิ่งที่ควรรันบนบิลด์ของคุณเอง
+        </p>
+        <a class="btn" href="https://devinspire734.gumroad.com/l/xejxsp/FIRST50" target="_blank" rel="noopener noreferrer">รับ checklist — โค้ด FIRST50 →</a>
+        <p class="fine">ลิงก์มีโค้ดส่วนลด FIRST50 หน้านี้ไม่ใช้สคริปต์ติดตาม</p>
+      </section>
+
+      <section class="faq" aria-labelledby="faq-title">
+        <h2 id="faq-title">คำถามที่พบบ่อยเกี่ยวกับการแชร์หน้าจอ</h2>
+        <details>
+          <summary>ทำไมการแชร์หน้าจอของฉันกระตุกทั้งที่ packet loss 0%?</summary>
+          <p>Packet loss เป็นเพียงแหล่งหน่วงแหล่งหนึ่ง โมเดลนี้แยกเวลา encode, bitrate และ jitter ออกจากกัน: หากเวลา encode เกินงบต่อเฟรมที่ 1000 ÷ fps ให้คาดว่าจะมีเฟรมหลุดหรืออัตราเฟรมจริงต่ำลง; เมื่อ bandwidth เป็นข้อจำกัด สตรีมจะลดคุณภาพแทน Jitter buffer ถูกตรึงไว้ที่สองเฟรม และการประเมิน latency ไม่รวมการส่งซ้ำ การเข้าคิว และความแออัด ดังนั้น Wi-Fi, relay และ uplink ที่ทำงานหนักสามารถเพิ่มความหน่วงจริงได้</p>
+        </details>
+        <details>
+          <summary>การแชร์หน้าจอควรตั้งเป้างบ latency เท่าไร?</summary>
+          <p>เส้น 150 ms เป็นค่าอ้างอิงการโต้ตอบที่ใช้กันทั่วไป ไม่ใช่ข้อบังคับ cloud gaming มักตั้งเป้าต่ำกว่า ขณะที่การซัพพอร์ตระยะไกลและงานนำเสนอรับค่าที่สูงกว่าได้ ให้ถือเป็นข้อมูลตั้งต้นแล้วตรวจสอบกับไปป์ไลน์ของคุณ</p>
+        </details>
+        <details>
+          <summary>ความละเอียดหรือ frame rate สำคัญกว่ากันสำหรับการแชร์หน้าจอ?</summary>
+          <p>ขึ้นกับเนื้อหา การคงความละเอียดและลด frame rate เหมาะกับเอกสาร โค้ด แดชบอร์ด และสไลด์; การคง frame rate และลดความละเอียดเหมาะกับวิดีโอ แอนิเมชัน การเคลื่อนไหวเคอร์เซอร์ และ cloud gaming สำหรับตัวอักษรใช้แบบแรก สำหรับการเคลื่อนไหวใช้แบบหลัง</p>
+        </details>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <p>เครื่องมือฟรี · เป็นเพียงการประเมิน · สูตรและสมมติฐานแสดงอยู่ในหน้านี้</p>
+      <p><a href="/">← กลับไปยังเว็บไซต์</a></p>
+    </div>
+  </footer>
+
+  <script>
+  (function () {
+    'use strict';
+
+    var PRESETS = {
+      '1080p': { w: 1920, h: 1080 },
+      '1440p': { w: 2560, h: 1440 },
+      '4k': { w: 3840, h: 2160 }
+    };
+
+    var CODECS = {
+      h264: { label: 'H.264', lo: 0.08, hi: 0.14, base: 5.0 },
+      hevc: { label: 'HEVC', lo: 0.05, hi: 0.09, base: 8.0 },
+      av1: { label: 'AV1', lo: 0.035, hi: 0.07, base: 11.0 }
+    };
+
+    var STANDARDS = [
+      [3840, 2160, '4K UHD'],
+      [2560, 1440, '1440p'],
+      [1920, 1080, '1080p'],
+      [1600, 900, '900p'],
+      [1280, 720, '720p'],
+      [960, 540, '540p'],
+      [854, 480, '480p'],
+      [640, 360, '360p'],
+      [426, 240, '240p']
+    ];
+
+    function $(id) { return document.getElementById(id); }
+
+    var el = {
+      form: $('calc-form'),
+      resolution: $('resolution'),
+      custom: $('custom-res'),
+      width: $('width'),
+      height: $('height'),
+      fps: $('fps'),
+      codec: $('codec'),
+      bandwidth: $('bandwidth'),
+      rtt: $('rtt'),
+      av1Note: $('av1-note'),
+      frameBudget: $('frame-budget'),
+      fpsOut: $('fps-out'),
+      encodeTime: $('encode-time'),
+      encodeHeadroom: $('encode-headroom'),
+      encodeVerdict: $('encode-verdict'),
+      bitrateMid: $('bitrate-mid'),
+      bitrateLow: $('bitrate-low'),
+      bitrateHigh: $('bitrate-high'),
+      bppMid: $('bpp-mid'),
+      bwOut: $('bw-out'),
+      bwHeadroom: $('bw-headroom'),
+      bwVerdict: $('bw-verdict'),
+      latencyTotal: $('latency-total'),
+      latencyReference: $('latency-reference'),
+      latencyBar: $('latency-bar'),
+      latencyLegend: $('latency-legend'),
+      latencyBody: $('latency-body'),
+      latencyVerdict: $('latency-verdict'),
+      degBw: $('deg-bw'),
+      degCodec: $('deg-codec'),
+      degAFps: $('deg-a-fps'),
+      degARes: $('deg-a-res'),
+      degAScale: $('deg-a-scale'),
+      degABitrate: $('deg-a-bitrate'),
+      degAEncode: $('deg-a-encode'),
+      degABudget: $('deg-a-budget'),
+      degALimit: $('deg-a-limit'),
+      degALatency: $('deg-a-latency'),
+      degAMotion: $('deg-a-motion'),
+      degADetail: $('deg-a-detail'),
+      degBFps: $('deg-b-fps'),
+      degBRes: $('deg-b-res'),
+      degBScale: $('deg-b-scale'),
+      degBBitrate: $('deg-b-bitrate'),
+      degBEncode: $('deg-b-encode'),
+      degBBudget: $('deg-b-budget'),
+      degBLimit: $('deg-b-limit'),
+      degBLatency: $('deg-b-latency'),
+      degBMotion: $('deg-b-motion'),
+      degBDetail: $('deg-b-detail'),
+      recommendation: $('recommendation')
+    };
+
+    function fmt(n, decimals) {
+      if (!isFinite(n)) { return '—'; }
+      var d = (decimals === undefined) ? 1 : decimals;
+      var s = n.toFixed(d);
+      if (s.indexOf('.') !== -1) {
+        s = s.replace(/0+$/, '').replace(/\.$/, '');
+      }
+      return s;
+    }
+
+    function readNumber(input, fallback, min, max) {
+      var raw = parseFloat(input.value);
+      if (!isFinite(raw)) { return fallback; }
+      return Math.min(max, Math.max(min, raw));
+    }
+
+    function setVerdict(node, text, cls) {
+      node.textContent = text;
+      node.className = 'verdict' + (cls ? ' ' + cls : '');
+    }
+
+    function nearestLabel(w, h) {
+      var area = w * h;
+      var best = null;
+      var bestDiff = Infinity;
+      for (var i = 0; i < STANDARDS.length; i++) {
+        var sw = STANDARDS[i][0];
+        var sh = STANDARDS[i][1];
+        var diff = Math.abs(sw * sh - area) / area;
+        if (diff < bestDiff) {
+          bestDiff = diff;
+          best = STANDARDS[i][2];
+        }
+      }
+      return bestDiff <= 0.12 ? best : null;
+    }
+
+    function syncCustom() {
+      el.custom.hidden = el.resolution.value !== 'custom';
+    }
+
+    function compute() {
+      var presetKey = el.resolution.value;
+      var w;
+      var h;
+      if (presetKey === 'custom') {
+        w = Math.round(readNumber(el.width, 1920, 320, 7680));
+        h = Math.round(readNumber(el.height, 1080, 240, 4320));
+      } else {
+        var preset = PRESETS[presetKey] || PRESETS['1080p'];
+        w = preset.w;
+        h = preset.h;
+      }
+
+      var fps = readNumber(el.fps, 30, 1, 240);
+      var codecKey = el.codec.value;
+      var codec = CODECS[codecKey] || CODECS.h264;
+      var bandwidth = readNumber(el.bandwidth, 20, 0.1, 100000);
+      var rtt = readNumber(el.rtt, 50, 0, 5000);
+
+      el.av1Note.hidden = codecKey !== 'av1';
+
+      var pixels = w * h;
+      var frameBudget = 1000 / fps;
+      var t = pixels / 2073600;
+      var encode = codec.base * Math.pow(t, 0.85);
+      var decode = encode * 0.6;
+      var capture = frameBudget;
+      var network = rtt / 2;
+      var jitter = 2 * frameBudget;
+      var render = 16.7;
+      var total = capture + encode + network + jitter + decode + render;
+
+      var bppMid = (codec.lo + codec.hi) / 2;
+      var bitrateLow = pixels * fps * codec.lo / 1e6;
+      var bitrateMid = pixels * fps * bppMid / 1e6;
+      var bitrateHigh = pixels * fps * codec.hi / 1e6;
+
+      /* Encode budget card */
+      el.frameBudget.textContent = fmt(frameBudget);
+      el.fpsOut.textContent = fmt(fps);
+      el.encodeTime.textContent = '~' + fmt(encode) + ' ms';
+
+      var encodeHeadroom = frameBudget - encode;
+      el.encodeHeadroom.textContent = (encodeHeadroom >= 0 ? '' : '-') + fmt(Math.abs(encodeHeadroom)) + ' ms';
+
+      if (encode > frameBudget) {
+        setVerdict(
+          el.encodeVerdict,
+          'เกินงบ: ค่าประเมินเกินช่วงเฟรมประมาณ ' + fmt(encode - frameBudget) +
+            ' ms จากช่วงเฟรม ' + fmt(frameBudget) + ' ms คาดว่าจะมีเฟรมหลุดหรืออัตราเฟรมจริงต่ำลง',
+          'bad'
+        );
+      } else if (encode > frameBudget * 0.7) {
+        setVerdict(
+          el.encodeVerdict,
+          'ตึงตัว: ยังพอดีช่วงเฟรม แต่เหลือเพียง ' + fmt(encodeHeadroom) +
+            ' ms สำหรับ jitter ในการจัดตารางและความช้าจากความร้อน',
+          'warn'
+        );
+      } else {
+        setVerdict(
+          el.encodeVerdict,
+          'พอดีโดยมีส่วนเหลือ: เหลือประมาณ ' + fmt(encodeHeadroom) +
+            ' ms ภายในช่วงเฟรม ' + fmt(frameBudget) + ' ms',
+          'ok'
+        );
+      }
+
+      /* Bitrate card */
+      el.bitrateMid.textContent = fmt(bitrateMid);
+      el.bitrateLow.textContent = fmt(bitrateLow);
+      el.bitrateHigh.textContent = fmt(bitrateHigh);
+      el.bppMid.textContent = fmt(bppMid, 3);
+      el.bwOut.textContent = fmt(bandwidth) + ' Mbps';
+
+      var bwHeadroom = bandwidth - bitrateHigh;
+      el.bwHeadroom.textContent = (bwHeadroom >= 0 ? '' : '-') + fmt(Math.abs(bwHeadroom)) + ' Mbps';
+
+      if (bandwidth >= bitrateHigh) {
+        setVerdict(
+          el.bwVerdict,
+          'ครอบคลุมค่าประเมินบนที่ความละเอียดและอัตราเฟรมนี้ โมเดล bitrate ไม่ได้บังคับให้ลดคุณภาพ',
+          'ok'
+        );
+      } else if (bandwidth >= bitrateMid) {
+        setVerdict(
+          el.bwVerdict,
+          'ครอบคลุมค่ากลางแต่ไม่ถึงปลายบนของช่วง ฉากที่เคลื่อนไหวมากอาจเกินลิงก์และกระตุ้น rate control',
+          'warn'
+        );
+      } else if (bandwidth >= bitrateLow) {
+        setVerdict(
+          el.bwVerdict,
+          'พอดีเฉพาะปลายล่างของช่วง bpp คาดว่าคุณภาพจะลดลงอย่างเห็นได้ชัด หรือต้องลดคุณภาพ เมื่อเนื้อหาเคลื่อนไหว',
+          'warn'
+        );
+      } else {
+        setVerdict(
+          el.bwVerdict,
+          'ต่ำกว่าค่าประเมินล่าง ไม่สามารถคงการตั้งค่านี้บนลิงก์นี้ได้หากไม่เกิด artifact ที่เห็นได้หรือต้องลดคุณภาพแบบบังคับ',
+          'bad'
+        );
+      }
+
+      /* Latency card */
+      var stages = [
+        { key: 'capture', label: 'Capture', ms: capture, allowance: frameBudget, allowanceText: '1 frame', flag: '—' },
+        { key: 'encode', label: 'Encode', ms: encode, allowance: frameBudget, allowanceText: '1 frame', flag: encode > frameBudget ? 'เกินงบ' : (encode > frameBudget * 0.7 ? 'ตึงตัว' : 'พอดี') },
+        { key: 'network', label: 'เครือข่ายขาเดียว', ms: network, allowance: network, allowanceText: 'RTT ÷ 2', flag: '—' },
+        { key: 'jitter', label: 'Jitter buffer', ms: jitter, allowance: jitter, allowanceText: '2 frames', flag: '—' },
+        { key: 'decode', label: 'Decode', ms: decode, allowance: frameBudget, allowanceText: '1 frame', flag: '—' },
+        { key: 'render', label: 'Render / คอมโพสิต', ms: render, allowance: render, allowanceText: '1 refresh', flag: '—' }
+      ];
+
+      el.latencyTotal.textContent = fmt(total);
+
+      var delta = total - 150;
+      if (delta > 15) {
+        el.latencyReference.textContent = '≈ ' + fmt(delta) + ' ms เหนือค่าอ้างอิงการโต้ตอบ 150 ms';
+      } else if (delta < -15) {
+        el.latencyReference.textContent = '≈ ' + fmt(-delta) + ' ms ต่ำกว่าค่าอ้างอิงการโต้ตอบ 150 ms';
+      } else {
+        el.latencyReference.textContent = 'ราวกับค่าอ้างอิงการโต้ตอบ 150 ms';
+      }
+
+      el.latencyBar.innerHTML = stages.map(function (s) {
+        var width = total > 0 ? (s.ms / total * 100) : 0;
+        return '<span class="bar-seg bar-seg--' + s.key + '" style="width:' + width.toFixed(2) +
+          '%" title="' + s.label + ': ~' + fmt(s.ms) + ' ms"></span>';
+      }).join('');
+
+      el.latencyLegend.innerHTML = stages.map(function (s) {
+        return '<span><i class="swatch swatch--' + s.key + '" aria-hidden="true"></i>' +
+          s.label + ' ' + fmt(s.ms) + ' ms</span>';
+      }).join('');
+
+      el.latencyBody.innerHTML = stages.map(function (s) {
+        var share = total > 0 ? (s.ms / total * 100) : 0;
+        var over = s.key === 'encode' && s.ms > s.allowance;
+        return '<tr' + (over ? ' class="is-over"' : '') + '>' +
+          '<th scope="row">' + s.label + '</th>' +
+          '<td class="num">' + fmt(s.ms) + ' ms</td>' +
+          '<td class="num">' + fmt(share) + '%</td>' +
+          '<td>' + s.allowanceText + '</td>' +
+          '<td>' + s.flag + '</td>' +
+          '</tr>';
+      }).join('');
+
+      var largest = stages[0];
+      for (var i = 1; i < stages.length; i++) {
+        if (stages[i].ms > largest.ms) { largest = stages[i]; }
+      }
+
+      var riskText;
+      var latencyClass;
+      if (encode > frameBudget) {
+        riskText = 'ขั้นที่เสี่ยงเกินงบที่สุด: encode ค่าประเมินประมาณ ' + fmt(encode) +
+          ' ms เทียบกับช่วงเฟรม ' + fmt(frameBudget) + ' ms';
+        latencyClass = 'bad';
+      } else if (largest.key === 'jitter') {
+        riskText = 'encode พอดีช่วงเฟรม ขั้นเดี่ยวที่ใหญ่ที่สุดคือ jitter buffer (' +
+          fmt(jitter) + ' ms, ' + fmt(jitter / total * 100) + '% ของทั้งหมด); ด้วย RTT ' + fmt(rtt) +
+          ' ms นโยบาย buffer และ RTT คือคันโยกหลัก';
+        latencyClass = total > 165 ? 'warn' : 'ok';
+      } else if (largest.key === 'network') {
+        riskText = 'encode พอดีช่วงเฟรม การรับส่งผ่านเครือข่ายเป็นขั้นที่ใหญ่ที่สุด (' +
+          fmt(network) + ' ms, ' + fmt(network / total * 100) + '%); relay ที่ใกล้กว่าหรือ RTT ต่ำกว่าจะลดยอดรวมโดยตรง';
+        latencyClass = total > 165 ? 'warn' : 'ok';
+      } else {
+        riskText = 'encode พอดีช่วงเฟรม ขั้นที่ใหญ่ที่สุดคือ ' + largest.label.toLowerCase() +
+          ' ประมาณ ' + fmt(largest.ms) + ' ms (' + fmt(largest.ms / total * 100) + '% ของทั้งหมด)';
+        latencyClass = total > 165 ? 'warn' : 'ok';
+      }
+
+      riskText += ' Capture บวก jitter เพียงอย่างเดียวคือ ' + fmt(capture + jitter) + ' ms ที่ ' + fmt(fps) + ' fps';
+      if (total > 150) {
+        riskText += ' ยอดรวมสูงกว่าค่าอ้างอิง 150 ms; ปกป้องตัวเลขนั้นก่อน';
+        if (latencyClass === 'ok') { latencyClass = 'warn'; }
+      } else {
+        riskText += ' ยอดรวมอยู่ที่หรือต่ำกว่าค่าอ้างอิง 150 ms';
+      }
+      setVerdict(el.latencyVerdict, riskText, latencyClass);
+
+      /* Degradation */
+      var availableBps = bandwidth * 1e6;
+      var maxFpsFull = availableBps / (pixels * bppMid);
+      var maxPixelsForFps = availableBps / (fps * bppMid);
+      var bandwidthScale = Math.sqrt(maxPixelsForFps / pixels);
+      var encoderMaxFps = encode > 0 ? 1000 / encode : Infinity;
+      var aFps = Math.min(fps, maxFpsFull, encoderMaxFps);
+
+      /* Pixels the encoder can finish inside one frame interval. */
+      var encodeFitPixels = 2073600 * Math.pow(frameBudget / codec.base, 1 / 0.85);
+      var encodeScale = Math.sqrt(encodeFitPixels / pixels);
+
+      var bScale = Math.min(1, bandwidthScale, encodeScale);
+      var bW = w;
+      var bH = h;
+      if (bScale < 1) {
+        bW = Math.max(2, Math.floor((w * bScale) / 2) * 2);
+        bH = Math.max(2, Math.floor((h * bScale) / 2) * 2);
+      }
+
+      var aBitrate = pixels * aFps * bppMid / 1e6;
+      var bBitrate = bW * bH * fps * bppMid / 1e6;
+      var bEncode = codec.base * Math.pow((bW * bH) / 2073600, 0.85);
+      var bDecode = bEncode * 0.6;
+      var aFrame = aFps > 0 ? 1000 / aFps : Infinity;
+      var aLatency = aFps >= 1 ? aFrame + encode + network + 2 * aFrame + decode + render : Infinity;
+      var bLatency = frameBudget + bEncode + network + 2 * frameBudget + bDecode + render;
+
+      function budgetCheck(ms, allowance) {
+        if (!isFinite(ms) || !isFinite(allowance)) { return '—'; }
+        var ratio = allowance > 0 ? ms / allowance : Infinity;
+        var word = ratio > 1.02 ? 'เกิน' : (ratio > 0.9 ? 'ถึงขีดจำกัด' : 'พอดี');
+        return '~' + fmt(ms) + ' ms / ' + fmt(allowance) + ' ms — ' + word;
+      }
+
+      el.degBw.textContent = fmt(bandwidth) + ' Mbps';
+      el.degCodec.textContent = codec.label;
+
+      var bindingA;
+      if (aFps >= fps) {
+        el.degAFps.textContent = fmt(fps) + ' fps (ถึงเป้า)';
+        bindingA = 'ไม่มีที่การตั้งค่านี้';
+      } else if (encoderMaxFps <= maxFpsFull) {
+        el.degAFps.textContent = '~' + fmt(aFps) + ' fps (จำกัดด้วย encode)';
+        bindingA = 'Throughput ของ encoder';
+      } else {
+        el.degAFps.textContent = '~' + fmt(aFps) + ' fps (จำกัดด้วย bandwidth)';
+        bindingA = 'Bandwidth';
+      }
+      el.degARes.textContent = w + ' × ' + h;
+      el.degAScale.textContent = '100%';
+      el.degABitrate.textContent = aFps >= 1 ? '~' + fmt(aBitrate) + ' Mbps' : '—';
+      el.degAEncode.textContent = '~' + fmt(encode) + ' ms';
+      el.degABudget.textContent = aFps >= 1 ? budgetCheck(encode, aFrame) : '—';
+      el.degALimit.textContent = bindingA;
+      el.degALatency.textContent = isFinite(aLatency) ? '~' + fmt(aLatency) + ' ms' : '—';
+
+      if (aFps >= fps) {
+        el.degAMotion.textContent = 'ลื่นไหลที่อัตราเป้าหมาย';
+      } else if (aFps >= 24) {
+        el.degAMotion.textContent = 'ลื่นพอสำหรับการเคลื่อนไหวส่วนใหญ่ที่อัตรานี้';
+      } else if (aFps >= 15) {
+        el.degAMotion.textContent = 'กระตุกเห็นชัด; ใช้ได้กับจอที่นิ่งเป็นส่วนใหญ่';
+      } else if (aFps >= 1) {
+        el.degAMotion.textContent = 'กระตุกมาก; ใช้ได้กับจอที่นิ่งเท่านั้น';
+      } else {
+        el.degAMotion.textContent = 'ใช้ไม่ได้ที่ความละเอียดเต็ม';
+      }
+      el.degADetail.textContent = 'ความละเอียดเต็ม; ตัวอักษรและ UI ยังคมชัด';
+
+      el.degBFps.textContent = fmt(fps) + ' fps (คงเป้าหมาย)';
+      if (bScale >= 1) {
+        el.degBRes.textContent = w + ' × ' + h + ' (ไม่ต้องลดสเกล)';
+        el.degBScale.textContent = '100% (ไม่ลดสเกล)';
+      } else {
+        var label = nearestLabel(bW, bH);
+        el.degBRes.textContent = bW + ' × ' + bH + (label ? ' (≈ ' + label + ')' : '');
+        el.degBScale.textContent = '~' + fmt(bScale * 100) + '% of input';
+      }
+      el.degBBitrate.textContent = '~' + fmt(bBitrate) + ' Mbps';
+      el.degBEncode.textContent = '~' + fmt(bEncode) + ' ms';
+      el.degBBudget.textContent = budgetCheck(bEncode, frameBudget);
+      if (bScale >= 1) {
+        el.degBLimit.textContent = 'ไม่มีที่การตั้งค่านี้';
+      } else if (encodeScale < bandwidthScale) {
+        el.degBLimit.textContent = 'Throughput ของ encoder';
+      } else if (encodeScale > bandwidthScale) {
+        el.degBLimit.textContent = 'Bandwidth';
+      } else {
+        el.degBLimit.textContent = 'Bandwidth + encoder';
+      }
+      el.degBLatency.textContent = '~' + fmt(bLatency) + ' ms';
+      el.degBMotion.textContent = 'คงจังหวะ ' + fmt(fps) + ' fps';
+      if (bScale >= 1) {
+        el.degBDetail.textContent = 'ไม่เปลี่ยนแปลง';
+      } else if (bScale >= 0.7) {
+        el.degBDetail.textContent = 'นุ่มลงเล็กน้อย; ตัวอักษรเล็กยังอ่านได้';
+      } else if (bScale >= 0.5) {
+        el.degBDetail.textContent = 'ตัวอักษรนุ่มลงแต่อ่านได้';
+      } else {
+        el.degBDetail.textContent = 'ตัวอักษรและ UI ละเอียดอ่านได้ยากขึ้น';
+      }
+
+      var rec;
+      var encodeBound = encode > frameBudget;
+      var aLatencyText = isFinite(aLatency) ? '~' + fmt(aLatency) + ' ms' : 'not viable';
+      if (encodeBound) {
+        if (aFps >= 24) {
+          rec = 'encode ไม่ใช่ bandwidth คือข้อจำกัดที่อินพุต: ประมาณ ' + fmt(encode) +
+            ' ms เทียบกับช่วงเฟรม ' + fmt(frameBudget) + ' ms คอลัมน์ A คงความละเอียดเต็มและจำกัดที่ราว ' +
+            fmt(aFps) + ' fps (' + aLatencyText + ' end-to-end) คอลัมน์ B ลดลงเหลือราว ' + bW + ' × ' + bH +
+            ' (' + fmt(bScale * 100) + '%) เพื่อคง ' + fmt(fps) + ' fps ที่ราว ' + fmt(bLatency) +
+            ' ms สำหรับจอที่เน้นตัวอักษร A ยังคมชัด; สำหรับการเคลื่อนไหวหรือ latency ต่ำกว่า B เป็นการแลกเปลี่ยนที่ดีกว่า';
+        } else {
+          rec = 'encode คือข้อจำกัด และความละเอียดเต็มไปไม่ถึง 24 fps (ราว ' + fmt(aFps) +
+            ' fps) คอลัมน์ B ลดสเกลเหลือราว ' + bW + ' × ' + bH + ' (' + fmt(bScale * 100) +
+            '%) เพื่อคง ' + fmt(fps) + ' fps ที่ราว ' + fmt(bLatency) +
+            ' ms ควรเลือก B เว้นแต่เนื้อหาส่วนใหญ่เป็นตัวอักษรนิ่ง';
+        }
+      } else if (bandwidth >= bitrateHigh) {
+        rec = 'ไม่จำเป็นต้องลดคุณภาพแบบหนักภายใต้สมมติฐาน bpp กลาง: bandwidth ที่มีครอบคลุมค่าประเมินบนและ encode พอดีงบเฟรม คงการตั้งค่าอินพุตและใช้ตัวเลขเป็นจุดเริ่มต้นสำหรับ encoder ของคุณ';
+      } else if (bandwidth >= bitrateMid) {
+        rec = 'bandwidth ครอบคลุมค่ากลางแต่ไม่ถึงปลายบนของช่วง เริ่มโดยไม่ลดคุณภาพ จำกัด bitrate ของ encoder และเฝ้าดูฉากที่เคลื่อนไหวมาก; หากเกิด artifact ให้ใช้เพดานความละเอียดในคอลัมน์ B';
+      } else if (aFps >= 24) {
+        rec = 'bandwidth คือข้อจำกัด คอลัมน์ A คงความละเอียดเต็มและลงที่ราว ' + fmt(aFps) +
+          ' fps; คอลัมน์ B ลดสเกลเหลือราว ' + bW + ' × ' + bH + ' (' + fmt(bScale * 100) +
+          '%) เพื่อคง ' + fmt(fps) + ' fps สำหรับตัวอักษรใช้ A; สำหรับการเคลื่อนไหวใช้ B ซึ่งยังลดค่าประเมิน end-to-end เหลือราว ' +
+          fmt(bLatency) + ' ms เทียบกับ ' + aLatencyText + ' ของ A';
+      } else if (bScale >= 0.5) {
+        rec = 'bandwidth คือข้อจำกัด คอลัมน์ B คง ' + fmt(fps) + ' fps ที่ราว ' + bW + ' × ' + bH +
+          ' (' + fmt(bScale * 100) + '%) และราว ' + fmt(bLatency) + ' ms end-to-end; คอลัมน์ A คงตัวอักษรคมชัดแต่การเคลื่อนไหวลดเหลือราว ' +
+          fmt(aFps) + ' fps (ราว ' + aLatencyText + ') ควรเลือก B สำหรับการเคลื่อนไหว; ใช้ A เฉพาะจอนิ่ง';
+      } else {
+        rec = 'คันโยกทั้งสองใกล้ขีดจำกัด: ความละเอียดเต็มรองรับได้เพียงราว ' + fmt(maxFpsFull) +
+          ' fps และการคง ' + fmt(fps) + ' fps ต้องใช้สเกลราว ' + fmt(bScale * 100) + '% (' + bW + ' × ' + bH +
+          ') ลด frame rate เป้าหมายหรือยอมรับการสูญเสียทั้งความละเอียดและจังหวะ';
+      }
+      rec += ' กฎง่าย ๆ เรื่องเนื้อหา: เลือก A สำหรับเอกสาร โค้ด UI และสไลด์; เลือก B สำหรับวิดีโอ แอนิเมชัน และ cloud gaming';
+      el.recommendation.querySelector('p').textContent = rec;
+    }
+
+    el.form.addEventListener('input', compute);
+    el.form.addEventListener('change', function (event) {
+      if (event.target === el.resolution) { syncCustom(); }
+      compute();
+    });
+
+    syncCustom();
+    compute();
+  }());
+  </script>
+</body>
+</html>
