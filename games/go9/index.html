@@ -1,0 +1,954 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Go 9×9 Online — Capture, Ko &amp; Area Scoring vs AI (围棋 9 路)</title>
+<meta name="description" content="Play 9×9 Go in your browser — captures, the suicide rule, ko, pass and Chinese area scoring, with three AI levels, local two-player and undo. Free, offline, no sign-up. 9 路围棋在线，人机三档。">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="author" content="Devin">
+<meta name="theme-color" content="#f2efe7">
+<link rel="canonical" href="https://hhfa008.github.io/games/go9/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23b98a5a'/%3E%3Cpath d='M6 10h20M6 16h20M6 22h20M10 6v20M16 6v20M22 6v20' stroke='%235f4326' stroke-width='1'/%3E%3Ccircle cx='10' cy='10' r='3.4' fill='%232b2f36'/%3E%3Ccircle cx='22' cy='22' r='3.4' fill='%23f3ead9'/%3E%3Ccircle cx='16' cy='16' r='3.4' fill='%232b2f36'/%3E%3C/svg%3E">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Devin">
+<meta property="og:title" content="Go 9×9 Online — capture, ko and area scoring vs AI">
+<meta property="og:description" content="Free 9×9 Go with captures, suicide rule, ko, pass and Chinese area scoring. Three AI levels, local two-player, undo. 9 路围棋在线。">
+<meta property="og:url" content="https://hhfa008.github.io/games/go9/">
+<meta property="og:locale" content="en_US">
+<meta property="og:locale:alternate" content="zh_CN">
+<meta property="og:locale:alternate" content="id_ID">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Go 9×9 Online — capture, ko and area scoring">
+<meta name="twitter:description" content="9×9 Go with captures, ko, suicide rule and Chinese area scoring. Three AI levels, undo, no sign-up.">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Go 9×9 Online",
+  "alternateName": "围棋 9 路",
+  "url": "https://hhfa008.github.io/games/go9/",
+  "applicationCategory": "Game",
+  "genre": "Board game",
+  "gamePlatform": "Web browser",
+  "operatingSystem": "Any",
+  "isAccessibleForFree": true,
+  "inLanguage": ["en", "zh-CN", "id"],
+  "description": "A free 9×9 Go game with full capture rules, the suicide rule, simple ko, pass, Chinese area scoring, three AI levels, local two-player mode and undo. Runs offline in the browser.",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+}
+</script>
+
+<style>
+:root{
+  --paper:#f2efe7;--paper-2:#fbf9f4;--ink:#14171a;--muted:#5b615c;--muted-2:#7b807a;
+  --line:#d5d0c4;--line-strong:#bcb5a7;--accent:#b93d12;--accent-soft:#f7e5da;
+  --dark:#101316;--dark-2:#1a2024;--on-dark:#f2efe7;--on-dark-muted:#b7b3a8;
+  --board:#b98a5a;--board-2:#9d7144;--board-line:#5f4326;--stone-b:#2b2f36;--stone-w:#f3ead9;--mark:#c0392b;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.55 var(--sans);
+  padding-bottom:calc(22px + env(safe-area-inset-bottom));-webkit-font-smoothing:antialiased}
+.wrap{max-width:660px;margin:0 auto;padding:0 16px}
+h1,h2,p{margin:0}
+button{font:inherit;color:inherit}
+a{color:inherit}
+.site-header{background:var(--dark);color:var(--on-dark);padding:12px 0}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:9px;font-weight:650;text-decoration:none}
+.brand-mark{width:22px;height:22px;border-radius:6px;background:var(--accent);flex:none}
+.langs{display:flex;gap:4px}
+.langs button{min-width:44px;min-height:40px;padding:0 8px;border:1px solid #343b40;border-radius:9px;
+  background:transparent;color:var(--on-dark-muted);font-size:13px;font-weight:600;cursor:pointer}
+.langs button[aria-pressed="true"]{background:var(--on-dark);color:var(--dark);border-color:var(--on-dark)}
+.hero{padding:24px 0 4px}
+.eyebrow{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--accent);margin-bottom:8px}
+.hero h1{font-size:clamp(1.9rem,7.4vw,2.5rem);line-height:1.1;letter-spacing:-.02em;margin-bottom:8px}
+.lede{color:var(--muted);font-size:16px}
+.game{background:var(--dark);color:var(--on-dark);border-radius:18px;padding:14px;margin-top:16px;
+  box-shadow:0 10px 30px rgb(16 19 22 / .16)}
+.controls{display:grid;gap:8px}
+.seg{display:flex;gap:5px;background:var(--dark-2);border:1px solid #2c3338;border-radius:12px;padding:4px}
+.seg button{flex:1;min-height:40px;padding:0 8px;border:0;border-radius:9px;background:transparent;
+  color:var(--on-dark-muted);font-size:14px;font-weight:600;cursor:pointer;touch-action:manipulation}
+.seg button[aria-pressed="true"]{background:var(--on-dark);color:var(--dark)}
+.seg button:disabled{opacity:.35;cursor:default}
+.statusbar{display:flex;align-items:center;gap:9px;margin:11px 0 9px;flex-wrap:wrap}
+.turn-dot{width:13px;height:13px;border-radius:50%;flex:none;border:1px solid #6d726d}
+.turn-dot.b{background:#2b2f36;border-color:#6b7379}
+.turn-dot.w{background:#f3ead9;border-color:#c9c2b3}
+.status{flex:1;min-width:120px;font-size:14.5px;font-weight:650;line-height:1.3}
+.tools{display:flex;gap:6px}
+.tools button{min-height:36px;padding:0 11px;border:1px solid #343b40;border-radius:9px;background:transparent;
+  color:var(--on-dark-muted);font-size:13px;font-weight:600;cursor:pointer;touch-action:manipulation}
+.tools button:disabled{opacity:.35;cursor:default}
+.boardwrap{display:flex;justify-content:center;margin:2px 0 4px}
+canvas{display:block;background:var(--board);border-radius:12px;touch-action:none;
+  box-shadow:0 6px 18px rgb(0 0 0 / .28);cursor:pointer}
+.hint{min-height:20px;font-size:12.5px;color:var(--on-dark-muted);text-align:center;padding:4px 4px 0}
+.record{min-height:17px;font-family:var(--mono);font-size:11.5px;color:#8f948d;text-align:center;
+  letter-spacing:.01em;padding:2px 4px 0}
+.scorecard{margin:10px 4px 2px;padding:12px 14px;background:var(--dark-2);border:1px solid #2c3338;border-radius:13px;text-align:center}
+.score-main{display:flex;align-items:baseline;justify-content:center;gap:12px;font-family:var(--mono)}
+.score-side{display:flex;flex-direction:column;gap:2px;min-width:88px}
+.score-label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--on-dark-muted)}
+.score-side strong{font-size:27px;line-height:1.1;font-variant-numeric:tabular-nums}
+.score-vs{font-size:20px;color:#6d726d}
+.score-result{margin-top:7px;font-size:15px;font-weight:650}
+.score-break{margin-top:4px;font-family:var(--mono);font-size:11px;line-height:1.5;color:var(--on-dark-muted)}
+.score-note{margin-top:6px;font-size:11.5px;line-height:1.5;color:#8f948d}
+.more{margin:18px 0 0;font-size:13.5px;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap}
+.more a{text-decoration:none;border-bottom:1px solid var(--line-strong)}
+.more a:hover{color:var(--accent)}
+.site-footer{max-width:660px;margin:20px auto 0;padding:0 16px;font-size:12.5px;color:var(--muted-2)}
+.site-footer a{text-decoration:none;border-bottom:1px solid var(--line-strong)}
+.site-footer a:hover{color:var(--accent)}
+.rule{margin:14px 0 0;padding-top:12px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted-2)}
+@media (max-width:380px){.seg button{font-size:13px;padding:0 4px}.game{padding:11px}.tools button{padding:0 9px}}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true"></span>Devin</a>
+    <nav class="langs" aria-label="Language">
+      <button type="button" data-lang="en">EN</button>
+      <button type="button" data-lang="zh">中文</button>
+      <button type="button" data-lang="id">ID</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero" aria-labelledby="page-title">
+    <p class="eyebrow" data-i="eyebrow">Free board game · Go</p>
+    <h1 id="page-title">Go 9×9 <span style="font-weight:400;color:var(--muted)">围棋</span></h1>
+    <p class="lede" data-i="tagline">Captures, ko and Chinese area scoring on a 9×9 board. Beat the AI or a friend.</p>
+  </section>
+
+  <section class="game" aria-label="Go board">
+    <div class="controls">
+      <div class="seg" role="group" aria-label="Mode">
+        <button type="button" data-mode="ai" data-i="vsAi" aria-pressed="true">vs AI</button>
+        <button type="button" data-mode="local" data-i="local" aria-pressed="false">2 players</button>
+      </div>
+      <div class="seg" id="diffRow" role="group" aria-label="Difficulty">
+        <button type="button" data-diff="1" data-i="easy" aria-pressed="false">Easy</button>
+        <button type="button" data-diff="2" data-i="normal" aria-pressed="true">Normal</button>
+        <button type="button" data-diff="3" data-i="hard" aria-pressed="false">Hard</button>
+      </div>
+    </div>
+
+    <div class="statusbar">
+      <span class="turn-dot b" id="turn-dot" aria-hidden="true"></span>
+      <span class="status" id="status" aria-live="polite">Your turn (black)</span>
+      <div class="tools">
+        <button type="button" id="undo" data-i="undo">Undo</button>
+        <button type="button" id="pass" data-i="pass">Pass</button>
+        <button type="button" id="new" data-i="newGame">New</button>
+      </div>
+    </div>
+
+    <div class="boardwrap" id="boardwrap">
+      <canvas id="board" width="360" height="360" role="img" aria-label="9 by 9 Go board"></canvas>
+    </div>
+
+    <div class="scorecard" id="scorecard" hidden>
+      <div class="score-main">
+        <div class="score-side"><span class="score-label" data-i="blackLabel">Black</span><strong id="score-black">0</strong></div>
+        <div class="score-vs">:</div>
+        <div class="score-side"><span class="score-label" data-i="whiteLabel">White</span><strong id="score-white">0</strong></div>
+      </div>
+      <p class="score-result" id="score-result"></p>
+      <p class="score-break" id="score-break"></p>
+      <p class="score-note" data-i="scoreNote"></p>
+    </div>
+
+    <p class="hint" id="hint" data-i="howTo"></p>
+    <p class="record" id="record"></p>
+  </section>
+
+  <p class="more">
+    <a href="/games/" data-i="moreGames">All online games →</a>
+    <a href="/games/go9/rules.html" data-i="rulesLink">How to play Go →</a>
+  </p>
+  <p class="rule" data-i="rule">Chinese area scoring: stones on the board plus surrounded empty points. A neutral point counts half to each side. Your record is saved in this browser only.</p>
+</main>
+
+<footer class="site-footer">
+  <a href="https://hhfa008.github.io/" data-i="moreLink">Built by an indie developer — more tools here</a>
+</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  var N = 9, NN = 81, BLACK = 1, WHITE = 2, EMPTY = 0;
+  var RECORD_KEY = 'go9-record-v1';
+  var TAU = Math.PI * 2;
+
+  var NB = (function () {
+    var a = new Array(NN), r, c, i, n;
+    for (r = 0; r < N; r++) {
+      for (c = 0; c < N; c++) {
+        i = r * N + c; n = [];
+        if (r > 0) n.push(i - N);
+        if (r < N - 1) n.push(i + N);
+        if (c > 0) n.push(i - 1);
+        if (c < N - 1) n.push(i + 1);
+        a[i] = n;
+      }
+    }
+    return a;
+  })();
+
+  var I18N = {
+    en: {
+      eyebrow: 'Free board game · Go',
+      tagline: 'Captures, ko and Chinese area scoring on a 9×9 board. Beat the AI or a friend.',
+      vsAi: 'vs AI', local: '2 players',
+      easy: 'Easy', normal: 'Normal', hard: 'Hard',
+      undo: 'Undo', pass: 'Pass', newGame: 'New',
+      yourTurn: 'Your turn (black)', aiTurn: 'AI turn (white)', thinking: 'AI is thinking…',
+      blackTurn: 'Black to move', whiteTurn: 'White to move', gameOver: 'Game over — scored',
+      blackLabel: 'Black', whiteLabel: 'White',
+      passInfo: 'Passed. Two passes in a row end the game and go to scoring.',
+      ko: 'Ko — you may not retake the same point immediately.',
+      suicide: 'Suicide — that point would leave your group with no liberties.',
+      occupied: 'That intersection is already occupied.',
+      scoring: 'Scoring (Chinese area rules)',
+      resultWin: 'You win by {n} points.', resultLose: 'The AI wins by {n} points.',
+      resultDraw: 'Draw — Black {b} · White {w}.',
+      blackWins: 'Black wins by {n} points.', whiteWins: 'White wins by {n} points.',
+      breakdown: 'Black {bs} stones + {bt} territory · White {ws} stones + {wt} territory · neutral {n}',
+      scoreNote: 'Dead stones are not removed automatically. Play until the position is clear, then pass twice. No komi is applied.',
+      captures: 'Captures — Black {b} · White {w}',
+      record: 'Record vs AI · {level}: {w}W {l}L {d}D',
+      howTo: 'Black moves first. Tap an intersection to play. Surround a group on all sides to capture it.',
+      confirm: 'Tap the same intersection again to place. Tap elsewhere to move the preview.',
+      moreGames: 'All online games →', rulesLink: 'How to play Go →',
+      rule: 'Chinese area scoring: stones on the board plus surrounded empty points. A neutral point counts half to each side. Your record is saved in this browser only.',
+      boardAria: '9 by 9 Go board',
+      moreLink: 'Built by an indie developer — more tools here'
+    },
+    zh: {
+      eyebrow: '免费桌游 · 围棋',
+      tagline: '9 路棋盘上的提子、打劫与中国规则数子。挑战三档 AI，或与朋友同机对战。',
+      vsAi: '人机', local: '双人',
+      easy: '简单', normal: '普通', hard: '较难',
+      undo: '悔棋', pass: '停一手', newGame: '重开',
+      yourTurn: '轮到你（黑棋）', aiTurn: '轮到 AI（白棋）', thinking: 'AI 思考中…',
+      blackTurn: '黑棋落子', whiteTurn: '白棋落子', gameOver: '终局 — 已数子',
+      blackLabel: '黑棋', whiteLabel: '白棋',
+      passInfo: '已停一手。双方连续停一手即终局，进入数子。',
+      ko: '打劫：不能立即回提刚才被提的那一点。',
+      suicide: '禁自杀：这一手落下后，自己这一块没有气。',
+      occupied: '这个交叉点已经有棋子了。',
+      scoring: '数子（中国规则）',
+      resultWin: '你赢了 {n} 点。', resultLose: 'AI 赢了你 {n} 点。',
+      resultDraw: '平局 — 黑 {b} · 白 {w}。',
+      blackWins: '黑棋胜 {n} 点。', whiteWins: '白棋胜 {n} 点。',
+      breakdown: '黑 {bs} 子 + {bt} 空点 · 白 {ws} 子 + {wt} 空点 · 单官 {n}',
+      scoreNote: '本页不自动移除死子；请下到局面清楚后连续停一手。不设贴目。',
+      captures: '提子 — 黑 {b} · 白 {w}',
+      record: '人机战绩 · {level}：{w} 胜 {l} 负 {d} 平',
+      howTo: '黑棋先行。点交叉点落子；把对方一块棋的气全部堵住即可提子。',
+      confirm: '再点同一交叉点确认落子；点别处可移动预览。',
+      moreGames: '全部在线桌游 →', rulesLink: '围棋规则与入门 →',
+      rule: '中国规则面积法：棋盘上的活棋加围住的空点；单官双方共有，各计半点。战绩只保存在当前浏览器。',
+      boardAria: '9 路围棋棋盘',
+      moreLink: '独立开发者作品 — 更多工具'
+    },
+    id: {
+      eyebrow: 'Papan gratis · Go',
+      tagline: 'Penangkapan, ko, dan penilaian area Tiongkok di papan 9×9. Kalahkan AI atau teman.',
+      vsAi: 'Lawan AI', local: '2 pemain',
+      easy: 'Mudah', normal: 'Sedang', hard: 'Sulit',
+      undo: 'Urungkan', pass: 'Lewat', newGame: 'Baru',
+      yourTurn: 'Giliran Anda (hitam)', aiTurn: 'Giliran AI (putih)', thinking: 'AI berpikir…',
+      blackTurn: 'Giliran hitam', whiteTurn: 'Giliran putih', gameOver: 'Selesai — sudah dinilai',
+      blackLabel: 'Hitam', whiteLabel: 'Putih',
+      passInfo: 'Lewat. Dua kali lewat berturut-turut mengakhiri permainan dan masuk penilaian.',
+      ko: 'Ko — Anda tidak boleh langsung mengambil kembali titik yang sama.',
+      suicide: 'Bunuh diri — titik itu membuat grup Anda tanpa kebebasan.',
+      occupied: 'Perpotongan itu sudah terisi.',
+      scoring: 'Penilaian (aturan area Tiongkok)',
+      resultWin: 'Anda menang {n} poin.', resultLose: 'AI menang {n} poin.',
+      resultDraw: 'Seri — Hitam {b} · Putih {w}.',
+      blackWins: 'Hitam menang {n} poin.', whiteWins: 'Putih menang {n} poin.',
+      breakdown: 'Hitam {bs} batu + {bt} wilayah · Putih {ws} batu + {wt} wilayah · netral {n}',
+      scoreNote: 'Batu mati tidak dihapus otomatis. Mainkan sampai posisi jelas, lalu lewat dua kali. Tanpa komi.',
+      captures: 'Tangkapan — Hitam {b} · Putih {w}',
+      record: 'Rekor vs AI · {level}: {w}M {l}K {d}S',
+      howTo: 'Hitam jalan dulu. Ketuk perpotongan; kepung semua kebebasan grup lawan untuk menangkapnya.',
+      confirm: 'Ketuk perpotongan yang sama lagi untuk menempatkan. Ketuk tempat lain untuk memindahkan pratinjau.',
+      moreGames: 'Semua game →', rulesLink: 'Cara bermain Go →',
+      rule: 'Penilaian area Tiongkok: batu di papan plus titik kosong yang dikelilingi. Titik netral dihitung setengah untuk masing-masing pihak. Rekor hanya di browser ini.',
+      boardAria: 'Papan Go 9 kali 9',
+      moreLink: 'Dibuat oleh indie developer — alat lain di sini'
+    }
+  };
+
+  var ui = { lang: 'en' };
+  var board = new Uint8Array(NN);
+  var history = [];
+  var turn = BLACK;
+  var ko = -1;
+  var passes = 0;
+  var lastMove = -1;
+  var caps = [0, 0, 0];
+  var over = false, score = null, winnerColor = 0, recorded = false;
+  var mode = 'ai', depth = 2;
+  var humanColor = BLACK, aiColor = WHITE;
+  var thinking = false, aiSeq = 0, aiTimer = null;
+  var pending = -1, hover = -1, msg = '';
+  var stats = {};
+  var canvas = null, ctx = null;
+  var view = { size: 360, margin: 16, step: 41 };
+
+  var $ = function (id) { return document.getElementById(id); };
+  var t = function (k) {
+    var d = I18N[ui.lang] || I18N.en;
+    return d[k] != null ? d[k] : (I18N.en[k] != null ? I18N.en[k] : k);
+  };
+  var fillText = function (s, map) {
+    return s.replace(/\{(\w+)\}/g, function (m, k) { return map[k] != null ? map[k] : ''; });
+  };
+  var fmt = function (n) {
+    return Math.abs(n - Math.round(n)) < 0.001 ? String(Math.round(n)) : n.toFixed(1);
+  };
+
+  function groupAt(b, start) {
+    var color = b[start];
+    if (!color) return { stones: [], libs: 0 };
+    var seen = new Uint8Array(NN), libSeen = new Uint8Array(NN);
+    var stack = [start], stones = [], libs = 0, i, k, ns, j, v;
+    seen[start] = 1;
+    while (stack.length) {
+      i = stack.pop(); stones.push(i);
+      ns = NB[i];
+      for (k = 0; k < ns.length; k++) {
+        j = ns[k]; v = b[j];
+        if (v === EMPTY) {
+          if (!libSeen[j]) { libSeen[j] = 1; libs++; }
+        } else if (v === color && !seen[j]) {
+          seen[j] = 1; stack.push(j);
+        }
+      }
+    }
+    return { stones: stones, libs: libs };
+  }
+
+  function tryMove(b, i, p, koPoint) {
+    if (i == null || i < 0 || i >= NN) return { legal: false, reason: 'offboard' };
+    if (b[i] !== EMPTY) return { legal: false, reason: 'occupied' };
+    if (koPoint != null && koPoint >= 0 && i === koPoint) return { legal: false, reason: 'ko' };
+    var nb = new Uint8Array(b);
+    nb[i] = p;
+    var opp = 3 - p, captured = [], ns = NB[i], k, j, g, s, st;
+    for (k = 0; k < ns.length; k++) {
+      j = ns[k];
+      if (nb[j] !== opp) continue;
+      g = groupAt(nb, j);
+      if (g.libs === 0) {
+        for (s = 0; s < g.stones.length; s++) {
+          st = g.stones[s]; nb[st] = EMPTY; captured.push(st);
+        }
+      }
+    }
+    var own = groupAt(nb, i);
+    if (captured.length === 0 && own.libs === 0) return { legal: false, reason: 'suicide' };
+    var nko = -1;
+    if (captured.length === 1 && own.stones.length === 1 && own.libs === 1) nko = captured[0];
+    return { legal: true, board: nb, captured: captured, koPoint: nko };
+  }
+
+  function uniqueOppGroupsAround(b, i, opp) {
+    var seen = new Uint8Array(NN), out = [], ns = NB[i], k, j, g, s;
+    for (k = 0; k < ns.length; k++) {
+      j = ns[k];
+      if (b[j] !== opp || seen[j]) continue;
+      g = groupAt(b, j);
+      out.push(g);
+      for (s = 0; s < g.stones.length; s++) seen[g.stones[s]] = 1;
+    }
+    return out;
+  }
+
+  function moveGreedy(b, i, res, p) {
+    var opp = 3 - p;
+    var value = res.captured.length * 120;
+    var own = groupAt(res.board, i);
+    value += own.libs * 5;
+    if (own.libs === 1 && res.captured.length === 0) value -= 55;
+    var groups = uniqueOppGroupsAround(b, i, opp), k, g, after;
+    for (k = 0; k < groups.length; k++) {
+      g = groups[k];
+      after = res.board[g.stones[0]] === opp ? groupAt(res.board, g.stones[0]).libs : 0;
+      value += (g.libs - after) * 6;
+      if (after === 1) value += 35;
+      if (after === 0) value += 20;
+    }
+    var r = (i / N) | 0, c = i % N, dr = r - 4, dc = c - 4;
+    value += (4.5 - Math.sqrt(dr * dr + dc * dc)) * 1.2;
+    if (r === 0) value -= 5;
+    if (r === N - 1) value -= 5;
+    if (c === 0) value -= 5;
+    if (c === N - 1) value -= 5;
+    var ns = NB[i], ownNb = 0;
+    for (k = 0; k < ns.length; k++) if (res.board[ns[k]] === p) ownNb++;
+    if (ownNb === ns.length && res.captured.length === 0) value -= 45;
+    return value;
+  }
+
+  function legalMoves(b, p, koPoint) {
+    var out = [], i, res;
+    for (i = 0; i < NN; i++) {
+      res = tryMove(b, i, p, koPoint);
+      if (res.legal) out.push({ i: i, res: res, score: 0 });
+    }
+    return out;
+  }
+
+  function chooseEasy(b, p, moves) {
+    var capsList = [], atari = [], k, m, groups, g, maxC, pool;
+    for (k = 0; k < moves.length; k++) {
+      m = moves[k];
+      if (m.res.captured.length) { capsList.push(m); continue; }
+      groups = uniqueOppGroupsAround(m.res.board, m.i, 3 - p);
+      for (g = 0; g < groups.length; g++) {
+        if (groups[g].libs === 1) { atari.push(m.i); break; }
+      }
+    }
+    if (capsList.length) {
+      maxC = 0;
+      for (k = 0; k < capsList.length; k++) if (capsList[k].res.captured.length > maxC) maxC = capsList[k].res.captured.length;
+      pool = [];
+      for (k = 0; k < capsList.length; k++) if (capsList[k].res.captured.length === maxC) pool.push(capsList[k]);
+      return pool[(Math.random() * pool.length) | 0].i;
+    }
+    if (atari.length) return atari[(Math.random() * atari.length) | 0];
+    return moves[(Math.random() * moves.length) | 0].i;
+  }
+
+  function chooseMove(b, p, level, koPoint) {
+    var moves = legalMoves(b, p, koPoint);
+    if (!moves.length) return -1;
+    if (level <= 1) return chooseEasy(b, p, moves);
+    var k, i, r2, s, m;
+    var opp = 3 - p;
+    for (k = 0; k < moves.length; k++) {
+      moves[k].score = moveGreedy(b, moves[k].i, moves[k].res, p);
+    }
+    moves.sort(function (a, b2) { return b2.score - a.score; });
+    if (level === 2) {
+      var top = moves[0].score, pool = [];
+      for (k = 0; k < moves.length && k < 6; k++) if (moves[k].score >= top - 3) pool.push(moves[k]);
+      return pool[(Math.random() * pool.length) | 0].i;
+    }
+    var deadline = Date.now() + 600, nodes = 0, cap = 2200;
+    var limit = Math.min(14, moves.length), best = moves[0].i, bestVal = -Infinity;
+    for (k = 0; k < limit; k++) {
+      if (Date.now() > deadline || nodes > cap) break;
+      m = moves[k];
+      var replyBest = 0, seenAny = false;
+      for (i = 0; i < NN; i++) {
+        if (nodes++ > cap || Date.now() > deadline) break;
+        r2 = tryMove(m.res.board, i, opp, m.res.koPoint);
+        if (!r2.legal) continue;
+        s = moveGreedy(m.res.board, i, r2, opp);
+        if (!seenAny || s > replyBest) { replyBest = s; seenAny = true; }
+      }
+      var val = m.score - replyBest * 0.85;
+      if (val > bestVal) { bestVal = val; best = m.i; }
+    }
+    return best;
+  }
+
+  function scoreArea(b) {
+    var blackStones = 0, whiteStones = 0, bt = 0, wt = 0, neutral = 0;
+    var seen = new Uint8Array(NN), i, k, j, ns;
+    for (i = 0; i < NN; i++) {
+      if (b[i] === BLACK) blackStones++;
+      else if (b[i] === WHITE) whiteStones++;
+    }
+    for (i = 0; i < NN; i++) {
+      if (b[i] !== EMPTY || seen[i]) continue;
+      var stack = [i], region = 0, touchB = false, touchW = false;
+      seen[i] = 1;
+      while (stack.length) {
+        var q = stack.pop(); region++;
+        ns = NB[q];
+        for (k = 0; k < ns.length; k++) {
+          j = ns[k];
+          if (b[j] === BLACK) touchB = true;
+          else if (b[j] === WHITE) touchW = true;
+          else if (!seen[j]) { seen[j] = 1; stack.push(j); }
+        }
+      }
+      if (touchB && !touchW) bt += region;
+      else if (touchW && !touchB) wt += region;
+      else neutral += region;
+    }
+    return {
+      black: blackStones, white: whiteStones,
+      blackTerritory: bt, whiteTerritory: wt, neutral: neutral,
+      blackScore: blackStones + bt + neutral / 2,
+      whiteScore: whiteStones + wt + neutral / 2
+    };
+  }
+
+  function loadPrefs() {
+    try {
+      var saved = localStorage.getItem(RECORD_KEY);
+      if (saved) stats = JSON.parse(saved) || {};
+    } catch (e) { stats = {}; }
+    var l = (navigator.language || 'en').toLowerCase();
+    if (l.indexOf('zh') === 0) ui.lang = 'zh';
+    else if (l.indexOf('id') === 0 || l.indexOf('in') === 0) ui.lang = 'id';
+  }
+  function saveStats() {
+    try { localStorage.setItem(RECORD_KEY, JSON.stringify(stats)); } catch (e) {}
+  }
+  function recordOf() {
+    var r = stats[depth];
+    if (!r) { r = { w: 0, l: 0, d: 0 }; stats[depth] = r; }
+    return r;
+  }
+  function recordGame() {
+    if (mode !== 'ai' || recorded) return;
+    recorded = true;
+    var r = recordOf();
+    if (winnerColor === 0) r.d++;
+    else if (winnerColor === aiColor) r.l++;
+    else r.w++;
+    saveStats();
+  }
+
+  function clearAI() {
+    aiSeq++;
+    if (aiTimer) { clearTimeout(aiTimer); aiTimer = null; }
+    thinking = false;
+  }
+
+  function snapshot() {
+    return {
+      board: board.slice(), turn: turn, ko: ko, passes: passes, lastMove: lastMove,
+      caps: caps.slice(), over: over, score: score, winnerColor: winnerColor, recorded: recorded
+    };
+  }
+  function pushHistory() {
+    history.push(snapshot());
+    if (history.length > 240) history.shift();
+  }
+  function restore(s) {
+    board = s.board.slice(); turn = s.turn; ko = s.ko; passes = s.passes; lastMove = s.lastMove;
+    caps = s.caps.slice(); over = s.over; score = s.score; winnerColor = s.winnerColor; recorded = s.recorded;
+    thinking = false; pending = -1; msg = '';
+  }
+
+  function newGame() {
+    clearAI();
+    board = new Uint8Array(NN);
+    history = [];
+    turn = BLACK; ko = -1; passes = 0; lastMove = -1; caps = [0, 0, 0];
+    over = false; score = null; winnerColor = 0; recorded = false;
+    pending = -1; hover = -1; msg = '';
+    updateUI();
+    draw();
+  }
+
+  function attempt(i, byAI) {
+    if (over) return false;
+    if (mode === 'ai') {
+      if (byAI && turn !== aiColor) return false;
+      if (!byAI && turn !== humanColor) return false;
+    }
+    var res = tryMove(board, i, turn, ko);
+    if (!res.legal) {
+      if (!byAI) {
+        msg = res.reason === 'ko' ? 'ko' : res.reason === 'suicide' ? 'suicide' : 'occupied';
+        updateUI();
+      }
+      return false;
+    }
+    pushHistory();
+    board = res.board;
+    caps[turn] += res.captured.length;
+    lastMove = i;
+    ko = res.koPoint;
+    passes = 0;
+    msg = '';
+    turn = 3 - turn;
+    updateUI();
+    draw();
+    if (mode === 'ai' && turn === aiColor) scheduleAI(90);
+    return true;
+  }
+
+  function doPass(byAI) {
+    if (over) return;
+    if (mode === 'ai') {
+      if (byAI && turn !== aiColor) return;
+      if (!byAI && turn !== humanColor) return;
+    }
+    pushHistory();
+    passes++;
+    ko = -1;
+    lastMove = -1;
+    msg = 'passInfo';
+    if (passes >= 2) {
+      finishScoring();
+    } else {
+      turn = 3 - turn;
+      if (mode === 'ai' && turn === aiColor) scheduleAI(90);
+    }
+    updateUI();
+    draw();
+  }
+
+  function finishScoring() {
+    over = true;
+    score = scoreArea(board);
+    winnerColor = score.blackScore > score.whiteScore ? BLACK : (score.whiteScore > score.blackScore ? WHITE : 0);
+    msg = '';
+    recordGame();
+  }
+
+  function scheduleAI(delay) {
+    if (over || mode !== 'ai' || turn !== aiColor) return;
+    thinking = true;
+    updateUI();
+    var seq = ++aiSeq;
+    aiTimer = setTimeout(function () {
+      aiTimer = null;
+      if (seq !== aiSeq || over || mode !== 'ai' || turn !== aiColor) {
+        thinking = false; updateUI(); return;
+      }
+      var i = -1;
+      try { i = chooseMove(board, aiColor, depth, ko); } catch (e) { i = -1; }
+      thinking = false;
+      if (i >= 0) {
+        if (!attempt(i, true)) doPass(true);
+      } else {
+        doPass(true);
+      }
+      updateUI();
+      draw();
+    }, delay || 90);
+  }
+
+  function undo() {
+    if (thinking || !history.length) return;
+    clearAI();
+    restore(history.pop());
+    if (mode === 'ai' && !over && turn !== humanColor && history.length) {
+      restore(history.pop());
+    }
+    updateUI();
+    draw();
+  }
+
+  function statusText() {
+    if (over) return t('gameOver');
+    if (mode === 'ai') {
+      if (thinking) return t('thinking');
+      return turn === humanColor ? t('yourTurn') : t('aiTurn');
+    }
+    return turn === BLACK ? t('blackTurn') : t('whiteTurn');
+  }
+
+  function levelName() {
+    return depth === 1 ? t('easy') : depth === 2 ? t('normal') : t('hard');
+  }
+
+  function updateUI() {
+    $('status').textContent = statusText();
+    $('undo').disabled = thinking || !history.length;
+    $('pass').disabled = over || thinking || (mode === 'ai' && turn !== humanColor);
+    var dot = $('turn-dot');
+    var showColor = over ? (winnerColor || turn) : turn;
+    dot.className = 'turn-dot ' + (showColor === BLACK ? 'b' : 'w');
+    $('diffRow').hidden = mode !== 'ai';
+    var mbtns = document.querySelectorAll('[data-mode]');
+    for (var i = 0; i < mbtns.length; i++) {
+      mbtns[i].setAttribute('aria-pressed', mbtns[i].getAttribute('data-mode') === mode ? 'true' : 'false');
+    }
+    var dbtns = document.querySelectorAll('[data-diff]');
+    for (var j = 0; j < dbtns.length; j++) {
+      dbtns[j].setAttribute('aria-pressed', parseInt(dbtns[j].getAttribute('data-diff'), 10) === depth ? 'true' : 'false');
+    }
+    $('record').textContent = fillText(t('captures'), { b: caps[BLACK], w: caps[WHITE] }) +
+      (mode === 'ai' ? ' · ' + fillText(t('record'), { level: levelName(), w: recordOf().w, l: recordOf().l, d: recordOf().d }) : '');
+    var card = $('scorecard');
+    if (over && score) {
+      card.hidden = false;
+      $('score-black').textContent = fmt(score.blackScore);
+      $('score-white').textContent = fmt(score.whiteScore);
+      var diff = score.blackScore - score.whiteScore;
+      var result;
+      if (diff === 0) {
+        result = fillText(t('resultDraw'), { b: fmt(score.blackScore), w: fmt(score.whiteScore) });
+      } else if (mode === 'ai') {
+        result = diff > 0 ? fillText(t('resultWin'), { n: fmt(Math.abs(diff)) }) : fillText(t('resultLose'), { n: fmt(Math.abs(diff)) });
+      } else {
+        result = diff > 0 ? fillText(t('blackWins'), { n: fmt(diff) }) : fillText(t('whiteWins'), { n: fmt(-diff) });
+      }
+      $('score-result').textContent = result;
+      $('score-break').textContent = fillText(t('breakdown'), {
+        bs: score.black, bt: score.blackTerritory, ws: score.white, wt: score.whiteTerritory, n: fmt(score.neutral)
+      });
+    } else {
+      card.hidden = true;
+    }
+    $('hint').textContent = over ? '' : pending >= 0 ? t('confirm') : (msg ? t(msg) : t('howTo'));
+    canvas.setAttribute('aria-label', t('boardAria'));
+  }
+
+  function applyLang() {
+    document.documentElement.lang = ui.lang === 'zh' ? 'zh-CN' : ui.lang;
+    var nodes = document.querySelectorAll('[data-i]');
+    for (var i = 0; i < nodes.length; i++) {
+      var k = nodes[i].getAttribute('data-i');
+      if (I18N[ui.lang][k] != null) nodes[i].textContent = I18N[ui.lang][k];
+    }
+    var langs = document.querySelectorAll('.langs button');
+    for (var j = 0; j < langs.length; j++) {
+      langs[j].setAttribute('aria-pressed', langs[j].getAttribute('data-lang') === ui.lang ? 'true' : 'false');
+    }
+    updateUI();
+  }
+
+  function resize() {
+    if (!canvas) return;
+    var wrap = $('boardwrap');
+    var w = wrap.clientWidth || 360;
+    var size = Math.min(Math.floor(w), 540);
+    if (size < 260) size = Math.max(260, Math.floor(w));
+    var dpr = Math.min(2, window.devicePixelRatio || 1);
+    canvas.style.width = size + 'px';
+    canvas.style.height = size + 'px';
+    canvas.width = Math.round(size * dpr);
+    canvas.height = Math.round(size * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    view.size = size;
+    view.margin = Math.max(10, size * 0.055);
+    view.step = (size - view.margin * 2) / (N - 1);
+    draw();
+  }
+
+  function drawStone(x, y, r, color, alpha) {
+    ctx.globalAlpha = alpha == null ? 1 : alpha;
+    ctx.beginPath();
+    ctx.arc(x, y + r * 0.08, r, 0, TAU);
+    ctx.fillStyle = 'rgba(0,0,0,.18)';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, TAU);
+    ctx.fillStyle = color === BLACK ? '#2b2f36' : '#f3ead9';
+    ctx.fill();
+    ctx.lineWidth = Math.max(1, r * 0.1);
+    ctx.strokeStyle = color === BLACK ? 'rgba(10,12,14,.7)' : 'rgba(120,88,50,.7)';
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(x - r * 0.28, y - r * 0.3, r * 0.34, Math.PI * 1.05, Math.PI * 1.72);
+    ctx.strokeStyle = color === BLACK ? 'rgba(255,255,255,.24)' : 'rgba(255,255,255,.95)';
+    ctx.lineWidth = Math.max(1, r * 0.14);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  function draw() {
+    if (!ctx) return;
+    var s = view.size, m = view.margin, step = view.step, i, r, c, x, y;
+    var grad = ctx.createLinearGradient(0, 0, s, s);
+    grad.addColorStop(0, '#c69b6d');
+    grad.addColorStop(1, '#a97b4a');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, s, s);
+
+    ctx.strokeStyle = 'rgba(95,67,38,.75)';
+    ctx.lineWidth = Math.max(1, s / 540);
+    ctx.beginPath();
+    for (i = 0; i < N; i++) {
+      var p = m + i * step;
+      ctx.moveTo(m, p); ctx.lineTo(s - m, p);
+      ctx.moveTo(p, m); ctx.lineTo(p, s - m);
+    }
+    ctx.stroke();
+
+    var stars = [[2, 2], [2, 6], [6, 2], [6, 6], [4, 4]];
+    ctx.fillStyle = 'rgba(76,52,28,.9)';
+    for (i = 0; i < stars.length; i++) {
+      x = m + stars[i][1] * step; y = m + stars[i][0] * step;
+      ctx.beginPath();
+      ctx.arc(x, y, Math.max(1.8, step * 0.075), 0, TAU);
+      ctx.fill();
+    }
+
+    var rad = step * 0.47;
+    for (r = 0; r < N; r++) {
+      for (c = 0; c < N; c++) {
+        var v = board[r * N + c];
+        if (v === EMPTY) continue;
+        drawStone(m + c * step, m + r * step, rad, v, 1);
+      }
+    }
+
+    if (!over && ko >= 0 && board[ko] === EMPTY) {
+      var kr = (ko / N) | 0, kc = ko % N;
+      var kx = m + kc * step, ky = m + kr * step, ks = step * 0.22;
+      ctx.strokeStyle = '#c0392b';
+      ctx.lineWidth = Math.max(1.4, step * 0.06);
+      ctx.setLineDash([3, 3]);
+      ctx.strokeRect(kx - ks, ky - ks, ks * 2, ks * 2);
+      ctx.setLineDash([]);
+    }
+
+    if (lastMove >= 0) {
+      var lr = (lastMove / N) | 0, lc = lastMove % N;
+      ctx.beginPath();
+      ctx.arc(m + lc * step, m + lr * step, Math.max(2.4, rad * 0.24), 0, TAU);
+      ctx.fillStyle = '#c0392b';
+      ctx.fill();
+      ctx.lineWidth = Math.max(1, rad * 0.1);
+      ctx.strokeStyle = 'rgba(255,255,255,.9)';
+      ctx.stroke();
+    }
+
+    if (!over && !thinking) {
+      var target = pending >= 0 ? pending : hover;
+      if (target >= 0 && board[target] === EMPTY) {
+        var pr = (target / N) | 0, pc = target % N;
+        var px = m + pc * step, py = m + pr * step;
+        drawStone(px, py, rad, turn, pending >= 0 ? 0.45 : 0.2);
+        if (pending >= 0) {
+          ctx.beginPath();
+          ctx.arc(px, py, rad * 1.18, 0, TAU);
+          ctx.strokeStyle = 'rgba(192,57,43,.9)';
+          ctx.lineWidth = Math.max(1.5, step * 0.06);
+          ctx.stroke();
+        }
+      }
+    }
+  }
+
+  function hitTest(x, y) {
+    if (!view.step) return -1;
+    var col = Math.round((x - view.margin) / view.step);
+    var row = Math.round((y - view.margin) / view.step);
+    if (col < 0 || col >= N || row < 0 || row >= N) return -1;
+    var px = view.margin + col * view.step, py = view.margin + row * view.step;
+    var dx = x - px, dy = y - py, tol = view.step * 0.62;
+    if (dx * dx + dy * dy > tol * tol) return -1;
+    return row * N + col;
+  }
+
+  function onPointerDown(e) {
+    if (over || thinking) return;
+    if (mode === 'ai' && turn === aiColor) return;
+    var rect = canvas.getBoundingClientRect();
+    if (!rect.width) return;
+    var scale = view.size / rect.width;
+    var x = (e.clientX - rect.left) * scale;
+    var y = (e.clientY - rect.top) * scale;
+    var i = hitTest(x, y);
+    if (i < 0) { if (pending >= 0) { pending = -1; draw(); } return; }
+    if (board[i] !== EMPTY) {
+      if (pending >= 0) { pending = -1; draw(); }
+      msg = 'occupied';
+      updateUI();
+      return;
+    }
+    var coarse = e.pointerType === 'touch' || e.pointerType === 'pen';
+    if (coarse) {
+      if (pending === i) { pending = -1; attempt(i, false); }
+      else { pending = i; msg = ''; updateUI(); draw(); }
+    } else {
+      attempt(i, false);
+    }
+  }
+
+  function bind() {
+    var langBtns = document.querySelectorAll('.langs button');
+    for (var i = 0; i < langBtns.length; i++) {
+      langBtns[i].addEventListener('click', function () {
+        ui.lang = this.getAttribute('data-lang');
+        applyLang();
+      });
+    }
+    var modeBtns = document.querySelectorAll('[data-mode]');
+    for (var m = 0; m < modeBtns.length; m++) {
+      modeBtns[m].addEventListener('click', function () {
+        mode = this.getAttribute('data-mode');
+        newGame();
+      });
+    }
+    var diffBtns = document.querySelectorAll('[data-diff]');
+    for (var d = 0; d < diffBtns.length; d++) {
+      diffBtns[d].addEventListener('click', function () {
+        depth = parseInt(this.getAttribute('data-diff'), 10) || 2;
+        newGame();
+      });
+    }
+    $('undo').addEventListener('click', undo);
+    $('pass').addEventListener('click', function () { doPass(false); });
+    $('new').addEventListener('click', function () { newGame(); });
+    canvas.addEventListener('pointerdown', onPointerDown);
+    canvas.addEventListener('pointermove', function (e) {
+      if (e.pointerType === 'touch') return;
+      var rect = canvas.getBoundingClientRect();
+      if (!rect.width) return;
+      var scale = view.size / rect.width;
+      var i = hitTest((e.clientX - rect.left) * scale, (e.clientY - rect.top) * scale);
+      if (i !== hover) {
+        hover = (i >= 0 && board[i] === EMPTY) ? i : -1;
+        draw();
+      }
+    });
+    canvas.addEventListener('pointerleave', function () {
+      if (hover !== -1) { hover = -1; draw(); }
+    });
+    window.addEventListener('resize', resize);
+    window.addEventListener('orientationchange', function () { setTimeout(resize, 150); });
+  }
+
+  function init() {
+    canvas = $('board');
+    ctx = canvas.getContext('2d');
+    loadPrefs();
+    bind();
+    applyLang();
+    resize();
+    newGame();
+  }
+
+  if (typeof document !== 'undefined' && document.getElementById) {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+    else init();
+  }
+
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+      N: N, BLACK: BLACK, WHITE: WHITE, EMPTY: EMPTY,
+      groupAt: groupAt,
+      tryMove: tryMove,
+      scoreArea: scoreArea,
+      chooseMove: chooseMove,
+      moveGreedy: moveGreedy,
+      legalMoves: legalMoves,
+      newBoard: function () { return new Uint8Array(NN); }
+    };
+  }
+})();
+</script>
+</body>
+</html>
