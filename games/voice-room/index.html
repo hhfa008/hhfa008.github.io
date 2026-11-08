@@ -1,0 +1,1124 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#10141c">
+<title>语音房 · 井字棋</title>
+<style>
+:root{
+  --bg:#0d1117; --card:#161d27; --card2:#1d2633; --line:#2a3646;
+  --text:#eef3f8; --muted:#8fa0b5; --accent:#ffb454; --accent2:#5ad2a5;
+  --danger:#ff6b6b; --x:#ffd166; --o:#6ec6ff; --radius:16px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;min-height:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB",sans-serif;
+  background:radial-gradient(1200px 700px at 15% -10%,#1c2a3d 0%,transparent 60%),
+             radial-gradient(900px 600px at 100% 10%,#2a1e18 0%,transparent 55%),var(--bg);
+  color:var(--text); min-height:100vh; padding:16px;
+}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+input{font:inherit}
+.hidden{display:none!important}
+.wrap{max-width:880px;margin:0 auto}
+.card{background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,0)),var(--card);
+  border:1px solid var(--line);border-radius:var(--radius);padding:20px}
+h1{font-size:clamp(26px,6vw,40px);line-height:1.15;margin:0 0 8px;letter-spacing:-.02em}
+h1 span{color:var(--accent)}
+.sub{color:var(--muted);margin:0 0 22px;font-size:15px;line-height:1.5}
+label{display:block;font-size:13px;color:var(--muted);margin:14px 0 6px}
+.input{width:100%;height:52px;border-radius:12px;border:1px solid var(--line);background:#0e141c;
+  color:var(--text);padding:0 14px;font-size:17px;outline:none}
+.input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(255,180,84,.15)}
+.btn{min-height:52px;border-radius:12px;padding:0 18px;font-size:17px;font-weight:600;
+  background:var(--card2);border:1px solid var(--line);display:inline-flex;align-items:center;
+  justify-content:center;gap:8px;transition:transform .06s,filter .15s}
+.btn:active{transform:scale(.98)}
+.btn.primary{background:linear-gradient(180deg,#ffc46d,#f0a33c);color:#241605;border-color:#f0a33c}
+.btn.ghost{background:transparent}
+.btn.danger{background:#3a1d22;border-color:#5c2a33;color:#ffb3b3}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row>.btn{flex:1}
+.or{text-align:center;color:var(--muted);font-size:13px;margin:14px 0}
+.join{display:flex;gap:10px}
+.join .input{flex:1;text-align:center;letter-spacing:.3em;font-size:22px;font-weight:700}
+.privacy{margin:22px 0 0;padding:14px 16px;border-radius:12px;background:rgba(90,210,165,.07);
+  border:1px solid rgba(90,210,165,.22);color:#a9dcc7;font-size:13px;line-height:1.6}
+.err{color:var(--danger);font-size:14px;min-height:20px;margin:12px 0 0}
+.room-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.room-code{font-size:clamp(30px,8vw,46px);font-weight:800;letter-spacing:.12em;color:var(--accent);line-height:1}
+.room-tag{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:5px 10px}
+.spacer{flex:1}
+.banner{padding:12px 14px;border-radius:12px;margin:0 0 14px;font-size:14px;line-height:1.5;
+  background:rgba(255,180,84,.1);border:1px solid rgba(255,180,84,.3);color:#ffd9a0}
+.banner.bad{background:rgba(255,107,107,.1);border-color:rgba(255,107,107,.35);color:#ffc0c0}
+.section-title{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;margin:20px 0 10px}
+.members{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.member{display:flex;align-items:center;gap:10px;background:var(--card2);border:1px solid var(--line);
+  border-radius:12px;padding:10px 12px;min-height:58px;position:relative;overflow:hidden}
+.avatar{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-weight:700;
+  background:#27364a;color:var(--accent);flex:none}
+.member.self{border-color:rgba(255,180,84,.45)}
+.m-name{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px}
+.m-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.mic-state{font-size:11px;color:var(--muted)}
+.mic-state.on{color:var(--accent2)}
+.level-dot{width:10px;height:10px;border-radius:50%;background:#33445a;margin-left:auto;flex:none;
+  transform:scale(calc(.75 + var(--l,0) * 1.35));transition:transform .08s,background .08s;
+  box-shadow:0 0 0 0 rgba(90,210,165,0)}
+.level-dot.live{background:var(--accent2);box-shadow:0 0 calc(4px + var(--l,0) * 12px) rgba(90,210,165,.6)}
+.controls{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.controls .btn{flex:1;min-width:130px}
+.game-card{margin-top:18px}
+.game-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.turn{font-size:17px;font-weight:650;line-height:1.4}
+.turn small{display:block;font-weight:400;color:var(--muted);font-size:12px;margin-top:3px}
+.scores{font-variant-numeric:tabular-nums;font-size:14px;color:var(--muted)}
+.scores b{color:var(--text);font-size:17px}
+.board{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:min(100%,390px);margin:0 auto;
+  aspect-ratio:1/1}
+.cell{background:#0f1620;border:1px solid var(--line);border-radius:12px;display:grid;place-items:center;
+  font-size:clamp(34px,12vw,58px);font-weight:800;line-height:1;transition:background .12s,border-color .12s}
+.cell:not(:disabled):active{background:#1a2533}
+.cell.x{color:var(--x)}
+.cell.o{color:var(--o)}
+.cell.win{background:rgba(255,209,102,.14);border-color:rgba(255,209,102,.65)}
+.cell:disabled{cursor:default}
+.game-foot{display:flex;justify-content:center;margin-top:14px}
+details{margin-top:18px;border-top:1px solid var(--line);padding-top:12px}
+summary{cursor:pointer;color:var(--muted);font-size:13px;padding:4px 0}
+#conn{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:var(--muted);
+  line-height:1.7;white-space:pre-wrap;margin-top:8px}
+#audios{position:fixed;width:0;height:0;overflow:hidden;left:-9999px}
+#toast{position:fixed;left:50%;bottom:max(24px,env(safe-area-inset-bottom));transform:translateX(-50%);
+  background:#243040;border:1px solid #3a4a5e;color:var(--text);padding:12px 18px;border-radius:999px;
+  font-size:14px;box-shadow:0 10px 30px rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:opacity .2s;
+  max-width:calc(100vw - 32px);text-align:center;z-index:20}
+#toast.show{opacity:1}
+@media (max-width:420px){body{padding:12px}.card{padding:16px}.member{min-height:52px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <section id="lobby" class="card">
+    <h1>语音房 <span>·</span> 井字棋</h1>
+    <p class="sub">4 位房号进房，最多 4 人。开麦就能互相听见，然后轮流落子。</p>
+    <label for="name">你的昵称</label>
+    <input id="name" class="input" maxlength="12" autocomplete="nickname" placeholder="怎么称呼你">
+    <div class="row" style="margin-top:16px">
+      <button id="createBtn" class="btn primary">创建房间</button>
+    </div>
+    <div class="or">或输入朋友发来的房号</div>
+    <div class="join">
+      <input id="code" class="input" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="0000" aria-label="4 位房号">
+      <button id="joinBtn" class="btn">加入</button>
+    </div>
+    <p id="lobbyErr" class="err" role="alert"></p>
+    <p class="privacy">隐私说明：语音点对点传输，不经过服务器录制；本站不录音、不存储任何音频。麦克风默认关闭，只有你点「开麦」才会请求权限。</p>
+  </section>
+
+  <section id="roomView" class="hidden">
+    <div class="card">
+      <div class="room-head">
+        <div>
+          <div class="room-code" id="roomCode">0000</div>
+          <div class="room-tag" id="connTag">连接中…</div>
+        </div>
+        <div class="spacer"></div>
+        <button id="copyBtn" class="btn ghost" style="min-height:44px;font-size:14px">复制邀请链接</button>
+        <button id="leaveBtn" class="btn danger" style="min-height:44px;font-size:14px">离开</button>
+      </div>
+      <div id="banner" class="banner hidden" role="status"></div>
+      <div class="section-title">房间成员 <span id="memberCount"></span></div>
+      <div class="members" id="members"></div>
+      <div class="controls">
+        <button id="micBtn" class="btn primary">开麦</button>
+        <button id="resetBtn" class="btn">新一局</button>
+      </div>
+      <p class="sub" style="margin:10px 0 0;font-size:12px">iOS Safari 如果听不到声音，点一下页面任意位置即可解锁音频播放。</p>
+    </div>
+
+    <div class="card game-card">
+      <div class="game-top">
+        <div class="turn" id="turnText">等待房间状态…</div>
+        <div class="scores" id="scores"></div>
+      </div>
+      <div class="board" id="board" aria-label="井字棋棋盘"></div>
+      <div class="game-foot"><span id="seatHint" class="sub" style="margin:0;font-size:12px"></span></div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <details id="debugDetails">
+        <summary>连接详情（WebRTC 状态与 candidate 类型）</summary>
+        <div id="conn">等待连接…</div>
+      </details>
+      <p class="privacy" style="margin-top:16px">语音点对点传输，不经过服务器录制；本站不录音、不存储任何音频。房主离开后自动移交给下一位成员。</p>
+    </div>
+  </section>
+</div>
+<div id="audios"></div>
+<div id="toast"></div>
+
+<script>
+(function(){
+'use strict';
+
+const params = new URLSearchParams(location.search);
+const API_BASE = (params.get('api') || 'https://voice-room.superapp-devin.workers.dev').replace(/\/+$/,'');
+const WS_BASE = API_BASE.replace(/^http/i, 'ws');
+const FORCE_RELAY = params.get('relay') === '1';
+const MAX_MEMBERS = 4;
+const NAME_KEY = 'vr_name';
+
+const S = {
+  name: '',
+  room: '',
+  selfId: null,
+  hostId: null,
+  members: [],
+  game: null,
+  ws: null,
+  wsState: 'idle',
+  leaving: false,
+  reconnectAttempt: 0,
+  reconnectTimer: null,
+  heartbeatTimer: null,
+  ice: null,
+  iceTimer: null,
+  pcs: new Map(),
+  pendingSignals: new Map(),
+  micOn: false,
+  micStream: null,
+  micTrack: null,
+  silentTrack: null,
+  silentCtx: null,
+  meterCtx: null,
+  localAnalyser: null,
+  localData: null,
+  remoteAnalysers: new Map(),
+  remoteAudios: new Map(),
+  debugTimer: null,
+  toastTimer: null,
+};
+
+const $ = (id) => document.getElementById(id);
+
+function escapeText(s){ return String(s == null ? '' : s); }
+function randomRoom(){ return String(Math.floor(1000 + Math.random() * 9000)); }
+function cleanName(v){
+  const s = String(v || '').replace(/[\u0000-\u001f\u007f]/g,'').trim().slice(0,12);
+  return s;
+}
+function nameOf(id){
+  const m = S.members.find((x) => x.id === id);
+  return m ? m.name : '已离开';
+}
+function roleOf(id){
+  if (!S.game) return null;
+  if (S.game.xId === id) return 'X';
+  if (S.game.oId === id) return 'O';
+  return null;
+}
+function myRole(){ return S.selfId && S.game ? roleOf(S.selfId) : null; }
+
+function setBanner(text, bad){
+  const el = $('banner');
+  if (!text){ el.classList.add('hidden'); el.textContent=''; return; }
+  el.textContent = text;
+  el.classList.toggle('bad', !!bad);
+  el.classList.remove('hidden');
+}
+function toast(text, ms){
+  const el = $('toast');
+  if (!text){ el.classList.remove('show'); el.textContent = ''; return; }
+  el.textContent = text;
+  el.classList.add('show');
+  clearTimeout(S.toastTimer);
+  S.toastTimer = setTimeout(() => el.classList.remove('show'), ms || 3200);
+}
+function setLobbyErr(text){ $('lobbyErr').textContent = text || ''; }
+
+function showLobby(){
+  $('roomView').classList.add('hidden');
+  $('lobby').classList.remove('hidden');
+}
+function showRoom(){
+  $('lobby').classList.add('hidden');
+  $('roomView').classList.remove('hidden');
+}
+
+function saveName(){
+  const n = cleanName($('name').value);
+  if (n){ S.name = n; try{ localStorage.setItem(NAME_KEY, n); }catch(e){} }
+  return n;
+}
+
+function updateUrl(room){
+  try{
+    const u = new URL(location.href);
+    if (room) u.searchParams.set('room', room); else u.searchParams.delete('room');
+    history.replaceState(null, '', u.toString());
+  }catch(e){}
+}
+
+async function fetchIce(force){
+  const now = Date.now();
+  if (!force && S.ice && now < S.ice.refreshAt) return S.ice;
+  const res = await fetch(API_BASE + '/api/ice', { cache: 'no-store' });
+  if (!res.ok) throw new Error('ICE endpoint ' + res.status);
+  const data = await res.json();
+  if (!Array.isArray(data.iceServers) || !data.iceServers.length) throw new Error('no iceServers');
+  const ttl = Number(data.ttl) || 3600;
+  data.refreshAt = Date.now() + Math.max(120, ttl - 600) * 1000;
+  S.ice = data;
+  return data;
+}
+
+function scheduleIceRefresh(){
+  clearTimeout(S.iceTimer);
+  if (!S.ice || !S.room) return;
+  const delay = Math.max(60000, S.ice.refreshAt - Date.now());
+  S.iceTimer = setTimeout(async () => {
+    if (!S.room || S.leaving) return;
+    try{
+      await fetchIce(true);
+      for (const peer of S.pcs.values()){
+        try{ peer.pc.setConfiguration({ iceServers: S.ice.iceServers }); }catch(e){}
+        if (S.selfId && S.selfId < peer.id){
+          try{ peer.pc.restartIce(); }catch(e){}
+        }
+      }
+      console.log('[voice-room] TURN credentials refreshed');
+      scheduleIceRefresh();
+    }catch(e){
+      console.warn('[voice-room] TURN refresh failed', e);
+      S.ice.refreshAt = Date.now() + 60000;
+      S.iceTimer = setTimeout(scheduleIceRefresh, 60000);
+    }
+  }, delay);
+}
+
+async function ensureSilentTrack(){
+  if (S.silentTrack && S.silentTrack.readyState === 'live') return S.silentTrack;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) throw new Error('AudioContext unavailable');
+  const ctx = new AC();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  gain.gain.value = 0;
+  const dest = ctx.createMediaStreamDestination();
+  osc.connect(gain); gain.connect(dest); osc.start();
+  S.silentCtx = ctx;
+  S.silentTrack = dest.stream.getAudioTracks()[0];
+  return S.silentTrack;
+}
+
+function getMeterCtx(){
+  if (!S.meterCtx){
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    S.meterCtx = new AC();
+  }
+  if (S.meterCtx.state === 'suspended') S.meterCtx.resume().catch(()=>{});
+  return S.meterCtx;
+}
+
+function attachLocalMeter(stream){
+  try{
+    const ctx = getMeterCtx();
+    if (!ctx) return;
+    const src = ctx.createMediaStreamSource(stream);
+    const an = ctx.createAnalyser();
+    an.fftSize = 512; an.smoothingTimeConstant = 0.55;
+    src.connect(an);
+    S.localAnalyser = an;
+    S.localData = new Uint8Array(an.fftSize);
+  }catch(e){ S.localAnalyser = null; }
+}
+
+function detachLocalMeter(){
+  S.localAnalyser = null;
+  S.localData = null;
+}
+
+function attachRemoteMeter(peerId, stream){
+  try{
+    const ctx = getMeterCtx();
+    if (!ctx) return;
+    const src = ctx.createMediaStreamSource(stream);
+    const an = ctx.createAnalyser();
+    an.fftSize = 512; an.smoothingTimeConstant = 0.55;
+    src.connect(an);
+    S.remoteAnalysers.set(peerId, an);
+  }catch(e){}
+}
+
+function detachRemoteMeter(peerId){ S.remoteAnalysers.delete(peerId); }
+
+function rmsOf(analyser, data){
+  if (!analyser) return 0;
+  analyser.getByteTimeDomainData(data);
+  let sum = 0;
+  for (let i=0;i<data.length;i++){
+    const v = (data[i] - 128) / 128;
+    sum += v*v;
+  }
+  return Math.min(1, Math.sqrt(sum / data.length) * 4.2);
+}
+
+let meterLast = 0;
+function meterLoop(ts){
+  requestAnimationFrame(meterLoop);
+  if (ts - meterLast < 66) return;
+  meterLast = ts;
+  for (const m of S.members){
+    const row = document.querySelector('.member[data-id="' + cssEscape(m.id) + '"]');
+    if (!row) continue;
+    const dot = row.querySelector('.level-dot');
+    if (!dot) continue;
+    let level = 0;
+    if (m.id === S.selfId){
+      level = S.micOn && S.localAnalyser ? rmsOf(S.localAnalyser, S.localData) : 0;
+    }else{
+      const an = S.remoteAnalysers.get(m.id);
+      if (an){
+        if (!an.__data) an.__data = new Uint8Array(an.fftSize);
+        level = rmsOf(an, an.__data);
+      }
+    }
+    dot.style.setProperty('--l', level.toFixed(3));
+    dot.classList.toggle('live', level > 0.04);
+  }
+}
+requestAnimationFrame(meterLoop);
+
+function cssEscape(v){
+  if (window.CSS && CSS.escape) return CSS.escape(v);
+  return String(v).replace(/["\\]/g, '\\$&');
+}
+
+function renderMembers(){
+  const box = $('members');
+  box.textContent = '';
+  $('memberCount').textContent = '(' + S.members.length + '/' + MAX_MEMBERS + ')';
+  for (const m of S.members){
+    const row = document.createElement('div');
+    row.className = 'member' + (m.id === S.selfId ? ' self' : '');
+    row.dataset.id = m.id;
+
+    const av = document.createElement('div');
+    av.className = 'avatar';
+    av.textContent = (m.name || '?').slice(0,1).toUpperCase();
+    row.appendChild(av);
+
+    const info = document.createElement('div');
+    info.style.minWidth = '0';
+    const nm = document.createElement('div');
+    nm.className = 'm-name';
+    nm.textContent = m.name + (m.id === S.selfId ? '（你）' : '');
+    const meta = document.createElement('div');
+    meta.className = 'm-meta';
+    meta.textContent = m.host ? '房主' : '成员';
+    const mic = document.createElement('div');
+    mic.className = 'mic-state' + (m.mic ? ' on' : '');
+    mic.textContent = m.mic ? '麦克风开' : '麦克风关';
+    info.appendChild(nm); info.appendChild(meta); info.appendChild(mic);
+    row.appendChild(info);
+
+    const dot = document.createElement('div');
+    dot.className = 'level-dot';
+    dot.title = '说话音量';
+    row.appendChild(dot);
+
+    if (m.host){
+      const crown = document.createElement('span');
+      crown.textContent = '★';
+      crown.style.cssText = 'position:absolute;top:6px;right:9px;color:var(--accent);font-size:12px';
+      crown.title = '房主';
+      row.appendChild(crown);
+    }
+    box.appendChild(row);
+  }
+}
+
+function updateMicUI(){
+  const btn = $('micBtn');
+  btn.textContent = S.micOn ? '静音' : '开麦';
+  btn.classList.toggle('primary', !S.micOn);
+  btn.classList.toggle('danger', S.micOn);
+}
+
+function renderGame(){
+  const board = $('board');
+  const g = S.game;
+  if (board.childElementCount !== 9){
+    board.textContent = '';
+    for (let i=0;i<9;i++){
+      const b = document.createElement('button');
+      b.className = 'cell';
+      b.type = 'button';
+      b.dataset.index = String(i);
+      b.setAttribute('aria-label', '第 ' + (i+1) + ' 格');
+      b.addEventListener('click', () => onCell(i));
+      board.appendChild(b);
+    }
+  }
+  const turnText = $('turnText');
+  const scores = $('scores');
+  const seatHint = $('seatHint');
+  const reset = $('resetBtn');
+
+  if (!g){
+    turnText.textContent = '等待房间状态…';
+    scores.textContent = '';
+    seatHint.textContent = '';
+    reset.disabled = true;
+    for (const b of board.children){ b.textContent=''; b.disabled=true; b.className='cell'; }
+    return;
+  }
+
+  const r = myRole();
+  const xName = nameOf(g.xId);
+  const oName = nameOf(g.oId);
+  scores.textContent = '';
+  const sx = document.createElement('span'); sx.innerHTML = 'X <b>'+g.scores.X+'</b>';
+  const sep = document.createElement('span'); sep.textContent = ' : ';
+  const so = document.createElement('span'); so.innerHTML = 'O <b>'+g.scores.O+'</b>';
+  scores.appendChild(sx); scores.appendChild(sep); scores.appendChild(so);
+
+  if (g.winner === 'draw'){
+    turnText.textContent = '平局';
+    turnText.appendChild(document.createElement('small')).textContent = '点「新一局」再来一次';
+  }else if (g.winner){
+    turnText.textContent = nameOf(g.winner === 'X' ? g.xId : g.oId) + '（' + g.winner + '）获胜！';
+    turnText.appendChild(document.createElement('small')).textContent = '房主可以开新一局';
+  }else if (!g.oId){
+    turnText.textContent = '等第二位玩家加入';
+    turnText.appendChild(document.createElement('small')).textContent = '至少 2 人才能开始，房主执 X 先手';
+  }else if (r && g.turn === r){
+    turnText.textContent = '轮到你（' + r + '）落子';
+    turnText.appendChild(document.createElement('small')).textContent = '点一个空格';
+  }else{
+    const turnId = g.turn === 'X' ? g.xId : g.oId;
+    turnText.textContent = '等待 ' + nameOf(turnId) + '（' + g.turn + '）落子';
+    turnText.appendChild(document.createElement('small')).textContent = r ? '你是 ' + r : '你在观战';
+  }
+
+  seatHint.textContent = !g.oId ? '' :
+    ('房主 ' + xName + ' 执 X 先手 · ' + (oName ? oName + ' 执 O' : '等待对手') + ' · 第 ' + (g.round || 1) + ' 局');
+
+  for (let i=0;i<9;i++){
+    const b = board.children[i];
+    const v = g.board[i];
+    b.textContent = v || '';
+    b.className = 'cell' + (v === 'X' ? ' x' : v === 'O' ? ' o' : '') +
+      (g.line && g.line.indexOf(i) !== -1 ? ' win' : '');
+    const mine = r && g.turn === r && !g.winner && !g.line && !v && !!g.oId;
+    b.disabled = !mine;
+  }
+  reset.disabled = !(S.selfId && g.xId === S.selfId);
+}
+
+function onCell(i){
+  if (!S.game || !S.selfId) return;
+  if (myRole() !== S.game.turn) return;
+  if (S.game.winner || S.game.line) return;
+  if (S.game.board[i]) return;
+  send({ type:'game_move', room:S.room, index:i });
+}
+
+function renderAll(){
+  $('roomCode').textContent = S.room || '0000';
+  $('connTag').textContent = S.wsState === 'open' ? '已连接 · 最多 4 人' : '连接中…';
+  renderMembers();
+  renderGame();
+  updateMicUI();
+}
+
+function scheduleReconnect(){
+  clearTimeout(S.reconnectTimer);
+  const n = Math.min(S.reconnectAttempt++, 6);
+  const delay = Math.min(10000, 1000 * Math.pow(2, n));
+  S.reconnectTimer = setTimeout(() => {
+    if (S.leaving || !S.room) return;
+    fetchIce(false).catch(()=>{}).finally(() => { if (!S.leaving) connectWS(); });
+  }, delay);
+}
+
+function connectWS(){
+  if (!S.room || S.leaving) return;
+  cleanupWS();
+  S.wsState = 'connecting';
+  renderAll();
+  const url = WS_BASE + '/ws?room=' + encodeURIComponent(S.room) + '&name=' + encodeURIComponent(S.name);
+  let ws;
+  try{ ws = new WebSocket(url); }catch(e){ S.wsState='closed'; scheduleReconnect(); return; }
+  S.ws = ws;
+
+  ws.onopen = function(){
+    if (S.ws !== ws) return;
+    S.wsState = 'open';
+    S.reconnectAttempt = 0;
+    setBanner('');
+    renderAll();
+    clearInterval(S.heartbeatTimer);
+    S.heartbeatTimer = setInterval(() => {
+      if (S.ws && S.ws.readyState === 1) send({ type:'ping', room:S.room, t:Date.now() });
+    }, 20000);
+  };
+  ws.onmessage = function(ev){
+    if (S.ws !== ws) return;
+    handleMessage(ev.data);
+  };
+  ws.onclose = function(ev){
+    if (S.ws !== ws || S.leaving) return;
+    S.wsState = 'closed';
+    clearInterval(S.heartbeatTimer);
+    closeAllPeers();
+    S.selfId = null; S.hostId = null; S.members = []; S.game = null;
+    renderAll();
+    if (ev.code === 4001 || ev.reason === 'room_full'){
+      leaveToLobby('房间已满（最多 4 人），换一个房号试试。');
+      return;
+    }
+    setBanner('连接断开，正在重连…（房间 ' + S.room + '）');
+    scheduleReconnect();
+  };
+  ws.onerror = function(){};
+}
+
+function cleanupWS(){
+  clearInterval(S.heartbeatTimer);
+  const ws = S.ws;
+  S.ws = null;
+  if (ws){
+    ws.onopen = ws.onmessage = ws.onclose = ws.onerror = null;
+    try{ ws.close(); }catch(e){}
+  }
+}
+
+function send(msg){
+  if (!S.ws || S.ws.readyState !== 1) return false;
+  try{ S.ws.send(JSON.stringify(msg)); return true; }catch(e){ return false; }
+}
+
+function sendSignal(to, data){
+  send({ type:'signal', room:S.room, to:to, data:data });
+}
+
+function descJSON(d){
+  return d ? { type:d.type, sdp:d.sdp } : null;
+}
+
+function handleMessage(raw){
+  let msg;
+  try{ msg = JSON.parse(raw); }catch(e){ return; }
+  if (!msg || typeof msg !== 'object') return;
+  if (msg.room && msg.room !== S.room) return; // never act on another room's traffic
+
+  if (msg.type === 'welcome'){
+    S.selfId = msg.selfId;
+    S.hostId = msg.hostId || null;
+    S.members = Array.isArray(msg.members) ? msg.members : [];
+    S.game = msg.game || null;
+    S.wsState = 'open';
+    setBanner('');
+    renderAll();
+    if (S.micOn) send({ type:'mic', room:S.room, on:true });
+    syncPeers();
+    return;
+  }
+
+  if (msg.type === 'room_state'){
+    const prevHost = S.hostId;
+    S.hostId = msg.hostId || null;
+    S.members = Array.isArray(msg.members) ? msg.members : [];
+    if (!S.members.some((m) => m.id === S.selfId)) return;
+    renderAll();
+    syncPeers();
+    if (msg.hostChanged || (prevHost && S.hostId && prevHost !== S.hostId)){
+      toast('房主已移交：' + nameOf(S.hostId));
+    }
+    return;
+  }
+
+  if (msg.type === 'game_state'){
+    S.game = msg.game || null;
+    renderGame();
+    return;
+  }
+
+  if (msg.type === 'signal'){
+    if (!msg.from || !msg.data) return;
+    handleSignal(msg.from, msg.data);
+    return;
+  }
+
+  if (msg.type === 'error'){
+    if (msg.code === 'room_full'){
+      leaveToLobby('房间已满（最多 4 人），换一个房号试试。');
+      return;
+    }
+    if (msg.code === 'unknown_type' || msg.code === 'bad_signal') return;
+    toast(msg.message || '操作失败');
+    return;
+  }
+}
+
+function syncPeers(){
+  if (!S.selfId) return;
+  const ids = new Set(S.members.filter((m) => m.id !== S.selfId).map((m) => m.id));
+  for (const id of Array.from(S.pcs.keys())){
+    if (!ids.has(id)) closePeer(id);
+  }
+  for (const id of ids){
+    if (!S.pcs.has(id)) createPeer(id);
+  }
+}
+
+async function createPeer(peerId){
+  if (!S.selfId || !S.room || S.pcs.has(peerId)) return S.pcs.get(peerId) || null;
+  if (!S.members.some((m) => m.id === peerId)) return null;
+
+  let ice;
+  try{ ice = await fetchIce(false); }
+  catch(e){ toast('无法获取 TURN 凭据，重试中'); setTimeout(() => createPeer(peerId), 3000); return null; }
+  if (!S.selfId || S.pcs.has(peerId)) return S.pcs.get(peerId) || null;
+  if (!S.members.some((m) => m.id === peerId)) return null;
+
+  let pc;
+  try{
+    pc = new RTCPeerConnection(Object.assign({
+      iceServers: ice.iceServers,
+      iceCandidatePoolSize: 4,
+    }, FORCE_RELAY ? { iceTransportPolicy: 'relay' } : {}));
+  }catch(e){ toast('浏览器不支持 WebRTC'); return null; }
+
+  const peer = {
+    id: peerId,
+    pc: pc,
+    polite: String(S.selfId) < String(peerId),
+    makingOffer: false,
+    ignoreOffer: false,
+    pendingCandidates: [],
+    remoteStream: null,
+    audioEl: null,
+    restartTimer: null,
+  };
+  S.pcs.set(peerId, peer);
+
+  try{
+    const track = S.micTrack || await ensureSilentTrack();
+    pc.addTrack(track, new MediaStream([track]));
+  }catch(e){ console.warn('[voice-room] addTrack failed', e); }
+
+  pc.onicecandidate = (ev) => {
+    if (ev.candidate) sendSignal(peerId, { candidate: ev.candidate.toJSON ? ev.candidate.toJSON() : ev.candidate });
+  };
+  pc.onnegotiationneeded = async () => {
+    if (peer.pc !== pc) return;
+    try{
+      peer.makingOffer = true;
+      await pc.setLocalDescription();
+      sendSignal(peerId, { description: descJSON(pc.localDescription) });
+    }catch(e){ console.warn('[voice-room] negotiation failed', e); }
+    finally{ peer.makingOffer = false; }
+  };
+  pc.ontrack = (ev) => {
+    const stream = ev.streams[0] || new MediaStream([ev.track]);
+    peer.remoteStream = stream;
+    attachRemoteAudio(peer, stream);
+    attachRemoteMeter(peerId, stream);
+  };
+  const onState = () => {
+    if (peer.pc !== pc) return;
+    console.log('[voice-room] peer ' + peerId.slice(0,8) + ' connectionState=' + pc.connectionState +
+      ' ice=' + pc.iceConnectionState);
+    updateConnDebug();
+    if (pc.connectionState === 'failed'){
+      clearTimeout(peer.restartTimer);
+      peer.restartTimer = setTimeout(() => {
+        if (peer.pc !== pc || S.leaving) return;
+        try{ pc.restartIce(); }catch(e){}
+      }, 1500);
+    }
+  };
+  pc.onconnectionstatechange = onState;
+  pc.oniceconnectionstatechange = onState;
+
+  const queue = S.pendingSignals.get(peerId);
+  if (queue && queue.length){
+    S.pendingSignals.delete(peerId);
+    for (const data of queue) handleSignal(peerId, data);
+  }
+  return peer;
+}
+
+function attachRemoteAudio(peer, stream){
+  let el = peer.audioEl;
+  if (!el){
+    el = document.createElement('audio');
+    el.autoplay = true;
+    el.playsInline = true;
+    el.setAttribute('playsinline', '');
+    $('audios').appendChild(el);
+    peer.audioEl = el;
+    S.remoteAudios.set(peer.id, el);
+  }
+  if (el.srcObject !== stream) el.srcObject = stream;
+  const p = el.play();
+  if (p && p.catch) p.catch(()=>{});
+}
+
+async function addCandidate(peer, candidate){
+  try{
+    if (!peer.pc.remoteDescription){
+      peer.pendingCandidates.push(candidate);
+      return;
+    }
+    await peer.pc.addIceCandidate(candidate);
+  }catch(e){
+    if (!peer.ignoreOffer) console.warn('[voice-room] addIceCandidate failed', e);
+  }
+}
+
+async function flushCandidates(peer){
+  if (!peer.pendingCandidates.length) return;
+  const list = peer.pendingCandidates.splice(0);
+  for (const c of list){
+    try{ await peer.pc.addIceCandidate(c); }catch(e){}
+  }
+}
+
+async function handleSignal(peerId, data){
+  if (!S.selfId || peerId === S.selfId) return;
+  let peer = S.pcs.get(peerId);
+  if (!peer){
+    if (!S.pendingSignals.has(peerId)) S.pendingSignals.set(peerId, []);
+    S.pendingSignals.get(peerId).push(data);
+    if (!S.members.some((m) => m.id === peerId)) return;
+    await createPeer(peerId);
+    return;
+  }
+  const pc = peer.pc;
+
+  try{
+    if (data.description){
+      const d = data.description;
+      if (!d.type || !d.sdp) return;
+      const offerCollision = d.type === 'offer' && (peer.makingOffer || pc.signalingState !== 'stable');
+      peer.ignoreOffer = !peer.polite && offerCollision;
+      if (peer.ignoreOffer) return;
+      if (offerCollision && peer.polite){
+        await pc.setLocalDescription({ type:'rollback' });
+      }
+      await pc.setRemoteDescription(d);
+      await flushCandidates(peer);
+      if (d.type === 'offer'){
+        await pc.setLocalDescription();
+        sendSignal(peerId, { description: descJSON(pc.localDescription) });
+      }
+    }else if (data.candidate){
+      await addCandidate(peer, data.candidate);
+    }
+  }catch(e){
+    console.warn('[voice-room] signal handling failed', e);
+  }
+}
+
+function closePeer(peerId){
+  const peer = S.pcs.get(peerId);
+  if (!peer) return;
+  S.pcs.delete(peerId);
+  clearTimeout(peer.restartTimer);
+  try{ peer.pc.onicecandidate = peer.pc.onnegotiationneeded = peer.pc.ontrack = null; }catch(e){}
+  try{ peer.pc.onconnectionstatechange = peer.pc.oniceconnectionstatechange = null; }catch(e){}
+  try{ peer.pc.close(); }catch(e){}
+  if (peer.audioEl){
+    try{ peer.audioEl.pause(); peer.audioEl.srcObject = null; }catch(e){}
+    peer.audioEl.remove();
+  }
+  S.remoteAudios.delete(peerId);
+  detachRemoteMeter(peerId);
+  updateConnDebug();
+}
+
+function closeAllPeers(){
+  for (const id of Array.from(S.pcs.keys())) closePeer(id);
+  S.pendingSignals.clear();
+  S.remoteAnalysers.clear();
+}
+
+function audioSender(pc){
+  const senders = pc.getSenders();
+  const s = senders.find((x) => x.track && x.track.kind === 'audio');
+  if (s) return s;
+  const tr = pc.getTransceivers().find((t) => t.sender && t.sender.track && t.sender.track.kind === 'audio');
+  return tr ? tr.sender : null;
+}
+
+async function setMic(on){
+  if (on === S.micOn) return;
+  const btn = $('micBtn');
+  if (on){
+    btn.disabled = true;
+    btn.textContent = '请求麦克风…';
+    try{
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation:true, noiseSuppression:true, autoGainControl:true },
+        video: false,
+      });
+      S.micStream = stream;
+      S.micTrack = stream.getAudioTracks()[0] || null;
+      if (!S.micTrack) throw new Error('没有可用的音轨');
+      for (const peer of S.pcs.values()){
+        const sender = audioSender(peer.pc);
+        if (sender) await sender.replaceTrack(S.micTrack).catch(()=>{});
+        else peer.pc.addTrack(S.micTrack, stream);
+      }
+      S.micOn = true;
+      attachLocalMeter(stream);
+      send({ type:'mic', room:S.room, on:true });
+      updateMicUI();
+    }catch(e){
+      console.warn('[voice-room] getUserMedia failed', e);
+      const m = e && e.name === 'NotAllowedError' ? '麦克风权限被拒绝，请在浏览器设置里允许后重试。'
+        : e && e.name === 'NotFoundError' ? '没有找到麦克风设备。'
+        : '无法打开麦克风：' + (e && e.message ? e.message : '未知错误');
+      toast(m, 5000);
+      btn.disabled = false;
+      updateMicUI();
+      return;
+    }
+    btn.disabled = false;
+  }else{
+    try{
+      const silent = await ensureSilentTrack();
+      for (const peer of S.pcs.values()){
+        const sender = audioSender(peer.pc);
+        if (sender) await sender.replaceTrack(silent).catch(()=>{});
+      }
+    }catch(e){}
+    if (S.micStream) S.micStream.getTracks().forEach((t) => { try{ t.stop(); }catch(e){} });
+    S.micStream = null;
+    S.micTrack = null;
+    S.micOn = false;
+    detachLocalMeter();
+    send({ type:'mic', room:S.room, on:false });
+    updateMicUI();
+  }
+}
+
+async function updateConnDebug(){
+  const el = $('conn');
+  if (!el) return;
+  if (!S.pcs.size){
+    el.textContent = S.wsState === 'open' ? '房间已连接；等其他人进房后建立点对点语音。' : '等待连接…';
+    return;
+  }
+  const lines = [];
+  for (const [id, peer] of S.pcs){
+    const pc = peer.pc;
+    let pair = null, local = null, remote = null;
+    try{
+      const stats = await pc.getStats();
+      stats.forEach((r) => {
+        if (r.type === 'transport' && r.selectedCandidatePairId){
+          pair = stats.get(r.selectedCandidatePairId) || null;
+        }
+      });
+      if (!pair){
+        stats.forEach((r) => {
+          if (r.type === 'candidate-pair' && r.state === 'succeeded' && (r.nominated || r.selected)) pair = r;
+        });
+      }
+      if (pair){
+        local = stats.get(pair.localCandidateId) || null;
+        remote = stats.get(pair.remoteCandidateId) || null;
+      }
+    }catch(e){}
+    lines.push(
+      (nameOf(id) || id.slice(0,8)) +
+      ' | connectionState=' + pc.connectionState +
+      ' | ice=' + pc.iceConnectionState +
+      ' | candidate=' + (local && local.candidateType ? local.candidateType : '?') +
+      ' -> ' + (remote && remote.candidateType ? remote.candidateType : '?') +
+      (local && local.protocol ? ' | ' + local.protocol : '')
+    );
+  }
+  el.textContent = lines.join('\n');
+}
+
+function startDebugTimer(){
+  clearInterval(S.debugTimer);
+  S.debugTimer = setInterval(() => {
+    if (!S.room) return;
+    const d = $('debugDetails');
+    if (d && d.open) updateConnDebug();
+  }, 2500);
+}
+
+function enterRoom(room){
+  S.leaving = false;
+  S.room = room;
+  S.selfId = null; S.hostId = null; S.members = []; S.game = null;
+  S.reconnectAttempt = 0;
+  clearTimeout(S.reconnectTimer);
+  closeAllPeers();
+  updateUrl(room);
+  showRoom();
+  renderAll();
+  setBanner('正在连接房间 ' + room + '…');
+  startDebugTimer();
+  fetchIce(false)
+    .then(() => { scheduleIceRefresh(); connectWS(); })
+    .catch((e) => {
+      setBanner('TURN 服务不可用，将只用直连（跨网络可能失败）', true);
+      connectWS();
+    });
+}
+
+function leaveToLobby(message){
+  S.leaving = true;
+  clearTimeout(S.reconnectTimer);
+  clearTimeout(S.iceTimer);
+  clearInterval(S.heartbeatTimer);
+  clearInterval(S.debugTimer);
+  cleanupWS();
+  closeAllPeers();
+  if (S.micStream) S.micStream.getTracks().forEach((t) => { try{ t.stop(); }catch(e){} });
+  S.micStream = null; S.micTrack = null; S.micOn = false;
+  detachLocalMeter();
+  S.room = ''; S.selfId = null; S.hostId = null; S.members = []; S.game = null;
+  S.wsState = 'idle';
+  updateUrl('');
+  showLobby();
+  setLobbyErr(message || '');
+  toast('');
+  if (message) toast(message, 4000);
+}
+
+function createRoom(){
+  const n = saveName();
+  if (!n){ setLobbyErr('先填一个昵称再创建房间。'); $('name').focus(); return; }
+  setLobbyErr('');
+  enterRoom(randomRoom());
+}
+
+function joinRoom(){
+  const n = saveName();
+  if (!n){ setLobbyErr('先填一个昵称再加入。'); $('name').focus(); return; }
+  const code = ($('code').value || '').replace(/\D/g,'').slice(0,4);
+  if (!/^\d{4}$/.test(code)){ setLobbyErr('房号是 4 位数字。'); $('code').focus(); return; }
+  setLobbyErr('');
+  enterRoom(code);
+}
+
+function copyInvite(){
+  if (!S.room) return;
+  const u = new URL(location.href);
+  u.searchParams.set('room', S.room);
+  const text = u.toString();
+  const done = () => toast('邀请链接已复制');
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
+  }else fallbackCopy(text, done);
+}
+function fallbackCopy(text, done){
+  try{
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); ta.remove(); done();
+  }catch(e){ toast('复制失败，请手动复制地址栏链接'); }
+}
+
+function unlockAudio(){
+  for (const el of S.remoteAudios.values()){
+    const p = el.play(); if (p && p.catch) p.catch(()=>{});
+  }
+  if (S.meterCtx && S.meterCtx.state === 'suspended') S.meterCtx.resume().catch(()=>{});
+  if (S.silentCtx && S.silentCtx.state === 'suspended') S.silentCtx.resume().catch(()=>{});
+}
+
+function init(){
+  let saved = '';
+  try{ saved = localStorage.getItem(NAME_KEY) || ''; }catch(e){}
+  if (!saved){
+    saved = '玩家' + Math.floor(10 + Math.random() * 90);
+  }
+  $('name').value = saved;
+  const roomParam = params.get('room') || '';
+  if (/^\d{4}$/.test(roomParam)) $('code').value = roomParam;
+
+  $('createBtn').addEventListener('click', createRoom);
+  $('joinBtn').addEventListener('click', joinRoom);
+  $('code').addEventListener('input', (e) => {
+    e.target.value = e.target.value.replace(/\D/g,'').slice(0,4);
+  });
+  $('code').addEventListener('keydown', (e) => { if (e.key === 'Enter') joinRoom(); });
+  $('name').addEventListener('keydown', (e) => { if (e.key === 'Enter'){ if ($('code').value) joinRoom(); else createRoom(); } });
+  $('micBtn').addEventListener('click', () => setMic(!S.micOn));
+  $('resetBtn').addEventListener('click', () => { send({ type:'game_reset', room:S.room }); });
+  $('leaveBtn').addEventListener('click', () => leaveToLobby(''));
+  $('copyBtn').addEventListener('click', copyInvite);
+  document.addEventListener('pointerdown', unlockAudio, { passive:true });
+
+  renderAll();
+  showLobby();
+
+  window.__vrDebug = {
+    get room(){ return S.room; },
+    get selfId(){ return S.selfId; },
+    get hostId(){ return S.hostId; },
+    get members(){ return S.members.map((m) => ({ id:m.id, name:m.name, mic:m.mic, host:m.host })); },
+    get game(){ return S.game; },
+    get micOn(){ return S.micOn; },
+    get wsState(){ return S.wsState; },
+    get wsReadyState(){ return S.ws ? S.ws.readyState : 3; },
+    get peerCount(){ return S.pcs.size; },
+    get relayMode(){ return FORCE_RELAY; },
+    disconnect(){
+      if (S.ws) S.ws.close();
+    },
+    async stats(){
+      const out = [];
+      for (const [id, peer] of S.pcs){
+        const pc = peer.pc;
+        let pair = null, local = null, remote = null;
+        try{
+          const stats = await pc.getStats();
+          stats.forEach((r) => {
+            if (r.type === 'transport' && r.selectedCandidatePairId) pair = stats.get(r.selectedCandidatePairId) || null;
+          });
+          if (!pair) stats.forEach((r) => {
+            if (r.type === 'candidate-pair' && r.state === 'succeeded' && (r.nominated || r.selected)) pair = r;
+          });
+          if (pair){
+            local = stats.get(pair.localCandidateId) || null;
+            remote = stats.get(pair.remoteCandidateId) || null;
+          }
+        }catch(e){}
+        out.push({
+          peerId: id,
+          name: nameOf(id),
+          connectionState: pc.connectionState,
+          iceConnectionState: pc.iceConnectionState,
+          localCandidateType: local ? local.candidateType : null,
+          remoteCandidateType: remote ? remote.candidateType : null,
+          protocol: local ? local.protocol : null,
+        });
+      }
+      return out;
+    },
+  };
+}
+
+init();
+})();
+</script>
+</body>
+</html>
