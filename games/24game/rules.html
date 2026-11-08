@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>24 点怎么算：从穷举到巧算的三个套路 — 规则、四个例子与常见问题</title>
+<meta name="description" content="24 点完整规则与算法：四张牌各用一次，只用加减乘除和括号算出 24。四个由易到难的例子、凑 3×8 / 4×6、利用 1 和分数、先凑 12 再乘 2 三个套路，以及用分数穷举保证有解的原理与常见问题。">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="author" content="Devin">
+<meta name="theme-color" content="#f3ead9">
+<link rel="canonical" href="https://hhfa008.github.io/games/24game/rules.html">
+<link rel="alternate" hreflang="zh-CN" href="https://hhfa008.github.io/games/24game/rules.html">
+<link rel="alternate" hreflang="x-default" href="https://hhfa008.github.io/games/24game/rules.html">
+<link rel="icon" href="/games/assets/icons/24game.svg" type="image/svg+xml">
+
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Devin">
+<meta property="og:title" content="24 点怎么算：从穷举到巧算的三个套路">
+<meta property="og:description" content="完整规则、四个由易到难的例子、三个巧算套路，以及用分数穷举保证每题有解的原理。">
+<meta property="og:url" content="https://hhfa008.github.io/games/24game/rules.html">
+<meta property="og:locale" content="zh_CN">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="24 点怎么算：从穷举到巧算的三个套路">
+<meta name="twitter:description" content="四个例子、三个套路，以及计算机怎样用分数穷举保证 24 点有解。">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "24 点怎么算：从穷举到巧算的三个套路",
+  "description": "24 点完整规则、四个由易到难的例子、凑 3×8 / 4×6、利用 1 和分数、先凑 12 再乘 2 三个套路，以及用分数穷举保证有解的原理。",
+  "inLanguage": "zh-CN",
+  "author": { "@type": "Person", "name": "Devin", "url": "https://hhfa008.github.io/" },
+  "publisher": { "@type": "Person", "name": "Devin", "url": "https://hhfa008.github.io/" },
+  "datePublished": "2026-11-09",
+  "dateModified": "2026-11-09",
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://hhfa008.github.io/games/24game/rules.html"
+  },
+  "about": { "@type": "Thing", "name": "24 点" }
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "24 点可以重复使用某一张牌吗？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "不可以。四张牌必须各用一次；即使两个点数相同，也要当作两张牌分别用掉。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "24 点的中间结果可以是负数或分数吗？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "可以。规则只要求最终结果等于 24，中间过程允许出现负数和分数，例如 8÷(3−8÷3) 的中间结果就是分数。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "能把 3 和 3 写成 33 吗？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "不能。只能使用加、减、乘、除和括号，不能拼接数字，也不能开方、阶乘或乘方。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "24 点发到的牌一定算得出来吗？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "本游戏在发牌前会用求解器验证该组合有解，只发有解的四张牌。暂时想不到时可以点「提示」看一步，或点「换一题」。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "24 点一定要按从左到右的顺序算吗？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "不需要。乘除先于加减，括号可以改变顺序；可以在任意位置加括号，只要最后一步等于 24 就行。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "为什么 24 点的提示只给一步？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "一步提示取自一条完整解法里的第一个运算，执行后剩下的数字仍然有解。它提供方向，但不会直接把答案说完。"
+      }
+    }
+  ]
+}
+</script>
+
+<style>
+:root{
+  --paper:#f3ead9;--paper-2:#fbf6ea;--ink:#2b2f36;--muted:#6d6459;--muted-2:#8a7f70;
+  --line:#dcccb3;--line-strong:#c9b697;--accent:#b98a5a;--accent-2:#8d6238;
+  --red:#c0392b;--dark:#2b2f36;--on-dark:#f3ead9;--on-dark-muted:#b9b2a5;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --serif:"Songti SC","STSong","SimSun","Noto Serif SC",serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.75 var(--sans);
+  padding-bottom:calc(28px + env(safe-area-inset-bottom));-webkit-font-smoothing:antialiased}
+.wrap{max-width:700px;margin:0 auto;padding:0 18px}
+a{color:var(--accent-2)}
+.site-header{background:var(--dark);color:var(--on-dark);padding:12px 0}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:700px;
+  margin:0 auto;padding:0 18px}
+.brand{display:flex;align-items:center;gap:9px;font-weight:650;text-decoration:none;color:var(--on-dark)}
+.brand-mark{width:22px;height:22px;border-radius:6px;background:var(--accent);flex:none}
+.header-nav{display:flex;gap:14px;font-size:13px}
+.header-nav a{color:var(--on-dark-muted);text-decoration:none}
+.header-nav a:hover{color:var(--on-dark)}
+
+.hero{padding:30px 0 8px}
+.eyebrow{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--accent-2);margin:0 0 10px}
+h1{font-family:var(--serif);font-size:clamp(1.75rem,6.4vw,2.4rem);line-height:1.22;letter-spacing:-.01em;
+  margin:0 0 12px;font-weight:700}
+.lede{color:var(--muted);font-size:16.5px;margin:0}
+article{padding-top:10px}
+h2{font-family:var(--serif);font-size:1.32rem;line-height:1.35;margin:34px 0 12px;padding-top:6px;
+  border-top:1px solid var(--line);font-weight:700}
+h3{font-size:1.03rem;line-height:1.45;margin:22px 0 8px}
+p{margin:0 0 12px}
+ul{margin:0 0 14px;padding-left:1.3em}
+li{margin:0 0 7px}
+code{font-family:var(--mono);font-size:.9em;background:var(--paper-2);border:1px solid var(--line);
+  border-radius:5px;padding:1px 5px}
+.calc{margin:10px 0 14px;padding:12px 14px;background:var(--paper-2);border:1px solid var(--line);
+  border-left:4px solid var(--accent);border-radius:10px;font-family:var(--mono);font-size:15px;
+  line-height:1.65;overflow-wrap:anywhere}
+.calc strong{color:var(--red);font-weight:700}
+.example{margin:20px 0 6px;padding:16px;background:var(--paper-2);border:1px solid var(--line);border-radius:12px}
+.example h3{margin-top:0}
+.example p:last-child{margin-bottom:0}
+.verify{color:var(--muted);font-size:14px}
+.trick{margin:14px 0;padding:16px;background:var(--paper-2);border:1px solid var(--line);border-radius:12px}
+.trick h3{margin-top:0;color:var(--accent-2)}
+.faq h3{font-size:1rem;margin:18px 0 4px;color:var(--ink)}
+.faq p{color:var(--muted);margin-bottom:8px}
+.end{padding:16px;background:var(--dark);color:var(--on-dark);border-radius:12px;margin-top:26px}
+.end a{color:var(--on-dark)}
+.more{margin:22px 0 0;font-size:14px;color:var(--muted)}
+footer{margin:30px auto 0;padding:16px 18px 0;border-top:1px solid var(--line);max-width:700px;
+  color:var(--muted-2);font-size:13px;text-align:center}
+footer a{color:var(--accent-2)}
+@media (max-width:420px){
+  .header-nav{gap:10px;font-size:12px}
+  body{font-size:15.5px}
+}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true"></span>Devin</a>
+    <nav class="header-nav" aria-label="导航">
+      <a href="./">玩 24 点</a>
+      <a href="/games/">游戏大厅</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <header class="hero">
+    <p class="eyebrow">卡牌 · 数字益智</p>
+    <h1>24 点怎么算：从穷举到巧算的三个套路</h1>
+    <p class="lede">四张牌、四个数字、一次机会。规则只有几行，但想在几秒内看出答案，需要一点方法。</p>
+  </header>
+
+  <article>
+    <p>「24 点」是一副牌就能玩的速算游戏：每次翻开四张牌，用加、减、乘、除和括号，把四个数字各用一次，算出 24。它看起来靠灵光一现，其实有稳定的路数。下面先讲规则，再用四个由易到难的例子拆解，然后给出三个最常用的套路，最后说明计算机怎样穷举，以及本游戏为什么不会发出无解的牌。</p>
+
+    <h2>一、规则：四张牌，各用一次</h2>
+    <ul>
+      <li>牌面：A 算 1，2 到 10 按点数，J 算 11，Q 算 12，K 算 13。本游戏使用完整的 A–K 牌组。</li>
+      <li>每次发四张牌。四张牌的点数可以相同，但同一张牌不能重复使用。</li>
+      <li>四个数字每个必须且只能用一次，顺序可以任意调整。</li>
+      <li>只允许加号、减号、乘号、除号和括号；不允许把两个数字拼成一个数，也不允许开方、阶乘、乘方。</li>
+      <li>中间结果可以是负数或分数，只要求最后一步等于 24。例如 8÷(3−8÷3) 的中间结果就是分数。</li>
+      <li>除数不能为 0，除以 0 的算式无效。</li>
+    </ul>
+    <p>举个例子：牌面 3、3、8、8 里有两个 3，但它们是两张不同的牌，算式中必须各出现一次；不能写成 33，也不能只用一个 3。</p>
+
+    <h2>二、四个例子，由易到难</h2>
+
+    <div class="example">
+      <h3>例 1：2、3、4、6</h3>
+      <p>先看能不能凑出 1：3−2=1。另一边 6×4 正好是 24，再乘 1 不改变结果。</p>
+      <p class="calc">6×4×(3−2)=<strong>24</strong></p>
+      <p class="verify">验证：3−2=1；6×4=24；24×1=24。</p>
+    </div>
+
+    <div class="example">
+      <h3>例 2：4、4、10、10</h3>
+      <p>两个 10 相乘得到 100，减去一个 4 得 96，再除以另一个 4。</p>
+      <p class="calc">(10×10−4)÷4=<strong>24</strong></p>
+      <p class="verify">验证：10×10=100；100−4=96；96÷4=24。</p>
+    </div>
+
+    <div class="example">
+      <h3>例 3：1、5、5、5</h3>
+      <p>直接想 5×?=24 不行，因为 24÷5=4.8。把 1 变成 1/5，括号里就得到 4.8。</p>
+      <p class="calc">5×(5−1÷5)=<strong>24</strong></p>
+      <p class="verify">验证：1÷5=1/5；5−1/5=24/5；5×24/5=24。</p>
+    </div>
+
+    <div class="example">
+      <h3>例 4：3、3、8、8</h3>
+      <p>这组没有 1、2、4、6，硬乘凑不出来，需要主动造一个分数：8÷3=8/3，3−8/3=1/3，而 8÷1/3=24。</p>
+      <p class="calc">8÷(3−8÷3)=<strong>24</strong></p>
+      <p class="verify">验证：8÷3=8/3；3−8/3=1/3；8÷1/3=24。</p>
+      <p>这个例子说明：分数不是障碍，而是 24 点最有力的工具之一。</p>
+    </div>
+
+    <h2>三、三个套路</h2>
+
+    <div class="trick">
+      <h3>套路一：凑 3×8 或 4×6</h3>
+      <p>24 的整数因数对只有 1×24、2×12、3×8、4×6。牌面里出现 3 就找 8，出现 4 就找 6，出现 2 就找 12。例 1 的骨架就是 6×4，另外两张牌只需要凑出 1。看到四张牌先问：能不能把其中两张留作因数，另外两张做成 1？</p>
+    </div>
+
+    <div class="trick">
+      <h3>套路二：利用 1 和分数</h3>
+      <p>如果凑不出整数因数，就制造 1 或倒数。例 3 用 1÷5 把 1 变成 0.2，让括号里得到 4.8；而 4.8 正好是 24÷5。另一个典型是 1、3、4、6：1−3÷4=1/4，6÷1/4=24，写成完整算式就是 6÷(1−3÷4)=24。看到 6 和 4，不要只想 6×4，也可以想 6÷(1/4)。</p>
+    </div>
+
+    <div class="trick">
+      <h3>套路三：先凑 12 再乘 2</h3>
+      <p>24 也等于 12×2。把四张牌分成两组，一组凑 12，一组凑 2。例：1、3、5、7，7+5=12，3−1=2，于是 (7+5)×(3−1)=24。再如 4、7、8、9，8+4=12，9−7=2，得到 (8+4)×(9−7)=24。分组比从左往右硬算更容易看出结构。</p>
+    </div>
+
+    <h2>四、穷举：计算机怎样保证有解</h2>
+    <p>程序的做法很朴素：每次从当前数字里挑两个，试加、减、乘、除四种运算（减法和除法要试两个方向），把结果放回去，数字就少一个；重复到只剩一个数，看它是不是 24。四个数只有有限的挑法和运算顺序，全部试完就能确定有没有解。</p>
+    <p>关键是全程用分数：8÷3 如果记成 0.3333，最后会差一点点；用分子和分母精确计算，才不会把有解误判成无解。</p>
+    <p>四个数能形成的组合其实很少，一次完整搜索通常不到一毫秒。难的不是算得快，而是判断得准：只要中途用过小数，就可能把「其实有解」算成「差一点」。本游戏发牌时先跑一遍这个穷举，只发有解的组合；提示功能也从同一条搜索路径里取第一步，所以提示之后剩下的牌一定还算得出来。</p>
+
+    <h2>五、常见问题</h2>
+    <div class="faq">
+      <h3>可以重复使用某一张牌吗？</h3>
+      <p>不可以。四张牌必须各用一次；即使两个点数相同，也要当作两张牌分别用掉。</p>
+
+      <h3>中间结果可以是负数或分数吗？</h3>
+      <p>可以。规则只约束最后结果等于 24，中间过程允许出现负数和分数。</p>
+
+      <h3>能把 3 和 3 写成 33 吗？</h3>
+      <p>不能。只能使用四则运算和括号，不能拼接数字，也不能开方、阶乘或乘方。</p>
+
+      <h3>发到的牌一定算得出来吗？</h3>
+      <p>是。每次发牌前程序都会验证有解；如果暂时想不到，可以点「提示」看一步，或点「换一题」。</p>
+
+      <h3>一定要按从左到右的顺序算吗？</h3>
+      <p>不需要。乘除先于加减，括号可以改变顺序；你可以在任意位置加括号，只要最后一步等于 24 就行。</p>
+
+      <h3>为什么提示只给一步？</h3>
+      <p>一步提示是从一条完整解法里取出的第一个运算，执行后剩下的数字仍然有解。它给你方向，但不会直接把答案说完。</p>
+    </div>
+
+    <div class="end">
+      <p>先认骨架，再试分数，最后才逐项穷举。顺序对了，24 点就从碰运气变成一门可以练的手艺。</p>
+      <p style="margin-bottom:0"><a href="./">回到 24 点游戏，试一手 →</a></p>
+    </div>
+  </article>
+
+  <p class="more"><a href="./">玩 24 点</a> · <a href="/games/">返回游戏大厅</a> · <a href="/">更多工具</a></p>
+</main>
+
+<footer>
+  <a href="https://hhfa008.github.io/">独立开发者作品 — 更多工具在这里</a>
+</footer>
+
+</body>
+</html>
