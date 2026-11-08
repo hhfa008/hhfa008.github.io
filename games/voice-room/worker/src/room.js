@@ -58,7 +58,7 @@ function emptyGame(seats, round) {
 function alignGame(game, seats) {
   const prev = game || emptyGame(seats, 1);
   if (prev.xId !== seats.xId || prev.oId !== seats.oId) {
-    return emptyGame(seats, (prev.round || 1) + 1);
+    return emptyGame(seats, 1);
   }
   return prev;
 }
