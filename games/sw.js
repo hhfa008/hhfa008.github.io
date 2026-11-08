@@ -4,7 +4,7 @@
    Static assets: cache-first with background refresh (stale-while-revalidate). */
 'use strict';
 
-var CACHE_VERSION = 'v2';
+var CACHE_VERSION = 'v3';
 var CACHE_PREFIX = 'hhfa-games-';
 var CACHE_NAME = CACHE_PREFIX + CACHE_VERSION;
 var OFFLINE_URL = '/games/offline.html';
@@ -14,7 +14,8 @@ var PRECACHE_URLS = [
   '/games/',
   '/games/en/',
   '/games/id/',
-  '/games/offline.html',
+  // '/games/offline.html' is precached separately: Cloudflare Pages redirects
+  // it, so it needs redirect-following plus normalisation (see below).
   '/games/manifest.webmanifest',
 
   // Shared code used by the games.
@@ -91,11 +92,15 @@ self.addEventListener('install', function (event) {
   event.waitUntil(
     caches.open(CACHE_NAME).then(function (cache) {
       // Cache entries one by one: a single 404 must not abort the whole install.
-      return Promise.all(PRECACHE_URLS.map(function (url) {
+      var jobs = PRECACHE_URLS.map(function (url) {
         return cache.add(new Request(url, { cache: 'reload' })).catch(function () {
           return null;
         });
+      });
+      jobs.push(precacheOfflinePage(cache).catch(function () {
+        return null;
       }));
+      return Promise.all(jobs);
     }).then(function () {
       return self.skipWaiting();
     })
@@ -115,6 +120,29 @@ self.addEventListener('activate', function (event) {
     })
   );
 });
+
+// Cloudflare Pages serves /games/offline.html as a 308 to /games/offline.
+// A response fetched through that redirect keeps `redirected = true`, and the
+// browser rejects such a response as a navigation reply (ERR_FAILED). Rebuild
+// the body as a plain same-origin 200 so it is always safe to hand back.
+function asPlain200(response) {
+  if (!response) return response;
+  return new Response(response.body, {
+    status: 200,
+    statusText: 'OK',
+    headers: response.headers
+  });
+}
+
+function precacheOfflinePage(cache) {
+  var request = new Request(OFFLINE_URL, { redirect: 'follow', cache: 'reload' });
+  return fetch(request).then(function (response) {
+    if (!response.ok) {
+      throw new Error('offline page responded with ' + response.status);
+    }
+    return cache.put(OFFLINE_URL, asPlain200(response));
+  });
+}
 
 function pageFallback(request) {
   var url = new URL(request.url);
@@ -144,9 +172,9 @@ function networkFirst(request) {
     return response;
   }).catch(function () {
     return pageFallback(request).then(function (hit) {
-      if (hit) return hit;
+      if (hit) return asPlain200(hit);
       return caches.match(OFFLINE_URL).then(function (offline) {
-        if (offline) return offline;
+        if (offline) return asPlain200(offline);
         return new Response('当前离线，且这个页面尚未缓存。', {
           status: 503,
           headers: { 'Content-Type': 'text/plain; charset=utf-8' }
