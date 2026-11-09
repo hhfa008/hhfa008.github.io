@@ -343,7 +343,7 @@ if (!pageChanges.length) {
 }
 
 if (version !== previousVersion) {
-  console.log(`  PASS 页面有 ${pageChanges.length} 处内容变更，且 CACHE_VERSION 已从 ${previousVersion} 升到 ${version}。`);
+  console.log(`  PASS 页面有 ${pageChanges.length} 处内容变更，且 CACHE_VERSION 已从 ${previousVersion} 变为 ${version}。`);
   for (const f of pageChanges.slice(0, 8)) console.log(`    ${f}`);
   if (pageChanges.length > 8) console.log(`    …另有 ${pageChanges.length - 8} 个`);
   process.exit(0);
