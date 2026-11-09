@@ -541,8 +541,9 @@ async function main() {
   if (opts.all) {
     var catalogPath = path.join(__dirname, 'catalog.json');
     try {
-      var catalog = JSON.parse(fs.readFileSync(catalogPath, 'utf8'));
-      if (!Array.isArray(catalog)) throw new Error('catalog.json 不是数组');
+      var catalogRaw = JSON.parse(fs.readFileSync(catalogPath, 'utf8'));
+      var catalog = Array.isArray(catalogRaw) ? catalogRaw : (catalogRaw && catalogRaw.tools);
+      if (!Array.isArray(catalog)) throw new Error('catalog.json 不是工具数组（或缺少 tools 数组）');
       catalogCount = catalog.length;
       catalog.forEach(function (item) {
         if (item && typeof item.slug === 'string' && item.slug) {

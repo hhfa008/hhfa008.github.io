@@ -29,7 +29,8 @@ function expectedSlugs() {
 }
 
 const CATALOG_JSON = JSON.parse(fs.readFileSync(path.join(DIR, "..", "catalog.json"), "utf8"));
-const catalogBySlug = new Map(CATALOG_JSON.map((e) => [e.slug, e]));
+const CATALOG_TOOLS = Array.isArray(CATALOG_JSON) ? CATALOG_JSON : CATALOG_JSON.tools;
+const catalogBySlug = new Map(CATALOG_TOOLS.map((e) => [e.slug, e]));
 
 const expected = expectedSlugs();
 const actual = new Set(

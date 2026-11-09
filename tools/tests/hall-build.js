@@ -2,26 +2,26 @@
 'use strict';
 
 /**
- * hall-build.js — 开发脚手架：从 catalog.json 重新生成三个工具大厅页。
+ * hall-build.js — 开发脚手架：校验/重建三个工具大厅页。
  *
- * ⚠️ 这是开发脚手架，不是生产生成器；生产的唯一事实源是 `games/registry.json`
- *    + `scripts/gen-hubs.js`（游戏大厅）。tools/ 大厅的线上内容以已提交的
- *    tools/index.html 等页面为准，catalog.json 只是本脚本自带的一份快照，
- *    不保证与大厅同步。
+ * ⚠️ catalog.json 是已生成大厅的导出快照，不是权威源。
+ *    权威源是 `games/registry.json` 与 `scripts/gen-hubs.js`；
+ *    改 catalog 不会改变线上，改线上也不应回写 catalog。
  *
- * 安全护栏：写入前先读取三个大厅的实际工具数与分类数，与本脚本的 catalog
- * 比对；只要数量、分类或 slug 集合不一致（包括大厅里存在 catalog 没有的
- * slug），就打印差异并 exit 1，不写任何文件。
+ * 默认行为：只校验，不写任何文件。
+ *   - 校验 catalog 结构；
+ *   - 把三个大厅在内存里重新渲染一遍，与磁盘上的线上大厅逐字节比对；
+ *   - 同时报告工具数、分类数、slug 集合差异。
+ *
+ * 要写文件必须显式传 `--write`；即使传了 `--write`，只要渲染结果与线上大厅
+ * 不一致（任何文案、数量、分类、slug 不同）仍会拒绝写入并 exit 1。
+ * 只有再加 `--force` 才允许覆盖，且会在输出里打印醒目警告。
  *
  * Usage:
- *   node tools/tests/hall-build.js
+ *   node tools/tests/hall-build.js                 # 只校验（默认）
+ *   node tools/tests/hall-build.js --write         # 仅当与线上大厅一致时写入
+ *   node tools/tests/hall-build.js --write --force # 不一致也覆盖（打印警告）
  *
- * The script writes:
- *   tools/index.html
- *   tools/en/index.html
- *   tools/id/index.html
- *
- * Then it runs static self-checks on the generated HTML. Any failure exits 1.
  * Tools whose page directory does not exist yet are reported as "pending";
  * their slug is still validated and their card is emitted.
  */
@@ -55,7 +55,8 @@ const CATEGORY_ORDER = [
   'health',
   'life-home',
   'random-fun',
-  'ledger'
+  'ledger',
+  'network'
 ];
 
 const EXPECTED_COUNTS = {
@@ -67,7 +68,8 @@ const EXPECTED_COUNTS = {
   health: 9,
   'life-home': 7,
   'random-fun': 8,
-  ledger: 1
+  ledger: 1,
+  network: 1
 };
 
 const CATEGORIES = [
@@ -115,26 +117,31 @@ const CATEGORIES = [
     id: 'ledger',
     label: { zh: '记账类', en: 'Ledger', id: 'Pembukuan' },
     small: { zh: 'Ledger', en: 'Ledger', id: 'Catatan' }
+  },
+  {
+    id: 'network',
+    label: { zh: '网络类', en: 'Network', id: 'Jaringan' },
+    small: { zh: 'Network', en: 'Diagnostics', id: 'Diagnostik' }
   }
 ];
 
-const TOTAL = 100;
+const TOTAL = 101;
 
 const LANG = {
   zh: {
     inLanguage: 'zh-CN',
     canonical: 'https://hhfa008.github.io/tools/',
     pageName: '免费在线工具大厅',
-    title: '免费在线工具大厅 — 100 个计算、文本、设计、时间与生活工具，无需注册',
+    title: '免费在线工具大厅 — 101 个计算、文本、设计、时间与生活工具，无需注册',
     description:
-      '100 个免费在线工具，覆盖计算与财务、文本与开发、设计与图片、日期与时间、数学、健康、生活与家居、随机与趣味、记账。无需注册，数据留在本地。',
-    ogTitle: '免费在线工具大厅 — 100 个实用小工具',
-    ogDesc: '9 类 100 个纯前端工具，打开就能用；无需注册，数据留在本地。',
-    twTitle: '免费在线工具大厅 — 100 个实用小工具',
-    twDesc: '100 个免费在线小工具：计算、文本、设计、时间、健康、家居、随机与记账，数据都在本地。',
-    h1: '100 个免费在线小工具',
+      '101 个免费在线工具，覆盖计算与财务、文本与开发、设计与图片、日期与时间、数学、健康、生活与家居、随机与趣味、记账与网络诊断。无需注册，数据留在本地。',
+    ogTitle: '免费在线工具大厅 — 101 个实用小工具',
+    ogDesc: '10 类 101 个纯前端工具，打开就能用；无需注册，数据留在本地。',
+    twTitle: '免费在线工具大厅 — 101 个实用小工具',
+    twDesc: '101 个免费在线小工具：计算、文本、设计、时间、健康、家居、随机、记账与网络诊断，数据都在本地。',
+    h1: '101 个免费在线小工具',
     lede:
-      '计算与财务、文本与开发、设计与图片、日期时间、数学、健康、生活家居、随机趣味和记账——9 类 100 个工具，无需注册，数据留在本地',
+      '计算与财务、文本与开发、设计与图片、日期时间、数学、健康、生活家居、随机趣味、记账与网络诊断——10 类 101 个工具，无需注册，数据留在本地',
     placeholder: '搜索工具，如 百分比 / JSON / 二维码 / 时区 / 房贷 / 配色',
     langLabel: '语言',
     staticTitle: '在工具页内切换',
@@ -151,23 +158,24 @@ const LANG = {
       localCalc: '本地计算',
       trilingual: '三语',
       offline: '可离线',
-      fourLang: '四语'
+      fourLang: '四语',
+      noMedia: '不传音视频'
     }
   },
   en: {
     inLanguage: 'en',
     canonical: 'https://hhfa008.github.io/tools/en/',
     pageName: 'Free online tools',
-    title: 'Free online tools — 100 calculators, text, design, time and everyday utilities, no sign-up',
+    title: 'Free online tools — 101 calculators, text, design, time and everyday utilities, no sign-up',
     description:
-      '100 free online tools across calculators and finance, text and dev, design and image, date and time, math, health, life and home, random and fun, and a ledger. No sign-up; everything runs in your browser.',
-    ogTitle: 'Free online tools — 100 practical utilities',
-    ogDesc: 'Nine categories, 100 browser-only tools that need no account and keep your data on your device.',
-    twTitle: 'Free online tools — 100 practical utilities',
-    twDesc: '100 free browser tools for calculations, text, design, time, health, home, randomness and bookkeeping — all local.',
-    h1: '100 free online tools',
+      '101 free online tools across calculators and finance, text and dev, design and image, date and time, math, health, life and home, random and fun, a ledger, and network diagnostics. No sign-up; everything runs in your browser.',
+    ogTitle: 'Free online tools — 101 practical utilities',
+    ogDesc: 'Ten categories, 101 browser-only tools that need no account and keep your data on your device.',
+    twTitle: 'Free online tools — 101 practical utilities',
+    twDesc: '101 free browser tools for calculations, text, design, time, health, home, randomness, bookkeeping and network diagnostics — all local.',
+    h1: '101 free online tools',
     lede:
-      'Calculators and finance, text and dev, design and image, date and time, math, health, life and home, random and fun, plus a ledger — 100 tools with no sign-up',
+      'Calculators and finance, text and dev, design and image, date and time, math, health, life and home, random and fun, plus a ledger and network diagnostics — 101 tools with no sign-up',
     placeholder: 'Search tools, e.g. percentage / JSON / QR code / time zone / loan / palette',
     langLabel: 'Lang',
     staticTitle: 'Switch inside the tool',
@@ -184,23 +192,24 @@ const LANG = {
       localCalc: 'Runs locally',
       trilingual: '3 languages',
       offline: 'Works offline',
-      fourLang: '4 languages'
+      fourLang: '4 languages',
+      noMedia: 'No media sent'
     }
   },
   id: {
     inLanguage: 'id',
     canonical: 'https://hhfa008.github.io/tools/id/',
     pageName: 'Alat online gratis',
-    title: 'Alat online gratis — 100 kalkulator, teks, desain, waktu, dan utilitas harian, tanpa daftar',
+    title: 'Alat online gratis — 101 kalkulator, teks, desain, waktu, dan utilitas harian, tanpa daftar',
     description:
-      '100 alat online gratis untuk kalkulator dan keuangan, teks dan dev, desain dan gambar, tanggal dan waktu, matematika, kesehatan, rumah tangga, acak dan seru, serta pembukuan. Tanpa daftar; semua berjalan di browser.',
-    ogTitle: 'Alat online gratis — 100 utilitas praktis',
-    ogDesc: 'Sembilan kategori, 100 alat berbasis browser tanpa akun, data tetap di perangkat Anda.',
-    twTitle: 'Alat online gratis — 100 utilitas praktis',
-    twDesc: '100 alat browser gratis untuk hitungan, teks, desain, waktu, kesehatan, rumah, keacakan, dan pembukuan — semua lokal.',
-    h1: '100 alat online gratis',
+      '101 alat online gratis untuk kalkulator dan keuangan, teks dan dev, desain dan gambar, tanggal dan waktu, matematika, kesehatan, rumah tangga, acak dan seru, pembukuan, serta diagnostik jaringan. Tanpa daftar; semua berjalan di browser.',
+    ogTitle: 'Alat online gratis — 101 utilitas praktis',
+    ogDesc: 'Sepuluh kategori, 101 alat berbasis browser tanpa akun, data tetap di perangkat Anda.',
+    twTitle: 'Alat online gratis — 101 utilitas praktis',
+    twDesc: '101 alat browser gratis untuk hitungan, teks, desain, waktu, kesehatan, rumah, keacakan, pembukuan, dan diagnostik jaringan — semua lokal.',
+    h1: '101 alat online gratis',
     lede:
-      'Kalkulator dan keuangan, teks dan dev, desain dan gambar, tanggal dan waktu, matematika, kesehatan, rumah tangga, acak dan seru, serta pembukuan — 100 alat tanpa daftar',
+      'Kalkulator dan keuangan, teks dan dev, desain dan gambar, tanggal dan waktu, matematika, kesehatan, rumah tangga, acak dan seru, serta pembukuan dan diagnostik jaringan — 101 alat tanpa daftar',
     placeholder: 'Cari alat, mis. persentase / JSON / kode QR / zona waktu / pinjaman / palet',
     langLabel: 'Bahasa',
     staticTitle: 'Ganti di dalam alat',
@@ -217,7 +226,8 @@ const LANG = {
       localCalc: 'Dihitung lokal',
       trilingual: '3 bahasa',
       offline: 'Bisa offline',
-      fourLang: '4 bahasa'
+      fourLang: '4 bahasa',
+      noMedia: 'Tanpa media'
     }
   }
 };
@@ -231,7 +241,8 @@ const CATEGORY_ICON = {
   health: 'heart',
   'life-home': 'home',
   'random-fun': 'sparkles',
-  ledger: 'ledger'
+  ledger: 'ledger',
+  network: 'network'
 };
 
 const ICON_OVERRIDES = {
@@ -455,7 +466,9 @@ const ICONS = {
   shoe:
     '<path d="M6 30h14l8-8 6 4h8v10H6z"/><path d="M6 30v6h36v-4"/><path d="M20 22l4 4M24 18l4 4"/>',
   ledger:
-    '<rect x="8" y="6" width="32" height="36" rx="3.2"/><path d="M15 6v36"/><path d="M21 15h13M21 22h13M21 29h8"/><circle cx="31" cy="35" r="5.5"/><path d="M31 32.5v5M28.8 33.8h4.4M28.8 36.2h4.4"/>'
+    '<rect x="8" y="6" width="32" height="36" rx="3.2"/><path d="M15 6v36"/><path d="M21 15h13M21 22h13M21 29h8"/><circle cx="31" cy="35" r="5.5"/><path d="M31 32.5v5M28.8 33.8h4.4M28.8 36.2h4.4"/>',
+  network:
+    '<path d="M6 34a18 18 0 0 1 36 0"/><path d="M13 34a11 11 0 0 1 22 0"/><path d="M20 34a4 4 0 0 1 8 0"/><path d="M24 7v4"/><circle cx="24" cy="34" r="1.6" fill="currentColor"/>'
 };
 
 function escHtml(value) {
@@ -485,6 +498,8 @@ function tagsFor(tool, lang) {
     tags = [t.hot, t.localCalc, t.fourLang];
   } else if (tool.slug === 'sari-sari-ledger') {
     tags = [t.hot, t.offline, t.trilingual];
+  } else if (tool.slug === 'rtc-diag') {
+    tags = [t.hot, t.noMedia, t.trilingual];
   } else {
     const calcLike = ['calc-finance', 'math', 'health', 'life-home'].indexOf(tool.category) !== -1;
     tags = [t.hot, calcLike ? t.localCalc : t.local, t.trilingual];
@@ -552,7 +567,7 @@ function renderCard(tool, lang) {
     '            <div><h3>' +
     escHtml(tool.name[lang]) +
     '</h3><span class="latin">' +
-    escHtml(tool.name.en) +
+    escHtml(tool.latin || tool.name.en) +
     '</span></div>\n' +
     '          </div>\n' +
     '          <p class="desc">' +
@@ -744,7 +759,16 @@ function checkHref(tool, lang, errors, stats) {
   if (hrefSlug !== tool.slug) {
     errors.push(tool.slug + ' [' + lang + ']: href slug mismatch ' + href);
   }
-  if (tool.slug !== 'screen-share-calc' && tool.slug !== 'sari-sari-ledger') {
+  if (tool.slug === 'rtc-diag') {
+    // 线上 rtc-diag 的中文入口不带 ?lang=，en/id 带。
+    if (lang === 'zh') {
+      if (match[3]) {
+        errors.push(tool.slug + ' [zh]: unexpected ?lang=' + match[3] + ' in ' + href);
+      }
+    } else if (match[3] !== lang) {
+      errors.push(tool.slug + ' [' + lang + ']: missing ?lang=' + lang + ' in ' + href);
+    }
+  } else if (tool.slug !== 'screen-share-calc' && tool.slug !== 'sari-sari-ledger') {
     if (match[3] !== lang) {
       errors.push(tool.slug + ' [' + lang + ']: missing ?lang=' + lang + ' in ' + href);
     }
@@ -891,10 +915,27 @@ function checkGenerated(html, lang, tools, errors, stats) {
   }
 }
 
-// 大厅护栏：把磁盘上三个大厅的真实内容与 catalog.json 对照。任何不一致都
-// 说明 catalog 已经落后于线上页面，此时写入会覆盖掉大厅里更新的工具/文案。
-// 返回 true 表示通过；不通过时直接打印差异并退出（不写任何文件）。
-function checkHallGuard(tools) {
+// 大厅护栏：把内存中重新渲染的三个大厅与磁盘上的线上大厅逐字节比对，
+// 同时对照工具数、分类数与 slug 集合。任何不一致都说明 catalog 不是线上
+// 大厅的忠实导出；此时 --write 会拒绝写入，只有 --force 才允许覆盖。
+// 返回 { problems, catalogSlugs, catalogCats }，由 main 决定如何处置。
+function firstDiffLine(expectedHtml, actualHtml) {
+  const expected = expectedHtml.split('\n');
+  const actual = actualHtml.split('\n');
+  const max = Math.max(expected.length, actual.length);
+  for (let i = 0; i < max; i++) {
+    if (expected[i] !== actual[i]) {
+      return {
+        line: i + 1,
+        expected: expected[i] === undefined ? '<文件结束>' : expected[i],
+        actual: actual[i] === undefined ? '<文件结束>' : actual[i]
+      };
+    }
+  }
+  return null;
+}
+
+function checkHallGuard(tools, generated) {
   const catalogSlugs = new Set(tools.map(function (tool) { return tool.slug; }));
   const catalogCats = Array.from(new Set(tools.map(function (tool) { return tool.category; }))).sort();
   const problems = [];
@@ -928,27 +969,34 @@ function checkHallGuard(tools) {
       return hallCats.indexOf(id) === -1;
     });
 
-    if (cardCount !== tools.length || hallCats.length !== catalogCats.length ||
+    const textMismatch = generated[lang] !== html;
+    if (textMismatch || cardCount !== tools.length || hallCats.length !== catalogCats.length ||
         extraSlugs.length || missingSlugs.length || extraCats.length || missingCats.length) {
       problems.push({
+        lang: lang,
         file: file,
         cardCount: cardCount,
         catCount: hallCats.length,
         extraSlugs: extraSlugs,
         missingSlugs: missingSlugs,
         extraCats: extraCats,
-        missingCats: missingCats
+        missingCats: missingCats,
+        textMismatch: textMismatch,
+        diff: textMismatch ? firstDiffLine(generated[lang], html) : null
       });
     }
   });
 
-  if (!problems.length) return true;
+  return { problems: problems, catalogSlugs: catalogSlugs, catalogCats: catalogCats };
+}
 
-  console.error('HALL GUARD REFUSED：大厅实际内容与 catalog.json 不一致，未写入任何文件。');
-  console.error('  catalog: ' + tools.length + ' 个工具，' + catalogCats.length + ' 个分类');
-  problems.forEach(function (problem) {
+function printGuardProblems(guard, tools) {
+  console.error('  线上大厅（磁盘）与 catalog 重新渲染的结果不一致：');
+  console.error('  catalog: ' + tools.length + ' 个工具，' + guard.catalogCats.length + ' 个分类');
+  guard.problems.forEach(function (problem) {
     console.error('  ' + path.relative(ROOT, problem.file) + ': ' +
-      problem.cardCount + ' 个工具，' + problem.catCount + ' 个分类');
+      problem.cardCount + ' 个工具，' + problem.catCount + ' 个分类' +
+      (problem.textMismatch ? '（逐字节比对不一致）' : ''));
     if (problem.extraSlugs.length) {
       console.error('    大厅有、catalog 没有的 slug: ' + problem.extraSlugs.join(', '));
     }
@@ -961,14 +1009,46 @@ function checkHallGuard(tools) {
     if (problem.missingCats.length) {
       console.error('    catalog 有、大厅没有的分类: ' + problem.missingCats.join(', '));
     }
+    if (problem.diff) {
+      console.error('    首个差异在第 ' + problem.diff.line + ' 行：');
+      console.error('      线上: ' + problem.diff.actual);
+      console.error('      重渲染: ' + problem.diff.expected);
+    }
   });
-  console.error('  这是开发脚手架，不是生产生成器；生产事实源见文件头注释。');
-  process.exit(1);
+}
+
+function usage() {
+  console.log('Usage:');
+  console.log('  node tools/tests/hall-build.js                 # 只校验（默认，不写文件）');
+  console.log('  node tools/tests/hall-build.js --write         # 仅当与线上大厅一致时写入');
+  console.log('  node tools/tests/hall-build.js --write --force # 不一致也覆盖（打印警告）');
 }
 
 function main() {
+  const args = process.argv.slice(2);
+  const unknown = args.filter(function (arg) {
+    return arg !== '--write' && arg !== '--force';
+  });
+  if (unknown.length) {
+    console.error('未知参数: ' + unknown.join(' '));
+    usage();
+    process.exit(2);
+  }
+  const write = args.indexOf('--write') !== -1;
+  const force = args.indexOf('--force') !== -1;
+  if (force && !write) {
+    console.error('--force 只能与 --write 一起使用；默认行为是只校验。');
+    usage();
+    process.exit(2);
+  }
+
   const errors = [];
-  const tools = JSON.parse(fs.readFileSync(CATALOG_PATH, 'utf8'));
+  const raw = JSON.parse(fs.readFileSync(CATALOG_PATH, 'utf8'));
+  if (!Array.isArray(raw) && !(raw && Array.isArray(raw.tools))) {
+    console.error('catalog.json 必须是工具数组，或包含 tools 数组的对象。');
+    process.exit(1);
+  }
+  const tools = Array.isArray(raw) ? raw : raw.tools;
   const style = fs.readFileSync(STYLE_PATH, 'utf8');
   const templates = {};
   Object.keys(TEMPLATE_PATH).forEach(function (lang) {
@@ -976,19 +1056,24 @@ function main() {
   });
 
   const counts = validateCatalog(tools, errors);
-  checkHallGuard(tools);
+  if (errors.length) {
+    console.error('SELF-CHECK FAILED (' + errors.length + ')，未生成、未写入任何文件：');
+    errors.forEach(function (error) {
+      console.error('  - ' + error);
+    });
+    process.exit(1);
+  }
+
+  const generated = {};
+  ['zh', 'en', 'id'].forEach(function (lang) {
+    generated[lang] = buildPage(tools, lang, templates[lang], style);
+  });
 
   const stats = { existing: new Set(), pending: new Set(), missing: new Set() };
   ['zh', 'en', 'id'].forEach(function (lang) {
     tools.forEach(function (tool) {
       checkHref(tool, lang, errors, stats);
     });
-  });
-
-  const generated = {};
-  ['zh', 'en', 'id'].forEach(function (lang) {
-    generated[lang] = buildPage(tools, lang, templates[lang], style);
-    fs.writeFileSync(OUTPUT_PATH[lang], generated[lang]);
     checkGenerated(generated[lang], lang, tools, errors, stats);
   });
 
@@ -1006,6 +1091,8 @@ function main() {
     }
   });
 
+  console.log(write ? 'MODE: ' + (force ? '--write --force（不一致也覆盖）' : '--write（仅一致时写入）')
+    : 'MODE: check-only（只校验，不写文件；要写请加 --write）');
   console.log('Catalog: ' + tools.length + ' tools, ' + Object.keys(counts).length + ' categories');
   CATEGORY_ORDER.forEach(function (id) {
     console.log('  ' + id + ': ' + counts[id] + ' (expected ' + EXPECTED_COUNTS[id] + ')');
@@ -1024,14 +1111,49 @@ function main() {
   });
 
   if (errors.length) {
-    console.error('\nSELF-CHECK FAILED (' + errors.length + '):');
+    console.error('\nSELF-CHECK FAILED (' + errors.length + ')，未写入任何文件：');
     errors.forEach(function (error) {
       console.error('  - ' + error);
     });
     process.exit(1);
   }
 
-  console.log('\nSELF-CHECK PASS: 100 cards, 9 categories, ItemList 100, unique slugs, valid hrefs, zero external requests.');
+  const guard = checkHallGuard(tools, generated);
+
+  if (!write) {
+    if (guard.problems.length) {
+      console.error('\nHALL GUARD FAILED：线上大厅与 catalog 不一致（默认只校验，未写文件）。');
+      printGuardProblems(guard, tools);
+      console.error('  catalog 是导出快照，不是权威源；不要通过改 catalog 来改线上。');
+      process.exit(1);
+    }
+    console.log('\nSELF-CHECK PASS: ' + tools.length + ' cards, ' + Object.keys(counts).length +
+      ' categories, ItemList ' + tools.length + ', unique slugs, valid hrefs, zero external requests.');
+    console.log('HALL GUARD PASS: 三个大厅与 catalog 重新渲染的结果逐字节一致（未写文件）。');
+    return;
+  }
+
+  if (guard.problems.length && !force) {
+    console.error('\nHALL GUARD REFUSED：线上大厅与 catalog 不一致，拒绝写入，未写任何文件。');
+    printGuardProblems(guard, tools);
+    console.error('  catalog 是导出快照，不是权威源；不要通过改 catalog 来改线上。');
+    console.error('  确实要覆盖请显式加 --force（会打印警告）。');
+    process.exit(1);
+  }
+
+  if (guard.problems.length && force) {
+    console.warn('!!! WARNING: --force 正在用 catalog 快照覆盖与线上不一致的大厅。');
+    console.warn('!!! catalog 不是权威源（权威源是 games/registry.json 与 scripts/gen-hubs.js）；');
+    console.warn('!!! 线上大厅被覆盖后不应回写 catalog。');
+    printGuardProblems(guard, tools);
+  }
+
+  ['zh', 'en', 'id'].forEach(function (lang) {
+    fs.writeFileSync(OUTPUT_PATH[lang], generated[lang]);
+    console.log('WROTE ' + path.relative(ROOT, OUTPUT_PATH[lang]));
+  });
+  console.log('\nSELF-CHECK PASS: ' + tools.length + ' cards, ' + Object.keys(counts).length +
+    ' categories, ItemList ' + tools.length + ', unique slugs, valid hrefs, zero external requests.');
 }
 
 main();
