@@ -1,0 +1,107 @@
+name: Agent task
+description: Propose, claim, or report a task from games/TASKS.json
+title: "[task] <task-id>"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The task board is `games/TASKS.json`. Each task has an id, target files,
+        executable acceptance commands, a probe that describes the unfinished
+        state, and optional dependencies.
+
+        Run `node scripts/check-tasks.js` to list open tasks and
+        `node scripts/check-tasks.js --task <id>` to check acceptance.
+        Do not include credentials, deploy commands, or "looks fine" as acceptance.
+
+  - type: input
+    id: task-id
+    attributes:
+      label: Task ID
+      description: Must match an id in games/TASKS.json (lowercase, hyphenated).
+      placeholder: save-state-chess
+    validations:
+      required: true
+
+  - type: dropdown
+    id: effort
+    attributes:
+      label: Effort
+      description: S = up to half a day, M = up to 2 days, L = more than 2 days.
+      options:
+        - S
+        - M
+        - L
+    validations:
+      required: true
+
+  - type: dropdown
+    id: status
+    attributes:
+      label: Status
+      options:
+        - open
+        - doing
+        - done
+    validations:
+      required: true
+
+  - type: textarea
+    id: files
+    attributes:
+      label: Target files
+      description: One repository path per line. Every path must already exist.
+      placeholder: |
+        games/chess/index.html
+        games/chess/test.js
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance commands
+      description: One executable command per line. No manual confirmation.
+      placeholder: |
+        node games/chess/test.js
+        node -e 'var fs=require("fs");process.exit(fs.readFileSync("games/chess/index.html","utf8").indexOf("hhfa-chess-save-v1")>=0?0:1)'
+    validations:
+      required: true
+
+  - type: input
+    id: probe-state
+    attributes:
+      label: Current probe state
+      description: Paste the `node scripts/check-tasks.js --red` line for this task.
+      placeholder: "RED — pattern hhfa-chess-save-v1 is absent (unfinished state expects absent)"
+    validations:
+      required: true
+
+  - type: input
+    id: depends-on
+    attributes:
+      label: Depends on
+      description: Comma-separated task ids, or "none".
+      placeholder: none
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes / known blockers
+      description: Anything an agent needs beyond TASKS.json. Do not paste secrets.
+      placeholder: "None."
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety
+      options:
+        - label: This issue contains no credentials, tokens, or deploy commands.
+          required: true
+        - label: Acceptance is executable and will be checked with `node scripts/check-tasks.js --task <id>`.
+          required: true
+        - label: I will run `node games/tests/run-all.js` before proposing a change.
+          required: true

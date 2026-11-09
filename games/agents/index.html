@@ -1,0 +1,1016 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Agent 任务看板 - 游戏站的任务、验收与复制指令</title>
+<meta name="description" content="游戏站的 agent 任务看板：按状态与工作量筛选任务，查看目标文件、依赖和验收命令，一键复制可直接交给编码 agent 的完整指令。">
+<meta name="robots" content="noindex,follow">
+<meta name="author" content="Devin">
+<meta name="theme-color" content="#0e1012">
+<link rel="icon" href="../assets/icons/gomoku.svg" type="image/svg+xml">
+<link rel="canonical" href="https://hhfa008.github.io/games/agents/">
+<style>
+:root{
+  color-scheme:dark;
+  --bg:#0e1012;--bg-soft:#121518;--panel:#171b1f;--panel-2:#1c2126;
+  --ink:#f3efe6;--muted:#b9b3a7;--muted-2:#948e83;
+  --line:#2b3137;--line-strong:#3c444c;
+  --gold:#e2b56a;--gold-bright:#f2cd8d;--gold-soft:rgba(226,181,106,.13);
+  --open:#e2b56a;--doing:#a9c4e6;--done:#9bc7a7;
+  --s:#9bc7a7;--m:#e2b56a;--l:#e39a8b;
+  --radius:16px;--tap:44px;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --shadow:0 18px 40px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;
+  background:
+    radial-gradient(1100px 520px at 12% -12%,rgba(226,181,106,.10),transparent 62%),
+    radial-gradient(900px 480px at 102% -4%,rgba(226,181,106,.05),transparent 55%),
+    var(--bg);
+  color:var(--ink);
+  font:16px/1.65 var(--sans);
+  padding-bottom:calc(10px + env(safe-area-inset-bottom));
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4,p{margin:0}
+a{color:inherit}
+code{font-family:var(--mono)}
+.wrap{max-width:980px;margin:0 auto;padding:0 14px;min-width:0}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+
+.skip-link{position:absolute;left:12px;top:-72px;z-index:20;display:inline-flex;align-items:center;min-height:var(--tap);padding:8px 14px;border-radius:10px;background:var(--gold);color:#17120a;font-weight:650;text-decoration:none}
+.skip-link:focus{top:12px}
+
+.site-header{background:#0b0d0f;border-bottom:1px solid var(--line);padding:10px 0}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.brand{min-height:var(--tap);display:inline-flex;align-items:center;gap:9px;color:var(--ink);text-decoration:none;font-weight:650;letter-spacing:-.01em}
+.brand-mark{width:10px;height:10px;border-radius:50%;background:var(--gold);box-shadow:0 0 0 3px rgba(226,181,106,.2)}
+.site-nav{display:flex;flex-wrap:wrap;gap:4px;font-size:13px}
+.site-nav a{display:inline-flex;align-items:center;min-height:var(--tap);padding:4px 10px;border-radius:999px;color:var(--muted);text-decoration:none;border:1px solid transparent}
+.site-nav a:hover{color:var(--ink);border-color:var(--line)}
+.site-nav a[aria-current="page"]{color:var(--gold-bright);border-color:rgba(226,181,106,.35);background:var(--gold-soft)}
+
+.hero{padding:30px 0 4px;min-width:0}
+.eyebrow{margin:0 0 8px;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
+.hero h1{font-size:clamp(28px,7vw,44px);line-height:1.15;letter-spacing:-.025em;display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.data-badge{display:inline-flex;align-items:center;min-height:28px;padding:2px 10px;border-radius:999px;border:1px solid rgba(226,181,106,.4);background:var(--gold-soft);color:var(--gold-bright);font:600 11px var(--mono);letter-spacing:.05em}
+.lede{margin:14px 0 0;max-width:48rem;color:var(--muted);font-size:15.5px;line-height:1.75}
+.lede strong{color:var(--gold-bright);font-family:var(--mono);font-size:.95em;font-variant-numeric:tabular-nums}
+.lede code{font-size:.88em;color:var(--gold-bright);background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:1px 5px;overflow-wrap:anywhere}
+.stats-note{margin:10px 0 0;font-size:12px;color:var(--muted-2);line-height:1.6}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;padding:0;list-style:none}
+.chip-stat{display:inline-flex;align-items:center;gap:7px;min-height:38px;padding:4px 12px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.02);font-size:12.5px;color:var(--muted)}
+.chip-stat b{color:var(--ink);font-family:var(--mono);font-size:12px;font-variant-numeric:tabular-nums}
+
+.section{margin-top:34px;min-width:0}
+.section-head{margin-bottom:12px}
+.section-head h2{font-size:20px;letter-spacing:-.015em;line-height:1.3}
+.section-head .sub{margin-top:5px;color:var(--muted-2);font-size:13px;line-height:1.6}
+
+.notice{margin:16px 0 0;padding:14px 15px;border:1px solid rgba(226,181,106,.38);background:var(--gold-soft);border-radius:14px;color:var(--ink);font-size:13.5px;line-height:1.65;min-width:0}
+.notice strong{display:block;margin-bottom:4px;color:var(--gold-bright);font-size:14px}
+.notice code{color:var(--gold-bright);overflow-wrap:anywhere}
+.notice .notice-actions{margin-top:10px;display:flex;flex-wrap:wrap;gap:8px}
+
+.start-list{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.start-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;padding:12px;border:1px solid var(--line);border-radius:14px;background:var(--panel);min-width:0}
+.step-num{width:30px;height:30px;border-radius:50%;border:1px solid rgba(226,181,106,.4);background:var(--gold-soft);color:var(--gold-bright);font:600 12px var(--mono);display:inline-flex;align-items:center;justify-content:center}
+.start-cmd{min-width:0}
+.cmd{display:block;max-width:100%;margin:0;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#0b0d0f;color:var(--gold-bright);font:12.5px/1.55 var(--mono);white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word}
+.start-hint{margin:6px 0 0;font-size:12px;color:var(--muted-2);line-height:1.55}
+
+.btn{min-height:var(--tap);min-width:var(--tap);padding:9px 14px;border-radius:10px;border:1px solid var(--line-strong);background:var(--panel-2);color:var(--ink);font:600 13px var(--sans);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:border-color .14s ease,color .14s ease,background-color .14s ease,transform .14s ease}
+.btn:hover{border-color:var(--gold);color:var(--gold-bright)}
+.btn:active{transform:translateY(1px)}
+.btn-gold{background:var(--gold);border-color:var(--gold);color:#17120a}
+.btn-gold:hover{background:var(--gold-bright);border-color:var(--gold-bright);color:#17120a}
+
+.toolbar{display:grid;gap:10px;margin:14px 0 4px;padding:12px;border:1px solid var(--line);border-radius:14px;background:var(--bg-soft);min-width:0}
+.filter-line{display:flex;flex-wrap:wrap;align-items:center;gap:8px;min-width:0}
+.filter-label{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted-2);min-width:46px}
+.filters{display:flex;flex-wrap:wrap;gap:6px;min-width:0}
+.fchip{display:inline-flex;align-items:center;gap:6px;min-height:var(--tap);padding:6px 13px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--muted);font:13px var(--sans);cursor:pointer;transition:border-color .14s ease,color .14s ease,background-color .14s ease}
+.fchip:hover{border-color:var(--line-strong);color:var(--ink)}
+.fchip[aria-pressed="true"]{border-color:var(--gold);background:var(--gold-soft);color:var(--gold-bright)}
+.fchip .n{font-family:var(--mono);font-size:11px;color:var(--muted-2);font-variant-numeric:tabular-nums}
+.fchip[aria-pressed="true"] .n{color:var(--gold)}
+.search{min-width:0}
+.search input{width:100%;min-height:var(--tap);padding:9px 13px;border:1px solid var(--line-strong);border-radius:10px;background:var(--panel);color:var(--ink);font:14px var(--sans);outline:none}
+.search input::placeholder{color:var(--muted-2)}
+.search input:focus{border-color:var(--gold);box-shadow:0 0 0 3px var(--gold-soft)}
+.result-count{min-height:18px;margin:8px 2px 0;font:11.5px var(--mono);color:var(--muted-2);font-variant-numeric:tabular-nums}
+
+.board-state{margin-top:14px;padding:20px;border:1px dashed var(--line-strong);border-radius:14px;background:var(--panel);color:var(--muted);font-size:13.5px;text-align:center}
+
+.status-group{margin-top:22px;min-width:0}
+.status-head{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:0 0 10px}
+.status-head h3{font-size:15px;letter-spacing:.01em}
+.status-head .group-count{font-family:var(--mono);font-size:11px;color:var(--muted-2);border:1px solid var(--line);border-radius:999px;padding:1px 8px}
+.task-list{list-style:none;margin:0;padding:0;display:grid;gap:12px;min-width:0}
+.task-card{border:1px solid var(--line);border-radius:var(--radius);background:linear-gradient(180deg,rgba(255,255,255,.022),transparent 55%),var(--panel);padding:15px;min-width:0;overflow-wrap:anywhere;transition:border-color .14s ease,box-shadow .14s ease}
+.task-card:hover{border-color:var(--line-strong)}
+.card-top{display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-width:0}
+.badge{display:inline-flex;align-items:center;min-height:24px;padding:2px 9px;border-radius:999px;border:1px solid transparent;font-size:11px;font-weight:650;letter-spacing:.02em;white-space:nowrap}
+.effort-S{color:var(--s);background:rgba(155,199,167,.12);border-color:rgba(155,199,167,.3)}
+.effort-M{color:var(--m);background:rgba(226,181,106,.12);border-color:rgba(226,181,106,.32)}
+.effort-L{color:var(--l);background:rgba(227,154,139,.12);border-color:rgba(227,154,139,.32)}
+.effort-unknown{color:var(--muted);background:rgba(255,255,255,.04);border-color:var(--line)}
+.status-open{color:var(--open);background:rgba(226,181,106,.12);border-color:rgba(226,181,106,.32)}
+.status-doing{color:var(--doing);background:rgba(169,196,230,.12);border-color:rgba(169,196,230,.32)}
+.status-done{color:var(--done);background:rgba(155,199,167,.12);border-color:rgba(155,199,167,.32)}
+.status-unknown{color:var(--muted);background:rgba(255,255,255,.04);border-color:var(--line)}
+.task-id{margin-left:auto;min-width:0;max-width:100%;font-family:var(--mono);font-size:11px;color:var(--muted-2);overflow-wrap:anywhere}
+.task-title{margin:10px 0 0;font-size:17px;line-height:1.4;letter-spacing:-.015em;overflow-wrap:anywhere}
+.task-why{margin:6px 0 0;color:var(--muted);font-size:13.5px;line-height:1.65;overflow-wrap:anywhere}
+.meta{margin-top:12px;padding-top:12px;border-top:1px dashed var(--line);min-width:0}
+.meta-label{margin:0 0 6px;font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted-2)}
+.file-list,.accept-list{list-style:none;margin:0;padding:0;display:grid;gap:6px;min-width:0}
+.file-list code{display:inline-block;max-width:100%;padding:2px 6px;border:1px solid var(--line);border-radius:6px;background:var(--panel-2);color:var(--ink);font-size:12px;overflow-wrap:anywhere}
+.accept-list li{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px;min-width:0}
+.accept-cmd{min-width:0;padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:#0b0d0f;color:var(--gold-bright);font-size:12px;overflow-wrap:anywhere;word-break:break-word}
+.accept-expect{color:var(--muted);font-size:12px;overflow-wrap:anywhere}
+.depends{margin:8px 0 0;color:var(--muted);font-size:12.5px;overflow-wrap:anywhere}
+.depends code{padding:1px 5px;border:1px solid var(--line);border-radius:5px;background:var(--panel-2);font-size:11.5px}
+.owner{margin:8px 0 0;color:var(--muted-2);font-size:12px}
+.card-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.copy-prompt{flex:1 1 auto;justify-content:center}
+
+.empty{margin-top:16px;padding:22px 18px;border:1px dashed var(--line-strong);border-radius:14px;background:var(--panel);text-align:center;color:var(--muted)}
+.empty strong{display:block;margin-bottom:6px;color:var(--ink);font-size:15px}
+.empty p{font-size:13.5px;line-height:1.65}
+.empty .btn{margin-top:12px}
+
+.site-footer{margin:40px auto 0;max-width:980px;padding:18px 14px 0;border-top:1px solid var(--line);color:var(--muted-2);font-size:12px;line-height:1.7}
+.site-footer a{display:inline-flex;align-items:center;min-height:var(--tap);padding:0 2px;color:var(--muted);text-decoration:none;border-bottom:1px solid var(--line-strong)}
+.site-footer a:hover{color:var(--gold-bright);border-color:var(--gold)}
+
+dialog#copyDialog{width:min(680px,calc(100vw - 28px));max-height:calc(100dvh - 40px);padding:0;border:1px solid var(--line-strong);border-radius:16px;background:var(--panel);color:var(--ink);box-shadow:var(--shadow)}
+dialog#copyDialog::backdrop{background:rgba(0,0,0,.68)}
+.dialog-inner{display:grid;gap:10px;padding:16px;min-width:0}
+.dialog-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.dialog-head h2{font-size:16px;line-height:1.35}
+.dialog-note{color:var(--muted);font-size:12.5px;line-height:1.6}
+#copyDialogText{width:100%;min-height:220px;max-height:50vh;margin:0;padding:10px;border:1px solid var(--line);border-radius:10px;background:#0b0d0f;color:var(--gold-bright);font:12px/1.55 var(--mono);resize:vertical}
+
+@media (max-width:460px){
+  .start-row{grid-template-columns:auto minmax(0,1fr)}
+  .start-row .btn{grid-column:2;justify-self:start}
+  .filter-label{min-width:100%}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#tasks">跳到任务列表</a>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>Devin · 游戏站</a>
+    <nav class="site-nav" aria-label="站点导航">
+      <a href="../index.html">全部游戏</a>
+      <a href="../README.md">维护说明</a>
+      <a href="./index.html" aria-current="page">任务看板</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap" id="main">
+  <section class="hero" aria-labelledby="boardTitle">
+    <p class="eyebrow">Agent task board</p>
+    <h1 id="boardTitle">任务看板 <span class="data-badge" id="dataBadge" hidden>示例数据</span></h1>
+    <p class="lede">
+      这个站现在有 <strong id="statGames">—</strong> 款游戏、<strong id="statAssertions">—</strong> 条测试断言。
+      每条任务都用同一个口径验收：<strong>全量测试通过</strong> + <code>node scripts/check-tasks.js --task &lt;id&gt;</code> 通过。
+    </p>
+    <p class="stats-note" id="statsNote">正在读取统计数据。取不到的数字会显示「—」，不会用估计值代替。</p>
+    <ul class="chips" aria-label="任务统计">
+      <li class="chip-stat">任务 <b id="chipTotal">—</b></li>
+      <li class="chip-stat">待开始 <b id="chipOpen">—</b></li>
+      <li class="chip-stat">进行中 <b id="chipDoing">—</b></li>
+      <li class="chip-stat">已完成 <b id="chipDone">—</b></li>
+      <li class="chip-stat">更新于 <b id="chipUpdated">—</b></li>
+    </ul>
+    <div class="notice" id="notice" role="status" hidden></div>
+  </section>
+
+  <section class="section" aria-labelledby="startTitle">
+    <div class="section-head">
+      <p class="eyebrow">Start here</p>
+      <h2 id="startTitle">我该怎么开始</h2>
+      <p class="sub">三条命令覆盖「跑测试 → 看任务 → 验一条任务」。点右侧按钮即可复制。</p>
+    </div>
+    <ol class="start-list">
+      <li class="start-row">
+        <span class="step-num" aria-hidden="true">1</span>
+        <div class="start-cmd">
+          <code class="cmd">node games/tests/run-all.js</code>
+          <p class="start-hint">跑全站测试；所有任务完成后都要求这条命令 0 failed。</p>
+        </div>
+        <button type="button" class="btn" data-copy-cmd="node games/tests/run-all.js" aria-label="复制命令：node games/tests/run-all.js">复制</button>
+      </li>
+      <li class="start-row">
+        <span class="step-num" aria-hidden="true">2</span>
+        <div class="start-cmd">
+          <code class="cmd">node scripts/check-tasks.js</code>
+          <p class="start-hint">校验 TASKS.json 的结构与依赖引用；具体任务见下方卡片。</p>
+        </div>
+        <button type="button" class="btn" data-copy-cmd="node scripts/check-tasks.js" aria-label="复制命令：node scripts/check-tasks.js">复制</button>
+      </li>
+      <li class="start-row">
+        <span class="step-num" aria-hidden="true">3</span>
+        <div class="start-cmd">
+          <code class="cmd">node scripts/check-tasks.js --task &lt;任务id&gt;</code>
+          <p class="start-hint">只验一条任务；把 &lt;任务id&gt; 换成卡片上显示的 id。</p>
+        </div>
+        <button type="button" class="btn" data-copy-cmd="node scripts/check-tasks.js --task &lt;任务id&gt;" aria-label="复制命令：node scripts/check-tasks.js --task 任务id">复制</button>
+      </li>
+    </ol>
+  </section>
+
+  <section class="section" id="tasks" aria-labelledby="tasksTitle">
+    <div class="section-head">
+      <p class="eyebrow">Tasks</p>
+      <h2 id="tasksTitle">任务清单</h2>
+      <p class="sub">每张卡片底部的「复制给 agent 的指令」包含任务 id、目标文件、验收命令、DoD 与禁止事项，可直接粘给任意编码 agent。</p>
+    </div>
+
+    <div class="toolbar" aria-label="筛选与搜索">
+      <div class="filter-line">
+        <span class="filter-label">状态</span>
+        <div class="filters" role="group" aria-label="按状态筛选">
+          <button type="button" class="fchip" data-filter="status" data-value="all" aria-pressed="true">全部</button>
+          <button type="button" class="fchip" data-filter="status" data-value="open" aria-pressed="false">待开始 <span class="n" id="countOpen">—</span></button>
+          <button type="button" class="fchip" data-filter="status" data-value="doing" aria-pressed="false">进行中 <span class="n" id="countDoing">—</span></button>
+          <button type="button" class="fchip" data-filter="status" data-value="done" aria-pressed="false">已完成 <span class="n" id="countDone">—</span></button>
+        </div>
+      </div>
+      <div class="filter-line">
+        <span class="filter-label">工作量</span>
+        <div class="filters" role="group" aria-label="按工作量筛选">
+          <button type="button" class="fchip" data-filter="effort" data-value="all" aria-pressed="true">全部</button>
+          <button type="button" class="fchip" data-filter="effort" data-value="S" aria-pressed="false">S · 小</button>
+          <button type="button" class="fchip" data-filter="effort" data-value="M" aria-pressed="false">M · 中</button>
+          <button type="button" class="fchip" data-filter="effort" data-value="L" aria-pressed="false">L · 大</button>
+        </div>
+      </div>
+      <div class="search">
+        <label class="sr-only" for="q">按关键词搜索任务</label>
+        <input id="q" type="search" placeholder="搜索标题、id、文件或验收命令…" autocomplete="off" spellcheck="false">
+      </div>
+    </div>
+
+    <p class="result-count" id="resultCount" aria-live="polite"></p>
+    <div class="board-state" id="boardState" role="status">正在读取任务清单…</div>
+    <div id="taskList" aria-busy="true"></div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <p>数据来自 <code>games/TASKS.json</code>；读取失败时展示内置示例任务并明确标注。页面本身不写死任何任务或统计估计值。</p>
+  <p><a href="../README.md">维护说明</a> · <a href="../index.html">返回游戏大厅</a></p>
+</footer>
+
+<div class="sr-only" id="copyStatus" aria-live="polite" aria-atomic="true"></div>
+
+<dialog id="copyDialog" aria-labelledby="copyDialogTitle">
+  <div class="dialog-inner">
+    <div class="dialog-head">
+      <h2 id="copyDialogTitle">复制给 agent 的指令</h2>
+      <form method="dialog"><button type="submit" class="btn">关闭</button></form>
+    </div>
+    <p class="dialog-note" id="copyDialogNote">浏览器拦截了自动复制。下面的文本已选中，请按 ⌘C / Ctrl+C 手动复制。</p>
+    <label class="sr-only" for="copyDialogText">任务指令全文</label>
+    <textarea id="copyDialogText" readonly spellcheck="false"></textarea>
+  </div>
+</dialog>
+
+<script id="board-core">
+/* Pure, DOM-free core. games/agents/test.js extracts this block and tests it. */
+(function (root) {
+  'use strict';
+
+  var SAMPLE_NOTICE = '示例数据，看板未就绪';
+  var RUN_ALL_CMD = 'node games/tests/run-all.js';
+  var CHECK_TASK_CMD = 'node scripts/check-tasks.js';
+  var STATUSES = ['open', 'doing', 'done'];
+  var EFFORTS = ['S', 'M', 'L'];
+  var STATUS_ORDER = { open: 0, doing: 1, done: 2 };
+  var EFFORT_ORDER = { S: 0, M: 1, L: 2 };
+  var STATUS_LABELS = { open: '待开始', doing: '进行中', done: '已完成', unknown: '状态未知' };
+  var EFFORT_LABELS = { S: 'S · 小', M: 'M · 中', L: 'L · 大', '?': '工作量未标注' };
+
+  /* Built-in sample tasks. Obviously fake ids are prefixed with "sample-". */
+  function sampleBoard() {
+    return {
+      version: 0,
+      updated: null,
+      stats: null,
+      tasks: [
+        {
+          id: 'sample-save-state-chess',
+          title: '象棋：刷新后恢复对局',
+          why: '手机上切后台再回来，对局丢了。把棋盘与轮次写进 localStorage，刷新后原样恢复。',
+          files: ['games/chess/index.html'],
+          acceptance: [{ cmd: 'node games/tests/run-all.js', expect: 'pass' }],
+          effort: 'M',
+          dependsOn: [],
+          owner: null,
+          status: 'open'
+        },
+        {
+          id: 'sample-hall-keyboard',
+          title: '大厅：键盘可达与焦点顺序',
+          why: '只用键盘时应能走完所有游戏卡片，并且焦点环清晰可见。',
+          files: ['games/index.html'],
+          acceptance: [{ cmd: 'node games/tests/run-all.js', expect: 'pass' }],
+          effort: 'S',
+          dependsOn: [],
+          owner: null,
+          status: 'open'
+        },
+        {
+          id: 'sample-voice-reconnect',
+          title: '语音房：断线后自动重连',
+          why: '弱网切换后房间掉线且不提示，需要自动重连并给出可见状态。',
+          files: ['games/voice-room/index.html'],
+          acceptance: [{ cmd: 'node games/tests/run-all.js', expect: 'pass' }],
+          effort: 'L',
+          dependsOn: [],
+          owner: null,
+          status: 'doing'
+        },
+        {
+          id: 'sample-rules-en',
+          title: '规则页：补齐英文版',
+          why: '英文入口需要对应的 rules-en.html，避免落到中文页。',
+          files: ['games/gomoku/rules-en.html'],
+          acceptance: [{ cmd: 'node games/tests/run-all.js', expect: 'pass' }],
+          effort: 'S',
+          dependsOn: [],
+          owner: null,
+          status: 'done'
+        }
+      ]
+    };
+  }
+
+  function pickStat(value) {
+    return typeof value === 'number' && isFinite(value) && value >= 0 ? value : null;
+  }
+
+  function formatStat(value) {
+    return typeof value === 'number' && isFinite(value) && value >= 0 ? String(value) : '—';
+  }
+
+  function normalizeBoard(raw) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+      return { ok: false, isSample: false, error: 'TASKS.json 不是对象' };
+    }
+    if (!Array.isArray(raw.tasks)) {
+      return { ok: false, isSample: false, error: 'TASKS.json 缺少 tasks 数组' };
+    }
+    var tasks = [];
+    for (var i = 0; i < raw.tasks.length; i++) {
+      var t = raw.tasks[i];
+      if (!t || typeof t !== 'object' || Array.isArray(t)) {
+        return { ok: false, isSample: false, error: '第 ' + (i + 1) + ' 条任务不是对象' };
+      }
+      var id = typeof t.id === 'string' ? t.id.trim() : '';
+      var title = typeof t.title === 'string' ? t.title.trim() : '';
+      if (!id || !title) {
+        return { ok: false, isSample: false, error: '第 ' + (i + 1) + ' 条任务缺少 id 或 title' };
+      }
+      var acceptance = [];
+      if (Array.isArray(t.acceptance)) {
+        for (var a = 0; a < t.acceptance.length; a++) {
+          var item = t.acceptance[a];
+          if (item && typeof item.cmd === 'string' && item.cmd.trim()) {
+            acceptance.push({
+              cmd: item.cmd.trim(),
+              expect: typeof item.expect === 'string' ? item.expect.trim() : ''
+            });
+          }
+        }
+      }
+      var files = [];
+      if (Array.isArray(t.files)) {
+        for (var f = 0; f < t.files.length; f++) {
+          if (typeof t.files[f] === 'string' && t.files[f].trim()) files.push(t.files[f].trim());
+        }
+      }
+      var dependsOn = [];
+      if (Array.isArray(t.dependsOn)) {
+        for (var d = 0; d < t.dependsOn.length; d++) {
+          if (typeof t.dependsOn[d] === 'string' && t.dependsOn[d].trim()) dependsOn.push(t.dependsOn[d].trim());
+        }
+      }
+      tasks.push({
+        id: id,
+        title: title,
+        why: typeof t.why === 'string' ? t.why.trim() : '',
+        files: files,
+        acceptance: acceptance,
+        effort: EFFORTS.indexOf(t.effort) >= 0 ? t.effort : '?',
+        dependsOn: dependsOn,
+        owner: typeof t.owner === 'string' && t.owner.trim() ? t.owner.trim() : null,
+        status: STATUSES.indexOf(t.status) >= 0 ? t.status : 'unknown'
+      });
+    }
+    return {
+      ok: true,
+      isSample: false,
+      error: null,
+      data: {
+        version: typeof raw.version === 'number' ? raw.version : null,
+        updated: typeof raw.updated === 'string' ? raw.updated : null,
+        stats: raw.stats && typeof raw.stats === 'object' ? {
+          games: pickStat(raw.stats.games),
+          assertions: pickStat(raw.stats.assertions)
+        } : null,
+        tasks: tasks
+      }
+    };
+  }
+
+  function fallbackBoard(reason) {
+    return {
+      ok: true,
+      isSample: true,
+      error: reason ? String(reason) : 'TASKS.json 不可用',
+      data: sampleBoard()
+    };
+  }
+
+  function readStats(board, site) {
+    var boardStats = board && board.stats ? board.stats : {};
+    var siteStats = site || {};
+    return {
+      games: pickStat(boardStats.games) !== null ? pickStat(boardStats.games) : pickStat(siteStats.games),
+      assertions: pickStat(boardStats.assertions) !== null ? pickStat(boardStats.assertions) : pickStat(siteStats.assertions)
+    };
+  }
+
+  function statusRank(status) {
+    return Object.prototype.hasOwnProperty.call(STATUS_ORDER, status) ? STATUS_ORDER[status] : 3;
+  }
+
+  function effortRank(effort) {
+    return Object.prototype.hasOwnProperty.call(EFFORT_ORDER, effort) ? EFFORT_ORDER[effort] : 3;
+  }
+
+  /* open first, done last; inside one status group effort goes S -> M -> L. */
+  function sortTasks(tasks) {
+    return tasks.slice().sort(function (a, b) {
+      var s = statusRank(a.status) - statusRank(b.status);
+      if (s) return s;
+      var e = effortRank(a.effort) - effortRank(b.effort);
+      if (e) return e;
+      return String(a.id).localeCompare(String(b.id));
+    });
+  }
+
+  function filterTasks(tasks, filters) {
+    var f = filters || {};
+    var status = f.status || 'all';
+    var effort = f.effort || 'all';
+    var q = typeof f.q === 'string' ? f.q.trim().toLowerCase() : '';
+    return tasks.filter(function (t) {
+      if (status !== 'all' && t.status !== status) return false;
+      if (effort !== 'all' && t.effort !== effort) return false;
+      if (!q) return true;
+      var hay = [
+        t.id, t.title, t.why, t.effort, t.status,
+        t.files.join(' '),
+        t.acceptance.map(function (a) { return a.cmd; }).join(' ')
+      ].join(' ').toLowerCase();
+      return hay.indexOf(q) >= 0;
+    });
+  }
+
+  function countByStatus(tasks) {
+    var counts = { open: 0, doing: 0, done: 0, unknown: 0, all: tasks.length };
+    tasks.forEach(function (t) {
+      if (Object.prototype.hasOwnProperty.call(counts, t.status)) counts[t.status]++;
+      else counts.unknown++;
+    });
+    return counts;
+  }
+
+  function statusLabel(status) {
+    return STATUS_LABELS[status] || STATUS_LABELS.unknown;
+  }
+
+  function effortLabel(effort) {
+    return EFFORT_LABELS[effort] || EFFORT_LABELS['?'];
+  }
+
+  function scrub(text) {
+    return String(text == null ? '' : text)
+      .replace(/\/Users\/[^\s`"'<>]*/g, '<本地路径已移除>')
+      .replace(/\/home\/[^\s`"'<>]*/g, '<本地路径已移除>')
+      .replace(/[A-Za-z]:\\[^\s`"<>]*/g, '<本地路径已移除>')
+      .replace(/[\w.+-]+@[\w-]+\.[A-Za-z]{2,}/g, '<邮箱已移除>');
+  }
+
+  function buildPrompt(task) {
+    var lines = [];
+    lines.push('你是编码 agent，请在这个仓库里完成下面这一个任务。');
+    lines.push('');
+    lines.push('任务 id：' + task.id);
+    lines.push('标题：' + scrub(task.title));
+    if (task.why) lines.push('为什么做：' + scrub(task.why));
+    lines.push('');
+    lines.push('目标文件（只改这些）：');
+    if (task.files.length) {
+      task.files.forEach(function (file) { lines.push('- ' + scrub(file)); });
+    } else {
+      lines.push('- （TASKS.json 未指定，请先在任务清单里确认）');
+    }
+    if (task.dependsOn && task.dependsOn.length) {
+      lines.push('');
+      lines.push('依赖（先确认已完成）：' + task.dependsOn.map(scrub).join('、'));
+    }
+    lines.push('');
+    lines.push('验收命令（每条都必须真实通过）：');
+    if (task.acceptance.length) {
+      task.acceptance.forEach(function (a) {
+        lines.push('- `' + scrub(a.cmd) + '` -> 期望：' + scrub(a.expect || 'pass'));
+      });
+    } else {
+      lines.push('- （未提供额外验收命令，按下面的 DoD 执行全量测试）');
+    }
+    lines.push('');
+    lines.push('Definition of Done（三条，缺一不可）：');
+    lines.push('1. `' + RUN_ALL_CMD + '` 全部通过（0 failed）。');
+    lines.push('2. `' + CHECK_TASK_CMD + ' --task ' + task.id + '` 通过。');
+    lines.push('3. 改动只落在上面列出的目标文件；页面改动需在 390px 竖屏无横向滚动、键盘可操作。');
+    lines.push('');
+    lines.push('禁止事项：');
+    lines.push('1. 不要 commit、push 或部署；不要改 TASKS.json、scripts/、游戏大厅与 sw.js。');
+    lines.push('2. 不要改目标文件之外的任何文件；不要引入外部依赖（CDN、外部字体、npm 包）。');
+    lines.push('');
+    lines.push('完成后请贴出：改了哪些文件、每条验收命令的真实输出。');
+    return lines.join('\n');
+  }
+
+  root.AgentBoard = {
+    SAMPLE_NOTICE: SAMPLE_NOTICE,
+    RUN_ALL_CMD: RUN_ALL_CMD,
+    CHECK_TASK_CMD: CHECK_TASK_CMD,
+    sampleBoard: sampleBoard,
+    fallbackBoard: fallbackBoard,
+    normalizeBoard: normalizeBoard,
+    readStats: readStats,
+    formatStat: formatStat,
+    sortTasks: sortTasks,
+    filterTasks: filterTasks,
+    countByStatus: countByStatus,
+    buildPrompt: buildPrompt,
+    statusLabel: statusLabel,
+    effortLabel: effortLabel
+  };
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+</script>
+
+<script id="board-page">
+(function () {
+  'use strict';
+
+  var AB = window.AgentBoard;
+  var EXPECTED_NOTICE = AB.SAMPLE_NOTICE;
+
+  var state = {
+    data: null,
+    isSample: false,
+    error: null,
+    filters: { status: 'all', effort: 'all', q: '' },
+    site: null
+  };
+
+  var els = {
+    games: document.getElementById('statGames'),
+    assertions: document.getElementById('statAssertions'),
+    statsNote: document.getElementById('statsNote'),
+    dataBadge: document.getElementById('dataBadge'),
+    notice: document.getElementById('notice'),
+    chipTotal: document.getElementById('chipTotal'),
+    chipOpen: document.getElementById('chipOpen'),
+    chipDoing: document.getElementById('chipDoing'),
+    chipDone: document.getElementById('chipDone'),
+    chipUpdated: document.getElementById('chipUpdated'),
+    countOpen: document.getElementById('countOpen'),
+    countDoing: document.getElementById('countDoing'),
+    countDone: document.getElementById('countDone'),
+    boardState: document.getElementById('boardState'),
+    taskList: document.getElementById('taskList'),
+    resultCount: document.getElementById('resultCount'),
+    q: document.getElementById('q'),
+    copyStatus: document.getElementById('copyStatus'),
+    copyDialog: document.getElementById('copyDialog'),
+    copyDialogText: document.getElementById('copyDialogText'),
+    copyDialogNote: document.getElementById('copyDialogNote')
+  };
+
+  var copySeq = 0;
+  var searchTimer = null;
+
+  function el(tag, className, text) {
+    var node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text != null) node.textContent = text;
+    return node;
+  }
+
+  function announce(message) {
+    copySeq++;
+    els.copyStatus.textContent = '';
+    window.setTimeout(function () {
+      els.copyStatus.textContent = message;
+    }, 30);
+  }
+
+  function fetchJson(url, timeoutMs) {
+    var controller = typeof AbortController === 'function' ? new AbortController() : null;
+    var timer = controller ? window.setTimeout(function () { controller.abort(); }, timeoutMs || 8000) : null;
+    return fetch(url, { cache: 'no-store', signal: controller ? controller.signal : undefined })
+      .then(function (res) {
+        if (timer) window.clearTimeout(timer);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .catch(function (err) {
+        if (timer) window.clearTimeout(timer);
+        throw err;
+      });
+  }
+
+  function loadBoard() {
+    return fetchJson('../TASKS.json', 8000).then(function (json) {
+      var normalized = AB.normalizeBoard(json);
+      if (!normalized.ok) throw new Error(normalized.error);
+      return normalized;
+    }).catch(function (err) {
+      return AB.fallbackBoard(err && err.message ? err.message : String(err));
+    });
+  }
+
+  function loadSiteStats() {
+    var gamesPromise = fetchJson('../registry.json', 8000).then(function (json) {
+      return Array.isArray(json && json.games) ? json.games.length : null;
+    }).catch(function () { return null; });
+    var reportPromise = fetchJson('../tests/report.json', 8000).then(function (json) {
+      var summary = json && json.summary;
+      if (!summary || typeof summary.assertionsPassed !== 'number') return null;
+      return { count: summary.assertionsPassed, at: typeof json.generatedAt === 'string' ? json.generatedAt : null };
+    }).catch(function () { return null; });
+    return Promise.all([gamesPromise, reportPromise]).then(function (results) {
+      return { games: results[0], assertions: results[1] };
+    });
+  }
+
+  function renderStats() {
+    var assertions = state.site && state.site.assertions ? state.site.assertions.count : null;
+    var stats = AB.readStats(state.data, {
+      games: state.site ? state.site.games : null,
+      assertions: assertions
+    });
+    els.games.textContent = AB.formatStat(stats.games);
+    els.assertions.textContent = AB.formatStat(stats.assertions);
+    if (stats.games == null || stats.assertions == null) {
+      els.statsNote.textContent = '部分统计暂时取不到，显示「—」；这里不会用估计值代替真实数字。';
+    } else {
+      var at = state.site && state.site.assertions && state.site.assertions.at;
+      var when = at ? String(at).slice(0, 10) : null;
+      els.statsNote.textContent = '游戏数取自 games/registry.json；断言数取自 games/tests/report.json' +
+        (when ? '（' + when + ' 的报告）' : '') + '，以实际 run-all 输出为准。';
+    }
+  }
+
+  function renderChips() {
+    var counts = AB.countByStatus(state.data.tasks);
+    els.chipTotal.textContent = String(counts.all);
+    els.chipOpen.textContent = String(counts.open);
+    els.chipDoing.textContent = String(counts.doing);
+    els.chipDone.textContent = String(counts.done);
+    els.countOpen.textContent = String(counts.open);
+    els.countDoing.textContent = String(counts.doing);
+    els.countDone.textContent = String(counts.done);
+    els.chipUpdated.textContent = state.data.updated || '—';
+  }
+
+  function renderNotice() {
+    els.notice.textContent = '';
+    if (!state.isSample) {
+      els.notice.hidden = true;
+      els.dataBadge.hidden = true;
+      return;
+    }
+    els.dataBadge.hidden = false;
+    els.notice.hidden = false;
+    var title = el('strong', null, EXPECTED_NOTICE);
+    var body = el('span', null, '读取 games/TASKS.json 失败（' + (state.error || '未知原因') +
+      '）。下面展示的是内置示例任务，只用于演示看板；请以真实的 TASKS.json 为准。');
+    els.notice.appendChild(title);
+    els.notice.appendChild(body);
+    var actions = el('div', 'notice-actions');
+    var retry = el('button', 'btn', '重新读取');
+    retry.type = 'button';
+    retry.addEventListener('click', boot);
+    actions.appendChild(retry);
+    els.notice.appendChild(actions);
+  }
+
+  function metaBlock(label, lines) {
+    var box = el('div', 'meta');
+    box.appendChild(el('p', 'meta-label', label));
+    var list = el('ul', label === '涉及文件' ? 'file-list' : 'accept-list');
+    lines.forEach(function (line) {
+      var li = el('li');
+      li.appendChild(line);
+      list.appendChild(li);
+    });
+    box.appendChild(list);
+    return box;
+  }
+
+  function renderCard(task, titleId) {
+    var card = el('article', 'task-card');
+    card.setAttribute('aria-labelledby', titleId);
+
+    var top = el('div', 'card-top');
+    top.appendChild(el('span', 'badge effort-' + task.effort, AB.effortLabel(task.effort)));
+    top.appendChild(el('span', 'badge status-' + task.status, AB.statusLabel(task.status)));
+    top.appendChild(el('code', 'task-id', task.id));
+    card.appendChild(top);
+
+    var title = el('h4', 'task-title', task.title);
+    title.id = titleId;
+    card.appendChild(title);
+
+    if (task.why) card.appendChild(el('p', 'task-why', task.why));
+
+    if (task.files.length) {
+      card.appendChild(metaBlock('涉及文件', task.files.map(function (file) {
+        return el('code', null, file);
+      })));
+    }
+
+    if (task.acceptance.length) {
+      card.appendChild(metaBlock('验收', task.acceptance.map(function (item) {
+        var wrap = el('span', null);
+        wrap.appendChild(el('code', 'accept-cmd', item.cmd));
+        wrap.appendChild(document.createTextNode(' '));
+        wrap.appendChild(el('span', 'accept-expect', '→ ' + (item.expect || 'pass')));
+        return wrap;
+      })));
+    }
+
+    if (task.dependsOn.length) {
+      var depends = el('p', 'depends', '依赖：');
+      task.dependsOn.forEach(function (id, index) {
+        if (index) depends.appendChild(document.createTextNode('、'));
+        depends.appendChild(el('code', null, id));
+      });
+      card.appendChild(depends);
+    }
+
+    if (task.owner) card.appendChild(el('p', 'owner', '认领：' + task.owner));
+
+    var actions = el('div', 'card-actions');
+    var copy = el('button', 'btn btn-gold copy-prompt', '复制给 agent 的指令');
+    copy.type = 'button';
+    copy.setAttribute('data-task-id', task.id);
+    copy.setAttribute('aria-label', '复制任务 ' + task.id + ' 的完整指令');
+    actions.appendChild(copy);
+    card.appendChild(actions);
+
+    var li = el('li', 'task-item');
+    li.appendChild(card);
+    return li;
+  }
+
+  function renderEmpty(message, withClear) {
+    var box = el('div', 'empty');
+    box.appendChild(el('strong', null, message));
+    box.appendChild(el('p', null, withClear
+      ? '当前筛选没有命中任务。清除筛选或换一个关键词再看看。'
+      : 'TASKS.json 已读到，但里面还没有任务。'));
+    if (withClear) {
+      var clear = el('button', 'btn', '清除筛选');
+      clear.type = 'button';
+      clear.addEventListener('click', resetFilters);
+      box.appendChild(clear);
+    }
+    els.taskList.appendChild(box);
+  }
+
+  function render() {
+    var all = state.data.tasks;
+    var counts = AB.countByStatus(all);
+    var filtered = AB.sortTasks(AB.filterTasks(all, state.filters));
+    els.taskList.textContent = '';
+    els.taskList.setAttribute('aria-busy', 'false');
+
+    if (!all.length) {
+      renderEmpty('还没有任务', false);
+      els.resultCount.textContent = '共 0 条任务';
+      return;
+    }
+    if (!filtered.length) {
+      renderEmpty('没有符合条件的任务', true);
+      els.resultCount.textContent = '显示 0 / ' + all.length + ' 条任务';
+      return;
+    }
+
+    els.resultCount.textContent = '显示 ' + filtered.length + ' / ' + all.length + ' 条任务' +
+      (state.isSample ? '（示例数据）' : '');
+
+    var groupOrder = ['open', 'doing', 'done', 'unknown'];
+    groupOrder.forEach(function (status) {
+      var group = filtered.filter(function (t) { return t.status === status; });
+      if (!group.length) return;
+      var section = el('section', 'status-group');
+      var head = el('div', 'status-head');
+      var heading = el('h3', null, AB.statusLabel(status));
+      head.appendChild(heading);
+      head.appendChild(el('span', 'group-count', String(group.length)));
+      section.appendChild(head);
+      var list = el('ol', 'task-list');
+      group.forEach(function (task, index) {
+        var titleId = 'task-title-' + status + '-' + index;
+        list.appendChild(renderCard(task, titleId));
+      });
+      section.appendChild(list);
+      els.taskList.appendChild(section);
+    });
+
+    if (counts.unknown) {
+      var note = el('p', 'sub', '有 ' + counts.unknown + ' 条任务的状态不在 open/doing/done 内，已归入「状态未知」。');
+      els.taskList.appendChild(note);
+    }
+  }
+
+  function syncPressed() {
+    document.querySelectorAll('[data-filter]').forEach(function (btn) {
+      var group = btn.getAttribute('data-filter');
+      btn.setAttribute('aria-pressed', String(state.filters[group] === btn.getAttribute('data-value')));
+    });
+  }
+
+  function resetFilters() {
+    state.filters = { status: 'all', effort: 'all', q: '' };
+    els.q.value = '';
+    syncPressed();
+    render();
+  }
+
+  function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(text).then(function () { return true; }).catch(function () {
+        return legacyCopy(text);
+      });
+    }
+    return Promise.resolve(legacyCopy(text));
+  }
+
+  function legacyCopy(text) {
+    try {
+      var area = document.createElement('textarea');
+      area.value = text;
+      area.setAttribute('readonly', '');
+      area.style.position = 'fixed';
+      area.style.top = '-1000px';
+      area.style.left = '0';
+      document.body.appendChild(area);
+      area.select();
+      area.setSelectionRange(0, text.length);
+      var ok = typeof document.execCommand === 'function' && document.execCommand('copy');
+      document.body.removeChild(area);
+      return !!ok;
+    } catch (err) {
+      return false;
+    }
+  }
+
+  function openCopyDialog(text) {
+    els.copyDialogText.value = text;
+    try {
+      if (typeof els.copyDialog.showModal === 'function') {
+        if (!els.copyDialog.open) els.copyDialog.showModal();
+      } else {
+        els.copyDialog.setAttribute('open', '');
+        els.copyDialogNote.textContent = '浏览器不支持自动复制，文本已选中，请手动复制。';
+      }
+      els.copyDialogText.focus();
+      els.copyDialogText.select();
+      if (els.copyDialogText.setSelectionRange) {
+        els.copyDialogText.setSelectionRange(0, text.length);
+      }
+    } catch (err) {
+      els.copyDialog.setAttribute('open', '');
+      els.copyDialogText.focus();
+      els.copyDialogText.select();
+    }
+  }
+
+  function copyAndReport(text, okMessage, fallbackLabel) {
+    copyText(text).then(function (ok) {
+      if (ok) {
+        announce(okMessage);
+      } else {
+        openCopyDialog(text);
+        announce('无法自动复制' + fallbackLabel + '，已在弹窗中选中文本，请手动复制');
+      }
+    });
+  }
+
+  function findTask(id) {
+    var found = null;
+    state.data.tasks.forEach(function (t) {
+      if (!found && t.id === id) found = t;
+    });
+    return found;
+  }
+
+  els.taskList.addEventListener('click', function (event) {
+    var btn = event.target.closest ? event.target.closest('button[data-task-id]') : null;
+    if (!btn) return;
+    var task = findTask(btn.getAttribute('data-task-id'));
+    if (!task) return;
+    var prompt = AB.buildPrompt(task);
+    if (state.isSample) {
+      prompt = '【' + EXPECTED_NOTICE + '：这是内置示例任务，不要执行；请先等 games/TASKS.json 生成】\n\n' + prompt;
+    }
+    copyAndReport(prompt, '已复制任务 ' + task.id + ' 的指令', '任务指令');
+  });
+
+  document.querySelectorAll('[data-copy-cmd]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      copyAndReport(btn.getAttribute('data-copy-cmd'), '命令已复制', '命令');
+    });
+  });
+
+  document.querySelectorAll('[data-filter]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      state.filters[btn.getAttribute('data-filter')] = btn.getAttribute('data-value');
+      syncPressed();
+      render();
+    });
+  });
+
+  els.q.addEventListener('input', function () {
+    if (searchTimer) window.clearTimeout(searchTimer);
+    searchTimer = window.setTimeout(function () {
+      state.filters.q = els.q.value;
+      render();
+    }, 120);
+  });
+  els.q.addEventListener('search', function () {
+    if (searchTimer) window.clearTimeout(searchTimer);
+    state.filters.q = els.q.value;
+    render();
+  });
+
+  function boot() {
+    els.boardState.hidden = false;
+    els.boardState.textContent = '正在读取任务清单…';
+    els.taskList.setAttribute('aria-busy', 'true');
+    els.taskList.textContent = '';
+
+    Promise.all([loadBoard(), state.site ? Promise.resolve(state.site) : loadSiteStats()]).then(function (results) {
+      var board = results[0];
+      state.site = results[1];
+      state.data = board.data;
+      state.isSample = !!board.isSample;
+      state.error = board.error;
+      els.boardState.hidden = true;
+      renderNotice();
+      renderStats();
+      renderChips();
+      render();
+    }).catch(function (err) {
+      state.data = AB.sampleBoard();
+      state.isSample = true;
+      state.error = err && err.message ? err.message : String(err);
+      els.boardState.hidden = true;
+      renderNotice();
+      renderStats();
+      renderChips();
+      render();
+    });
+  }
+
+  boot();
+})();
+</script>
+</body>
+</html>
