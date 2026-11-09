@@ -18,7 +18,7 @@ node --version        # 应为 v24.x
 `tools/` 包含：工具大厅（中/英/印尼三语）、屏幕共享延迟计算器（含 id/vi/th 版本）、Sari-Sari 离线赊账本（PWA）。
 工具的验收标准与游戏一致：单文件、无外部依赖、无追踪、390px 不溢出、三语切换正确、`ItemList` 计数与卡片数一致。
 
-**你不负责**（不要改）：站点首页、`tools/`、`personal/`、`ios/`、`writing/`、任何根目录 HTML。
+**你不负责**（不要改）：站点首页、`personal/`、`ios/`、`writing/`、`store/`、任何根目录 HTML。
 
 ## 硬规则（都是踩过的坑）
 
