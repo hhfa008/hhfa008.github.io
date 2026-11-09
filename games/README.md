@@ -38,6 +38,18 @@
 - 三语：15 款走 EN／简中／ID 字典与切换；Tap Match 为 EN／ID／FIL；中国象棋、语音房暂为中文单语，改版时应优先补齐。
 - 触控优先：以手机竖屏为基准，点按目标不小于 32px，棋盘随视口缩放。
 
+## 随机与洗牌
+
+所有卡牌游戏共用 `shared/shuffle.js`（UMD、无依赖；浏览器在游戏页里用 `<script src="/games/shared/shuffle.js">` 先加载，Node 用 `require`）。
+
+- 生产随机源：`crypto.getRandomValues`（浏览器）/ `node:crypto.randomBytes`（Node）。默认路径不用 `Math.random`；两个来源都不存在时直接抛错，不做静默降级。
+- 洗牌算法：Fisher-Yates 从后往前，每一步在剩余元素中等概率取一张，因此 n! 种排列等概率。禁止 `sort(() => Math.random() - 0.5)`：比较排序的比较次数与数据相关，结果有偏。
+- 整数取样：自带随机源时对 32 位字做拒绝采样（丢弃不完整的最高桶），消除取模偏差；调用方传入浮点 rng（各游戏旧的 mulberry32，为兼容旧存档保留）时用 `floor(rng() * n)`，只剩浮点量化误差。
+- 种子模式：`createRng(seed)` 用 FNV-1a 哈希种子、splitmix32 展开、sfc32 生成；同 seed 在任何平台得到同一序列，用于测试、复盘和每日挑战。
+- API：`shuffle(a, {seed})` 返回新数组；`shuffleInPlace(a, {seed})` 原地；`createRng(seed)`；`shuffleDeck({jokers})` 52/54 张；`deal(deck, hands, perHand)` 校验张数够不够。
+- 已接入：接龙、空当接龙、蜘蛛纸牌、斗地主、德州扑克。接入时把各游戏原有 `rng` 原样传给共享引擎（而不是改成共享 seed），所以旧 seed 的发牌逐字节不变，旧存档/复盘链接不受影响；无 seed 时改用共享 CSPRNG。
+- 统计检验：`node games/shared/shuffle.test.js`（`run-all.js` 跳过 `shared/`，需单独跑）。一次实测：52×52 卡方 χ²=2675.55，df=2601，p≈0.151；A♠ 落在第一张 3785 次（期望 3846.15，偏差 −1.59%，z=−1.00）；100,000 次洗牌得到 100,000 个互异排列；共 47 项断言。
+
 ## 质量约定
 
 每个游戏必须有能脱离 DOM、在 node 下运行的单元测试；纯 UI 游戏用无头浏览器 E2E 兜底。提交前全部通过，测试要点与项数如下：

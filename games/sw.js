@@ -4,7 +4,7 @@
    Static assets: cache-first with background refresh (stale-while-revalidate). */
 'use strict';
 
-var CACHE_VERSION = 'v7';
+var CACHE_VERSION = 'v8';
 var CACHE_PREFIX = 'hhfa-games-';
 var CACHE_NAME = CACHE_PREFIX + CACHE_VERSION;
 var OFFLINE_URL = '/games/offline.html';
@@ -21,6 +21,7 @@ var PRECACHE_URLS = [
   // Shared code used by the games.
   '/games/shared/rules.js',
   '/games/shared/share.js',
+  '/games/shared/shuffle.js',
   '/games/pioneers/engine.js',
 
   // Every game entry page.
