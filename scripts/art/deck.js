@@ -36,37 +36,41 @@ const ROOT = path.resolve(__dirname, '..', '..');
 const ART_DIR = path.join(ROOT, 'games', 'assets', 'art');
 const DEFAULT_ELEMENTS = path.join(ART_DIR, 'elements');
 const DEFAULT_OUT = path.join(ART_DIR, 'decks');
+const COURT_DIR = path.join(ART_DIR, 'court');
 const CSS_FILE = path.join(__dirname, 'deck.css');
 
+/* Only carriers that are still used.  The old AI pip-* and the xiangqi
+   red/black blanks are deliberately not read: pips are standard SVG now and
+   both xiangqi sides share xiangqi-blank. */
 const ELEMENT_NAMES = [
   'card-face-frame',
-  'pip-spade', 'pip-heart', 'pip-diamond', 'pip-club',
   'court-panel',
   'mahjong-blank',
   'xiangqi-blank',
-  'xiangqi-blank-red', 'xiangqi-blank-black',
 ];
 
 const POKER_SUITS = [
-  { code: 'S', el: 'pip-spade', tone: 'black' },
-  { code: 'H', el: 'pip-heart', tone: 'red' },
-  { code: 'D', el: 'pip-diamond', tone: 'red' },
-  { code: 'C', el: 'pip-club', tone: 'black' },
+  { code: 'S', tone: 'black' },
+  { code: 'H', tone: 'red' },
+  { code: 'D', tone: 'red' },
+  { code: 'C', tone: 'black' },
 ];
 
 const POKER_RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
 
-/* Classic pip positions, normalised inside a 112x196 box centred on the card.
-   Rows are 0, 1/3, 2/3, 1; columns 0 and 1. */
+/* Real playing-card pip layouts, normalised inside a 104x196 box centred on
+   the card.  Every layout is 180° rotationally symmetric: (x, y) must have a
+   mate at (1 - x, 1 - y).  6/7/8 use two columns of three at 0/0.5/1 (the old
+   1/3 placement was not rotationally symmetric). */
 const PIP_LAYOUT = {
   2: [[0.5, 0], [0.5, 1]],
   3: [[0.5, 0], [0.5, 0.5], [0.5, 1]],
   4: [[0, 0], [1, 0], [0, 1], [1, 1]],
   5: [[0, 0], [1, 0], [0.5, 0.5], [0, 1], [1, 1]],
-  6: [[0, 0], [0, 1 / 3], [0, 1], [1, 0], [1, 1 / 3], [1, 1]],
-  7: [[0, 0], [0, 1 / 3], [0, 1], [1, 0], [1, 1 / 3], [1, 1], [0.5, 1 / 6]],
-  8: [[0, 0], [0, 1 / 3], [0, 1], [1, 0], [1, 1 / 3], [1, 1],
-      [0.5, 1 / 6], [0.5, 5 / 6]],
+  6: [[0, 0], [0, 0.5], [0, 1], [1, 0], [1, 0.5], [1, 1]],
+  7: [[0, 0], [0, 0.5], [0, 1], [1, 0], [1, 0.5], [1, 1], [0.5, 0.5]],
+  8: [[0, 0], [0, 0.5], [0, 1], [1, 0], [1, 0.5], [1, 1],
+      [0.5, 0.25], [0.5, 0.75]],
   9: [[0, 0], [0, 1 / 3], [0, 2 / 3], [0, 1],
       [1, 0], [1, 1 / 3], [1, 2 / 3], [1, 1], [0.5, 0.5]],
   10: [[0, 0], [0, 1 / 3], [0, 2 / 3], [0, 1],
@@ -74,12 +78,25 @@ const PIP_LAYOUT = {
        [0.5, 1 / 3], [0.5, 2 / 3]],
 };
 const PIP_SIZE = {
-  2: 46, 3: 44, 4: 42, 5: 40, 6: 37, 7: 35, 8: 34, 9: 33, 10: 32,
+  2: 46, 3: 44, 4: 42, 5: 40, 6: 44, 7: 40, 8: 38, 9: 33, 10: 32,
 };
 
+function assertPipSymmetry() {
+  const eps = 1e-6;
+  for (const [rank, layout] of Object.entries(PIP_LAYOUT)) {
+    for (const [x, y] of layout) {
+      const mate = layout.some(
+        ([xx, yy]) => Math.abs(xx - (1 - x)) < eps && Math.abs(yy - (1 - y)) < eps
+      );
+      if (!mate) {
+        throw new Error(`PIP_LAYOUT ${rank} is not 180° symmetric at (${x}, ${y})`);
+      }
+    }
+  }
+}
+
 const SUIT_SVG = {
-  S: '<path d="M50 92C44 80 14 62 14 37 14 20 26 10 39 10c6 0 10 3 11 9 1-6 5-9 11-9 13 0 25 10 25 27 0 25-30 43-36 55z"/>' +
-     '<path d="M44 72c-1 12-7 18-16 22h44c-9-4-15-10-16-22z"/>',
+  S: '<path d="M50 6C38 24 8 46 8 67c0 15 12 25 25 25 6 0 11-3 14-8-2 10-7 16-13 20h32c-6-4-11-10-13-20 3 5 8 8 14 8 13 0 25-10 25-25C92 46 62 24 50 6z"/>',
   H: '<path d="M50 88C20 66 6 46 6 29 6 13 18 3 33 3c9 0 15 5 17 13 2-8 8-13 17-13 15 0 27 10 27 26 0 17-14 37-44 59z"/>',
   D: '<path d="M50 2 95 50 50 98 5 50z"/>',
   C: '<circle cx="50" cy="24" r="19"/><circle cx="29" cy="58" r="19"/>' +
@@ -452,6 +469,34 @@ function missingElements(elems, names) {
   return names.filter((n) => !elems.get(n));
 }
 
+function loadCourt(dir) {
+  const map = new Map();
+  for (const rank of ['J', 'Q', 'K']) {
+    for (const suit of ['S', 'H', 'D', 'C']) {
+      const name = `${rank}-${suit}`;
+      for (const ext of ['.png', '.webp']) {
+        const file = path.join(dir, name + ext);
+        if (!fs.existsSync(file)) continue;
+        if (ext === '.png' && !isPng(file)) continue;
+        map.set(name, { file, url: pathToFileURL(file).href });
+        break;
+      }
+    }
+  }
+  return map;
+}
+
+function missingCourt(court) {
+  const out = [];
+  for (const rank of ['J', 'Q', 'K']) {
+    for (const suit of ['S', 'H', 'D', 'C']) {
+      const name = `${rank}-${suit}`;
+      if (!court.has(name)) out.push(name);
+    }
+  }
+  return out;
+}
+
 /* ------------------------------------------------------------------ HTML */
 
 function escapeAttr(value) {
@@ -519,25 +564,60 @@ function suitSvg(code) {
   return `<svg viewBox="0 0 100 100" aria-hidden="true">${SUIT_SVG[code]}</svg>`;
 }
 
-function pipMarkup(card, elems, size, x, y) {
-  const pip = elems.get(card.suit.el);
-  const art = pip ? '' : suitSvg(card.suit.code);
-  const bg = pip ? carrierBg(pip, size, size, 'contain') : '';
-  const style = `left:${x * 100}%;top:${y * 100}%;width:${size}px;height:${size}px;${bg}`;
-  return `<span class="pip" ${styleAttr(style)}>${art}</span>`;
+function pipMarkup(card, size, x, y) {
+  const style = `left:${x * 100}%;top:${y * 100}%;width:${size}px;height:${size}px`;
+  return `<span class="pip" ${styleAttr(style)}>${suitSvg(card.suit.code)}</span>`;
 }
 
-function pokerCorner(card, elems, cls) {
-  const pip = elems.get(card.suit.el);
-  const art = pip ? '' : suitSvg(card.suit.code);
-  const bg = pip ? carrierBg(pip, 20, 20, 'contain') : '';
+function pokerCorner(card, cls) {
   return `<div class="corner ${cls}">` +
     `<span class="rank${card.rank === '10' ? ' rank--ten' : ''}">${card.rank}</span>` +
-    `<span class="suit-mark"${bg ? ` ${styleAttr(bg)}` : ''}>${art}</span>` +
+    `<span class="suit-mark">${suitSvg(card.suit.code)}</span>` +
     '</div>';
 }
 
-function pokerCard(card, elems) {
+/* Ace: one large suit plus a thin ring and 12 short rays. */
+function aceMarkup(card) {
+  const ticks = [];
+  for (let i = 0; i < 12; i++) {
+    const a = (i * 30 * Math.PI) / 180;
+    const x1 = 100 + Math.cos(a) * 86;
+    const y1 = 100 + Math.sin(a) * 86;
+    const x2 = 100 + Math.cos(a) * 98;
+    const y2 = 100 + Math.sin(a) * 98;
+    ticks.push(
+      `<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" ` +
+      `x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}"/>`
+    );
+  }
+  const rays = `<svg class="ace-rays" viewBox="0 0 200 200" aria-hidden="true">` +
+    '<circle cx="100" cy="100" r="92" fill="none" stroke="currentColor" stroke-width="2" opacity="0.55"/>' +
+    '<circle cx="100" cy="100" r="84" fill="none" stroke="currentColor" stroke-width="2" opacity="0.35"/>' +
+    `<g stroke="currentColor" stroke-width="2" opacity="0.35">${ticks.join('')}</g>` +
+    '</svg>';
+  return `<div class="ace">${rays}${pipMarkup(card, 120, 0.5, 0.5)}</div>`;
+}
+
+/* Real court card: the same half-length portrait in the top half and rotated
+   180° in the bottom half.  The corner index is the only letter. */
+function courtMarkup(card, elems, court) {
+  const panel = elems.get('court-panel');
+  const portrait = court.get(`${card.rank}-${card.suit.code}`);
+  if (portrait) {
+    return '<div class="court">' +
+      (panel ? `<div class="court-bg" ${styleAttr(carrierBg(panel, 152, 206, 'contain'))}></div>` : '') +
+      '<div class="court-portrait">' +
+      `<img class="court-figure" src="${escapeAttr(portrait.url)}" alt="">` +
+      `<img class="court-figure court-figure--flip" src="${escapeAttr(portrait.url)}" alt="">` +
+      '</div></div>';
+  }
+  return '<div class="court">' +
+    (panel ? `<div class="court-bg" ${styleAttr(carrierBg(panel, 152, 206, 'contain'))}></div>` : '') +
+    `<div class="court-medallion"><span class="court-letter">${card.rank}</span></div>` +
+    '</div>';
+}
+
+function pokerCard(card, elems, court) {
   const frame = elems.get('card-face-frame');
   const fallback = !frame;
   const paper = fallback ? '<div class="poker-paper"></div>' : '';
@@ -562,26 +642,22 @@ function pokerCard(card, elems) {
 
   let center;
   if (card.rank === 'A') {
-    center = `<div class="pips">${pipMarkup(card, elems, 88, 0.5, 0.5)}</div>`;
+    center = aceMarkup(card);
   } else if (card.rank === 'J' || card.rank === 'Q' || card.rank === 'K') {
-    const panel = elems.get('court-panel');
-    center = '<div class="court">' +
-      (panel ? `<div class="court-bg" ${styleAttr(carrierBg(panel, 152, 206, 'contain'))}></div>` : '') +
-      `<div class="court-medallion"><span class="court-letter">${card.rank}</span></div>` +
-      '</div>';
+    center = courtMarkup(card, elems, court);
   } else {
     const layout = PIP_LAYOUT[Number(card.rank)];
     const size = PIP_SIZE[Number(card.rank)];
     center = `<div class="pips">${layout
-      .map(([x, y]) => pipMarkup(card, elems, size, x, y))
+      .map(([x, y]) => pipMarkup(card, size, x, y))
       .join('')}</div>`;
   }
 
   return `<div class="card poker suit-${card.suit.code}${fallback ? ' fallback' : ''}">` +
     paper + frameDiv + (frame ? '<div class="poker-rule"></div>' : '') +
     '<div class="paper-grain"></div>' +
-    pokerCorner(card, elems, 'corner--tl') +
-    pokerCorner(card, elems, 'corner--br') +
+    pokerCorner(card, 'corner--tl') +
+    pokerCorner(card, 'corner--br') +
     center +
     '<div class="card-edge"></div>' +
     '</div>';
@@ -594,7 +670,7 @@ function pokerCard(card, elems) {
 const MJ_RINGS = [
   'color-mix(in srgb, var(--red) 65%, black)',
   'color-mix(in srgb, var(--mj-green) 65%, black)',
-  'color-mix(in srgb, var(--black) 80%, black)',
+  'color-mix(in srgb, var(--mj-blue) 65%, black)',
 ];
 
 function ringVarsFor(i) {
@@ -968,25 +1044,19 @@ function webpSize(buffer) {
 /* --------------------------------------------------------------- rendering */
 
 const SET_ELEMENTS = {
-  poker: ['card-face-frame', 'pip-spade', 'pip-heart', 'pip-diamond', 'pip-club', 'court-panel'],
+  poker: ['card-face-frame', 'court-panel'],
   mahjong: ['mahjong-blank'],
   xiangqi: ['xiangqi-blank'],
 };
 
 const FALLBACK_NOTES = {
   'card-face-frame': 'poker: --paper fill + 2px --paper-line border',
-  'pip-spade': 'poker: inline SVG, flat --black',
-  'pip-heart': 'poker: inline SVG, flat --red',
-  'pip-diamond': 'poker: inline SVG, flat --red',
-  'pip-club': 'poker: inline SVG, flat --black',
-  'court-panel': 'poker J/Q/K: ivory medallion only',
+  'court-panel': 'poker J/Q/K: ivory medallion + big letter (portrait missing)',
   'mahjong-blank': 'mahjong: --ivory tile + 2px recess',
-  'xiangqi-blank': 'xiangqi: light wood/ivory disc (#e8d3ab) + 2px wood line',
-  'xiangqi-blank-red': 'unused fallback: radial lacquer disc',
-  'xiangqi-blank-black': 'unused fallback: radial near-black disc',
+  'xiangqi-blank': 'xiangqi: light wood/ivory disc (#e0b671) + 2px wood line',
 };
 
-async function renderSet(browser, set, cards, elems, opts, css, tmpDir, fontState) {
+async function renderSet(browser, set, cards, elems, court, opts, css, tmpDir, fontState) {
   const outDir = path.join(opts.out, set);
   const pngDir = path.join(outDir, 'png');
   const webpDir = path.join(outDir, 'webp');
@@ -999,7 +1069,7 @@ async function renderSet(browser, set, cards, elems, opts, css, tmpDir, fontStat
   for (let i = 0; i < cards.length; i++) {
     const card = cards[i];
     let body;
-    if (set === 'poker') body = pokerCard(card, elems);
+    if (set === 'poker') body = pokerCard(card, elems, court);
     else if (set === 'mahjong') body = mahjongTile(card, elems);
     else body = xiangqiPiece(card, elems);
 
@@ -1268,6 +1338,9 @@ async function main() {
 
   if (opts.help) { console.log(usage()); return; }
 
+  assertPipSymmetry();
+  console.log('[deck] pip symmetry OK (2–10, 180° rotational)');
+
   if (opts.all) opts.sets = ['poker', 'mahjong', 'xiangqi'];
   if (!opts.sets.length && !opts.list && !opts.preview) {
     console.error(`deck: pick --all or --set <poker|mahjong|xiangqi>\n\n${usage()}`);
@@ -1276,6 +1349,7 @@ async function main() {
   }
 
   const elems = loadElements(opts.elements);
+  const court = loadCourt(COURT_DIR);
   const allCards = {};
   for (const set of opts.sets) allCards[set] = SETS[set]();
 
@@ -1300,7 +1374,16 @@ async function main() {
         );
       }
     }
-    console.log(`  ${missing.length === 0 ? 'all element carriers present' : `${missing.length} missing, fallbacks ready`}`);
+    console.log(`  ${missing.length === 0 ? 'all used element carriers present' : `${missing.length} missing, fallbacks ready`}`);
+    const courtMissing = missingCourt(court);
+    console.log('');
+    console.log(
+      `court dir: ${path.relative(ROOT, COURT_DIR) || COURT_DIR}  ` +
+      `${court.size}/12 portraits present`
+    );
+    if (courtMissing.length) {
+      console.log(`  missing: ${courtMissing.join(' ')}  -> letter-medallion fallback`);
+    }
     return;
   }
 
@@ -1318,7 +1401,7 @@ async function main() {
     if (opts.sets.length) {
       fs.mkdirSync(opts.out, { recursive: true });
       for (const set of opts.sets) {
-        const result = await renderSet(browser, set, allCards[set], elems, opts, css, tmpDir, fontState);
+        const result = await renderSet(browser, set, allCards[set], elems, court, opts, css, tmpDir, fontState);
         totals[set] = result;
       }
     }

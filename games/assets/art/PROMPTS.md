@@ -21,3 +21,20 @@
 | aeroplane | gpt-image-2 | 否 | - | An aeroplane chess board on a dark tabletop seen from 30 degrees overhead; four colored pawns in red, yellow, blue and green advance along a blank colored track, a pair of dice stopped in the center of the board, the track cells are plain color with no characters or markings, warm rim light from the upper left. Style: cinematic 3D render, matte wood and stone materials, warm rim light, deep charcoal background, subtle volumetric light rays, no text. Composition: 30-degree overhead tabletop view, centered rule-of-thirds framing, the subject occupies about 60 percent of the frame, dark vignette around the edges. Strictly no letters, numerals, logos, watermarks or signatures; no human faces; no real brands; no existing game or card IP. | aeroplane-og.webp | 149598 | aeroplane-card.webp | 26350 |
 | backgammon | gpt-image-2 | 否 | - | A backgammon board of warm walnut wood with inlaid lighter points; dark and ivory checkers arranged on the points, two dice showing simple pip patterns resting on the central bar, strong visible wood grain, warm rim light raking from the upper left. Style: cinematic 3D render, matte wood and stone materials, warm rim light, deep charcoal background, subtle volumetric light rays, no text. Composition: 30-degree overhead tabletop view, centered rule-of-thirds framing, the subject occupies about 60 percent of the frame, dark vignette around the edges. Strictly no letters, numerals, logos, watermarks or signatures; no human faces; no real brands; no existing game or card IP. | backgammon-og.webp | 181738 | backgammon-card.webp | 33444 |
 | tcg-sample | gpt-image-2 | 否 | - | An original dark-fantasy card game scene: a single unopened card lying on black velvet, its back showing an abstract glowing lantern emblem, while a small floating lamp spirit made of a luminous paper-lantern body with ribbon-like trails of light hovers above it in the dark; warm lantern glow, deep charcoal background. Style: cinematic 3D render, matte wood and stone materials, warm rim light, deep charcoal background, subtle volumetric light rays, no text. Composition: 30-degree overhead tabletop view, centered rule-of-thirds framing, the subject occupies about 60 percent of the frame, dark vignette around the edges. Strictly no letters, numerals, logos, watermarks or signatures; no human faces; no real brands; no existing game or card IP. | tcg-sample-og.webp | 151504 | tcg-sample-card.webp | 34408 |
+
+## 扑克花牌半身像（court/，2026-11-10）
+
+12 张，`court/<rank>-<suit>.png`，gpt-image-2，1024x1024 请求（网关返回约 1300×1200），
+白底木刻版画。后处理：白底转 alpha、裁 alpha bbox、缩到 512px，透明 PNG。
+
+模板：
+
+> Victorian woodcut playing-card court portrait, half-length <figure> from the waist up, facing right in profile, <attribute>, centered on a pure white background, <accent>, no text, no letters, no numbers, no border, no card frame, no watermark, no suit symbols, single isolated figure, antique print aesthetic
+
+- King：`ornate jeweled crown, holding a raised sword upright`
+- Queen：`ornate jeweled crown, holding a single stemmed flower upright`
+- Jack：`wearing a feathered cap, holding a halberd upright`
+- S/C：`monochrome black ink line engraving with fine cross-hatching`
+- H/D：`black ink line engraving with fine cross-hatching and deep crimson red accents on the robe and mantle`
+
+文件：`K-S Q-S J-S K-H Q-H J-H K-D Q-D J-D K-C Q-C J-C`
