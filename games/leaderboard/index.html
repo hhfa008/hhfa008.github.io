@@ -1,0 +1,1288 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>排行榜与好友挑战 — 免费网页桌游</title>
+<meta name="description" content="网页桌游排行榜：查看本周榜与总榜、设置可选昵称、复制设备编号、发起好友挑战链接。无需注册，免费游玩。">
+<meta name="theme-color" content="#0a0d11">
+<meta name="robots" content="index,follow">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230a0d11'/%3E%3Ccircle cx='16' cy='16' r='8' fill='%23e3b05c'/%3E%3C/svg%3E">
+<link rel="canonical" href="https://hhfa008.github.io/games/leaderboard/">
+<style>
+:root{
+  --bg:#0a0d11;--bg-2:#0f141a;--card:#121920;--card-2:#18212a;--card-3:#1e2833;
+  --line:#28323d;--line-2:#384553;
+  --text:#f4efe4;--muted:#aab1ba;--muted-2:#7f8995;
+  --gold:#e3b05c;--gold-strong:#f2cc82;--gold-soft:rgba(227,176,92,.13);
+  --silver:#c9d2df;--bronze:#c58a5c;--danger:#e0756a;--good:#8fd6a4;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Noto Sans SC","Microsoft YaHei",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --radius:18px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;min-height:100vh;color:var(--text);font:16px/1.6 var(--sans);
+  background:
+    radial-gradient(760px 380px at 50% -140px,rgba(227,176,92,.14),transparent 68%),
+    radial-gradient(560px 320px at 105% 32%,rgba(72,104,150,.13),transparent 70%),
+    linear-gradient(180deg,#0b0f14 0%,var(--bg) 42%,#080a0d 100%);
+  background-attachment:fixed;
+  -webkit-font-smoothing:antialiased;
+}
+[hidden]{display:none!important}
+a{color:var(--gold);text-underline-offset:3px}
+button{font:inherit;color:inherit}
+code{font-family:var(--mono)}
+.wrap{width:100%;max-width:920px;margin:0 auto;padding:0 16px 56px}
+.top{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  width:100%;max-width:920px;margin:0 auto;padding:12px 16px;
+  padding-left:max(16px,env(safe-area-inset-left));
+  padding-right:max(16px,env(safe-area-inset-right));
+}
+.brand{
+  display:inline-flex;align-items:center;gap:9px;min-height:44px;
+  color:var(--text);text-decoration:none;font-weight:650;letter-spacing:-.01em;
+}
+.brand .dot{width:9px;height:9px;border-radius:50%;background:var(--gold);box-shadow:0 0 0 3px rgba(227,176,92,.2)}
+.brand small{font:500 11px/1 var(--mono);color:var(--muted-2);letter-spacing:.08em}
+.top-link{
+  display:inline-flex;align-items:center;min-height:44px;padding:0 12px;border-radius:999px;
+  color:var(--muted);text-decoration:none;font-size:13px;border:1px solid transparent;
+}
+.top-link:hover{color:var(--text);border-color:var(--line)}
+.hero{padding:18px 2px 6px}
+.eyebrow{
+  margin:0 0 8px;font:600 10px/1.4 var(--mono);letter-spacing:.16em;
+  text-transform:uppercase;color:var(--gold);
+}
+.hero h1{margin:0;font-size:clamp(30px,8vw,44px);line-height:1.1;letter-spacing:-.03em;font-weight:720}
+.hero p{margin:10px 0 0;color:var(--muted);font-size:14.5px;max-width:36rem}
+.mock-badge{
+  display:inline-flex;align-items:center;gap:6px;margin-top:12px;padding:4px 10px;
+  border:1px solid rgba(227,176,92,.4);border-radius:999px;background:var(--gold-soft);
+  color:var(--gold-strong);font:600 11px/1.6 var(--mono);letter-spacing:.04em;
+}
+.card{
+  margin-top:16px;padding:clamp(15px,4.2vw,22px);
+  background:linear-gradient(180deg,rgba(24,33,42,.94),rgba(17,23,30,.96));
+  border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:0 18px 48px rgba(0,0,0,.28);
+}
+.card h2{margin:0;font-size:17px;line-height:1.3;letter-spacing:-.01em}
+.card .sub{margin:6px 0 0;color:var(--muted);font-size:13px}
+.section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.label{margin:0 0 6px;font:600 11px/1.4 var(--mono);letter-spacing:.08em;color:var(--muted-2);text-transform:uppercase}
+.hint{margin:8px 0 0;color:var(--muted-2);font-size:12.5px;line-height:1.55}
+.hint strong{color:var(--muted);font-weight:600}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  min-height:44px;padding:0 16px;border-radius:12px;cursor:pointer;
+  border:1px solid var(--line-2);background:var(--card-2);color:var(--text);
+  font:600 14px/1.2 var(--sans);text-decoration:none;white-space:nowrap;
+  transition:background .16s ease,border-color .16s ease,transform .16s ease;
+}
+.btn:hover{background:var(--card-3);border-color:#4a5868}
+.btn:active{transform:translateY(1px)}
+.btn.primary{
+  background:linear-gradient(180deg,var(--gold-strong),var(--gold));
+  border-color:transparent;color:#1b1305;box-shadow:0 6px 18px rgba(227,176,92,.18);
+}
+.btn.primary:hover{filter:brightness(1.04);background:linear-gradient(180deg,var(--gold-strong),var(--gold))}
+.btn.ghost{background:transparent}
+.btn.danger{color:var(--danger);border-color:rgba(224,117,106,.45);background:rgba(224,117,106,.07)}
+.btn.danger:hover{background:rgba(224,117,106,.14)}
+.btn:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visible{
+  outline:2px solid var(--gold-strong);outline-offset:2px;
+}
+.btn[disabled]{opacity:.55;cursor:not-allowed;transform:none}
+input,select{
+  width:100%;min-width:0;min-height:48px;padding:10px 13px;
+  border:1px solid var(--line-2);border-radius:12px;
+  background:#0d1319;color:var(--text);font:15px var(--sans);outline:none;
+}
+input::placeholder{color:#68727e}
+input:focus,select:focus{border-color:var(--gold);box-shadow:0 0 0 3px var(--gold-soft)}
+input[readonly]{color:var(--muted);font-family:var(--mono);font-size:12.5px}
+select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted-2) 50%),linear-gradient(135deg,var(--muted-2) 50%,transparent 50%);background-position:calc(100% - 19px) 21px,calc(100% - 14px) 21px;background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:38px}
+.field{margin-top:12px}
+.field label{display:block;margin:0 0 6px;font:600 12px/1.4 var(--sans);color:var(--muted)}
+.inline{display:flex;align-items:flex-start;gap:10px}
+.inline>.grow{flex:1 1 auto;min-width:0}
+.inline>.btn{flex:0 0 auto}
+
+/* Identity */
+.identity-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.device-short{
+  margin:2px 0 0;font:700 26px/1.1 var(--mono);letter-spacing:.03em;color:var(--gold-strong);
+  font-variant-numeric:tabular-nums;
+}
+.device-caption{margin:4px 0 0;color:var(--muted-2);font-size:12px}
+.device-actions{display:flex;gap:8px;flex-wrap:wrap}
+details.device-full{margin-top:10px;border-top:1px solid var(--line);padding-top:4px}
+details.device-full summary{
+  min-height:44px;display:flex;align-items:center;cursor:pointer;list-style:none;
+  color:var(--muted);font-size:12.5px;
+}
+details.device-full summary::-webkit-details-marker{display:none}
+details.device-full summary::before{content:"＋";display:inline-block;width:20px;color:var(--gold)}
+details.device-full[open] summary::before{content:"－"}
+.device-full .full-row{display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap}
+.device-full code{
+  flex:1 1 220px;min-width:0;padding:10px 12px;border:1px solid var(--line);
+  border-radius:10px;background:#0a0f14;color:var(--silver);font-size:12px;
+  overflow-wrap:anywhere;word-break:break-all;line-height:1.5;
+}
+.identity-divider{height:1px;background:var(--line);margin:16px 0}
+.name-preview{margin:8px 0 0;font-size:13px;color:var(--muted)}
+.name-preview strong{color:var(--gold-strong);font-weight:650}
+.privacy{margin:10px 0 0;padding:10px 12px;border-radius:12px;background:rgba(143,214,164,.06);border:1px solid rgba(143,214,164,.16);color:#a9c9b3;font-size:12px;line-height:1.55}
+
+/* Challenge banner */
+.challenge-banner{
+  margin-top:18px;padding:clamp(16px,4.5vw,24px);border-radius:var(--radius);
+  border:1px solid rgba(227,176,92,.5);
+  background:
+    radial-gradient(420px 160px at 12% 0%,rgba(227,176,92,.2),transparent 70%),
+    linear-gradient(180deg,#1c1a14,#14181e);
+  box-shadow:0 18px 48px rgba(0,0,0,.32);
+}
+.challenge-banner .eyebrow{margin-bottom:6px}
+.challenge-banner h2{margin:0;font-size:clamp(19px,5.4vw,24px);line-height:1.3}
+.challenge-banner .goal{margin:8px 0 0;color:var(--gold-strong);font-size:14.5px}
+.challenge-banner .from{margin:8px 0 0;color:var(--muted);font-size:12.5px}
+.challenge-banner .btn{margin-top:16px}
+
+/* Board controls */
+.board-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px}
+.seg{display:inline-flex;padding:3px;gap:2px;border:1px solid var(--line-2);border-radius:12px;background:#0c1218}
+.seg button{
+  min-height:44px;padding:0 16px;border:0;border-radius:9px;background:transparent;
+  color:var(--muted);font:600 13.5px/1 var(--sans);cursor:pointer;
+}
+.seg button[aria-selected="true"]{background:var(--gold-soft);color:var(--gold-strong);box-shadow:inset 0 0 0 1px rgba(227,176,92,.3)}
+.game-pick{flex:1 1 200px;min-width:0}
+.board-meta{margin:12px 0 0;color:var(--muted-2);font:500 11.5px/1.5 var(--mono);letter-spacing:.02em}
+.notice{
+  margin-top:12px;padding:12px 14px;border-radius:12px;
+  border:1px solid rgba(224,117,106,.35);background:rgba(224,117,106,.08);
+  color:#f0b4ac;font-size:13px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+}
+.notice .btn{min-height:44px;padding:0 14px;color:var(--text);border-color:rgba(224,117,106,.4);background:rgba(0,0,0,.18)}
+
+/* Podium */
+.podium{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;
+  align-items:end;margin:18px 0 10px;
+}
+.slot{display:flex;flex-direction:column;align-items:center;min-width:0;text-align:center}
+.slot .av-svg{width:clamp(46px,13vw,60px);height:auto;aspect-ratio:1/1;filter:drop-shadow(0 8px 16px rgba(0,0,0,.32))}
+.slot.p2 .av-svg,.slot.p3 .av-svg{width:clamp(40px,11vw,52px);aspect-ratio:1/1}
+.medal{
+  order:-1;margin-bottom:5px;font:700 11px/1 var(--mono);letter-spacing:.06em;
+  color:var(--muted-2);
+}
+.slot.p1 .medal{color:var(--gold-strong)}
+.slot.p2 .medal{color:var(--silver)}
+.slot.p3 .medal{color:var(--bronze)}
+.p-name{
+  margin-top:7px;max-width:100%;font-size:clamp(11.5px,3.1vw,13px);font-weight:620;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.p-value{margin-top:2px;font:500 clamp(10.5px,2.9vw,12px)/1.4 var(--mono);color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.p-block{
+  width:100%;margin-top:8px;border-radius:12px 12px 5px 5px;
+  border:1px solid var(--line-2);display:flex;align-items:flex-start;justify-content:center;
+  padding-top:8px;font:700 20px/1 var(--mono);color:rgba(244,239,228,.32);
+  background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.01));
+}
+.slot.p1 .p-block{height:82px;border-color:rgba(227,176,92,.48);background:linear-gradient(180deg,rgba(227,176,92,.2),rgba(227,176,92,.04));color:rgba(242,204,130,.6)}
+.slot.p2 .p-block{height:60px;border-color:rgba(201,210,223,.32);background:linear-gradient(180deg,rgba(201,210,223,.14),rgba(201,210,223,.03))}
+.slot.p3 .p-block{height:50px;border-color:rgba(197,138,92,.35);background:linear-gradient(180deg,rgba(197,138,92,.14),rgba(197,138,92,.03))}
+
+.board-list{list-style:none;margin:4px 0 0;padding:0}
+.board-list li{
+  display:grid;grid-template-columns:34px minmax(0,1fr) auto;align-items:center;gap:10px;
+  min-height:56px;padding:8px 4px;border-top:1px solid var(--line);
+}
+.board-list li:first-child{border-top:0}
+.rank-no{font:600 13px/1 var(--mono);color:var(--muted-2);text-align:right;font-variant-numeric:tabular-nums}
+.who{display:flex;align-items:center;gap:9px;min-width:0}
+.who .av-svg{width:32px;height:32px;flex:0 0 32px}
+.who .name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;font-weight:560}
+.row-value{font:600 13px/1.3 var(--mono);color:var(--gold-strong);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap;padding-left:6px}
+.board-list li.me{background:linear-gradient(90deg,rgba(227,176,92,.1),transparent 72%);border-radius:10px;padding-left:8px;padding-right:8px}
+.board-list li.me .name{color:var(--gold-strong)}
+.list-note{margin:12px 0 0}
+
+/* Empty */
+.empty{padding:26px 6px 10px;text-align:center}
+.empty-mark{
+  width:64px;height:64px;margin:0 auto 14px;border-radius:50%;
+  border:1px dashed rgba(227,176,92,.45);display:grid;place-items:center;
+  color:var(--gold);font:700 24px/1 var(--mono);background:var(--gold-soft);
+}
+.empty p{margin:0;font-size:15px;color:var(--text)}
+.empty .btn{margin-top:16px}
+
+/* My rank */
+.my-rank-body{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-top:14px}
+.big-value{font:700 clamp(24px,7vw,32px)/1.1 var(--mono);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.big-value small{display:block;margin-top:6px;font:500 12px/1.4 var(--sans);color:var(--muted-2);letter-spacing:0}
+.rank-chip{
+  display:inline-flex;align-items:baseline;gap:4px;min-height:44px;padding:6px 14px;
+  border-radius:12px;border:1px solid var(--line-2);background:var(--card-2);
+  font:700 20px/1 var(--mono);color:var(--gold-strong);font-variant-numeric:tabular-nums;
+}
+.rank-chip span{font:500 11px/1 var(--sans);color:var(--muted)}
+.my-rank .muted{color:var(--muted);font-size:14px}
+
+/* Challenge generator */
+.grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.out{margin-top:12px}
+.out .inline{margin-top:0}
+.out .hint{margin-top:8px}
+
+/* Danger */
+.danger-zone{border-color:rgba(224,117,106,.25);background:linear-gradient(180deg,rgba(35,25,27,.7),rgba(17,20,24,.96))}
+.danger-zone h2{color:#f0c0ba}
+.confirm{
+  margin-top:14px;padding:14px;border-radius:12px;border:1px solid rgba(224,117,106,.4);
+  background:rgba(224,117,106,.07);
+}
+.confirm p{margin:0 0 12px;font-size:13.5px;color:#f0c0ba}
+.confirm-actions{display:flex;gap:10px;flex-wrap:wrap}
+.status{margin:10px 0 0;font-size:12.5px;color:var(--muted);min-height:18px;line-height:1.55}
+.status.ok{color:var(--good)}
+.status.bad{color:#f0b4ac}
+
+.foot{margin-top:28px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted-2);font-size:12px;line-height:1.7}
+.foot a{color:var(--muted)}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+@media (max-width:430px){
+  .grid-2{grid-template-columns:1fr}
+  .device-actions .btn{padding:0 12px}
+  .board-controls{gap:8px}
+  .seg{width:100%}
+  .seg button{flex:1 1 0;padding:0 8px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="../"><span class="dot" aria-hidden="true"></span> 游戏大厅 <small>GAMES</small></a>
+  <a class="top-link" href="../">← 返回大厅</a>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <p class="eyebrow">Leaderboard · 本周与总榜</p>
+    <h1>排行榜</h1>
+    <p>不用注册。设备编号就是你的身份，昵称只是显示名。</p>
+    <span class="mock-badge" id="mockBadge" hidden>演示数据 · ?mock=1</span>
+  </section>
+
+  <section class="challenge-banner" id="challengeBanner" hidden aria-live="polite">
+    <p class="eyebrow">Friend challenge</p>
+    <h2><span id="challengerName">好友</span> 向你发起挑战</h2>
+    <p class="goal" id="challengeGoal"></p>
+    <p class="from" id="challengeFrom"></p>
+    <a class="btn primary" id="acceptChallenge" href="#">接受挑战</a>
+  </section>
+
+  <section class="card identity" aria-labelledby="identityTitle">
+    <div class="identity-top">
+      <div>
+        <p class="label" id="identityTitle">我的设备编号</p>
+        <p class="device-short" id="shortId">#----</p>
+        <p class="device-caption">这是你的主身份，只用于归属成绩</p>
+      </div>
+      <div class="device-actions">
+        <button class="btn ghost" type="button" id="copyShort">复制短号</button>
+      </div>
+    </div>
+
+    <details class="device-full">
+      <summary>查看完整设备编号</summary>
+      <div class="full-row">
+        <code id="fullId">正在读取…</code>
+        <button class="btn ghost" type="button" id="copyFull">复制完整编号</button>
+      </div>
+    </details>
+
+    <p class="hint">换浏览器或换设备就是新身份；清除浏览器数据会失去名次。编号不包含任何个人信息。</p>
+
+    <div class="identity-divider"></div>
+
+    <div class="field" style="margin-top:0">
+      <label for="nameInput">昵称（可选）</label>
+      <div class="inline">
+        <div class="grow">
+          <input id="nameInput" type="text" maxlength="12" autocomplete="nickname" placeholder="留空则显示匿名编号">
+        </div>
+        <button class="btn" type="button" id="saveName">保存</button>
+      </div>
+      <p class="name-preview" id="namePreview">当前显示：<strong id="namePreviewValue">读取中…</strong></p>
+      <p class="hint">昵称最多 12 个字，可用中文、英文、数字、空格、下划线和短横线。</p>
+    </div>
+
+    <p class="privacy">昵称可选：不设置时以「玩家 #XXXX」上榜。只有昵称和成绩会公开，可随时删除。</p>
+  </section>
+
+  <section class="card board-card" aria-labelledby="boardTitle">
+    <div class="section-head">
+      <h2 id="boardTitle">榜单</h2>
+      <div class="seg" role="tablist" aria-label="榜单周期">
+        <button type="button" role="tab" id="tabWeek" data-period="week" aria-selected="true">本周</button>
+        <button type="button" role="tab" id="tabAll" data-period="all" aria-selected="false">总榜</button>
+      </div>
+    </div>
+
+    <div class="board-controls">
+      <div class="game-pick">
+        <label class="sr-only" for="gameSelect">按游戏筛选</label>
+        <select id="gameSelect"></select>
+      </div>
+    </div>
+
+    <p class="board-meta" id="boardMeta" aria-live="polite">加载中…</p>
+
+    <div class="notice" id="offlineNotice" hidden>
+      <span>排行榜暂不可用，本地成绩仍然有效</span>
+      <button class="btn" type="button" id="retryBoard">重试</button>
+    </div>
+
+    <div class="podium" id="podium" aria-label="前三名"></div>
+
+    <div class="empty" id="emptyState" hidden>
+      <div class="empty-mark" aria-hidden="true">1</div>
+      <p id="emptyTitle">本周还没有人上榜，你可以是第一个</p>
+      <a class="btn primary" id="emptyPlay" href="../">去玩一局</a>
+    </div>
+
+    <ol class="board-list" id="boardList"></ol>
+    <p class="hint list-note" id="listNote" hidden></p>
+  </section>
+
+  <section class="card my-rank" aria-labelledby="myRankTitle">
+    <div class="section-head">
+      <h2 id="myRankTitle">我的排名</h2>
+      <span class="hint" id="myRankGame" style="margin:0"></span>
+    </div>
+    <div class="my-rank-body" id="myRankBody">
+      <div>
+        <div class="big-value">—</div>
+        <small>读取中…</small>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="challengeGenTitle">
+    <h2 id="challengeGenTitle">发起好友挑战</h2>
+    <p class="sub">挑战数据只放在链接里，不上传服务器，也不写入对方的进度。对方打开后可以直接跳到对应游戏。</p>
+
+    <div class="field">
+      <label for="cgGame">游戏</label>
+      <select id="cgGame"></select>
+    </div>
+
+    <div class="grid-2" style="margin-top:10px">
+      <div>
+        <label for="cgKind" style="display:block;margin:0 0 6px;font:600 12px/1.4 var(--sans);color:var(--muted)">挑战类型</label>
+        <select id="cgKind">
+          <option value="xp">XP 分数</option>
+          <option value="time">用时（秒）</option>
+          <option value="streak">连续天数</option>
+        </select>
+      </div>
+      <div>
+        <label for="cgValue" id="cgValueLabel" style="display:block;margin:0 0 6px;font:600 12px/1.4 var(--sans);color:var(--muted)">目标分数</label>
+        <input id="cgValue" type="number" min="0" step="any" inputmode="decimal" placeholder="例如 1200">
+      </div>
+    </div>
+
+    <p class="hint">可以填入你的最好成绩，也可以定一个目标值。类型与游戏页面的计分方式一致时，对方接受后更容易对齐。</p>
+
+    <button class="btn primary" type="button" id="makeChallenge" style="margin-top:14px">生成挑战链接</button>
+    <p class="status" id="challengeStatus" aria-live="polite"></p>
+
+    <div class="out" id="challengeOut" hidden>
+      <div class="inline">
+        <div class="grow"><input id="challengeUrl" type="text" readonly aria-label="挑战链接"></div>
+        <button class="btn" type="button" id="copyChallenge">复制链接</button>
+      </div>
+      <p class="hint">对方打开链接后，会看到你设下的目标，并可一键进入游戏。</p>
+    </div>
+  </section>
+
+  <section class="card danger-zone" aria-labelledby="deleteTitle">
+    <h2 id="deleteTitle">删除我的数据</h2>
+    <p class="sub">会调用服务器的删除接口，清空本机昵称与成绩，并重新生成设备编号。</p>
+    <p class="hint" style="color:#d9a39c">删除后你的历史成绩无法恢复。</p>
+
+    <button class="btn danger" type="button" id="deleteStart" style="margin-top:14px">删除我的数据</button>
+
+    <div class="confirm" id="deleteConfirm" hidden>
+      <p>再次确认：删除后你的历史成绩无法恢复，设备编号会重新生成。</p>
+      <div class="confirm-actions">
+        <button class="btn" type="button" id="deleteCancel">取消</button>
+        <button class="btn danger" type="button" id="deleteNow">确认删除</button>
+      </div>
+    </div>
+    <p class="status" id="deleteStatus" aria-live="polite"></p>
+  </section>
+
+  <footer class="foot">
+    <p>排行榜只记录游戏成绩与可选昵称，不接入统计、不加载第三方资源、不写追踪 Cookie。设备编号 Cookie 仅用于在本地存储被系统清理后恢复身份。</p>
+    <p><a href="../">返回游戏大厅</a></p>
+  </footer>
+</main>
+
+<script src="../shared/leaderboard.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var L = window.Leaderboard;
+  var $ = function (id) { return document.getElementById(id); };
+  var AVATAR_SEQ = 0;
+  var state = {
+    games: [],
+    game: '',
+    period: 'week',
+    rows: [],
+    total: 0,
+    token: 0,
+    device: '',
+    challenge: null,
+    challengeCode: ''
+  };
+
+  var FALLBACK_GAMES = [
+    { slug: 'xiangqi', label: '中国象棋' },
+    { slug: 'chess', label: '国际象棋' },
+    { slug: 'gomoku', label: '五子棋' },
+    { slug: 'reversi', label: '黑白棋' },
+    { slug: 'checkers-jump', label: '中国跳棋' },
+    { slug: 'draughts', label: '国际跳棋 8×8' },
+    { slug: 'backgammon', label: '西洋双陆棋' },
+    { slug: 'banqi', label: '暗棋' },
+    { slug: 'connect4', label: '四子棋' },
+    { slug: 'go9', label: '围棋 9 路' },
+    { slug: 'solitaire', label: '接龙' },
+    { slug: 'freecell', label: '空当接龙' },
+    { slug: 'spider', label: '蜘蛛纸牌' },
+    { slug: '24game', label: '24 点' },
+    { slug: 'doudizhu', label: '斗地主' },
+    { slug: 'texas-holdem', label: '德州扑克' },
+    { slug: 'mahjong', label: '麻将' },
+    { slug: 'tcg-deck', label: '余烬牌组工坊' },
+    { slug: 'tcg-sample', label: '灯语者：余烬对决' },
+    { slug: 'pioneers', label: '拓荒者：九岛' },
+    { slug: 'undercover', label: '谁是卧底' },
+    { slug: 'aeroplane', label: '飞行棋' },
+    { slug: 'tap-match', label: 'Tap Match' },
+    { slug: 'voice-room', label: '语音房' }
+  ];
+
+  var DEFAULT_KIND = {
+    solitaire: 'time', freecell: 'time', spider: 'time', '24game': 'time',
+    'tap-match': 'time', 'tcg-deck': 'xp', 'tcg-sample': 'xp'
+  };
+
+  /* ------------------------------------------------------------------ *
+   * Helpers                                                            *
+   * ------------------------------------------------------------------ */
+
+  function el(tag, className, text) {
+    var node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text != null) node.textContent = String(text);
+    return node;
+  }
+
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+
+  function fmtNumber(n) {
+    var v = Number(n);
+    if (!isFinite(v)) return '—';
+    try { return v.toLocaleString('zh-CN'); } catch (e) { return String(v); }
+  }
+
+  function fmtTime(seconds) {
+    var total = Math.max(0, Math.round(Number(seconds) || 0));
+    var h = Math.floor(total / 3600);
+    var m = Math.floor((total % 3600) / 60);
+    var s = total % 60;
+    return h ? h + ':' + pad2(m) + ':' + pad2(s) : m + ':' + pad2(s);
+  }
+
+  function fmtValue(value, kind) {
+    if (kind === 'time') return fmtTime(value);
+    if (kind === 'streak') return fmtNumber(value) + ' 天';
+    return fmtNumber(value) + ' XP';
+  }
+
+  function fmtUpdated(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    if (!d || isNaN(d.getTime())) return '';
+    return '更新于 ' + (d.getMonth() + 1) + '-' + d.getDate() + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+  }
+
+  function gameEntry(slug) {
+    for (var i = 0; i < state.games.length; i++) {
+      if (state.games[i].slug === slug) return state.games[i];
+    }
+    return null;
+  }
+
+  function gameLabel(slug) {
+    var entry = gameEntry(slug);
+    if (entry && entry.label) return entry.label;
+    return slug || '这个游戏';
+  }
+
+  function gameHref(slug) {
+    return '../' + encodeURIComponent(slug) + '/';
+  }
+
+  function arg(name) {
+    try { return new URLSearchParams(location.search).get(name); } catch (e) { return null; }
+  }
+
+  function syncUrl() {
+    try {
+      var u = new URL(location.href);
+      if (state.game) u.searchParams.set('game', state.game);
+      if (state.period === 'all') u.searchParams.set('period', 'all');
+      else u.searchParams.delete('period');
+      history.replaceState(null, '', u.pathname + u.search + u.hash);
+    } catch (e) {}
+  }
+
+  function flash(button, text) {
+    if (!button) return;
+    var original = button.getAttribute('data-label') || button.textContent;
+    if (!button.getAttribute('data-label')) button.setAttribute('data-label', original);
+    button.textContent = text;
+    setTimeout(function () { button.textContent = original; }, 1600);
+  }
+
+  function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(text).catch(function () { return legacyCopy(text); });
+    }
+    return Promise.resolve(legacyCopy(text));
+  }
+
+  function legacyCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    var ok = false;
+    try {
+      ta.select();
+      ok = document.execCommand('copy');
+    } catch (e) { ok = false; }
+    document.body.removeChild(ta);
+    return ok;
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Avatars: drawn locally from {h1, h2, shape}; no image requests     *
+   * ------------------------------------------------------------------ */
+
+  var PALETTE = [
+    ['#e3b05c', '#8f5a1c'], ['#7fb2ff', '#2b4d8f'], ['#ff8b7a', '#8f2f2b'],
+    ['#8fd6a4', '#2f6b45'], ['#d5a6ff', '#5b3584'], ['#ffd27f', '#8a5a12'],
+    ['#9fd7ff', '#265b7a'], ['#ffb4c8', '#7d2f47'], ['#c9e28a', '#556922'],
+    ['#b9c3d6', '#4a5568']
+  ];
+
+  function hashString(s) {
+    var h = 2166136261;
+    s = String(s || '');
+    for (var i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul ? Math.imul(h, 16777619) : (h * 16777619);
+    }
+    return h >>> 0;
+  }
+
+  function validColor(c) {
+    if (typeof c !== 'string') return null;
+    if (/^#[0-9a-f]{6}$/i.test(c)) return c;
+    if (/^#[0-9a-f]{3}$/i.test(c)) {
+      return '#' + c[1] + c[1] + c[2] + c[2] + c[3] + c[3];
+    }
+    return null;
+  }
+
+  // The worker sends avatar hues as numbers 0..359; older/mock payloads may
+  // use hex colors. Both are rendered locally.
+  function hueColor(hue, saturation, lightness) {
+    var n = Number(hue);
+    if (!isFinite(n)) return null;
+    n = ((n % 360) + 360) % 360;
+    return 'hsl(' + n + ' ' + saturation + '% ' + lightness + '%)';
+  }
+
+  function avatarSpec(avatar, seed) {
+    var numericHue = avatar && (typeof avatar.h1 === 'number' || /^\d+(\.\d+)?$/.test(String(avatar.h1)));
+    var h1 = numericHue ? hueColor(avatar.h1, 62, 58) : (avatar && validColor(avatar.h1));
+    var h2 = numericHue ? hueColor(avatar.h2, 55, 34) : (avatar && validColor(avatar.h2));
+    var shape = avatar && typeof avatar.shape === 'string' ? avatar.shape : '';
+    if (!h1 || !h2) {
+      var pal = PALETTE[hashString(seed || 'player') % PALETTE.length];
+      h1 = h1 || pal[0];
+      h2 = h2 || pal[1];
+    }
+    if (['circle', 'tri', 'square', 'star', 'hex', 'diamond'].indexOf(shape) < 0) shape = 'circle';
+    return { h1: h1, h2: h2, shape: shape };
+  }
+
+  function avatarNode(avatar, seed) {
+    var spec = avatarSpec(avatar, seed);
+    var ns = 'http://www.w3.org/2000/svg';
+    var svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('viewBox', '0 0 48 48');
+    svg.setAttribute('class', 'av-svg');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.setAttribute('focusable', 'false');
+
+    var gid = 'av' + (++AVATAR_SEQ);
+    var defs = document.createElementNS(ns, 'defs');
+    var grad = document.createElementNS(ns, 'linearGradient');
+    grad.setAttribute('id', gid);
+    grad.setAttribute('x1', '0');
+    grad.setAttribute('y1', '0');
+    grad.setAttribute('x2', '1');
+    grad.setAttribute('y2', '1');
+    var stop1 = document.createElementNS(ns, 'stop');
+    stop1.setAttribute('offset', '0');
+    stop1.setAttribute('stop-color', spec.h1);
+    var stop2 = document.createElementNS(ns, 'stop');
+    stop2.setAttribute('offset', '1');
+    stop2.setAttribute('stop-color', spec.h2);
+    grad.appendChild(stop1);
+    grad.appendChild(stop2);
+    defs.appendChild(grad);
+    svg.appendChild(defs);
+
+    var shape;
+    if (spec.shape === 'square') {
+      shape = document.createElementNS(ns, 'rect');
+      shape.setAttribute('x', '3');
+      shape.setAttribute('y', '3');
+      shape.setAttribute('width', '42');
+      shape.setAttribute('height', '42');
+      shape.setAttribute('rx', '10');
+    } else if (spec.shape === 'hex') {
+      shape = document.createElementNS(ns, 'path');
+      shape.setAttribute('d', 'M24 2 L43 13 L43 35 L24 46 L5 35 L5 13 Z');
+    } else if (spec.shape === 'diamond') {
+      shape = document.createElementNS(ns, 'path');
+      shape.setAttribute('d', 'M24 2 L46 24 L24 46 L2 24 Z');
+    } else if (spec.shape === 'tri') {
+      shape = document.createElementNS(ns, 'polygon');
+      shape.setAttribute('points', '24,4 45,42 3,42');
+    } else if (spec.shape === 'star') {
+      shape = document.createElementNS(ns, 'polygon');
+      shape.setAttribute('points', '24,2 29.5,17.4 45.8,17.8 32.9,27.6 37.7,43.4 24,33.5 10.3,43.4 15.1,27.6 2.2,17.8 18.5,17.4');
+    } else {
+      shape = document.createElementNS(ns, 'circle');
+      shape.setAttribute('cx', '24');
+      shape.setAttribute('cy', '24');
+      shape.setAttribute('r', '22');
+    }
+    shape.setAttribute('fill', 'url(#' + gid + ')');
+    svg.appendChild(shape);
+
+    var shine = document.createElementNS(ns, 'circle');
+    shine.setAttribute('cx', '17');
+    shine.setAttribute('cy', '14');
+    shine.setAttribute('r', '6');
+    shine.setAttribute('fill', 'rgba(255,255,255,.18)');
+    svg.appendChild(shine);
+
+    return svg;
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Games list                                                         *
+   * ------------------------------------------------------------------ */
+
+  function populateGames() {
+    var boardSel = $('gameSelect');
+    var cgSel = $('cgGame');
+    var boardValue = state.game || (state.games[0] && state.games[0].slug) || '';
+    var cgValue = cgSel.value || boardValue;
+
+    [boardSel, cgSel].forEach(function (sel) {
+      while (sel.firstChild) sel.removeChild(sel.firstChild);
+      state.games.forEach(function (g) {
+        var opt = el('option', null, g.label);
+        opt.value = g.slug;
+        sel.appendChild(opt);
+      });
+    });
+    if (boardValue && gameEntry(boardValue)) boardSel.value = boardValue;
+    if (cgValue && gameEntry(cgValue)) cgSel.value = cgValue;
+    else if (boardValue) cgSel.value = boardValue;
+  }
+
+  function loadRegistry() {
+    return new Promise(function (resolve) {
+      if (!window.fetch) { resolve(null); return; }
+      var ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+      var timer = setTimeout(function () {
+        if (ctrl) { try { ctrl.abort(); } catch (e) {} }
+        resolve(null);
+      }, 6000);
+      var init = { cache: 'no-store' };
+      if (ctrl) init.signal = ctrl.signal;
+      fetch('../registry.json', init).then(function (res) {
+        if (!res.ok) throw new Error('registry_' + res.status);
+        return res.json();
+      }).then(function (data) {
+        clearTimeout(timer);
+        var list = (data && Array.isArray(data.games) ? data.games : []).map(function (g) {
+          if (!g || typeof g.slug !== 'string' || !/^[a-z0-9-]+$/.test(g.slug)) return null;
+          var label = (g.names && (g.names.zh || g.names.en)) || g.slug;
+          return { slug: g.slug, label: String(label) };
+        }).filter(Boolean);
+        resolve(list.length ? list : null);
+      }).catch(function () {
+        clearTimeout(timer);
+        resolve(null);
+      });
+    });
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Board                                                              *
+   * ------------------------------------------------------------------ */
+
+  function currentKind() {
+    if (state.rows.length && state.rows[0].kind) return state.rows[0].kind;
+    return DEFAULT_KIND[state.game] || 'xp';
+  }
+
+  function renderPodium(rows) {
+    var podium = $('podium');
+    while (podium.firstChild) podium.removeChild(podium.firstChild);
+    if (!rows.length) return;
+
+    var slots = [];
+    if (rows[0]) slots.push({ row: rows[0], cls: 'p1', col: 2 });
+    if (rows[1]) slots.push({ row: rows[1], cls: 'p2', col: 1 });
+    if (rows[2]) slots.push({ row: rows[2], cls: 'p3', col: 3 });
+
+    slots.forEach(function (slot) {
+      var box = el('div', 'slot ' + slot.cls);
+      box.style.gridColumn = String(slot.col);
+      box.setAttribute('aria-label', '第 ' + slot.row.rank + ' 名 ' + slot.row.name);
+
+      var medal = el('div', 'medal', 'NO.' + slot.row.rank);
+      box.appendChild(medal);
+
+      var avatar = avatarNode(slot.row.avatar, slot.row.name);
+      box.appendChild(avatar);
+
+      var name = el('div', 'p-name', slot.row.name);
+      name.title = slot.row.name;
+      box.appendChild(name);
+
+      box.appendChild(el('div', 'p-value', fmtValue(slot.row.value, slot.row.kind)));
+
+      var block = el('div', 'p-block', String(slot.row.rank));
+      box.appendChild(block);
+
+      podium.appendChild(box);
+    });
+  }
+
+  function myRecord() {
+    return L.myBest(state.game);
+  }
+
+  function rowIsMine(row) {
+    var rec = myRecord();
+    var names = [L.displayName()];
+    if (rec && rec.name) names.push(rec.name);
+    if (names.indexOf(row.name) < 0) return false;
+    if (rec && Number(rec.value) !== Number(row.value)) return false;
+    return true;
+  }
+
+  function renderList(rows) {
+    var list = $('boardList');
+    while (list.firstChild) list.removeChild(list.firstChild);
+    var rest = rows.slice(3);
+    rest.forEach(function (row) {
+      var li = el('li');
+      if (rowIsMine(row)) {
+        li.className = 'me';
+        li.setAttribute('aria-label', '我的成绩');
+      }
+      li.appendChild(el('span', 'rank-no', String(row.rank)));
+
+      var who = el('span', 'who');
+      who.appendChild(avatarNode(row.avatar, row.name));
+      var name = el('span', 'name', row.name);
+      name.title = row.name;
+      who.appendChild(name);
+      li.appendChild(who);
+
+      li.appendChild(el('span', 'row-value', fmtValue(row.value, row.kind)));
+      list.appendChild(li);
+    });
+
+    var note = $('listNote');
+    if (state.total > rows.length) {
+      note.textContent = '仅显示前 ' + rows.length + ' 名（共 ' + state.total + ' 人）';
+      note.hidden = false;
+    } else if (rows.length > 3) {
+      note.textContent = '共 ' + state.total + ' 人上榜';
+      note.hidden = false;
+    } else {
+      note.hidden = true;
+    }
+  }
+
+  function renderMyRank() {
+    var body = $('myRankBody');
+    while (body.firstChild) body.removeChild(body.firstChild);
+    $('myRankGame').textContent = gameLabel(state.game);
+
+    var rec = myRecord();
+    if (!rec) {
+      var left = el('div');
+      left.appendChild(el('div', 'muted', '还未提交'));
+      var sub = el('small');
+      sub.style.display = 'block';
+      sub.style.marginTop = '6px';
+      sub.style.color = 'var(--muted-2)';
+      sub.style.fontSize = '12px';
+      sub.textContent = '玩一局并提交成绩后，这里会显示你的最好成绩和名次。';
+      left.appendChild(sub);
+      var link = el('a', 'btn ghost', '去玩一局');
+      link.href = gameHref(state.game);
+      link.style.marginTop = '12px';
+      body.appendChild(left);
+      body.appendChild(link);
+      return;
+    }
+
+    var mine = null;
+    for (var i = 0; i < state.rows.length; i++) {
+      if (rowIsMine(state.rows[i])) { mine = state.rows[i]; break; }
+    }
+    var rank = mine ? mine.rank : Number(rec.rank);
+
+    var leftBox = el('div');
+    leftBox.appendChild(el('div', 'big-value', fmtValue(rec.value, rec.kind || currentKind())));
+    var small = el('small');
+    small.textContent = '本地记录的最好成绩 · ' + gameLabel(state.game);
+    leftBox.appendChild(small);
+    body.appendChild(leftBox);
+
+    var chip = el('div', 'rank-chip');
+    if (rank > 0) {
+      chip.appendChild(document.createTextNode('第 ' + rank + ' 名'));
+      chip.appendChild(el('span', null, mine ? '（榜单内）' : '（最近一次提交）'));
+    } else {
+      chip.appendChild(document.createTextNode('已提交'));
+      chip.appendChild(el('span', null, '排名更新中'));
+    }
+    body.appendChild(chip);
+  }
+
+  function renderEmpty() {
+    var podium = $('podium');
+    var list = $('boardList');
+    while (podium.firstChild) podium.removeChild(podium.firstChild);
+    while (list.firstChild) list.removeChild(list.firstChild);
+    $('emptyState').hidden = false;
+    $('emptyTitle').textContent = state.period === 'week'
+      ? '本周还没有人上榜，你可以是第一个'
+      : '总榜还没有人上榜，你可以是第一个';
+    var play = $('emptyPlay');
+    play.href = gameHref(state.game);
+    play.textContent = '去玩 ' + gameLabel(state.game);
+    $('listNote').hidden = true;
+  }
+
+  function renderOffline() {
+    var podium = $('podium');
+    var list = $('boardList');
+    while (podium.firstChild) podium.removeChild(podium.firstChild);
+    while (list.firstChild) list.removeChild(list.firstChild);
+    $('emptyState').hidden = true;
+    $('listNote').hidden = true;
+    $('offlineNotice').hidden = false;
+    $('boardMeta').textContent = state.period === 'week' ? '本周榜单' : '总榜';
+  }
+
+  function setLoading() {
+    $('offlineNotice').hidden = true;
+    $('emptyState').hidden = true;
+    $('listNote').hidden = true;
+    var podium = $('podium');
+    var list = $('boardList');
+    while (podium.firstChild) podium.removeChild(podium.firstChild);
+    while (list.firstChild) list.removeChild(list.firstChild);
+    $('boardMeta').textContent = '加载中…';
+  }
+
+  async function loadBoard() {
+    var token = ++state.token;
+    var game = state.game;
+    var period = state.period;
+    if (!game) return;
+    setLoading();
+    var res = await L.board({ game: game, period: period, limit: 50 });
+    if (token !== state.token) return;
+
+    if (!res.ok) {
+      state.rows = [];
+      state.total = 0;
+      renderOffline();
+      renderMyRank();
+      return;
+    }
+
+    state.rows = Array.isArray(res.rows) ? res.rows : [];
+    state.total = res.total == null ? state.rows.length : res.total;
+    $('offlineNotice').hidden = true;
+
+    var meta = (period === 'week' ? '本周' : '总榜') + ' · ' + gameLabel(game);
+    if (state.total > 0) meta += ' · 共 ' + state.total + ' 人';
+    var updated = fmtUpdated(res.updatedAt);
+    if (updated) meta += ' · ' + updated;
+    if (L.isMock()) meta += ' · 演示数据';
+    $('boardMeta').textContent = meta;
+
+    if (L.isEmptyBoard(state.rows)) {
+      renderEmpty();
+    } else {
+      $('emptyState').hidden = true;
+      renderPodium(state.rows);
+      renderList(state.rows);
+    }
+    renderMyRank();
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Identity                                                           *
+   * ------------------------------------------------------------------ */
+
+  function updateNameUI() {
+    var name = L.getName();
+    var preview = $('namePreviewValue');
+    if (name) preview.textContent = name + '（昵称）';
+    else preview.textContent = L.displayName() + '（匿名）';
+    $('nameInput').value = name;
+  }
+
+  function updateDeviceUI() {
+    var d = state.device || L.device();
+    $('shortId').textContent = L.shortId(d);
+    $('fullId').textContent = d;
+    $('copyShort').textContent = '复制 ' + L.shortId(d);
+  }
+
+  async function initIdentity() {
+    var d;
+    try { d = await L.ready(); } catch (e) { d = L.device(); }
+    state.device = d;
+    updateDeviceUI();
+    updateNameUI();
+    renderList(state.rows);
+    renderMyRank();
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Challenge                                                          *
+   * ------------------------------------------------------------------ */
+
+  function describeGoal(c) {
+    var label = gameLabel(c.game);
+    if (c.kind === 'time') return label + ' · 用时 ' + fmtTime(c.value);
+    if (c.kind === 'streak') return label + ' · 连续 ' + fmtNumber(c.value) + ' 天';
+    return label + ' · 目标 ' + fmtNumber(c.value) + ' XP';
+  }
+
+  function renderChallenge(c, code) {
+    state.challenge = c;
+    state.challengeCode = code;
+    $('challengerName').textContent = c.name;
+    $('challengeGoal').textContent = describeGoal(c);
+    var when = c.at ? new Date(c.at) : null;
+    $('challengeFrom').textContent = when && !isNaN(when.getTime())
+      ? '链接创建于 ' + (when.getMonth() + 1) + '-' + when.getDate() + ' ' + pad2(when.getHours()) + ':' + pad2(when.getMinutes())
+      : '挑战数据只在这个链接里，不会上传服务器。';
+    var accept = $('acceptChallenge');
+    accept.href = gameHref(c.game) + '?challenge=' + encodeURIComponent(code);
+    accept.textContent = '接受挑战 · 去玩' + (gameEntry(c.game) ? '' : ' ' + c.game);
+    $('challengeBanner').hidden = false;
+  }
+
+  function initChallengeBanner() {
+    var code = arg('challenge');
+    if (!code) return;
+    var c = L.parseChallenge(code);
+    if (!c) {
+      $('challengeBanner').hidden = true;
+      return;
+    }
+    renderChallenge(c, code);
+  }
+
+  function syncChallengeKind() {
+    var k = $('cgKind').value;
+    var label = $('cgValueLabel');
+    var input = $('cgValue');
+    if (k === 'time') {
+      label.textContent = '用时（秒）';
+      input.placeholder = '例如 83 = 1:23';
+    } else if (k === 'streak') {
+      label.textContent = '连续天数';
+      input.placeholder = '例如 7';
+    } else {
+      label.textContent = '目标分数';
+      input.placeholder = '例如 1200';
+    }
+  }
+
+  function prefillChallenge() {
+    var game = $('cgGame').value;
+    $('cgKind').value = DEFAULT_KIND[game] || 'xp';
+    syncChallengeKind();
+    var rec = L.myBest(game);
+    if (rec && rec.value != null) {
+      $('cgValue').value = String(rec.value);
+      if (rec.kind) $('cgKind').value = rec.kind;
+      syncChallengeKind();
+    }
+  }
+
+  function makeChallenge() {
+    var status = $('challengeStatus');
+    var game = $('cgGame').value;
+    var kind = $('cgKind').value;
+    var raw = $('cgValue').value.trim();
+    var value = Number(raw);
+    if (!raw || !isFinite(value) || value < 0) {
+      status.className = 'status bad';
+      status.textContent = '请填写一个不小于 0 的成绩。';
+      $('challengeOut').hidden = true;
+      return;
+    }
+    var code = L.buildChallenge({ game: game, value: value, kind: kind, name: L.displayName(), at: Date.now() });
+    if (!code) {
+      status.className = 'status bad';
+      status.textContent = '生成失败：游戏或成绩不合法。';
+      $('challengeOut').hidden = true;
+      return;
+    }
+    var url;
+    try {
+      url = new URL(location.href);
+      url.search = '';
+      url.searchParams.set('challenge', code);
+      url.hash = '';
+      url = url.href;
+    } catch (e) {
+      url = '?challenge=' + encodeURIComponent(code);
+    }
+    $('challengeUrl').value = url;
+    $('challengeOut').hidden = false;
+    status.className = 'status ok';
+    status.textContent = '挑战链接已生成。复制发给好友即可，不需要上传任何数据。';
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Delete                                                             *
+   * ------------------------------------------------------------------ */
+
+  function initDelete() {
+    var start = $('deleteStart');
+    var confirmBox = $('deleteConfirm');
+    var now = $('deleteNow');
+    var status = $('deleteStatus');
+
+    start.addEventListener('click', function () {
+      confirmBox.hidden = false;
+      start.hidden = true;
+      status.className = 'status';
+      status.textContent = '';
+      now.focus();
+    });
+
+    $('deleteCancel').addEventListener('click', function () {
+      confirmBox.hidden = true;
+      start.hidden = false;
+      status.className = 'status';
+      status.textContent = '';
+      start.focus();
+    });
+
+    now.addEventListener('click', async function () {
+      now.disabled = true;
+      start.disabled = true;
+      status.className = 'status';
+      status.textContent = '正在删除…';
+      var res = await L.deleteAll();
+      if (res.ok) {
+        state.device = res.device;
+        state.rows = [];
+        state.total = 0;
+        updateDeviceUI();
+        updateNameUI();
+        confirmBox.hidden = true;
+        start.hidden = false;
+        status.className = 'status ok';
+        status.textContent = '已删除。设备编号已更新为 ' + L.shortId(res.device) + '，历史成绩无法恢复。';
+        await loadBoard();
+      } else {
+        status.className = 'status bad';
+        status.textContent = res.error === 'offline'
+          ? '删除失败：网络不可用。你的设备编号没有变化，成绩仍在，请稍后重试。'
+          : '删除失败：' + res.error + '。你的设备编号没有变化，成绩仍在。';
+      }
+      now.disabled = false;
+      start.disabled = false;
+    });
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Wiring                                                             *
+   * ------------------------------------------------------------------ */
+
+  function bind() {
+    $('copyShort').addEventListener('click', function () {
+      copyText(L.shortId(state.device || L.device())).then(function (ok) {
+        flash($('copyShort'), ok ? '已复制短号' : '复制失败');
+      });
+    });
+    $('copyFull').addEventListener('click', function () {
+      copyText(state.device || L.device()).then(function (ok) {
+        flash($('copyFull'), ok ? '已复制完整编号' : '复制失败');
+      });
+    });
+
+    function saveName() {
+      var value = L.setName($('nameInput').value);
+      $('nameInput').value = value;
+      updateNameUI();
+      renderList(state.rows);
+      renderMyRank();
+      var preview = $('namePreview');
+      preview.setAttribute('aria-live', 'polite');
+      preview.style.color = 'var(--good)';
+      setTimeout(function () { preview.style.color = ''; }, 1400);
+    }
+    $('saveName').addEventListener('click', saveName);
+    $('nameInput').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); saveName(); }
+    });
+
+    Array.prototype.forEach.call(document.querySelectorAll('[data-period]'), function (btn) {
+      btn.addEventListener('click', function () {
+        if (state.period === btn.getAttribute('data-period')) return;
+        state.period = btn.getAttribute('data-period');
+        state.rows = [];
+        state.total = 0;
+        document.querySelectorAll('[data-period]').forEach(function (b) {
+          b.setAttribute('aria-selected', b === btn ? 'true' : 'false');
+        });
+        syncUrl();
+        loadBoard();
+        renderMyRank();
+      });
+    });
+
+    $('gameSelect').addEventListener('change', function () {
+      state.game = this.value;
+      state.rows = [];
+      state.total = 0;
+      syncUrl();
+      loadBoard();
+      renderMyRank();
+    });
+
+    $('retryBoard').addEventListener('click', function () { loadBoard(); });
+
+    $('cgGame').addEventListener('change', prefillChallenge);
+    $('cgKind').addEventListener('change', syncChallengeKind);
+    $('makeChallenge').addEventListener('click', makeChallenge);
+    $('copyChallenge').addEventListener('click', function () {
+      copyText($('challengeUrl').value).then(function (ok) {
+        flash($('copyChallenge'), ok ? '已复制' : '复制失败');
+      });
+    });
+
+    document.addEventListener('leaderboard:submit', function (e) {
+      if (e && e.detail && e.detail.game === state.game) loadBoard();
+    });
+  }
+
+  async function init() {
+    $('mockBadge').hidden = !L.isMock();
+
+    state.games = FALLBACK_GAMES.slice();
+    state.game = arg('game') || '';
+    if (!gameEntry(state.game)) state.game = state.games[0].slug;
+    state.period = arg('period') === 'all' ? 'all' : 'week';
+
+    populateGames();
+    $('gameSelect').value = state.game;
+    document.querySelectorAll('[data-period]').forEach(function (b) {
+      b.setAttribute('aria-selected', b.getAttribute('data-period') === state.period ? 'true' : 'false');
+    });
+    $('cgGame').value = state.game;
+    prefillChallenge();
+
+    initChallengeBanner();
+    bind();
+    initDelete();
+    syncUrl();
+
+    loadBoard();
+    initIdentity();
+
+    loadRegistry().then(function (list) {
+      if (!list) return;
+      state.games = list;
+      populateGames();
+      if (!gameEntry(state.game)) {
+        state.game = state.games[0].slug;
+        $('gameSelect').value = state.game;
+        syncUrl();
+        loadBoard();
+      }
+      if (state.challenge) renderChallenge(state.challenge, state.challengeCode);
+      renderMyRank();
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>
