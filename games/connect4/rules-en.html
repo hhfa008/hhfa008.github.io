@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Connect Four Strategy: Why the Center Column Decides the Game</title>
+<meta name="description" content="Connect Four strategy and rules: 7 columns by 6 rows, gravity drops, four in a row in any direction, why the center column touches 51 of 69 winning windows, and how first player advantage works.">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="author" content="Devin">
+<meta name="theme-color" content="#f2efe7">
+<link rel="canonical" href="https://hhfa008.github.io/games/connect4/rules-en.html">
+<link rel="alternate" hreflang="en" href="https://hhfa008.github.io/games/connect4/rules-en.html">
+<link rel="alternate" hreflang="zh-CN" href="https://hhfa008.github.io/games/connect4/rules.html">
+<link rel="alternate" hreflang="x-default" href="https://hhfa008.github.io/games/connect4/rules.html">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232b2f36'/%3E%3Ccircle cx='9' cy='10' r='4' fill='%23191d21'/%3E%3Ccircle cx='16' cy='10' r='4' fill='%23c0392b'/%3E%3Ccircle cx='23' cy='10' r='4' fill='%23191d21'/%3E%3Ccircle cx='9' cy='22' r='4' fill='%23e0a63a'/%3E%3Ccircle cx='16' cy='22' r='4' fill='%23c0392b'/%3E%3Ccircle cx='23' cy='22' r='4' fill='%23e0a63a'/%3E%3C/svg%3E">
+
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Devin">
+<meta property="og:title" content="Connect Four Strategy: Why the Center Column Decides the Game">
+<meta property="og:description" content="Rules, the 69-window board, first player advantage, and three habits that win more games.">
+<meta property="og:url" content="https://hhfa008.github.io/games/connect4/rules-en.html">
+<meta property="og:locale" content="en_US">
+<meta property="og:locale:alternate" content="zh_CN">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Connect Four Strategy and Rules">
+<meta name="twitter:description" content="The center column is in 51 of 69 possible four-in-a-row windows. Here is why that matters.">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "Connect Four Strategy: Why the Center Column Decides the Game",
+  "description": "Connect Four rules and strategy: gravity drops, winning lines, the 69 four-cell windows, the center column's 51 windows, first player advantage, and practical tactics.",
+  "inLanguage": "en",
+  "author": { "@type": "Person", "name": "Devin", "url": "https://hhfa008.github.io/" },
+  "publisher": { "@type": "Person", "name": "Devin", "url": "https://hhfa008.github.io/" },
+  "datePublished": "2026-11-09",
+  "dateModified": "2026-11-09",
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://hhfa008.github.io/games/connect4/rules-en.html"
+  },
+  "about": { "@type": "Thing", "name": "Connect Four" }
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Does the first player always win Connect Four?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "With perfect play on the standard 7×6 board, yes. The game was solved independently by James D. Allen and Victor Allis in 1988. In practice, a first player who gives away the center column or ignores diagonal threats can still lose."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Why is the center column the most important?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The 7×6 board contains 69 possible four-cell windows. The center column touches 51 of them, while an edge column touches only 15. A disc in the center therefore participates in more horizontal and diagonal lines than a disc anywhere else."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can a disc stop in mid-air?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. A disc enters at the top of a column and falls to the lowest empty slot. You choose the column, never the row. A full column cannot be played, and the board is a draw only when all 42 slots are filled with no four in a row."
+      }
+    }
+  ]
+}
+</script>
+
+<style>
+:root{
+  --paper:#f2efe7;--paper-2:#fbf9f4;--ink:#14171a;--muted:#5b615c;--muted-2:#7b807a;
+  --line:#d5d0c4;--line-strong:#bcb5a7;--accent:#c0392b;--accent-soft:#f7e5da;
+  --dark:#2b2f36;--on-dark:#f3ead9;--on-dark-muted:#b7b3a8;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.7 var(--sans);
+  padding-bottom:calc(28px + env(safe-area-inset-bottom));-webkit-font-smoothing:antialiased}
+.wrap{max-width:660px;margin:0 auto;padding:0 16px}
+h1,h2,h3,p,ul,ol{margin:0}
+a{color:inherit}
+.site-header{background:var(--dark);color:var(--on-dark);padding:12px 0}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:9px;font-weight:650;text-decoration:none}
+.brand-mark{width:22px;height:22px;border-radius:6px;background:var(--accent);flex:none}
+.site-nav{display:flex;gap:16px;font-size:14px;font-weight:600}
+.site-nav a{color:var(--on-dark-muted);text-decoration:none}
+.site-nav a:hover{color:var(--on-dark)}
+.breadcrumb{padding:18px 0 0;font-size:13px;color:var(--muted-2)}
+.breadcrumb a{text-decoration:none;border-bottom:1px solid var(--line)}
+.langs{margin:8px 0 0;font-size:13px;color:var(--muted-2)}
+.langs a{text-decoration:none;border-bottom:1px solid var(--line)}
+article{padding:10px 0 0}
+h1{font-size:clamp(1.7rem,6.4vw,2.3rem);line-height:1.18;letter-spacing:-.02em;margin:10px 0 8px}
+.meta{font-family:var(--mono);font-size:12px;color:var(--muted-2);margin-bottom:16px}
+.lede{font-size:17px;color:var(--muted);margin-bottom:20px}
+article h2{font-size:1.3rem;line-height:1.25;letter-spacing:-.01em;margin:30px 0 10px;
+  padding-top:4px;border-top:1px solid var(--line)}
+article h3{font-size:1.05rem;margin:18px 0 4px}
+article p{margin-bottom:12px}
+article ul,article ol{margin:0 0 14px;padding-left:22px}
+article li{margin-bottom:7px}
+strong{font-weight:700}
+.example{background:var(--paper-2);border:1px solid var(--line);border-radius:12px;
+  padding:12px 14px;margin:14px 0;font-size:14.5px;color:var(--muted)}
+.example strong{color:var(--ink)}
+.faq{margin-top:14px}
+.faq h3{font-size:1rem;margin-top:16px}
+.cta{background:var(--dark);color:var(--on-dark);border-radius:16px;padding:20px;margin:30px 0 8px}
+.cta h2{all:unset;display:block;font-size:1.2rem;font-weight:700;line-height:1.3;margin-bottom:6px}
+.cta p{color:var(--on-dark-muted);font-size:14.5px;margin-bottom:14px}
+.cta a{display:inline-block;min-height:44px;line-height:44px;padding:0 20px;border-radius:10px;
+  background:var(--on-dark);color:var(--dark);font-weight:700;text-decoration:none}
+.cta a:hover{background:#fff}
+.back{font-size:14px;margin-top:12px}
+.back a{text-decoration:none;border-bottom:1px solid var(--line-strong)}
+.site-footer{max-width:660px;margin:32px auto 0;padding:0 16px;font-size:12.5px;color:var(--muted-2);
+  display:flex;gap:14px;flex-wrap:wrap}
+.site-footer a{text-decoration:none;border-bottom:1px solid var(--line)}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true"></span>Devin</a>
+    <nav class="site-nav" aria-label="Main navigation">
+      <a href="/games/">All games</a>
+      <a href="./">Play Connect Four</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="/">Home</a> / <a href="/games/">Games</a> / <a href="./">Connect Four</a> / Rules &amp; strategy
+  </nav>
+  <p class="langs"><a href="rules.html" hreflang="zh-CN" lang="zh-CN">中文版</a> <span aria-hidden="true">·</span> <strong>English</strong></p>
+
+  <article>
+    <h1>Connect Four Strategy: Why the Center Column Decides the Game</h1>
+    <p class="meta">2026-11-09 · 7 min read</p>
+    <p class="lede">Connect Four looks like a children's game: drop a disc, make four in a row. Then you play someone who keeps taking the middle and suddenly every column you need is blocked. The rules are simple, but the board is not symmetric. Seven columns do not offer seven equal chances.</p>
+
+    <h2>Connect 4 rules in one minute</h2>
+    <p>The board stands upright with 7 columns and 6 rows, 42 slots in total. Red moves first, then players alternate, one disc per turn.</p>
+    <p>Choose a column. The disc enters at the top and falls to the lowest empty slot in that column. You never choose a row; gravity does. A disc cannot hang in mid-air or rest on top of another disc.</p>
+    <p>A column holds at most six discs. Once it is full, that column cannot be played, but the other columns continue normally. The board is full only when all seven columns are full.</p>
+    <p>Four discs of the same color in an unbroken line win immediately. The line can be horizontal, vertical, or diagonal in either direction. Five or six in a row also win, because they contain a run of four. A gap or an opponent's disc breaks the line.</p>
+    <p>If all 42 slots fill with no four in a row, the game is a draw. A full column is not a loss; it only removes one option.</p>
+
+    <h2>Why the center column is different</h2>
+    <p>Count every possible group of four connected cells on a 7×6 board. There are 69 such windows: 24 horizontal, 21 vertical, 12 on one diagonal, and 12 on the other.</p>
+    <p>Those 69 windows are not shared equally among the columns. The center column touches 51 of them. The columns next to it touch 39 each, the next pair 27 each, and the two edge columns only 15 each.</p>
+    <p>Put a disc in the center and it can join horizontal lines in both directions and both diagonals. Put a disc on an edge and most of those lines do not exist. A center disc is not just one disc; it is a piece in more than three times as many potential winning lines as an edge disc.</p>
+    <div class="example"><strong>Why first move matters.</strong> Red opens in the center. Every horizontal and diagonal threat Red builds later has a chance to pass through that disc. Black must either contest the center or spend moves blocking lines that already have a head start.</div>
+
+    <h2>First player advantage</h2>
+    <p>On the standard 7×6 board, Connect Four is a solved game. With perfect play, the first player wins. James D. Allen and Victor Allis independently solved it in 1988.</p>
+    <p>That does not mean the first player wins automatically. The theoretical result assumes every move is correct. In real games, the advantage shrinks quickly when the first player gives up the center, builds only one threat at a time, or ignores diagonals.</p>
+    <p>The practical version of first player advantage is simpler: Red gets the first claim on the center column. If Red uses it to create two threats at once, Black can block only one. Most beginner losses come from allowing that double threat, not from the opening move itself.</p>
+
+    <h2>Three habits that win more games</h2>
+    <h3>1. Start in the center, then work outward</h3>
+    <p>The center column is the best first move and remains the best default for much of the game. After that, the columns next to it are stronger than the edges. Build a connected shape around the middle before you spread to the sides.</p>
+    <p>Do not play the center every turn out of habit. The point of the center is to connect lines. A center disc with no support and no follow-up is worth less than a side disc that completes a threat.</p>
+    <h3>2. Build two threats, not one</h3>
+    <p>A single three-in-a-row is easy to block. Your opponent plays the one square that stops it, and the attack ends. A double threat is different: two separate lines that would each become four on your next move. The opponent can block only one.</p>
+    <p>This is the main winning pattern in Connect Four. Look for two threes that share a gap, or a horizontal three plus a diagonal three. When you can create both in one move, you usually win.</p>
+    <h3>3. Check the square above the opponent's last disc</h3>
+    <p>When your opponent drops a disc, the square directly above it is often the key defensive point. Playing there limits their ability to build upward and reduces the diagonals that pass through their disc.</p>
+    <p>Then scan all four directions every turn: horizontal, vertical, and both diagonals. Most missed defenses happen on diagonals, because players watch the rows and columns and forget the slanted lines.</p>
+
+    <h2>Reading the board like a grid</h2>
+    <p>It helps to think of the board as a set of overlapping four-cell windows rather than as 42 separate slots. Every disc you place changes several windows at once. A move that looks quiet on the surface may complete two windows that were already three-quarters full.</p>
+    <p>When you are deciding between columns, ask which windows your disc enters and which windows it blocks for the opponent. The center column enters the most windows, which is exactly why it is contested first.</p>
+
+    <h2>Common mistakes</h2>
+    <ul>
+      <li><strong>Playing only the center.</strong> The center is a means to an end. Without side support, it does not create threats by itself.</li>
+      <li><strong>Blocking too late.</strong> If the opponent has an open three, block the open end now. Waiting one turn usually means the game is already lost.</li>
+      <li><strong>Ignoring diagonals.</strong> Diagonal fours are the most common surprise win. Check both diagonal directions before every move.</li>
+      <li><strong>Filling a column for no reason.</strong> Stacking discs in one column can hand the opponent a vertical line and remove your own future options.</li>
+      <li><strong>Assuming a full board is a win.</strong> A full board with no four in a row is a draw, no matter who filled the last slot.</li>
+    </ul>
+
+    <h2>Common questions</h2>
+    <div class="faq">
+      <h3>Does the first player always win Connect Four?</h3>
+      <p>With perfect play on the standard 7×6 board, yes. The game was solved independently by James D. Allen and Victor Allis in 1988. In practice, a first player who gives away the center column or ignores diagonal threats can still lose.</p>
+      <h3>Why is the center column the most important?</h3>
+      <p>The 7×6 board contains 69 possible four-cell windows. The center column touches 51 of them, while an edge column touches only 15. A disc in the center therefore participates in more horizontal and diagonal lines than a disc anywhere else.</p>
+      <h3>Can a disc stop in mid-air?</h3>
+      <p>No. A disc enters at the top of a column and falls to the lowest empty slot. You choose the column, never the row. A full column cannot be played, and the board is a draw only when all 42 slots are filled with no four in a row.</p>
+    </div>
+
+    <div class="cta">
+      <h2>Take the center</h2>
+      <p>Play Connect Four against three AI levels or a friend. The easy level checks one move ahead, the medium level searches four plies, and the harder level searches deeper while preferring the center.</p>
+      <a href="./">Play Connect Four →</a>
+    </div>
+  </article>
+
+  <p class="back"><a href="/games/">← Back to all games</a></p>
+</main>
+
+<footer class="site-footer">
+  <span>© 2026 Devin</span>
+  <a href="/">Home</a>
+  <a href="/games/">All games</a>
+  <a href="./">Connect Four</a>
+  <a href="rules.html" hreflang="zh-CN" lang="zh-CN">中文规则</a>
+</footer>
+</body>
+</html>

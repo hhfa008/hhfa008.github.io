@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Connect Four Online — 4 in a Row vs AI (四子棋 在线)</title>
+<meta name="description" content="Play Connect Four online free: drop discs into a 7×6 board, line up four horizontally, vertically or diagonally. Three AI levels (minimax, depth 4 and 7), local two-player and undo. 四子棋在线：三档 AI、本地双人与悔棋，中间列优先。">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="author" content="Devin">
+<meta name="theme-color" content="#f2efe7">
+<link rel="canonical" href="https://hhfa008.github.io/games/connect4/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232b2f36'/%3E%3Ccircle cx='9' cy='10' r='4' fill='%23191d21'/%3E%3Ccircle cx='16' cy='10' r='4' fill='%23c0392b'/%3E%3Ccircle cx='23' cy='10' r='4' fill='%23191d21'/%3E%3Ccircle cx='9' cy='22' r='4' fill='%23e0a63a'/%3E%3Ccircle cx='16' cy='22' r='4' fill='%23c0392b'/%3E%3Ccircle cx='23' cy='22' r='4' fill='%23e0a63a'/%3E%3C/svg%3E">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Devin">
+<meta property="og:title" content="Connect Four Online — 4 in a row vs AI">
+<meta property="og:description" content="Free 7×6 Connect Four: three AI levels, local two-player and undo. The middle column matters most.">
+<meta property="og:url" content="https://hhfa008.github.io/games/connect4/">
+<meta property="og:locale" content="en_US">
+<meta property="og:locale:alternate" content="zh_CN">
+<meta property="og:locale:alternate" content="id_ID">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Connect Four Online — four in a row vs AI">
+<meta name="twitter:description" content="Drop discs, line up four. Three AI levels (depth 4 and 7 minimax), local two-player, undo.">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Connect Four Online",
+  "alternateName": ["四子棋", "Connect 4", "Four in a Row", "Permainan 4 Sejajar"],
+  "url": "https://hhfa008.github.io/games/connect4/",
+  "applicationCategory": "Game",
+  "genre": "Board game",
+  "gamePlatform": "Web browser",
+  "operatingSystem": "Any",
+  "isAccessibleForFree": true,
+  "inLanguage": ["en", "zh-CN", "id"],
+  "description": "A free 7×6 Connect Four game: drop discs, line up four horizontally, vertically or diagonally. Three AI levels using minimax with alpha-beta pruning, local two-player mode and undo. Runs offline in the browser.",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+}
+</script>
+
+<style>
+:root{
+  --paper:#f2efe7;--paper-2:#fbf9f4;--ink:#14171a;--muted:#5b615c;--muted-2:#696d68;
+  --line:#d5d0c4;--line-strong:#bcb5a7;--accent:#c0392b;--accent-soft:#f7e5da;
+  --dark:#2b2f36;--dark-2:#23272d;--on-dark:#f3ead9;--on-dark-muted:#b7b3a8;
+  --frame:#2b2f36;--frame-edge:#1b1f24;--hole:#15181b;
+  --p1:#c0392b;--p1-hi:#e05a48;--p1-lo:#8e2a1f;
+  --p2:#e0a63a;--p2-hi:#f2c464;--p2-lo:#a9761c;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --paper:#101316;--paper-2:#181d21;--ink:#f2efe7;--muted:#b7b3a8;--muted-2:#938f86;
+    --line:#2c343a;--line-strong:#3d474f;--accent:#e35b4b;--accent-soft:#3a251d;
+    --dark:#181d21;--dark-2:#20262c;--on-dark:#f3ead9;--on-dark-muted:#b7b3a8;
+    --frame:#20262c;--frame-edge:#121619;--hole:#0d1013;
+    --p1:#d84a3a;--p1-hi:#f07563;--p1-lo:#8e2a1f;
+    --p2:#e6b04b;--p2-hi:#f8cf78;--p2-lo:#a9761c;
+  }
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.55 var(--sans);
+  padding-bottom:calc(22px + env(safe-area-inset-bottom));-webkit-font-smoothing:antialiased}
+.wrap{max-width:660px;margin:0 auto;padding:0 16px}
+h1,h2,p{margin:0}
+button{font:inherit;color:inherit}
+a{color:inherit}
+.site-header{background:var(--dark);color:var(--on-dark);padding:12px 0}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{min-height:44px;display:flex;align-items:center;gap:9px;font-weight:650;text-decoration:none}
+.brand-mark{width:22px;height:22px;border-radius:6px;background:var(--accent);flex:none}
+.langs{display:flex;gap:4px}
+.langs button{min-width:44px;min-height:44px;padding:0 8px;border:1px solid #4a5056;border-radius:9px;
+  background:transparent;color:var(--on-dark-muted);font-size:13px;font-weight:600;cursor:pointer}
+.langs button[aria-pressed="true"]{background:var(--on-dark);color:var(--dark);border-color:var(--on-dark)}
+.hero{padding:24px 0 4px}
+.eyebrow{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--accent);margin-bottom:8px}
+.hero h1{font-size:clamp(1.9rem,7.4vw,2.5rem);line-height:1.1;letter-spacing:-.02em;margin-bottom:8px}
+.hero h1 .sub{font-weight:400;color:var(--muted);font-size:.62em;white-space:nowrap}
+.lede{color:var(--muted);font-size:16px}
+.game{background:var(--dark);color:var(--on-dark);border-radius:18px;padding:14px;margin-top:16px;
+  box-shadow:0 10px 30px rgb(16 19 22 / .16)}
+.controls{display:grid;gap:8px}
+.seg{display:flex;gap:5px;background:var(--dark-2);border:1px solid #3a4147;border-radius:12px;padding:4px}
+.seg button{flex:1;min-height:44px;padding:0 8px;border:0;border-radius:9px;background:transparent;
+  color:var(--on-dark-muted);font-size:14px;font-weight:600;cursor:pointer;touch-action:manipulation}
+.seg button[aria-pressed="true"]{background:var(--on-dark);color:var(--dark)}
+.seg button:disabled{opacity:.35;cursor:default}
+.statusbar{display:flex;align-items:center;gap:9px;margin:11px 0 9px;flex-wrap:wrap}
+.turn-dot{width:14px;height:14px;border-radius:50%;flex:none;border:2px solid #8a908f;background:var(--p1);
+  box-shadow:inset 0 -2px 3px rgb(0 0 0/.35)}
+.status{flex:1;min-width:130px;font-size:14.5px;font-weight:650;line-height:1.3}
+.tools{display:flex;gap:6px}
+.tools button{min-height:44px;padding:0 12px;border:1px solid #4a5056;border-radius:9px;background:transparent;
+  color:var(--on-dark-muted);font-size:13px;font-weight:600;cursor:pointer;touch-action:manipulation}
+.tools button:disabled{opacity:.35;cursor:default}
+.boardwrap{position:relative;display:flex;justify-content:center;margin:4px 0 2px}
+.board{position:relative;width:100%;max-width:470px;aspect-ratio:7/6;border:8px solid var(--frame-edge);
+  border-radius:18px;background:linear-gradient(180deg,#343a42,#2b2f36);overflow:hidden;
+  box-shadow:0 10px 26px rgb(0 0 0 / .38)}
+@media (prefers-color-scheme:dark){.board{background:linear-gradient(180deg,#262c33,#20262c)}}
+.slots{position:absolute;inset:0;display:grid;grid-template-columns:repeat(7,1fr);grid-template-rows:repeat(6,1fr)}
+.slot{display:flex;align-items:center;justify-content:center}
+.slot i{display:block;width:84%;aspect-ratio:1;border-radius:50%;background:var(--hole);
+  box-shadow:inset 0 4px 8px rgb(0 0 0/.62),inset 0 -1px 1px rgb(255 255 255/.05)}
+.pieces{position:absolute;inset:0;pointer-events:none}
+.disc{position:absolute;width:14.2857%;height:16.6667%;display:flex;align-items:center;
+  justify-content:center;will-change:transform}
+.disc::before{content:'';width:84%;aspect-ratio:1;border-radius:50%;
+  box-shadow:inset 0 -4px 7px rgb(0 0 0/.35),0 2px 4px rgb(0 0 0/.45)}
+.disc.p1::before{background:radial-gradient(circle at 34% 30%,var(--p1-hi),var(--p1) 60%,var(--p1-lo))}
+.disc.p2::before{background:radial-gradient(circle at 34% 30%,var(--p2-hi),var(--p2) 60%,var(--p2-lo))}
+.disc.last::after{content:'';position:absolute;width:24%;aspect-ratio:1;border-radius:50%;
+  border:2px solid rgb(255 255 255/.82);box-shadow:0 0 0 1px rgb(0 0 0/.3)}
+.disc.win::before{box-shadow:0 0 0 3px var(--on-dark),0 0 18px 6px rgb(255 255 255/.5),
+  inset 0 -4px 7px rgb(0 0 0/.35);animation:winp .9s ease-in-out infinite}
+.disc.fall{animation-name:drop;animation-timing-function:cubic-bezier(.32,.82,.42,1.08);animation-fill-mode:both}
+@keyframes drop{from{transform:translateY(calc(var(--r) * -100%))}to{transform:translateY(0)}}
+@keyframes winp{0%,100%{filter:brightness(1)}50%{filter:brightness(1.4)}}
+.hits{position:absolute;inset:0;display:grid;grid-template-columns:repeat(7,1fr);z-index:3}
+.hit{position:relative;border:0;background:transparent;padding:0;cursor:pointer;touch-action:manipulation}
+.hit::before{content:'';position:absolute;inset:0;background:transparent;transition:background .15s ease}
+.hit.available::after{content:'\25BE';position:absolute;top:1px;left:0;right:0;text-align:center;
+  font-size:15px;line-height:1;opacity:.8;transition:opacity .15s ease}
+.hits.p1 .hit.available::after{color:var(--p1-hi)}
+.hits.p2 .hit.available::after{color:var(--p2-hi)}
+.hit:hover::before,.hit:focus-visible::before{background:rgb(243 234 217 / .1)}
+.hit:focus-visible{outline:2px solid var(--on-dark);outline-offset:-3px;border-radius:8px}
+.hit:disabled{cursor:default}
+.banner{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:5;display:flex;
+  flex-direction:column;align-items:center;gap:10px;padding:18px 22px;border-radius:14px;
+  background:rgb(24 28 33 / .94);border:1px solid #4a5056;text-align:center;box-shadow:0 12px 30px rgb(0 0 0 / .5)}
+.banner strong{font-size:18px}
+.banner button{min-height:44px;padding:0 18px;border:0;border-radius:999px;background:var(--accent);
+  color:#fff;font-weight:650;cursor:pointer}
+.tally{min-height:20px;font-size:12.5px;color:var(--on-dark-muted);text-align:center;padding:6px 6px 0;line-height:1.4}
+.hint{min-height:38px;font-size:13px;color:var(--on-dark-muted);text-align:center;padding:2px 6px 0;line-height:1.45}
+.more{margin:18px 0 0;font-size:13.5px;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap}
+.more a{display:inline-flex;align-items:center;min-height:44px;text-decoration:none;border-bottom:1px solid var(--line-strong)}
+.more a:hover{color:var(--accent)}
+.rule{margin:14px 0 0;padding-top:12px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted-2)}
+.site-footer{max-width:660px;margin:20px auto 0;padding:0 16px;font-size:12.5px;color:var(--muted-2)}
+.site-footer a{display:inline-flex;align-items:center;min-height:44px;text-decoration:none;border-bottom:1px solid var(--line-strong)}
+.site-footer a:hover{color:var(--accent)}
+@media (max-width:380px){.seg button{font-size:12.5px;padding:0 4px}.game{padding:11px}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true"></span>Devin</a>
+    <nav class="langs" aria-label="Language">
+      <button type="button" data-lang="en">EN</button>
+      <button type="button" data-lang="zh">中文</button>
+      <button type="button" data-lang="id">ID</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero" aria-labelledby="page-title">
+    <p class="eyebrow" data-i="eyebrow">Free board game · Connect Four</p>
+    <h1 id="page-title"><span id="titleMain">Connect Four</span> <span class="sub" id="titleSub">7×6 · four in a row</span></h1>
+    <p class="lede" data-i="tagline">Drop a disc into a column and let gravity do the rest. Four in a row wins — and the middle column is where most lines live.</p>
+  </section>
+
+  <section class="game" aria-label="Connect Four board">
+    <div class="controls">
+      <div class="seg" id="modeRow" role="group" aria-label="Mode">
+        <button type="button" data-mode="ai" data-i="vsAi" aria-pressed="true">vs AI</button>
+        <button type="button" data-mode="local" data-i="local" aria-pressed="false">2 players</button>
+      </div>
+      <div class="seg" id="diffRow" role="group" aria-label="Difficulty">
+        <button type="button" data-diff="1" data-i="easy" aria-pressed="false">Easy</button>
+        <button type="button" data-diff="2" data-i="medium" aria-pressed="true">Medium</button>
+        <button type="button" data-diff="3" data-i="hard" aria-pressed="false">Hard</button>
+      </div>
+    </div>
+
+    <div class="statusbar">
+      <span class="turn-dot" id="turn-dot" aria-hidden="true"></span>
+      <span class="status" id="status" role="status" aria-live="polite">Red to move</span>
+      <div class="tools">
+        <button type="button" id="undo" data-i="undo">Undo</button>
+        <button type="button" id="restart" data-i="restart">Restart</button>
+      </div>
+    </div>
+
+    <div class="boardwrap">
+      <div class="board" id="board">
+        <div class="slots" id="slots" aria-hidden="true"></div>
+        <div class="pieces" id="pieces" aria-hidden="true"></div>
+        <div class="hits" id="hits" role="group" aria-label="Choose a column"></div>
+        <div class="banner" id="banner" hidden><strong id="bannerText"></strong><button type="button" id="again" data-i="again">Play again</button></div>
+      </div>
+    </div>
+    <p class="tally" id="tally"></p>
+    <p class="hint" id="hint" data-i="yourTurn">Tap a column to drop your disc.</p>
+  </section>
+
+  <p class="more">
+    <a href="/games/" data-i="allGames">All games →</a>
+    <a href="/games/connect4/rules.html" data-i="rulesLink">Rules &amp; strategy →</a>
+    <a href="/games/connect4/rules-en.html">Rules (EN) →</a>
+  </p>
+  <p class="rule" data-i="ruleNote">7 columns × 6 rows. Discs fall to the lowest empty slot; four discs in a row horizontally, vertically or diagonally wins. A full column cannot be played, and a full board with no four-in-a-row is a draw.</p>
+</main>
+
+<footer class="site-footer">
+<div class="share-row">
+  <button type="button" class="share-btn" data-share-btn aria-label="Share this page"
+    style="display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;min-width:44px;padding:0 16px;border:1px solid currentColor;border-radius:999px;background:transparent;color:inherit;font:inherit;font-size:14px;font-weight:600;cursor:pointer">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.4 10.7 15.6 6.3"/><path d="M8.4 13.3 15.6 17.7"/></svg>
+    <span data-share-label>Share</span>
+  </button>
+</div>
+  <p><a href="/" data-i="home">Devin — free browser games</a> · <a href="/games/" data-i="allGames2">Game collection</a></p>
+</footer>
+
+<script src="../shared/rules.js"></script>
+<script>
+/* Shared engine: ../shared/rules.js (same file the voice-room server runs). */
+var C4 = GameRules.connect4;
+
+(function () {
+  'use strict';
+  var I18N = {
+    en: {
+      eyebrow: 'Free board game · Connect Four',
+      tagline: 'Drop a disc into a column and let gravity do the rest. Four in a row wins — and the middle column is where most lines live.',
+      title: 'Connect Four', sub: '7×6 · four in a row',
+      vsAi: 'vs AI', local: '2 players', easy: 'Easy', medium: 'Medium', hard: 'Hard',
+      undo: 'Undo', restart: 'Restart', again: 'Play again',
+      red: 'Red', yellow: 'Yellow',
+      turn: '{name} to move', thinking: 'AI is thinking…',
+      win: '{name} wins', draw: 'Draw — full board, no four in a row',
+      yourTurn: 'Tap a column to drop your disc.',
+      aiTurn: 'AI is playing. Wait for your turn.',
+      moves: 'Move {n} of 42',
+      dropCol: 'Drop a disc in column {n}',
+      ruleNote: '7 columns × 6 rows. Discs fall to the lowest empty slot; four discs in a row horizontally, vertically or diagonally wins. A full column cannot be played, and a full board with no four-in-a-row is a draw.',
+      allGames: 'All games →', allGames2: 'Game collection',
+      rulesLink: 'Rules & strategy →', home: 'Devin — free browser games'
+    },
+    zh: {
+      eyebrow: '免费桌游 · 四子棋',
+      tagline: '选一列落子，棋子顺着重力落下。横、竖、斜任意方向连成四子即胜——中间列能参与的连线最多。',
+      title: '四子棋', sub: '7×6 · 四子连线',
+      vsAi: '人机对战', local: '本地双人', easy: '简单', medium: '中等', hard: '较难',
+      undo: '悔棋', restart: '重新开局', again: '再来一局',
+      red: '红方', yellow: '黄方',
+      turn: '轮到{name}', thinking: 'AI 思考中…',
+      win: '{name}获胜', draw: '平局——棋盘已满，没有四连',
+      yourTurn: '点一列落子，棋子会落到最底部空位。',
+      aiTurn: 'AI 正在落子，请稍候。',
+      moves: '第 {n} 手 / 共 42 手',
+      dropCol: '在第 {n} 列落子',
+      ruleNote: '7 列 × 6 行。棋子落到该列最低的空位；横、竖、两条斜线任一方向连成四子即胜。列满不能落子，棋盘填满且无四连判平局。',
+      allGames: '全部游戏 →', allGames2: '游戏合集',
+      rulesLink: '规则与技巧 →', home: 'Devin — 免费在线小游戏'
+    },
+    id: {
+      eyebrow: 'Game papan gratis · Connect Four',
+      tagline: 'Pilih kolom, jatuhkan keping, biarkan gravitasi bekerja. Empat sejajar menang — dan kolom tengah punya peluang paling besar.',
+      title: 'Connect Four', sub: '7×6 · empat sejajar',
+      vsAi: 'Lawan AI', local: '2 pemain', easy: 'Mudah', medium: 'Sedang', hard: 'Sulit',
+      undo: 'Batal', restart: 'Mulai ulang', again: 'Main lagi',
+      red: 'Merah', yellow: 'Kuning',
+      turn: 'Giliran {name}', thinking: 'AI sedang berpikir…',
+      win: '{name} menang', draw: 'Seri — papan penuh, tidak ada empat sejajar',
+      yourTurn: 'Ketuk kolom untuk menjatuhkan keping.',
+      aiTurn: 'AI sedang bermain. Tunggu giliranmu.',
+      moves: 'Langkah {n} dari 42',
+      dropCol: 'Jatuhkan keping di kolom {n}',
+      ruleNote: '7 kolom × 6 baris. Keping jatuh ke slot kosong paling bawah; empat keping sejajar horizontal, vertikal, atau diagonal menang. Kolom penuh tidak bisa dipakai, dan papan penuh tanpa empat sejajar adalah seri.',
+      allGames: 'Semua game →', allGames2: 'Koleksi game',
+      rulesLink: 'Aturan & strategi →', home: 'Devin — game browser gratis'
+    }
+  };
+
+  var ui = { lang: 'en' };
+  var mode = 'ai', level = 2, human = C4.P1;
+  var state = C4.setup();
+  var hist = [C4.clone(state)];
+  var st = C4.status(state);
+  var over = false, busy = false, aiTimer = null, aiToken = 0;
+  var $ = function (id) { return document.getElementById(id); };
+  var pieces = $('pieces'), hits = $('hits'), slots = $('slots');
+
+  function t(k) {
+    var d = I18N[ui.lang] || I18N.en;
+    return d[k] != null ? d[k] : (I18N.en[k] != null ? I18N.en[k] : k);
+  }
+  function fmt(s, map) {
+    return s.replace(/\{(\w+)\}/g, function (m, k) { return map[k] != null ? map[k] : ''; });
+  }
+  function nameOf(p) { return p === C4.P1 ? t('red') : t('yellow'); }
+
+  function buildBoard() {
+    var i, frag = document.createDocumentFragment();
+    for (i = 0; i < C4.ROWS * C4.COLS; i++) {
+      var slot = document.createElement('div');
+      slot.className = 'slot';
+      slot.appendChild(document.createElement('i'));
+      frag.appendChild(slot);
+    }
+    slots.appendChild(frag);
+    for (i = 0; i < C4.COLS; i++) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'hit';
+      btn.setAttribute('data-col', String(i));
+      btn.addEventListener('click', function () {
+        drop(+this.getAttribute('data-col'));
+      });
+      hits.appendChild(btn);
+    }
+  }
+
+  function render(anim) {
+    var frag = document.createDocumentFragment(), b = state.b, i;
+    for (i = 0; i < b.length; i++) {
+      if (!b[i]) continue;
+      var r = Math.floor(i / C4.COLS), c = i % C4.COLS;
+      var d = document.createElement('div');
+      d.className = 'disc ' + (b[i] === C4.P1 ? 'p1' : 'p2');
+      d.style.left = (c * 100 / C4.COLS) + '%';
+      d.style.top = (r * 100 / C4.ROWS) + '%';
+      if (i === state.last) d.classList.add('last');
+      if (st.line && st.line.indexOf(i) >= 0) d.classList.add('win');
+      if (anim && i === state.last) {
+        d.style.setProperty('--r', String(r));
+        d.style.animationDuration = (0.16 + 0.08 * (r + 1)).toFixed(2) + 's';
+        d.classList.add('fall');
+      }
+      frag.appendChild(d);
+    }
+    pieces.textContent = '';
+    pieces.appendChild(frag);
+  }
+
+  function resultLine() {
+    if (st.draw || !st.winner) return t('draw');
+    return fmt(t('win'), { name: nameOf(st.winner) });
+  }
+
+  function clue() {
+    if (over) return resultLine();
+    if (busy) return t('thinking');
+    if (mode === 'ai' && state.turn !== human) return t('aiTurn');
+    return t('yourTurn');
+  }
+
+  function updateUI() {
+    var canAct = !over && !busy && (mode === 'local' || state.turn === human);
+    $('status').textContent = over ? resultLine() : (busy ? t('thinking') : fmt(t('turn'), { name: nameOf(state.turn) }));
+    $('turn-dot').style.background = state.turn === C4.P1 ? 'var(--p1)' : 'var(--p2)';
+    $('undo').disabled = hist.length <= 1;
+    $('hint').textContent = clue();
+    $('tally').textContent = fmt(t('moves'), { n: state.plies });
+    $('banner').hidden = !over;
+    if (over) $('bannerText').textContent = resultLine();
+    hits.className = 'hits ' + (state.turn === C4.P1 ? 'p1' : 'p2');
+    for (var i = 0; i < hits.children.length; i++) {
+      var b = hits.children[i], c = +b.getAttribute('data-col');
+      var playable = canAct && C4.isLegal(state, c);
+      b.disabled = !playable;
+      b.classList.toggle('available', playable);
+      b.setAttribute('aria-label', fmt(t('dropCol'), { n: c + 1 }));
+    }
+  }
+
+  function scheduleAI() {
+    busy = true;
+    var token = ++aiToken;
+    updateUI();
+    aiTimer = setTimeout(function () {
+      if (token !== aiToken) return;
+      var c = C4.aiMove(state, level, level >= 3 ? 490 : 400);
+      if (token !== aiToken) return;
+      busy = false;
+      if (c == null) { updateUI(); return; }
+      state = C4.applyMove(state, c);
+      hist.push(C4.clone(state));
+      st = C4.status(state);
+      over = st.over;
+      render(true);
+      updateUI();
+    }, 260);
+  }
+
+  function drop(c) {
+    if (over || busy) return;
+    if (mode === 'ai' && state.turn !== human) return;
+    if (!C4.isLegal(state, c)) return;
+    state = C4.applyMove(state, c);
+    hist.push(C4.clone(state));
+    st = C4.status(state);
+    over = st.over;
+    render(true);
+    updateUI();
+    if (!over && mode === 'ai' && state.turn !== human) scheduleAI();
+  }
+
+  function undo() {
+    aiToken++;
+    if (aiTimer) { clearTimeout(aiTimer); aiTimer = null; }
+    busy = false;
+    if (hist.length <= 1) return;
+    hist.pop();
+    if (mode === 'ai' && hist.length > 1 && hist[hist.length - 1].turn !== human) hist.pop();
+    state = C4.clone(hist[hist.length - 1]);
+    st = C4.status(state);
+    over = st.over;
+    render(false);
+    updateUI();
+  }
+
+  function newGame() {
+    aiToken++;
+    if (aiTimer) { clearTimeout(aiTimer); aiTimer = null; }
+    busy = false;
+    state = C4.setup();
+    hist = [C4.clone(state)];
+    st = C4.status(state);
+    over = false;
+    render(false);
+    updateUI();
+  }
+
+  function applyLang() {
+    document.documentElement.lang = ui.lang === 'zh' ? 'zh-CN' : ui.lang;
+    var nodes = document.querySelectorAll('[data-i]');
+    for (var i = 0; i < nodes.length; i++) {
+      var k = nodes[i].getAttribute('data-i');
+      if (I18N[ui.lang][k] != null) nodes[i].textContent = I18N[ui.lang][k];
+    }
+    var langs = document.querySelectorAll('.langs button');
+    for (var j = 0; j < langs.length; j++) {
+      langs[j].setAttribute('aria-pressed', langs[j].getAttribute('data-lang') === ui.lang ? 'true' : 'false');
+    }
+    $('titleMain').textContent = t('title');
+    $('titleSub').textContent = t('sub');
+    updateUI();
+  }
+
+  function bind() {
+    var langBtns = document.querySelectorAll('.langs button');
+    for (var i = 0; i < langBtns.length; i++) {
+      langBtns[i].addEventListener('click', function () {
+        ui.lang = this.getAttribute('data-lang');
+        applyLang();
+      });
+    }
+    var modeBtns = document.querySelectorAll('#modeRow button');
+    for (var m = 0; m < modeBtns.length; m++) {
+      modeBtns[m].addEventListener('click', function () {
+        mode = this.getAttribute('data-mode');
+        for (var k = 0; k < modeBtns.length; k++) {
+          modeBtns[k].setAttribute('aria-pressed', modeBtns[k] === this ? 'true' : 'false');
+        }
+        newGame();
+      });
+    }
+    var diffBtns = document.querySelectorAll('#diffRow button');
+    for (var d = 0; d < diffBtns.length; d++) {
+      diffBtns[d].addEventListener('click', function () {
+        level = +this.getAttribute('data-diff');
+        for (var k = 0; k < diffBtns.length; k++) {
+          diffBtns[k].setAttribute('aria-pressed', diffBtns[k] === this ? 'true' : 'false');
+        }
+      });
+    }
+    $('undo').addEventListener('click', undo);
+    $('restart').addEventListener('click', newGame);
+    $('again').addEventListener('click', newGame);
+    var l = (navigator.language || 'en').toLowerCase();
+    if (l.indexOf('zh') === 0) ui.lang = 'zh';
+    else if (l.indexOf('id') === 0 || l.indexOf('in') === 0) ui.lang = 'id';
+    applyLang();
+  }
+
+  buildBoard();
+  bind();
+  render(false);
+  updateUI();
+})();
+</script>
+
+<script src="/games/shared/share.js" data-name-zh="四子棋" data-name-en="Connect Four" data-name-id="Connect Four"></script>
+</body>
+</html>

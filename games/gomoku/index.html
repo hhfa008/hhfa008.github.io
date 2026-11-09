@@ -1,0 +1,804 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gomoku Online — Free Five in a Row vs AI (五子棋 在线)</title>
+<meta name="description" content="Play gomoku online — free 15×15 five in a row against an AI with three levels, local two-player mode, and undo. Works offline, no sign-up. 五子棋在线，三档 AI，人机对战。">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="author" content="Devin">
+<meta name="theme-color" content="#f2efe7">
+<link rel="canonical" href="https://hhfa008.github.io/games/gomoku/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23b93d12'/%3E%3Ccircle cx='10' cy='10' r='4' fill='%2314171a'/%3E%3Ccircle cx='22' cy='10' r='4' fill='%23f7f3e9'/%3E%3Ccircle cx='10' cy='22' r='4' fill='%23f7f3e9'/%3E%3Ccircle cx='22' cy='22' r='4' fill='%2314171a'/%3E%3C/svg%3E">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Devin">
+<meta property="og:title" content="Gomoku Online — five in a row vs AI">
+<meta property="og:description" content="Free 15×15 gomoku with three AI levels, local two-player mode, and undo. Offline, no sign-up. 五子棋在线。">
+<meta property="og:url" content="https://hhfa008.github.io/games/gomoku/">
+<meta property="og:locale" content="en_US">
+<meta property="og:locale:alternate" content="zh_CN">
+<meta property="og:locale:alternate" content="id_ID">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Gomoku Online — five in a row vs AI">
+<meta name="twitter:description" content="Free 15×15 gomoku: three AI levels, local two-player, undo. Works offline.">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Gomoku Online",
+  "url": "https://hhfa008.github.io/games/gomoku/",
+  "applicationCategory": "Game",
+  "genre": "Board game",
+  "gamePlatform": "Web browser",
+  "operatingSystem": "Any",
+  "isAccessibleForFree": true,
+  "inLanguage": ["en", "zh-CN", "id"],
+  "description": "A free 15×15 gomoku (five in a row) game with three AI difficulty levels, local two-player mode, and undo. Runs offline in the browser and stores your record locally.",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+}
+</script>
+
+<style>
+:root{
+  --paper:#f2efe7;--paper-2:#fbf9f4;--ink:#14171a;--muted:#5b615c;--muted-2:#696d68;
+  --line:#d5d0c4;--line-strong:#bcb5a7;--accent:#b93d12;--accent-soft:#f7e5da;
+  --dark:#101316;--dark-2:#1a2024;--on-dark:#f2efe7;--on-dark-muted:#b7b3a8;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.55 var(--sans);
+  padding-bottom:calc(22px + env(safe-area-inset-bottom));-webkit-font-smoothing:antialiased}
+.wrap{max-width:660px;margin:0 auto;padding:0 16px}
+h1,h2,p{margin:0}
+button{font:inherit;color:inherit}
+a{color:inherit}
+.site-header{background:var(--dark);color:var(--on-dark);padding:12px 0}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{min-height:44px;display:flex;align-items:center;gap:9px;font-weight:650;text-decoration:none}
+.brand-mark{width:22px;height:22px;border-radius:6px;background:var(--accent);flex:none}
+.langs{display:flex;gap:4px}
+.langs button{min-width:44px;min-height:44px;padding:0 8px;border:1px solid #343b40;border-radius:9px;
+  background:transparent;color:var(--on-dark-muted);font-size:13px;font-weight:600;cursor:pointer}
+.langs button[aria-pressed="true"]{background:var(--on-dark);color:var(--dark);border-color:var(--on-dark)}
+.hero{padding:24px 0 4px}
+.eyebrow{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--accent);margin-bottom:8px}
+.hero h1{font-size:clamp(1.9rem,7.4vw,2.5rem);line-height:1.1;letter-spacing:-.02em;margin-bottom:8px}
+.lede{color:var(--muted);font-size:16px}
+.game{background:var(--dark);color:var(--on-dark);border-radius:18px;padding:14px;margin-top:16px;
+  box-shadow:0 10px 30px rgb(16 19 22 / .16)}
+.controls{display:grid;gap:8px}
+.seg{display:flex;gap:5px;background:var(--dark-2);border:1px solid #2c3338;border-radius:12px;padding:4px}
+.seg button{flex:1;min-height:44px;padding:0 8px;border:0;border-radius:9px;background:transparent;
+  color:var(--on-dark-muted);font-size:14px;font-weight:600;cursor:pointer;touch-action:manipulation}
+.seg button[aria-pressed="true"]{background:var(--on-dark);color:var(--dark)}
+.seg button:disabled{opacity:.35;cursor:default}
+.statusbar{display:flex;align-items:center;gap:9px;margin:11px 0 9px;flex-wrap:wrap}
+.turn-dot{width:13px;height:13px;border-radius:50%;flex:none;border:1px solid #6d726d}
+.turn-dot.b{background:#0b0d0f;border-color:#4a5054}
+.turn-dot.w{background:#f7f3e9;border-color:#c9c2b3}
+.status{flex:1;min-width:130px;font-size:14.5px;font-weight:650;line-height:1.3}
+.tools{display:flex;gap:6px}
+.tools button{min-height:44px;padding:0 12px;border:1px solid #343b40;border-radius:9px;background:transparent;
+  color:var(--on-dark-muted);font-size:13px;font-weight:600;cursor:pointer;touch-action:manipulation}
+.tools button:disabled{opacity:.35;cursor:default}
+.boardwrap{display:flex;justify-content:center;margin:2px 0 4px}
+canvas{display:block;background:#e9d3ab;border-radius:12px;touch-action:none;
+  box-shadow:0 6px 18px rgb(0 0 0 / .28);cursor:pointer}
+.hint{min-height:20px;font-size:12.5px;color:var(--on-dark-muted);text-align:center;padding:4px 4px 0}
+.record{min-height:17px;font-family:var(--mono);font-size:11.5px;color:#8f948d;text-align:center;
+  letter-spacing:.01em;padding:2px 4px 0}
+.more{margin:18px 0 0;font-size:13.5px;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap}
+.more a{display:inline-flex;align-items:center;min-height:44px;text-decoration:none;border-bottom:1px solid var(--line-strong)}
+.more a:hover{color:var(--accent)}
+.site-footer{max-width:660px;margin:20px auto 0;padding:0 16px;font-size:12.5px;color:var(--muted-2)}
+.site-footer a{display:inline-flex;align-items:center;min-height:44px;text-decoration:none;border-bottom:1px solid var(--line-strong)}
+.site-footer a:hover{color:var(--accent)}
+.rule{margin:14px 0 0;padding-top:12px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted-2)}
+@media (max-width:380px){.seg button{font-size:13px;padding:0 4px}.game{padding:11px}}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true"></span>Devin</a>
+    <nav class="langs" aria-label="Language">
+      <button type="button" data-lang="en">EN</button>
+      <button type="button" data-lang="zh">中文</button>
+      <button type="button" data-lang="id">ID</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero" aria-labelledby="page-title">
+    <p class="eyebrow" data-i="eyebrow">Free board game · Gomoku</p>
+    <h1 id="page-title">Gomoku <span style="font-weight:400;color:var(--muted)">五子棋</span></h1>
+    <p class="lede" data-i="tagline">Five in a row on a 15×15 board. Beat the AI or a friend.</p>
+  </section>
+
+  <section class="game" aria-label="Gomoku board">
+    <div class="controls">
+      <div class="seg" role="group" aria-label="Mode">
+        <button type="button" data-mode="ai" data-i="vsAi" aria-pressed="true">vs AI</button>
+        <button type="button" data-mode="local" data-i="local" aria-pressed="false">2 players</button>
+      </div>
+      <div class="seg" id="diffRow" role="group" aria-label="Difficulty">
+        <button type="button" data-diff="1" data-i="easy" aria-pressed="false">Easy</button>
+        <button type="button" data-diff="2" data-i="normal" aria-pressed="true">Normal</button>
+        <button type="button" data-diff="4" data-i="hard" aria-pressed="false">Hard</button>
+      </div>
+    </div>
+
+    <div class="statusbar">
+      <span class="turn-dot b" id="turn-dot" aria-hidden="true"></span>
+      <span class="status" id="status" aria-live="polite">Your turn (black)</span>
+      <div class="tools">
+        <button type="button" id="undo" data-i="undo">Undo</button>
+        <button type="button" id="new" data-i="newGame">New</button>
+      </div>
+    </div>
+
+    <div class="boardwrap" id="boardwrap">
+      <canvas id="board" width="320" height="320" role="img" aria-label="15 by 15 gomoku board"></canvas>
+    </div>
+
+    <p class="hint" id="hint" data-i="howTo"></p>
+    <p class="record" id="record"></p>
+  </section>
+
+  <p class="more">
+    <a href="/" data-i="more">More tools &amp; games</a>
+    <a href="/games/reversi/" data-i="reversi">Reversi →</a>
+    <a href="rules-en.html" hreflang="en" lang="en">Rules (EN) →</a>
+  </p>
+  <p class="rule" data-i="rule">No forbidden moves are enforced. The last stone is marked with an orange dot. Your record is saved in this browser only.</p>
+</main>
+
+<footer class="site-footer">
+<div class="share-row">
+  <button type="button" class="share-btn" data-share-btn aria-label="Share this page"
+    style="display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;min-width:44px;padding:0 16px;border:1px solid currentColor;border-radius:999px;background:transparent;color:inherit;font:inherit;font-size:14px;font-weight:600;cursor:pointer">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.4 10.7 15.6 6.3"/><path d="M8.4 13.3 15.6 17.7"/></svg>
+    <span data-share-label>Share</span>
+  </button>
+</div>
+  <a href="https://hhfa008.github.io/" data-i="moreLink">Built by an indie developer — more tools here</a>
+</footer>
+
+<script src="../shared/rules.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  // Rules come from ../shared/rules.js — the same file the voice-room server runs.
+  var GOMOKU = GameRules.gomoku;
+  var N = GOMOKU.N, NN = GOMOKU.NN, BLACK = GOMOKU.BLACK, WHITE = GOMOKU.WHITE, EMPTY = GOMOKU.EMPTY;
+  var WIN = 1e9;
+  var W5 = [0, 1, 12, 220, 4000, 1000000];
+  var W6 = [0, 2, 25, 450, 9000, 300000, 0];
+  var DIRS = GOMOKU.DIRS;
+  var RECORD_KEY = 'gomoku-record-v1';
+  var TAU = Math.PI * 2;
+
+  var I18N = {
+    en: {
+      eyebrow: 'Free board game · Gomoku',
+      tagline: 'Five in a row on a 15×15 board. Beat the AI or a friend.',
+      vsAi: 'vs AI', local: '2 players',
+      easy: 'Easy', normal: 'Normal', hard: 'Hard',
+      undo: 'Undo', newGame: 'New',
+      yourTurn: 'Your turn (black)', aiTurn: 'AI turn (white)', thinking: 'AI is thinking…',
+      blackTurn: 'Black to move', whiteTurn: 'White to move',
+      youWin: 'You win!', aiWins: 'The AI wins', draw: 'Draw — the board is full',
+      blackWins: 'Black wins!', whiteWins: 'White wins!',
+      record: 'Record vs AI · {level}: {w}W {l}L {d}D',
+      confirm: 'Tap the same spot again to place. Tap another spot to move the preview.',
+      howTo: 'Black moves first. Five stones in a row — across, down, or diagonally — wins.',
+      more: 'More tools & games', reversi: 'Reversi →',
+      rule: 'No forbidden moves are enforced. The last stone is marked with an orange dot. Your record is saved in this browser only.',
+      moreLink: 'Built by an indie developer — more tools here'
+    },
+    zh: {
+      eyebrow: '免费桌游 · 五子棋',
+      tagline: '15×15 棋盘五子连珠，挑战三档 AI，或与朋友同机对战。',
+      vsAi: '人机', local: '双人',
+      easy: '简单', normal: '普通', hard: '困难',
+      undo: '悔棋', newGame: '重开',
+      yourTurn: '轮到你（黑棋）', aiTurn: '轮到 AI（白棋）', thinking: 'AI 思考中…',
+      blackTurn: '黑棋落子', whiteTurn: '白棋落子',
+      youWin: '你赢了！', aiWins: 'AI 获胜', draw: '平局 — 棋盘已满',
+      blackWins: '黑棋获胜！', whiteWins: '白棋获胜！',
+      record: '人机战绩 · {level}：{w} 胜 {l} 负 {d} 平',
+      confirm: '再点同一位置确认落子；点别处可移动预览。',
+      howTo: '黑棋先行。横、竖、斜任意方向连成五子即胜。',
+      more: '更多工具与游戏', reversi: '黑白棋 →',
+      rule: '本页不设禁手。最后一步用橙点标记。战绩只保存在当前浏览器。',
+      moreLink: '独立开发者作品 — 更多工具'
+    },
+    id: {
+      eyebrow: 'Papan gratis · Gomoku',
+      tagline: 'Lima berturut-turut di papan 15×15. Kalahkan AI atau teman.',
+      vsAi: 'Lawan AI', local: '2 pemain',
+      easy: 'Mudah', normal: 'Sedang', hard: 'Sulit',
+      undo: 'Urungkan', newGame: 'Baru',
+      yourTurn: 'Giliran Anda (hitam)', aiTurn: 'Giliran AI (putih)', thinking: 'AI berpikir…',
+      blackTurn: 'Giliran hitam', whiteTurn: 'Giliran putih',
+      youWin: 'Anda menang!', aiWins: 'AI menang', draw: 'Seri — papan penuh',
+      blackWins: 'Hitam menang!', whiteWins: 'Putih menang!',
+      record: 'Rekor vs AI · {level}: {w}M {l}K {d}S',
+      confirm: 'Ketuk titik yang sama lagi untuk menempatkan. Ketuk tempat lain untuk memindahkan pratinjau.',
+      howTo: 'Hitam jalan dulu. Lima batu berderet — mendatar, menurun, atau diagonal — untuk menang.',
+      more: 'Alat & game lain', reversi: 'Reversi →',
+      rule: 'Tidak ada aturan larangan. Langkah terakhir ditandai titik oranye. Rekor hanya disimpan di browser ini.',
+      moreLink: 'Dibuat oleh indie developer — alat lain di sini'
+    }
+  };
+
+  var ui = { lang: 'en' };
+  var board = new Uint8Array(NN);
+  var history = [];
+  var turn = BLACK;
+  var over = false, winner = 0, recorded = false;
+  var mode = 'ai', depth = 2;
+  var humanColor = BLACK, aiColor = WHITE;
+  var thinking = false;
+  var pending = -1, hover = -1;
+  var stats = {};
+  var canvas = null, ctx = null;
+  var view = { size: 320, margin: 14, step: 21 };
+
+  var $ = function (id) { return document.getElementById(id); };
+  var t = function (k) {
+    var d = I18N[ui.lang] || I18N.en;
+    return d[k] != null ? d[k] : (I18N.en[k] != null ? I18N.en[k] : k);
+  };
+  var fillText = function (s, map) {
+    return s.replace(/\{(\w+)\}/g, function (m, k) { return map[k] != null ? map[k] : ''; });
+  };
+
+  var inBoard = GOMOKU.inBoard;
+  var checkWinAt = GOMOKU.checkWinAt;
+
+  function immediateWins(b, p) {
+    var out = [];
+    for (var i = 0; i < NN; i++) {
+      if (b[i] !== EMPTY) continue;
+      var r = (i / N) | 0, c = i % N;
+      b[i] = p;
+      if (checkWinAt(b, r, c, p)) out.push(i);
+      b[i] = EMPTY;
+    }
+    return out;
+  }
+
+  function pointScore(b, i, p) {
+    var r = (i / N) | 0, c = i % N, q = 3 - p, total = 0, d, st, k;
+    for (d = 0; d < 4; d++) {
+      var dr = DIRS[d][0], dc = DIRS[d][1];
+      for (st = -4; st <= 0; st++) {
+        var own = 0, blocked = false;
+        for (k = 0; k < 5; k++) {
+          var off = st + k, v;
+          if (off === 0) v = p;
+          else {
+            var rr = r + dr * off, cc = c + dc * off;
+            if (!inBoard(rr, cc)) { blocked = true; break; }
+            v = b[rr * N + cc];
+          }
+          if (v === q) { blocked = true; break; }
+          if (v === p) own++;
+        }
+        if (!blocked) total += W5[own];
+      }
+      for (st = -5; st <= 0; st++) {
+        var e1r = r + dr * st, e1c = c + dc * st;
+        var e2r = r + dr * (st + 5), e2c = c + dc * (st + 5);
+        if (!inBoard(e1r, e1c) || !inBoard(e2r, e2c)) continue;
+        if (b[e1r * N + e1c] !== EMPTY || b[e2r * N + e2c] !== EMPTY) continue;
+        var own2 = 0, bad = false;
+        for (k = 1; k <= 4; k++) {
+          var off2 = st + k, v2;
+          if (off2 === 0) v2 = p;
+          else v2 = b[(r + dr * off2) * N + (c + dc * off2)];
+          if (v2 === q) { bad = true; break; }
+          if (v2 === p) own2++;
+        }
+        if (!bad) total += W6[own2];
+      }
+    }
+    return total;
+  }
+
+  var LINES = (function () {
+    var lines = [], r, c, k;
+    for (r = 0; r < N; r++) {
+      var row = [];
+      for (c = 0; c < N; c++) row.push(r * N + c);
+      lines.push(row);
+    }
+    for (c = 0; c < N; c++) {
+      var col = [];
+      for (r = 0; r < N; r++) col.push(r * N + c);
+      lines.push(col);
+    }
+    function diag(r0, c0, dr, dc) {
+      var a = [], rr = r0, cc = c0;
+      while (inBoard(rr, cc)) { a.push(rr * N + cc); rr += dr; cc += dc; }
+      if (a.length >= 5) lines.push(a);
+    }
+    for (c = 0; c < N; c++) { diag(0, c, 1, 1); diag(0, c, 1, -1); }
+    for (r = 1; r < N; r++) { diag(r, 0, 1, 1); diag(r, N - 1, 1, -1); }
+    return lines;
+  })();
+
+  function evalBoard(b, p) {
+    var q = 3 - p, s = 0, li, i, j, v, o, x;
+    for (li = 0; li < LINES.length; li++) {
+      var L = LINES[li], len = L.length;
+      for (i = 0; i + 5 <= len; i++) {
+        o = 0; x = 0;
+        for (j = 0; j < 5; j++) {
+          v = b[L[i + j]];
+          if (v === p) o++; else if (v === q) x++;
+        }
+        if (!x) s += W5[o];
+        else if (!o) s -= W5[x] * 1.12;
+      }
+      for (i = 0; i + 6 <= len; i++) {
+        if (b[L[i]] !== EMPTY || b[L[i + 5]] !== EMPTY) continue;
+        o = 0; x = 0;
+        for (j = 1; j <= 4; j++) {
+          v = b[L[i + j]];
+          if (v === p) o++; else if (v === q) x++;
+        }
+        if (!x) s += W6[o];
+        else if (!o) s -= W6[x] * 1.12;
+      }
+    }
+    return s;
+  }
+
+  function candidates(b) {
+    var seen = new Uint8Array(NN), out = [], any = false, i, dr, dc;
+    for (i = 0; i < NN; i++) {
+      if (b[i] === EMPTY) continue;
+      any = true;
+      var r = (i / N) | 0, c = i % N;
+      for (dr = -2; dr <= 2; dr++) {
+        for (dc = -2; dc <= 2; dc++) {
+          if (dr === 0 && dc === 0) continue;
+          var rr = r + dr, cc = c + dc;
+          if (!inBoard(rr, cc)) continue;
+          var j = rr * N + cc;
+          if (b[j] === EMPTY && !seen[j]) { seen[j] = 1; out.push(j); }
+        }
+      }
+    }
+    if (!any) return [112];
+    return out;
+  }
+
+  function orderedMoves(b, p, limit) {
+    var list = candidates(b), scored = [];
+    for (var k = 0; k < list.length; k++) {
+      var i = list[k];
+      var s = pointScore(b, i, p) + pointScore(b, i, 3 - p) * 0.9;
+      scored.push([s, i]);
+    }
+    scored.sort(function (a, b2) { return b2[0] - a[0]; });
+    var out = [];
+    for (var m = 0; m < scored.length && m < limit; m++) out.push(scored[m][1]);
+    return out;
+  }
+
+  function negamax(b, d, alpha, beta, p, deadline) {
+    if (d <= 0 || Date.now() > deadline) return evalBoard(b, p);
+    var moves = orderedMoves(b, p, 6);
+    if (!moves.length) return 0;
+    var best = -Infinity;
+    for (var k = 0; k < moves.length; k++) {
+      var i = moves[k], r = (i / N) | 0, c = i % N;
+      b[i] = p;
+      var val;
+      if (checkWinAt(b, r, c, p)) val = WIN - (10 - d) * 1000;
+      else val = -negamax(b, d - 1, -beta, -alpha, 3 - p, deadline);
+      b[i] = EMPTY;
+      if (val > best) best = val;
+      if (best > alpha) alpha = best;
+      if (alpha >= beta) break;
+    }
+    return best;
+  }
+
+  function bestScored(b, list, p) {
+    var best = list[0], bs = -Infinity;
+    for (var k = 0; k < list.length; k++) {
+      var s = pointScore(b, list[k], p);
+      if (s > bs) { bs = s; best = list[k]; }
+    }
+    return best;
+  }
+
+  function chooseMove(b, p, level) {
+    var wins = immediateWins(b, p);
+    if (wins.length) return wins[0];
+    var blocks = immediateWins(b, 3 - p);
+    if (blocks.length) return bestScored(b, blocks, p);
+    var empty = true;
+    for (var e = 0; e < NN; e++) { if (b[e] !== EMPTY) { empty = false; break; } }
+    if (empty) return 112;
+    var rootLimit = level === 1 ? 14 : level === 2 ? 10 : 8;
+    var moves = orderedMoves(b, p, rootLimit);
+    if (!moves.length) return -1;
+    var deadline = Date.now() + (level >= 4 ? 700 : level === 2 ? 400 : 120);
+    var best = moves[0], bestScore = -Infinity, alpha = -Infinity;
+    for (var k = 0; k < moves.length; k++) {
+      var i = moves[k], r = (i / N) | 0, c = i % N;
+      b[i] = p;
+      var val;
+      if (checkWinAt(b, r, c, p)) val = WIN;
+      else val = -negamax(b, level - 1, -Infinity, -alpha, 3 - p, deadline);
+      b[i] = EMPTY;
+      if (level === 1) val += (Math.random() - 0.5) * (Math.abs(val) * 0.08 + 60);
+      if (val > bestScore) { bestScore = val; best = i; }
+      if (bestScore > alpha) alpha = bestScore;
+    }
+    return best;
+  }
+
+  function loadPrefs() {
+    try {
+      var saved = localStorage.getItem(RECORD_KEY);
+      if (saved) stats = JSON.parse(saved) || {};
+    } catch (e) { stats = {}; }
+    var l = (navigator.language || 'en').toLowerCase();
+    if (l.indexOf('zh') === 0) ui.lang = 'zh';
+    else if (l.indexOf('id') === 0 || l.indexOf('in') === 0) ui.lang = 'id';
+  }
+  function saveStats() {
+    try { localStorage.setItem(RECORD_KEY, JSON.stringify(stats)); } catch (e) {}
+  }
+  function recordOf() {
+    var r = stats[depth];
+    if (!r) { r = { w: 0, l: 0, d: 0 }; stats[depth] = r; }
+    return r;
+  }
+
+  function recordGame() {
+    if (mode !== 'ai' || recorded) return;
+    recorded = true;
+    var r = recordOf();
+    if (winner === 0) r.d++;
+    else if (winner === aiColor) r.l++;
+    else r.w++;
+    saveStats();
+  }
+
+  function newGame() {
+    board = new Uint8Array(NN);
+    history = [];
+    turn = BLACK;
+    over = false; winner = 0; recorded = false;
+    thinking = false; pending = -1; hover = -1;
+    updateUI();
+    draw();
+  }
+
+  function place(i) {
+    if (over || thinking || i < 0 || i >= NN || board[i] !== EMPTY) return;
+    pending = -1;
+    var r = (i / N) | 0, c = i % N, p = turn;
+    board[i] = p;
+    history.push({ r: r, c: c, p: p });
+    if (checkWinAt(board, r, c, p)) {
+      over = true; winner = p;
+      recordGame();
+      updateUI(); draw();
+      return;
+    }
+    if (history.length === NN) {
+      over = true; winner = 0;
+      recordGame();
+      updateUI(); draw();
+      return;
+    }
+    turn = 3 - p;
+    updateUI(); draw();
+    if (mode === 'ai' && turn === aiColor) scheduleAI(90);
+  }
+
+  function scheduleAI(delay) {
+    if (over || mode !== 'ai' || turn !== aiColor) return;
+    thinking = true;
+    updateUI();
+    setTimeout(function () {
+      if (over || mode !== 'ai' || turn !== aiColor) { thinking = false; return; }
+      var i = chooseMove(board, aiColor, depth);
+      thinking = false;
+      if (i >= 0) place(i);
+      else { turn = 3 - turn; updateUI(); draw(); }
+    }, delay || 80);
+  }
+
+  function undo() {
+    if (over || thinking || !history.length) return;
+    if (mode === 'ai') {
+      var last = history[history.length - 1];
+      history.pop();
+      if (last.p === aiColor && history.length && history[history.length - 1].p === humanColor) history.pop();
+      while (history.length && history[history.length - 1].p === aiColor) history.pop();
+    } else {
+      history.pop();
+    }
+    board = new Uint8Array(NN);
+    for (var k = 0; k < history.length; k++) {
+      board[history[k].r * N + history[k].c] = history[k].p;
+    }
+    over = false; winner = 0; recorded = false; thinking = false; pending = -1;
+    turn = history.length ? 3 - history[history.length - 1].p : BLACK;
+    updateUI();
+    draw();
+  }
+
+  function statusText() {
+    if (over) {
+      if (mode === 'ai') {
+        if (winner === 0) return t('draw');
+        return winner === humanColor ? t('youWin') : t('aiWins');
+      }
+      if (winner === 0) return t('draw');
+      return winner === BLACK ? t('blackWins') : t('whiteWins');
+    }
+    if (mode === 'ai') {
+      if (thinking) return t('thinking');
+      return turn === humanColor ? t('yourTurn') : t('aiTurn');
+    }
+    return turn === BLACK ? t('blackTurn') : t('whiteTurn');
+  }
+
+  function updateUI() {
+    $('status').textContent = statusText();
+    $('undo').disabled = over || thinking || !history.length;
+    var dot = $('turn-dot');
+    var showColor = over ? (winner || turn) : turn;
+    dot.className = 'turn-dot ' + (showColor === BLACK ? 'b' : 'w');
+    $('diffRow').hidden = mode !== 'ai';
+    var mbtns = document.querySelectorAll('[data-mode]');
+    for (var i = 0; i < mbtns.length; i++) {
+      mbtns[i].setAttribute('aria-pressed', mbtns[i].getAttribute('data-mode') === mode ? 'true' : 'false');
+    }
+    var dbtns = document.querySelectorAll('[data-diff]');
+    for (var j = 0; j < dbtns.length; j++) {
+      dbtns[j].setAttribute('aria-pressed', parseInt(dbtns[j].getAttribute('data-diff'), 10) === depth ? 'true' : 'false');
+    }
+    var rec = $('record');
+    if (mode === 'ai' && depth) {
+      var r = recordOf();
+      var lvl = depth === 1 ? t('easy') : depth === 2 ? t('normal') : t('hard');
+      rec.textContent = fillText(t('record'), { level: lvl, w: r.w, l: r.l, d: r.d });
+    } else rec.textContent = '';
+    var hint = $('hint');
+    if (!over && pending >= 0) hint.textContent = t('confirm');
+    else hint.textContent = t('howTo');
+  }
+
+  function applyLang() {
+    document.documentElement.lang = ui.lang === 'zh' ? 'zh-CN' : ui.lang;
+    var nodes = document.querySelectorAll('[data-i]');
+    for (var i = 0; i < nodes.length; i++) {
+      var k = nodes[i].getAttribute('data-i');
+      if (I18N[ui.lang][k] != null) nodes[i].textContent = I18N[ui.lang][k];
+    }
+    var langs = document.querySelectorAll('.langs button');
+    for (var j = 0; j < langs.length; j++) {
+      langs[j].setAttribute('aria-pressed', langs[j].getAttribute('data-lang') === ui.lang ? 'true' : 'false');
+    }
+    updateUI();
+  }
+
+  function resize() {
+    if (!canvas) return;
+    var wrap = $('boardwrap');
+    var w = wrap.clientWidth || 320;
+    var size = Math.min(Math.floor(w), 540);
+    if (size < 240) size = Math.max(240, Math.floor(w));
+    var dpr = Math.min(2, window.devicePixelRatio || 1);
+    canvas.style.width = size + 'px';
+    canvas.style.height = size + 'px';
+    canvas.width = Math.round(size * dpr);
+    canvas.height = Math.round(size * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    view.size = size;
+    view.margin = Math.max(8, size * 0.045);
+    view.step = (size - view.margin * 2) / (N - 1);
+    draw();
+  }
+
+  function drawStone(x, y, r, color, alpha) {
+    ctx.globalAlpha = alpha == null ? 1 : alpha;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, TAU);
+    ctx.fillStyle = color === BLACK ? '#161a1e' : '#f7f3e9';
+    ctx.fill();
+    ctx.lineWidth = Math.max(1, r * 0.12);
+    ctx.strokeStyle = color === BLACK ? 'rgba(0,0,0,.6)' : 'rgba(120,108,88,.55)';
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(x - r * 0.28, y - r * 0.3, r * 0.3, Math.PI * 1.05, Math.PI * 1.72);
+    ctx.strokeStyle = color === BLACK ? 'rgba(255,255,255,.26)' : 'rgba(255,255,255,.9)';
+    ctx.lineWidth = Math.max(1, r * 0.13);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  function draw() {
+    if (!ctx) return;
+    var s = view.size, m = view.margin, step = view.step, i, r, c, rr;
+    ctx.clearRect(0, 0, s, s);
+    ctx.strokeStyle = 'rgba(108,78,42,.55)';
+    ctx.lineWidth = Math.max(1, s / 520);
+    ctx.beginPath();
+    for (i = 0; i < N; i++) {
+      var p = m + i * step;
+      ctx.moveTo(m, p); ctx.lineTo(s - m, p);
+      ctx.moveTo(p, m); ctx.lineTo(p, s - m);
+    }
+    ctx.stroke();
+    var stars = [[3, 3], [3, 11], [11, 3], [11, 11], [7, 7]];
+    ctx.fillStyle = 'rgba(88,62,32,.85)';
+    for (i = 0; i < stars.length; i++) {
+      var sx = m + stars[i][1] * step, sy = m + stars[i][0] * step;
+      ctx.beginPath();
+      ctx.arc(sx, sy, Math.max(1.7, step * 0.085), 0, TAU);
+      ctx.fill();
+    }
+    var rad = step * 0.46;
+    for (rr = 0; rr < N; rr++) {
+      for (c = 0; c < N; c++) {
+        var v = board[rr * N + c];
+        if (v === EMPTY) continue;
+        drawStone(m + c * step, m + rr * step, rad, v, 1);
+      }
+    }
+    if (history.length) {
+      var lr = history[history.length - 1].r, lc = history[history.length - 1].c;
+      ctx.beginPath();
+      ctx.arc(m + lc * step, m + lr * step, Math.max(2.4, rad * 0.26), 0, TAU);
+      ctx.fillStyle = '#d84a1c';
+      ctx.fill();
+      ctx.lineWidth = Math.max(1, rad * 0.1);
+      ctx.strokeStyle = 'rgba(255,255,255,.85)';
+      ctx.stroke();
+    }
+    if (!over && !thinking) {
+      if (pending >= 0 && board[pending] === EMPTY) {
+        var pr = (pending / N) | 0, pc = pending % N;
+        drawStone(m + pc * step, m + pr * step, rad, turn, 0.45);
+        ctx.beginPath();
+        ctx.arc(m + pc * step, m + pr * step, rad * 1.18, 0, TAU);
+        ctx.strokeStyle = 'rgba(185,61,18,.9)';
+        ctx.lineWidth = Math.max(1.5, step * 0.07);
+        ctx.stroke();
+      } else if (hover >= 0 && board[hover] === EMPTY) {
+        var hr = (hover / N) | 0, hc = hover % N;
+        drawStone(m + hc * step, m + hr * step, rad, turn, 0.2);
+      }
+    }
+  }
+
+  function hitTest(x, y) {
+    if (!view.step) return -1;
+    var col = Math.round((x - view.margin) / view.step);
+    var row = Math.round((y - view.margin) / view.step);
+    if (col < 0 || col >= N || row < 0 || row >= N) return -1;
+    var px = view.margin + col * view.step, py = view.margin + row * view.step;
+    var dx = x - px, dy = y - py;
+    var tol = view.step * 0.62;
+    if (dx * dx + dy * dy > tol * tol) return -1;
+    return row * N + col;
+  }
+
+  function onPointerDown(e) {
+    if (over || thinking) return;
+    if (mode === 'ai' && turn === aiColor) return;
+    var rect = canvas.getBoundingClientRect();
+    if (!rect.width) return;
+    var scale = view.size / rect.width;
+    var x = (e.clientX - rect.left) * scale;
+    var y = (e.clientY - rect.top) * scale;
+    var i = hitTest(x, y);
+    if (i < 0) { if (pending >= 0) { pending = -1; draw(); updateUI(); } return; }
+    if (board[i] !== EMPTY) { if (pending >= 0) { pending = -1; draw(); updateUI(); } return; }
+    var coarse = e.pointerType === 'touch' || e.pointerType === 'pen';
+    if (coarse) {
+      if (pending === i) place(i);
+      else { pending = i; draw(); updateUI(); }
+    } else {
+      place(i);
+    }
+  }
+
+  function bind() {
+    var langBtns = document.querySelectorAll('.langs button');
+    for (var i = 0; i < langBtns.length; i++) {
+      langBtns[i].addEventListener('click', function () {
+        ui.lang = this.getAttribute('data-lang');
+        applyLang();
+      });
+    }
+    var modeBtns = document.querySelectorAll('[data-mode]');
+    for (var m = 0; m < modeBtns.length; m++) {
+      modeBtns[m].addEventListener('click', function () {
+        mode = this.getAttribute('data-mode');
+        newGame();
+      });
+    }
+    var diffBtns = document.querySelectorAll('[data-diff]');
+    for (var d = 0; d < diffBtns.length; d++) {
+      diffBtns[d].addEventListener('click', function () {
+        depth = parseInt(this.getAttribute('data-diff'), 10) || 2;
+        newGame();
+        updateUI();
+      });
+    }
+    $('undo').addEventListener('click', undo);
+    $('new').addEventListener('click', function () { newGame(); });
+    canvas.addEventListener('pointerdown', onPointerDown);
+    canvas.addEventListener('pointermove', function (e) {
+      if (e.pointerType === 'touch') return;
+      var rect = canvas.getBoundingClientRect();
+      if (!rect.width) return;
+      var scale = view.size / rect.width;
+      var i = hitTest((e.clientX - rect.left) * scale, (e.clientY - rect.top) * scale);
+      if (i !== hover) {
+        hover = (i >= 0 && board[i] === EMPTY) ? i : -1;
+        draw();
+      }
+    });
+    canvas.addEventListener('pointerleave', function () {
+      if (hover !== -1) { hover = -1; draw(); }
+    });
+    window.addEventListener('resize', resize);
+    window.addEventListener('orientationchange', function () { setTimeout(resize, 150); });
+  }
+
+  function init() {
+    canvas = $('board');
+    ctx = canvas.getContext('2d');
+    loadPrefs();
+    bind();
+    applyLang();
+    resize();
+    newGame();
+  }
+
+  if (typeof document !== 'undefined' && document.getElementById) {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+    else init();
+  }
+
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+      N: N, BLACK: BLACK, WHITE: WHITE,
+      checkWinAt: checkWinAt,
+      immediateWins: immediateWins,
+      pointScore: pointScore,
+      evalBoard: evalBoard,
+      candidates: candidates,
+      chooseMove: chooseMove,
+      newBoard: function () { return new Uint8Array(NN); }
+    };
+  }
+})();
+</script>
+
+<script src="/games/shared/share.js" data-name-zh="五子棋" data-name-en="Gomoku" data-name-id="Gomoku"></script>
+</body>
+</html>

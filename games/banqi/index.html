@@ -1,0 +1,811 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Banqi (Dark Chess) Online — 4×8 Flip Chess with Chinese Pieces (暗棋 / 翻棋)</title>
+<meta name="description" content="Play Banqi (暗棋 / 翻棋) online: 32 Chinese chess pieces face down on a 4×8 board. Flip a piece or move your own; higher ranks capture lower, soldiers kill the king, and cannons capture only by jumping exactly one piece. Three AI levels, local two-player and undo.">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="author" content="Devin">
+<meta name="theme-color" content="#f2efe7">
+<link rel="canonical" href="https://hhfa008.github.io/games/banqi/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23b98a5a'/%3E%3Cpath d='M4 6h24M4 12h24M4 18h24M4 24h24M8 6v22M14 6v22M20 6v22M26 6v22' stroke='%238a6238' stroke-width='.8' opacity='.55'/%3E%3Ccircle cx='11' cy='15' r='5.2' fill='%236e4d2e' stroke='%23f3ead9' stroke-width='.8'/%3E%3Ccircle cx='21' cy='21' r='5.2' fill='%23f3ead9' stroke='%23c0392b' stroke-width='1.6'/%3E%3Cpath d='M20 18.5h2M21 18.5v5M19.5 21h3' stroke='%23c0392b' stroke-width='1'/%3E%3C/svg%3E">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Devin">
+<meta property="og:title" content="Banqi (Dark Chess) — 4×8 flip chess with Chinese pieces">
+<meta property="og:description" content="All 32 pieces start face down. Flip one or move your own: higher ranks capture lower, soldiers kill the king, cannons need exactly one screen. Three AI levels and undo.">
+<meta property="og:url" content="https://hhfa008.github.io/games/banqi/">
+<meta property="og:locale" content="en_US">
+<meta property="og:locale:alternate" content="zh_CN">
+<meta property="og:locale:alternate" content="id_ID">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Banqi (Dark Chess) — 4×8 flip chess">
+<meta name="twitter:description" content="32 hidden Chinese chess pieces, a soldier that kills the king, and a cannon that must jump one piece to capture. Play vs AI or a friend.">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Banqi (Dark Chess)",
+  "alternateName": ["暗棋", "翻棋", "Banqi", "Catur gelap"],
+  "url": "https://hhfa008.github.io/games/banqi/",
+  "applicationCategory": "Game",
+  "genre": "Board game",
+  "gamePlatform": "Web browser",
+  "operatingSystem": "Any",
+  "isAccessibleForFree": true,
+  "inLanguage": ["en", "zh-CN", "id"],
+  "description": "Banqi (dark chess / 暗棋) on a 4×8 board: 32 Chinese chess pieces start face down. Each turn, flip a hidden piece or move one of your revealed pieces one square. Higher ranks capture lower, equal ranks cannot capture, soldiers may capture the king, and cannons capture only by jumping exactly one piece of either colour, hidden or revealed. Three AI levels, local two-player and undo.",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+}
+</script>
+
+<style>
+:root{
+  --paper:#f2efe7;--paper-2:#fbf9f4;--ink:#14171a;--muted:#5b615c;--muted-2:#696d68;
+  --line:#d5d0c4;--line-strong:#bcb5a7;--accent:#c0392b;--accent-soft:#f7e5da;
+  --dark:#2b2f36;--dark-2:#23272d;--on-dark:#f3ead9;--on-dark-muted:#b7b3a8;
+  --board:#b98a5a;--board-edge:#8a6238;--cell-a:#c39666;--cell-b:#b98a5a;--grid:#8a6238;
+  --piece-face:#f3ead9;--piece-edge:#7a5a35;--piece-back:#6e4d2e;--piece-back-edge:#5a3f26;
+  --red:#c0392b;--black-ink:#2b2f36;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --han:"Songti SC","STSong","SimSun","Noto Serif CJK SC",serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --paper:#101316;--paper-2:#181d21;--ink:#f2efe7;--muted:#b7b3a8;--muted-2:#938f86;
+    --line:#2c343a;--line-strong:#3d474f;--accent:#e35b4b;--accent-soft:#3a251d;
+    --dark:#181d21;--dark-2:#20262c;--on-dark:#f3ead9;--on-dark-muted:#b7b3a8;
+    --board:#7c5a37;--board-edge:#5d4328;--cell-a:#8c6742;--cell-b:#7c5a37;--grid:#5d4328;
+    --piece-face:#e6dcc8;--piece-edge:#5f4324;--piece-back:#4a3520;--piece-back-edge:#332312;
+    --red:#c0392b;--black-ink:#2b2f36;
+  }
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.55 var(--sans);
+  padding-bottom:calc(22px + env(safe-area-inset-bottom));-webkit-font-smoothing:antialiased}
+.wrap{max-width:700px;margin:0 auto;padding:0 16px}
+h1,h2,p{margin:0}
+button{font:inherit;color:inherit}
+a{color:inherit}
+.site-header{background:var(--dark);color:var(--on-dark);padding:12px 0}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{min-height:44px;display:flex;align-items:center;gap:9px;font-weight:650;text-decoration:none}
+.brand-mark{width:22px;height:22px;border-radius:6px;background:var(--accent);flex:none}
+.langs{display:flex;gap:4px}
+.langs button{min-width:44px;min-height:44px;padding:0 8px;border:1px solid #4a5056;border-radius:9px;
+  background:transparent;color:var(--on-dark-muted);font-size:13px;font-weight:600;cursor:pointer}
+.langs button[aria-pressed="true"]{background:var(--on-dark);color:var(--dark);border-color:var(--on-dark)}
+.hero{padding:24px 0 4px}
+.eyebrow{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--accent);margin-bottom:8px}
+.hero h1{font-size:clamp(1.9rem,7.4vw,2.5rem);line-height:1.1;letter-spacing:-.02em;margin-bottom:8px}
+.hero h1 .sub{font-weight:400;color:var(--muted);font-size:.62em;white-space:nowrap}
+.lede{color:var(--muted);font-size:16px}
+.game{background:var(--dark);color:var(--on-dark);border-radius:18px;padding:14px;margin-top:16px;
+  box-shadow:0 10px 30px rgb(16 19 22 / .16)}
+.controls{display:grid;gap:8px}
+.seg{display:flex;gap:5px;background:var(--dark-2);border:1px solid #3a4147;border-radius:12px;padding:4px}
+.seg button{flex:1;min-height:44px;padding:0 8px;border:0;border-radius:9px;background:transparent;
+  color:var(--on-dark-muted);font-size:14px;font-weight:600;cursor:pointer;touch-action:manipulation}
+.seg button[aria-pressed="true"]{background:var(--on-dark);color:var(--dark)}
+.statusbar{display:flex;align-items:center;gap:9px;margin:11px 0 8px;flex-wrap:wrap}
+.turn-dot{width:14px;height:14px;border-radius:50%;flex:none;border:2px solid #8a908f;background:var(--red)}
+.turn-dot.black{background:var(--black-ink);border-color:var(--on-dark-muted)}
+.status{flex:1;min-width:140px;font-size:14.5px;font-weight:650;line-height:1.3}
+.tools{display:flex;gap:6px}
+.tools button{min-height:44px;padding:0 12px;border:1px solid #4a5056;border-radius:9px;background:transparent;
+  color:var(--on-dark-muted);font-size:13px;font-weight:600;cursor:pointer;touch-action:manipulation}
+.tools button:disabled{opacity:.35;cursor:default}
+.boardwrap{position:relative;display:flex;justify-content:center;margin:2px 0 4px}
+svg.board{display:block;width:100%;max-width:676px;height:auto;touch-action:manipulation;
+  border-radius:14px;box-shadow:0 8px 22px rgb(0 0 0 / .3)}
+.cell-a{fill:var(--cell-a)}
+.cell-b{fill:var(--cell-b)}
+.gridline{stroke:var(--grid);stroke-width:1.6;opacity:.8}
+.hit{fill:transparent;cursor:pointer}
+.hit:hover{fill:#fff;opacity:.05}
+.lastmark{fill:var(--accent);opacity:.14;pointer-events:none}
+.selring{fill:none;stroke:var(--accent);stroke-width:3.6;opacity:.95;pointer-events:none}
+.destdot{fill:var(--accent);opacity:.85;pointer-events:none}
+.destring{fill:none;stroke:var(--accent);stroke-width:4;opacity:.9;pointer-events:none;
+  animation:destp 1.2s ease-in-out infinite}
+@keyframes destp{0%,100%{opacity:.45}50%{opacity:1}}
+.shadow{fill:#000;opacity:.2;pointer-events:none}
+.disc{stroke-width:3;pointer-events:none}
+.disc.red{fill:var(--piece-face);stroke:var(--red)}
+.disc.black{fill:var(--piece-face);stroke:var(--black-ink)}
+.disc.hidden{fill:var(--piece-back);stroke:var(--piece-back-edge);stroke-width:2}
+.discin{fill:none;stroke-width:1.2;opacity:.28;pointer-events:none}
+.discin.red{stroke:var(--red)}
+.discin.black{stroke:var(--black-ink)}
+.discin.hidden{stroke:var(--piece-face);opacity:.3;stroke-dasharray:3 4}
+.han{font-family:var(--han);font-size:38px;font-weight:700;text-anchor:middle;
+  dominant-baseline:central;pointer-events:none}
+.han.red{fill:var(--red)}
+.han.black{fill:var(--black-ink)}
+.banner{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:5;display:flex;
+  flex-direction:column;align-items:center;gap:8px;padding:18px 22px;border-radius:14px;
+  background:rgb(24 28 33 / .95);border:1px solid #4a5056;text-align:center;box-shadow:0 12px 30px rgb(0 0 0 / .5)}
+.banner strong{font-size:18px}
+.banner span{font-size:12.5px;color:var(--on-dark-muted)}
+.banner button{min-height:44px;padding:0 18px;border:0;border-radius:999px;background:var(--accent);
+  color:#fff;font-weight:650;cursor:pointer;margin-top:2px}
+.tally{min-height:20px;font-size:12.5px;color:var(--on-dark-muted);text-align:center;padding:6px 6px 0;line-height:1.4}
+.hint{min-height:38px;font-size:13px;color:var(--on-dark-muted);text-align:center;padding:2px 6px 0;line-height:1.45}
+.more{margin:18px 0 0;font-size:13.5px;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap}
+.more a{display:inline-flex;align-items:center;min-height:44px;text-decoration:none;border-bottom:1px solid var(--line-strong)}
+.more a:hover{color:var(--accent)}
+.site-footer{max-width:700px;margin:20px auto 0;padding:0 16px;font-size:12.5px;color:var(--muted-2)}
+.site-footer a{display:inline-flex;align-items:center;min-height:44px;text-decoration:none;border-bottom:1px solid var(--line-strong)}
+.site-footer a:hover{color:var(--accent)}
+.rule{margin:14px 0 0;padding-top:12px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted-2)}
+@media (max-width:420px){.seg button{font-size:12.5px;padding:0 4px}.game{padding:10px}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true"></span>Devin</a>
+    <nav class="langs" aria-label="Language">
+      <button type="button" data-lang="en">EN</button>
+      <button type="button" data-lang="zh">中文</button>
+      <button type="button" data-lang="id">ID</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero" aria-labelledby="page-title">
+    <p class="eyebrow" data-i="eyebrow">Free board game · Banqi (dark chess)</p>
+    <h1 id="page-title"><span id="titleMain">Banqi</span> <span class="sub" id="titleSub">4×8 flip chess</span></h1>
+    <p class="lede" data-i="tagline">32 Chinese chess pieces start face down. Flip one, or move what you already own.</p>
+  </section>
+
+  <section class="game" aria-label="Banqi board">
+    <div class="controls">
+      <div class="seg" id="modeRow" role="group" aria-label="Mode">
+        <button type="button" data-mode="ai" data-i="vsAi" aria-pressed="true">vs AI</button>
+        <button type="button" data-mode="local" data-i="local" aria-pressed="false">2 players</button>
+      </div>
+      <div class="seg" id="diffRow" role="group" aria-label="Difficulty">
+        <button type="button" data-diff="1" data-i="easy" aria-pressed="false">Easy</button>
+        <button type="button" data-diff="2" data-i="medium" aria-pressed="true">Medium</button>
+        <button type="button" data-diff="3" data-i="hard" aria-pressed="false">Hard</button>
+      </div>
+    </div>
+
+    <div class="statusbar">
+      <span class="turn-dot" id="turn-dot" aria-hidden="true"></span>
+      <span class="status" id="status" role="status" aria-live="polite">Red to move</span>
+      <div class="tools">
+        <button type="button" id="undo" data-i="undo">Undo</button>
+        <button type="button" id="restart" data-i="restart">Restart</button>
+      </div>
+    </div>
+
+    <div class="boardwrap" id="boardwrap">
+      <svg class="board" id="board" viewBox="0 0 676 348" role="img" aria-label="4 by 8 Banqi board with 32 face-down Chinese chess pieces"></svg>
+      <div class="banner" id="banner" hidden><strong id="bannerText"></strong><span id="bannerSub"></span><button type="button" id="again" data-i="again">Play again</button></div>
+    </div>
+    <p class="tally" id="tally"></p>
+    <p class="hint" id="hint" data-i="yourTurn">Tap a face-down piece to flip it, or a piece of yours to move.</p>
+  </section>
+
+  <p class="more">
+    <a href="/games/" data-i="allGames">All games →</a>
+    <a href="/games/banqi/rules.html" data-i="rulesLink">Rules &amp; basics →</a>
+  </p>
+  <p class="rule" data-i="ruleNote">Higher ranks capture lower; equal ranks cannot capture. Soldiers may capture the king. A cannon captures only by jumping exactly one piece — of either colour, hidden or revealed — and cannot capture the piece directly next to it.</p>
+</main>
+
+<footer class="site-footer">
+<div class="share-row">
+  <button type="button" class="share-btn" data-share-btn aria-label="Share this page"
+    style="display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;min-width:44px;padding:0 16px;border:1px solid currentColor;border-radius:999px;background:transparent;color:inherit;font:inherit;font-size:14px;font-weight:600;cursor:pointer">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.4 10.7 15.6 6.3"/><path d="M8.4 13.3 15.6 17.7"/></svg>
+    <span data-share-label>Share</span>
+  </button>
+</div>
+  <p><a href="/" data-i="home">Devin — free browser games</a> · <a href="/games/" data-i="allGames2">Game collection</a></p>
+</footer>
+
+<script>
+/* === ENGINE START === */
+var BQ = (function () {
+  'use strict';
+  var RED = 1, BLACK = -1;
+  var RANK = { K: 7, A: 6, B: 5, R: 4, N: 3, C: 2, P: 1 };
+  var VALUE = { K: 10, A: 5, B: 4.5, R: 6, N: 4, C: 3.5, P: 2 };
+  var GLYPH = {
+    '1': { K: '帅', A: '仕', B: '相', R: '車', N: '馬', C: '炮', P: '兵' },
+    '-1': { K: '将', A: '士', B: '象', R: '車', N: '馬', C: '砲', P: '卒' }
+  };
+  var COLS = 8, ROWS = 4, N = COLS * ROWS;
+  var NEI = (function () {
+    var out = [], r, c, a;
+    for (r = 0; r < ROWS; r++) for (c = 0; c < COLS; c++) {
+      a = [];
+      if (r > 0) a.push((r - 1) * COLS + c);
+      if (r < ROWS - 1) a.push((r + 1) * COLS + c);
+      if (c > 0) a.push(r * COLS + c - 1);
+      if (c < COLS - 1) a.push(r * COLS + c + 1);
+      out.push(a);
+    }
+    return out;
+  })();
+
+  function mk(s, t, h) { return { s: s, t: t, h: h ? 1 : 0 }; }
+  function idx(r, c) { return r * COLS + c; }
+  function rowOf(i) { return Math.floor(i / COLS); }
+  function colOf(i) { return i % COLS; }
+
+  function setup(rng) {
+    rng = rng || Math.random;
+    var list = [], k, i, j, tmp, cells = [];
+    [RED, BLACK].forEach(function (s) {
+      var counts = { K: 1, A: 2, B: 2, R: 2, N: 2, C: 2, P: 5 };
+      Object.keys(counts).forEach(function (t) {
+        for (k = 0; k < counts[t]; k++) list.push({ s: s, t: t });
+      });
+    });
+    for (i = list.length - 1; i > 0; i--) {
+      j = Math.floor(rng() * (i + 1));
+      tmp = list[i]; list[i] = list[j]; list[j] = tmp;
+    }
+    for (i = 0; i < N; i++) cells.push(mk(list[i].s, list[i].t, 1));
+    return { cells: cells, turn: RED, noProgress: 0 };
+  }
+
+  function empty(turn) {
+    var cells = [], i;
+    for (i = 0; i < N; i++) cells.push(null);
+    return { cells: cells, turn: turn || RED, noProgress: 0 };
+  }
+
+  function clone(st) {
+    return {
+      cells: st.cells.map(function (c) { return c ? { s: c.s, t: c.t, h: c.h } : null; }),
+      turn: st.turn, noProgress: st.noProgress || 0
+    };
+  }
+
+  function count(st, side) {
+    var n = 0, i;
+    for (i = 0; i < N; i++) if (st.cells[i] && st.cells[i].s === side) n++;
+    return n;
+  }
+  function visibleCount(st, side) {
+    var n = 0, i;
+    for (i = 0; i < N; i++) if (st.cells[i] && st.cells[i].s === side && !st.cells[i].h) n++;
+    return n;
+  }
+  function hiddenCount(st) {
+    var n = 0, i;
+    for (i = 0; i < N; i++) if (st.cells[i] && st.cells[i].h) n++;
+    return n;
+  }
+
+  // Attacker captures defender by rank, except cannon (jump capture only).
+  function canCapture(att, def) {
+    if (!att || !def || def.h || att.s === def.s) return false;
+    if (att.t === 'C') return false;
+    if (att.t === 'P' && def.t === 'K') return true;
+    return RANK[att.t] > RANK[def.t];
+  }
+
+  // Exactly one screen piece on the line; the next piece may be captured.
+  function cannonTargets(st, from) {
+    var out = [], cell = st.cells[from], r = rowOf(from), c = colOf(from);
+    var dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]], d, rr, cc, j, seen, target;
+    for (d = 0; d < 4; d++) {
+      seen = 0;
+      rr = r + dirs[d][0]; cc = c + dirs[d][1];
+      while (rr >= 0 && rr < ROWS && cc >= 0 && cc < COLS) {
+        j = idx(rr, cc);
+        if (st.cells[j]) {
+          if (seen === 0) {
+            seen = 1;
+          } else {
+            target = st.cells[j];
+            if (!target.h && target.s !== cell.s) out.push(j);
+            break;
+          }
+        }
+        rr += dirs[d][0]; cc += dirs[d][1];
+      }
+    }
+    return out;
+  }
+
+  function movesFor(st, from) {
+    var cell = st.cells[from], out = [], i, j, t, ct;
+    if (!cell || cell.h || cell.s !== st.turn) return out;
+    for (i = 0; i < NEI[from].length; i++) {
+      j = NEI[from][i]; t = st.cells[j];
+      if (!t) out.push(j);
+      else if (canCapture(cell, t)) out.push(j);
+    }
+    if (cell.t === 'C') {
+      ct = cannonTargets(st, from);
+      for (i = 0; i < ct.length; i++) if (out.indexOf(ct[i]) < 0) out.push(ct[i]);
+    }
+    return out;
+  }
+
+  function legalActions(st) {
+    var out = [], i, ms, k, c;
+    if (!st || !st.cells) return out;
+    for (i = 0; i < N; i++) {
+      if (st.cells[i] && st.cells[i].h) out.push({ k: 'flip', to: i });
+    }
+    for (i = 0; i < N; i++) {
+      c = st.cells[i];
+      if (!c || c.h || c.s !== st.turn) continue;
+      ms = movesFor(st, i);
+      for (k = 0; k < ms.length; k++) out.push({ k: 'move', from: i, to: ms[k] });
+    }
+    return out;
+  }
+
+  function isLegal(st, a) {
+    if (!a) return false;
+    if (a.k === 'flip') return !!st.cells[a.to] && !!st.cells[a.to].h;
+    if (a.k === 'move') return movesFor(st, a.from).indexOf(a.to) >= 0;
+    return false;
+  }
+
+  function applyAction(st, a) {
+    var n = clone(st), cap;
+    if (a.k === 'flip') {
+      n.cells[a.to].h = 0;
+      n.noProgress = 0;
+    } else {
+      cap = !!n.cells[a.to];
+      n.cells[a.to] = n.cells[a.from];
+      n.cells[a.from] = null;
+      n.noProgress = cap ? 0 : (n.noProgress + 1);
+    }
+    n.turn = -st.turn;
+    return n;
+  }
+
+  function status(st) {
+    var red = count(st, RED), black = count(st, BLACK);
+    if (red === 0 && black === 0) return { over: true, winner: 0, reason: 'draw' };
+    if (red === 0) return { over: true, winner: BLACK, reason: 'all' };
+    if (black === 0) return { over: true, winner: RED, reason: 'all' };
+    if ((st.noProgress || 0) >= 120) return { over: true, winner: 0, reason: 'draw' };
+    if (legalActions(st).length === 0) return { over: true, winner: -st.turn, reason: 'stuck' };
+    return { over: false, winner: 0, reason: '' };
+  }
+
+  // Material balance plus how many usable (revealed) pieces each side owns.
+  function evaluate(st, side) {
+    var score = 0, my = 0, opp = 0, i, c;
+    for (i = 0; i < N; i++) {
+      c = st.cells[i];
+      if (!c || c.h) continue;
+      if (c.s === side) { score += VALUE[c.t]; my++; }
+      else { score -= VALUE[c.t]; opp++; }
+    }
+    return score + (my - opp) * 0.7;
+  }
+
+  function actionScore(st, a, rng, level) {
+    var target = a.k === 'move' ? st.cells[a.to] : null, v;
+    if (level === 2) {
+      if (target) v = 20 + VALUE[target.t] * 3;
+      else if (a.k === 'flip') v = 8;
+      else v = 1;
+      return v + rng() * 2;
+    }
+    v = evaluate(applyAction(st, a), st.turn);
+    return v + rng() * 0.04;
+  }
+
+  function aiAction(st, level, rng, budget) {
+    var acts = legalActions(st), i, best = null, bv = -Infinity, v, deadline;
+    if (!acts.length) return null;
+    rng = rng || Math.random;
+    if (level <= 1) return acts[Math.floor(rng() * acts.length)];
+    deadline = Date.now() + (budget || 200);
+    for (i = 0; i < acts.length; i++) {
+      if (i > 0 && Date.now() > deadline) break;
+      v = actionScore(st, acts[i], rng, level);
+      if (v > bv) { bv = v; best = acts[i]; }
+    }
+    return best || acts[0];
+  }
+
+  return {
+    RED: RED, BLACK: BLACK, RANK: RANK, VALUE: VALUE, GLYPH: GLYPH,
+    COLS: COLS, ROWS: ROWS, N: N, NEI: NEI,
+    mk: mk, idx: idx, rowOf: rowOf, colOf: colOf,
+    setup: setup, empty: empty, clone: clone,
+    count: count, visibleCount: visibleCount, hiddenCount: hiddenCount,
+    canCapture: canCapture, cannonTargets: cannonTargets, movesFor: movesFor,
+    legalActions: legalActions, isLegal: isLegal, applyAction: applyAction,
+    status: status, evaluate: evaluate, aiAction: aiAction
+  };
+})();
+/* === ENGINE END === */
+
+(function () {
+  'use strict';
+  var I18N = {
+    en: {
+      eyebrow: 'Free board game · Banqi (dark chess)',
+      tagline: '32 Chinese chess pieces start face down. Flip one, or move what you already own.',
+      title: 'Banqi', sub: '4×8 flip chess',
+      vsAi: 'vs AI', local: '2 players', easy: 'Easy', medium: 'Medium', hard: 'Hard',
+      undo: 'Undo', restart: 'Restart', again: 'Play again',
+      red: 'Red', black: 'Black',
+      turn: '{name} to move', thinking: '{name} is thinking…',
+      yourTurn: 'Tap a face-down piece to flip it, or a piece of yours to move.',
+      pickDest: 'Tap a highlighted square to move, or a ringed piece to capture.',
+      illegal: 'That move is not allowed.',
+      win: '{name} wins',
+      winAll: 'All of the opponent’s pieces are gone.',
+      winStuck: 'The opponent has no legal move.',
+      draw: 'Draw',
+      drawSub: 'No capture or flip for a long stretch.',
+      tally: 'Revealed: red {r} · black {b} · face down {h}',
+      ruleNote: 'Higher ranks capture lower; equal ranks cannot capture. Soldiers may capture the king. A cannon captures only by jumping exactly one piece — of either colour, hidden or revealed — and cannot capture the piece directly next to it.',
+      allGames: 'All games →', allGames2: 'Game collection',
+      rulesLink: 'Rules & basics →', home: 'Devin — free browser games',
+      boardAria: '4 by 8 Banqi board with 32 face-down Chinese chess pieces'
+    },
+    zh: {
+      eyebrow: '免费棋类 · 暗棋（翻棋）',
+      tagline: '32 枚中国象棋棋子全部背面朝上：翻一枚，或者走自己已经翻开的子。',
+      title: '暗棋', sub: '翻棋 · 4×8',
+      vsAi: '人机对战', local: '本地双人', easy: '简单', medium: '中等', hard: '较难',
+      undo: '悔棋', restart: '重新开局', again: '再来一局',
+      red: '红方', black: '黑方',
+      turn: '轮到{name}', thinking: '{name}思考中…',
+      yourTurn: '点暗格翻子；点自己已翻开的子，再点高亮处走子。',
+      pickDest: '点高亮空格移动，或点红圈吃子。',
+      illegal: '这一步不合法。',
+      win: '{name}获胜',
+      winAll: '对方棋子已被全部吃掉。',
+      winStuck: '对方已无子可动。',
+      draw: '和棋',
+      drawSub: '长时间没有吃子或翻子。',
+      tally: '明子：红 {r} · 黑 {b} · 暗子 {h}',
+      ruleNote: '等级高的吃等级低的，同级不能互吃；兵/卒可以吃帅/将。炮必须隔一个棋子（任意颜色、明暗均可）才能吃，紧挨着的子不能直接吃。',
+      allGames: '全部游戏 →', allGames2: '游戏合集',
+      rulesLink: '规则与入门 →', home: 'Devin — 免费在线小游戏',
+      boardAria: '4×8 暗棋棋盘，32 枚棋子全部背面朝上'
+    },
+    id: {
+      eyebrow: 'Game papan gratis · Banqi (catur gelap)',
+      tagline: '32 bidak catur Cina mulai tertutup. Balik satu, atau gerakkan bidak yang sudah terbuka.',
+      title: 'Banqi', sub: 'Catur gelap 4×8',
+      vsAi: 'Lawan AI', local: '2 pemain', easy: 'Mudah', medium: 'Sedang', hard: 'Sulit',
+      undo: 'Batal', restart: 'Mulai ulang', again: 'Main lagi',
+      red: 'Merah', black: 'Hitam',
+      turn: 'Giliran {name}', thinking: '{name} sedang berpikir…',
+      yourTurn: 'Ketuk bidak tertutup untuk membaliknya, atau bidak milikmu untuk melangkah.',
+      pickDest: 'Ketuk kotak yang menyala untuk melangkah, atau bidak bercincin untuk menangkap.',
+      illegal: 'Langkah itu tidak sah.',
+      win: '{name} menang',
+      winAll: 'Semua bidak lawan sudah habis.',
+      winStuck: 'Lawan tidak punya langkah sah.',
+      draw: 'Seri',
+      drawSub: 'Lama tanpa tangkapan atau pembalikan.',
+      tally: 'Terbuka: merah {r} · hitam {b} · tertutup {h}',
+      ruleNote: 'Pangkat lebih tinggi menangkap yang lebih rendah; pangkat sama tidak bisa saling menangkap. Prajurit boleh menangkap raja. Meriam hanya menangkap dengan melompati tepat satu bidak — warna apa pun, terbuka atau tertutup — dan tidak bisa menangkap bidak yang menempel.',
+      allGames: 'Semua game →', allGames2: 'Koleksi game',
+      rulesLink: 'Aturan & dasar →', home: 'Devin — game browser gratis',
+      boardAria: 'Papan Banqi 4 kali 8 dengan 32 bidak catur Cina tertutup'
+    }
+  };
+
+  var ui = { lang: 'en' };
+  var mode = 'ai', level = 2;
+  var state = BQ.setup();
+  var hist = [], selected = -1, dests = [], last = null, flashMsg = '';
+  var aiTimer = null, aiToken = 0;
+  var NS = 'http://www.w3.org/2000/svg';
+  var svg = document.getElementById('board');
+  var G = {};
+  var M = 10, CS = 82;
+  var $ = function (id) { return document.getElementById(id); };
+
+  function t(k) {
+    var d = I18N[ui.lang] || I18N.en;
+    return d[k] != null ? d[k] : (I18N.en[k] != null ? I18N.en[k] : k);
+  }
+  function fmt(s, map) {
+    return s.replace(/\{(\w+)\}/g, function (m, k) { return map[k] != null ? map[k] : ''; });
+  }
+  function sideName(side) { return side === BQ.RED ? t('red') : t('black'); }
+  function el(name, attrs) {
+    var node = document.createElementNS(NS, name);
+    if (attrs) for (var k in attrs) node.setAttribute(k, attrs[k]);
+    return node;
+  }
+  function clear(g) { while (g.firstChild) g.removeChild(g.firstChild); }
+  function cx(i) { return M + (i % BQ.COLS) * CS + CS / 2; }
+  function cy(i) { return M + Math.floor(i / BQ.COLS) * CS + CS / 2; }
+
+  function buildBoard() {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    svg.appendChild(el('rect', { x: 0, y: 0, width: 676, height: 348, rx: 22, fill: 'var(--board-edge)' }));
+    svg.appendChild(el('rect', { x: 6, y: 6, width: 664, height: 336, rx: 14, fill: 'var(--board)' }));
+    var r, c, x, y;
+    for (r = 0; r < BQ.ROWS; r++) for (c = 0; c < BQ.COLS; c++) {
+      x = M + c * CS; y = M + r * CS;
+      svg.appendChild(el('rect', {
+        x: x, y: y, width: CS, height: CS,
+        class: (r + c) % 2 === 0 ? 'cell-a' : 'cell-b'
+      }));
+    }
+    for (c = 1; c < BQ.COLS; c++) {
+      svg.appendChild(el('line', { x1: M + c * CS, y1: M, x2: M + c * CS, y2: M + BQ.ROWS * CS, class: 'gridline' }));
+    }
+    for (r = 1; r < BQ.ROWS; r++) {
+      svg.appendChild(el('line', { x1: M, y1: M + r * CS, x2: M + BQ.COLS * CS, y2: M + r * CS, class: 'gridline' }));
+    }
+    G.marks = el('g'); G.pieces = el('g'); G.hits = el('g');
+    svg.appendChild(G.marks); svg.appendChild(G.pieces); svg.appendChild(G.hits);
+    for (r = 0; r < BQ.ROWS; r++) for (c = 0; c < BQ.COLS; c++) {
+      var i = BQ.idx(r, c);
+      G.hits.appendChild(el('rect', {
+        x: M + c * CS, y: M + r * CS, width: CS, height: CS, class: 'hit', 'data-cell': i
+      }));
+    }
+    svg.addEventListener('click', onBoardClick);
+  }
+
+  function drawPiece(g, i) {
+    var cell = state.cells[i], x = cx(i), y = cy(i), side = cell.s === BQ.RED ? 'red' : 'black';
+    g.appendChild(el('circle', { cx: x, cy: y + 2, r: 31, class: 'shadow' }));
+    if (cell.h) {
+      g.appendChild(el('circle', { cx: x, cy: y, r: 30, class: 'disc hidden' }));
+      g.appendChild(el('circle', { cx: x, cy: y, r: 23, class: 'discin hidden' }));
+      g.appendChild(el('circle', { cx: x, cy: y, r: 8, class: 'discin hidden' }));
+    } else {
+      g.appendChild(el('circle', { cx: x, cy: y, r: 30, class: 'disc ' + side }));
+      g.appendChild(el('circle', { cx: x, cy: y, r: 24, class: 'discin ' + side }));
+      var tx = el('text', { x: x, y: y + 1, class: 'han ' + side });
+      tx.textContent = BQ.GLYPH[String(cell.s)][cell.t];
+      g.appendChild(tx);
+    }
+  }
+
+  function render() {
+    clear(G.marks); clear(G.pieces);
+    var i, cell, st = BQ.status(state);
+
+    if (last) {
+      [last.from, last.to].forEach(function (i2) {
+        if (i2 == null) return;
+        G.marks.appendChild(el('rect', {
+          x: M + (i2 % BQ.COLS) * CS + 3, y: M + Math.floor(i2 / BQ.COLS) * CS + 3,
+          width: CS - 6, height: CS - 6, rx: 9, class: 'lastmark'
+        }));
+      });
+    }
+    if (selected >= 0) {
+      G.marks.appendChild(el('circle', { cx: cx(selected), cy: cy(selected), r: 34, class: 'selring' }));
+    }
+    for (i = 0; i < BQ.N; i++) {
+      cell = state.cells[i];
+      if (!cell) continue;
+      drawPiece(G.pieces, i);
+    }
+    dests.forEach(function (j) {
+      var g = el('g');
+      if (state.cells[j]) {
+        g.appendChild(el('circle', { cx: cx(j), cy: cy(j), r: 33, class: 'destring' }));
+      } else {
+        g.appendChild(el('circle', { cx: cx(j), cy: cy(j), r: 8, class: 'destdot' }));
+      }
+      G.marks.appendChild(g);
+    });
+    updateUI(st);
+  }
+
+  function resultLine(st) {
+    if (st.reason === 'draw') return t('draw');
+    return fmt(t('win'), { name: sideName(st.winner) });
+  }
+  function resultSub(st) {
+    if (st.reason === 'draw') return t('drawSub');
+    if (st.reason === 'stuck') return t('winStuck');
+    return t('winAll');
+  }
+
+  function updateUI(st) {
+    st = st || BQ.status(state);
+    var statusEl = $('status'), hintEl = $('hint'), dot = $('turn-dot');
+    dot.className = 'turn-dot' + (state.turn === BQ.BLACK ? ' black' : '');
+    if (st.over) {
+      statusEl.textContent = resultLine(st);
+      hintEl.textContent = t('ruleNote');
+      $('bannerText').textContent = resultLine(st);
+      $('bannerSub').textContent = resultSub(st);
+      $('banner').hidden = false;
+    } else {
+      $('banner').hidden = true;
+      if (mode === 'ai' && state.turn === BQ.BLACK) {
+        statusEl.textContent = fmt(t('thinking'), { name: sideName(BQ.BLACK) });
+      } else {
+        statusEl.textContent = fmt(t('turn'), { name: sideName(state.turn) });
+      }
+      if (flashMsg) hintEl.textContent = flashMsg;
+      else if (selected >= 0) hintEl.textContent = t('pickDest');
+      else hintEl.textContent = t('yourTurn');
+    }
+    $('tally').textContent = fmt(t('tally'), {
+      r: BQ.visibleCount(state, BQ.RED),
+      b: BQ.visibleCount(state, BQ.BLACK),
+      h: BQ.hiddenCount(state)
+    });
+    $('undo').disabled = !hist.length;
+  }
+
+  function flash(msg) {
+    flashMsg = msg;
+    render();
+    setTimeout(function () { flashMsg = ''; render(); }, 1400);
+  }
+
+  function doAction(a) {
+    if (mode === 'ai' && state.turn === BQ.BLACK) return;
+    if (!BQ.isLegal(state, a)) { flash(t('illegal')); return; }
+    hist.push(BQ.clone(state));
+    last = a;
+    state = BQ.applyAction(state, a);
+    selected = -1;
+    dests = [];
+    render();
+    maybeAi();
+  }
+
+  function clickCell(i) {
+    if (BQ.status(state).over) return;
+    if (mode === 'ai' && state.turn === BQ.BLACK) return;
+    var cell = state.cells[i];
+    if (cell && cell.h) { doAction({ k: 'flip', to: i }); return; }
+    if (selected >= 0 && dests.indexOf(i) >= 0) { doAction({ k: 'move', from: selected, to: i }); return; }
+    if (cell && !cell.h && cell.s === state.turn) {
+      selected = i;
+      dests = BQ.movesFor(state, i);
+      render();
+      return;
+    }
+    if (selected >= 0) { selected = -1; dests = []; render(); return; }
+    if (cell) flash(t('illegal'));
+  }
+
+  function onBoardClick(e) {
+    var n = e.target;
+    while (n && n !== svg) {
+      if (n.getAttribute) {
+        var p = n.getAttribute('data-cell');
+        if (p != null) { clickCell(+p); return; }
+      }
+      n = n.parentNode;
+    }
+  }
+
+  function maybeAi() {
+    if (mode !== 'ai' || BQ.status(state).over || state.turn !== BQ.BLACK) return;
+    var token = ++aiToken;
+    clearTimeout(aiTimer);
+    aiTimer = setTimeout(function () {
+      if (token !== aiToken) return;
+      if (BQ.status(state).over || state.turn !== BQ.BLACK) return;
+      var a = BQ.aiAction(state, level, Math.random, 200);
+      if (!a) return;
+      hist.push(BQ.clone(state));
+      last = a;
+      state = BQ.applyAction(state, a);
+      selected = -1;
+      dests = [];
+      render();
+    }, 340);
+  }
+
+  function newGame() {
+    aiToken++;
+    clearTimeout(aiTimer);
+    state = BQ.setup();
+    hist = [];
+    selected = -1;
+    dests = [];
+    last = null;
+    flashMsg = '';
+    $('banner').hidden = true;
+    render();
+  }
+
+  function undo() {
+    if (!hist.length) return;
+    aiToken++;
+    clearTimeout(aiTimer);
+    var restored = null;
+    if (mode === 'ai') {
+      while (hist.length) {
+        var snap = hist.pop();
+        if (snap.turn === BQ.RED) { restored = snap; break; }
+      }
+    } else {
+      restored = hist.pop();
+    }
+    if (restored) state = BQ.clone(restored);
+    selected = -1;
+    dests = [];
+    flashMsg = '';
+    $('banner').hidden = true;
+    render();
+  }
+
+  function applyLang() {
+    document.documentElement.lang = ui.lang === 'zh' ? 'zh-CN' : ui.lang;
+    var nodes = document.querySelectorAll('[data-i]');
+    for (var i = 0; i < nodes.length; i++) {
+      var k = nodes[i].getAttribute('data-i');
+      if (I18N[ui.lang][k] != null) nodes[i].textContent = I18N[ui.lang][k];
+    }
+    var langs = document.querySelectorAll('.langs button');
+    for (var j = 0; j < langs.length; j++) {
+      langs[j].setAttribute('aria-pressed', langs[j].getAttribute('data-lang') === ui.lang ? 'true' : 'false');
+    }
+    $('titleMain').textContent = t('title');
+    $('titleSub').textContent = t('sub');
+    svg.setAttribute('aria-label', t('boardAria'));
+    render();
+  }
+
+  function bind() {
+    var langBtns = document.querySelectorAll('.langs button');
+    for (var i = 0; i < langBtns.length; i++) {
+      langBtns[i].addEventListener('click', function () {
+        ui.lang = this.getAttribute('data-lang');
+        applyLang();
+      });
+    }
+    var modeBtns = document.querySelectorAll('#modeRow button');
+    for (var m = 0; m < modeBtns.length; m++) {
+      modeBtns[m].addEventListener('click', function () {
+        mode = this.getAttribute('data-mode');
+        for (var k = 0; k < modeBtns.length; k++) modeBtns[k].setAttribute('aria-pressed', modeBtns[k] === this ? 'true' : 'false');
+        $('diffRow').hidden = mode !== 'ai';
+        newGame();
+      });
+    }
+    var diffBtns = document.querySelectorAll('#diffRow button');
+    for (var d = 0; d < diffBtns.length; d++) {
+      diffBtns[d].addEventListener('click', function () {
+        level = +this.getAttribute('data-diff');
+        for (var k = 0; k < diffBtns.length; k++) diffBtns[k].setAttribute('aria-pressed', diffBtns[k] === this ? 'true' : 'false');
+      });
+    }
+    $('undo').addEventListener('click', undo);
+    $('restart').addEventListener('click', newGame);
+    $('again').addEventListener('click', newGame);
+    var l = (navigator.language || 'en').toLowerCase();
+    if (l.indexOf('zh') === 0) ui.lang = 'zh';
+    else if (l.indexOf('id') === 0 || l.indexOf('in') === 0) ui.lang = 'id';
+    applyLang();
+  }
+
+  buildBoard();
+  bind();
+  newGame();
+})();
+</script>
+
+<script src="/games/shared/share.js" data-name-zh="暗棋" data-name-en="Banqi" data-name-id="Banqi"></script>
+</body>
+</html>
