@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>只言片语 Dixit 简化版 — 词卡联想单机桌游</title>
+<meta name="description" content="只言片语 Dixit 简化中文单机版：抽象词卡、讲述者给线索、其他玩家出牌、投票找出讲述者的牌，按 Dixit 规则计分，对战两名 AI。">
+<meta name="theme-color" content="#101a18">
+<style>
+:root{--bg:#0e1715;--panel:#17241f;--panel2:#20332b;--ink:#f1f0e7;--muted:#a9b8ad;
+--accent:#e3b85a;--accent2:#8fb59a;--line:#32483c;--story:#b2764a}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:radial-gradient(900px 520px at 50% -10%,#26382f,var(--bg));color:var(--ink);
+font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
+padding-bottom:calc(26px + env(safe-area-inset-bottom))}
+.wrap{max-width:700px;margin:0 auto;padding:0 14px}
+header{padding:16px 0 8px;display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap}
+h1{font-size:1.35rem;margin:0}
+h1 small{display:block;font-size:.74rem;color:var(--muted);letter-spacing:.14em;font-weight:400;margin-top:3px}
+button{font:inherit;color:inherit;cursor:pointer;min-height:44px;border-radius:10px;border:1px solid var(--line);
+background:var(--panel2);padding:8px 12px}
+button:hover{filter:brightness(1.12)}
+button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+button:disabled{opacity:.45;cursor:default}
+button.primary{background:var(--accent);border-color:var(--accent);color:#221a08;font-weight:700}
+button.story{border-color:var(--story);box-shadow:0 0 0 1px rgba(178,118,74,.5) inset}
+.players{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0 12px}
+.player{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px;min-width:0}
+.player.story{border-color:var(--accent)}
+.player h2{font-size:.82rem;margin:0 0 4px;display:flex;justify-content:space-between;gap:4px;flex-wrap:wrap}
+.score{color:var(--accent);font-size:.78rem;white-space:nowrap}
+.badge{font-size:.64rem;color:var(--accent);border:1px solid var(--line);border-radius:99px;padding:1px 6px}
+.row{font-size:.72rem;color:var(--muted);margin-top:3px}
+.hand{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 10px}
+.hcard{flex:1 1 120px;min-height:58px;background:var(--panel);border:1px solid var(--line);border-radius:10px;
+padding:6px;text-align:left;font-size:.9rem;font-weight:650;display:flex;flex-direction:column;gap:2px}
+.hcard small{font-weight:400;color:var(--muted);font-size:.66rem}
+.hcard.sel{border-color:var(--accent);background:#3a3220}
+.status{background:rgba(23,36,31,.9);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:8px 0 12px}
+.status .big{font-weight:700}
+.status .sub{color:var(--muted);font-size:.86rem;margin-top:2px}
+.clueform{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+.clueform input{flex:1 1 150px;min-width:0;min-height:46px;border-radius:10px;border:1px solid var(--line);
+background:#0f1a16;color:var(--ink);padding:10px 12px}
+.clueform button{flex:0 0 auto}
+.display{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin:10px 0}
+.dcard{min-height:70px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px;
+display:flex;flex-direction:column;gap:3px;text-align:left;font-weight:650;font-size:.92rem}
+.dcard small{font-weight:400;color:var(--muted);font-size:.65rem}
+.dcard.mine{opacity:.55}
+.dcard.winner{border-color:var(--accent);background:#3a3320}
+.scorebox{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:10px 0;
+font-size:.86rem}
+.scorebox p{margin:3px 0;color:var(--muted)}
+.scorebox b{color:var(--ink)}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.actions button{flex:1 1 150px}
+.log{max-height:140px;overflow:auto;border-top:1px solid var(--line);margin-top:14px;padding-top:8px;
+font-size:.82rem;color:var(--muted)}
+.log p{margin:3px 0}
+.banner{margin:10px 0;padding:10px;border-radius:10px;background:#2f3c26;border:1px solid #62794a;
+text-align:center;font-weight:700}
+.links{display:flex;justify-content:space-between;margin-top:14px;font-size:.86rem;flex-wrap:wrap;gap:8px}
+.links a{color:var(--accent);text-decoration:none;min-height:44px;display:inline-flex;align-items:center}
+@media (max-width:360px){.wrap{padding:0 10px}.players{grid-template-columns:1fr}.hcard{flex-basis:100%}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>只言片语 <small>DIXIT · 词卡联想简化版</small></h1>
+  <button id="newGame">新对局</button>
+</header>
+<div class="players" id="players" aria-label="玩家得分"></div>
+<div class="banner" id="banner" hidden></div>
+<div class="status" id="status" aria-live="polite"></div>
+<div class="hand" id="hand" aria-label="你的手牌"></div>
+<form class="clueform" id="clueForm" autocomplete="off" hidden>
+  <input id="clueText" maxlength="30" placeholder="给一个不太直白、也不太模糊的线索" aria-label="线索">
+  <button type="submit" class="primary" id="clueSubmit">给出线索</button>
+</form>
+<div class="display" id="display" aria-label="本回合展示的牌"></div>
+<div class="scorebox" id="scorebox" hidden></div>
+<div class="actions" id="actions"></div>
+<div class="log" id="log" aria-live="polite"></div>
+<div class="links">
+  <a href="rules.html">查看中文规则</a>
+  <a href="../index.html">返回桌游目录</a>
+</div>
+</div>
+<script src="engine.js"></script>
+<script>
+(function () {
+  'use strict';
+  var E = window.DixitEngine;
+  var state = null;
+  var gen = 0;
+  var selectedCard = null;
+  var playersEl = document.getElementById('players');
+  var handEl = document.getElementById('hand');
+  var displayEl = document.getElementById('display');
+  var actionsEl = document.getElementById('actions');
+  var statusEl = document.getElementById('status');
+  var logEl = document.getElementById('log');
+  var scorebox = document.getElementById('scorebox');
+  var banner = document.getElementById('banner');
+  var clueForm = document.getElementById('clueForm');
+  var clueText = document.getElementById('clueText');
+
+  function esc(t) {
+    return String(t).replace(/[&<>"']/g, function (c) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+    });
+  }
+  function cardText(id) { return (E.CARD_BY_ID[id] && E.CARD_BY_ID[id].text) || id; }
+  function cardTags(id) { return (E.CARD_BY_ID[id] && E.CARD_BY_ID[id].tags) || []; }
+
+  function render() {
+    if (!state) return;
+    var v = E.viewFor(state, 0);
+    var humanStory = v.storyteller === 0;
+    var canClue = v.phase === 'clue' && humanStory;
+    var canSubmit = v.phase === 'submit' && !humanStory && E.needsHuman(state);
+    var canVote = v.phase === 'vote' && !humanStory && E.needsHuman(state);
+
+    playersEl.innerHTML = v.players.map(function (p) {
+      return '<div class="player' + (p.id === v.storyteller ? ' story' : '') + '">' +
+        '<h2><span>' + esc(p.name) + (p.id === 0 ? '（你）' : '') + '</span>' +
+        '<span class="score">' + p.score + ' 分</span></h2>' +
+        (p.id === v.storyteller ? '<span class="badge">讲述者</span>' : '') +
+        '<div class="row">手牌 ' + p.handCount + ' 张</div></div>';
+    }).join('');
+
+    var myHand = v.players[0].hand;
+    if (selectedCard && myHand.indexOf(selectedCard) < 0) selectedCard = null;
+    handEl.innerHTML = myHand.map(function (cid) {
+      var clickable = canClue || canSubmit;
+      var sel = selectedCard === cid ? ' sel' : '';
+      return '<button class="hcard' + sel + '" data-hand="' + esc(cid) + '"' +
+        (clickable ? '' : ' disabled') + ' aria-label="手牌：' + esc(cardText(cid)) + '">' +
+        esc(cardText(cid)) + '<small>' + esc(cardTags(cid).join(' · ')) + '</small></button>';
+    }).join('');
+
+    clueForm.hidden = !canClue;
+    document.getElementById('clueSubmit').disabled = !canClue || !selectedCard;
+
+    if (v.display) {
+      displayEl.innerHTML = v.display.map(function (d) {
+        var mine = v.mySubmitted === d.displayId;
+        var cls = 'dcard' + (mine ? ' mine' : '') +
+          (v.phase === 'score' && d.ownerId === v.storyteller ? ' story' : '');
+        var owner = d.ownerId === 'hidden' ? '' : '<small>出自 ' + esc(v.players[d.ownerId].name) + '</small>';
+        return '<button class="' + cls + '" data-display="' + d.displayId + '"' +
+          ((canVote && !mine) ? '' : ' disabled') + ' aria-label="' + esc(d.text) + '">' +
+          esc(d.text) + '<small>' + esc(d.tags.join(' · ')) + '</small>' + owner + '</button>';
+      }).join('');
+    } else displayEl.innerHTML = '';
+
+    var big = '', sub = '';
+    if (v.phase === 'over') {
+      big = '对局结束';
+      sub = v.winner === 0 ? '你获胜！' : (v.winner === 1 ? v.players[1].name + ' 获胜。' :
+        (v.winner === 2 ? v.players[2].name + ' 获胜。' : '平局。'));
+    } else if (v.phase === 'clue') {
+      big = humanStory ? '你是讲述者：选一张手牌，写下线索' : v.players[v.storyteller].name + ' 正在想线索…';
+      sub = '线索太直白会被所有人猜中，太模糊会无人猜中，两种情况讲述者都得 0 分。';
+    } else if (v.phase === 'submit') {
+      big = humanStory ? '其他玩家正在出牌…' : '选择一张最符合线索的手牌暗出';
+      sub = '线索：「' + (v.clue || '') + '」';
+    } else if (v.phase === 'vote') {
+      big = humanStory ? '其他玩家正在投票…' : '投票：哪张牌属于讲述者？';
+      sub = '线索：「' + (v.clue || '') + '」 · 不能投自己出的牌';
+    } else if (v.phase === 'score') {
+      big = '本回合结算';
+      sub = '看看谁猜中了讲述者的牌，以及各自拿到了多少分。';
+    }
+    statusEl.innerHTML = '<div class="big">' + esc(big) + '</div><div class="sub">' + esc(sub) + '</div>';
+    if (v.phase === 'over') {
+      banner.hidden = false;
+      banner.textContent = v.winner === 0 ? '你赢了这局只言片语！' :
+        (v.winner >= 0 ? v.players[v.winner].name + ' 获胜。' : '最高分并列，平局。');
+    } else banner.hidden = true;
+
+    if (v.phase === 'score' && v.lastScore) {
+      scorebox.hidden = false;
+      var lines = v.players.map(function (p) {
+        var delta = v.lastScore.add[p.id] || 0;
+        return '<p>' + esc(p.name) + '：' + p.score + ' 分（本回合 +' + delta + '）</p>';
+      }).join('');
+      var note = v.lastScore.correct === 0 ? '无人猜中讲述者的牌，除讲述者外每人 +2。' :
+        (v.lastScore.correct === v.lastScore.voters ? '所有人都猜中，除讲述者外每人 +2。' :
+          '部分猜中：讲述者 +3，猜中者 +3，自己的牌每被投一票 +1。');
+      scorebox.innerHTML = lines + '<p>' + esc(note) + '</p>';
+    } else {
+      scorebox.hidden = true;
+      scorebox.innerHTML = '';
+    }
+
+    var buttons = [];
+    if (v.phase === 'over') buttons.push('<button class="primary" data-act="new">再来一局</button>');
+    else if (!E.needsHuman(state)) buttons.push('<button disabled>等待 AI…</button>');
+    else if (v.phase === 'score') buttons.push('<button class="primary" data-act="next">下一回合</button>');
+    if (v.phase === 'submit' && !humanStory) {
+      buttons.push('<button disabled>点击上方手牌出牌</button>');
+    }
+    if (v.phase === 'vote' && !humanStory) {
+      buttons.push('<button disabled>点击上方展示牌投票</button>');
+    }
+    if (v.phase === 'clue' && humanStory) {
+      buttons.push('<button disabled>先选牌，再写线索</button>');
+    }
+    actionsEl.innerHTML = buttons.join('');
+    logEl.innerHTML = v.log.slice(-12).map(function (line) { return '<p>' + esc(line) + '</p>'; }).join('');
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function pump() {
+    var my = gen;
+    function step() {
+      if (my !== gen || !state || E.isOver(state) || E.needsHuman(state)) { render(); return; }
+      var a = E.aiAction(state);
+      if (!a) { render(); return; }
+      E.applyAction(state, a);
+      render();
+      setTimeout(step, 600);
+    }
+    setTimeout(step, 300);
+  }
+
+  handEl.addEventListener('click', function (ev) {
+    var btn = ev.target.closest('button[data-hand]');
+    if (!btn || !state) return;
+    var cid = btn.getAttribute('data-hand');
+    var v = E.viewFor(state, 0);
+    if (v.phase === 'clue' && v.storyteller === 0) {
+      selectedCard = cid;
+      render();
+      return;
+    }
+    if (v.phase === 'submit' && v.storyteller !== 0 && E.needsHuman(state)) {
+      var r = E.applyAction(state, { type: 'submit', cardId: cid });
+      if (!r.ok) return;
+      selectedCard = null;
+      render();
+      if (!E.isOver(state) && !E.needsHuman(state)) pump();
+    }
+  });
+
+  displayEl.addEventListener('click', function (ev) {
+    var btn = ev.target.closest('button[data-display]');
+    if (!btn || !state) return;
+    if (!E.needsHuman(state) || state.phase !== 'vote') return;
+    var r = E.applyAction(state, { type: 'vote', displayId: Number(btn.getAttribute('data-display')) });
+    if (!r.ok) return;
+    render();
+    if (!E.isOver(state) && !E.needsHuman(state)) pump();
+  });
+
+  actionsEl.addEventListener('click', function (ev) {
+    var btn = ev.target.closest('button[data-act]');
+    if (!btn || !state) return;
+    var act = btn.getAttribute('data-act');
+    if (act === 'new') { newGame(); return; }
+    if (act === 'next') {
+      E.applyAction(state, { type: 'next' });
+      render();
+      if (!E.isOver(state) && !E.needsHuman(state)) pump();
+    }
+  });
+
+  clueForm.addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    if (!state || !selectedCard) return;
+    var r = E.applyAction(state, { type: 'clue', cardId: selectedCard, text: clueText.value });
+    if (!r.ok) {
+      statusEl.innerHTML = '<div class="big">线索无效</div><div class="sub">' + esc(r.error) + '</div>';
+      return;
+    }
+    selectedCard = null;
+    clueText.value = '';
+    render();
+    if (!E.isOver(state) && !E.needsHuman(state)) pump();
+  });
+
+  function newGame() {
+    gen++;
+    state = E.createGame({ seed: (Date.now() % 1000000) + 11 });
+    selectedCard = null;
+    clueText.value = '';
+    render();
+    if (!E.needsHuman(state) && !E.isOver(state)) pump();
+  }
+
+  document.getElementById('newGame').addEventListener('click', newGame);
+  newGame();
+}());
+</script>
+</body>
+</html>

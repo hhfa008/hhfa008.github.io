@@ -1,0 +1,844 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>牌面资产画廊 · 102</title>
+<style>
+  :root {
+    --font-cjk: system-ui, -apple-system, "PingFang SC", "Songti SC", "STKaiti", serif;
+    --felt: #1d5a3d;
+    --felt-deep: #143f2b;
+    --charcoal: #1a1b1e;
+    --ink: #1d1f22;
+    --red: #b2262e;
+    --pcw: clamp(30px, 7.6vw, 116px);
+    --pch: calc(var(--pcw) * 1.4);
+    --mjw: clamp(28px, 7.2vw, 104px);
+    --mjh: calc(var(--mjw) * 1.26);
+    --chw: clamp(30px, 7.4vw, 106px);
+    /* Local FLUX material swatches (512x512, no text/glyphs baked in). */
+    --tex-wood-dark: url("../assets/cardart/textures/wood-dark.png");
+    --tex-wood-light: url("../assets/cardart/textures/wood-light.png");
+    --tex-stone: url("../assets/cardart/textures/stone.png");
+    --tex-lacquer: url("../assets/cardart/textures/lacquer-black.png");
+    --tex-felt: url("../assets/cardart/textures/felt-green.png");
+    --tex-charcoal: url("../assets/cardart/textures/charcoal.png");
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    max-width: 100%;
+    overflow-x: clip;
+    background: #0e1012;
+    color: #e9e4d8;
+    font-family: var(--font-cjk);
+  }
+  body {
+    background:
+      radial-gradient(120% 80% at 50% 0%, #1b2025 0%, #121417 48%, #0b0c0e 100%);
+    min-height: 100vh;
+  }
+
+  .page-head {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 30px 20px 14px;
+  }
+  .page-head h1 {
+    margin: 0 0 8px;
+    font-size: clamp(20px, 4vw, 34px);
+    font-weight: 600;
+    letter-spacing: .04em;
+    color: #f3eee2;
+  }
+  .page-head p {
+    margin: 0;
+    color: #9aa19f;
+    font-size: clamp(12px, 1.8vw, 14px);
+    line-height: 1.6;
+  }
+  .page-head .counts { color: #c9b98e; }
+
+  .gallery {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 16px 64px;
+    display: flex;
+    flex-direction: column;
+    gap: 26px;
+  }
+  .cat {
+    border-radius: 18px;
+    border: 1px solid rgba(255,255,255,.07);
+    background: rgba(255,255,255,.022);
+    box-shadow: 0 20px 50px rgba(0,0,0,.28);
+    overflow: hidden;
+  }
+  .cat-head {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    padding: 14px 18px 2px;
+  }
+  .cat-head h2 {
+    margin: 0;
+    font-size: clamp(14px, 2.4vw, 18px);
+    font-weight: 600;
+    letter-spacing: .02em;
+    color: #e9e0ce;
+  }
+  .cat-head span {
+    color: #8d938f;
+    font-size: clamp(11px, 1.7vw, 12px);
+  }
+
+  /* ---------- 3D table spec: perspective 1600 + rotateX(52) + rotateZ(-14) ---------- */
+  .scene {
+    position: relative;
+    perspective: 1600px;
+    perspective-origin: 50% 32%;
+    overflow: hidden;
+    padding: 40px 0 30px;
+  }
+  .scene-chess {
+    padding: 118px 0 56px;
+  }
+  .table3d {
+    width: max-content;
+    margin: 0 auto;
+    transform: rotateX(52deg) rotateZ(-14deg) scale(var(--fit, 1));
+    transform-style: preserve-3d;
+    transform-origin: 50% 50%;
+  }
+
+  .poker-table,
+  .mahjong-table {
+    display: grid;
+    gap: clamp(18px, 2vw, 28px) clamp(6px, 1.1vw, 14px);
+    padding: clamp(14px, 2.4vw, 30px);
+    border-radius: 22px;
+    background-color: #1b5539;
+    background-image:
+      radial-gradient(120% 130% at 18% 8%, rgba(255,255,255,.12), transparent 46%),
+      radial-gradient(90% 90% at 72% 92%, rgba(0,0,0,.34), transparent 62%),
+      linear-gradient(145deg, rgba(34,102,72,.50) 0%, rgba(27,85,57,.58) 46%, rgba(19,61,41,.70) 100%),
+      var(--tex-felt);
+    background-size: cover, cover, cover, 430px 430px;
+    background-repeat: no-repeat, no-repeat, no-repeat, repeat;
+    box-shadow:
+      inset 0 0 70px rgba(0,0,0,.38),
+      inset 0 1px 0 rgba(255,255,255,.10),
+      0 18px 40px rgba(0,0,0,.35);
+  }
+  .poker-table { grid-template-columns: repeat(9, var(--pcw)); }
+  .mahjong-table { grid-template-columns: repeat(12, var(--mjw)); }
+
+  .chess-table {
+    display: grid;
+    grid-template-columns: repeat(7, var(--chw));
+    gap: clamp(48px, 6.4vw, 82px) clamp(10px, 1.8vw, 22px);
+    padding: clamp(18px, 2.8vw, 34px);
+    border-radius: 18px;
+    background-color: #1a1b1e;
+    background-image:
+      radial-gradient(120% 120% at 18% 10%, rgba(255,255,255,.06), transparent 50%),
+      repeating-linear-gradient(0deg, rgba(255,255,255,.032) 0 1px, transparent 1px 11.11%),
+      repeating-linear-gradient(90deg, rgba(255,255,255,.032) 0 1px, transparent 1px 10%),
+      linear-gradient(150deg, rgba(38,40,44,.64) 0%, rgba(27,29,32,.72) 55%, rgba(18,19,22,.82) 100%),
+      var(--tex-charcoal);
+    background-size: cover, 100% 100%, 100% 100%, cover, 430px 430px;
+    background-repeat: no-repeat, repeat, repeat, no-repeat, repeat;
+    box-shadow:
+      inset 0 0 90px rgba(0,0,0,.55),
+      inset 0 1px 0 rgba(255,255,255,.06),
+      0 18px 40px rgba(0,0,0,.42);
+  }
+
+  .asset {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+  }
+  .poker-table .asset { width: var(--pcw); height: var(--pch); }
+  .mahjong-table .asset { width: var(--mjw); height: var(--mjh); }
+  .chess-table .asset { width: var(--chw); height: var(--chw); }
+
+  .asset-flat .ca-face {
+    transform: rotate(var(--tilt, 0deg));
+    transform-origin: 50% 50%;
+  }
+  .asset-upright .stand {
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+  }
+  /* Billboard: counter-rotate the table so the piece stands upright, bottom on the table. */
+  .asset-upright .ca-face {
+    transform: rotateZ(14deg) rotateX(-52deg);
+    transform-origin: 50% 100%;
+  }
+
+  /* ---------- unified contact shadow: ellipse, +10px right, +8px down ---------- */
+  .contact-shadow {
+    position: absolute;
+    left: calc(50% + 10px);
+    top: calc(100% + 8px);
+    width: 86%;
+    height: 18%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: radial-gradient(ellipse at 50% 50%,
+      rgba(0,0,0,.55) 0%,
+      rgba(0,0,0,.30) 38%,
+      rgba(0,0,0,.10) 62%,
+      rgba(0,0,0,0) 78%);
+    filter: blur(5px);
+    opacity: .62;
+    pointer-events: none;
+  }
+  .chess-table .contact-shadow {
+    width: 82%;
+    height: 16%;
+  }
+
+  /* ---------- card face base ---------- */
+  .ca-face {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 100%;
+    container-type: inline-size;
+    font-family: var(--font-cjk);
+    overflow: hidden;
+    transform-style: preserve-3d;
+  }
+
+  .ca-poker {
+    background-color: #faf7ec;
+    background-image:
+      radial-gradient(120% 105% at 20% 10%, rgba(255,254,251,.86) 0%, rgba(250,247,236,.82) 52%, rgba(237,231,213,.80) 100%),
+      var(--tex-wood-light);
+    background-size: cover, cover;
+    background-position: center, center;
+    background-repeat: no-repeat, no-repeat;
+    border: 1px solid #d7cfb9;
+    border-radius: 6.5%;
+    color: #20242a;
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,.72),
+      inset -2px -3px 0 rgba(120,105,80,.10),
+      0 2px 0 #d0c6ad;
+  }
+  .ca-poker.ca-red { color: var(--red); }
+  .ca-poker.ca-black { color: #20242a; }
+
+  .ca-corner {
+    position: absolute;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: .92;
+    font-weight: 700;
+  }
+  .ca-corner-tl { left: 5.5%; top: 4.4%; }
+  .ca-corner-br { right: 5.5%; bottom: 4.4%; transform: rotate(180deg); }
+  .ca-corner b { font-weight: 800; line-height: .9; letter-spacing: -.02em; }
+  .ca-corner i { font-style: normal; line-height: 1; margin-top: 3%; }
+
+  .ca-center {
+    position: absolute;
+    inset: 13% 12% 13% 12%;
+  }
+  .ca-pip {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    line-height: 1;
+    font-weight: 500;
+  }
+  .ca-ace {
+    display: grid;
+    place-items: center;
+  }
+  .ca-ace::before {
+    content: "";
+    position: absolute;
+    width: 48%;
+    aspect-ratio: 1;
+    border: 1px solid currentColor;
+    border-radius: 50%;
+    opacity: .16;
+  }
+  .ca-ace-suit { line-height: 1; }
+  .ca-court {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3%;
+    width: 100%;
+    height: 100%;
+    border-radius: 4%;
+    background-image:
+      linear-gradient(180deg, rgba(255,252,244,.72), rgba(248,242,229,.66)),
+      var(--tex-wood-dark);
+    background-size: cover, cover;
+    background-position: center, center;
+    background-repeat: no-repeat, no-repeat;
+    box-shadow: inset 0 0 0 1px rgba(110,88,52,.16);
+  }
+  .ca-court-rule {
+    width: 36%;
+    height: 1px;
+    background: currentColor;
+    opacity: .22;
+  }
+  .ca-court-letter {
+    font-weight: 700;
+    line-height: .95;
+    font-family: inherit;
+  }
+  .ca-court-suit { line-height: 1; opacity: .9; }
+
+  .ca-joker-face {
+    position: absolute;
+    inset: 12% 10%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5%;
+    border: 1px solid currentColor;
+    border-radius: 5%;
+    background-image:
+      linear-gradient(180deg, rgba(255,253,247,.78), rgba(247,241,227,.72)),
+      var(--tex-wood-dark);
+    background-size: cover, cover;
+    background-position: center, center;
+    background-repeat: no-repeat, no-repeat;
+    opacity: .92;
+  }
+  .ca-joker-tag { letter-spacing: .18em; font-weight: 700; }
+  .ca-joker-word { font-weight: 700; line-height: 1; letter-spacing: .10em; }
+  .ca-joker-suit { line-height: 1; opacity: .55; }
+  .ca-joker-corner b { letter-spacing: .04em; }
+  .ca-joker-corner i { font-weight: 700; }
+
+  /* ---------- mahjong tile: ivory / lacquer bevel ---------- */
+  .ca-mahjong {
+    background-color: #f4efdf;
+    background-image:
+      linear-gradient(150deg, rgba(255,252,243,.82) 0%, rgba(244,239,224,.80) 55%, rgba(224,214,190,.80) 100%),
+      var(--tex-wood-light);
+    background-size: cover, cover;
+    background-position: center, center;
+    background-repeat: no-repeat, no-repeat;
+    border: 1px solid #d6cab0;
+    border-radius: 11%;
+    color: #20303a;
+    box-shadow:
+      inset 2px 2px 0 rgba(255,255,255,.95),
+      inset -2px -3px 0 rgba(110,95,70,.16),
+      0 3px 0 #cdc1a6;
+  }
+  .ca-mj-inner {
+    position: absolute;
+    inset: 7% 6%;
+    display: block;
+    border-radius: 8%;
+    background-color: #f7f2e3;
+    background-image:
+      radial-gradient(120% 100% at 24% 12%, rgba(255,253,246,.90) 0%, rgba(247,242,227,.86) 70%, rgba(236,226,204,.82) 100%),
+      var(--tex-wood-light);
+    background-size: cover, cover;
+    background-position: center, center;
+    background-repeat: no-repeat, no-repeat;
+    box-shadow: inset 0 0 0 1px rgba(140,120,85,.18);
+  }
+  /* Lacquered base edge on the ivory tile. */
+  .ca-mahjong::after {
+    content: "";
+    position: absolute;
+    left: 3.5%;
+    right: 3.5%;
+    bottom: 0.6%;
+    height: 5%;
+    border-radius: 0 0 9% 9%;
+    background-image:
+      linear-gradient(180deg, rgba(12,12,14,.45), rgba(8,8,10,.90)),
+      var(--tex-lacquer);
+    background-size: cover, cover;
+    opacity: .55;
+    pointer-events: none;
+  }
+  .ca-mj-wan .ca-mj-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2%;
+  }
+  .ca-mj-num { color: #1d3f6e; font-weight: 600; line-height: 1; }
+  .ca-mj-unit { color: #b03a34; font-weight: 700; line-height: 1; }
+
+  .ca-dot {
+    position: absolute;
+    aspect-ratio: 1;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    border: 2px solid #245e86;
+    background:
+      radial-gradient(circle at 36% 32%, #ffffff 0 14%, #3a7fa8 15% 40%, #e9f2f7 41% 54%, #245e86 55% 76%, #e9f2f7 77%);
+  }
+  .ca-dot::after {
+    content: "";
+    position: absolute;
+    inset: 28%;
+    border-radius: 50%;
+    background: #c2483e;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.55);
+  }
+
+  .ca-stick {
+    position: absolute;
+    width: 8.5%;
+    transform: translate(-50%, -50%);
+    border-radius: 42% / 9%;
+    background: linear-gradient(90deg, #1f6039 0%, #63b57e 46%, #276e43 100%);
+    box-shadow:
+      inset 0 0 0 1px rgba(20,60,35,.35),
+      0 1px 0 rgba(255,255,255,.42);
+  }
+  .ca-stick::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 5%;
+    bottom: 5%;
+    width: 12%;
+    transform: translateX(-50%);
+    background: rgba(255,255,255,.20);
+    border-radius: 2px;
+  }
+  .ca-stick::after {
+    content: "";
+    position: absolute;
+    left: 10%;
+    right: 10%;
+    top: 44%;
+    height: 11%;
+    background: #dce8cd;
+    opacity: .55;
+    border-radius: 2px;
+  }
+
+  .ca-bird {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+  }
+  .ca-bird svg { width: 58%; height: auto; }
+
+  .ca-mj-wind .ca-mj-inner,
+  .ca-mj-dragon .ca-mj-inner {
+    display: grid;
+    place-items: center;
+  }
+  .ca-mj-honor {
+    line-height: 1;
+    font-weight: 600;
+    font-family: "Songti SC", "STKaiti", "PingFang SC", serif;
+  }
+  .ca-tone-wind { color: #1f4d3f; }
+  .ca-tone-red { color: #b02e2a; }
+  .ca-tone-green { color: #1f7a4c; }
+  .ca-tone-blue { color: #235d8c; }
+
+  /* ---------- xiangqi piece: matte wood / stone ---------- */
+  .ca-chess {
+    border-radius: 50%;
+    aspect-ratio: 1;
+    background-color: #e7d6b4;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    border: 2px solid #8d6d42;
+    box-shadow:
+      inset 0 0 0 6px rgba(255,250,235,.50),
+      inset 0 0 0 8px rgba(120,88,48,.45),
+      0 4px 0 #6f5535,
+      0 6px 8px rgba(0,0,0,.25);
+  }
+  .ca-chess-rim {
+    position: absolute;
+    inset: 12%;
+    border-radius: 50%;
+    border: 1px solid rgba(110,82,45,.50);
+    box-shadow: inset 0 0 0 2px rgba(255,250,238,.45);
+  }
+  .ca-chess-glyph {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font-family: "STKaiti", "Songti SC", "PingFang SC", serif;
+    font-weight: 600;
+    line-height: 1;
+  }
+  .ca-chess-red {
+    color: #a92a2a;
+    background-image:
+      radial-gradient(circle at 30% 22%, rgba(255,250,235,.60) 0%, rgba(247,234,205,.52) 48%, rgba(214,184,138,.50) 100%),
+      var(--tex-wood-light);
+  }
+  .ca-chess-black {
+    color: #202225;
+    background-image:
+      radial-gradient(circle at 30% 22%, rgba(252,252,248,.58) 0%, rgba(226,223,215,.50) 50%, rgba(176,170,158,.48) 100%),
+      var(--tex-stone);
+  }
+
+  /* ---------- export mode ---------- */
+  html.export-mode,
+  body.export-mode {
+    background: transparent;
+    min-height: 100vh;
+  }
+  .export-root {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    background: transparent;
+  }
+  .export-frame {
+    position: relative;
+    width: 360px;
+    height: 420px;
+    background: transparent;
+    overflow: hidden;
+  }
+  .export-frame.overview {
+    width: 1200px;
+    height: 800px;
+    background:
+      radial-gradient(110% 80% at 50% 0%, #1b2025 0%, #101215 55%, #0a0b0d 100%);
+    overflow: hidden;
+  }
+  .export-scene {
+    width: 100%;
+    height: 100%;
+    display: grid;
+    place-items: center;
+    perspective: 1600px;
+    perspective-origin: 50% 38%;
+    overflow: visible;
+    padding: 0;
+  }
+  .export-table {
+    margin: 0;
+    padding: 0;
+    display: block;
+    background: transparent;
+    box-shadow: none;
+    border-radius: 0;
+  }
+  .export-frame .asset { width: 220px; height: 308px; }
+  .export-frame[data-kind="mahjong"] .asset { width: 224px; height: 282px; }
+  .export-frame[data-kind="chess"] .asset { width: 210px; height: 210px; }
+
+  .overview-scene {
+    position: relative;
+    width: 1200px;
+    height: 800px;
+    display: grid;
+    place-items: center;
+    perspective: 1600px;
+    perspective-origin: 50% 45%;
+    overflow: hidden;
+  }
+  .overview-table {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 20px;
+    border-radius: 22px;
+    background-color: #1b5539;
+    background-image:
+      radial-gradient(120% 130% at 18% 8%, rgba(255,255,255,.12), transparent 46%),
+      radial-gradient(90% 90% at 72% 92%, rgba(0,0,0,.34), transparent 62%),
+      linear-gradient(145deg, rgba(34,102,72,.50) 0%, rgba(27,85,57,.58) 46%, rgba(19,61,41,.70) 100%),
+      var(--tex-felt);
+    background-size: cover, cover, cover, 430px 430px;
+    background-repeat: no-repeat, no-repeat, no-repeat, repeat;
+    box-shadow: inset 0 0 70px rgba(0,0,0,.38), 0 18px 40px rgba(0,0,0,.35);
+  }
+  .overview-row { display: grid; gap: 5px; }
+  .overview-poker { grid-template-columns: repeat(18, 54px); }
+  .overview-mahjong { grid-template-columns: repeat(17, 54px); }
+  .overview-chess { grid-template-columns: repeat(14, 54px); margin-top: 44px; }
+  .overview-poker .asset { width: 54px; height: 70px; }
+  .overview-mahjong .asset { width: 54px; height: 64px; }
+  .overview-chess .asset { width: 54px; height: 54px; }
+  .overview-table .contact-shadow { filter: blur(3px); }
+
+  @media (max-width: 640px) {
+    .page-head { padding: 20px 14px 8px; }
+    .gallery { padding: 0 8px 40px; gap: 16px; }
+    .cat-head { padding: 10px 12px 0; }
+    .scene { padding: 26px 0 18px; }
+    .scene-chess { padding: 78px 0 34px; }
+  }
+</style>
+</head>
+<body>
+<header class="page-head">
+  <h1>牌面资产画廊 · 102</h1>
+  <p>
+    代码 + 系统字体渲染 · <span class="counts">扑克 54 / 麻将 34 / 象棋 14</span><br>
+    统一 3D 桌面：perspective 1600px · rotateX(52°) · rotateZ(-14°) · 左上光 · 右下椭圆接触阴影<br>
+    本地 FLUX 材质底图（木 / 石 / 象牙 / 漆面 / 毛毡 / 炭）· 汉字仍由系统字体渲染
+  </p>
+</header>
+<main class="gallery" id="gallery"></main>
+<noscript>需要启用 JavaScript 才能渲染牌面。</noscript>
+<script type="module">
+import {
+  pokerCards,
+  mahjongTiles,
+  chessPieces,
+  allCards,
+  cardHTML,
+} from '../app/cardart.js';
+
+const TEXTURE_URLS = [
+  '../assets/cardart/textures/wood-dark.png',
+  '../assets/cardart/textures/wood-light.png',
+  '../assets/cardart/textures/stone.png',
+  '../assets/cardart/textures/lacquer-black.png',
+  '../assets/cardart/textures/felt-green.png',
+  '../assets/cardart/textures/charcoal.png',
+];
+
+function preloadTextures() {
+  return Promise.all(
+    TEXTURE_URLS.map(
+      (src) =>
+        new Promise((resolve) => {
+          const image = new Image();
+          image.onload = () => resolve({ src, ok: true });
+          image.onerror = () => resolve({ src, ok: false });
+          image.src = src;
+        }),
+    ),
+  ).then((results) => {
+    window.__CARDART_TEXTURES_READY__ = results.every((result) => result.ok);
+    window.__CARDART_TEXTURE_MISSING__ = results.filter((result) => !result.ok).map((result) => result.src);
+    return results;
+  });
+}
+
+const GALLERY_READY = () => {
+  window.__CARDART_READY__ = true;
+  document.documentElement.dataset.cardartReady = '1';
+};
+
+function tiltFor(id) {
+  let hash = 0;
+  for (let i = 0; i < id.length; i += 1) {
+    hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  }
+  return Math.round(((hash % 241) / 10 - 12) * 10) / 10; // -12.0 .. +12.0
+}
+
+function buildAsset(item) {
+  const asset = document.createElement('div');
+  asset.dataset.cardId = item.id;
+  asset.dataset.exportId = item.id;
+  asset.dataset.kind = item.kind;
+
+  if (item.kind === 'chess') {
+    asset.className = 'asset asset-upright';
+    asset.innerHTML = `<div class="stand">${cardHTML(item)}</div><span class="contact-shadow"></span>`;
+  } else {
+    const tilt = tiltFor(item.id);
+    asset.className = 'asset asset-flat';
+    asset.dataset.tilt = String(tilt);
+    asset.style.setProperty('--tilt', `${tilt}deg`);
+    asset.innerHTML = `${cardHTML(item)}<span class="contact-shadow"></span>`;
+  }
+  return asset;
+}
+
+function buildCategory({ title, note, items, gridClass, sceneClass }) {
+  const section = document.createElement('section');
+  section.className = 'cat';
+  section.innerHTML = `
+    <div class="cat-head"><h2>${title}</h2><span>${note}</span></div>
+    <div class="scene ${sceneClass}">
+      <div class="table3d ${gridClass}" data-perspective="1600" data-rx="52" data-rz="-14"></div>
+    </div>`;
+  const table = section.querySelector('.table3d');
+  for (const item of items) table.appendChild(buildAsset(item));
+  return section;
+}
+
+function fitTables() {
+  for (const scene of document.querySelectorAll('.scene')) {
+    const table = scene.querySelector('.table3d');
+    if (!table) continue;
+    table.style.setProperty('--fit', '1');
+    let rect = table.getBoundingClientRect();
+    const available = scene.clientWidth - 8;
+    if (rect.width > available) {
+      let scale = available / rect.width;
+      table.style.setProperty('--fit', String(scale));
+      rect = table.getBoundingClientRect();
+      if (rect.width > available) {
+        scale *= available / rect.width;
+        table.style.setProperty('--fit', String(scale));
+      }
+    }
+  }
+}
+
+function mountGallery() {
+  const gallery = document.getElementById('gallery');
+  gallery.append(
+    buildCategory({
+      title: '扑克 · 54',
+      note: '52 张 + 大小王 · 经典点阵 A–10 · J/Q/K 字牌',
+      items: pokerCards(),
+      gridClass: 'poker-table',
+      sceneClass: 'scene-poker',
+    }),
+    buildCategory({
+      title: '麻将 · 34',
+      note: '万 / 筒 / 条 各 1–9 · 東南西北中發白',
+      items: mahjongTiles(),
+      gridClass: 'mahjong-table',
+      sceneClass: 'scene-mahjong',
+    }),
+    buildCategory({
+      title: '象棋 · 14',
+      note: '红 帥仕相馬車炮兵 · 黑 將士象馬車砲卒 · 直立广告牌',
+      items: chessPieces(),
+      gridClass: 'chess-table',
+      sceneClass: 'scene-chess',
+    }),
+  );
+  fitTables();
+  preloadTextures().then(() => {
+    requestAnimationFrame(() => {
+      fitTables();
+      requestAnimationFrame(GALLERY_READY);
+    });
+  });
+}
+
+/* ---------------- export mode ---------------- */
+
+const exportParam = new URLSearchParams(location.search).get('export');
+
+function buildOverview() {
+  const scene = document.createElement('div');
+  scene.className = 'overview-scene';
+  const table = document.createElement('div');
+  table.className = 'table3d overview-table';
+  table.style.setProperty('--fit', '1');
+
+  const groups = [
+    ['poker', pokerCards()],
+    ['mahjong', mahjongTiles()],
+    ['chess', chessPieces()],
+  ];
+  for (const [kind, items] of groups) {
+    const row = document.createElement('div');
+    row.className = `overview-row overview-${kind}`;
+    for (const item of items) row.appendChild(buildAsset(item));
+    table.appendChild(row);
+  }
+  scene.appendChild(table);
+  return scene;
+}
+
+function setupExportMode() {
+  document.body.classList.add('export-mode');
+  document.documentElement.classList.add('export-mode');
+  document.documentElement.style.background = 'transparent';
+  document.body.style.background = 'transparent';
+  document.querySelector('.page-head')?.remove();
+  document.getElementById('gallery')?.remove();
+
+  const root = document.createElement('div');
+  root.className = 'export-root';
+  const frame = document.createElement('div');
+  frame.className = 'export-frame';
+  root.appendChild(frame);
+  document.body.appendChild(root);
+
+  const items = allCards();
+  const byId = new Map(items.map((item) => [item.id, item]));
+  const byPath = new Map(items.map((item) => [item.exportPath, item]));
+
+  function render(id) {
+    frame.innerHTML = '';
+    frame.removeAttribute('data-kind');
+    frame.dataset.exportId = id;
+    frame.classList.toggle('overview', id === '__gallery__');
+
+    if (id === '__gallery__') {
+      frame.style.width = '1200px';
+      frame.style.height = '800px';
+      frame.appendChild(buildOverview());
+      return null;
+    }
+
+    frame.style.width = '360px';
+    frame.style.height = '420px';
+    const item = byId.get(id) || byPath.get(id);
+    if (!item) throw new Error(`Unknown card id: ${id}`);
+    frame.dataset.kind = item.kind;
+
+    const scene = document.createElement('div');
+    scene.className = 'scene export-scene';
+    const table = document.createElement('div');
+    table.className = `table3d export-table ${item.kind}`;
+    table.dataset.perspective = '1600';
+    table.dataset.rx = '52';
+    table.dataset.rz = '-14';
+    table.style.setProperty('--fit', '1');
+    table.appendChild(buildAsset(item));
+    scene.appendChild(table);
+    frame.appendChild(scene);
+    return item.exportPath;
+  }
+
+  window.cardartExport = {
+    ids: items.map((item) => item.id),
+    count: items.length,
+    paths: Object.fromEntries(items.map((item) => [item.id, item.exportPath])),
+    render,
+  };
+
+  const requested = new URLSearchParams(location.search).get('id');
+  render(requested && requested !== '1' ? requested : 'AS');
+  preloadTextures().then(() => {
+    requestAnimationFrame(() => requestAnimationFrame(GALLERY_READY));
+  });
+}
+
+if (exportParam) {
+  setupExportMode();
+} else {
+  mountGallery();
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="data:,">
+<title>麻将 · 单机</title>
+<style>
+  :root{
+    --bg:#0d1117;--panel:#161d26;--panel-2:#1e2833;--line:#2c3947;
+    --text:#e9eef5;--muted:#93a3b5;--accent:#4f9cf9;--accent-2:#2f7ad6;
+    --man:#ffb26b;--pin:#76c7e8;--sou:#8adf9b;--honor:#d9b8ff;--danger:#ff7b72;--gold:#ffd479;
+    --tile-bg:#f2eee2;--tile-edge:#c9c1ad;--tile-text:#1a2029;
+  }
+  *{box-sizing:border-box}
+  html,body{max-width:100%;overflow-x:hidden}
+  body{
+    margin:0;padding:10px;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    min-height:100dvh;display:flex;flex-direction:column;gap:10px;
+  }
+  [hidden]{display:none!important}
+  h1{font-size:18px;line-height:1.2;margin:0}
+  .top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+  .sub{margin:3px 0 0;color:var(--muted);font-size:12px;min-height:16px}
+  .meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+  .pill{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:6px 10px;font-size:12px;color:var(--muted)}
+  a.link{color:var(--text);text-decoration:none;border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:10px 12px;min-height:44px;display:inline-flex;align-items:center;font-size:13px}
+  a.link:active{background:var(--panel-2)}
+  main{display:flex;flex-direction:column;gap:10px;flex:1;min-height:0}
+  .opponents{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+  .opp{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px;min-width:0}
+  .opp.active{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+  .opp .name{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .opp .count{font-size:15px;font-weight:700;margin-top:2px}
+  .opp .count small{font-size:10px;color:var(--muted);font-weight:400}
+  .table{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px}
+  .rivers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  .river{min-width:0}
+  .river-head{font-size:11px;color:var(--muted);margin-bottom:3px;display:flex;justify-content:space-between;gap:4px}
+  .river-tiles{display:flex;flex-wrap:wrap;gap:3px;min-height:30px;align-content:flex-start}
+  .river-empty{font-size:11px;color:#5d6b7a}
+  .mtile{width:22px;height:27px;border-radius:4px;background:var(--tile-bg);border:1px solid var(--tile-edge);color:var(--tile-text);font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:700;padding:0}
+  .mtile.man{color:#a33b12}.mtile.pin{color:#0d5f93}.mtile.sou{color:#177a3a}.mtile.z{color:#6b2d9c}
+  .hand-panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px}
+  .hand-head{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted)}
+  .hand{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+  .tile{
+    width:100%;min-width:0;min-height:52px;padding:2px 0;border-radius:7px;border:1px solid var(--tile-edge);
+    background:linear-gradient(180deg,#fbf8ee,#e7e0cd);color:var(--tile-text);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+    font-family:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+    transition:transform .08s ease,box-shadow .08s ease;
+  }
+  .tile:active{transform:translateY(1px)}
+  .tile:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  .tile[disabled]{opacity:.62;cursor:default}
+  .tile .rank{font-size:16px;font-weight:800;line-height:1}
+  .tile .suit{font-size:11px;line-height:1;font-weight:700}
+  .tile.man .suit,.tile.man .rank{color:#a33b12}
+  .tile.pin .suit,.tile.pin .rank{color:#0d5f93}
+  .tile.sou .suit,.tile.sou .rank{color:#177a3a}
+  .tile.z .suit,.tile.z .rank{color:#6b2d9c}
+  .tile.z .suitsolo{font-size:17px;font-weight:800}
+  .actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+  button,.select-wrap{min-height:44px}
+  button{
+    font-family:inherit;font-size:14px;color:var(--text);background:var(--panel-2);
+    border:1px solid var(--line);border-radius:10px;padding:0 14px;cursor:pointer;
+    min-width:72px;touch-action:manipulation;
+  }
+  button:active{filter:brightness(1.15)}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#08111d;font-weight:800}
+  button.ghost{background:transparent}
+  button:focus-visible,a:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .select-wrap{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);border:1px solid var(--line);border-radius:10px;padding:0 10px;background:var(--panel-2)}
+  select{font-family:inherit;font-size:14px;color:var(--text);background:transparent;border:0;min-height:44px;min-width:44px;outline:none}
+  .overlay{position:fixed;inset:0;background:rgba(4,8,13,.72);display:flex;align-items:center;justify-content:center;padding:12px;z-index:10}
+  .result{width:100%;max-width:340px;max-height:80dvh;overflow:auto;background:var(--panel);border:1px solid var(--accent);border-radius:16px;padding:16px;box-shadow:0 18px 50px rgba(0,0,0,.5)}
+  .result h2{font-size:20px;margin:0 0 6px}
+  .result .kind{color:var(--accent);font-size:13px;margin:0 0 10px}
+  .result dl{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;margin:0 0 12px;font-size:13px}
+  .result dt{color:var(--muted)}
+  .result dd{margin:0;text-align:right}
+  .result .yaku{font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:12px;overflow-wrap:anywhere}
+  .result button{width:100%}
+  /* 结果页留存块：沿用 rewards.html 的深色 token */
+  .result h3{font-size:13px;margin:0 0 4px;color:var(--text)}
+  .result .rr-hint{color:var(--muted);font-size:11px;line-height:1.5;margin:0 0 8px;overflow-wrap:anywhere}
+  .result .rr-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:0 0 8px}
+  .result .rr-stat{background:var(--panel-2);border:1px solid var(--line);border-radius:9px;padding:6px 8px;min-width:0}
+  .result .rr-stat span{display:block;color:var(--muted);font-size:10px}
+  .result .rr-stat strong{display:block;font-size:17px;line-height:1.2;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+  .result .rr-stat small{display:block;color:var(--muted);font-size:10px;overflow-wrap:anywhere}
+  .result .rr-levelup{color:var(--gold);font-weight:700;font-size:13px;margin:0 0 8px;overflow-wrap:anywhere}
+  .result .rr-levelup.flash{animation:levelup-pop 900ms ease-out}
+  @keyframes levelup-pop{
+    0%{transform:scale(.92);opacity:.2}
+    45%{transform:scale(1.04);opacity:1}
+    100%{transform:scale(1);opacity:1}
+  }
+  .result .rr-warn{color:var(--danger);font-size:11px;font-weight:600;margin:0 0 8px;overflow-wrap:anywhere}
+  .result .rr-board{display:grid;gap:4px;margin:0 0 8px;padding:0;list-style:none}
+  .result .rr-board li{display:flex;align-items:baseline;gap:8px;padding:5px 8px;border-radius:8px;background:var(--panel-2);border:1px solid transparent;min-width:0}
+  .result .rr-board li.self{border-color:var(--accent)}
+  .result .rr-rank{flex:0 0 auto;color:var(--muted);font-size:11px;font-variant-numeric:tabular-nums}
+  .result .rr-who{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+  .result .rr-score{flex:0 0 auto;font-weight:700;font-variant-numeric:tabular-nums}
+  .result .rr-empty{font-size:11px;color:var(--muted)}
+  .result .rr-actions{display:grid;gap:6px;margin:0 0 8px}
+  .result .rr-actions button{width:100%;min-height:44px}
+  .result .status{color:var(--accent);font-size:11px;min-height:16px;margin:0 0 8px;overflow-wrap:anywhere}
+  @media (max-width:374px){
+    .hand{grid-template-columns:repeat(5,minmax(0,1fr))}
+    .opponents{grid-template-columns:repeat(2,minmax(0,1fr))}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none!important;animation:none!important}
+  }
+</style>
+</head>
+<body>
+  <header class="top">
+    <div>
+      <h1>麻将 · 单机</h1>
+      <p class="sub" id="status" aria-live="polite">准备中</p>
+    </div>
+    <div class="meta">
+      <span class="pill" id="wallCount">牌墙 0</span>
+      <a class="link" href="./rooms.html">房间</a>
+    </div>
+  </header>
+
+  <main>
+    <section id="opponents" class="opponents" aria-label="对家"></section>
+
+    <section class="table" aria-label="弃牌区">
+      <div class="rivers" id="rivers"></div>
+    </section>
+
+    <section class="hand-panel">
+      <div class="hand-head">
+        <span>你的手牌</span>
+        <span id="hint">点击一张牌打出</span>
+      </div>
+      <div id="hand" class="hand" role="group" aria-label="你的手牌"></div>
+      <div class="actions">
+        <button id="tsumo" class="primary" type="button" hidden>自摸胡牌</button>
+        <button id="ron" class="primary" type="button" hidden>荣和</button>
+        <button id="pass" class="ghost" type="button" hidden>过</button>
+        <button id="newGame" type="button">新局</button>
+        <label class="select-wrap">人数
+          <select id="players" aria-label="玩家人数">
+            <option value="4" selected>4 人</option>
+          </select>
+        </label>
+      </div>
+    </section>
+  </main>
+
+  <div id="overlay" class="overlay" hidden>
+    <div class="result" role="dialog" aria-modal="true" aria-labelledby="resultTitle">
+      <h2 id="resultTitle">本局结束</h2>
+      <p class="kind" id="resultKind"></p>
+      <dl>
+        <dt>番 / 符</dt><dd id="resultHan">—</dd>
+        <dt>点数</dt><dd id="resultPoints">—</dd>
+        <dt>剩余牌墙</dt><dd id="resultWall">—</dd>
+      </dl>
+      <div class="yaku" id="resultYaku"></div>
+      <p class="rr-hint">积分规则：胜 100 + 番数×10（最多 60）+ 余牌奖励（余牌/5，最多 40）+ 自摸 20；负 20；流局 50。只有通过校验的对局才计入本机榜单。</p>
+      <div class="rr-stats" aria-label="本局积分、等级与连胜">
+        <div class="rr-stat"><span>本局积分</span><strong id="rr-points">+0</strong></div>
+        <div class="rr-stat"><span>等级</span><strong id="rr-level">1</strong><small id="rr-level-title"></small></div>
+        <div class="rr-stat"><span>连胜</span><strong id="rr-streak">0</strong><small>天</small></div>
+      </div>
+      <p id="rr-levelup" class="rr-levelup" hidden aria-live="assertive"></p>
+      <p id="rr-trophies" class="rr-hint" hidden></p>
+      <p id="rr-daily" class="rr-hint"></p>
+      <p id="rr-anti" class="rr-warn" hidden></p>
+      <h3>本机匿名榜 · 前 5</h3>
+      <ol id="rr-board" class="rr-board"></ol>
+      <p id="rr-device" class="rr-hint"></p>
+      <div class="rr-actions">
+        <button id="rr-share" class="primary" type="button">分享战绩</button>
+        <button id="rr-claim" class="ghost" type="button">打满 3 局可领奖励</button>
+      </div>
+      <p id="rr-status" class="status" role="status" aria-live="polite"></p>
+      <button id="again" class="primary" type="button">再来一局</button>
+    </div>
+  </div>
+
+  <script type="module" src="./mahjong.js"></script>
+</body>
+</html>

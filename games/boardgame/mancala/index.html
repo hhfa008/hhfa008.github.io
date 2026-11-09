@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>曼卡拉播棋（Mancala）在线玩 — 对 AI · Kalah 规则</title>
+<meta name="description" content="免费在线曼卡拉播棋（Mancala / Kalah 规则）：两排各 6 洞、两端仓库，点击自己的洞逆时针播种。最后一颗进仓库可再来一回合，落进己方空洞可吃子；与 AI 对弈，看谁仓库里的石子更多。">
+<meta name="theme-color" content="#f3eee2">
+<meta name="color-scheme" content="light dark">
+<meta name="robots" content="index,follow">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231d4b3e'/%3E%3Ccircle cx='10' cy='16' r='4' fill='%23f1d9a8'/%3E%3Ccircle cx='22' cy='16' r='4' fill='%23d79a45'/%3E%3C/svg%3E">
+<style>
+:root{
+  --paper:#f3eee2; --paper-2:#fbf7ed; --ink:#17231f; --muted:#5b675f; --muted-2:#7a837b;
+  --line:#d8d0bf; --line-strong:#bdb3a0;
+  --board:#1d4b3e; --board-deep:#14382e; --board-edge:#0e2c24;
+  --pit:#f3e4c7; --pit-2:#e7d2ab; --pit-edge:#c9b28a; --pit-ink:#2b2a21;
+  --pit-ai:#dbe1d9; --pit-ai-2:#c8d2c8; --pit-ai-edge:#aab8ad;
+  --accent:#c66a28; --accent-2:#e19a4e; --accent-soft:#f5e2c9;
+  --human:#c66a28; --ai:#6f8379; --good:#2f7d54; --bad:#a8432e;
+  --store-human-a:#e4b05c; --store-human-b:#bb7c29; --store-human-ink:#2a1c08;
+  --store-ai-a:#8a9d93; --store-ai-b:#5e7268; --store-ai-ink:#f7f3e8;
+  --focus:#ffbd66;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --paper:#0f1513; --paper-2:#161e1a; --ink:#f1ede2; --muted:#a8b1a9; --muted-2:#8b958d;
+    --line:#2b3732; --line-strong:#405049;
+    --board:#15382f; --board-deep:#102b24; --board-edge:#091f1a;
+    --pit:#ddc9a8; --pit-2:#cdb58e; --pit-edge:#9d8866; --pit-ink:#27241b;
+    --pit-ai:#b5c2b8; --pit-ai-2:#9eada2; --pit-ai-edge:#7d8c82;
+    --accent:#e8873d; --accent-2:#f0ad69; --accent-soft:#3a2a1c;
+    --human:#e8873d; --ai:#93a79c; --good:#7fc79c; --bad:#e28b74;
+    --store-human-a:#d3a04f; --store-human-b:#a96f26; --store-human-ink:#251806;
+    --store-ai-a:#63786d; --store-ai-b:#45594f; --store-ai-ink:#f1ede2;
+    --focus:#ffc879;
+  }
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%;background:var(--paper)}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font:16px/1.55 var(--sans); -webkit-font-smoothing:antialiased;
+  overflow-wrap:break-word;
+}
+h1,h2,p,ul{margin:0}
+button,a{font:inherit}
+a{color:inherit}
+button{touch-action:manipulation}
+.wrap{width:100%; max-width:760px; margin:0 auto; padding:0 4px}
+.site-header{border-bottom:1px solid var(--line); background:var(--paper)}
+.header-inner{min-height:58px; display:flex; align-items:center; justify-content:space-between; gap:10px}
+.brand{display:flex; align-items:center; gap:8px; min-width:0; font-weight:700; letter-spacing:-.01em}
+.brand-mark{width:24px; height:24px; border-radius:8px; flex:none;
+  background:linear-gradient(145deg,var(--accent-2),var(--accent)); box-shadow:inset 0 0 0 1px rgb(255 255 255 / .25)}
+.brand-name{font-size:15px}
+.brand-sep{color:var(--muted-2); font-weight:400}
+.brand-game{font-size:14px; color:var(--muted); font-weight:600}
+.rules-link{display:inline-flex; align-items:center; justify-content:center; min-height:44px; padding:0 12px;
+  border:1px solid var(--line-strong); border-radius:10px; text-decoration:none; font-size:14px; font-weight:650;
+  color:var(--muted); background:var(--paper-2); white-space:nowrap}
+.rules-link:hover{color:var(--ink); border-color:var(--accent)}
+.hero{padding:24px 4px 16px}
+.eyebrow{font-family:var(--mono); font-size:11px; line-height:1.4; font-weight:700; letter-spacing:.11em;
+  text-transform:uppercase; color:var(--accent); margin-bottom:7px}
+.hero h1{font-size:clamp(2rem,9vw,3rem); line-height:1.05; letter-spacing:-.035em}
+.lede{max-width:34em; margin-top:9px; color:var(--muted); font-size:15px; line-height:1.6}
+.game{background:var(--board-deep); border:1px solid var(--board-edge); border-radius:22px; padding:4px;
+  box-shadow:0 18px 45px rgb(25 40 34 / .16), inset 0 1px 0 rgb(255 255 255 / .07)}
+@media (prefers-color-scheme: dark){
+  .game{box-shadow:0 18px 45px rgb(0 0 0 / .35), inset 0 1px 0 rgb(255 255 255 / .05)}
+}
+.status-row{display:flex; align-items:center; justify-content:space-between; gap:8px; padding:1px 3px 9px; color:#f4f0e4}
+.turn-wrap{display:flex; align-items:center; gap:8px; min-width:0}
+.turn-dot{width:12px; height:12px; border-radius:50%; flex:none; background:var(--human);
+  box-shadow:0 0 0 3px rgb(198 106 40 / .2)}
+.turn-dot.ai{background:var(--ai); box-shadow:0 0 0 3px rgb(147 167 156 / .18)}
+.turn-dot.over{background:#b8b1a2; box-shadow:0 0 0 3px rgb(184 177 162 / .14)}
+.turn-text{font-size:14px; line-height:1.3; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.score-mini{display:flex; align-items:center; gap:5px; font-family:var(--mono); font-size:12px;
+  color:#d9d2c2; white-space:nowrap; padding:3px 7px; border:1px solid rgb(255 255 255 / .12); border-radius:999px}
+.score-mini b{color:#fff7e5; font-size:13px}
+.score-mini .colon{opacity:.5}
+.board{
+  display:grid; grid-template-columns:44px minmax(0,1fr) 44px; gap:2px;
+  padding:2px; border-radius:18px;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgb(255 255 255 / .08), transparent 62%),
+    linear-gradient(160deg,#245847,var(--board) 55%,var(--board-deep));
+  border:1px solid rgb(255 255 255 / .07);
+  box-shadow:inset 0 2px 8px rgb(0 0 0 / .2), 0 1px 0 rgb(255 255 255 / .05);
+}
+.playfield{display:grid; gap:4px; min-width:0}
+.pit-row{display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:1px; min-width:0}
+.pit-row + .pit-row{border-top:1px solid rgb(255 255 255 / .1); padding-top:4px}
+.pit{
+  appearance:none; -webkit-appearance:none; width:100%; min-width:0; min-height:52px;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+  padding:3px 1px; border:1px solid var(--pit-edge); border-radius:50% / 42%;
+  background:radial-gradient(ellipse at 50% 28%, #fff8e9 0%, var(--pit) 48%, var(--pit-2) 100%);
+  color:var(--pit-ink); cursor:default; user-select:none; -webkit-user-select:none;
+  box-shadow:inset 0 3px 6px rgb(81 55 21 / .14), inset 0 -2px 2px rgb(255 255 255 / .3), 0 2px 0 rgb(0 0 0 / .16);
+  transition:transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+}
+.pit.ai{
+  background:radial-gradient(ellipse at 50% 28%, #f2f5ee 0%, var(--pit-ai) 50%, var(--pit-ai-2) 100%);
+  border-color:var(--pit-ai-edge);
+}
+.pit.playable{
+  cursor:pointer; border-color:var(--accent); border-width:2px;
+  box-shadow:inset 0 3px 6px rgb(81 55 21 / .12), 0 0 0 2px rgb(198 106 40 / .18), 0 1px 0 rgb(0 0 0 / .14);
+}
+.pit.playable:hover{transform:translateY(-2px); box-shadow:inset 0 3px 6px rgb(81 55 21 / .12), 0 4px 0 rgb(0 0 0 / .16), 0 0 0 3px rgb(198 106 40 / .24)}
+.pit.playable:active{transform:translateY(0) scale(.97)}
+.pit.empty{opacity:.55}
+.pit:focus-visible,.rules-link:focus-visible,.btn-primary:focus-visible,.btn-ghost:focus-visible{
+  outline:3px solid var(--focus); outline-offset:2px;
+}
+.pit-count{font-family:var(--mono); font-size:21px; line-height:1; font-weight:800; letter-spacing:-.04em; pointer-events:none}
+.pit-index{font-family:var(--mono); font-size:8px; line-height:1; font-weight:700; opacity:.48; pointer-events:none}
+.store{
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px;
+  padding:4px 1px; border-radius:15px; min-width:0; overflow:hidden;
+  box-shadow:inset 0 2px 5px rgb(0 0 0 / .16), inset 0 -1px 0 rgb(255 255 255 / .18);
+}
+.store-ai{background:linear-gradient(180deg,var(--store-ai-a),var(--store-ai-b)); color:var(--store-ai-ink)}
+.store-you{background:linear-gradient(180deg,var(--store-human-a),var(--store-human-b)); color:var(--store-human-ink)}
+.store-label{font-size:9px; line-height:1.2; font-weight:700; text-align:center; letter-spacing:.02em; opacity:.78}
+.store-count{font-family:var(--mono); font-size:clamp(22px,6.3vw,32px); line-height:1; font-weight:800; letter-spacing:-.05em}
+.store-unit{font-size:8px; line-height:1; opacity:.55}
+.result{
+  display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;
+  margin-top:9px; padding:10px 13px; border-radius:12px; background:var(--accent-soft);
+  border:1px solid var(--line-strong); color:var(--ink);
+}
+.result strong{font-size:16px; line-height:1.25}
+.result span{font-family:var(--mono); font-size:12.5px; color:var(--muted); white-space:nowrap}
+.result.win{border-color:var(--good); box-shadow:inset 3px 0 0 var(--good)}
+.result.lose{border-color:var(--bad); box-shadow:inset 3px 0 0 var(--bad)}
+.result.draw{border-color:var(--line-strong); box-shadow:inset 3px 0 0 var(--muted-2)}
+.message{
+  min-height:44px; display:flex; align-items:center; justify-content:center; text-align:center;
+  padding:7px 6px 0; color:#e1dacb; font-size:13.5px; line-height:1.45;
+}
+.actions{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:7px}
+.btn-primary,.btn-ghost{
+  min-height:48px; display:inline-flex; align-items:center; justify-content:center; gap:6px;
+  border-radius:12px; border:1px solid transparent; text-decoration:none; font-weight:700; font-size:14.5px;
+  touch-action:manipulation;
+}
+.btn-primary{background:var(--accent); color:#fff8ef; border-color:rgb(0 0 0 / .08);
+  box-shadow:0 2px 0 rgb(0 0 0 / .2)}
+.btn-primary:hover{background:var(--accent-2); color:#241706}
+.btn-primary:active{transform:translateY(1px); box-shadow:none}
+.btn-ghost{background:transparent; color:#e1dacb; border-color:rgb(255 255 255 / .18)}
+.btn-ghost:hover{border-color:rgb(255 255 255 / .4); color:#fff}
+.how{padding:18px 4px 0}
+.how h2{font-size:1.08rem; letter-spacing:-.01em; margin-bottom:8px}
+.how ul{margin:0; padding-left:20px; color:var(--muted); font-size:14px; line-height:1.6}
+.how li{margin-bottom:5px}
+.how strong{color:var(--ink)}
+.foot-note{color:var(--muted-2); font-size:12px; line-height:1.5; padding:14px 4px 28px}
+.site-footer{border-top:1px solid var(--line); color:var(--muted-2); font-size:12px;
+  padding:14px 8px calc(20px + env(safe-area-inset-bottom)); text-align:center}
+@media (max-width:389px){
+  .board{grid-template-columns:minmax(0,1fr); grid-template-areas:"ai" "field" "you"; gap:5px; padding:6px}
+  .store{width:100%; height:44px; flex-direction:row; gap:7px; border-radius:11px}
+  .store-ai{grid-area:ai}
+  .playfield{grid-area:field}
+  .store-you{grid-area:you}
+  .store-label{font-size:10px}
+  .store-count{font-size:24px}
+  .store-unit{font-size:9px}
+  .pit{min-height:48px; border-radius:50% / 38%}
+  .pit-count{font-size:19px}
+  .hero{padding-top:18px}
+}
+@media (min-width:520px){
+  .wrap{padding:0 16px}
+  .game{padding:10px}
+  .board{grid-template-columns:56px minmax(0,1fr) 56px; gap:4px; padding:6px}
+  .pit{min-height:58px}
+  .store-count{font-size:34px}
+  .store-label,.store-unit{font-size:10px}
+  .hero{padding-top:30px}
+}
+@media (min-width:760px){
+  .board{grid-template-columns:64px minmax(0,1fr) 64px}
+  .pit{min-height:64px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important; transition:none!important; scroll-behavior:auto!important}
+}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-name">Devin</span>
+      <span class="brand-sep" aria-hidden="true">/</span>
+      <span class="brand-game">曼卡拉</span>
+    </div>
+    <a class="rules-link" href="rules.html" aria-label="阅读曼卡拉播棋规则">规则</a>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero" aria-labelledby="page-title">
+    <p class="eyebrow">Mancala · Kalah 规则</p>
+    <h1 id="page-title">曼卡拉播棋</h1>
+    <p class="lede">把石子一颗颗播进洞里。最后一颗落进自己的仓库，就能再来一回合；落进自己的空洞，还能把对面的石子一起收走。</p>
+  </section>
+
+  <section class="game" aria-label="曼卡拉播棋游戏区域">
+    <div class="status-row">
+      <div class="turn-wrap">
+        <span class="turn-dot" id="turnDot" aria-hidden="true"></span>
+        <strong class="turn-text" id="turnText">轮到你</strong>
+      </div>
+      <div class="score-mini" aria-label="当前比分">
+        <span>你 <b id="miniYou">0</b></span>
+        <span class="colon" aria-hidden="true">:</span>
+        <span><b id="miniAi">0</b> AI</span>
+      </div>
+    </div>
+
+    <div class="board" role="group" aria-label="棋盘：上方是 AI 的六个洞，下方是你的六个洞；左边是 AI 仓库，右边是你的仓库">
+      <div class="store store-ai" id="storeAiBox" aria-label="AI 仓库，0 颗石子">
+        <span class="store-label">AI 仓库</span>
+        <strong class="store-count" id="storeAi">0</strong>
+        <span class="store-unit">颗</span>
+      </div>
+
+      <div class="playfield">
+        <div class="pit-row" id="aiRow" role="group" aria-label="AI 的六个洞"></div>
+        <div class="pit-row" id="youRow" role="group" aria-label="你的六个洞"></div>
+      </div>
+
+      <div class="store store-you" id="storeYouBox" aria-label="你的仓库，0 颗石子">
+        <span class="store-label">你的仓库</span>
+        <strong class="store-count" id="storeYou">0</strong>
+        <span class="store-unit">颗</span>
+      </div>
+    </div>
+
+    <div class="result" id="result" role="status" aria-live="polite" hidden>
+      <strong id="resultTitle"></strong>
+      <span id="resultDetail"></span>
+    </div>
+
+    <p class="message" id="message" role="status" aria-live="polite">点击你这一排的任意非空洞开始播种。</p>
+
+    <div class="actions">
+      <button class="btn-primary" id="restart" type="button" aria-label="重新开始一局曼卡拉">重新开始</button>
+      <a class="btn-ghost" href="rules.html" aria-label="查看曼卡拉播棋规则与常见问题">查看规则</a>
+    </div>
+  </section>
+
+  <section class="how" aria-labelledby="how-title">
+    <h2 id="how-title">三步上手</h2>
+    <ul>
+      <li><strong>选洞：</strong>只能点自己这一排、且里面有石子的洞。石子会逆时针逐洞播撒，经过对手仓库时跳过。</li>
+      <li><strong>抢回合：</strong>最后一颗落进自己的仓库，就能立刻再走一次。落进自己原本为空的洞并吃到对面石子，会一起收进仓库。</li>
+      <li><strong>比仓库：</strong>任意一方六个洞全空时结束，对方剩余的石子也会归入其仓库；仓库石子多者获胜，相同则平局。</li>
+    </ul>
+  </section>
+
+  <p class="foot-note">你执下方（先手），AI 执上方。棋盘和规则都在本机运行，不发送任何对局数据。</p>
+</main>
+
+<footer class="site-footer">曼卡拉 · Mancala Kalah · 离线可玩</footer>
+
+<script src="engine.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var E = window.MancalaEngine;
+  var messageEl = document.getElementById('message');
+  if (!E) {
+    messageEl.textContent = '游戏引擎加载失败，请刷新页面重试。';
+    return;
+  }
+
+  var HUMAN = 0;
+  var AI = 1;
+  var AI_DELAY = 460;
+  var aiRow = document.getElementById('aiRow');
+  var youRow = document.getElementById('youRow');
+  var storeAiEl = document.getElementById('storeAi');
+  var storeYouEl = document.getElementById('storeYou');
+  var storeAiBox = document.getElementById('storeAiBox');
+  var storeYouBox = document.getElementById('storeYouBox');
+  var miniAiEl = document.getElementById('miniAi');
+  var miniYouEl = document.getElementById('miniYou');
+  var turnDot = document.getElementById('turnDot');
+  var turnText = document.getElementById('turnText');
+  var resultEl = document.getElementById('result');
+  var resultTitle = document.getElementById('resultTitle');
+  var resultDetail = document.getElementById('resultDetail');
+  var restartBtn = document.getElementById('restart');
+  var buttons = {};
+  var state = E.setup();
+  var aiTimer = null;
+  var aiSeq = 0;
+
+  function makePit(pit, index, isAI) {
+    var button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'pit ' + (isAI ? 'ai' : 'human');
+    button.setAttribute('data-pit', String(pit));
+
+    var count = document.createElement('span');
+    count.className = 'pit-count';
+    count.setAttribute('aria-hidden', 'true');
+    count.textContent = '0';
+
+    var number = document.createElement('span');
+    number.className = 'pit-index';
+    number.setAttribute('aria-hidden', 'true');
+    number.textContent = String(index);
+
+    button.appendChild(count);
+    button.appendChild(number);
+    button.addEventListener('click', function () { humanMove(pit); });
+    buttons[pit] = button;
+    return button;
+  }
+
+  [6, 7, 8, 9, 10, 11].forEach(function (pit, index) {
+    aiRow.appendChild(makePit(pit, index + 1, true));
+  });
+  for (var i = 0; i < E.PITS; i++) {
+    youRow.appendChild(makePit(i, i + 1, false));
+  }
+
+  function moveMessage(move, actor) {
+    if (!move) return actor === HUMAN ? '你完成了一次播种。' : 'AI 完成了一次播种。';
+    var who = actor === HUMAN ? '你' : 'AI';
+    if (move.capture > 0) {
+      return who + '吃掉了对方 ' + move.capture + ' 颗石子，全部收进自己的仓库。';
+    }
+    if (move.extraTurn) {
+      return who + '的最后一颗落进自己的仓库，获得额外回合。';
+    }
+    return who + (actor === HUMAN ? '' : ' ') + '播下了 ' + move.seeds + ' 颗石子。';
+  }
+
+  function updateBoard() {
+    var scores = E.scores(state);
+    storeAiEl.textContent = String(scores[1]);
+    storeYouEl.textContent = String(scores[0]);
+    miniAiEl.textContent = String(scores[1]);
+    miniYouEl.textContent = String(scores[0]);
+    storeAiBox.setAttribute('aria-label', 'AI 仓库，' + scores[1] + ' 颗石子');
+    storeYouBox.setAttribute('aria-label', '你的仓库，' + scores[0] + ' 颗石子');
+
+    var humanTurn = !state.over && state.turn === HUMAN;
+    for (var pit = 0; pit < E.PIT_COUNT; pit++) {
+      var button = buttons[pit];
+      if (!button) continue;
+      var count = state.pits[pit];
+      var mine = pit < E.PITS;
+      var playable = mine && humanTurn && count > 0;
+
+      button.querySelector('.pit-count').textContent = String(count);
+      button.disabled = !playable;
+      button.classList.toggle('empty', count === 0);
+      button.classList.toggle('playable', playable);
+
+      var side = mine ? '你的第 ' + (pit + 1) + ' 洞' : 'AI 的第 ' + (pit - 5) + ' 洞';
+      var action;
+      if (!mine) action = '不可操作';
+      else if (state.over) action = '本局已结束';
+      else if (state.turn === AI) action = 'AI 回合，不可操作';
+      else if (count === 0) action = '空洞，不可选';
+      else action = '点击播种';
+      button.setAttribute('aria-label', side + '，' + count + ' 颗石子，' + action);
+    }
+  }
+
+  function showResult() {
+    var result = E.status(state);
+    if (!result.over) {
+      resultEl.hidden = true;
+      return;
+    }
+
+    var scores = result.scores;
+    resultEl.hidden = false;
+    if (result.draw) {
+      resultEl.className = 'result draw';
+      resultTitle.textContent = '平局';
+      resultDetail.textContent = '双方各 ' + scores[0] + ' 颗';
+      messageEl.textContent = '本局结束：双方仓库各有 ' + scores[0] + ' 颗石子，平局。';
+    } else if (result.winner === HUMAN) {
+      resultEl.className = 'result win';
+      resultTitle.textContent = '你赢了';
+      resultDetail.textContent = scores[0] + ' : ' + scores[1] + '（你 : AI）';
+      messageEl.textContent = '本局结束：你以 ' + scores[0] + ' : ' + scores[1] + ' 获胜。';
+    } else {
+      resultEl.className = 'result lose';
+      resultTitle.textContent = 'AI 赢了';
+      resultDetail.textContent = scores[0] + ' : ' + scores[1] + '（你 : AI）';
+      messageEl.textContent = '本局结束：AI 以 ' + scores[1] + ' : ' + scores[0] + ' 获胜。';
+    }
+  }
+
+  function render(messageText) {
+    updateBoard();
+    showResult();
+
+    if (state.over) {
+      turnDot.className = 'turn-dot over';
+      turnText.textContent = '本局结束';
+    } else if (state.turn === AI) {
+      turnDot.className = 'turn-dot ai';
+      turnText.textContent = 'AI 思考中…';
+    } else {
+      turnDot.className = 'turn-dot human';
+      turnText.textContent = state.lastMove && state.lastMove.extraTurn ? '额外回合 · 轮到你' : '轮到你';
+    }
+
+    if (messageText != null && !state.over) messageEl.textContent = messageText;
+  }
+
+  function scheduleAI() {
+    if (state.over || state.turn !== AI) return;
+    aiSeq += 1;
+    var seq = aiSeq;
+    if (aiTimer) clearTimeout(aiTimer);
+    aiTimer = setTimeout(function () {
+      aiTimer = null;
+      if (seq !== aiSeq || state.over || state.turn !== AI) return;
+
+      var move = E.aiMove(state, { depth: 5 });
+      if (move == null) {
+        render('AI 没有可走的洞，点“重新开始”再来一局。');
+        return;
+      }
+
+      var next = E.applyMove(state, move);
+      if (!next) {
+        render('AI 走子失败，请点“重新开始”再来一局。');
+        return;
+      }
+
+      state = next;
+      render(moveMessage(state.lastMove, AI));
+      if (!state.over && state.turn === AI) scheduleAI();
+    }, AI_DELAY);
+  }
+
+  function humanMove(pit) {
+    if (state.over || state.turn !== HUMAN || pit < 0 || pit >= E.PITS) return;
+    var next = E.applyMove(state, pit);
+    if (!next) {
+      render('这个洞不能选，请换一个非空洞。');
+      return;
+    }
+
+    state = next;
+    render(moveMessage(state.lastMove, HUMAN));
+    if (!state.over && state.turn === AI) scheduleAI();
+  }
+
+  function restart() {
+    aiSeq += 1;
+    if (aiTimer) {
+      clearTimeout(aiTimer);
+      aiTimer = null;
+    }
+    state = E.setup();
+    render('新的一局。点击你这一排的任意非空洞开始播种。');
+  }
+
+  restartBtn.addEventListener('click', restart);
+  render('点击你这一排的任意非空洞开始播种。');
+})();
+</script>
+</body>
+</html>

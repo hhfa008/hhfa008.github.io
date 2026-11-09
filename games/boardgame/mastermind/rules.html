@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>珠玑妙算规则：Mastermind 六色四位与黑白提示</title>
+<meta name="description" content="珠玑妙算（Mastermind）完整中文规则：六种颜色、四位密码、允许重复，黑钉与白钉如何按多重集计算，十次机会、胜负判定与 AI 提示说明。">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="author" content="Devin">
+<meta name="theme-color" content="#171a24">
+<style>
+:root{
+  --bg:#f2eee5;--card:#fffdf8;--ink:#1c1f2a;--muted:#666b78;--line:#ded8ca;
+  --accent:#b8462f;--dark:#171a24;--on-dark:#f7f2e7;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --radius:16px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;background:var(--bg)}
+body{
+  margin:0;min-height:100vh;background:radial-gradient(900px 420px at 50% -10%,#faf6ec,var(--bg));
+  color:var(--ink);font:16px/1.7 var(--sans);overflow-wrap:break-word;-webkit-font-smoothing:antialiased
+}
+h1,h2,p{margin:0}
+a{color:inherit}
+.wrap{max-width:680px;margin:0 auto;padding:18px 16px calc(30px + env(safe-area-inset-bottom))}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.eyebrow{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;font-size:11px;font-weight:700;letter-spacing:.16em;color:var(--accent);text-transform:uppercase}
+.back{
+  display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 12px;
+  border:1px solid var(--line);border-radius:11px;background:var(--card);font-size:14px;font-weight:700;
+  text-decoration:none;color:var(--accent);white-space:nowrap
+}
+.back:focus-visible,.cta:focus-visible{outline:3px solid #3b6fd4;outline-offset:2px}
+article{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px 18px;box-shadow:0 8px 24px rgb(28 31 42 / .06)}
+h1{font-size:clamp(1.55rem,6vw,2rem);line-height:1.2;letter-spacing:-.02em}
+.lead{color:var(--muted);font-size:15px;margin-top:8px}
+h2{font-size:16px;font-weight:750;margin-top:22px;letter-spacing:-.01em}
+h2:first-of-type{margin-top:18px}
+p{font-size:15.5px;margin-top:7px}
+.example{background:#f7f2e7;border:1px solid #e7dfcf;border-radius:11px;padding:10px 12px;font-size:14.5px}
+.example strong{color:var(--accent)}
+.cta-row{display:flex;justify-content:center;margin-top:24px}
+.cta{
+  display:inline-flex;align-items:center;justify-content:center;min-height:50px;padding:0 26px;
+  border-radius:13px;background:var(--dark);color:var(--on-dark);font-size:16px;font-weight:750;
+  text-decoration:none
+}
+@media (max-width:430px){
+  .wrap{padding-left:12px;padding-right:12px}
+  article{padding:16px 14px}
+  h2{margin-top:20px}
+}
+@media (prefers-reduced-motion:reduce){
+  *{scroll-behavior:auto!important;transition:none!important;animation:none!important}
+}
+</style>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "珠玑妙算是什么游戏？",
+      "acceptedAnswer": { "@type": "Answer", "text": "一款颜色密码推理游戏。出题方隐藏四位密码，猜题方依据黑白提示逐次排除，直到猜中或次数用完。" }
+    },
+    {
+      "@type": "Question",
+      "name": "黑钉和白钉表示什么？",
+      "acceptedAnswer": { "@type": "Answer", "text": "黑钉表示颜色与位置都对，白钉表示颜色对但位置错。同一颜色不会重复计算，也不会同时算黑钉和白钉。" }
+    },
+    {
+      "@type": "Question",
+      "name": "密码颜色可以重复吗？",
+      "acceptedAnswer": { "@type": "Answer", "text": "可以。密码和猜测都是四位，每位可从六种颜色中任选，因此红红黄蓝也合法。" }
+    },
+    {
+      "@type": "Question",
+      "name": "十次没猜中怎么办？",
+      "acceptedAnswer": { "@type": "Answer", "text": "本局失败，页面会公布正确密码。重新开始会生成新密码并清空记录。" }
+    }
+  ]
+}
+</script>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="eyebrow">Mastermind · 规则</div>
+    <a class="back" href="index.html" aria-label="返回游戏页面">返回游戏</a>
+  </div>
+
+  <article>
+    <h1>珠玑妙算：六色四位的推理规则</h1>
+    <p class="lead">珠玑妙算是出题方隐藏四位颜色密码、猜题方逐次推理的桌游。本页为单人版：电脑出题，十次内猜中。</p>
+
+    <h2>一、目标与组成</h2>
+    <p>游戏使用红、黄、绿、蓝、紫、橙六种颜色。密码固定四位，每位都可任选颜色，所以同一种颜色可以重复。全部组合共有六的四次方，即一千二百九十六种。</p>
+
+    <h2>二、怎么猜</h2>
+    <p>每局最多提交十次猜测。每次给出四位颜色，可以重复，也不必与上次不同。选满后提交；点槽位可单独清除，也可一次清空。只有合法的四位猜测会被接受。</p>
+
+    <h2>三、黑白提示</h2>
+    <p>提交后得到黑钉和白钉。黑钉表示颜色与位置都正确；白钉表示颜色在密码中但位置不对。提示按多重集匹配：同一种颜色数量有限，不会重复计算，也不会既算黑又算白。黑钉加白钉，就是猜对的总颜色数。</p>
+    <p class="example">例如密码<strong>红红绿绿</strong>、猜测<strong>红绿红绿</strong>，结果是两黑两白：首尾位置正确，另两个颜色存在但位置互换。若密码<strong>红黄绿蓝</strong>、猜测<strong>红黄绿橙</strong>，则是三黑零白。</p>
+
+    <h2>四、胜负与次数</h2>
+    <p>一次猜出四黑立即获胜，剩余次数作废。十次后仍未四黑则失败，页面公布答案。重新开始会生成全新密码，旧记录清空。</p>
+
+    <h2>五、AI 提示与出题</h2>
+    <p>电脑随机出题，随机数可复现，同一局提示稳定。卡住时点提示，解题器会依据现有黑白反馈，从仍可能的密码中挑信息量较大的猜测。提示不替你提交，也不消耗次数。</p>
+
+    <h2>六、小技巧</h2>
+    <p>首猜可用两种颜色各两次，判断哪些颜色存在。之后优先选与反馈一致、又能把剩余可能分得更开的猜测。别只看颜色，也要用白钉排除位置，并避免重复提交相同猜测。</p>
+
+    <div class="cta-row">
+      <a class="cta" href="index.html" aria-label="返回游戏页面开始猜密码">开始游戏</a>
+    </div>
+  </article>
+</div>
+</body>
+</html>

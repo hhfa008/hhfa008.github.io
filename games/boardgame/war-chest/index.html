@@ -1,0 +1,1193 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#12171d">
+<title>战争宝箱 War Chest — 7×7 双人据点争夺（简化版）</title>
+<meta name="description" content="战争宝箱 War Chest 简化网页版：7×7 棋盘、12 个据点、5 种单位、抽币部署、移动攻击与 AI 对手，纯前端离线可玩，手机优先。">
+<meta name="robots" content="index,follow">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2312171d'/%3E%3Cpath d='M6 26V10h4V7h4v3h2V6h4v4h2V7h4v19h-7v-4h-4v4H6z' fill='%23c9a46a'/%3E%3C/svg%3E">
+<style>
+:root {
+  --bg: #12171d;
+  --bg-soft: #182029;
+  --panel: #1b232c;
+  --panel-2: #202a34;
+  --line: #2c3844;
+  --line-soft: #26313c;
+  --ink: #ece6d8;
+  --muted: #98a3ad;
+  --brass: #c9a46a;
+  --brass-bright: #e3c48d;
+  --p0: #4c9db5;
+  --p0-bright: #78c5d9;
+  --p1: #c96a52;
+  --p1-bright: #e59077;
+  --danger: #d4553f;
+  --ok: #67a97b;
+  --radius: 14px;
+  --cell-gap: 4px;
+  --board-pad: 6px;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  font-size: 15px;
+  line-height: 1.45;
+  min-height: 100vh;
+  overflow-x: clip;
+  background:
+    radial-gradient(1200px 500px at 50% -12%, rgba(201, 164, 106, 0.10), transparent 62%),
+    radial-gradient(700px 420px at 80% 110%, rgba(76, 157, 181, 0.08), transparent 66%),
+    var(--bg);
+  -webkit-text-size-adjust: 100%;
+}
+
+button, a { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+button { font: inherit; color: inherit; }
+a { color: var(--brass-bright); text-decoration: none; }
+
+:focus-visible {
+  outline: 2px solid var(--brass-bright);
+  outline-offset: 2px;
+}
+
+.app {
+  width: 100%;
+  max-width: 490px;
+  margin: 0 auto;
+  padding: 10px 12px max(20px, env(safe-area-inset-bottom));
+}
+
+/* ---------------------------------------------------------------- header */
+
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 2px 10px;
+}
+
+.brand { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.brand-mark {
+  width: 38px; height: 38px;
+  flex: 0 0 auto;
+  display: grid; place-items: center;
+  border-radius: 11px;
+  background: linear-gradient(145deg, #2c3844, #1a222b);
+  border: 1px solid #3a4754;
+  color: var(--brass-bright);
+  font-size: 20px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.brand h1 {
+  margin: 0;
+  font-size: 19px;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+}
+.brand p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.top-actions { display: flex; gap: 6px; flex: 0 0 auto; }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 11px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
+  user-select: none;
+}
+.btn:hover { background: var(--panel-2); border-color: #3c4a58; }
+.btn:active { transform: translateY(1px); }
+.btn.ghost { background: transparent; min-width: 52px; padding: 0 10px; }
+.btn.primary {
+  background: linear-gradient(180deg, #d3b17c, #b9905a);
+  border-color: #8e6b3d;
+  color: #241a0d;
+}
+.btn.primary:hover { background: linear-gradient(180deg, #e0c08c, #c59a61); }
+.btn:disabled { opacity: 0.42; cursor: not-allowed; transform: none; }
+.btn.small { min-height: 44px; font-size: 13px; padding: 0 11px; }
+
+/* ------------------------------------------------------------------- hud */
+
+.hud {
+  background: linear-gradient(180deg, rgba(32, 42, 52, 0.82), rgba(24, 32, 41, 0.82));
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
+}
+
+.status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 24px;
+}
+.status {
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+}
+.status .turn-dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--p0-bright);
+  box-shadow: 0 0 8px rgba(120, 197, 217, 0.8);
+  vertical-align: 1px;
+}
+.status.ai .turn-dot { background: var(--p1-bright); box-shadow: 0 0 8px rgba(229, 144, 119, 0.8); }
+.status.over .turn-dot { background: var(--brass); box-shadow: 0 0 8px rgba(201, 164, 106, 0.8); }
+.hand-meta { color: var(--muted); font-size: 12px; white-space: nowrap; }
+
+.scoreboard {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: stretch;
+  gap: 8px;
+  margin-top: 9px;
+}
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 7px 9px;
+  border-radius: 10px;
+  border: 1px solid var(--line-soft);
+  background: rgba(15, 20, 26, 0.5);
+}
+.side.you { border-left: 3px solid var(--p0); }
+.side.ai { border-right: 3px solid var(--p1); text-align: right; }
+.side .who {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+}
+.side.ai .who { justify-content: flex-end; }
+.side .who .chip-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--p0);
+}
+.side.ai .who .chip-dot { background: var(--p1); }
+.side .ctrl {
+  font-size: 21px;
+  font-weight: 800;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+.side .ctrl small { color: var(--muted); font-size: 11px; font-weight: 600; margin-left: 2px; }
+.side .sub { font-size: 10.5px; color: var(--muted); }
+.vs {
+  align-self: center;
+  color: #5d6a76;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  font-weight: 700;
+}
+
+/* ----------------------------------------------------------------- board */
+
+main { margin-top: 10px; }
+
+.board-wrap {
+  display: flex;
+  justify-content: center;
+  margin: 0 -2px;
+}
+
+.board {
+  width: 100%;
+  max-width: 438px;
+  aspect-ratio: 1 / 1;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: repeat(7, 1fr);
+  gap: var(--cell-gap);
+  padding: var(--board-pad);
+  border-radius: 17px;
+  border: 1px solid #34414e;
+  background:
+    linear-gradient(145deg, rgba(201, 164, 106, 0.07), transparent 38%),
+    linear-gradient(180deg, #1a232c, #151c23);
+  box-shadow:
+    0 14px 34px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  touch-action: manipulation;
+}
+
+.cell {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 1px solid #2d3a46;
+  border-radius: 8px;
+  background: linear-gradient(160deg, #25313c, #1f2933);
+  color: var(--ink);
+  cursor: pointer;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+.cell.alt { background: linear-gradient(160deg, #222d37, #1c252e); }
+@media (hover: hover) {
+  .cell:not(:disabled):hover { background: linear-gradient(160deg, #2e3c49, #26323d); }
+}
+.cell:disabled { cursor: default; }
+.cell .empty-mark {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: #3a4754;
+  opacity: 0.55;
+}
+
+.terrain {
+  position: absolute;
+  inset: 13%;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  color: #8b98a4;
+}
+.terrain svg { width: 100%; height: 100%; display: block; }
+.cell.base .terrain { color: var(--brass); opacity: 0.9; inset: 9%; }
+.cell.base.base-0 { background: linear-gradient(160deg, #263541, #1d2832); box-shadow: inset 0 0 0 1px rgba(201, 164, 106, 0.38); }
+.cell.base.base-1 { background: linear-gradient(160deg, #3a2b29, #2a2020); box-shadow: inset 0 0 0 1px rgba(201, 120, 105, 0.4); }
+
+.cell.stronghold .terrain { opacity: 0.72; }
+.cell.stronghold.owned-0 { box-shadow: inset 0 0 0 2px rgba(76, 157, 181, 0.85); background: linear-gradient(160deg, #223945, #1b2b34); }
+.cell.stronghold.owned-0 .terrain { color: var(--p0-bright); opacity: 1; }
+.cell.stronghold.owned-1 { box-shadow: inset 0 0 0 2px rgba(201, 106, 82, 0.85); background: linear-gradient(160deg, #3a2b29, #2b2020); }
+.cell.stronghold.owned-1 .terrain { color: var(--p1-bright); opacity: 1; }
+.cell.stronghold:not(.owned-0):not(.owned-1) .terrain { color: #a8b3bd; }
+
+.unit {
+  position: absolute;
+  inset: 12%;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  font-size: clamp(13px, 4.1vw, 20px);
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.26),
+    inset 0 -6px 12px rgba(0, 0, 0, 0.22),
+    0 2px 6px rgba(0, 0, 0, 0.5);
+  z-index: 2;
+  pointer-events: none;
+}
+.unit.u0 { background: radial-gradient(circle at 34% 28%, #8ed6e8, #3f8ea8 58%, #245c70); }
+.unit.u1 { background: radial-gradient(circle at 34% 28%, #f0a48d, #c05c45 58%, #793628); }
+
+/* highlights */
+.cell.deploy::after {
+  content: "+";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--brass-bright);
+  font-size: clamp(17px, 5vw, 25px);
+  font-weight: 700;
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 2px rgba(201, 164, 106, 0.9);
+  background: rgba(201, 164, 106, 0.12);
+  z-index: 3;
+}
+.cell.pickable { box-shadow: inset 0 0 0 2px rgba(201, 164, 106, 0.58); }
+.cell.pickable::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 2px rgba(227, 196, 141, 0.55);
+  animation: pick-breathe 1.8s ease-in-out infinite;
+  pointer-events: none;
+}
+.cell.move::after {
+  content: "";
+  position: absolute;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: rgba(120, 197, 217, 0.95);
+  box-shadow: 0 0 10px rgba(120, 197, 217, 0.65);
+  z-index: 3;
+}
+.cell.attack { box-shadow: inset 0 0 0 2px rgba(212, 85, 63, 0.95); background: linear-gradient(160deg, #4a2a27, #341f1d); }
+.cell.attack::after {
+  content: "";
+  position: absolute;
+  inset: 16%;
+  border-radius: 50%;
+  border: 2px dashed rgba(240, 150, 130, 0.95);
+  animation: attack-pulse 1.25s ease-in-out infinite;
+  z-index: 3;
+  pointer-events: none;
+}
+.cell.selected { box-shadow: inset 0 0 0 3px var(--brass-bright), 0 0 14px rgba(227, 196, 141, 0.4); }
+.cell.selected .unit { box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.55), 0 0 12px rgba(227, 196, 141, 0.6); }
+
+@keyframes pick-breathe {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 1; }
+}
+@keyframes attack-pulse {
+  0%, 100% { transform: scale(0.92); opacity: 0.7; }
+  50% { transform: scale(1.02); opacity: 1; }
+}
+
+/* ----------------------------------------------------------------- hint */
+
+.hint {
+  min-height: 42px;
+  margin: 9px 2px 0;
+  padding: 9px 11px;
+  border-radius: 10px;
+  border: 1px solid var(--line-soft);
+  background: rgba(27, 35, 44, 0.72);
+  color: #cfd7de;
+  font-size: 13px;
+  line-height: 1.4;
+  display: flex;
+  align-items: center;
+}
+.hint.warn { color: #f0b9ab; border-color: rgba(212, 85, 63, 0.45); }
+
+.action-row {
+  display: grid;
+  grid-template-columns: 1fr 0.8fr;
+  gap: 8px;
+  margin-top: 9px;
+}
+.action-row .btn { width: 100%; }
+
+/* ----------------------------------------------------------------- hand */
+
+.panel {
+  margin-top: 10px;
+  padding: 10px 11px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line-soft);
+  background: rgba(27, 35, 44, 0.72);
+}
+.panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.panel-head h2 {
+  margin: 0;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  color: #c9d2da;
+}
+.panel-head .meta { font-size: 11px; color: var(--muted); }
+
+.chips {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+.coin {
+  min-height: 58px;
+  padding: 5px 2px 4px;
+  border-radius: 11px;
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, #27333e, #1d262f);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.12s ease;
+}
+.coin:hover:not(:disabled) { background: linear-gradient(180deg, #2e3c49, #222d37); }
+.coin:active:not(:disabled) { transform: translateY(1px); }
+.coin .coin-glyph {
+  width: 25px; height: 25px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: 13px;
+  font-weight: 800;
+  color: #1c1408;
+  background: radial-gradient(circle at 35% 30%, #f0d9ac, #c9a46a 70%);
+  box-shadow: inset 0 0 0 1px rgba(90, 62, 27, 0.45), 0 2px 5px rgba(0, 0, 0, 0.35);
+}
+.coin .coin-name { font-size: 10.5px; color: #cfd7de; white-space: nowrap; }
+.coin .coin-count { font-size: 11px; font-weight: 700; color: var(--brass-bright); font-variant-numeric: tabular-nums; }
+.coin.empty { opacity: 0.34; }
+.coin[aria-pressed="true"] {
+  border-color: var(--brass-bright);
+  background: linear-gradient(180deg, #3a3325, #27231a);
+  box-shadow: 0 0 0 1px rgba(227, 196, 141, 0.35), 0 0 14px rgba(201, 164, 106, 0.18);
+  opacity: 1;
+}
+
+/* ---------------------------------------------------------------- piles */
+
+.piles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  margin-top: 8px;
+}
+.pile {
+  padding: 7px 9px;
+  border-radius: 10px;
+  border: 1px solid var(--line-soft);
+  background: rgba(20, 26, 33, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.pile strong { color: var(--ink); font-size: 14px; font-variant-numeric: tabular-nums; }
+.pile.reserve { grid-column: 1 / -1; align-items: flex-start; }
+.pile.reserve .reserve-list { display: flex; flex-wrap: wrap; gap: 4px 8px; justify-content: flex-end; }
+.reserve-item { color: #c8d1d9; white-space: nowrap; }
+.reserve-item b { color: var(--ink); font-weight: 700; }
+
+/* ------------------------------------------------------------------ log */
+
+.log-panel { margin-top: 10px; }
+.log-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 132px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 5px;
+  scrollbar-width: thin;
+}
+.log-list li {
+  display: flex;
+  gap: 7px;
+  font-size: 11.5px;
+  color: #b8c2cb;
+  line-height: 1.35;
+}
+.log-list li .t {
+  flex: 0 0 auto;
+  color: #6f7d89;
+  font-variant-numeric: tabular-nums;
+}
+.log-list li.control { color: #9fc9d6; }
+.log-list li.attack { color: #e5a898; }
+.log-list li.result { color: var(--brass-bright); font-weight: 700; }
+.log-list li.turn { color: #8d99a4; }
+
+/* --------------------------------------------------------------- overlay */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(8, 11, 14, 0.72);
+  backdrop-filter: blur(3px);
+}
+.dialog {
+  width: 100%;
+  max-width: 330px;
+  padding: 22px 20px 18px;
+  border-radius: 18px;
+  border: 1px solid #3c4a58;
+  background: linear-gradient(180deg, #232d38, #1a222b);
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.55);
+  text-align: center;
+}
+.dialog .crest {
+  width: 52px; height: 52px;
+  margin: 0 auto 10px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #343f4b, #222c36);
+  border: 1px solid #47586a;
+  font-size: 25px;
+}
+.dialog h2 { margin: 0 0 7px; font-size: 21px; letter-spacing: 0.05em; }
+.dialog p { margin: 0 0 16px; color: #b9c3cc; font-size: 13px; line-height: 1.5; }
+.dialog .dialog-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.dialog .dialog-actions .btn { width: 100%; }
+
+/* --------------------------------------------------------------- footer */
+
+.foot {
+  margin-top: 14px;
+  text-align: center;
+  color: #64717d;
+  font-size: 10.5px;
+  line-height: 1.6;
+}
+.foot a { color: #8fa6b8; text-decoration: underline; text-underline-offset: 2px; }
+
+/* ------------------------------------------------------------ responsive */
+
+@media (max-width: 430px) {
+  :root { --cell-gap: 3px; --board-pad: 5px; }
+  .app { padding: 8px 10px max(18px, env(safe-area-inset-bottom)); }
+  .brand h1 { font-size: 18px; }
+  .btn.ghost { min-width: 46px; padding: 0 8px; }
+  .side .ctrl { font-size: 19px; }
+  .chips { gap: 5px; }
+}
+
+@media (max-width: 350px) {
+  :root { --cell-gap: 2px; --board-pad: 4px; }
+  .brand p { display: none; }
+  .coin .coin-name { font-size: 9.5px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">⚔</span>
+      <div>
+        <h1>战争宝箱</h1>
+        <p>War Chest · 简化版</p>
+      </div>
+    </div>
+    <nav class="top-actions" aria-label="页面操作">
+      <a class="btn ghost small" href="rules.html" aria-label="查看完整规则">规则</a>
+      <button class="btn ghost small" type="button" id="restart" aria-label="重新开始对局">重开</button>
+    </nav>
+  </header>
+
+  <section class="hud" aria-label="对局状态">
+    <div class="status-row">
+      <div class="status" id="status" aria-live="polite"><span class="turn-dot" aria-hidden="true"></span>准备开局</div>
+      <div class="hand-meta" id="handMeta">手牌 0</div>
+    </div>
+    <div class="scoreboard">
+      <div class="side you">
+        <div class="who"><span class="chip-dot" aria-hidden="true"></span>你</div>
+        <div class="ctrl"><strong id="ctrl0">0</strong><small>/4 据点</small></div>
+        <div class="sub" id="sub0">单位 0 · 袋 0</div>
+      </div>
+      <div class="vs" aria-hidden="true">VS</div>
+      <div class="side ai">
+        <div class="who">AI<span class="chip-dot" aria-hidden="true"></span></div>
+        <div class="ctrl"><strong id="ctrl1">0</strong><small>/4 据点</small></div>
+        <div class="sub" id="sub1">单位 0 · 袋 0</div>
+      </div>
+    </div>
+  </section>
+
+  <main>
+    <div class="board-wrap">
+      <div class="board" id="board" role="group" aria-label="7×7 战场"></div>
+    </div>
+
+    <div class="hint" id="hint" role="status" aria-live="polite">
+      选择一枚手牌单位币：点击高亮空格部署，或点击己方单位移动 / 攻击。
+    </div>
+
+    <div class="action-row">
+      <button class="btn primary" type="button" id="endTurn">结束回合</button>
+      <button class="btn" type="button" id="cancel" disabled>取消选择</button>
+    </div>
+
+    <section class="panel" aria-label="手牌与单位袋">
+      <div class="panel-head">
+        <h2>你的手牌</h2>
+        <span class="meta" id="handMeta2">抽 3 枚 / 回合</span>
+      </div>
+      <div class="chips" id="handChips"></div>
+      <div class="piles">
+        <div class="pile"><span>单位袋</span><strong id="bagCount">0</strong></div>
+        <div class="pile"><span>弃币</span><strong id="discardCount">0</strong></div>
+        <div class="pile reserve">
+          <span>预备队</span>
+          <div class="reserve-list" id="reserveList"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel log-panel" aria-label="行动日志">
+      <div class="panel-head">
+        <h2>行动日志</h2>
+        <span class="meta">最近 12 条</span>
+      </div>
+      <ol class="log-list" id="log" aria-live="polite" aria-relevant="additions"></ol>
+    </section>
+  </main>
+
+  <footer class="foot">
+    简化版，非官方完整规则。纯前端离线可玩 ·
+    <a href="rules.html">查看规则与单位表</a>
+  </footer>
+</div>
+
+<div class="overlay" id="overlay" hidden>
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="resultTitle" aria-describedby="resultText">
+    <div class="crest" aria-hidden="true" id="resultCrest">⚔</div>
+    <h2 id="resultTitle">对局结束</h2>
+    <p id="resultText"></p>
+    <div class="dialog-actions">
+      <button class="btn primary" type="button" id="again">再来一局</button>
+      <a class="btn" href="rules.html">查看规则</a>
+    </div>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script src="engine.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var E = window.WarChestEngine;
+  var D = window.WarChestData;
+  if (!E || !D) {
+    document.getElementById('hint').textContent = '引擎加载失败，请刷新页面。';
+    return;
+  }
+
+  var boardEl = document.getElementById('board');
+  var statusEl = document.getElementById('status');
+  var hintEl = document.getElementById('hint');
+  var handMetaEl = document.getElementById('handMeta');
+  var handMeta2El = document.getElementById('handMeta2');
+  var ctrl0El = document.getElementById('ctrl0');
+  var ctrl1El = document.getElementById('ctrl1');
+  var sub0El = document.getElementById('sub0');
+  var sub1El = document.getElementById('sub1');
+  var endTurnEl = document.getElementById('endTurn');
+  var cancelEl = document.getElementById('cancel');
+  var logEl = document.getElementById('log');
+  var bagEl = document.getElementById('bagCount');
+  var discardEl = document.getElementById('discardCount');
+  var reserveEl = document.getElementById('reserveList');
+  var overlayEl = document.getElementById('overlay');
+  var resultTitleEl = document.getElementById('resultTitle');
+  var resultTextEl = document.getElementById('resultText');
+  var resultCrestEl = document.getElementById('resultCrest');
+  var againEl = document.getElementById('again');
+  var restartEl = document.getElementById('restart');
+  var handChipsEl = document.getElementById('handChips');
+
+  var reducedMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  var AI_DELAY = reducedMotion ? 110 : 520;
+  var AI_STEP_DELAY = reducedMotion ? 90 : 430;
+
+  var state = null;
+  var selectedType = null;
+  var selectedUnitId = null;
+  var aiTimer = null;
+  var aiBusy = false;
+  var cells = [];
+  var coinButtons = {};
+
+  var CASTLE_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">' +
+    '<path d="M3 21V9h3V6h3v3h2V5h2v4h2V6h3v3h3v12h-7v-3a1 1 0 0 0-2 0v3H3z"/></svg>';
+  var FLAG_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+    'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<path d="M6 21V4"/><path d="M6 4h12l-2 4 2 4H6"/></svg>';
+
+  /* ------------------------------------------------------------- helpers */
+
+  function byId(id) { return document.getElementById(id); }
+
+  function currentPlayer() { return state ? state.players[state.current] : null; }
+  function humanTurn() { return !!state && !state.over && state.current === 0 && !aiBusy; }
+  function locked() { return !state || state.over || state.current !== 0 || aiBusy; }
+
+  function hasCoin(type) {
+    return !!state && state.players[0].hand.indexOf(type) !== -1;
+  }
+
+  function unitName(type) { return (D.UNITS[type] && D.UNITS[type].name) || type; }
+
+  function setHint(text, warn) {
+    hintEl.textContent = text;
+    hintEl.classList.toggle('warn', !!warn);
+  }
+
+  function cellLabel(r, c) {
+    var parts = ['第' + (r + 1) + '行第' + (c + 1) + '列'];
+    var base = E.baseAt(state, r, c);
+    var sh = E.strongholdAt(state, r, c);
+    var unit = E.unitAt(state, r, c);
+    if (base) parts.push(base.owner === 0 ? '你的大本营' : 'AI 的大本营');
+    else if (sh) parts.push(sh.owner == null ? '中立据点' : (sh.owner === 0 ? '你的据点' : 'AI 的据点'));
+    else parts.push('平地');
+    if (unit) parts.push((unit.owner === 0 ? '你的' : 'AI 的') + unitName(unit.type));
+    return parts.join('，');
+  }
+
+  function selectionCleared() {
+    selectedType = null;
+    selectedUnitId = null;
+  }
+
+  /* ---------------------------------------------------------- build board */
+
+  function buildBoard() {
+    boardEl.innerHTML = '';
+    cells = [];
+    for (var r = 0; r < D.BOARD_SIZE; r++) {
+      cells[r] = [];
+      for (var c = 0; c < D.BOARD_SIZE; c++) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'cell' + (((r + c) % 2) ? ' alt' : '');
+        btn.dataset.r = String(r);
+        btn.dataset.c = String(c);
+        btn.setAttribute('aria-label', '棋盘格');
+        (function (rr, cc) {
+          btn.addEventListener('click', function () { onCellClick(rr, cc); });
+        })(r, c);
+        boardEl.appendChild(btn);
+        cells[r][c] = btn;
+      }
+    }
+  }
+
+  function paintBoard() {
+    if (!state) return;
+    var selUnit = selectedUnitId == null ? null : E.findUnit(state, selectedUnitId);
+    for (var r = 0; r < D.BOARD_SIZE; r++) {
+      for (var c = 0; c < D.BOARD_SIZE; c++) {
+        var cell = cells[r][c];
+        var base = E.baseAt(state, r, c);
+        var sh = E.strongholdAt(state, r, c);
+        var unit = E.unitAt(state, r, c);
+        var cls = ['cell'];
+        if ((r + c) % 2) cls.push('alt');
+        if (base) {
+          cls.push('base');
+          cls.push(base.owner === 0 ? 'base-0' : 'base-1');
+        } else if (sh) {
+          cls.push('stronghold');
+          if (sh.owner != null) cls.push('owned-' + sh.owner);
+        }
+
+        if (selUnit) {
+          if (selUnit.r === r && selUnit.c === c) cls.push('selected');
+          else if (unit && unit.owner !== 0) {
+            if (E.canAttack(state, selectedUnitId, unit.id).ok) cls.push('attack');
+          } else if (!unit && E.canMove(state, selectedUnitId, { r: r, c: c }).ok) {
+            cls.push('move');
+          }
+        } else if (selectedType) {
+          if (unit && unit.owner === 0 && unit.type === selectedType) cls.push('pickable');
+          else if (!unit && E.canDeploy(state, selectedType, r, c).ok) cls.push('deploy');
+        }
+
+        cell.className = cls.join(' ');
+        var html = '';
+        if (base) html += '<span class="terrain">' + CASTLE_SVG + '</span>';
+        else if (sh) html += '<span class="terrain">' + FLAG_SVG + '</span>';
+        else if (!unit) html += '<span class="empty-mark" aria-hidden="true"></span>';
+        if (unit) {
+          html += '<span class="unit u' + unit.owner + '"><span>' +
+            D.UNITS[unit.type].glyph + '</span></span>';
+        }
+        cell.innerHTML = html;
+        cell.setAttribute('aria-label', cellLabel(r, c));
+        cell.disabled = locked();
+      }
+    }
+  }
+
+  /* ------------------------------------------------------------- hand UI */
+
+  function buildHand() {
+    handChipsEl.innerHTML = '';
+    coinButtons = {};
+    D.UNIT_ORDER.forEach(function (type) {
+      var def = D.UNITS[type];
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'coin';
+      btn.dataset.type = type;
+      btn.innerHTML =
+        '<span class="coin-glyph" aria-hidden="true">' + def.glyph + '</span>' +
+        '<span class="coin-name">' + def.name + '</span>' +
+        '<span class="coin-count">×0</span>';
+      btn.addEventListener('click', function () {
+        if (locked() || !hasCoin(type)) return;
+        if (selectedType === type && selectedUnitId == null) {
+          selectionCleared();
+          setHint('已取消选择。选择一枚单位币开始行动。');
+        } else {
+          selectedType = type;
+          selectedUnitId = null;
+          setHint('已选择 ' + def.name + '：点击「+」空格部署，或点击己方 ' + def.name + ' 激活（移动 / 攻击）。');
+        }
+        render();
+      });
+      handChipsEl.appendChild(btn);
+      coinButtons[type] = btn;
+    });
+  }
+
+  function paintHand() {
+    var counts = E.handCounts(state.players[0]);
+    D.UNIT_ORDER.forEach(function (type) {
+      var btn = coinButtons[type];
+      var n = counts[type] || 0;
+      btn.classList.toggle('empty', n === 0);
+      btn.disabled = locked() || n === 0;
+      btn.setAttribute('aria-pressed', String(selectedType === type));
+      btn.setAttribute('aria-label', D.UNITS[type].name + '币 ' + n + ' 枚' +
+        (n ? '，点击选择' : '，当前没有'));
+      btn.querySelector('.coin-count').textContent = '×' + n;
+    });
+  }
+
+  /* --------------------------------------------------------------- paint */
+
+  function paintHud() {
+    var p0 = state.players[0];
+    var p1 = state.players[1];
+    var c0 = E.controlCount(state, 0);
+    var c1 = E.controlCount(state, 1);
+    ctrl0El.textContent = String(c0);
+    ctrl1El.textContent = String(c1);
+    sub0El.textContent = '单位 ' + E.unitsOf(state, 0).length + ' · 袋 ' + p0.bag.length;
+    sub1El.textContent = '单位 ' + E.unitsOf(state, 1).length + ' · 袋 ' + p1.bag.length;
+    handMetaEl.textContent = '手牌 ' + p0.hand.length + ' · 袋 ' + p0.bag.length + ' · 弃 ' + p0.discard.length;
+    handMeta2El.textContent = '第 ' + state.turn + ' 个玩家回合 · 抽 3 枚 / 回合';
+
+    statusEl.classList.remove('ai', 'over');
+    if (state.over) {
+      statusEl.classList.add('over');
+      statusEl.innerHTML = '<span class="turn-dot" aria-hidden="true"></span>对局结束';
+    } else if (state.current === 1 || aiBusy) {
+      statusEl.classList.add('ai');
+      statusEl.innerHTML = '<span class="turn-dot" aria-hidden="true"></span>AI 思考中…';
+    } else {
+      statusEl.innerHTML = '<span class="turn-dot" aria-hidden="true"></span>轮到你行动 · 手牌 ' +
+        state.players[0].hand.length + ' 枚';
+    }
+
+    bagEl.textContent = String(p0.bag.length);
+    discardEl.textContent = String(p0.discard.length);
+    reserveEl.innerHTML = D.UNIT_ORDER.map(function (type) {
+      return '<span class="reserve-item">' + D.UNITS[type].glyph + ' <b>' +
+        p0.reserves[type] + '</b></span>';
+    }).join('');
+
+    endTurnEl.disabled = locked();
+    cancelEl.disabled = locked() || (!selectedType && selectedUnitId == null);
+  }
+
+  function paintLog() {
+    var entries = state.log.slice(-12);
+    logEl.innerHTML = entries.map(function (entry) {
+      var cls = entry.type || 'info';
+      return '<li class="' + cls + '"><span class="t">#' + entry.turn + '</span><span>' +
+        escapeHtml(entry.text) + '</span></li>';
+    }).join('');
+    logEl.scrollTop = 0;
+  }
+
+  function escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function render() {
+    if (!state) return;
+    paintHud();
+    paintBoard();
+    paintHand();
+    paintLog();
+  }
+
+  /* ---------------------------------------------------------- interactions */
+
+  function onCellClick(r, c) {
+    if (locked()) return;
+    var unit = E.unitAt(state, r, c);
+
+    if (selectedUnitId != null) {
+      var sel = E.findUnit(state, selectedUnitId);
+      if (!sel) { selectionCleared(); render(); return; }
+
+      if (unit && unit.owner === 0) {
+        if (unit.id === selectedUnitId) {
+          selectionCleared();
+          setHint('已取消单位选择。');
+          render();
+          return;
+        }
+        if (hasCoin(unit.type)) {
+          selectedType = unit.type;
+          selectedUnitId = unit.id;
+          setHint('已选择 ' + unitName(unit.type) + '。点击高亮格移动，或点击红圈敌人攻击。');
+          render();
+        } else {
+          setHint('手里没有 ' + unitName(unit.type) + ' 币，无法激活这个单位。', true);
+        }
+        return;
+      }
+
+      if (unit && unit.owner === 1) {
+        var atk = E.canAttack(state, selectedUnitId, unit.id, 0);
+        if (atk.ok) {
+          perform(function () { return E.attackUnit(state, selectedUnitId, unit.id, 0); },
+            '攻击成功，击杀了 AI 的 ' + unitName(unit.type) + '。');
+        } else {
+          setHint(atk.reason, true);
+        }
+        return;
+      }
+
+      if (!unit) {
+        var mv = E.canMove(state, selectedUnitId, { r: r, c: c }, 0);
+        if (mv.ok) {
+          perform(function () { return E.moveUnit(state, selectedUnitId, { r: r, c: c }, 0); },
+            '移动完成。');
+        } else {
+          setHint(mv.reason, true);
+        }
+        return;
+      }
+    }
+
+    if (selectedType) {
+      if (unit && unit.owner === 0) {
+        if (unit.type === selectedType) {
+          selectedUnitId = unit.id;
+          setHint('已选择 ' + unitName(selectedType) + '。点击高亮格移动，或点击红圈敌人攻击。');
+          render();
+        } else {
+          setHint('这个单位是 ' + unitName(unit.type) + '，请选择对应的单位币。', true);
+        }
+        return;
+      }
+      if (unit && unit.owner === 1) {
+        setHint('请先点击己方单位，再攻击敌人。', true);
+        return;
+      }
+      if (!unit) {
+        var dep = E.canDeploy(state, selectedType, r, c, 0);
+        if (dep.ok) {
+          perform(function () { return E.deploy(state, selectedType, r, c, 0); },
+            '部署完成。');
+        } else {
+          setHint(dep.reason, true);
+        }
+        return;
+      }
+    }
+
+    if (unit && unit.owner === 0) {
+      if (hasCoin(unit.type)) {
+        selectedType = unit.type;
+        selectedUnitId = unit.id;
+        setHint('已选择 ' + unitName(unit.type) + '。点击高亮格移动，或点击红圈敌人攻击。');
+        render();
+      } else {
+        setHint('手里没有 ' + unitName(unit.type) + ' 币，无法激活这个单位。', true);
+      }
+      return;
+    }
+
+    setHint('先选择一枚手牌单位币，或点击己方单位。');
+  }
+
+  function perform(actionFn, successText) {
+    var next;
+    try {
+      next = actionFn();
+    } catch (error) {
+      setHint(String(error && error.message || error), true);
+      return;
+    }
+    state = next;
+    if (selectedType && !hasCoin(selectedType)) selectedType = null;
+    selectedUnitId = null;
+    if (state.over) {
+      aiBusy = false;
+      render();
+      showResult();
+      return;
+    }
+    render();
+    if (state.current === 1) {
+      setHint(successText + ' AI 开始行动…');
+      scheduleAI();
+    } else {
+      setHint(successText + (selectedType
+        ? ' 还可继续用 ' + unitName(selectedType) + ' 币行动，或结束回合。'
+        : ' 可以继续行动，或结束回合。'));
+    }
+  }
+
+  function onEndTurn() {
+    if (locked()) return;
+    var next = E.endTurn(state);
+    state = next;
+    selectionCleared();
+    render();
+    if (state.over) {
+      showResult();
+      return;
+    }
+    if (state.current === 1) {
+      setHint('你结束了回合，AI 开始行动…');
+      scheduleAI();
+    } else {
+      setHint('新回合开始：你抽了 ' + state.players[0].hand.length + ' 枚单位币。');
+    }
+  }
+
+  function onCancel() {
+    if (locked()) return;
+    selectionCleared();
+    setHint('已取消选择。选择一枚单位币开始行动。');
+    render();
+  }
+
+  /* ------------------------------------------------------------------ AI */
+
+  function scheduleAI() {
+    if (!state || state.over || state.current !== 1) return;
+    if (aiTimer) return;
+    aiBusy = true;
+    render();
+    aiTimer = window.setTimeout(aiStep, AI_DELAY);
+  }
+
+  function aiStep() {
+    aiTimer = null;
+    if (!state || state.over || state.current !== 1) {
+      aiBusy = false;
+      render();
+      return;
+    }
+    var action = E.chooseAIAction(state, 1);
+    var next;
+    try {
+      next = E.applyAction(state, action);
+    } catch (error) {
+      // 兜底：任何意外都结束 AI 回合，避免卡死。
+      next = E.endTurn(state);
+    }
+    state = next;
+    if (state.over) {
+      aiBusy = false;
+      render();
+      showResult();
+      return;
+    }
+    if (state.current === 1) {
+      render();
+      aiTimer = window.setTimeout(aiStep, AI_STEP_DELAY);
+    } else {
+      aiBusy = false;
+      render();
+      setHint('AI 结束了回合，轮到你行动。');
+    }
+  }
+
+  /* -------------------------------------------------------------- result */
+
+  function showResult() {
+    if (!state || !state.over) return;
+    var result = state.result || {};
+    var title = result.winner === 0 ? '你赢了' : result.winner === 1 ? 'AI 获胜' : '平局';
+    resultTitleEl.textContent = title;
+    resultTextEl.textContent = result.reason +
+      ' · 据点数 ' + result.control[0] + ' : ' + result.control[1] +
+      ' · 场上兵力 ' + result.units[0] + ' : ' + result.units[1];
+    resultCrestEl.textContent = result.winner === 0 ? '🏆' : result.winner === 1 ? '⚔' : '⚖';
+    overlayEl.hidden = false;
+    window.setTimeout(function () { againEl.focus(); }, 30);
+  }
+
+  function hideResult() {
+    overlayEl.hidden = true;
+  }
+
+  /* ---------------------------------------------------------------- boot */
+
+  function seedNow() {
+    return ((Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0) || 1;
+  }
+
+  function startGame() {
+    if (aiTimer) { window.clearTimeout(aiTimer); aiTimer = null; }
+    aiBusy = false;
+    state = E.createGame({ seed: seedNow(), aiPlayer: 1 });
+    selectionCleared();
+    hideResult();
+    setHint('选择一枚手牌单位币：点击高亮空格部署，或点击己方单位移动 / 攻击。');
+    render();
+  }
+
+  buildBoard();
+  buildHand();
+  endTurnEl.addEventListener('click', onEndTurn);
+  cancelEl.addEventListener('click', onCancel);
+  restartEl.addEventListener('click', startGame);
+  againEl.addEventListener('click', startGame);
+  startGame();
+})();
+</script>
+</body>
+</html>

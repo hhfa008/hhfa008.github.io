@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#172033">
+<meta name="description" content="浏览器可玩的卡牌对战最小闭环：抽牌、出牌、附着能量、攻击、击倒与奖赏。">
+<title>卡牌对战 · 宝可梦样板</title>
+<link rel="icon" href="data:,">
+<style>
+:root {
+  --bg: #eef2f9;
+  --surface: #ffffff;
+  --surface-2: #f6f8fc;
+  --text: #16202f;
+  --muted: #58657a;
+  --line: #dbe2ee;
+  --accent: #2b5cff;
+  --accent-weak: #e6ecff;
+  --danger: #c23b3b;
+  --good: #1f7a52;
+  --shadow: 0 6px 18px rgba(24, 39, 75, 0.10);
+  --radius: 14px;
+  --card-radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b1020;
+    --surface: #151c2e;
+    --surface-2: #1b2438;
+    --text: #edf1fa;
+    --muted: #a3aec4;
+    --line: #2a3650;
+    --accent: #7aa2ff;
+    --accent-weak: #1d2a4d;
+    --danger: #ff8a8a;
+    --good: #69d3a3;
+    --shadow: 0 8px 22px rgba(0, 0, 0, 0.36);
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "PingFang SC", "Noto Sans SC", "Segoe UI", sans-serif;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+  line-height: 1.45;
+}
+button { font: inherit; color: inherit; }
+h1, h2, h3, p { margin: 0; }
+.app {
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 8px 10px 28px;
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  min-width: 0;
+}
+.topbar h1 { font-size: 18px; line-height: 1.2; }
+.turn { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+.top-actions { display: flex; gap: 8px; flex: none; }
+.icon-btn {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-2);
+  cursor: pointer;
+}
+.icon-btn[aria-pressed="false"] { opacity: 0.55; }
+.side {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px;
+  box-shadow: var(--shadow);
+  min-width: 0;
+}
+.side.opponent { border-top: 4px solid #8b5cf6; }
+.side.player { border-top: 4px solid var(--accent); }
+.side-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.side-head h2 { font-size: 15px; }
+.counts { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.field {
+  margin-top: 8px;
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.active-slot { min-width: 0; }
+.active-card {
+  width: 100%;
+  min-height: 84px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-left: 6px solid var(--type-color, var(--accent));
+  border-radius: var(--card-radius);
+  background: var(--surface-2);
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.active-card.empty {
+  border-left-color: var(--line);
+  color: var(--muted);
+  align-content: center;
+  text-align: center;
+  font-size: 13px;
+}
+.active-card .card-name { font-size: 15px; font-weight: 700; overflow-wrap: anywhere; }
+.active-card .card-meta, .active-card .card-hp { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.hpbar {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+.hpbar > span {
+  display: block;
+  height: 100%;
+  background: var(--good);
+  transition: width 0.25s ease;
+}
+.bench {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(86px, 1fr));
+  gap: 6px;
+  min-width: 0;
+}
+.bench-slot {
+  min-height: 56px;
+  padding: 6px 8px;
+  border: 1px dashed var(--line);
+  border-left: 4px solid var(--type-color, var(--line));
+  border-radius: 8px;
+  background: var(--surface-2);
+  font-size: 11px;
+  display: grid;
+  gap: 2px;
+  align-content: center;
+  min-width: 0;
+}
+.bench-slot.empty { color: var(--muted); border-left-color: var(--line); }
+.bench-slot .bench-name { font-weight: 600; overflow-wrap: anywhere; }
+.piles {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
+  gap: 6px;
+  min-width: 0;
+}
+.pile {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 6px 8px;
+  background: var(--surface-2);
+  font-size: 12px;
+  min-width: 0;
+}
+.pile-label { color: var(--muted); margin-right: 4px; }
+.pile-value { font-weight: 700; }
+.handbacks { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px; }
+.card-back {
+  width: 14px;
+  height: 20px;
+  border-radius: 3px;
+  background: repeating-linear-gradient(45deg, var(--accent-weak), var(--accent-weak) 3px, var(--surface) 3px, var(--surface) 6px);
+  border: 1px solid var(--line);
+}
+.hand-title { margin-top: 10px; font-size: 14px; }
+.hand-grid {
+  margin-top: 6px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 6px;
+  min-width: 0;
+}
+.card {
+  min-height: 88px;
+  text-align: left;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--type-color, var(--accent));
+  border-radius: var(--card-radius);
+  background: var(--surface-2);
+  display: grid;
+  gap: 2px;
+  align-content: start;
+  cursor: pointer;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.card:hover { border-color: var(--accent); }
+.card[aria-pressed="true"] {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  background: var(--accent-weak);
+}
+.card-name { font-size: 12px; font-weight: 700; }
+.card-meta, .card-hp { font-size: 10px; color: var(--muted); }
+.controls {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px;
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.action-row { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.action-row button, .attacks button {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+  cursor: pointer;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.action-row button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+.action-row[hidden] { display: none; }
+.attacks { display: grid; gap: 6px; min-width: 0; }
+.attacks button { text-align: left; }
+.attack-cost { color: var(--muted); font-size: 12px; }
+.status { color: var(--muted); font-size: 13px; min-height: 20px; overflow-wrap: anywhere; }
+.status.error { color: var(--danger); }
+.status.good { color: var(--good); }
+.log-wrap {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px;
+  box-shadow: var(--shadow);
+  min-width: 0;
+}
+.log-wrap h2 { font-size: 14px; margin-bottom: 6px; }
+.log {
+  margin: 0;
+  padding-left: 20px;
+  max-height: 190px;
+  overflow-y: auto;
+  font-size: 12px;
+  color: var(--muted);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.log li { margin: 2px 0; }
+.log li.attack, .log li.ko { color: var(--danger); }
+.log li.win { color: var(--good); font-weight: 700; }
+/* 结果页留存面板：沿用 rewards.html 的深色 token，光/暗色页面下都保持一致的对比度 */
+.result-panel {
+  --rp-bg: #0b0d12;
+  --rp-panel: #1c2330;
+  --rp-line: #2a3444;
+  --rp-text: #f2f5fa;
+  --rp-muted: #a7b3c6;
+  --rp-accent: #7cc4ff;
+  --rp-gold: #ffd479;
+  --rp-danger: #ff9a8a;
+  background: var(--rp-bg);
+  color: var(--rp-text);
+  border: 1px solid var(--rp-line);
+  border-radius: var(--radius);
+  padding: 14px;
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.result-panel[hidden] { display: none; }
+.result-panel h2 { font-size: 18px; line-height: 1.25; }
+.result-panel h3 { font-size: 14px; margin: 0; }
+.rr-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.rr-stat {
+  background: var(--rp-panel);
+  border: 1px solid var(--rp-line);
+  border-radius: 10px;
+  padding: 8px 10px;
+  min-width: 0;
+}
+.rr-stat span { display: block; color: var(--rp-muted); font-size: 11px; }
+.rr-stat strong {
+  display: block;
+  font-size: 20px;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.rr-stat small { display: block; color: var(--rp-muted); font-size: 10px; overflow-wrap: anywhere; }
+.rr-hint { color: var(--rp-muted); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.rr-levelup { color: var(--rp-gold); font-weight: 700; font-size: 14px; overflow-wrap: anywhere; }
+.rr-levelup.flash { animation: levelup-pop 900ms ease-out; }
+@keyframes levelup-pop {
+  0% { transform: scale(0.92); opacity: 0.2; }
+  45% { transform: scale(1.04); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.rr-warn { color: var(--rp-danger); font-size: 12px; font-weight: 600; overflow-wrap: anywhere; }
+.rr-board { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.rr-board li {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 9px;
+  background: var(--rp-panel);
+  border: 1px solid transparent;
+  min-width: 0;
+}
+.rr-board li.self { border-color: var(--rp-accent); }
+.rr-rank { flex: 0 0 auto; color: var(--rp-muted); font-variant-numeric: tabular-nums; font-size: 12px; }
+.rr-who { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.rr-score { flex: 0 0 auto; font-weight: 700; font-variant-numeric: tabular-nums; }
+.rr-empty { font-size: 12px; color: var(--rp-muted); }
+.rr-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.rr-actions button {
+  min-height: 48px;
+  min-width: 48px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--rp-line);
+  background: var(--rp-panel);
+  color: var(--rp-text);
+  font-weight: 700;
+  cursor: pointer;
+}
+.rr-actions button.primary { background: var(--rp-accent); border-color: var(--rp-accent); color: #04121f; }
+.rr-actions button:disabled { opacity: 0.55; cursor: not-allowed; }
+.result-panel .status { color: var(--rp-accent); min-height: 20px; }
+@media (max-width: 340px) {
+  .rr-stats { grid-template-columns: 1fr; }
+}
+@media (max-width: 360px) {
+  .app { padding-left: 8px; padding-right: 8px; }
+  .hand-grid { grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); }
+  .bench { grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); }
+  .topbar h1 { font-size: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+</style>
+</head>
+<body>
+<main class="app">
+  <header class="topbar">
+    <div>
+      <h1>卡牌对战</h1>
+      <p id="turn-indicator" class="turn" aria-live="polite">准备中…</p>
+      <p id="room-context" class="turn" hidden></p>
+    </div>
+    <div class="top-actions">
+      <button id="btn-sound" class="icon-btn" type="button" aria-pressed="true" aria-label="音效开关" title="音效开关">🔊</button>
+      <button id="btn-reset" class="icon-btn" type="button" aria-label="重新开始" title="重新开始">↻</button>
+    </div>
+  </header>
+
+  <section class="side opponent" aria-labelledby="opp-title">
+    <div class="side-head">
+      <h2 id="opp-title">对手</h2>
+      <span class="counts" id="opp-counts">手牌 0 · 奖赏 0 · 牌库 0</span>
+    </div>
+    <div class="field">
+      <div id="opp-active" class="active-slot"></div>
+      <div id="opp-bench" class="bench" aria-label="对手备战区"></div>
+    </div>
+    <div class="piles">
+      <div class="pile"><span class="pile-label">手牌</span><span class="pile-value" id="opp-hand-count">0</span><div id="opp-hand" class="handbacks" aria-label="对手手牌背面"></div></div>
+      <div class="pile"><span class="pile-label">奖赏</span><span class="pile-value" id="opp-prize-count">0</span></div>
+      <div class="pile"><span class="pile-label">牌库</span><span class="pile-value" id="opp-deck-count">0</span></div>
+    </div>
+  </section>
+
+  <section class="side player" aria-labelledby="my-title">
+    <div class="side-head">
+      <h2 id="my-title">你</h2>
+      <span class="counts" id="my-counts">手牌 0 · 奖赏 0 · 牌库 0</span>
+    </div>
+    <div class="field">
+      <div id="my-active" class="active-slot"></div>
+      <div id="my-bench" class="bench" aria-label="你的备战区"></div>
+    </div>
+    <div class="piles">
+      <div class="pile"><span class="pile-label">奖赏</span><span class="pile-value" id="my-prize-count">0</span></div>
+      <div class="pile"><span class="pile-label">牌库</span><span class="pile-value" id="my-deck-count">0</span></div>
+      <div class="pile"><span class="pile-label">弃牌</span><span class="pile-value" id="my-discard-count">0</span></div>
+    </div>
+    <h3 class="hand-title">你的手牌</h3>
+    <div id="my-hand" class="hand-grid" role="list"></div>
+  </section>
+
+  <section class="controls" aria-label="操作">
+    <div class="action-row">
+      <button id="btn-draw" type="button">抽牌</button>
+      <button id="btn-end" type="button">结束回合</button>
+    </div>
+    <div id="selection-actions" class="action-row" hidden>
+      <button id="btn-active" type="button">出战</button>
+      <button id="btn-bench" type="button">后备</button>
+      <button id="btn-energy" type="button">附着能量</button>
+    </div>
+    <div id="attacks" class="attacks" aria-label="招式"></div>
+    <p id="status" class="status" role="status" aria-live="polite"></p>
+  </section>
+
+  <section class="result-panel" id="result-panel" hidden aria-labelledby="result-title">
+    <h2 id="result-title" aria-live="polite">本局结束</h2>
+    <div class="rr-stats" aria-label="本局积分、等级与连胜">
+      <div class="rr-stat"><span>本局积分</span><strong id="rr-points">+0</strong></div>
+      <div class="rr-stat"><span>等级</span><strong id="rr-level">1</strong><small id="rr-level-title">青铜牌手</small></div>
+      <div class="rr-stat"><span>连胜</span><strong id="rr-streak">0</strong><small>天</small></div>
+    </div>
+    <p id="rr-summary" class="rr-hint"></p>
+    <p class="rr-hint">积分规则：胜 100 + 剩余奖赏×10 + 速胜奖励（每少 1 回合 +2，最多 +40）；负 20；平 50。只有通过校验的对局才计入本机榜单。</p>
+    <p id="rr-levelup" class="rr-levelup" hidden aria-live="assertive"></p>
+    <p id="rr-trophies" class="rr-hint" hidden></p>
+    <p id="rr-daily" class="rr-hint"></p>
+    <p id="rr-anti" class="rr-warn" hidden></p>
+    <h3>本机匿名榜 · 前 5</h3>
+    <ol id="rr-board" class="rr-board"></ol>
+    <p id="rr-device" class="rr-hint"></p>
+    <div class="rr-actions">
+      <button id="rr-share" class="primary" type="button">分享战绩</button>
+      <button id="rr-claim" type="button">打满 3 局可领奖励</button>
+    </div>
+    <p id="rr-status" class="status" role="status" aria-live="polite"></p>
+  </section>
+
+  <section class="log-wrap" aria-labelledby="log-title">
+    <h2 id="log-title">战斗日志</h2>
+    <ol id="log" class="log" reversed></ol>
+  </section>
+</main>
+<script type="module" src="./card-battle.js"></script>
+</body>
+</html>

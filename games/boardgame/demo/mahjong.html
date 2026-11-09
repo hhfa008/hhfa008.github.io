@@ -1,0 +1,778 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2b2f36">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232b2f36'/%3E%3Crect x='7' y='5' width='13' height='19' rx='2' fill='%23f3ead9'/%3E%3Crect x='13' y='8' width='13' height='19' rx='2' fill='%23b98a5a' stroke='%232b2f36' stroke-width='1.5'/%3E%3C/svg%3E">
+<title>麻将 · 四人单机</title>
+<meta name="description" content="四人麻将单机版：136 张牌、吃碰杠、自摸点炮、七对与标准型番种，本地牌图与音效，纯前端零外部请求。">
+<link rel="stylesheet" href="demos.css">
+<style>
+  :root {
+    --mj-tile-border: #c9b89a;
+    --mj-tile-bg: #fffaf0;
+    --mj-green: #3f7d5b;
+    --mj-blue: #2f5f8a;
+    --mj-red-suit: #8a3b2e;
+    --mj-purple: #6b4a8a;
+  }
+  body { background: radial-gradient(circle at 50% 0, #fbf5e9 0, var(--paper) 46%, #eadcc3 100%); }
+  .mjx {
+    width: 100%;
+    max-width: 430px;
+    margin: 0 auto;
+    padding: 8px 10px calc(10px + env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .mjx-status {
+    display: flex; align-items: center; gap: 8px;
+    min-height: 38px; padding: 6px 10px;
+    border: 1px solid var(--line); border-radius: 12px;
+    background: rgba(251, 245, 233, .86);
+    font-size: 12px; color: var(--muted);
+  }
+  .mjx-status strong { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .mjx-status .grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mjx-badge {
+    display: inline-flex; align-items: center; min-height: 24px; padding: 0 8px;
+    border-radius: 999px; background: var(--card); color: var(--ink);
+    font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .06em; flex: none;
+  }
+  .mjx-badge.hot { background: #f6d8ce; color: #8a2b1e; }
+  .mjx-opponents { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .mjx-seat {
+    min-width: 0; padding: 6px; border-radius: 12px;
+    border: 1px solid var(--line); background: rgba(251, 245, 233, .9);
+  }
+  .mjx-seat.current { border-color: var(--red); box-shadow: inset 0 0 0 1px var(--red); }
+  .mjx-seat-head { display: flex; align-items: baseline; justify-content: space-between; gap: 4px; }
+  .mjx-seat-name { font-size: 11.5px; font-weight: 750; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mjx-seat-meta { font-size: 9.5px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .mjx-backs { display: flex; gap: 1px; height: 15px; margin: 4px 0 3px; overflow: hidden; }
+  .mjx-back {
+    width: 6px; height: 13px; flex: none; border-radius: 1px;
+    background: repeating-linear-gradient(135deg, #2f5f8a 0 2px, #24496b 2px 4px);
+    border: 1px solid #1c3a55;
+  }
+  .mjx-mini-river { display: flex; flex-wrap: wrap; gap: 2px; min-height: 18px; max-height: 48px; overflow: hidden; }
+  .mjx-center {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+    padding: 8px; border: 1px solid var(--line); border-radius: 14px;
+    background: rgba(251, 245, 233, .74);
+  }
+  .mjx-block { min-width: 0; }
+  .mjx-block h2 {
+    margin: 0 0 4px; font-family: var(--mono); font-size: 9.5px;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 700;
+  }
+  .mjx-river { display: flex; flex-wrap: wrap; gap: 3px; min-height: 34px; max-height: 72px; overflow-y: auto; }
+  .mjx-melds { display: flex; flex-wrap: wrap; gap: 6px; min-height: 34px; align-content: flex-start; }
+  .mjx-meld { display: flex; gap: 1px; padding: 2px; border-radius: 5px; background: rgba(43, 47, 54, .08); }
+  .mjx-hand-head { display: flex; align-items: center; justify-content: space-between; min-height: 22px; }
+  .mjx-hand-head span:first-child {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--muted); font-weight: 700;
+  }
+  .mjx-hand-head span:last-child { font-size: 10.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .mjx-hand { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; padding: 2px 0; }
+  .mjx-tile {
+    display: inline-flex; align-items: center; justify-content: center; flex: none;
+    padding: 0; overflow: hidden; border: 1px solid var(--mj-tile-border);
+    border-radius: 5px; background: var(--mj-tile-bg);
+    box-shadow: 0 1px 0 rgb(43 47 54 / .16);
+  }
+  .mjx-tile img { display: block; width: 100%; height: 100%; object-fit: contain; pointer-events: none; -webkit-user-drag: none; }
+  .mjx-tile.mini { width: 18px; height: 23px; border-radius: 3px; }
+  .mjx-tile.small { width: 27px; height: 35px; border-radius: 4px; }
+  .mjx-tile.hand-tile {
+    width: 100%; aspect-ratio: 6 / 7; min-height: 44px; cursor: pointer;
+    touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  }
+  .mjx-tile.hand-tile:hover { background: #fff; }
+  .mjx-tile.hand-tile:disabled { opacity: .58; cursor: not-allowed; }
+  .mjx-tile.hand-tile.drawn { box-shadow: 0 0 0 2px var(--red); transform: translateY(-2px); }
+  .mjx-tile.hand-tile.selected { outline: 2px solid var(--red); outline-offset: 1px; }
+  .mjx-tile.win { outline: 2px solid var(--red); outline-offset: 1px; }
+  .mjx-tile:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+  .mjx-actions-wrap { display: flex; flex-direction: column; gap: 5px; }
+  .mjx-actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+  .mjx-actions button, .mjx-chi-options button {
+    min-width: 56px; min-height: 46px; padding: 0 14px;
+    border-radius: 999px; border: 1px solid var(--line-strong);
+    background: #fffdf8; font-weight: 750; font-size: 14px;
+    cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  }
+  .mjx-actions button.primary { background: var(--dark); border-color: var(--dark); color: var(--on-dark); }
+  .mjx-actions button:disabled { opacity: .4; cursor: not-allowed; }
+  .mjx-actions button:focus-visible, .mjx-chi-options button:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+  .mjx-chi-options { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+  .mjx-chi-options button { display: inline-flex; align-items: center; gap: 3px; padding: 0 8px; min-width: 0; }
+  .mjx-hint { min-height: 18px; text-align: center; font-size: 11.5px; color: var(--muted); }
+  .mjx-result-score { display: flex; justify-content: center; gap: 17px; margin: 10px 0 4px; }
+  .mjx-result-score div { min-width: 70px; padding: 7px 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); }
+  .mjx-result-score strong { display: block; font-family: var(--mono); font-size: 21px; line-height: 1.2; }
+  .mjx-result-score span { font-size: 10px; color: var(--muted); }
+  .mjx-result-hand { display: flex; flex-wrap: wrap; gap: 2px; justify-content: center; margin-top: 9px; }
+  .mjx-result-hand .mjx-tile { width: 22px; height: 29px; border-radius: 3px; }
+  .mjx-result-melds { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 6px; }
+  .mjx-result-melds .mjx-meld { background: transparent; }
+  .overlay .box { max-height: 86vh; overflow-y: auto; }
+  .overlay .box p { margin-top: 4px; }
+  .overlay .actions { margin-top: 14px; }
+  .file-warning { display: none; margin: 0 0 6px; padding: 9px 11px; border-radius: 10px; border: 1px solid var(--red); background: #fff3ef; color: #8a2b1e; font-size: 12px; }
+  html.file-mode .file-warning { display: block; }
+  @media (max-width: 360px) {
+    .mjx { padding-left: 7px; padding-right: 7px; }
+    .mjx-hand { gap: 3px; }
+    .mjx-actions button { min-width: 50px; padding: 0 10px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .mjx-tile.drawn { transform: none; } }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="wrap">
+    <a href="../index.html">← 目录</a>
+    <span class="title">麻将</span>
+    <a href="mahjong-rules.html">规则</a>
+    <button id="sound" type="button" aria-pressed="false">声音 开</button>
+  </div>
+</header>
+
+<main class="mjx">
+  <p class="file-warning">请用本地静态服务器打开本页（例如在 <code>games/boardgame</code> 下运行 <code>python3 -m http.server 8123</code>）；直接双击 file:// 会被浏览器拦截 ES modules。</p>
+
+  <section class="mjx-status" aria-label="牌局状态" aria-live="polite">
+    <span class="mjx-badge" id="phase-badge">出牌</span>
+    <span class="grow" id="status-line">准备开局…</span>
+    <span>牌山 <strong id="wall-left">0</strong></span>
+  </section>
+
+  <section class="mjx-opponents" id="opponents" aria-label="其他玩家"></section>
+
+  <section class="mjx-center" aria-label="牌桌">
+    <div class="mjx-block">
+      <h2>你的弃牌河</h2>
+      <div class="mjx-river" id="my-river"></div>
+    </div>
+    <div class="mjx-block">
+      <h2>你的副露</h2>
+      <div class="mjx-melds" id="my-melds"></div>
+    </div>
+  </section>
+
+  <section aria-label="你的手牌">
+    <div class="mjx-hand-head"><span>手牌</span><span id="hand-count">0 张</span></div>
+    <div class="mjx-hand" id="hand" role="group" aria-label="你的手牌，方向键选择，回车出牌"></div>
+  </section>
+
+  <section class="mjx-actions-wrap" aria-label="操作">
+    <div class="mjx-actions" id="actions">
+      <button type="button" data-action="chi" disabled>吃</button>
+      <button type="button" data-action="pong" disabled>碰</button>
+      <button type="button" data-action="kong" disabled>杠</button>
+      <button type="button" data-action="win" disabled>和</button>
+      <button type="button" data-action="pass" disabled>过</button>
+    </div>
+    <div class="mjx-chi-options" id="chi-options"></div>
+  </section>
+  <p class="mjx-hint" id="hint">点一张牌打出；方向键选择，回车出牌。</p>
+</main>
+
+<div class="overlay" id="overlay" hidden></div>
+
+<script>
+if (location.protocol === 'file:') document.documentElement.classList.add('file-mode');
+</script>
+<script type="module">
+import {
+  TILE_KINDS,
+  tileAsset,
+  tileLabel,
+  parseTile,
+  createGame,
+  discard,
+  evaluateHand,
+  selfDrawWin,
+  claimWin,
+  claimChi,
+  claimPong,
+  claimKong,
+  passClaim,
+  currentClaimOffer,
+  chooseAiClaim,
+  chooseAiDiscard,
+  summarize
+} from '../app/mahjong.js';
+import { audio } from '../app/audio.js';
+import { dealPlan } from '../app/physics.js';
+
+const $ = (id) => document.getElementById(id);
+const SEAT_NAMES = ['你', '下家', '对家', '上家'];
+const ACTION_NAMES = { win: '和', pong: '碰', kong: '杠', chi: '吃', pass: '过' };
+const reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+const AI_DELAY = 430;
+
+audio.unlockOnGesture(window);
+window.__mahjongAudio = audio;
+
+/* ---------- 34 张本地牌图预加载（Playwright 验收用真实计数） ---------- */
+const ASSET_DIR = '../assets/cardart/mahjong/';
+const assetUrls = TILE_KINDS.map(function (code) { return ASSET_DIR + tileAsset(code); });
+const assetState = { expected: assetUrls.length, loaded: 0, failed: [], urls: assetUrls.slice() };
+window.__mahjongAssets = assetState;
+assetUrls.forEach(function (url) {
+  const img = new Image();
+  img.decoding = 'async';
+  img.onload = function () { assetState.loaded += 1; };
+  img.onerror = function () { assetState.failed.push(url); };
+  img.src = url;
+});
+
+let game = null;
+let botTimer = null;
+let busy = false;
+let settled = false;
+let selectedIndex = null;
+let lastDrawnSeen = '';
+let dealAnimating = false;
+
+function seedNow() {
+  return (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
+}
+
+function esc(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function sortKey(tile) {
+  const parsed = parseTile(tile);
+  if (!parsed) return 999;
+  const offset = parsed.suit === 'm' ? 0 : parsed.suit === 'p' ? 100 : parsed.suit === 's' ? 200 : 300;
+  return offset + parsed.rank;
+}
+
+function tileImg(tile, size, extraClass) {
+  const cls = 'mjx-tile' + (size ? ' ' + size : '') + (extraClass ? ' ' + extraClass : '');
+  const src = ASSET_DIR + tileAsset(tile);
+  return '<span class="' + cls + '" aria-label="' + esc(tileLabel(tile)) + '">' +
+    '<img src="' + src + '" alt="' + esc(tileLabel(tile)) + '" draggable="false">' +
+    '</span>';
+}
+
+function meldHtml(meld, size) {
+  return '<span class="mjx-meld" aria-label="副露">' +
+    meld.tiles.map(function (tile) { return tileImg(tile, size || 'mini'); }).join('') +
+    '</span>';
+}
+
+function seatLabel(player) {
+  return SEAT_NAMES[player] + (game && game.dealer === player ? ' · 庄' : '');
+}
+
+function lastDrawnKey(state) {
+  if (!state || !state.lastDrawn) return '';
+  return state.lastDrawn.player + ':' + state.lastDrawn.tile + ':' + state.handCounts[state.lastDrawn.player];
+}
+
+function handItems() {
+  if (!game) return [];
+  const hand = game.hands[0].slice();
+  const meldCount = game.melds[0].length;
+  const full = 14 - meldCount * 3;
+  const items = hand.map(function (tile, index) { return { tile: tile, index: index }; });
+  let drawn = null;
+  if (hand.length === full && game.lastDrawn && game.lastDrawn.player === 0) {
+    for (let i = items.length - 1; i >= 0; i -= 1) {
+      if (items[i].tile === game.lastDrawn.tile) {
+        drawn = items.splice(i, 1)[0];
+        drawn.drawn = true;
+        break;
+      }
+    }
+  }
+  items.sort(function (a, b) {
+    return sortKey(a.tile) - sortKey(b.tile) || a.index - b.index;
+  });
+  if (drawn) items.push(drawn);
+  return items;
+}
+
+function canDiscardNow() {
+  if (!game || game.phase !== 'discard' || game.currentPlayer !== 0 || busy) return false;
+  return game.hands[0].length === 14 - game.melds[0].length * 3;
+}
+
+function tsumoResult() {
+  if (!game || game.phase !== 'discard' || game.currentPlayer !== 0) return null;
+  if (!game.lastDrawn || game.lastDrawn.player !== 0) return null;
+  if (game.hands[0].length !== 14 - game.melds[0].length * 3) return null;
+  return evaluateHand(game.hands[0], game.melds[0]);
+}
+
+function renderHand() {
+  const items = handItems();
+  const canDiscard = canDiscardNow();
+  const html = items.map(function (item) {
+    const selected = selectedIndex === item.index ? ' selected' : '';
+    return '<button class="mjx-tile hand-tile' + (item.drawn ? ' drawn' : '') + selected + '"' +
+      ' type="button" data-hand-index="' + item.index + '"' +
+      ' aria-label="打出 ' + esc(tileLabel(item.tile)) + '"' +
+      (canDiscard ? '' : ' disabled') + '>' +
+      '<img src="' + ASSET_DIR + tileAsset(item.tile) + '" alt="" draggable="false">' +
+      '</button>';
+  }).join('');
+  $('hand').innerHTML = html || '<span class="muted">—</span>';
+  $('hand').setAttribute('aria-busy', canDiscard ? 'false' : 'true');
+  $('hand-count').textContent = game.hands[0].length + ' 张' +
+    (game.melds[0].length ? ' · 副露 ' + game.melds[0].length + ' 组' : '');
+}
+
+function renderOpponents() {
+  $('opponents').innerHTML = [1, 2, 3].map(function (player) {
+    const isCurrent = game.phase !== 'ended' && game.phase !== 'claim' && game.currentPlayer === player;
+    const claimHere = game.phase === 'claim' && currentClaimOffer(game) && currentClaimOffer(game).player === player;
+    const backs = new Array(game.hands[player].length).fill('<span class="mjx-back"></span>').join('');
+    const river = game.rivers[player].slice(-8).map(function (tile) {
+      return tileImg(tile, 'mini');
+    }).join('') || '<span class="mjx-seat-meta">—</span>';
+    return '<div class="mjx-seat' + (isCurrent || claimHere ? ' current' : '') + '">' +
+      '<div class="mjx-seat-head">' +
+      '<span class="mjx-seat-name">' + esc(seatLabel(player)) + '</span>' +
+      '<span class="mjx-seat-meta">' + (isCurrent ? '行动' : claimHere ? '鸣牌' : '') + '</span>' +
+      '</div>' +
+      '<div class="mjx-backs" aria-label="手牌 ' + game.hands[player].length + ' 张">' + backs + '</div>' +
+      '<div class="mjx-mini-river">' + river + '</div>' +
+      (game.melds[player].length ? '<div class="mjx-melds" style="margin-top:3px">' +
+        game.melds[player].map(function (meld) { return meldHtml(meld, 'mini'); }).join('') + '</div>' : '') +
+      '</div>';
+  }).join('');
+}
+
+function renderActions() {
+  const offer = currentClaimOffer(game);
+  const humanOffer = offer && offer.player === 0 ? offer : null;
+  const types = humanOffer ? humanOffer.actions.map(function (action) { return action.type; }) : [];
+  const tsumo = tsumoResult();
+  const buttons = $('actions').querySelectorAll('button[data-action]');
+  buttons.forEach(function (button) {
+    const action = button.dataset.action;
+    let enabled = false;
+    if (action === 'win') enabled = Boolean(tsumo && tsumo.win) || types.indexOf('win') !== -1;
+    else if (action === 'pass') enabled = Boolean(humanOffer);
+    else enabled = types.indexOf(action) !== -1;
+    button.disabled = !enabled;
+    button.classList.toggle('primary', enabled && (action === 'win' || action === 'kong'));
+  });
+
+  const chiOptions = $('chi-options');
+  const chiAction = humanOffer && humanOffer.actions.find(function (action) { return action.type === 'chi'; });
+  if (chiAction && chiAction.combos.length > 1) {
+    chiOptions.innerHTML = chiAction.combos.map(function (combo, index) {
+      return '<button type="button" data-chi-index="' + index + '" aria-label="吃 ' +
+        combo.meld.map(tileLabel).join(' ') + '">吃' +
+        combo.meld.map(function (tile) { return tileImg(tile, 'mini'); }).join('') + '</button>';
+    }).join('');
+  } else {
+    chiOptions.innerHTML = '';
+  }
+}
+
+function render() {
+  if (!game) return;
+  const sum = summarize(game);
+  $('wall-left').textContent = String(sum.wallLeft);
+  const offer = currentClaimOffer(game);
+  const phaseText = game.phase === 'ended' ? '结束' :
+    game.phase === 'claim' ? '鸣牌' : game.currentPlayer === 0 ? '你的回合' : '等待';
+  $('phase-badge').textContent = phaseText;
+  $('phase-badge').classList.toggle('hot', game.phase === 'claim' || (game.phase === 'discard' && game.currentPlayer === 0));
+
+  if (game.phase === 'ended') {
+    $('status-line').textContent = resultLine(game.result);
+  } else if (game.phase === 'claim') {
+    const who = offer ? SEAT_NAMES[offer.player] : '—';
+    $('status-line').textContent = '待处理 ' + tileLabel(game.lastDiscard ? game.lastDiscard.tile : '') + '：' + who;
+  } else {
+    $('status-line').textContent = game.currentPlayer === 0 ? '轮到你摸打' : '轮到 ' + SEAT_NAMES[game.currentPlayer] + ' 摸打';
+  }
+
+  renderOpponents();
+  $('my-river').innerHTML = game.rivers[0].slice(-24).map(function (tile) { return tileImg(tile, 'small'); }).join('') ||
+    '<span class="muted" style="font-size:11px">—</span>';
+  $('my-melds').innerHTML = game.melds[0].length ? game.melds[0].map(function (meld) { return meldHtml(meld, 'small'); }).join('') :
+    '<span class="muted" style="font-size:11px">—</span>';
+  renderHand();
+  renderActions();
+
+  const humanOffer = offer && offer.player === 0 ? offer : null;
+  const tsumo = tsumoResult();
+  if (game.phase === 'ended') $('hint').textContent = '本局结束，点“再来一局”继续。';
+  else if (humanOffer) {
+    const names = humanOffer.actions.map(function (action) { return ACTION_NAMES[action.type] || action.type; }).join(' / ');
+    $('hint').textContent = '你可以：' + names + '，或点“过”。';
+  } else if (tsumo && tsumo.win) $('hint').textContent = '牌型已和，点“和”自摸。';
+  else if (game.phase === 'claim') $('hint').textContent = '等待 ' + SEAT_NAMES[offer ? offer.player : game.currentPlayer] + ' 决定…';
+  else if (game.currentPlayer === 0 && !busy) $('hint').textContent = '点一张牌打出；方向键选择，回车出牌。';
+  else $('hint').textContent = '等待对手摸打…';
+
+  const drawnKey = game.lastDrawn && game.lastDrawn.player === 0 && !dealAnimating &&
+    game.hands[0].length === 14 - game.melds[0].length * 3 ? lastDrawnKey(sum) : '';
+  if (drawnKey && drawnKey !== lastDrawnSeen) {
+    audio.play('draw');
+    animateDraw();
+  }
+  if (drawnKey) lastDrawnSeen = drawnKey;
+}
+
+function resultLine(result) {
+  if (!result) return '本局结束';
+  if (result.type === 'draw') return result.reason || '流局';
+  const who = result.winner === 0 ? '你' : SEAT_NAMES[result.winner];
+  const how = result.type === 'tsumo' ? '自摸' : '点炮';
+  return who + ' ' + how + ' · ' + result.fan + ' 番 · ' + result.points + ' 分';
+}
+
+function animateDeal() {
+  if (reduceMotion) return;
+  const tiles = Array.prototype.slice.call(document.querySelectorAll('#hand .hand-tile'));
+  if (!tiles.length) return;
+  const plan = dealPlan({
+    count: tiles.length,
+    from: { x: 0, y: -130 },
+    to: { x: 0, y: 0 },
+    stagger: 26,
+    duration: 260,
+    easing: 'easeOutCubic'
+  });
+  tiles.forEach(function (el, i) {
+    const item = plan[i];
+    el.animate([
+      { transform: 'translate(' + item.from.x + 'px,' + item.from.y + 'px) scale(.55) rotate(-6deg)', opacity: 0.15 },
+      { transform: 'translate(0,0) scale(1.03)', opacity: 1, offset: 0.82 },
+      { transform: 'none', opacity: 1 }
+    ], {
+      duration: item.duration,
+      delay: item.delay,
+      easing: 'cubic-bezier(.19,1,.22,1)',
+      fill: 'both'
+    });
+  });
+}
+
+function animateDraw() {
+  if (reduceMotion) return;
+  const el = document.querySelector('#hand .hand-tile.drawn');
+  if (!el || typeof el.animate !== 'function') return;
+  const plan = dealPlan({
+    count: 1,
+    from: { x: 46, y: -44 },
+    to: { x: 0, y: 0 },
+    stagger: 0,
+    duration: 240,
+    easing: 'easeOutCubic'
+  })[0];
+  el.animate([
+    { transform: 'translate(' + plan.from.x + 'px,' + plan.from.y + 'px) scale(.72)', opacity: 0.2 },
+    { transform: 'translate(0,0) scale(1.04)', opacity: 1, offset: 0.85 },
+    { transform: 'translateY(-2px)', opacity: 1 }
+  ], {
+    duration: plan.duration,
+    delay: plan.delay,
+    easing: 'cubic-bezier(.19,1,.22,1)',
+    fill: 'both'
+  });
+}
+
+function newGame() {
+  clearTimeout(botTimer);
+  game = createGame({ seed: seedNow(), dealer: 0 });
+  settled = false;
+  busy = false;
+  selectedIndex = null;
+  dealAnimating = true;
+  $('overlay').hidden = true;
+  render();
+  dealAnimating = false;
+  lastDrawnSeen = lastDrawnKey(summarize(game));
+  audio.play('deal');
+  animateDeal();
+  schedule();
+}
+
+function humanDiscard(index) {
+  if (!canDiscardNow()) return;
+  const tile = game.hands[0][index];
+  if (!tile) return;
+  const result = discard(game, tile);
+  if (!result.ok) {
+    audio.play('error');
+    $('hint').textContent = result.message || '不能打出这张牌';
+    return;
+  }
+  selectedIndex = null;
+  audio.play('play');
+  render();
+  schedule();
+}
+
+function afterAction(result, sound) {
+  if (!result || !result.ok) {
+    audio.play('error');
+    if (result && result.message) $('hint').textContent = result.message;
+    render();
+    return;
+  }
+  if (sound) audio.play(sound);
+  render();
+  schedule();
+}
+
+function doHumanClaim(type, comboIndex) {
+  if (!game || game.phase !== 'claim') return;
+  const offer = currentClaimOffer(game);
+  if (!offer || offer.player !== 0) return;
+  let result = null;
+  if (type === 'win') result = claimWin(game, 0);
+  else if (type === 'pong') result = claimPong(game, 0);
+  else if (type === 'kong') result = claimKong(game, 0);
+  else if (type === 'chi') result = claimChi(game, 0, comboIndex || 0);
+  else if (type === 'pass') result = passClaim(game, 0);
+  afterAction(result, type === 'pass' ? 'tap' : type === 'kong' ? 'attack' : 'tap');
+}
+
+function doHumanTsumo() {
+  if (!game) return;
+  const result = selfDrawWin(game, 0);
+  afterAction(result, null);
+}
+
+function schedule() {
+  clearTimeout(botTimer);
+  if (!game) return;
+  if (game.phase === 'ended') {
+    settle();
+    return;
+  }
+
+  if (game.phase === 'claim') {
+    const offer = currentClaimOffer(game);
+    if (!offer) {
+      busy = false;
+      render();
+      return;
+    }
+    if (offer.player === 0) {
+      busy = false;
+      render();
+      return;
+    }
+    busy = true;
+    render();
+    botTimer = setTimeout(function () {
+      if (!game || game.phase !== 'claim') return;
+      const current = currentClaimOffer(game);
+      if (!current || current.player === 0) {
+        busy = false;
+        render();
+        schedule();
+        return;
+      }
+      const choice = chooseAiClaim(game, current.player);
+      let result = null;
+      if (choice.type === 'win') result = claimWin(game, current.player);
+      else if (choice.type === 'pong') result = claimPong(game, current.player);
+      else if (choice.type === 'kong') result = claimKong(game, current.player);
+      else if (choice.type === 'chi') result = claimChi(game, current.player, choice.comboIndex || 0);
+      else result = passClaim(game, current.player);
+      if (!result || !result.ok) result = passClaim(game, current.player);
+      busy = false;
+      if (choice.type !== 'win') {
+        audio.play(choice.type === 'pass' ? 'tap' : choice.type === 'kong' ? 'attack' : 'tap');
+      }
+      render();
+      schedule();
+    }, AI_DELAY);
+    return;
+  }
+
+  if (game.currentPlayer !== 0) {
+    busy = true;
+    render();
+    botTimer = setTimeout(function () {
+      if (!game || game.phase !== 'discard' || game.currentPlayer === 0) {
+        busy = false;
+        render();
+        schedule();
+        return;
+      }
+      const player = game.currentPlayer;
+      const aiWin = evaluateHand(game.hands[player], game.melds[player]);
+      if (game.lastDrawn && game.lastDrawn.player === player && aiWin.win) {
+        busy = false;
+        const winResult = selfDrawWin(game, player);
+        if (winResult && winResult.ok) {
+          render();
+          schedule();
+          return;
+        }
+      }
+      const tile = chooseAiDiscard(game.hands[player], game.melds[player]);
+      let result = discard(game, tile);
+      if (!result || !result.ok) {
+        const fallback = game.hands[player][game.hands[player].length - 1];
+        if (fallback) result = discard(game, fallback);
+      }
+      busy = false;
+      audio.play('tile');
+      render();
+      schedule();
+    }, AI_DELAY);
+    return;
+  }
+
+  busy = false;
+  render();
+}
+
+function settle() {
+  if (settled || !game || game.phase !== 'ended') return;
+  settled = true;
+  clearTimeout(botTimer);
+  busy = false;
+  const result = game.result || { type: 'draw', winner: null, fan: 0, points: 0, patterns: [] };
+  const won = result.winner === 0;
+  audio.play(result.winner == null ? 'lose' : won ? 'win' : 'lose');
+
+  const title = result.winner == null ? '流局' :
+    won ? '你和牌' : SEAT_NAMES[result.winner] + ' 和牌';
+  const how = result.type === 'tsumo' ? '自摸' :
+    result.type === 'ron' ? (won ? '点炮' : '你点炮') : '';
+  const patterns = (result.patterns || []).join('、');
+  const fan = result.fan || 0;
+  const points = result.points == null ? (result.winner == null ? 0 : 100 + fan * 100) : result.points;
+
+  let winningHtml = '';
+  if (result.winner != null && Array.isArray(result.hand)) {
+    let winTileUsed = false;
+    const sorted = result.hand.slice().sort(function (a, b) { return sortKey(a) - sortKey(b); });
+    winningHtml = '<div class="mjx-result-hand">' + sorted.map(function (tile) {
+      let cls = '';
+      if (!winTileUsed && tile === result.tile) { cls = 'win'; winTileUsed = true; }
+      return tileImg(tile, '', cls);
+    }).join('') + '</div>';
+    if (result.melds && result.melds.length) {
+      winningHtml += '<div class="mjx-result-melds">' + result.melds.map(function (meld) {
+        return meldHtml(meld, 'mini');
+      }).join('') + '</div>';
+    }
+  }
+
+  const box = document.createElement('div');
+  box.className = 'box';
+  box.innerHTML =
+    '<h2>' + esc(title) + '</h2>' +
+    (result.winner == null
+      ? '<p>' + esc(result.reason || '牌山已空') + '</p>'
+      : '<p>' + (how ? esc(how) + ' · ' : '') + esc(patterns || '和牌') + '</p>') +
+    (result.winner == null ? '' :
+      '<div class="mjx-result-score">' +
+      '<div><strong>' + fan + '</strong><span>番</span></div>' +
+      '<div><strong>' + points + '</strong><span>分</span></div>' +
+      '</div>') +
+    winningHtml +
+    '<div class="actions"><button class="primary" type="button" id="again">再来一局</button></div>';
+  const overlay = $('overlay');
+  overlay.innerHTML = '';
+  overlay.appendChild(box);
+  overlay.hidden = false;
+  $('again').addEventListener('click', function () {
+    audio.play('tap');
+    newGame();
+  });
+}
+
+function syncSound() {
+  const muted = audio.isMuted();
+  $('sound').textContent = muted ? '声音 关' : '声音 开';
+  $('sound').setAttribute('aria-pressed', String(!muted));
+}
+
+/* ---------- 事件 ---------- */
+
+$('hand').addEventListener('click', function (event) {
+  const button = event.target.closest('button[data-hand-index]');
+  if (!button || button.disabled) return;
+  humanDiscard(Number(button.dataset.handIndex));
+});
+
+$('actions').addEventListener('click', function (event) {
+  const button = event.target.closest('button[data-action]');
+  if (!button || button.disabled) return;
+  const action = button.dataset.action;
+  if (action === 'win') {
+    if (game.phase === 'claim') doHumanClaim('win');
+    else doHumanTsumo();
+  } else {
+    doHumanClaim(action);
+  }
+});
+
+$('chi-options').addEventListener('click', function (event) {
+  const button = event.target.closest('button[data-chi-index]');
+  if (!button) return;
+  doHumanClaim('chi', Number(button.dataset.chiIndex));
+});
+
+$('sound').addEventListener('click', function () {
+  audio.toggle();
+  audio.play('tap');
+  syncSound();
+});
+
+document.addEventListener('keydown', function (event) {
+  if (event.altKey || event.ctrlKey || event.metaKey) return;
+  if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+    const buttons = Array.prototype.slice.call(document.querySelectorAll('#hand button[data-hand-index]:not(:disabled)'));
+    if (!buttons.length) return;
+    event.preventDefault();
+    const active = document.activeElement;
+    let at = buttons.indexOf(active);
+    if (at === -1) at = event.key === 'ArrowLeft' ? 0 : -1;
+    const next = event.key === 'ArrowLeft' ? (at - 1 + buttons.length) % buttons.length : (at + 1) % buttons.length;
+    buttons[next].focus();
+    selectedIndex = Number(buttons[next].dataset.handIndex);
+    renderHand();
+    const focused = document.querySelector('#hand button[data-hand-index="' + selectedIndex + '"]');
+    if (focused) focused.focus();
+    return;
+  }
+  const key = event.key.toLowerCase();
+  if (key === 'c') { if (game.phase === 'claim') doHumanClaim('chi'); }
+  else if (key === 'p') { if (game.phase === 'claim') doHumanClaim('pong'); }
+  else if (key === 'g') { if (game.phase === 'claim') doHumanClaim('kong'); }
+  else if (key === 'h' || key === 'w') {
+    if (game.phase === 'claim') doHumanClaim('win');
+    else doHumanTsumo();
+  } else if (event.key === 'Escape') {
+    if (game.phase === 'claim') doHumanClaim('pass');
+  }
+});
+
+window.__mahjong = {
+  get state() { return game; },
+  get assets() { return assetState; },
+  newGame: newGame,
+  evaluateHand: evaluateHand
+};
+
+syncSound();
+newGame();
+</script>
+</body>
+</html>

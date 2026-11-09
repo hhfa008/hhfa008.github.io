@@ -1,0 +1,651 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>英雄领域 Hero Realms（简化版）· 双人卡牌构筑</title>
+<meta name="description" content="Hero Realms 英雄领域简化网页版：50 点生命、7 金币 + 3 匕首起始牌组、5 张中央市场、冠军与护甲规则，玩家对战启发式 AI。纯前端离线可玩。">
+<style>
+  :root{
+    --bg:#14161b;--bg-2:#1c2028;--paper:#20252e;--paper-2:#272d38;--card:#2e3542;
+    --ink:#f4efe4;--muted:#b8b1a3;--muted-2:#8e877a;--line:#3a424f;--line-strong:#4d5665;
+    --accent:#e6b45c;--accent-2:#f2d38d;--good:#67c58b;--bad:#e37b74;--armor:#8fc7ef;
+    --shadow:0 10px 30px rgba(0,0,0,.28);--radius:14px;
+  }
+  @media (prefers-color-scheme:light){
+    :root{
+      --bg:#efe8db;--bg-2:#f7f2e8;--paper:#fffdf8;--paper-2:#f3ecdf;--card:#fffaf0;
+      --ink:#2d2418;--muted:#6b6152;--muted-2:#8a7f6e;--line:#d8cdbb;--line-strong:#c4b7a1;
+      --accent:#9a6418;--accent-2:#b9862f;--good:#2f7d4f;--bad:#a63b35;--armor:#2f6d96;
+      --shadow:0 10px 26px rgba(80,55,20,.13);
+    }
+  }
+  *{box-sizing:border-box}
+  html,body{max-width:100%;overflow-x:hidden}
+  body{
+    margin:0;background:radial-gradient(1200px 600px at 50% -10%,var(--bg-2),var(--bg));
+    color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",
+    "Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    -webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent;
+  }
+  [hidden]{display:none!important}
+  .wrap{width:100%;max-width:820px;margin:0 auto;padding:0 12px 40px}
+  .site-header{border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--bg) 82%,transparent);
+    backdrop-filter:blur(8px);position:sticky;top:0;z-index:20}
+  .header-inner{display:flex;align-items:center;justify-content:space-between;min-height:52px;gap:10px}
+  .brand{color:var(--ink);text-decoration:none;font-weight:700;display:inline-flex;align-items:center;
+    min-height:44px;padding:0 4px;border-radius:10px}
+  .brand:focus-visible,.btn:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+  .header-note{color:var(--muted);font-size:12px;letter-spacing:.12em;text-transform:uppercase}
+  .hero{padding:18px 2px 10px}
+  .eyebrow{margin:0 0 4px;color:var(--accent);font-size:11px;letter-spacing:.18em;font-weight:700}
+  h1{margin:0;font-size:clamp(26px,7vw,40px);line-height:1.12;letter-spacing:-.02em}
+  h1 span{display:block;color:var(--muted);font-size:.46em;font-weight:600;letter-spacing:.08em;margin-top:4px}
+  .lede{margin:10px 0 0;color:var(--muted);max-width:56ch;font-size:14px}
+  .status-grid{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:stretch;margin:14px 0 10px}
+  .panel{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:10px 12px;box-shadow:var(--shadow);min-width:0}
+  .panel.ai{border-color:color-mix(in srgb,var(--bad) 45%,var(--line))}
+  .panel.targetable{outline:3px solid var(--accent);outline-offset:2px;cursor:pointer}
+  .panel-head{display:flex;align-items:center;justify-content:space-between;gap:6px;color:var(--muted);font-size:12px}
+  .tag{font-size:10px;border:1px solid var(--line-strong);border-radius:999px;padding:1px 7px;color:var(--muted)}
+  .hp{display:flex;align-items:baseline;gap:4px;margin:2px 0 4px}
+  .hp strong{font-size:30px;line-height:1;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+  .hp span{font-size:12px;color:var(--muted)}
+  .bar{height:7px;border-radius:999px;background:var(--paper-2);overflow:hidden;border:1px solid var(--line)}
+  .bar i{display:block;height:100%;width:100%;background:linear-gradient(90deg,var(--good),#9fe0b6);transition:width .25s ease}
+  .panel.ai .bar i{background:linear-gradient(90deg,var(--bad),#f0a49d)}
+  .stats{display:flex;gap:10px;flex-wrap:wrap;margin-top:7px;font-size:12px;color:var(--muted)}
+  .stats b{color:var(--ink);font-variant-numeric:tabular-nums}
+  .stats .armor b{color:var(--armor)}
+  .stats .gold b{color:var(--accent-2)}
+  .counts{margin-top:5px;color:var(--muted-2);font-size:11px;font-variant-numeric:tabular-nums}
+  .vs{display:grid;place-items:center;color:var(--muted-2);font-weight:800;font-size:12px;letter-spacing:.1em;padding:0 2px}
+  .turnbar{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;
+    background:var(--paper-2);border:1px solid var(--line);border-radius:999px;padding:7px 13px;font-size:12px;color:var(--muted)}
+  .turnbar b{color:var(--ink);font-variant-numeric:tabular-nums}
+  #turn-chip{font-weight:800;color:var(--ink);letter-spacing:.02em}
+  #turn-chip.ai{color:var(--bad)}
+  .zone{margin-top:12px}
+  .zone-head{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted);margin:0 2px 6px}
+  .zone-head strong{color:var(--ink)}
+  .hint{color:var(--muted-2);font-size:11px;text-align:right}
+  .row{display:flex;gap:8px;overflow-x:auto;padding:2px 1px 6px;-webkit-overflow-scrolling:touch}
+  .empty{margin:0;padding:12px;border:1px dashed var(--line-strong);border-radius:12px;color:var(--muted-2);font-size:12px;flex:1}
+  .market{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+  .mcard,.hcard,.champ{
+    position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:5px;
+    border:1px solid rgba(255,255,255,.28);border-radius:13px;text-align:left;color:#fff;
+    background:linear-gradient(155deg,var(--g1,#666),var(--g2,#222));text-shadow:0 1px 2px rgba(0,0,0,.55);
+    box-shadow:0 5px 14px rgba(0,0,0,.25);padding:9px 9px 8px;font:inherit;cursor:pointer;
+    overflow:hidden;isolation:isolate;
+  }
+  .mcard::after,.hcard::after,.champ::after{content:"";position:absolute;inset:0;z-index:-1;
+    background:linear-gradient(180deg,rgba(0,0,0,0) 35%,rgba(0,0,0,.32));}
+  .mcard{min-height:118px}
+  .mcard:active,.hcard:active,.champ:active{transform:translateY(1px)}
+  .mcard.poor{filter:saturate(.55) brightness(.72)}
+  .mcard.poor::before{content:"金币不足";position:absolute;right:6px;bottom:6px;font-size:10px;
+    background:rgba(0,0,0,.5);padding:1px 6px;border-radius:999px;text-shadow:none}
+  .cost{position:absolute;top:6px;left:6px;width:24px;height:24px;border-radius:999px;display:grid;
+    place-items:center;background:rgba(0,0,0,.48);border:1px solid rgba(255,255,255,.55);
+    font-size:13px;font-weight:800;text-shadow:none}
+  .badge{position:absolute;top:7px;right:6px;font-size:9px;letter-spacing:.06em;padding:2px 6px;
+    border-radius:999px;background:rgba(0,0,0,.42);border:1px solid rgba(255,255,255,.3);text-shadow:none}
+  .cname{font-size:14px;font-weight:800;line-height:1.2;margin-top:16px}
+  .ctext{font-size:11px;line-height:1.35;opacity:.95}
+  .cfoot{margin-top:auto;font-size:10px;opacity:.82}
+  .hand{display:flex;gap:8px;overflow-x:auto;padding:3px 1px 10px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}
+  .hcard{flex:0 0 132px;min-height:150px;scroll-snap-align:start}
+  .hcard .cname{margin-top:14px}
+  .hcard.pending{outline:3px solid var(--accent);outline-offset:2px}
+  .hcard:disabled,.mcard:disabled,.champ:disabled{cursor:default}
+  .champ{flex:0 0 138px;min-height:66px;padding:8px 9px}
+  .champ .champ-name{font-size:13px;font-weight:800}
+  .champ .champ-def{position:absolute;top:7px;right:7px;font-size:10px;background:rgba(0,0,0,.45);
+    border-radius:999px;padding:2px 6px;text-shadow:none}
+  .champ .champ-ab{font-size:10px;opacity:.93;line-height:1.3}
+  .champ.used{filter:grayscale(.6) brightness(.72)}
+  .champ.used .champ-ab::after{content:" · 已激活"}
+  .champ.targetable{outline:3px solid var(--accent);outline-offset:2px}
+  .target-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--paper);
+    border:1px solid var(--accent);border-radius:12px;padding:9px 11px;margin:0 0 8px;font-size:12px}
+  .target-bar span{color:var(--muted)}
+  .controls{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:10px 14px;
+    border-radius:12px;border:1px solid var(--line-strong);background:var(--paper-2);color:var(--ink);
+    font-weight:700;text-decoration:none;cursor:pointer;font:inherit;touch-action:manipulation}
+  .btn.primary{background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#241a08;border-color:transparent}
+  .btn.ghost{background:transparent}
+  .btn:disabled{opacity:.45;cursor:default}
+  .target-btn{min-height:44px;padding:6px 11px;border-radius:10px;border:1px solid var(--accent);
+    background:var(--paper-2);color:var(--ink);font:inherit;font-size:12px;cursor:pointer}
+  .log-zone{margin-top:16px}
+  .log{list-style:none;margin:0;padding:8px 10px;max-height:210px;overflow:auto;border:1px solid var(--line);
+    border-radius:12px;background:var(--paper);font-size:12px;line-height:1.45}
+  .log li{padding:3px 6px;border-radius:7px;color:var(--muted)}
+  .log li.player{background:color-mix(in srgb,var(--good) 14%,transparent);color:var(--ink)}
+  .log li.ai{background:color-mix(in srgb,var(--bad) 13%,transparent);color:var(--ink)}
+  .log li .t{color:var(--muted-2);font-variant-numeric:tabular-nums;margin-right:5px}
+  .overlay{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:18px;
+    background:rgba(10,12,16,.66);backdrop-filter:blur(4px)}
+  .overlay-card{width:100%;max-width:360px;background:var(--paper);border:1px solid var(--line-strong);
+    border-radius:18px;padding:22px 20px;text-align:center;box-shadow:0 24px 70px rgba(0,0,0,.4)}
+  .over-intro{margin:0;color:var(--accent);font-size:11px;letter-spacing:.16em;font-weight:800}
+  .overlay-card h2{margin:6px 0 4px;font-size:26px}
+  .overlay-card p{color:var(--muted);font-size:13px;margin:0 0 16px}
+  .foot-note{margin:18px 2px 0;color:var(--muted-2);font-size:11px;line-height:1.6}
+  @media (max-width:360px){
+    .hp strong{font-size:26px}
+    .hcard{flex-basis:124px}
+    .wrap{padding-left:10px;padding-right:10px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{scroll-behavior:auto!important;transition:none!important;animation:none!important}
+  }
+</style>
+</head>
+<body>
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="../index.html">← 桌游目录</a>
+    <span class="header-note">Hero Realms</span>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <p class="eyebrow">BOARDGAME · 双人卡牌构筑</p>
+    <h1>英雄领域 <span>Hero Realms · 简化版</span></h1>
+    <p class="lede">50 点生命，7 金币 + 3 匕首起手。每回合抽 5 张，出牌赚金币、打伤害、治疗或召唤冠军，再从中央市场买 1 张牌强化牌库。把 AI 英雄打到 0 HP 即获胜。</p>
+  </section>
+
+  <section class="status-grid" aria-label="双方状态">
+    <div class="panel player" id="player-panel" aria-label="你的状态">
+      <div class="panel-head"><span>你</span><span class="tag">玩家</span></div>
+      <div class="hp"><strong id="p-hp">50</strong><span>/ <span id="p-max">50</span> HP</span></div>
+      <div class="bar" aria-hidden="true"><i id="p-bar"></i></div>
+      <div class="stats">
+        <span class="armor">护甲 <b id="p-armor">0</b></span>
+        <span class="gold">金币 <b id="p-gold">0</b></span>
+      </div>
+      <div class="counts">牌库 <b id="p-deck">5</b> · 弃牌 <b id="p-discard">0</b> · 手牌 <b id="p-hand">5</b></div>
+    </div>
+    <div class="vs" aria-hidden="true">VS</div>
+    <div class="panel ai" id="ai-panel" aria-label="对手状态">
+      <div class="panel-head"><span>AI</span><span class="tag">对手</span></div>
+      <div class="hp"><strong id="a-hp">50</strong><span>/ <span id="a-max">50</span> HP</span></div>
+      <div class="bar" aria-hidden="true"><i id="a-bar"></i></div>
+      <div class="stats">
+        <span class="armor">护甲 <b id="a-armor">0</b></span>
+        <span class="gold">金币 <b id="a-gold">0</b></span>
+      </div>
+      <div class="counts">牌库 <b id="a-deck">10</b> · 弃牌 <b id="a-discard">0</b> · 手牌 <b id="a-hand">0</b></div>
+    </div>
+  </section>
+
+  <section class="turnbar" aria-label="回合与牌堆">
+    <span id="turn-chip">你的回合</span>
+    <span>第 <b id="turn-number">1</b> 回合</span>
+    <span>市场堆 <b id="market-deck">21</b></span>
+  </section>
+
+  <section class="zone" aria-label="对手冠军区">
+    <div class="zone-head"><span>对手冠军</span><span class="hint" id="ai-champ-hint">伤害牌可指定冠军为目标</span></div>
+    <div class="row" id="ai-champions"></div>
+  </section>
+
+  <section class="zone" aria-label="中央市场">
+    <div class="zone-head"><span><strong>中央市场</strong> <span id="market-count"></span></span><span class="hint" id="market-hint">每回合可购买 1 张，买入后进入弃牌堆</span></div>
+    <div class="market" id="market"></div>
+  </section>
+
+  <section class="zone" aria-label="你的冠军区">
+    <div class="zone-head"><span>你的冠军</span><span class="hint" id="player-champ-hint">每名冠军每回合可激活 1 次</span></div>
+    <div class="row" id="player-champions"></div>
+  </section>
+
+  <section class="hand-zone zone" aria-label="你的手牌">
+    <div class="zone-head"><span><strong>手牌</strong> <span id="hand-count">0</span></span><span class="hint" id="hint" role="status">点击手牌打出</span></div>
+    <div class="target-bar" id="target-bar" hidden>
+      <span>选择伤害目标：</span>
+      <button class="target-btn" id="target-face" type="button" aria-label="选择对手英雄作为伤害目标">对手英雄</button>
+      <button class="target-btn" id="cancel-target" type="button" aria-label="取消选择伤害目标">取消</button>
+    </div>
+    <div class="hand" id="hand"></div>
+  </section>
+
+  <section class="controls">
+    <button class="btn primary" id="end-turn" type="button">结束回合</button>
+    <button class="btn" id="restart" type="button">重新开始</button>
+    <a class="btn ghost" href="rules.html">规则速览</a>
+    <button class="btn ghost" id="cancel-target-2" type="button" hidden>取消选目标</button>
+  </section>
+
+  <section class="log-zone" aria-label="战斗日志">
+    <div class="zone-head"><span>战斗日志</span><span class="hint">最近 40 条</span></div>
+    <ol class="log" id="log"></ol>
+  </section>
+
+  <p class="foot-note">简化规则：金币与护甲在你自己的回合开始时重置；冠军留在场上，被击杀后进入其主人的弃牌堆。完整说明见上方“规则速览”。</p>
+</main>
+
+<div class="overlay" id="overlay" hidden>
+  <div class="overlay-card" role="dialog" aria-modal="true" aria-labelledby="over-title">
+    <p class="over-intro">对局结束</p>
+    <h2 id="over-title">你赢了！</h2>
+    <p id="over-sub"></p>
+    <button class="btn primary" id="over-restart" type="button">再来一局</button>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script src="engine.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var DATA = window.HeroRealmsData;
+  var E = window.HeroRealmsEngine;
+  if (!DATA || !E) return;
+
+  var el = {};
+  ['p-hp','p-max','p-bar','p-armor','p-gold','p-deck','p-discard','p-hand',
+   'a-hp','a-max','a-bar','a-armor','a-gold','a-deck','a-discard','a-hand',
+   'turn-chip','turn-number','market-deck','market-count','market-hint',
+   'ai-champ-hint','player-champ-hint','hand-count','hint','hand','market',
+   'ai-champions','player-champions','end-turn','restart','overlay','over-title',
+   'over-sub','over-restart','target-bar','target-face','cancel-target',
+   'cancel-target-2','log','player-panel','ai-panel'].forEach(function (id) {
+    el[id] = document.getElementById(id);
+  });
+
+  var state = null;
+  var pending = null;
+  var aiTimer = null;
+  var aiSteps = 0;
+  var hintOverride = '';
+  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function esc(value) {
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function typeLabel(card) {
+    return (DATA.typeLabels && DATA.typeLabels[card.type]) || card.type;
+  }
+
+  function abilityText(card) {
+    var ab = card.ability || {};
+    var amount = ab.amount || 0;
+    if (ab.type === 'damage') return '激活：造成 ' + amount + ' 点伤害';
+    if (ab.type === 'heal') return '激活：恢复 ' + amount + ' 点生命';
+    if (ab.type === 'gold') return '激活：+' + amount + ' 金币';
+    if (ab.type === 'armor') return '激活：+' + amount + ' 护甲';
+    if (ab.type === 'draw') return '激活：抽 ' + amount + ' 张牌';
+    return '无激活能力';
+  }
+
+  function newGame() {
+    if (aiTimer) { clearTimeout(aiTimer); aiTimer = null; }
+    pending = null;
+    hintOverride = '';
+    aiSteps = 0;
+    el.overlay.hidden = true;
+    state = E.createGame({
+      cards: DATA,
+      seed: (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0
+    });
+    render();
+  }
+
+  function setHint(text) {
+    hintOverride = text || '';
+    el.hint.textContent = hintOverride || defaultHint();
+  }
+
+  function defaultHint() {
+    if (pending) return '选择伤害目标：对手英雄或对手冠军';
+    if (state.winner) return '对局结束，点击“重新开始”';
+    if (state.turn === 'ai') return 'AI 正在行动…';
+    return '点击手牌打出；点击市场购买；点击自己的冠军激活能力';
+  }
+
+  function targetFaceLabel() {
+    var foe = state.sides[E.otherSide(state.turn)];
+    return '对手英雄（HP ' + foe.hp + '，护甲 ' + foe.armor + '）';
+  }
+
+  function cardStyle(card) {
+    var g = card.gradient || ['#666', '#222'];
+    return '--g1:' + esc(g[0]) + ';--g2:' + esc(g[1]);
+  }
+
+  function renderChampions(side, host, hintEl) {
+    var list = state.sides[side].champions;
+    var canPick = side === 'ai' && !!pending;
+    var canActivate = side === 'player' && state.turn === 'player' && !state.winner;
+    host.innerHTML = '';
+    if (!list.length) {
+      var p = document.createElement('p');
+      p.className = 'empty';
+      p.textContent = side === 'player' ? '还没有冠军，购买并打出冠军牌即可召唤。' : '对手暂无冠军。';
+      host.appendChild(p);
+      hintEl.textContent = side === 'ai'
+        ? (pending ? '点击要攻击的冠军' : '伤害牌可指定冠军为目标')
+        : '每名冠军每回合可激活 1 次';
+      return;
+    }
+    list.forEach(function (ch) {
+      var card = state.cards[ch.cardId];
+      var disabled = side === 'ai' ? !canPick : !(canActivate && !ch.used);
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'champ' + (ch.used ? ' used' : '') + (canPick ? ' targetable' : '');
+      b.setAttribute('data-uid', String(ch.uid));
+      b.setAttribute('data-side', side);
+      b.style.cssText = cardStyle(card);
+      b.disabled = disabled;
+      var aria = (side === 'player' ? '你的冠军 ' : '对手冠军 ') + card.name +
+        '，防御 ' + ch.hp + '/' + ch.maxHp + '，' + abilityText(card) +
+        (ch.used ? '，本回合已激活' : '');
+      if (canPick) aria += '，可作为伤害目标';
+      b.setAttribute('aria-label', aria);
+      b.innerHTML = '<span class="champ-name">' + esc(card.name) + '</span>' +
+        '<span class="champ-def">防御 ' + ch.hp + '</span>' +
+        '<span class="champ-ab">' + esc(abilityText(card)) + '</span>';
+      host.appendChild(b);
+    });
+    hintEl.textContent = side === 'ai'
+      ? (pending ? '点击要攻击的冠军' : '伤害牌可指定冠军为目标')
+      : '点击冠军激活能力（每名每回合 1 次）';
+  }
+
+  function renderHand() {
+    var hand = state.sides.player.hand;
+    el['hand-count'].textContent = hand.length;
+    el.hand.innerHTML = '';
+    hand.forEach(function (id, index) {
+      var card = state.cards[id];
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'hcard' + (pending && pending.kind === 'play' && pending.handIndex === index ? ' pending' : '');
+      b.setAttribute('data-index', String(index));
+      b.style.cssText = cardStyle(card);
+      var label = '打出 ' + card.name + '，类型 ' + typeLabel(card) + '，' + card.text;
+      if (!state.winner && state.turn === 'player') {
+        b.setAttribute('aria-label', label + '；点击出牌');
+      } else {
+        b.disabled = true;
+        b.setAttribute('aria-label', label + '；现在不能出牌');
+      }
+      b.innerHTML = '<span class="badge">' + esc(typeLabel(card)) + '</span>' +
+        '<span class="cname">' + esc(card.name) + '</span>' +
+        '<span class="ctext">' + esc(card.text) + '</span>' +
+        '<span class="cfoot">' + (card.starting ? '起始牌' : '市场牌 · 价格 ' + card.cost) + '</span>';
+      el.hand.appendChild(b);
+    });
+    if (!hand.length) {
+      var p = document.createElement('p');
+      p.className = 'empty';
+      p.textContent = state.turn === 'player' ? '手牌已空，可以购买或结束回合。' : '等待你的回合。';
+      el.hand.appendChild(p);
+    }
+  }
+
+  function renderMarket() {
+    el.market.innerHTML = '';
+    el['market-count'].textContent = '(' + state.market.length + ' 张)';
+    state.market.forEach(function (id, index) {
+      var card = state.cards[id];
+      var affordable = state.sides.player.gold >= card.cost;
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'mcard' + (affordable ? '' : ' poor');
+      b.setAttribute('data-market', String(index));
+      b.style.cssText = cardStyle(card);
+      b.setAttribute('aria-label', '购买 ' + card.name + '，价格 ' + card.cost +
+        ' 金币，' + card.text + (affordable ? '；点击购买' : '；金币不足') +
+        (state.sides.player.boughtThisTurn ? '；本回合已购买过' : ''));
+      b.innerHTML = '<span class="cost">' + card.cost + '</span>' +
+        '<span class="badge">' + esc(typeLabel(card)) + '</span>' +
+        '<span class="cname">' + esc(card.name) + '</span>' +
+        '<span class="ctext">' + esc(card.text) + '</span>' +
+        '<span class="cfoot">防御 / 效果见规则</span>';
+      if (card.type === 'champion') {
+        b.querySelector('.cfoot').textContent = '防御 ' + card.defense;
+      }
+      el.market.appendChild(b);
+    });
+    if (!state.market.length) {
+      var p = document.createElement('p');
+      p.className = 'empty';
+      p.textContent = '市场牌堆已经买空。';
+      el.market.appendChild(p);
+    }
+  }
+
+  function renderLog() {
+    var rows = state.log.slice(-40);
+    el.log.innerHTML = rows.map(function (entry) {
+      var cls = entry.side === 'player' ? 'player' : (entry.side === 'ai' ? 'ai' : '');
+      return '<li class="' + cls + '"><span class="t">T' + entry.turn + '</span>' + esc(entry.text) + '</li>';
+    }).join('');
+    el.log.scrollTop = el.log.scrollHeight;
+  }
+
+  function render() {
+    var p = state.sides.player;
+    var a = state.sides.ai;
+    el['p-hp'].textContent = p.hp;
+    el['p-max'].textContent = p.maxHp;
+    el['p-bar'].style.width = Math.max(0, Math.min(100, p.hp / p.maxHp * 100)) + '%';
+    el['p-armor'].textContent = p.armor;
+    el['p-gold'].textContent = p.gold;
+    el['p-deck'].textContent = p.deck.length;
+    el['p-discard'].textContent = p.discard.length;
+    el['p-hand'].textContent = p.hand.length;
+    el['a-hp'].textContent = a.hp;
+    el['a-max'].textContent = a.maxHp;
+    el['a-bar'].style.width = Math.max(0, Math.min(100, a.hp / a.maxHp * 100)) + '%';
+    el['a-armor'].textContent = a.armor;
+    el['a-gold'].textContent = a.gold;
+    el['a-deck'].textContent = a.deck.length;
+    el['a-discard'].textContent = a.discard.length;
+    el['a-hand'].textContent = a.hand.length;
+    el['turn-number'].textContent = state.turnNumber;
+    el['market-deck'].textContent = state.marketDeck.length;
+    el['turn-chip'].textContent = state.winner ? '对局结束' :
+      (state.turn === 'player' ? '你的回合' : 'AI 回合');
+    el['turn-chip'].classList.toggle('ai', state.turn === 'ai' && !state.winner);
+
+    el['end-turn'].disabled = state.winner || state.turn !== 'player';
+    el.restart.disabled = false;
+    el['target-bar'].hidden = !pending;
+    if (pending) el['target-face'].textContent = targetFaceLabel();
+    el['cancel-target-2'].hidden = !pending;
+
+    el['player-panel'].classList.toggle('targetable', false);
+    el['ai-panel'].classList.toggle('targetable', !!pending);
+    if (pending) {
+      el['ai-panel'].setAttribute('role', 'button');
+      el['ai-panel'].setAttribute('tabindex', '0');
+      el['ai-panel'].setAttribute('aria-label', '选择对手英雄作为伤害目标');
+    } else {
+      el['ai-panel'].removeAttribute('role');
+      el['ai-panel'].removeAttribute('tabindex');
+      el['ai-panel'].setAttribute('aria-label', '对手状态');
+    }
+
+    renderChampions('player', el['player-champions'], el['player-champ-hint']);
+    renderChampions('ai', el['ai-champions'], el['ai-champ-hint']);
+    renderMarket();
+    renderHand();
+    renderLog();
+    el.hint.textContent = hintOverride || defaultHint();
+
+    if (state.winner) {
+      var won = state.winner === 'player';
+      el['over-title'].textContent = won ? '你赢了！' : '你输了…';
+      el['over-sub'].textContent = '第 ' + state.turnNumber + ' 回合，' +
+        (won ? 'AI 英雄' : '你的英雄') + ' HP 归零。';
+      el.overlay.hidden = false;
+      el['over-restart'].focus();
+    } else {
+      el.overlay.hidden = true;
+    }
+  }
+
+  function apply(fn) {
+    try {
+      state = fn(state);
+      hintOverride = '';
+    } catch (err) {
+      hintOverride = err && err.message ? err.message : '操作失败';
+    }
+    render();
+  }
+
+  function hasDamage(card) {
+    return !!(card.effects && card.effects.damage > 0);
+  }
+
+  function playHand(index) {
+    if (state.winner || state.turn !== 'player') return;
+    var card = state.cards[state.sides.player.hand[index]];
+    if (!card) return;
+    if (hasDamage(card) && state.sides.ai.champions.length) {
+      pending = { kind: 'play', handIndex: index };
+      hintOverride = '';
+      render();
+      return;
+    }
+    pending = null;
+    apply(function (s) { return E.playCard(s, 'player', index, { kind: 'player' }); });
+  }
+
+  function activateChampion(uid) {
+    if (state.winner || state.turn !== 'player') return;
+    var ch = null;
+    state.sides.player.champions.forEach(function (c) { if (c.uid === uid) ch = c; });
+    if (!ch || ch.used) return;
+    var card = state.cards[ch.cardId];
+    var ab = card.ability || {};
+    if (ab.type === 'damage' && state.sides.ai.champions.length) {
+      pending = { kind: 'activate', uid: uid };
+      hintOverride = '';
+      render();
+      return;
+    }
+    pending = null;
+    apply(function (s) { return E.activateChampion(s, 'player', uid, { kind: 'player' }); });
+  }
+
+  function resolvePending(target) {
+    if (!pending) return;
+    var job = pending;
+    pending = null;
+    if (job.kind === 'play') {
+      apply(function (s) { return E.playCard(s, 'player', job.handIndex, target); });
+    } else {
+      apply(function (s) { return E.activateChampion(s, 'player', job.uid, target); });
+    }
+  }
+
+  function cancelPending() {
+    if (!pending) return;
+    pending = null;
+    hintOverride = '';
+    render();
+  }
+
+  function buyMarket(index) {
+    if (state.winner || state.turn !== 'player') return;
+    pending = null;
+    apply(function (s) { return E.buyCard(s, 'player', index); });
+  }
+
+  function scheduleAI() {
+    if (state.winner || state.turn !== 'ai') return;
+    aiTimer = setTimeout(function () {
+      aiTimer = null;
+      if (state.winner || state.turn !== 'ai') return;
+      aiSteps++;
+      if (aiSteps > 80) {
+        apply(function (s) { return E.endTurn(s, 'ai'); });
+        return;
+      }
+      var action = E.aiAction(state, 'ai');
+      if (!action) {
+        apply(function (s) { return E.endTurn(s, 'ai'); });
+        return;
+      }
+      var acted = action.type;
+      apply(function (s) { return E.applyAction(s, action); });
+      if (state.winner) return;
+      if (state.turn === 'ai' && acted !== 'endTurn') scheduleAI();
+    }, reduced ? 20 : 360);
+  }
+
+  function endTurn() {
+    if (state.winner || state.turn !== 'player') return;
+    pending = null;
+    hintOverride = '';
+    aiSteps = 0;
+    apply(function (s) { return E.endTurn(s, 'player'); });
+    if (!state.winner && state.turn === 'ai') scheduleAI();
+  }
+
+  /* ---------- 事件 ---------- */
+
+  el.hand.addEventListener('click', function (ev) {
+    var btn = ev.target.closest('button[data-index]');
+    if (!btn) return;
+    var index = parseInt(btn.getAttribute('data-index'), 10);
+    if (pending && pending.kind === 'play' && pending.handIndex === index) {
+      cancelPending();
+      return;
+    }
+    playHand(index);
+  });
+
+  el.market.addEventListener('click', function (ev) {
+    var btn = ev.target.closest('button[data-market]');
+    if (!btn) return;
+    buyMarket(parseInt(btn.getAttribute('data-market'), 10));
+  });
+
+  function onChampionClick(ev) {
+    var btn = ev.target.closest('button[data-uid]');
+    if (!btn) return;
+    var side = btn.getAttribute('data-side');
+    var uid = parseInt(btn.getAttribute('data-uid'), 10);
+    if (side === 'ai') {
+      if (pending) resolvePending({ kind: 'champion', uid: uid });
+      return;
+    }
+    activateChampion(uid);
+  }
+  el['player-champions'].addEventListener('click', onChampionClick);
+  el['ai-champions'].addEventListener('click', onChampionClick);
+
+  function faceClick() {
+    if (pending) resolvePending({ kind: 'player' });
+  }
+  el['ai-panel'].addEventListener('click', faceClick);
+  el['ai-panel'].addEventListener('keydown', function (ev) {
+    if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); faceClick(); }
+  });
+  el['target-face'].addEventListener('click', faceClick);
+  el['cancel-target'].addEventListener('click', cancelPending);
+  el['cancel-target-2'].addEventListener('click', cancelPending);
+  el['end-turn'].addEventListener('click', endTurn);
+  el.restart.addEventListener('click', newGame);
+  el['over-restart'].addEventListener('click', newGame);
+
+  newGame();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2b2f36">
+<title>分享结果 · 桌游</title>
+<meta name="description" content="桌游对局分享结果页：标题、结果、积分、排名与可复制文案，纯本地、无个人信息。">
+<link rel="stylesheet" href="demos.css">
+<style>
+.share-card {
+  border: 1px solid var(--line-strong); border-radius: 18px; padding: 18px;
+  background: linear-gradient(160deg, var(--paper-2), var(--card));
+  box-shadow: 0 16px 40px rgb(35 38 43 / .1);
+}
+.share-card .kicker { font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--red); }
+.share-card h2 { font-size: clamp(1.4rem, 6vw, 2rem); line-height: 1.15; margin: 6px 0 10px; overflow-wrap: anywhere; }
+.share-stats { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.share-stat { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; font-size: 12px; color: var(--muted); }
+.share-stat strong { color: var(--ink); font-family: var(--mono); font-size: 14px; }
+.share-text {
+  margin-top: 12px; padding: 10px; border-radius: 10px; background: var(--input, #fffdf8);
+  border: 1px dashed var(--line-strong); font-size: 13px; color: var(--muted); overflow-wrap: anywhere;
+}
+.share-link { font-size: 12px; color: var(--muted); word-break: break-all; margin-top: 8px; }
+.actions a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; border-radius: 11px; border: 1px solid var(--line-strong); text-decoration: none; font-weight: 700; }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="wrap">
+    <a href="../index.html">← 目录</a>
+    <span class="title">分享结果</span>
+    <button id="sound" type="button" aria-pressed="false">声音 开</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="page-head">
+    <p class="eyebrow">RESULT CARD · SHARE</p>
+    <h1>分享这局</h1>
+    <p class="lede">页面只使用 URL 里的对局 id、结果、分数与排名，不包含设备 id、姓名或其他个人信息。</p>
+  </section>
+
+  <p class="file-warning">这个页面用 ES modules 引用 <code>../app/</code>。请用本地静态服务器打开，例如在 <code>games/boardgame</code> 下运行 <code>python3 -m http.server 8123</code>，再访问 <code>http://127.0.0.1:8123/demo/share.html</code>。</p>
+
+  <section class="panel">
+    <div class="share-card" id="card">
+      <div class="kicker">BOARDGAME · RESULT</div>
+      <h2 id="title">桌游对局</h2>
+      <div class="share-stats" id="stats"></div>
+      <div class="share-text" id="text"></div>
+      <div class="share-link" id="link"></div>
+    </div>
+    <div class="actions" style="margin-top:12px">
+      <button id="copy" class="primary" type="button">复制分享文案</button>
+      <a href="leaderboard.html">看排行榜</a>
+      <a href="card-battle.html">卡牌对战</a>
+      <a href="mahjong.html">麻将</a>
+    </div>
+    <p class="meta" id="status" style="margin-top:8px"></p>
+  </section>
+</main>
+
+<script>
+if (location.protocol === 'file:') document.documentElement.classList.add('file-mode');
+</script>
+<script type="module">
+import { buildSharePayload } from '../app/retention.js';
+import { audio } from '../app/audio.js';
+
+const $ = (id) => document.getElementById(id);
+const params = new URLSearchParams(location.search);
+const payload = buildSharePayload({
+  matchId: params.get('match') || 'demo-match-001',
+  result: params.get('result') || 'win',
+  score: Number(params.get('score')) || 120,
+  rank: Number(params.get('rank')) || 3,
+  title: params.get('title') || '桌游对局'
+});
+const shareUrl = new URL(payload.url, location.href).href;
+
+function esc(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function render() {
+  $('title').textContent = payload.title;
+  const stats = [
+    ['结果', payload.result || '—'],
+    ['分数', String(payload.score)],
+    ['排名', payload.rank != null ? '#' + payload.rank : '—'],
+    ['对局', payload.matchId]
+  ];
+  $('stats').innerHTML = stats.map(function (pair) {
+    return '<span class="share-stat">' + esc(pair[0]) + ' <strong>' + esc(pair[1]) + '</strong></span>';
+  }).join('');
+  $('text').textContent = payload.text;
+  $('link').textContent = shareUrl;
+}
+
+async function copy() {
+  const text = payload.text + '\n' + shareUrl;
+  try {
+    await navigator.clipboard.writeText(text);
+    $('status').textContent = '已复制到剪贴板。';
+  } catch (err) {
+    try {
+      const area = document.createElement('textarea');
+      area.value = text;
+      document.body.appendChild(area);
+      area.select();
+      document.execCommand('copy');
+      area.remove();
+      $('status').textContent = '已复制到剪贴板。';
+    } catch (inner) {
+      $('status').textContent = '浏览器不允许自动复制，请手动选中文案。';
+    }
+  }
+  audio.play('click');
+}
+
+function syncSound() {
+  const muted = audio.isMuted();
+  $('sound').textContent = muted ? '声音 关' : '声音 开';
+  $('sound').setAttribute('aria-pressed', String(!muted));
+}
+
+$('copy').addEventListener('click', copy);
+$('sound').addEventListener('click', function () { audio.toggle(); audio.play('click'); syncSound(); });
+
+syncSound();
+render();
+</script>
+</body>
+</html>

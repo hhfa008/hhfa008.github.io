@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>蛇梯棋规则 — 掷骰、爬梯与恰好到达 100</title>
+<meta name="description" content="蛇梯棋完整规则：10×10 共 100 格，两人轮流掷骰；踩到梯子上升，遇到蛇头下滑，超过 100 点停在原地，必须恰好到 100 才获胜。附四条常见问题。">
+<meta name="theme-color" content="#173b2f">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23173b2f'/%3E%3Cpath d='M7 25 L25 7' stroke='%23e8cf8f' stroke-width='3'/%3E%3Ccircle cx='7' cy='25' r='3' fill='%23b94e38'/%3E%3Ccircle cx='25' cy='7' r='3' fill='%232e7a5d'/%3E%3C/svg%3E">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "必须掷出刚好到 100 的点数吗？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "是的。超过 100 的点数不会让棋子前进，棋子会停在第 100 格之前，等待下一次机会。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "踩到梯子后会触发梯子顶端的蛇吗？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "不会。每手只结算落点的一次梯子或蛇，梯顶和蛇尾都算最终位置，不会连续触发。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "两个棋子能停在同一格吗？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "可以。双方棋子在棋盘上互不阻挡，同一格会并排显示你和电脑的小棋子。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "电脑的掷骰公平吗？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "公平。你和电脑使用同一条随机数序列，每次都是独立的 1 到 6 点，电脑不会额外加分或改变骰子。"
+      }
+    }
+  ]
+}
+</script>
+<style>
+:root{
+  --paper:#f4ecdc;--paper-2:#fbf7ee;--ink:#20322b;--muted:#637068;--muted-2:#7a857d;
+  --line:#d8cbb2;--line-strong:#b9a987;--green:#1d5a45;--green-2:#2e7a5d;
+  --red:#b94e38;--gold:#bd8a39;--gold-soft:#f1e3bd;--shadow:rgb(38 48 41 / .12);
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue","PingFang SC","Hiragino Sans GB","Microsoft YaHei",Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --paper:#111b16;--paper-2:#18251f;--ink:#f1ead9;--muted:#b0bcb3;--muted-2:#8f9d93;
+    --line:#334139;--line-strong:#52645a;--green:#69b893;--green-2:#85cbaa;
+    --red:#e28269;--gold:#d7ac5d;--gold-soft:#3c3220;--shadow:rgb(0 0 0 / .3);
+  }
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;background:var(--paper)}
+body{margin:0;color:var(--ink);background:
+  radial-gradient(circle at 8% 0%,rgb(189 138 57 / .12),transparent 30rem),
+  radial-gradient(circle at 100% 20%,rgb(29 90 69 / .08),transparent 28rem),
+  var(--paper);
+  font:16px/1.75 var(--sans);-webkit-font-smoothing:antialiased;overflow-x:hidden;
+  padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+h1,h2,p,dl,dd{margin:0}
+a{color:inherit}
+.wrap{width:100%;max-width:700px;margin:0 auto;padding:0 16px}
+.topbar{background:var(--green);color:#f8f1e2;padding:6px 0;box-shadow:0 2px 14px rgb(20 35 28 / .18)}
+.topbar-inner{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px}
+.brand{display:inline-flex;align-items:center;gap:9px;min-height:44px;color:#f8f1e2;text-decoration:none;font-weight:700}
+.brand-mark{width:27px;height:27px;flex:none;border-radius:8px;background:#f8f1e2;color:var(--green);
+  display:inline-flex;align-items:center;justify-content:center;font-size:16px;line-height:1}
+.top-tag{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  color:rgb(248 241 226 / .82);border:1px solid rgb(248 241 226 / .4);border-radius:999px;padding:3px 9px}
+.home-link{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 4px;
+  font-size:13px;font-weight:600;text-decoration:none;border-bottom:1px solid rgb(248 241 226 / .35)}
+.home-link:hover{border-bottom-color:#f8f1e2}
+a:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+
+.crumbs{padding:16px 0 0;font-size:12px;color:var(--muted-2)}
+.crumbs a{display:inline-flex;align-items:center;min-height:44px;text-decoration:none;border-bottom:1px solid var(--line-strong)}
+.page-head{padding:10px 0 4px}
+.eyebrow{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--red);margin-bottom:7px}
+h1{font-size:clamp(1.7rem,6.4vw,2.35rem);line-height:1.15;letter-spacing:-.035em}
+.lede{margin-top:12px;color:var(--muted);font-size:15px;line-height:1.75}
+.meta{margin-top:9px;font-family:var(--mono);font-size:10.5px;color:var(--muted-2)}
+
+.rule-body{padding-top:4px}
+.rule-body h2{margin:28px 0 9px;padding-top:16px;border-top:1px solid var(--line);
+  font-size:1.24rem;line-height:1.35;letter-spacing:-.01em}
+.rule-body p{margin:0 0 12px}
+.rule-body strong{font-weight:700;color:var(--green)}
+.callout{margin:13px 0;padding:12px 14px;border-left:3px solid var(--gold);border-radius:0 10px 10px 0;
+  background:var(--gold-soft);font-size:14px;line-height:1.7;color:var(--ink)}
+.faq{margin-top:6px}
+.faq dt{margin:15px 0 4px;font-weight:700}
+.faq dd{color:var(--muted);font-size:14.5px;line-height:1.7}
+.cta{margin:30px 0 8px;padding:20px 18px;border-radius:16px;background:var(--green);color:#f8f1e2;
+  box-shadow:0 10px 24px var(--shadow)}
+.cta h2{margin:0 0 6px;padding:0;border:0;font-size:1.12rem;color:#f8f1e2}
+.cta p{margin:0 0 14px;color:rgb(248 241 226 / .78);font-size:13.5px;line-height:1.6}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:10px 20px;
+  border-radius:999px;background:#f8f1e2;color:var(--green);font-size:14px;font-weight:700;text-decoration:none}
+.btn:hover{background:#fffaf0}
+.site-footer{margin-top:28px;padding-top:16px;border-top:1px solid var(--line);font-size:11px;line-height:1.65;color:var(--muted-2)}
+.site-footer a{display:inline-flex;align-items:center;min-height:44px;text-decoration:none;border-bottom:1px solid var(--line-strong)}
+@media (max-width:360px){
+  .wrap{padding:0 12px}
+  .lede{font-size:14px}
+  .rule-body p{font-size:15px}
+  .cta{padding:17px 15px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <a class="brand" href="index.html" aria-label="返回蛇梯棋游戏">
+      <span class="brand-mark" aria-hidden="true">↗</span>
+      <span>蛇梯棋</span>
+    </a>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span class="top-tag">规则</span>
+      <a class="home-link" href="index.html" aria-label="回到蛇梯棋游戏页面">开始游戏</a>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <nav class="crumbs" aria-label="面包屑">
+    <a href="index.html" aria-label="返回蛇梯棋游戏">蛇梯棋</a> / 规则
+  </nav>
+
+  <header class="page-head">
+    <p class="eyebrow">How to play · 2 players</p>
+    <h1>蛇梯棋规则</h1>
+    <p class="lede">你和电脑各执一枚棋子，从第 1 格出发，轮流掷骰前进。谁先恰好落在第 100 格，谁就获胜。骰子无法选择，读懂棋盘就是全部策略。</p>
+    <p class="meta">约 3 分钟阅读 · 玩家 vs 电脑 · 100 格</p>
+  </header>
+
+  <article class="rule-body">
+    <h2>一、棋盘与目标</h2>
+    <p>棋盘是 10×10 的方格，共 100 格，按蛇形顺序从 1 排到 100：底行从左到右，第二行从右到左，依次向上。格子左上角的小数字是编号，绿色 1 是起点，金色 100 是终点。</p>
+
+    <h2>二、回合怎么走</h2>
+    <p>你执绿棋并先手，电脑执红棋。轮到你时点击“掷骰子”，骰子给出 1 到 6 点，棋子向前走对应格数。落点若有梯子或蛇，立即结算；没有就停在那里。随后换电脑行动，它会短暂停顿后自动掷骰，方便你看清节奏。</p>
+
+    <h2>三、梯子与蛇</h2>
+    <p>绿色实线和向上箭头标出梯子，踩到梯子底部会升到顶端；红色波浪线和向下箭头标出蛇，踩到蛇头会滑到蛇尾。棋盘下方有图例。梯子和蛇都只结算一次：从梯顶开始不会继续触发另一条梯子，落在蛇尾也不会再次下滑。</p>
+
+    <h2>四、必须恰好到 100</h2>
+    <p>棋子必须恰好落在第 100 格才算获胜。若你在第 97 格掷出 5 点，棋子不会冲到 102，而是留在 97 格；下一手掷出 3 点才能到达 100。越接近终点，越需要耐心。</p>
+    <div class="callout">如果掷出的点数会超过 100，整手不移动，回合仍然结束。恰好补足最后几格，才是有效胜利。</div>
+
+    <h2>五、界面与操作</h2>
+    <p>顶部显示双方当前位置，当前回合的玩家卡片会亮起。掷骰记录按时间倒序列出每一手；点“重新开始”会清空记录并回到第 1 格。页面无需登录，进度只留在本机。</p>
+
+    <h2>六、常见问题</h2>
+    <dl class="faq">
+      <dt>必须掷出刚好到 100 的点数吗？</dt>
+      <dd>是的。超过 100 的点数不会让棋子前进，棋子会停在第 100 格之前，等待下一次机会。</dd>
+      <dt>踩到梯子后会触发梯子顶端的蛇吗？</dt>
+      <dd>不会。每手只结算落点的一次梯子或蛇，梯顶和蛇尾都算最终位置，不会连续触发。</dd>
+      <dt>两个棋子能停在同一格吗？</dt>
+      <dd>可以。双方棋子在棋盘上互不阻挡，同一格会并排显示你和电脑的小棋子。</dd>
+      <dt>电脑的掷骰公平吗？</dt>
+      <dd>公平。你和电脑使用同一条随机数序列，每次都是独立的 1 到 6 点，电脑不会额外加分或改变骰子。</dd>
+    </dl>
+
+    <aside class="cta" aria-label="开始游戏">
+      <h2>规则看完了，去掷第一手</h2>
+      <p>回到棋盘，和电脑来一局。踩梯子还是遇蛇，下一手见分晓。</p>
+      <a class="btn" href="index.html" aria-label="返回蛇梯棋游戏并开始对局">开始游戏 →</a>
+    </aside>
+  </article>
+
+  <footer class="site-footer">
+    <p>蛇梯棋 · 免费在线小游戏 · <a href="index.html" aria-label="返回蛇梯棋游戏页面">返回游戏</a></p>
+  </footer>
+</main>
+
+</body>
+</html>

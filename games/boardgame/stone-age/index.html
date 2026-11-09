@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>石器时代 · Stone Age 简化版（人机对战）</title>
+<meta name="description" content="与 AI 对战简化版 Stone Age：工人放置采集木砖石金食物，喂食、建造、升级工具，8 轮后高分获胜。">
+<meta name="theme-color" content="#2a2118">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232a2118'/%3E%3Ccircle cx='16' cy='16' r='8' fill='none' stroke='%23d9b168' stroke-width='3'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#211a13;--panel:#2d251b;--panel2:#3a3024;--ink:#f2e8d5;--muted:#bfae93;--gold:#d9b168;--gold2:#f0d7a6;
+  --line:#4b3e2c;--green:#7fbf8a;--red:#d0735f;--human:#7fbf8a;--ai:#d0735f;
+  --wood:#9a6b3f;--brick:#b5674f;--stone:#8d9399;--gold-res:#d9b168;--food:#c98a52;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:radial-gradient(900px 420px at 50% -70px,#3a2d1f,#211a13 62%);color:var(--ink);font-family:var(--sans);line-height:1.45;min-height:100vh;overflow-x:hidden}
+.wrap{max-width:1060px;margin:0 auto;padding:12px 12px 40px}
+header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-bottom:10px}
+h1{font-size:19px;margin:0;color:var(--gold2);letter-spacing:.4px}
+h1 small{font-size:11px;color:var(--muted);font-weight:400;margin-left:5px}
+.stats{display:flex;gap:6px;flex-wrap:wrap}
+.pill{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:5px 9px;font-size:12px;color:var(--muted)}
+.pill b{color:var(--gold2);font-size:15px;margin-left:4px}
+button{font-family:inherit;min-height:44px;min-width:44px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);font-size:13px;padding:7px 11px;cursor:pointer;touch-action:manipulation}
+button:hover:not(:disabled){border-color:var(--gold)}
+button:disabled{opacity:.4;cursor:not-allowed}
+button.primary{background:var(--gold);border-color:var(--gold);color:#2a2118;font-weight:700}
+button.ghost{background:transparent}
+.layout{display:grid;grid-template-columns:1.15fr .95fr;gap:10px;align-items:start}
+.panel{background:rgba(45,37,27,.9);border:1px solid var(--line);border-radius:13px;padding:10px;box-shadow:0 6px 18px rgba(0,0,0,.28);margin-bottom:10px}
+.panel h2{font-size:12px;color:var(--muted);margin:0 0 8px;letter-spacing:.4px;font-weight:600}
+.spots{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.spot{border:1px solid var(--line);border-radius:11px;padding:8px;background:#332a1f;display:flex;flex-direction:column;gap:5px}
+.spot .top{display:flex;align-items:center;gap:7px}
+.glyph{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:#241c13;flex:none}
+.spot .name{font-size:14px;font-weight:700}
+.spot .meta{font-size:11px;color:var(--muted)}
+.occ{font-size:12px;color:var(--gold2)}
+.bar{height:6px;border-radius:3px;background:#241d15;overflow:hidden;display:flex}
+.bar i{display:block;height:100%}
+.bar i.human{background:var(--human)}
+.bar i.ai{background:var(--ai)}
+.spot button{margin-top:auto}
+.two{display:flex;gap:8px;flex-wrap:wrap}
+.res{display:flex;gap:6px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:5px;background:#241d15;border:1px solid var(--line);border-radius:8px;padding:4px 7px;font-size:12px}
+.chip i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.buildings{display:grid;gap:7px}
+.bld{border:1px solid var(--line);border-radius:10px;padding:7px;background:#332a1f;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.bld .info{flex:1;min-width:120px}
+.bld .bname{font-size:13px;font-weight:700}
+.bld .cost{font-size:11px;color:var(--muted);margin-top:2px}
+.bld .pts{font-size:15px;font-weight:800;color:var(--gold2);margin-left:auto}
+.bld button{min-height:40px;padding:4px 10px;font-size:12px}
+.status{font-size:13px;color:var(--gold2);min-height:20px;margin:6px 0}
+.log{max-height:150px;overflow:auto;font-size:11.5px;color:var(--muted);border-top:1px solid var(--line);margin-top:6px;padding-top:6px}
+.log div{padding:2px 0}
+.hint{font-size:11px;color:var(--muted)}
+.player-line{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid rgba(75,62,44,.6);font-size:13px}
+.player-line:last-child{border-bottom:0}
+.overlay{position:fixed;inset:0;background:rgba(12,9,6,.78);display:none;align-items:center;justify-content:center;padding:16px;z-index:30}
+.overlay.show{display:flex}
+.dialog{background:var(--panel);border:1px solid var(--gold);border-radius:15px;padding:18px;max-width:400px;width:100%;text-align:center}
+.dialog h3{margin:0 0 8px;color:var(--gold2)}
+.dialog p{font-size:14px;color:#eadfcb}
+@media (max-width:820px){.layout{grid-template-columns:1fr}}
+@media (max-width:430px){
+  .wrap{padding:9px 9px 30px}
+  h1{font-size:16px}
+  .stats{width:100%}
+  .spots{gap:6px}
+  .spot{padding:7px}
+  .spot .name{font-size:13px}
+  button{padding:6px 9px;font-size:12px}
+  .panel{padding:8px;border-radius:11px}
+}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>石器时代 <small>Stone Age · 简化版</small></h1>
+    <div class="stats" aria-label="对局统计">
+      <div class="pill">回合 <b id="round">1</b>/8</div>
+      <div class="pill">你 <b id="score-human">0</b></div>
+      <div class="pill">AI <b id="score-ai">0</b></div>
+      <button id="restart" class="ghost" aria-label="重新开始一局">重开</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <div>
+      <section class="panel" aria-label="采集工位">
+        <h2>工位 · 工人放置（双方共享容量）</h2>
+        <div id="spots" class="spots"></div>
+      </section>
+      <section class="panel" aria-label="对局日志">
+        <h2>日志</h2>
+        <div id="status" class="status" role="status" aria-live="polite"></div>
+        <div id="log" class="log" aria-label="对局日志"></div>
+      </section>
+    </div>
+
+    <div>
+      <section class="panel" aria-label="双方状态">
+        <h2>双方状态</h2>
+        <div id="players"></div>
+      </section>
+      <section class="panel" aria-label="建筑市场">
+        <h2>建筑市场 · 建造得分，或将 1 木 + 1 砖升级工具</h2>
+        <div id="buildings" class="buildings"></div>
+        <div class="two" style="margin-top:8px">
+          <button id="upgrade" aria-label="花费一木一砖升级工具">升级工具</button>
+          <button id="pass" aria-label="跳过建造">跳过建造</button>
+        </div>
+        <div class="hint">每回合每人可建造一座建筑或升级一次工具；食物不足会扣分。工具等级为有工人的工位额外加资源。</div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<div id="overlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="result-title">
+  <div class="dialog">
+    <h3 id="result-title">本局结束</h3>
+    <p id="result-text"></p>
+    <button id="again" class="primary" aria-label="再来一局">再来一局</button>
+  </div>
+</div>
+
+<script src="engine.js"></script>
+<script>
+(function () {
+  'use strict';
+  var E = window.StoneAgeEngine;
+  var RES_HEX = { wood: '#9a6b3f', brick: '#b5674f', stone: '#8d9399', gold: '#d9b168', food: '#c98a52' };
+  var game, aiTimer = null;
+
+  function $(id) { return document.getElementById(id); }
+  function esc(t) {
+    return String(t).replace(/[<>&]/g, function (c) { return { '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]; });
+  }
+  function canPlace(spotId) {
+    return E.legalMoves(game).some(function (m) { return m.type === 'place' && m.spot === spotId; });
+  }
+  function canBuild(id) {
+    return E.legalMoves(game).some(function (m) { return m.type === 'build' && m.buildingId === id; });
+  }
+  function costText(cost) {
+    return Object.keys(cost).map(function (r) { return E.RESOURCE_NAMES[r] + ' ' + cost[r]; }).join(' · ');
+  }
+  function resourceChips(res) {
+    return ['wood', 'brick', 'stone', 'gold', 'food'].map(function (r) {
+      return '<span class="chip"><i style="background:' + RES_HEX[r] + '"></i>' + E.RESOURCE_NAMES[r] + ' ' + (res[r] || 0) + '</span>';
+    }).join('');
+  }
+
+  function renderSpots() {
+    $('spots').innerHTML = E.SPOTS.map(function (sp) {
+      var h = game.placements[0][sp.id], a = game.placements[1][sp.id];
+      var total = h + a;
+      var hp = sp.capacity ? (h / sp.capacity * 100) : 0, ap = sp.capacity ? (a / sp.capacity * 100) : 0;
+      var afford = canPlace(sp.id) && game.turn === 0 && game.phase === 'place';
+      return '<div class="spot">' +
+        '<div class="top"><span class="glyph" style="background:' + RES_HEX[sp.resource] + '">' + sp.glyph + '</span>' +
+        '<div><div class="name">' + sp.name + '</div><div class="meta">每工人 +' + sp.perWorker + ' ' + E.RESOURCE_NAMES[sp.resource] + '</div></div></div>' +
+        '<div class="occ">占用 ' + total + '/' + sp.capacity + ' · 你 ' + h + ' · AI ' + a + '</div>' +
+        '<div class="bar"><i class="human" style="width:' + hp + '%"></i><i class="ai" style="width:' + ap + '%"></i></div>' +
+        '<button data-spot="' + sp.id + '"' + (afford ? '' : ' disabled') + ' aria-label="在' + sp.name + '放置一名工人">放置工人</button>' +
+        '</div>';
+    }).join('');
+    Array.prototype.forEach.call($('spots').querySelectorAll('button[data-spot]'), function (b) {
+      b.addEventListener('click', function () { humanPlace(b.getAttribute('data-spot')); });
+    });
+  }
+
+  function renderPlayers() {
+    $('players').innerHTML = game.players.map(function (p, i) {
+      return '<div class="player-line" style="border-left:3px solid ' + (i === 0 ? 'var(--human)' : 'var(--ai)') + ';padding-left:7px">' +
+        '<div><b>' + p.name + '</b> · 工人 ' + game.workersLeft[i] + ' · 工具 ' + p.tools + ' 级' +
+        '<div class="res" style="margin-top:4px">' + resourceChips(p.resources) + '</div></div>' +
+        '<div style="text-align:right;font-size:12px;color:var(--muted)">分数<br><b style="font-size:18px;color:var(--gold2)">' + p.score + '</b></div>' +
+        '</div>';
+    }).join('');
+  }
+
+  function renderBuildings() {
+    $('buildings').innerHTML = game.market.map(function (b) {
+      var afford = canBuild(b.id) && game.turn === 0 && game.phase === 'build';
+      return '<div class="bld"><div class="info"><div class="bname">' + b.name + '</div>' +
+        '<div class="cost">' + costText(b.cost) + '</div></div>' +
+        '<div class="pts">' + b.points + '分</div>' +
+        '<button data-build="' + b.id + '"' + (afford ? '' : ' disabled') + ' aria-label="建造' + b.name + '">建造</button></div>';
+    }).join('');
+    Array.prototype.forEach.call($('buildings').querySelectorAll('button[data-build]'), function (b) {
+      b.addEventListener('click', function () { humanBuild(b.getAttribute('data-build')); });
+    });
+  }
+
+  function render() {
+    var sc = E.score(game);
+    $('round').textContent = Math.min(game.round, 8);
+    $('score-human').textContent = sc.human;
+    $('score-ai').textContent = sc.ai;
+    renderSpots();
+    renderPlayers();
+    renderBuildings();
+    var isHumanBuild = game.phase === 'build' && game.turn === 0 && !game.buildDone[0] && !game.over;
+    var p = game.players[0];
+    var canUpgrade = isHumanBuild && p.tools < 3 && p.resources.wood >= 1 && p.resources.brick >= 1;
+    $('upgrade').disabled = !canUpgrade;
+    $('pass').disabled = !isHumanBuild;
+    var st;
+    if (game.over) st = '游戏结束。';
+    else if (game.phase === 'place') st = game.turn === 0 ? '放置阶段：轮到你放工人（剩 ' + game.workersLeft[0] + ' 名）。' : 'AI 正在放置工人…';
+    else st = game.turn === 0 ? '建造阶段：可建造一座建筑、升级工具或跳过。' : 'AI 正在建造…';
+    $('status').textContent = st;
+    $('log').innerHTML = game.log.slice(-16).reverse().map(function (l) { return '<div>' + esc(l) + '</div>'; }).join('');
+    if (game.over) showResult();
+  }
+
+  function humanPlace(spot) {
+    if (game.turn !== 0 || game.over) return;
+    try { game = E.applyMove(game, { type: 'place', spot: spot }); render(); scheduleAI(); }
+    catch (e) { $('status').textContent = '无法放置：' + e.message; }
+  }
+  function humanBuild(id) {
+    if (game.turn !== 0 || game.over) return;
+    try { game = E.applyMove(game, { type: 'build', buildingId: id }); render(); scheduleAI(); }
+    catch (e) { $('status').textContent = '无法建造：' + e.message; }
+  }
+  function humanUpgrade() {
+    if (game.turn !== 0 || game.over) return;
+    try { game = E.applyMove(game, { type: 'upgradeTool' }); render(); scheduleAI(); }
+    catch (e) { $('status').textContent = '无法升级：' + e.message; }
+  }
+  function humanPass() {
+    if (game.turn !== 0 || game.over) return;
+    try { game = E.applyMove(game, { type: 'passBuild' }); render(); scheduleAI(); }
+    catch (e) { $('status').textContent = '无法跳过：' + e.message; }
+  }
+
+  function showResult() {
+    var sc = E.score(game);
+    var w = E.winner(game);
+    $('result-title').textContent = w === 'human' ? '你赢了！' : (w === 'ai' ? 'AI 获胜' : '平局');
+    $('result-text').textContent = '最终分数：你 ' + sc.human + ' 比 ' + sc.ai + ' AI。';
+    $('overlay').classList.add('show');
+  }
+
+  function scheduleAI() {
+    if (aiTimer) clearTimeout(aiTimer);
+    if (game.over || game.turn !== 1) return;
+    aiTimer = setTimeout(function () {
+      try { game = E.applyMove(game, E.aiMove(game)); render(); scheduleAI(); }
+      catch (e) { $('status').textContent = 'AI 出错：' + e.message; }
+    }, 520);
+  }
+
+  function start() {
+    if (aiTimer) clearTimeout(aiTimer);
+    game = E.createGame({ seed: (Date.now() ^ Math.floor(Math.random() * 1e9)) >>> 0, humanFirst: true });
+    $('overlay').classList.remove('show');
+    render();
+  }
+
+  $('upgrade').addEventListener('click', humanUpgrade);
+  $('pass').addEventListener('click', humanPass);
+  $('restart').addEventListener('click', start);
+  $('again').addEventListener('click', start);
+  start();
+})();
+</script>
+</body>
+</html>

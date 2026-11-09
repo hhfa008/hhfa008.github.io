@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>疯狂八 · 人机对战</title>
+<style>
+  :root{
+    --felt:#0b3d2e;
+    --felt-deep:#07271e;
+    --cream:#fffdf5;
+    --ink:#1f2328;
+    --gold:#ffd166;
+    --line:rgba(255,255,255,.16);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    min-height:100vh;
+    overflow-x:hidden;
+    color:#f7f3e8;
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    background:
+      radial-gradient(circle at 50% 0%,#185c44 0%,var(--felt) 42%,var(--felt-deep) 100%) fixed;
+  }
+  .game{
+    width:100%;
+    max-width:430px;
+    margin:0 auto;
+    padding:12px 12px calc(20px + env(safe-area-inset-bottom));
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    min-height:100vh;
+  }
+  header{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .brand{min-width:0;}
+  h1{font-size:1.3rem;line-height:1.2;margin:0;letter-spacing:.06em;}
+  .sub{font-size:.72rem;color:#cfe7d9;margin-top:2px;}
+  .btn{
+    min-height:44px;
+    padding:0 16px;
+    border-radius:11px;
+    border:1px solid rgba(255,255,255,.28);
+    background:#195b43;
+    color:#fff;
+    font:inherit;
+    font-size:.93rem;
+    cursor:pointer;
+    transition:transform .12s ease,background .12s ease,opacity .12s ease;
+  }
+  .btn:active{transform:scale(.97);}
+  .btn:disabled{opacity:.38;cursor:not-allowed;}
+  .btn.ghost{background:rgba(255,255,255,.08);}
+  .btn.gold{background:var(--gold);border-color:#ffe3a3;color:#3b2a00;font-weight:700;}
+  .opp{
+    border:1px solid var(--line);
+    border-radius:14px;
+    background:rgba(0,0,0,.16);
+    padding:9px 11px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    min-height:64px;
+  }
+  .opp-id{display:flex;align-items:center;gap:8px;flex:0 0 auto;}
+  .avatar{
+    width:34px;height:34px;border-radius:50%;
+    display:grid;place-items:center;
+    background:linear-gradient(135deg,#2c6e58,#164332);
+    border:1px solid rgba(255,255,255,.22);
+    font-size:.72rem;
+    font-weight:700;
+  }
+  .opp-name{font-size:.9rem;font-weight:600;}
+  .count{font-size:.72rem;color:#b9d8c8;}
+  .ai-hand{display:flex;align-items:center;gap:3px;flex-wrap:wrap;justify-content:flex-end;min-width:0;}
+  .ai-card{
+    width:20px;height:30px;border-radius:4px;
+    border:1px solid #e9e2cd;
+    background:repeating-linear-gradient(45deg,#1b4f77,#1b4f77 3px,#245f8c 3px,#245f8c 6px);
+    box-shadow:0 2px 4px rgba(0,0,0,.3);
+  }
+  .more{font-size:.7rem;color:#cfe7d9;margin-left:3px;}
+  .table{
+    display:flex;
+    justify-content:center;
+    align-items:flex-start;
+    gap:26px;
+    padding:6px 0 2px;
+  }
+  .pile{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:88px;}
+  .pile-label{font-size:.7rem;color:#b9d8c8;letter-spacing:.08em;}
+  .deck{
+    width:58px;height:82px;min-height:82px;
+    padding:0;
+    border-radius:9px;
+    border:2px solid #eee6ce;
+    background:repeating-linear-gradient(45deg,#1a4c74,#1a4c74 5px,#25638f 5px,#25638f 10px);
+    box-shadow:0 4px 0 #0a2335,0 8px 14px rgba(0,0,0,.32);
+    color:#fff;
+    font:inherit;
+    font-size:.68rem;
+    cursor:pointer;
+    display:grid;
+    place-items:center;
+    transition:transform .12s ease,opacity .12s ease;
+  }
+  .deck span{background:rgba(0,0,0,.38);padding:3px 6px;border-radius:6px;}
+  .deck:active{transform:translateY(2px);}
+  .deck:disabled{opacity:.42;cursor:not-allowed;}
+  .top-card{
+    width:62px;height:88px;
+    border-radius:9px;
+    border:1px solid #d9d2be;
+    background:var(--cream);
+    color:var(--ink);
+    box-shadow:0 4px 0 #cfc7b2,0 8px 14px rgba(0,0,0,.3);
+    position:relative;
+    display:grid;
+    place-items:center;
+  }
+  .top-card.red{color:#c1272d;}
+  .top-card .rank{position:absolute;top:5px;left:7px;font-size:1rem;font-weight:800;line-height:1;}
+  .top-card .suit{font-size:1.65rem;line-height:1;}
+  .top-card .corner{
+    position:absolute;bottom:5px;right:7px;
+    font-size:.72rem;line-height:1;transform:rotate(180deg);
+  }
+  .wild-badge{
+    position:absolute;top:4px;right:4px;
+    font-size:.52rem;padding:2px 4px;border-radius:4px;
+    background:#7a2bbd;color:#fff;letter-spacing:.04em;
+  }
+  .suit-now{
+    font-size:.76rem;
+    color:#f4e7bc;
+    padding:4px 10px;
+    border-radius:999px;
+    background:rgba(0,0,0,.24);
+    border:1px solid var(--line);
+    white-space:nowrap;
+  }
+  .suit-now.red{color:#ffb3b8;}
+  .status{
+    min-height:42px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    padding:8px 12px;
+    border-radius:12px;
+    background:rgba(0,0,0,.2);
+    border:1px solid var(--line);
+    font-size:.86rem;
+    line-height:1.35;
+    color:#fff4cf;
+  }
+  .my-area{display:flex;flex-direction:column;gap:7px;}
+  .my-head{display:flex;align-items:center;justify-content:space-between;font-size:.78rem;color:#cfe7d9;padding:0 2px;}
+  .hand{
+    display:flex;
+    flex-wrap:wrap;
+    gap:7px;
+    justify-content:center;
+    align-items:flex-end;
+    min-height:96px;
+    padding:10px 6px 6px;
+    border-radius:14px;
+    border:1px dashed rgba(255,255,255,.2);
+    background:rgba(0,0,0,.12);
+  }
+  .hand-empty{font-size:.82rem;color:#b9d8c8;align-self:center;padding:20px 0;}
+  .card{
+    position:relative;
+    flex:0 0 54px;
+    width:54px;
+    height:78px;
+    min-height:78px;
+    padding:0;
+    border-radius:8px;
+    border:1px solid #d9d2be;
+    background:var(--cream);
+    color:var(--ink);
+    box-shadow:0 3px 0 #cfc7b2,0 5px 9px rgba(0,0,0,.24);
+    font:inherit;
+    cursor:pointer;
+    transition:transform .13s ease,box-shadow .13s ease,opacity .13s ease;
+  }
+  .card.red{color:#c1272d;}
+  .card .rank{position:absolute;top:4px;left:6px;font-size:.92rem;font-weight:800;line-height:1;}
+  .card .suit{position:absolute;top:17px;left:6px;font-size:.72rem;line-height:1;}
+  .card .pip{font-size:1.5rem;line-height:1;}
+  .card .corner{position:absolute;bottom:5px;right:6px;font-size:.7rem;line-height:1;transform:rotate(180deg);}
+  .card.selected{transform:translateY(-9px);box-shadow:0 0 0 3px var(--gold),0 8px 14px rgba(0,0,0,.35);}
+  .card.legal{outline:2px solid rgba(255,209,102,.5);outline-offset:1px;}
+  .card:active{transform:translateY(-3px);}
+  .actions{display:flex;gap:8px;justify-content:center;min-height:44px;}
+  .actions .btn{flex:1;}
+  .log-wrap{
+    border:1px solid var(--line);
+    border-radius:12px;
+    background:rgba(0,0,0,.16);
+    padding:7px 10px;
+  }
+  .log{
+    max-height:108px;
+    overflow-y:auto;
+    font-size:.72rem;
+    line-height:1.55;
+    color:#cfe7d9;
+    overflow-wrap:anywhere;
+  }
+  .log div{padding:1px 0;}
+  .log div:last-child{color:#fff2c7;}
+  .overlay{
+    position:fixed;
+    inset:0;
+    z-index:20;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    background:rgba(3,18,13,.72);
+    backdrop-filter:blur(4px);
+  }
+  .overlay.hidden{display:none;}
+  .picker{
+    width:100%;
+    max-width:320px;
+    padding:18px;
+    border-radius:18px;
+    background:#0f4b37;
+    border:1px solid rgba(255,255,255,.25);
+    box-shadow:0 18px 40px rgba(0,0,0,.45);
+    text-align:center;
+  }
+  .picker h2{font-size:1.02rem;margin:0 0 14px;letter-spacing:.05em;}
+  .suit-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+  .suit-btn{
+    min-height:74px;
+    border-radius:12px;
+    border:1px solid rgba(255,255,255,.25);
+    background:var(--cream);
+    color:#1f2328;
+    font:inherit;
+    font-size:1.5rem;
+    line-height:1.1;
+    cursor:pointer;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:3px;
+  }
+  .suit-btn span{font-size:.74rem;font-weight:600;letter-spacing:.08em;}
+  .suit-btn.red{color:#c1272d;}
+  .suit-btn:active{transform:scale(.97);}
+  .picker .btn{width:100%;}
+  @media (max-width:360px){
+    .table{gap:16px;}
+    .card{flex-basis:50px;width:50px;height:74px;min-height:74px;}
+    .top-card{width:58px;height:84px;}
+  }
+</style>
+</head>
+<body>
+<main class="game">
+  <header>
+    <div class="brand">
+      <h1>疯狂八</h1>
+      <div class="sub">你 vs 电脑 · 先出完手牌者胜</div>
+    </div>
+    <button id="restartBtn" class="btn ghost" type="button" aria-label="重新开始游戏">重新开始</button>
+  </header>
+
+  <section class="opp" aria-label="电脑手牌区域">
+    <div class="opp-id">
+      <div class="avatar" aria-hidden="true">AI</div>
+      <div>
+        <div class="opp-name">电脑</div>
+        <div id="aiCount" class="count">5 张</div>
+      </div>
+    </div>
+    <div id="aiHand" class="ai-hand" aria-hidden="true"></div>
+  </section>
+
+  <section class="table" aria-label="牌桌中央">
+    <div class="pile">
+      <div class="pile-label">牌堆</div>
+      <button id="drawBtn" class="deck" type="button" aria-label="摸一张牌"><span>摸牌</span></button>
+      <div id="deckCount" class="count">41 张</div>
+    </div>
+    <div class="pile">
+      <div class="pile-label">弃牌堆</div>
+      <div id="topCard" class="top-card"></div>
+      <div id="suitNow" class="suit-now">当前花色：黑桃</div>
+    </div>
+  </section>
+
+  <div id="status" class="status" role="status" aria-live="polite">正在发牌…</div>
+
+  <section class="my-area" aria-label="你的手牌区域">
+    <div class="my-head">
+      <span>你的手牌</span>
+      <span id="myCount" class="count">5 张</span>
+    </div>
+    <div id="hand" class="hand" aria-label="你的手牌"></div>
+  </section>
+
+  <div class="actions">
+    <button id="skipBtn" class="btn" type="button" aria-label="跳过本回合，放弃刚摸到的牌" hidden>跳过</button>
+  </div>
+
+  <section class="log-wrap" aria-label="对局记录">
+    <div id="log" class="log"></div>
+  </section>
+</main>
+
+<div id="suitPicker" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="suitTitle">
+  <div class="picker">
+    <h2 id="suitTitle">打出 8 · 请选择新花色</h2>
+    <div class="suit-grid">
+      <button class="suit-btn" type="button" data-suit="S" aria-label="选择黑桃">♠<span>黑桃</span></button>
+      <button class="suit-btn red" type="button" data-suit="H" aria-label="选择红桃">♥<span>红桃</span></button>
+      <button class="suit-btn red" type="button" data-suit="D" aria-label="选择方块">♦<span>方块</span></button>
+      <button class="suit-btn" type="button" data-suit="C" aria-label="选择梅花">♣<span>梅花</span></button>
+    </div>
+    <button id="cancelSuitBtn" class="btn ghost" type="button" aria-label="取消选择花色">取消</button>
+  </div>
+</div>
+
+<script src="./engine.js"></script>
+<script>
+(function(){
+  'use strict';
+  var E=window.CrazyEightsEngine;
+  if(!E){document.getElementById('status').textContent='引擎加载失败，请检查 engine.js。';return;}
+
+  var state=null;
+  var selectedId=null;
+  var pendingEightId=null;
+  var notice='';
+  var aiBusy=false;
+  var aiTimer=null;
+  var gameToken=0;
+
+  var els={
+    aiHand:document.getElementById('aiHand'),
+    aiCount:document.getElementById('aiCount'),
+    deckBtn:document.getElementById('drawBtn'),
+    deckCount:document.getElementById('deckCount'),
+    topCard:document.getElementById('topCard'),
+    suitNow:document.getElementById('suitNow'),
+    status:document.getElementById('status'),
+    hand:document.getElementById('hand'),
+    myCount:document.getElementById('myCount'),
+    skipBtn:document.getElementById('skipBtn'),
+    log:document.getElementById('log'),
+    restartBtn:document.getElementById('restartBtn'),
+    picker:document.getElementById('suitPicker'),
+    cancelSuitBtn:document.getElementById('cancelSuitBtn')
+  };
+
+  function playerTurn(){
+    return !!state&&state.phase==='playing'&&state.turn===0&&!aiBusy;
+  }
+
+  function selectedCard(){
+    if(!state||!selectedId)return null;
+    var hand=state.hands[0];
+    for(var i=0;i<hand.length;i++)if(hand[i].id===selectedId)return hand[i];
+    return null;
+  }
+
+  function statusText(){
+    if(!state)return '正在发牌…';
+    if(state.phase==='over'){
+      return state.winner===0
+        ? '你赢了！点击“重新开始”再来一局。'
+        : '电脑获胜。点击“重新开始”再挑战一次。';
+    }
+    if(notice)return notice;
+    if(aiBusy||state.turn===1)return '电脑正在思考…';
+    if(state.mustPlayDrawn){
+      var drawn=null;
+      var hand=state.hands[0];
+      for(var i=0;i<hand.length;i++)if(hand[i].id===state.drawnCardId)drawn=hand[i];
+      return drawn
+        ? '你摸到 '+E.cardLabel(drawn)+'，可以打出它，或点“跳过”。'
+        : '你摸到一张可以打出的牌，请出牌或跳过。';
+    }
+    if(E.legalMoves(state).length===0)return '你没有可出的牌，请点牌堆摸一张。';
+    return '轮到你出牌：选一张同花色、同点数或 8。';
+  }
+
+  function makeTopCard(card){
+    els.topCard.textContent='';
+    els.topCard.className='top-card'+(E.isRed(card)?' red':'');
+    els.topCard.setAttribute('aria-label','弃牌堆顶：'+E.suitName(card.suit)+E.rankLabel(card.rank));
+    var rank=document.createElement('span');
+    rank.className='rank';
+    rank.textContent=E.rankLabel(card.rank);
+    var suit=document.createElement('span');
+    suit.className='suit';
+    suit.textContent=E.suitSymbol(card.suit);
+    var corner=document.createElement('span');
+    corner.className='corner';
+    corner.textContent=E.rankLabel(card.rank)+E.suitSymbol(card.suit);
+    els.topCard.appendChild(rank);
+    els.topCard.appendChild(suit);
+    els.topCard.appendChild(corner);
+    if(card.rank==='8'){
+      var badge=document.createElement('span');
+      badge.className='wild-badge';
+      badge.textContent='万能';
+      els.topCard.appendChild(badge);
+    }
+  }
+
+  function makeHandCard(card,legal){
+    var btn=document.createElement('button');
+    btn.type='button';
+    btn.className='card'+(E.isRed(card)?' red':'')+(legal?' legal':'')+(selectedId===card.id?' selected':'');
+    btn.setAttribute('aria-label',E.suitName(card.suit)+E.rankLabel(card.rank)+(card.rank==='8'?'，万能牌':'')+'，点击出牌');
+    btn.setAttribute('aria-pressed',selectedId===card.id?'true':'false');
+    btn.dataset.cardId=card.id;
+
+    var rank=document.createElement('span');
+    rank.className='rank';
+    rank.textContent=E.rankLabel(card.rank);
+    var suitTag=document.createElement('span');
+    suitTag.className='suit';
+    suitTag.textContent=E.suitSymbol(card.suit);
+    var pip=document.createElement('span');
+    pip.className='pip';
+    pip.textContent=E.suitSymbol(card.suit);
+    var corner=document.createElement('span');
+    corner.className='corner';
+    corner.textContent=E.rankLabel(card.rank)+E.suitSymbol(card.suit);
+
+    btn.appendChild(rank);
+    btn.appendChild(suitTag);
+    btn.appendChild(pip);
+    btn.appendChild(corner);
+    btn.addEventListener('click',function(){onHandTap(card);});
+    return btn;
+  }
+
+  function render(){
+    if(!state)return;
+
+    var top=E.topCard(state);
+    makeTopCard(top);
+
+    var suit=state.currentSuit;
+    els.suitNow.textContent='当前花色：'+E.suitSymbol(suit)+' '+E.suitName(suit);
+    els.suitNow.className='suit-now'+(E.isRed({suit:suit})?' red':'');
+
+    els.aiCount.textContent=state.hands[1].length+' 张';
+    els.aiHand.textContent='';
+    var show=Math.min(state.hands[1].length,8);
+    for(var i=0;i<show;i++){
+      var back=document.createElement('div');
+      back.className='ai-card';
+      els.aiHand.appendChild(back);
+    }
+    if(state.hands[1].length>show){
+      var more=document.createElement('span');
+      more.className='more';
+      more.textContent='+'+(state.hands[1].length-show);
+      els.aiHand.appendChild(more);
+    }
+
+    els.deckCount.textContent=state.deck.length+' 张';
+    els.myCount.textContent=state.hands[0].length+' 张';
+
+    els.hand.textContent='';
+    var hand=state.hands[0];
+    if(hand.length===0){
+      var empty=document.createElement('span');
+      empty.className='hand-empty';
+      empty.textContent='手牌已出完';
+      els.hand.appendChild(empty);
+    }else{
+      var legalIds={};
+      E.legalMoves(state).forEach(function(c){legalIds[c.id]=true;});
+      for(var j=0;j<hand.length;j++){
+        els.hand.appendChild(makeHandCard(hand[j],!!legalIds[hand[j].id]));
+      }
+    }
+
+    var canDraw=playerTurn()&&!state.mustPlayDrawn&&E.legalMoves(state).length===0;
+    els.deckBtn.disabled=!canDraw;
+    els.deckBtn.setAttribute('aria-label',canDraw?'从牌堆摸一张牌':'现在不能摸牌');
+
+    els.skipBtn.hidden=!(playerTurn()&&state.mustPlayDrawn);
+
+    els.status.textContent=statusText();
+
+    var lines=state.log.slice(-14);
+    els.log.textContent='';
+    for(var k=0;k<lines.length;k++){
+      var row=document.createElement('div');
+      row.textContent=lines[k];
+      els.log.appendChild(row);
+    }
+    els.log.scrollTop=els.log.scrollHeight;
+  }
+
+  function clearNotice(){notice='';}
+
+  function onHandTap(card){
+    if(!state||state.phase!=='playing')return;
+    if(!playerTurn()){
+      notice='现在还不是你的回合。';
+      render();
+      return;
+    }
+    if(state.mustPlayDrawn&&card.id!==state.drawnCardId){
+      notice='摸牌后只能打出刚摸到的那张牌，或点“跳过”。';
+      selectedId=card.id;
+      render();
+      return;
+    }
+    if(!E.canPlay(state,card)){
+      notice='这张牌不能出：需要同花色、同点数，或打出万能牌 8。';
+      selectedId=card.id;
+      render();
+      return;
+    }
+    if(card.rank==='8'){
+      selectedId=card.id;
+      pendingEightId=card.id;
+      notice='';
+      render();
+      openPicker();
+      return;
+    }
+    doPlay(card.id);
+  }
+
+  function doPlay(cardId,suit){
+    clearNotice();
+    var res=E.playCard(state,cardId,suit);
+    if(!res.ok){
+      notice=res.error||'出牌失败。';
+      render();
+      return;
+    }
+    selectedId=null;
+    pendingEightId=null;
+    closePicker();
+    render();
+    scheduleAI();
+  }
+
+  function onDraw(){
+    if(!playerTurn())return;
+    clearNotice();
+    var res=E.drawCard(state);
+    if(!res.ok){
+      notice=res.error||'现在不能摸牌。';
+      render();
+      return;
+    }
+    if(res.mustPlay){
+      selectedId=res.card.id;
+      notice='你摸到 '+E.cardLabel(res.card)+'，可以打出它，或点“跳过”。';
+      render();
+      return;
+    }
+    selectedId=null;
+    notice='你摸到一张牌，无法出牌，轮到电脑。';
+    render();
+    scheduleAI();
+  }
+
+  function onSkip(){
+    if(!playerTurn())return;
+    clearNotice();
+    var res=E.passAfterDraw(state);
+    if(!res.ok){
+      notice=res.error||'现在不能跳过。';
+      render();
+      return;
+    }
+    selectedId=null;
+    render();
+    scheduleAI();
+  }
+
+  function scheduleAI(){
+    if(!state||state.phase!=='playing'||state.turn!==1)return;
+    if(aiTimer)clearTimeout(aiTimer);
+    aiBusy=true;
+    render();
+    var token=gameToken;
+    aiTimer=setTimeout(function(){
+      aiTimer=null;
+      if(token!==gameToken)return;
+      aiStep();
+    },650);
+  }
+
+  function aiStep(){
+    if(!state||state.phase!=='playing'||state.turn!==1){
+      aiBusy=false;
+      render();
+      return;
+    }
+    notice='';
+    var move=E.aiChooseMove(state);
+    if(move.type==='play'){
+      var playRes=E.playCard(state,move.cardId,move.suit);
+      if(!playRes.ok&&state.phase==='playing'){
+        if(state.mustPlayDrawn||E.legalMoves(state).length===0){
+          E.passAfterDraw(state);
+        }
+      }
+    }else{
+      var drawRes=E.drawCard(state);
+      if(!drawRes.ok&&state.phase==='playing'&&state.turn===1){
+        E.passAfterDraw(state);
+      }
+    }
+    render();
+
+    if(state.phase==='playing'&&state.turn===1){
+      var token=gameToken;
+      aiTimer=setTimeout(function(){
+        aiTimer=null;
+        if(token!==gameToken)return;
+        aiStep();
+      },650);
+    }else{
+      aiBusy=false;
+      render();
+    }
+  }
+
+  function openPicker(){
+    els.picker.classList.remove('hidden');
+    var first=els.picker.querySelector('.suit-btn');
+    if(first)first.focus();
+  }
+
+  function closePicker(){
+    els.picker.classList.add('hidden');
+    pendingEightId=null;
+  }
+
+  function startGame(){
+    gameToken++;
+    if(aiTimer){clearTimeout(aiTimer);aiTimer=null;}
+    aiBusy=false;
+    selectedId=null;
+    pendingEightId=null;
+    notice='';
+    closePicker();
+    state=E.createGame({seed:(Date.now()^Math.floor(Math.random()*4294967296))>>>0});
+    render();
+    if(state.turn===1)scheduleAI();
+  }
+
+  els.deckBtn.addEventListener('click',onDraw);
+  els.skipBtn.addEventListener('click',onSkip);
+  els.restartBtn.addEventListener('click',function(){
+    startGame();
+  });
+
+  els.picker.addEventListener('click',function(ev){
+    var btn=ev.target.closest?ev.target.closest('.suit-btn'):null;
+    if(btn){
+      var suit=btn.getAttribute('data-suit');
+      var id=pendingEightId;
+      if(id&&state){
+        doPlay(id,suit);
+      }
+      return;
+    }
+    if(ev.target===els.picker)closePicker();
+  });
+
+  els.cancelSuitBtn.addEventListener('click',function(){
+    closePicker();
+    selectedId=null;
+    clearNotice();
+    render();
+  });
+
+  document.addEventListener('keydown',function(ev){
+    if(ev.key==='Escape'&&!els.picker.classList.contains('hidden')){
+      closePicker();
+      selectedId=null;
+      clearNotice();
+      render();
+    }
+  });
+
+  startGame();
+})();
+</script>
+</body>
+</html>

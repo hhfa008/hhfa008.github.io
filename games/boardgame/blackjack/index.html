@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>21 点 · 黑杰克</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { max-width: 100%; overflow-x: hidden; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: radial-gradient(circle at 50% 0, #14532d 0, #052e16 68%, #01130a 100%);
+    color: #f8fafc;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  .app { width: 100%; max-width: 460px; margin: 0 auto; padding: 16px 14px 28px; }
+  header { text-align: center; margin-bottom: 12px; }
+  h1 { margin: 0 0 4px; font-size: 24px; letter-spacing: 1px; color: #fde68a; }
+  .subtitle { margin: 0; font-size: 13px; color: #bbf7d0; }
+  .stats { display: flex; gap: 8px; margin-bottom: 12px; }
+  .stat {
+    flex: 1 1 0; min-width: 0; background: rgba(0, 0, 0, .3);
+    border: 1px solid rgba(255, 255, 255, .12); border-radius: 12px;
+    padding: 8px 6px; text-align: center;
+  }
+  .stat span { display: block; font-size: 11px; color: #86efac; margin-bottom: 2px; }
+  .stat strong { font-size: 17px; color: #fef3c7; }
+  .panel {
+    background: rgba(0, 0, 0, .3);
+    border: 1px solid rgba(255, 255, 255, .12);
+    border-radius: 16px; padding: 12px; margin-bottom: 10px;
+  }
+  .section-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+  h2 { margin: 0; font-size: 15px; color: #dcfce7; }
+  .value { font-size: 13px; font-weight: 700; color: #fde68a; white-space: nowrap; }
+  .hand { display: flex; flex-wrap: wrap; gap: 6px; min-height: 68px; align-items: center; }
+  .card {
+    width: 48px; height: 68px; flex: 0 0 auto; border-radius: 8px;
+    background: #fff; color: #111827; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; font-weight: 800;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, .35);
+    border: 1px solid #e5e7eb;
+  }
+  .card .rank { font-size: 18px; line-height: 1.1; }
+  .card .suit { font-size: 20px; line-height: 1.1; }
+  .card.red { color: #dc2626; }
+  .card.back {
+    background: repeating-linear-gradient(45deg, #1d4ed8 0 6px, #1e3a8a 6px 12px);
+    border: 2px solid #93c5fd; color: rgba(255, 255, 255, .85);
+  }
+  .card.back::after { content: "21"; font-size: 17px; letter-spacing: 1px; }
+  .placeholder { font-size: 13px; color: #94a3b8; }
+  .result {
+    min-height: 24px; margin: 8px 2px 2px; text-align: center;
+    font-size: 16px; font-weight: 700; color: #fde68a;
+  }
+  .error { min-height: 20px; text-align: center; font-size: 13px; color: #fca5a5; }
+  .bet-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .bet-row label { font-size: 14px; color: #dcfce7; white-space: nowrap; }
+  input[type="number"] {
+    flex: 1 1 auto; min-width: 0; min-height: 44px; font-size: 18px;
+    padding: 8px 12px; border-radius: 10px; border: 1px solid #475569;
+    background: #0f172a; color: #fff; font-family: inherit;
+  }
+  input[type="number"]:focus { outline: 2px solid #fbbf24; outline-offset: 1px; }
+  .quick { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .quick button { flex: 1 1 50px; }
+  .actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  button {
+    min-height: 44px; min-width: 44px; padding: 10px 8px;
+    border: 0; border-radius: 10px; cursor: pointer;
+    font-family: inherit; font-size: 16px; font-weight: 700;
+    transition: filter .15s ease;
+  }
+  button:active:not(:disabled) { filter: brightness(.9); }
+  button:focus-visible { outline: 2px solid #fbbf24; outline-offset: 2px; }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  .deal { background: #22c55e; color: #052e16; }
+  .hit { background: #38bdf8; color: #082f49; }
+  .stand { background: #f87171; color: #450a0a; }
+  .quick button { background: #334155; color: #e2e8f0; font-size: 14px; font-weight: 600; }
+  .log-wrap { margin-top: 2px; }
+  .log-wrap h2 { margin-bottom: 6px; }
+  .log {
+    list-style: none; margin: 0; padding: 0; max-height: 138px; overflow-y: auto;
+    font-size: 13px; line-height: 1.5; color: #cbd5e1;
+  }
+  .log li { padding: 3px 0; border-bottom: 1px dashed rgba(255, 255, 255, .08); }
+  .log li:last-child { border-bottom: 0; }
+  footer { text-align: center; font-size: 13px; color: #94a3b8; margin-top: 4px; }
+  footer a { color: #93c5fd; text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+  @media (max-width: 359px) {
+    .card { width: 42px; height: 60px; }
+    .actions { grid-template-columns: 1fr 1fr; }
+    .actions .deal { grid-column: 1 / -1; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>21 点 · 黑杰克</h1>
+    <p class="subtitle">单人对战庄家 · 接近 21 点而不爆牌</p>
+  </header>
+
+  <div class="stats" aria-label="牌局状态">
+    <div class="stat"><span>筹码</span><strong id="chips">100</strong></div>
+    <div class="stat"><span>下注</span><strong id="bet">0</strong></div>
+    <div class="stat"><span>状态</span><strong id="phaseLabel">请下注</strong></div>
+  </div>
+
+  <section class="panel" aria-labelledby="dealerTitle">
+    <div class="section-head">
+      <h2 id="dealerTitle">庄家</h2>
+      <span class="value" id="dealerValue">—</span>
+    </div>
+    <div class="hand" id="dealerHand" aria-label="庄家手牌"></div>
+  </section>
+
+  <section class="panel" aria-labelledby="playerTitle">
+    <div class="section-head">
+      <h2 id="playerTitle">闲家（你）</h2>
+      <span class="value" id="playerValue">—</span>
+    </div>
+    <div class="hand" id="playerHand" aria-label="闲家手牌"></div>
+  </section>
+
+  <div class="result" id="result" aria-live="polite"></div>
+  <div class="error" id="error" aria-live="assertive"></div>
+
+  <section class="panel" aria-label="下注与操作">
+    <div class="bet-row">
+      <label for="betInput">下注</label>
+      <input id="betInput" type="number" inputmode="numeric" min="1" step="1" value="10" aria-label="下注筹码数量">
+    </div>
+    <div class="quick" aria-label="快捷下注">
+      <button type="button" class="quick-chip" data-amount="1" aria-label="下注 1 筹码">1</button>
+      <button type="button" class="quick-chip" data-amount="5" aria-label="下注 5 筹码">5</button>
+      <button type="button" class="quick-chip" data-amount="10" aria-label="下注 10 筹码">10</button>
+      <button type="button" class="quick-chip" data-amount="25" aria-label="下注 25 筹码">25</button>
+      <button type="button" class="quick-chip" id="allIn" aria-label="全押当前所有筹码">全押</button>
+    </div>
+    <div class="actions">
+      <button type="button" class="deal" id="dealBtn" aria-label="发牌开始本局">发牌</button>
+      <button type="button" class="hit" id="hitBtn" aria-label="要一张牌" disabled>要牌</button>
+      <button type="button" class="stand" id="standBtn" aria-label="停牌并交给庄家" disabled>停牌</button>
+    </div>
+  </section>
+
+  <section class="panel log-wrap" aria-labelledby="logTitle">
+    <h2 id="logTitle">牌局记录</h2>
+    <ul class="log" id="log" aria-label="牌局日志"></ul>
+  </section>
+
+  <footer><a href="./rules.html">查看游戏规则与常见问题</a></footer>
+</div>
+
+<script src="./engine.js"></script>
+<script>
+(function () {
+  'use strict';
+  var E = window.BlackjackEngine;
+  var SUIT_NAMES = { S: '黑桃', H: '红桃', D: '方块', C: '梅花' };
+  var PHASE_TEXT = { bet: '请下注', player: '闲家行动', dealer: '庄家行动', over: '本局结束' };
+
+  var game = E.createGame({ seed: (Date.now() ^ 0x9e3779b9) >>> 0 });
+  var hint = '';
+
+  var chipsEl = document.getElementById('chips');
+  var betEl = document.getElementById('bet');
+  var phaseEl = document.getElementById('phaseLabel');
+  var dealerHandEl = document.getElementById('dealerHand');
+  var playerHandEl = document.getElementById('playerHand');
+  var dealerValueEl = document.getElementById('dealerValue');
+  var playerValueEl = document.getElementById('playerValue');
+  var resultEl = document.getElementById('result');
+  var errorEl = document.getElementById('error');
+  var logEl = document.getElementById('log');
+  var betInput = document.getElementById('betInput');
+  var dealBtn = document.getElementById('dealBtn');
+  var hitBtn = document.getElementById('hitBtn');
+  var standBtn = document.getElementById('standBtn');
+  var allInBtn = document.getElementById('allIn');
+  var quickButtons = Array.prototype.slice.call(document.querySelectorAll('.quick-chip[data-amount]'));
+
+  function makeCard(card, hidden) {
+    var el = document.createElement('div');
+    if (hidden) {
+      el.className = 'card back';
+      el.setAttribute('aria-label', '庄家暗牌');
+      return el;
+    }
+    el.className = 'card' + (E.isRed(card.suit) ? ' red' : '');
+    el.setAttribute('aria-label', SUIT_NAMES[card.suit] + card.rank + '，' + card.rank + ' 点');
+    var rank = document.createElement('span');
+    rank.className = 'rank';
+    rank.textContent = E.rankLabel(card.rank);
+    var suit = document.createElement('span');
+    suit.className = 'suit';
+    suit.textContent = E.suitSymbol(card.suit);
+    el.appendChild(rank);
+    el.appendChild(suit);
+    return el;
+  }
+
+  function renderHand(container, cards, hideIndex) {
+    container.textContent = '';
+    if (!cards.length) {
+      var ph = document.createElement('span');
+      ph.className = 'placeholder';
+      ph.textContent = '等待发牌';
+      container.appendChild(ph);
+      return;
+    }
+    cards.forEach(function (card, index) {
+      container.appendChild(makeCard(card, hideIndex === index));
+    });
+  }
+
+  function render() {
+    chipsEl.textContent = String(game.chips);
+    betEl.textContent = String(game.bet);
+    phaseEl.textContent = PHASE_TEXT[game.phase] || game.phase;
+
+    var hideHole = game.phase === 'player' && game.dealer.length > 1;
+    renderHand(dealerHandEl, game.dealer, hideHole ? 1 : -1);
+    renderHand(playerHandEl, game.player, -1);
+
+    if (game.dealer.length) {
+      if (hideHole) {
+        dealerValueEl.textContent = '明牌 ' + E.handValue([game.dealer[0]]).total + ' 点 + 暗牌';
+      } else {
+        dealerValueEl.textContent = E.handValue(game.dealer).total + ' 点';
+      }
+    } else {
+      dealerValueEl.textContent = '—';
+    }
+    playerValueEl.textContent = game.player.length ? E.handValue(game.player).total + ' 点' : '—';
+
+    resultEl.textContent = game.message || '';
+    errorEl.textContent = hint;
+
+    var playing = game.phase === 'player' || game.phase === 'dealer';
+    dealBtn.disabled = playing;
+    dealBtn.textContent = game.phase === 'over' ? '再来一局' : '发牌';
+    dealBtn.setAttribute('aria-label', game.phase === 'over' ? '开始新一局并下注' : '发牌开始本局');
+    hitBtn.disabled = game.phase !== 'player';
+    standBtn.disabled = game.phase !== 'player';
+    betInput.disabled = game.phase !== 'bet';
+    quickButtons.forEach(function (btn) { btn.disabled = game.phase !== 'bet'; });
+    allInBtn.disabled = game.phase !== 'bet';
+
+    logEl.textContent = '';
+    game.log.slice(-14).forEach(function (line) {
+      var li = document.createElement('li');
+      li.textContent = line;
+      logEl.appendChild(li);
+    });
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function clampBetInput() {
+    var raw = parseInt(betInput.value, 10);
+    if (!isFinite(raw) || raw < 1) raw = 1;
+    var max = Math.max(1, game.chips);
+    if (raw > max) raw = max;
+    betInput.value = String(raw);
+    return raw;
+  }
+
+  dealBtn.addEventListener('click', function () {
+    hint = '';
+    if (game.phase === 'over') {
+      var nr = E.newRound(game);
+      if (!nr.ok) { hint = nr.error; render(); return; }
+      betInput.value = String(Math.min(10, game.chips));
+    }
+    if (game.phase !== 'bet') { render(); return; }
+    var bet = clampBetInput();
+    var res = E.startRound(game, bet);
+    if (!res.ok) hint = res.error;
+    render();
+  });
+
+  hitBtn.addEventListener('click', function () {
+    hint = '';
+    var res = E.hit(game);
+    if (!res.ok) hint = res.error;
+    render();
+  });
+
+  standBtn.addEventListener('click', function () {
+    hint = '';
+    var res = E.stand(game);
+    if (!res.ok) hint = res.error;
+    render();
+  });
+
+  quickButtons.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var amount = parseInt(btn.getAttribute('data-amount'), 10);
+      betInput.value = String(Math.max(1, Math.min(amount, game.chips)));
+      hint = '';
+      render();
+    });
+  });
+
+  allInBtn.addEventListener('click', function () {
+    betInput.value = String(Math.max(1, game.chips));
+    hint = '';
+    render();
+  });
+
+  betInput.addEventListener('change', function () {
+    clampBetInput();
+    hint = '';
+    render();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

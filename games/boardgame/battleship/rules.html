@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#04111c">
+<meta name="description" content="海战棋规则：8×8 棋盘、五艘战舰布阵方法、轮流炮击规则、AI parity 搜索与追击策略说明。">
+<title>海战棋规则 · 玩法与 AI 策略</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #04111c;
+    --panel: rgba(8, 34, 53, 0.84);
+    --line: rgba(126, 214, 255, 0.18);
+    --text: #e9f7ff;
+    --muted: #9db8ca;
+    --cyan: #5eead4;
+    --blue: #38bdf8;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    background:
+      radial-gradient(circle at 12% -8%, rgba(56, 189, 248, 0.18), transparent 28rem),
+      radial-gradient(circle at 110% 18%, rgba(94, 234, 212, 0.09), transparent 26rem),
+      linear-gradient(180deg, #04111c 0%, #020a12 72%);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  a { -webkit-tap-highlight-color: transparent; }
+
+  .wrap {
+    width: 100%;
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 16px 16px 44px;
+  }
+
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    min-width: 44px;
+    margin-bottom: 20px;
+    padding: 0 14px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: rgba(12, 46, 69, 0.72);
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 650;
+    text-decoration: none;
+  }
+
+  .back-link:hover { background: rgba(18, 62, 91, 0.92); }
+
+  .back-link:focus-visible,
+  .cta a:focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: 2px;
+  }
+
+  .eyebrow {
+    margin: 0 0 8px;
+    color: var(--cyan);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.24em;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: clamp(27px, 8vw, 40px);
+    line-height: 1.18;
+    letter-spacing: 0.03em;
+  }
+
+  .lede {
+    margin: 12px 0 0;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.8;
+  }
+
+  .rules {
+    margin-top: 22px;
+    padding: 18px 16px;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    background: var(--panel);
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.24);
+  }
+
+  h2 {
+    margin: 26px 0 8px;
+    padding-left: 10px;
+    border-left: 3px solid var(--blue);
+    color: #d8f5ff;
+    font-size: 17px;
+    line-height: 1.35;
+  }
+
+  h2:first-of-type { margin-top: 0; }
+
+  p {
+    margin: 8px 0;
+    color: #c4dbe8;
+    font-size: 14px;
+    line-height: 1.9;
+  }
+
+  strong { color: #ffffff; }
+
+  .cta {
+    margin-top: 18px;
+    padding: 20px 16px;
+    border: 1px solid rgba(94, 234, 212, 0.36);
+    border-radius: 18px;
+    background: linear-gradient(140deg, rgba(13, 78, 83, 0.64), rgba(5, 30, 45, 0.92));
+    text-align: center;
+  }
+
+  .cta h2 {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    font-size: 20px;
+  }
+
+  .cta p {
+    margin: 8px 0 16px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .cta a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 48px;
+    min-width: 44px;
+    padding: 0 24px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #2dd4bf, #0ea5e9);
+    color: #02232c;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    text-decoration: none;
+  }
+
+  .cta a:hover { background: linear-gradient(135deg, #5eead4, #38bdf8); }
+
+  footer {
+    margin-top: 24px;
+    color: rgba(157, 184, 202, 0.72);
+    font-size: 11px;
+    line-height: 1.6;
+    text-align: center;
+  }
+
+  @media (max-width: 360px) {
+    .wrap { padding: 12px 12px 36px; }
+    .rules, .cta { padding: 15px 13px; }
+    p { font-size: 13px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { scroll-behavior: auto !important; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back-link" href="index.html" aria-label="返回海战棋游戏页面">← 返回游戏</a>
+
+  <header>
+    <p class="eyebrow">BATTLESHIP · 规则</p>
+    <h1>海战棋怎么玩</h1>
+    <p class="lede">八行八列的海域，五艘看不见的战舰。轮流炮击、推理位置，先让对方整支舰队沉没的人获胜。</p>
+  </header>
+
+  <article class="rules">
+    <h2>目标</h2>
+    <p>你与 AI 各拥有一片八行八列的隐藏海域，并各自部署五艘战舰。双方轮流炮击对方海域，率先击沉对方全部五艘战舰的一方获胜。</p>
+
+    <h2>棋盘与舰队</h2>
+    <p>棋盘共有六十四个格子。双方舰队完全相同：长度五格的<strong>航空母舰</strong>、长度四格的<strong>战列舰</strong>、两艘长度三格的<strong>巡洋舰</strong>与<strong>驱逐舰</strong>，以及长度两格的<strong>潜艇</strong>。每艘战舰必须完整落在棋盘内，只能横向或竖向摆放，不能斜放，也不能与其它战舰重叠。</p>
+
+    <h2>布阵阶段</h2>
+    <p>页面会按航空母舰、战列舰、巡洋舰、驱逐舰、潜艇的顺序提示下一艘待放置的战舰。点击“旋转”可以在横向与竖向之间切换，再点击你的海域格子完成放置。放错时可以点击“清空重摆”，或直接使用“随机布阵”生成一套合法阵型。五艘战舰全部就位后，“开始战斗”按钮才会启用。</p>
+
+    <h2>炮击回合</h2>
+    <p>战斗开始后由你先手。点击敌方海域中的任意格进行一次炮击，随后轮到 AI。每个格子一局只能炮击一次。落空显示圆点，命中显示叉号；当一艘战舰的全部格子都被命中时，该舰沉没，状态区会给出提示。无论命中还是落空，双方都要交换行动权，不能因为命中而连续炮击。</p>
+
+    <h2>AI 的策略</h2>
+    <p>AI 没有命中线索时，会按 parity 棋盘格搜索，也就是优先选择行号与列号之和为偶数的格子，以较快覆盖常见舰型。一旦命中，它切换到追击模式，优先攻击该命中格上下左右相邻且尚未炮击的格子；若已经连成一线，则优先延伸线的两端。目标舰沉没后，它回到 parity 搜索。AI 不读取隐藏信息，只依据已经公开的炮击结果。</p>
+
+    <h2>胜利与重开</h2>
+    <p>当对方五艘战舰全部沉没时，对局立即结束。状态区与结果卡会显示“胜利”或“战败”，已击沉数量也会同步更新。你可以随时点击“重新开始”，系统会重新生成 AI 舰队并回到布阵阶段，之前的炮击记录不会保留。</p>
+
+    <h2>布阵小提示</h2>
+    <p>把战舰分散摆放，可以减少 AI 追击时快速锁定整艘船的机会。同时留意敌方海域的落空分布，用排除法缩小剩余战舰可能出现的位置。</p>
+  </article>
+
+  <section class="cta" aria-label="开始游戏">
+    <h2>准备好出海了吗？</h2>
+    <p>手动布阵，或者让系统随机排好五艘战舰，然后向敌方海域开出第一炮。</p>
+    <a href="index.html" aria-label="开始海战棋对局">开始对局</a>
+  </section>
+
+  <footer>海战棋 · 纯静态离线页面 · 规则以本页为准</footer>
+</div>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "海战棋的棋盘和战舰尺寸是多少？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "棋盘是八行八列，共六十四个格子。双方各有五艘战舰，长度分别为五格、四格、三格、三格和两格。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "战舰可以重叠或斜着放吗？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "不可以。每艘战舰都必须完整位于棋盘内，只能横向或竖向摆放，并且不能与其它战舰占用同一个格子。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "命中以后可以连续炮击吗？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "不可以。玩家与 AI 每次行动只炮击一个格子，即使命中，也要把行动权交给对方。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "AI 怎样选择炮击目标？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "AI 未命中时按 parity 棋盘格搜索，优先选择行号与列号之和为偶数的格子；命中后优先攻击相邻未打格，并根据连续命中延伸线的两端。"
+      }
+    }
+  ]
+}
+</script>
+</body>
+</html>

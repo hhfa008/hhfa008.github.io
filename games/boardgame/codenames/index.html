@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>行动代号 Codenames — 单机中文词库桌游</title>
+<meta name="description" content="行动代号 Codenames 中文单机版：内置词库，队长给一词线索加数字，队员猜词，踩到刺客立即判负。支持玩家当队长或当队员对战 AI。">
+<meta name="theme-color" content="#151a2d">
+<style>
+:root{--bg:#101426;--panel:#1b2240;--panel2:#232c52;--ink:#f3f1ea;--muted:#a8b0cf;
+--red:#e05b57;--red2:#7e2f2d;--blue:#4f8fd8;--blue2:#24405f;--neutral:#a99a78;--neutral2:#5b5340;
+--assassin:#1b1b1f;--accent:#f2c14e;--line:#35406b}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:radial-gradient(1200px 600px at 50% -10%,#222b52,var(--bg));color:var(--ink);
+font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
+padding:0 0 calc(24px + env(safe-area-inset-bottom))}
+.wrap{max-width:680px;margin:0 auto;padding:0 14px}
+header{padding:16px 0 10px}
+h1{font-size:1.35rem;margin:0;letter-spacing:.04em}
+h1 small{display:block;font-size:.78rem;color:var(--muted);font-weight:400;letter-spacing:.18em;margin-top:4px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0}
+.score{display:flex;gap:8px;flex:1;min-width:210px}
+.pill{border-radius:10px;padding:8px 12px;font-size:.86rem;min-height:44px;display:flex;align-items:center;gap:8px;border:1px solid var(--line)}
+.pill.red{background:var(--red2)}.pill.blue{background:var(--blue2)}
+.pill b{font-size:1.05rem}
+button,select,input{font:inherit;color:inherit}
+button{cursor:pointer;border-radius:10px;border:1px solid var(--line);background:var(--panel2);
+min-height:44px;padding:8px 14px}
+button:hover{filter:brightness(1.12)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+button:disabled{opacity:.55;cursor:default}
+.seg{display:flex;gap:6px}
+.seg button.on{background:var(--accent);color:#201a05;border-color:var(--accent);font-weight:700}
+.status{border:1px solid var(--line);background:rgba(27,34,64,.72);border-radius:12px;padding:10px 12px;
+margin:8px 0 12px;min-height:52px}
+.status .big{font-weight:650}
+.status .sub{color:var(--muted);font-size:.86rem}
+.clueform{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.clueform input{flex:1 1 140px;min-width:0;min-height:46px;border-radius:10px;border:1px solid var(--line);
+background:#121731;padding:10px 12px}
+.clueform select{min-height:46px;border-radius:10px;border:1px solid var(--line);background:#121731;padding:0 8px}
+.board{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:6px}
+.tile{position:relative;min-height:62px;padding:6px 3px;border-radius:9px;border:1px solid var(--line);
+background:linear-gradient(180deg,#2a335e,#222a4b);display:flex;flex-direction:column;align-items:center;
+justify-content:center;gap:2px;font-size:clamp(.7rem,3.6vw,.95rem);font-weight:600;line-height:1.2;
+text-align:center;word-break:break-all;transition:transform .12s ease}
+.tile small{font-size:.58rem;font-weight:500;color:var(--muted);letter-spacing:.06em}
+.tile.red{background:linear-gradient(180deg,#b94743,#8a322f);border-color:#d87773}
+.tile.blue{background:linear-gradient(180deg,#3f78b8,#2e5688);border-color:#78a7de}
+.tile.neutral{background:linear-gradient(180deg,#b7a681,#8a7b59);border-color:#cdbc96;color:#201c12}
+.tile.assassin{background:#0b0b10;border-color:#000;color:#f3f1ea}
+.tile.hidden{background:linear-gradient(180deg,#2c355f,#222a4b)}
+.tile.revealed{opacity:.52;filter:saturate(.45)}
+.tile:disabled{opacity:1}
+.tile.clickable:hover{transform:translateY(-2px)}
+.legend{display:flex;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:.76rem;margin:10px 2px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.log{margin-top:14px;border-top:1px solid var(--line);padding-top:10px;color:var(--muted);font-size:.84rem}
+.log p{margin:4px 0}
+.banner{margin:12px 0;padding:12px 14px;border-radius:12px;background:#2c3a2b;border:1px solid #587a4f;
+font-weight:700;text-align:center}
+.banner.blue{background:#22344d;border-color:#4c78a8}
+.banner.red{background:#4b2624;border-color:#a35754}
+.links{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:16px;font-size:.86rem}
+.links a{color:var(--accent);text-decoration:none;min-height:44px;display:inline-flex;align-items:center}
+@media (max-width:360px){.wrap{padding:0 10px}.board{gap:4px}.tile{min-height:56px;font-size:.68rem}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>行动代号 <small>CODENAMES · 中文单机版</small></h1>
+</header>
+<div class="bar">
+  <div class="score">
+    <div class="pill red" aria-label="红队得分">红队 <b id="redScore">0</b>/9</div>
+    <div class="pill blue" aria-label="蓝队得分">蓝队 <b id="blueScore">0</b>/8</div>
+  </div>
+  <div class="seg" role="group" aria-label="选择身份">
+    <button id="modeCaptain" class="on" aria-pressed="true">我当队长</button>
+    <button id="modeOperative" aria-pressed="false">我当队员</button>
+  </div>
+  <button id="newGame" aria-label="开始新对局">新对局</button>
+</div>
+<div class="status" id="status" aria-live="polite"></div>
+<div id="banner" class="banner" hidden></div>
+<form class="clueform" id="clueForm" autocomplete="off">
+  <input id="clueText" maxlength="20" placeholder="输入一个线索词" aria-label="线索词">
+  <select id="clueCount" aria-label="线索数字">
+    <option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option>
+  </select>
+  <button type="submit" id="clueSubmit">给出线索</button>
+</form>
+<div class="board" id="board" role="group" aria-label="25 张行动代号词卡"></div>
+<div class="legend">
+  <span><i style="background:#b94743"></i>红队</span>
+  <span><i style="background:#3f78b8"></i>蓝队</span>
+  <span><i style="background:#b7a681"></i>中立</span>
+  <span><i style="background:#0b0b10;border:1px solid #555"></i>刺客</span>
+</div>
+<div class="log" id="log" aria-live="polite"></div>
+<div class="links">
+  <a href="rules.html">查看中文规则</a>
+  <a href="../index.html">返回桌游目录</a>
+</div>
+</div>
+<script src="engine.js"></script>
+<script>
+(function () {
+  'use strict';
+  var E = window.CodenamesEngine;
+  var state = null;
+  var mode = 'captain';
+  var gen = 0;
+  var board = document.getElementById('board');
+  var statusEl = document.getElementById('status');
+  var logEl = document.getElementById('log');
+  var banner = document.getElementById('banner');
+  var form = document.getElementById('clueForm');
+  var clueText = document.getElementById('clueText');
+  var clueCount = document.getElementById('clueCount');
+
+  function esc(t) {
+    return String(t).replace(/[&<>"']/g, function (c) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+    });
+  }
+
+  function render() {
+    if (!state) return;
+    var v = E.viewFor(state, 0);
+    document.getElementById('redScore').textContent = v.scores.red;
+    document.getElementById('blueScore').textContent = v.scores.blue;
+    var humanClue = E.needsHuman(state) && state.phase === 'clue';
+    form.hidden = !humanClue;
+    document.getElementById('clueSubmit').disabled = !humanClue;
+    var humanGuess = E.needsHuman(state) && state.phase === 'guess';
+    board.innerHTML = v.words.map(function (w, idx) {
+      var cls = 'tile ' + w.color + (w.revealed ? ' revealed' : '') +
+        ((humanGuess && !w.revealed) ? ' clickable' : '');
+      var label = w.text + (w.color !== 'hidden' ? '，' + ({ red: '红队', blue: '蓝队', neutral: '中立', assassin: '刺客' }[w.color] || '') : '，未翻开');
+      return '<button class="' + cls + '" data-i="' + idx + '" aria-label="' + esc(label) + '"' +
+        ((!humanGuess || w.revealed) ? ' disabled' : '') + '>' + esc(w.text) + '</button>';
+    }).join('');
+    var t = v.turn === 'red' ? '红队' : '蓝队';
+    var sub = '';
+    if (v.phase === 'over') {
+      sub = '对局结束。';
+    } else if (v.phase === 'clue') {
+      sub = humanClue ? '你是红队队长：输入线索词并选择数字。' :
+        (state.turn === 'red' ? 'AI 队长正在思考线索…' : 'AI 队长正在思考线索…');
+    } else {
+      sub = '线索「' + (v.clue ? v.clue.text : '') + '」 · 剩余猜词 ' + v.guessesLeft +
+        (humanGuess ? ' · 点击词卡猜词' : ' · AI 队员正在猜词…');
+    }
+    statusEl.innerHTML = '<div class="big">当前回合：' + t + '</div><div class="sub">' + esc(sub) + '</div>';
+    if (v.winner) {
+      banner.hidden = false;
+      banner.className = 'banner ' + v.winner;
+      banner.textContent = (v.winner === 'red' ? '红队' : '蓝队') + '获胜！' +
+        (state.mode === 'captain' ? (v.winner === 'red' ? ' 你的队伍赢了。' : ' AI 队伍赢了。') : '');
+      banner.setAttribute('role', 'status');
+    } else {
+      banner.hidden = true;
+    }
+    var lines = v.log.slice(-7).map(function (line) { return '<p>' + esc(line) + '</p>'; });
+    logEl.innerHTML = lines.join('');
+  }
+
+  function pump() {
+    var my = gen;
+    function step() {
+      if (my !== gen || !state) return;
+      if (E.isOver(state) || E.needsHuman(state)) { render(); return; }
+      var a = E.aiAction(state);
+      if (!a) { render(); return; }
+      E.applyAction(state, a);
+      render();
+      setTimeout(step, 520);
+    }
+    setTimeout(step, 260);
+  }
+
+  function newGame(nextMode) {
+    gen++;
+    mode = nextMode || mode;
+    state = E.createGame({ mode: mode, seed: (Date.now() % 1000000) + 1 });
+    document.getElementById('modeCaptain').classList.toggle('on', mode === 'captain');
+    document.getElementById('modeOperative').classList.toggle('on', mode === 'operative');
+    document.getElementById('modeCaptain').setAttribute('aria-pressed', String(mode === 'captain'));
+    document.getElementById('modeOperative').setAttribute('aria-pressed', String(mode === 'operative'));
+    clueText.value = '';
+    render();
+    if (!E.needsHuman(state) && !E.isOver(state)) pump();
+  }
+
+  board.addEventListener('click', function (ev) {
+    var btn = ev.target.closest('button[data-i]');
+    if (!btn || !state) return;
+    if (!(E.needsHuman(state) && state.phase === 'guess')) return;
+    var r = E.applyAction(state, { type: 'guess', index: Number(btn.getAttribute('data-i')), ai: false });
+    if (!r.ok) return;
+    render();
+    if (!E.isOver(state)) {
+      if (E.needsHuman(state)) render();
+      else pump();
+    }
+  });
+
+  form.addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    if (!state || !E.needsHuman(state) || state.phase !== 'clue') return;
+    var r = E.applyAction(state, {
+      type: 'clue',
+      text: clueText.value,
+      count: Number(clueCount.value)
+    });
+    if (!r.ok) {
+      statusEl.innerHTML = '<div class="big">线索无效</div><div class="sub">' + esc(r.error) + '</div>';
+      return;
+    }
+    clueText.value = '';
+    render();
+    pump();
+  });
+
+  document.getElementById('newGame').addEventListener('click', function () { newGame(); });
+  document.getElementById('modeCaptain').addEventListener('click', function () { newGame('captain'); });
+  document.getElementById('modeOperative').addEventListener('click', function () { newGame('operative'); });
+
+  newGame('captain');
+}());
+</script>
+</body>
+</html>

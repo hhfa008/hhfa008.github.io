@@ -1,0 +1,544 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2b2f36">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232b2f36'/%3E%3Crect x='7' y='5' width='13' height='19' rx='2' fill='%23f3ead9'/%3E%3Crect x='13' y='8' width='13' height='19' rx='2' fill='%23b98a5a' stroke='%232b2f36' stroke-width='1.5'/%3E%3C/svg%3E">
+<title>卡牌对战 · 桌游最小闭环</title>
+<meta name="description" content="宝可梦式卡牌对战最小闭环：抽卡、出牌、攻击、血量与胜负判定，纯前端、零外部请求。">
+<link rel="stylesheet" href="demos.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="wrap">
+    <a href="../index.html">← 目录</a>
+    <span class="title">卡牌对战</span>
+    <button id="sound" type="button" aria-pressed="false">声音 开</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="page-head">
+    <p class="eyebrow">DEMO · CARD BATTLE</p>
+    <h1>卡牌对战</h1>
+    <p class="lede">起手 5 张，每回合摸 1 张、+1 能量。出牌、攻击，把对手训练师打到 0 HP。</p>
+  </section>
+
+  <p class="file-warning">这个页面用 ES modules 引用 <code>../app/</code>。请用本地静态服务器打开，例如在 <code>games/boardgame</code> 下运行 <code>python3 -m http.server 8123</code>，再访问 <code>http://127.0.0.1:8123/demo/card-battle.html</code>。直接双击 file:// 打开时浏览器会拦截模块加载。</p>
+
+  <section class="panel" aria-label="对战状态">
+    <div class="player-strip" style="margin-bottom:8px">
+      <span class="who">你</span>
+      <span class="hpbar" id="my-hpbar"><i id="my-hpfill"></i></span>
+      <span class="energy" id="my-hp">20 / 20 HP</span>
+      <span class="energy" id="my-energy">能量 0</span>
+    </div>
+    <div class="player-strip">
+      <span class="who">对手</span>
+      <span class="hpbar" id="opp-hpbar"><i id="opp-hpfill"></i></span>
+      <span class="energy" id="opp-hp">20 / 20 HP</span>
+      <span class="energy" id="opp-energy">能量 0</span>
+    </div>
+
+    <div class="arena">
+      <div class="side opp">
+        <div class="slot-label">对手场上</div>
+        <div class="slot" id="opp-slot"></div>
+      </div>
+      <div class="vs">VS</div>
+      <div class="side me">
+        <div class="slot-label">你的场上</div>
+        <div class="slot" id="my-slot"></div>
+      </div>
+    </div>
+    <p class="meta" id="turn-line" style="margin-top:8px"></p>
+  </section>
+
+  <section class="panel">
+    <h2>战斗记录</h2>
+    <div class="log"><ol id="log" aria-live="polite"></ol></div>
+  </section>
+
+  <section class="panel">
+    <h2>你的手牌 · <span id="hand-count">0</span> 张</h2>
+    <div class="hand-tools">
+      <div class="deck" id="deck" aria-label="牌库剩余">
+        <span class="deck-stack" aria-hidden="true"></span>
+        <span class="deck-label">牌库 <strong class="mono" id="deck-count">0</strong></span>
+      </div>
+    </div>
+    <div class="hand" id="hand" aria-label="你的手牌"></div>
+    <div class="actions">
+      <button id="attack" class="primary" type="button">攻击</button>
+      <button id="end" type="button">结束回合</button>
+      <button id="restart" type="button">重新开始</button>
+      <span class="hint" id="hint">选择一张手牌打出</span>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>今日 / 积分</h2>
+    <div class="meta" id="meta">统计加载中…</div>
+  </section>
+</main>
+
+<div class="overlay" id="overlay" hidden></div>
+
+<script>
+if (location.protocol === 'file:') document.documentElement.classList.add('file-mode');
+</script>
+<script type="module">
+import {
+  createGame,
+  summarize,
+  legalActions,
+  playCard,
+  attack,
+  endTurn,
+  restart,
+  cardById,
+  CARD_POOL,
+  RULES
+} from '../app/cardgame.js';
+import { audio } from '../app/audio.js';
+import { dealPlan, Tween } from '../app/physics.js';
+import { createRetention } from '../app/retention.js';
+import { createRewards } from '../app/rewards.js';
+import { createLeaderboard, getOrCreateDeviceId } from '../app/leaderboard.js';
+
+const MAX_HP = 20;
+const $ = (id) => document.getElementById(id);
+const retention = createRetention();
+const rewards = createRewards();
+const leaderboard = createLeaderboard();
+const deviceId = getOrCreateDeviceId();
+
+let game = null;
+let maxHp = MAX_HP;
+let busy = false;
+let settled = false;
+let startedAt = 0;
+let seenHand = new Set();
+let lastHandSignature = '';
+let isDealing = false;
+let lastHandCount = 0;
+const reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+// 首次 pointerdown / touchstart / keydown 解锁音频；导出给验收脚本读取状态。
+audio.unlockOnGesture(window);
+window.__boardgameAudio = audio;
+
+function runTween(options, apply) {
+  const tween = new Tween(options);
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min(64, Math.max(0, now - last));
+    last = now;
+    tween.update(dt);
+    apply(tween.value);
+    if (!tween.done) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+  return tween;
+}
+
+function lunge(el, dx, dy, duration) {
+  if (!el || reduceMotion) return;
+  const base = el.style.transform;
+  runTween({ from: 0, to: 1, duration: duration, easing: 'easeOutCubic' }, function (v) {
+    const k = Math.sin(Math.PI * Math.min(1, Math.max(0, v)));
+    el.style.transform = 'translate(' + (dx * k).toFixed(2) + 'px,' + (dy * k).toFixed(2) + 'px)';
+    if (v >= 1) el.style.transform = base;
+  });
+}
+
+function shake(el) {
+  if (!el || reduceMotion) return;
+  el.classList.remove('hit');
+  // 强制重排，让连续受击也能重放动画。
+  void el.offsetWidth;
+  el.classList.add('hit');
+  window.setTimeout(function () { el.classList.remove('hit'); }, 340);
+}
+
+function animateDeal(cards, plan) {
+  if (!cards.length || reduceMotion) return;
+  const deck = $('deck');
+  if (!deck) return;
+  window.requestAnimationFrame(function () {
+    const d = deck.getBoundingClientRect();
+    cards.forEach(function (el, i) {
+      if (!el || typeof el.animate !== 'function') return;
+      const r = el.getBoundingClientRect();
+      const dx = d.left + d.width / 2 - (r.left + r.width / 2);
+      const dy = d.top + d.height / 2 - (r.top + r.height / 2);
+      const item = plan[i] || {};
+      el.animate([
+        { transform: 'translate(' + dx + 'px,' + dy + 'px) scale(.45) rotate(-6deg)', opacity: .2 },
+        { transform: 'translate(0,0) scale(1.03) rotate(0deg)', opacity: 1, offset: .82 },
+        { transform: 'none', opacity: 1 }
+      ], {
+        duration: item.duration || 260,
+        delay: item.delay || 0,
+        easing: 'cubic-bezier(.19,1,.22,1)',
+        fill: 'both'
+      });
+    });
+  });
+}
+
+function animateAttack(fromSeat) {
+  if (reduceMotion) return;
+  const mine = $('my-slot').querySelector('.creature');
+  const opp = $('opp-slot').querySelector('.creature');
+  if (fromSeat === 0) {
+    lunge(mine, 0, -30, 260);
+    window.setTimeout(function () { shake(opp); }, 120);
+  } else {
+    lunge(opp, 0, 30, 260);
+    window.setTimeout(function () { shake(mine); }, 120);
+  }
+}
+
+function seedNow() {
+  return (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
+}
+
+function esc(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function current() {
+  return summarize(game).current;
+}
+
+function newGame() {
+  game = createGame({ seed: seedNow(), names: ['你', '对手'], playerHp: MAX_HP });
+  maxHp = MAX_HP;
+  busy = false;
+  settled = false;
+  startedAt = Date.now();
+  seenHand = new Set();
+  lastHandSignature = '';
+  lastHandCount = 0;
+  isDealing = true;
+  $('overlay').hidden = true;
+  render();
+  isDealing = false;
+  audio.play('deal');
+  if (current() === 1) scheduleBot();
+}
+
+function creatureHtml(card, emptyLabel) {
+  if (!card) return '<div class="creature empty">' + esc(emptyLabel) + '</div>';
+  const pct = Math.max(0, Math.min(100, (card.hp / card.maxHp) * 100));
+  return '<div class="creature pop-in" style="--type:' + esc(card.color) + '">' +
+    '<div class="cname">' + esc(card.name) + '</div>' +
+    '<div class="cstats"><span>HP ' + card.hp + ' / ' + card.maxHp + '</span><span>攻击 ' + card.attack + '</span></div>' +
+    '<div class="chp"><i style="width:' + pct + '%"></i></div>' +
+    '</div>';
+}
+
+function handPlan(count) {
+  return dealPlan({
+    count: count,
+    from: { x: 0, y: 40 },
+    to: { x: 0, y: 0 },
+    stagger: 45,
+    duration: 260,
+    easing: 'easeOutCubic'
+  });
+}
+
+function renderHand() {
+  const hand = game.players[0].hand;
+  const me = game.players[0];
+  const myTurn = current() === 0 && game.phase === 'playing' && !busy;
+  const canPlay = myTurn && !me.active;
+  const plan = handPlan(hand.length);
+  const signature = hand.join(',');
+  const grew = hand.length > lastHandCount;
+  const html = hand.map(function (id, index) {
+    const card = cardById(id);
+    if (!card) return '';
+    const affordable = me.energy >= card.cost;
+    const disabled = !canPlay || !affordable;
+    const isNew = !seenHand.has(id);
+    seenHand.add(id);
+    const delay = plan[index] ? plan[index].delay : 0;
+    const duration = plan[index] ? plan[index].duration : 260;
+    return '<button class="card' + (isNew ? ' deal-in' : '') + '" type="button" data-card="' + esc(id) + '"' +
+      ' aria-disabled="' + (disabled ? 'true' : 'false') + '"' +
+      ' style="--type:' + esc(card.color) + '; animation-delay:' + delay + 'ms; animation-duration:' + duration + 'ms">' +
+      '<span class="type">' + esc(card.type) + '</span>' +
+      '<span class="name">' + esc(card.name) + '</span>' +
+      '<span class="stats"><span>HP ' + card.hp + '</span><span>攻击 ' + card.attack + '</span></span>' +
+      '<span class="stats"><span>费用 ' + card.cost + '</span><span>' + (affordable ? '可出' : '能量不足') + '</span></span>' +
+      '</button>';
+  }).join('');
+  $('hand').innerHTML = html || '<p class="empty">手牌已空，结束回合等待摸牌。</p>';
+  $('hand-count').textContent = String(hand.length);
+  $('deck-count').textContent = String(me.deck.length);
+  if (signature !== lastHandSignature) {
+    lastHandSignature = signature;
+  }
+  const newCards = Array.prototype.slice.call($('hand').querySelectorAll('.card.deal-in'));
+  animateDeal(newCards, plan);
+  // 回合开始摸牌（非开局发牌）时补一个抽牌音。
+  if (grew && !isDealing && lastHandCount > 0) audio.play('draw');
+  lastHandCount = hand.length;
+}
+
+function renderLog() {
+  const items = game.log.slice(-8);
+  $('log').innerHTML = items.map(function (entry) {
+    return '<li>' + esc(entry.text) + '</li>';
+  }).join('');
+  const logBox = $('log').parentElement;
+  logBox.scrollTop = logBox.scrollHeight;
+}
+
+function renderMeta(extra) {
+  let daily = null;
+  let reward = null;
+  try { daily = retention.getState(); } catch (err) { daily = null; }
+  try { reward = rewards.getState(); } catch (err) { reward = null; }
+  const bits = [];
+  if (daily) {
+    bits.push('每日目标 <strong>' + daily.daily.played + ' / ' + daily.daily.target + '</strong>');
+    bits.push('连胜 <strong>' + daily.streak.current + '</strong> 天');
+  }
+  if (reward) {
+    bits.push('积分 <strong>' + reward.total + '</strong>');
+    bits.push('等级 <strong>Lv.' + reward.level + ' ' + esc(reward.tier) + '</strong>');
+    bits.push('奖杯 <strong>' + reward.trophies.length + '</strong>');
+  }
+  if (extra) bits.push(extra);
+  $('meta').innerHTML = bits.join(' · ') || '—';
+}
+
+function render() {
+  if (!game) return;
+  const sum = summarize(game);
+  const me = sum.players[0];
+  const opp = sum.players[1];
+  const myPct = Math.max(0, Math.min(100, (me.hp / maxHp) * 100));
+  const oppPct = Math.max(0, Math.min(100, (opp.hp / maxHp) * 100));
+  $('my-hpfill').style.width = myPct + '%';
+  $('opp-hpfill').style.width = oppPct + '%';
+  $('my-hpbar').classList.toggle('low', myPct <= 35);
+  $('opp-hpbar').classList.toggle('low', oppPct <= 35);
+  $('my-hp').textContent = me.hp + ' / ' + maxHp + ' HP';
+  $('opp-hp').textContent = opp.hp + ' / ' + maxHp + ' HP';
+  $('my-energy').textContent = '能量 ' + me.energy;
+  $('opp-energy').textContent = '能量 ' + opp.energy;
+  $('my-slot').innerHTML = creatureHtml(me.active, '空场 · 打出一张手牌');
+  $('opp-slot').innerHTML = creatureHtml(opp.active, '空场');
+  $('turn-line').textContent = '第 ' + (Math.floor(game.turn / 2) + 1) + ' 轮 · ' +
+    (game.phase === 'ended' ? '对局结束' : (sum.current === 0 ? '你的回合' : '对手回合')) +
+    ' · 先手：' + (game.first === 0 ? '你' : '对手');
+
+  renderHand();
+  renderLog();
+
+  const myTurn = sum.current === 0 && game.phase === 'playing' && !busy;
+  $('attack').disabled = !myTurn || !me.canAttack;
+  $('end').disabled = !myTurn;
+  $('restart').disabled = busy && game.phase === 'playing';
+  if (game.phase === 'ended') {
+    $('hint').textContent = '对局结束，点“重新开始”。';
+  } else if (!myTurn) {
+    $('hint').textContent = '等待对手行动…';
+  } else if (me.active) {
+    $('hint').textContent = me.canAttack ? '可以攻击，或结束回合。' : '能量不足，结束回合。';
+  } else {
+    $('hint').textContent = '选择一张可支付费用的手牌。';
+  }
+  renderMeta();
+
+  if (game.phase === 'ended' && !settled) settle();
+}
+
+function showError(result) {
+  if (!result || result.ok) return;
+  audio.play('error');
+  $('hint').textContent = result.message || result.code || '操作失败';
+}
+
+function playerPlay(cardId) {
+  if (busy || current() !== 0) return;
+  const result = playCard(game, 0, cardId);
+  if (!result.ok) { showError(result); return; }
+  audio.play('play');
+  render();
+}
+
+function playerAttack() {
+  if (busy || current() !== 0) return;
+  const result = attack(game, 0);
+  if (!result.ok) { showError(result); return; }
+  audio.play('attack');
+  render();
+  animateAttack(0);
+  if (game.phase === 'ended') settle();
+}
+
+function playerEndTurn() {
+  if (busy || current() !== 0) return;
+  const result = endTurn(game, 0);
+  if (!result.ok) { showError(result); return; }
+  audio.play('tap');
+  render();
+  if (game.phase === 'playing') scheduleBot();
+}
+
+function scheduleBot() {
+  if (game.phase !== 'playing' || current() !== 1) return;
+  busy = true;
+  render();
+  setTimeout(botStep, 520);
+}
+
+function botStep() {
+  if (game.phase !== 'playing' || current() !== 1) {
+    busy = false;
+    render();
+    return;
+  }
+  const bot = game.players[1];
+  let acted = false;
+  let attacked = false;
+  if (!bot.active) {
+    const options = bot.hand
+      .map(function (id) { return cardById(id); })
+      .filter(function (card) { return card && card.cost <= bot.energy; })
+      .sort(function (a, b) { return (b.attack + b.hp) - (a.attack + a.hp); });
+    if (options.length) {
+      const result = playCard(game, 1, options[0].id);
+      if (result.ok) { acted = true; audio.play('play'); }
+    }
+  }
+  if (!acted && legalActions(game, 1).some(function (action) { return action.type === 'attack'; })) {
+    const result = attack(game, 1);
+    if (result.ok) { acted = true; attacked = true; audio.play('attack'); }
+  }
+  render();
+  if (attacked) animateAttack(1);
+  if (game.phase === 'ended') {
+    busy = false;
+    settle();
+    return;
+  }
+  setTimeout(function () {
+    if (game.phase === 'playing' && current() === 1) {
+      const result = endTurn(game, 1);
+      if (result.ok) audio.play('tap');
+    }
+    busy = false;
+    render();
+    if (game.phase === 'ended') settle();
+  }, acted ? 420 : 240);
+}
+
+function settle() {
+  if (settled || !game || game.phase !== 'ended') return;
+  settled = true;
+  busy = false;
+  const won = game.winner === 0;
+  audio.play(won ? 'win' : 'lose');
+
+  const myHp = Math.max(0, game.players[0].hp);
+  const score = won ? 100 + myHp * 10 : 10 + myHp * 5;
+  let daily = null;
+  let reward = null;
+  let rank = null;
+  try {
+    daily = retention.recordPlay({ gameId: 'card-battle', won: won, score: score });
+  } catch (err) { daily = null; }
+  try {
+    reward = rewards.award({
+      type: 'card',
+      points: won ? 30 : 10,
+      reason: won ? '卡牌对战胜利' : '卡牌对战',
+      trophy: won ? 'card_win' : undefined
+    });
+  } catch (err) { reward = null; }
+  try {
+    const result = leaderboard.submit({
+      deviceId: deviceId,
+      gameId: 'card-battle',
+      score: score,
+      durationMs: Math.max(1000, Date.now() - startedAt),
+      nonce: 'card-' + Date.now() + '-' + Math.random().toString(36).slice(2)
+    });
+    rank = result.ok && !result.flagged ? result.rank : null;
+  } catch (err) { rank = null; }
+
+  const totalPoints = reward ? reward.total : null;
+  const extra = [];
+  if (totalPoints != null) extra.push('本局积分 <strong>' + (won ? 30 : 10) + '</strong>');
+  if (rank != null) extra.push('榜单 <strong>#' + rank + '</strong>');
+  else extra.push('榜单 <strong>未入榜</strong>');
+  renderMeta(extra.join(' · '));
+
+  const box = document.createElement('div');
+  box.className = 'box';
+  box.innerHTML =
+    '<h2>' + (won ? '胜利' : '惜败') + '</h2>' +
+    '<p>你 ' + Math.max(0, game.players[0].hp) + ' HP · 对手 ' + Math.max(0, game.players[1].hp) + ' HP · 第 ' +
+    (Math.floor(game.turn / 2) + 1) + ' 轮</p>' +
+    '<p>' + (daily ? '每日 ' + daily.daily.played + ' / ' + daily.daily.target + ' · 连胜 ' + daily.streak.current + ' 天' : '') +
+    (rank != null ? ' · 榜单 #' + rank : '') + '</p>' +
+    '<ul style="text-align:left;margin:10px 0 0 18px;padding:0;color:var(--muted);font-size:13px">' +
+    RULES.slice(0, 4).map(function (rule) { return '<li>' + esc(rule) + '</li>'; }).join('') +
+    '</ul>' +
+    '<div class="actions"><button class="primary" type="button" id="again">再来一局</button></div>';
+  const overlay = $('overlay');
+  overlay.innerHTML = '';
+  overlay.appendChild(box);
+  overlay.hidden = false;
+  document.getElementById('again').addEventListener('click', newGame);
+}
+
+function syncSound() {
+  const muted = audio.isMuted();
+  $('sound').textContent = muted ? '声音 关' : '声音 开';
+  $('sound').setAttribute('aria-pressed', String(!muted));
+}
+
+$('hand').addEventListener('click', function (event) {
+  const button = event.target.closest('button[data-card]');
+  if (!button) return;
+  if (button.getAttribute('aria-disabled') === 'true') {
+    audio.play('error');
+    const card = cardById(button.dataset.card);
+    const me = game.players[0];
+    let message = '这张牌现在不能打出。';
+    if (busy || current() !== 0 || game.phase !== 'playing') message = '还没轮到你。';
+    else if (me.active) message = '场上已有生物，先攻击或结束回合。';
+    else if (card && me.energy < card.cost) message = '能量不足：需要 ' + card.cost + '，现有 ' + me.energy + '。';
+    $('hint').textContent = message;
+    return;
+  }
+  playerPlay(button.dataset.card);
+});
+$('attack').addEventListener('click', playerAttack);
+$('end').addEventListener('click', playerEndTurn);
+$('restart').addEventListener('click', function () {
+  audio.play('tap');
+  newGame();
+});
+$('sound').addEventListener('click', function () {
+  audio.toggle();
+  audio.play('tap');
+  syncSound();
+});
+
+syncSound();
+newGame();
+</script>
+</body>
+</html>

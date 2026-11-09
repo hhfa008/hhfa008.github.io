@@ -1,0 +1,1138 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>多米诺王国 · Kingdomino 双人桌游（人机对战）</title>
+<meta name="description" content="和 AI 对战 Kingdomino：每轮 1-2-1 选瓦片，旋转翻转后放进 5×5 王国，用连通地形面积乘皇冠计分。纯前端、离线可玩、手机优先。">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="theme-color" content="#20262c">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2320262c'/%3E%3Crect x='5' y='6' width='10' height='20' rx='2' fill='%233f7d5b'/%3E%3Crect x='17' y='6' width='10' height='20' rx='2' fill='%23d8a441'/%3E%3Ccircle cx='10' cy='11' r='2' fill='%23fff8dc'/%3E%3Ccircle cx='22' cy='21' r='2' fill='%23fff8dc'/%3E%3C/svg%3E">
+<style>
+:root{
+  --paper:#f1eadb;--paper-2:#fbf6ea;--card:#efe3cb;--ink:#20262c;--muted:#675f54;--muted-2:#7a7266;
+  --dark:#20262c;--dark-2:#293039;--dark-3:#171c21;--on-dark:#f4ecdc;--on-dark-muted:#b9b2a4;
+  --gold:#d8a441;--gold-2:#edc471;--red:#b34a3b;--red-2:#943a2d;--green:#3f7d5b;--green-2:#92cbaa;
+  --line:#d9cbb1;--line-strong:#c4b08d;--input:#fffdf8;--board-empty:#e9dcc4;--board-line:#c8b490;
+  --t-wheat:#d8a441;--t-forest:#3f7a50;--t-water:#3d6fa0;--t-grass:#7fa64d;--t-swamp:#75607f;--t-mine:#5c616b;--t-castle:#9a7446;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --serif:"Songti SC","Noto Serif SC",Georgia,"Times New Roman",serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.55 var(--sans);
+  padding-bottom:calc(22px + env(safe-area-inset-bottom));-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body.modal-open{overflow:hidden}
+h1,h2,h3,p,ol,ul{margin:0}
+button{font:inherit;color:inherit}
+a{color:inherit}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.wrap{max-width:680px;margin:0 auto;padding:0 16px}
+
+.site-header{background:var(--dark);color:var(--on-dark);padding:10px 0}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{min-height:44px;display:flex;align-items:center;gap:9px;font-weight:650;text-decoration:none;font-size:15px}
+.brand-mark{width:24px;height:24px;border-radius:6px;background:
+  linear-gradient(90deg,transparent 48%,var(--dark-3) 48% 52%,transparent 52%),
+  linear-gradient(0deg,var(--t-forest) 0 50%,var(--t-wheat) 50% 100%);
+  box-shadow:inset 0 0 0 2px var(--dark-3);flex:none}
+.top-nav{display:flex;align-items:center;gap:2px}
+.top-nav a{display:inline-flex;align-items:center;min-height:44px;padding:0 10px;border-radius:9px;
+  color:var(--on-dark-muted);text-decoration:none;font-size:13px;font-weight:600}
+.top-nav a:hover{color:var(--on-dark);background:#343c45}
+
+.hero{padding:22px 0 12px}
+.eyebrow{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--red);margin-bottom:8px}
+.hero h1{font-size:clamp(1.8rem,7vw,2.45rem);line-height:1.1;letter-spacing:-.025em;margin-bottom:8px}
+.hero h1 span{display:block;font-family:var(--serif);font-size:.5em;font-weight:400;letter-spacing:.02em;color:var(--muted);margin-top:4px}
+.lede{color:var(--muted);font-size:15.5px;line-height:1.65}
+.hero-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.tag{display:inline-flex;align-items:center;min-height:28px;padding:0 10px;border:1px solid var(--line-strong);
+  border-radius:999px;font-size:12px;font-weight:600;color:var(--muted);background:var(--paper-2)}
+
+.game{background:var(--dark);color:var(--on-dark);border-radius:20px;padding:14px;margin-top:14px;
+  box-shadow:0 16px 38px rgb(20 23 27 / .18);min-width:0}
+.scoreboard{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.player{background:var(--dark-2);border:1px solid #3c454f;border-radius:13px;padding:9px 11px;min-width:0;
+  transition:border-color .15s,background .15s}
+.player.active{border-color:var(--gold);background:#313942;box-shadow:inset 0 0 0 1px rgb(237 196 113 / .28)}
+.player-head{display:flex;align-items:center;gap:7px;min-width:0}
+.player-dot{width:10px;height:10px;border-radius:50%;flex:none;background:var(--green);box-shadow:0 0 0 2px rgb(255 255 255 / .12)}
+.player.ai .player-dot{background:var(--red)}
+.player-name{font-size:13.5px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.player-role{margin-left:auto;font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;color:var(--on-dark-muted);flex:none}
+.player-score{display:flex;align-items:baseline;gap:5px;margin-top:3px}
+.player-score strong{font-size:26px;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.player-score span{font-size:10.5px;color:var(--on-dark-muted)}
+.player-meta{margin-top:3px;font-size:10.5px;line-height:1.4;color:var(--on-dark-muted);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.player.active .player-name{color:var(--gold-2)}
+
+.status-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:9px 2px 0;font-size:10.5px;color:var(--on-dark-muted)}
+.status-row span{display:inline-flex;align-items:center;min-height:24px;padding:0 8px;border-radius:999px;
+  background:var(--dark-2);border:1px solid #3c454f;font-variant-numeric:tabular-nums}
+.status-row .turn{color:var(--gold-2);border-color:#5a4a2c;background:#322b20}
+
+.board-panel{margin-top:12px;background:var(--dark-3);border:1px solid #343c45;border-radius:16px;padding:10px;min-width:0}
+.panel-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;min-width:0}
+.panel-title h2{font-size:13px;font-weight:650;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.panel-title .sub{font-size:10.5px;color:var(--on-dark-muted);font-variant-numeric:tabular-nums;flex:none;
+  max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.board-frame{width:100%;padding:6px;border-radius:13px;background:linear-gradient(145deg,#7e5c37,#604425);
+  box-shadow:inset 0 1px 0 rgb(255 255 255 / .18),0 5px 16px rgb(0 0 0 / .26)}
+.board-frame.small{max-width:268px;margin:0 auto;padding:4px;border-radius:11px}
+.board{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:3px;width:100%;aspect-ratio:1;
+  background:var(--board-line);border-radius:9px;overflow:hidden;touch-action:manipulation;
+  user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
+.board.readonly{touch-action:auto}
+.cell{position:relative;min-width:0;min-height:0;padding:0;border:0;border-radius:3px;background:var(--board-empty);
+  cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;overflow:hidden;
+  transition:box-shadow .1s,filter .1s}
+.cell.alt{background:#e3d5bb}
+.cell.occupied,.cell.castle{box-shadow:inset 0 0 0 1px rgb(255 255 255 / .18)}
+.cell.terrain-wheat{background:var(--t-wheat)}
+.cell.terrain-forest{background:var(--t-forest)}
+.cell.terrain-water{background:var(--t-water)}
+.cell.terrain-grass{background:var(--t-grass)}
+.cell.terrain-swamp{background:var(--t-swamp)}
+.cell.terrain-mine{background:var(--t-mine)}
+.cell.castle{background:
+  radial-gradient(circle at 50% 42%,#c5a06c 0 28%,transparent 29%),
+  linear-gradient(135deg,#9a7446,#76552f)}
+.cell.occupied::before{content:"";position:absolute;inset:0;opacity:.14;
+  background:repeating-linear-gradient(45deg,#fff 0 1px,transparent 1px 6px)}
+.terrain-glyph{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  font-size:clamp(12px,3.6vw,19px);font-weight:700;line-height:1;color:#fffaf0;
+  text-shadow:0 1px 2px rgb(0 0 0 / .4);pointer-events:none;z-index:1}
+.castle .terrain-glyph{font-size:clamp(13px,4vw,21px);color:#fff3d8}
+.crown-dots{position:absolute;right:2px;bottom:2px;display:flex;gap:1px;z-index:2;pointer-events:none}
+.crown-dot{width:5px;height:5px;border-radius:50%;background:#fff8dc;box-shadow:0 0 0 1px rgb(60 40 10 / .55)}
+.cell.preview-ok{box-shadow:inset 0 0 0 3px #93d8ad,0 0 0 1px #93d8ad;filter:brightness(1.06)}
+.cell.preview-ghost{box-shadow:inset 0 0 0 2px rgb(147 216 173 / .7)}
+.cell.preview-bad{box-shadow:inset 0 0 0 3px #ef8b7e;filter:brightness(.93)}
+.cell.preview-anchor{outline:2px solid #ffe3ae;outline-offset:-2px;z-index:3}
+.cell.last-move{box-shadow:inset 0 0 0 2px rgb(255 227 174 / .55)}
+.cell:focus-visible{outline:2px solid #ffe3ae;outline-offset:-2px;z-index:3}
+.cell[aria-disabled="true"]{cursor:default}
+.board-meta{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:7px;
+  font-size:10.5px;color:var(--on-dark-muted);min-width:0}
+.board-meta span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mini-btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 12px;
+  border:1px solid #4a545f;border-radius:10px;background:transparent;color:var(--on-dark);
+  font-size:12px;font-weight:650;cursor:pointer;flex:none;touch-action:manipulation}
+.mini-btn:hover{background:#323b44}
+.mini-btn:focus-visible{outline:2px solid var(--gold-2);outline-offset:2px}
+
+.draft-panel{margin-top:12px;background:var(--dark-2);border:1px solid #3a434d;border-radius:14px;padding:10px;min-width:0}
+.order-row{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
+.order-chip{display:inline-flex;align-items:center;min-height:26px;padding:0 8px;border-radius:999px;
+  background:#313a44;border:1px solid #414b56;color:var(--on-dark-muted);font-size:10.5px;
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+.order-chip.done{opacity:.55;text-decoration:line-through}
+.order-chip.current{border-color:var(--gold);color:#241a10;background:var(--gold);font-weight:700}
+.draft-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.draft-card{display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:4px;
+  min-width:0;min-height:112px;padding:6px 5px;border:1px solid #404a55;border-radius:12px;
+  background:#2c343d;color:var(--on-dark);cursor:pointer;touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;transition:border-color .12s,background .12s,transform .12s}
+.draft-card:hover:not(:disabled){background:#333c46;border-color:#5b6773}
+.draft-card:active:not(:disabled){transform:translateY(1px)}
+.draft-card[aria-pressed="true"]{border-color:var(--gold);background:#3a3a30;box-shadow:inset 0 0 0 1px rgb(237 196 113 / .3)}
+.draft-card:disabled{opacity:.42;cursor:default}
+.draft-card.unplaceable:not(:disabled){opacity:.6}
+.draft-card:focus-visible{outline:2px solid var(--gold-2);outline-offset:2px}
+.draft-top{display:flex;align-items:baseline;justify-content:space-between;gap:4px;width:100%;min-width:0}
+.tile-no{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--gold-2)}
+.draft-crowns{font-size:8.5px;color:var(--on-dark-muted);white-space:nowrap}
+.draft-domino{display:flex;align-items:center;justify-content:center;min-height:34px}
+.draft-status{font-size:9.5px;line-height:1.2;color:var(--on-dark-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.draft-card[aria-pressed="true"] .draft-status{color:var(--gold-2)}
+
+.domino{display:inline-flex;border-radius:6px;overflow:hidden;border:1px solid rgb(255 255 255 / .22);
+  box-shadow:0 2px 7px rgb(0 0 0 / .3);vertical-align:middle;flex:none}
+.domino.vertical{flex-direction:column}
+.domino .half{position:relative;width:34px;height:34px;display:grid;place-items:center}
+.domino.mini .half{width:27px;height:27px}
+.domino.big .half{width:54px;height:54px;border-radius:0}
+.half[data-terrain="wheat"]{background:var(--t-wheat)}
+.half[data-terrain="forest"]{background:var(--t-forest)}
+.half[data-terrain="water"]{background:var(--t-water)}
+.half[data-terrain="grass"]{background:var(--t-grass)}
+.half[data-terrain="swamp"]{background:var(--t-swamp)}
+.half[data-terrain="mine"]{background:var(--t-mine)}
+.half .terrain-glyph{font-size:15px}
+.domino.mini .terrain-glyph{font-size:12px}
+.domino.big .terrain-glyph{font-size:22px}
+.half .crown-dot{width:5px;height:5px}
+.domino.big .crown-dot{width:7px;height:7px}
+
+.pick-panel{margin-top:12px;background:var(--dark-3);border:1px solid #343c45;border-radius:14px;padding:10px;min-width:0}
+.pick-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:8px}
+.pick-head h2{font-size:12px;font-weight:650}
+.pick-head span{font-size:10px;color:var(--on-dark-muted);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pick-body{display:flex;align-items:center;gap:12px;min-width:0}
+.pick-preview{flex:1;min-width:0}
+.pick-empty{font-size:11.5px;line-height:1.55;color:var(--on-dark-muted)}
+.pick-selected{display:flex;align-items:center;gap:12px;min-width:0}
+.pick-info{min-width:0}
+.pick-info strong{display:block;font-size:12.5px;margin-bottom:3px}
+.pick-info span{display:block;font-size:10.5px;line-height:1.5;color:var(--on-dark-muted);overflow-wrap:anywhere}
+.pick-tools{display:flex;flex-direction:column;gap:6px;width:112px;flex:none}
+.pick-tools .btn{min-height:44px;padding:0 6px;font-size:12px}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:0 10px;
+  border:1px solid #4a545f;border-radius:11px;background:transparent;color:var(--on-dark);
+  font-size:13px;font-weight:650;cursor:pointer;touch-action:manipulation;text-align:center;
+  -webkit-tap-highlight-color:transparent;text-decoration:none}
+.btn:hover:not(:disabled){background:#323b44;border-color:#5d6874}
+.btn:active:not(:disabled){transform:translateY(1px)}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.btn.primary{background:var(--gold);border-color:var(--gold);color:#241a10}
+.btn.primary:hover:not(:disabled){background:#e4b658;border-color:#e4b658}
+.btn.ghost{color:var(--on-dark-muted)}
+.btn:focus-visible,.link-btn:focus-visible{outline:2px solid var(--gold-2);outline-offset:2px}
+
+.hint{min-height:36px;margin:9px 2px 0;font-size:12px;line-height:1.5;color:var(--on-dark-muted);text-align:center}
+.hint.warn{color:#f0a79f}
+.hint.good{color:#9ad4b2}
+
+.ai-panel{margin-top:12px;background:var(--dark-2);border:1px solid #3a434d;border-radius:14px;padding:10px;min-width:0}
+.log-panel{margin-top:12px;background:var(--dark-2);border:1px solid #3a434d;border-radius:14px;padding:10px 11px;min-width:0}
+.log-panel h2{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--on-dark-muted);font-weight:650;margin-bottom:6px}
+.log{list-style:none;padding:0;display:flex;flex-direction:column;gap:5px;max-height:132px;overflow-y:auto}
+.log li{display:flex;gap:6px;align-items:flex-start;font-size:11.5px;line-height:1.45;color:var(--on-dark-muted)}
+.log .log-turn{font-family:var(--mono);font-size:9px;color:#7f8994;flex:none;min-width:22px;padding-top:1px}
+.log .log-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex:none;margin-top:5px}
+.log li.ai .log-dot{background:var(--red)}
+.log li.system .log-dot{background:var(--gold)}
+.log .log-text{min-width:0;overflow-wrap:anywhere}
+.log li.latest{color:var(--on-dark)}
+
+.setup-panel{margin-top:12px;background:var(--dark-2);border:1px solid #3a434d;border-radius:14px;padding:11px;min-width:0}
+.setup-panel label{display:block;font-size:10px;font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase;
+  color:var(--on-dark-muted);margin-bottom:6px}
+.seed-row{display:flex;gap:6px;flex-wrap:wrap;align-items:stretch}
+.seed-row input{flex:1 1 120px;min-width:0;min-height:46px;padding:0 11px;border-radius:10px;
+  border:1px solid #4a545f;background:#14191e;color:var(--on-dark);font:14px var(--mono);font-variant-numeric:tabular-nums}
+.seed-row input:focus-visible{outline:2px solid var(--gold-2);outline-offset:1px}
+.seed-row .btn{flex:none;font-size:12px;padding:0 11px}
+.seed-note{margin-top:6px;font-size:10px;line-height:1.5;color:var(--on-dark-muted)}
+
+.info{margin-top:22px}
+.info-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.info-card{background:var(--paper-2);border:1px solid var(--line);border-radius:13px;padding:11px 12px;min-width:0}
+.info-card h3{font-size:13px;margin-bottom:4px}
+.info-card p{font-size:11.5px;line-height:1.55;color:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.legend span{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;color:var(--muted)}
+.legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.cta{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--paper-2);
+  border:1px solid var(--line);border-radius:16px;padding:14px;margin-top:12px;box-shadow:0 8px 22px rgb(35 38 43 / .05)}
+.cta p{font-size:12.5px;color:var(--muted);line-height:1.5}
+.cta .link-btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 15px;
+  border-radius:999px;background:var(--red);color:#fff;text-decoration:none;font-size:13px;font-weight:650;white-space:nowrap;flex:none}
+.cta .link-btn:hover{background:var(--red-2)}
+.site-footer{max-width:680px;margin:24px auto 0;padding:0 16px;font-size:12px;color:var(--muted-2);
+  border-top:1px solid var(--line);padding-top:14px;line-height:1.6;display:flex;gap:12px;flex-wrap:wrap}
+.site-footer a{display:inline-flex;align-items:center;min-height:44px;text-decoration:none;border-bottom:1px solid var(--line-strong)}
+
+.overlay{position:fixed;inset:0;z-index:80;background:rgb(12 16 19 / .74);display:flex;align-items:center;
+  justify-content:center;padding:16px;overflow-y:auto}
+.result-card{width:100%;max-width:440px;background:var(--paper-2);color:var(--ink);border-radius:20px;
+  padding:18px;box-shadow:0 30px 80px rgb(0 0 0 / .4);margin:auto}
+.result-card .eyebrow{margin-bottom:4px}
+.result-card h2{font-size:clamp(1.5rem,6vw,2rem);line-height:1.18;letter-spacing:-.02em}
+.result-reason{margin-top:5px;font-size:12.5px;color:var(--muted);line-height:1.5;overflow-wrap:anywhere}
+.result-scores{display:flex;flex-direction:column;gap:7px;margin-top:14px}
+.result-row{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);
+  border-radius:12px;padding:9px 11px;min-width:0}
+.result-row.winner{border-color:var(--gold);background:#f5e5c8}
+.result-name{min-width:0;flex:1}
+.result-name strong{display:block;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.result-name span{display:block;font-size:10.5px;color:var(--muted);line-height:1.4}
+.result-total{font-size:23px;font-weight:750;font-variant-numeric:tabular-nums;color:var(--red);flex:none}
+.result-unit{font-size:10px;font-weight:600;color:var(--muted);margin-left:2px}
+.result-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+.result-actions .btn{min-height:48px;border-color:var(--line-strong);color:var(--ink);background:transparent}
+.result-actions .btn.primary{background:var(--red);border-color:var(--red);color:#fff}
+.result-actions .btn.primary:hover:not(:disabled){background:var(--red-2);border-color:var(--red-2)}
+.result-actions .btn:hover:not(:disabled){background:var(--card)}
+
+@media (max-width:430px){
+  .wrap{padding:0 8px}
+  .hero{padding-top:18px}
+  .game{padding:8px 6px;border-radius:17px}
+  .board-panel{padding:6px 4px;border-radius:14px}
+  .board-frame{padding:3px;border-radius:10px}
+  .board{gap:2px}
+  .scoreboard{gap:6px}
+  .player{padding:8px 9px}
+  .player-score strong{font-size:23px}
+  .draft-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .draft-card{min-height:96px}
+  .pick-body{gap:9px}
+  .pick-tools{width:100px}
+  .pick-tools .btn{font-size:11px}
+  .info-grid{grid-template-columns:1fr}
+  .cta{align-items:flex-start;flex-direction:column}
+  .cta .link-btn{width:100%}
+  .seed-row .btn{flex:1 1 auto}
+}
+@media (prefers-color-scheme:dark){
+  :root{--paper:#171b20;--paper-2:#20262c;--card:#293039;--ink:#f4ecdc;--muted:#b9b2a4;--muted-2:#a59e91;
+    --line:#3a424c;--line-strong:#4a545f;--input:#171b20;--board-empty:#d9c7a8;--board-line:#8e744f}
+  .tag{background:#20262c}
+  .info-card,.cta{background:#20262c}
+  .result-card{background:#20262c;color:var(--ink)}
+  .result-row{background:#293039}
+  .result-row.winner{background:#3a3024;border-color:var(--gold)}
+  .result-actions .btn{color:var(--ink)}
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition:none!important;animation:none!important;scroll-behavior:auto!important}
+}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span><span>多米诺王国</span></a>
+    <nav class="top-nav" aria-label="导航">
+      <a href="rules.html">规则</a>
+      <a href="../index.html">桌游目录</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <p class="eyebrow">Kingdomino · 2 Players</p>
+    <h1>多米诺王国<span>用 12 块多米诺，拼出你的 5×5 领地</span></h1>
+    <p class="lede">每轮亮出 4 张地形瓦片，按 1-2-1 的顺序挑选。旋转或翻转瓦片，把它接到城堡旁的领地上；同地形连成一片后，面积乘皇冠就是得分。六轮之后，比分高的一方加冕。</p>
+    <div class="hero-tags" aria-label="玩法要点">
+      <span class="tag">5×5 王国</span>
+      <span class="tag">48 张瓦片 · 每局 24 张</span>
+      <span class="tag">1-2-1 选牌</span>
+      <span class="tag">面积 × 皇冠</span>
+      <span class="tag">离线可玩</span>
+    </div>
+  </section>
+
+  <section class="game" id="game" aria-label="多米诺王国对局">
+    <div class="scoreboard" id="scoreboard">
+      <div class="player" id="player0">
+        <div class="player-head"><span class="player-dot" aria-hidden="true"></span><span class="player-name">你</span><span class="player-role">YOU</span></div>
+        <div class="player-score"><strong id="score0">--</strong><span>分</span></div>
+        <div class="player-meta" id="meta0">瓦片 -- · 皇冠 --</div>
+      </div>
+      <div class="player ai" id="player1">
+        <div class="player-head"><span class="player-dot" aria-hidden="true"></span><span class="player-name">AI 对手</span><span class="player-role">AI</span></div>
+        <div class="player-score"><strong id="score1">--</strong><span>分</span></div>
+        <div class="player-meta" id="meta1">瓦片 -- · 皇冠 --</div>
+      </div>
+    </div>
+
+    <div class="status-row" aria-label="对局状态">
+      <span id="roundLabel">第 1 / 6 轮</span>
+      <span class="turn" id="turnLabel">轮到你</span>
+      <span id="seedLabel">seed --</span>
+      <span id="firstLabel">先手 --</span>
+    </div>
+
+    <div class="board-panel">
+      <div class="panel-title">
+        <h2>你的 5×5 王国</h2>
+        <span class="sub" id="yourSub">得分 0</span>
+      </div>
+      <div class="board-frame">
+        <div class="board" id="yourBoard" role="grid" aria-label="你的 5×5 王国"></div>
+      </div>
+      <div class="board-meta">
+        <span id="yourMeta">正在准备棋盘…</span>
+        <button class="mini-btn" type="button" id="newGameTop" aria-label="随机种子重新开始">重开</button>
+      </div>
+    </div>
+
+    <div class="draft-panel" aria-labelledby="draftTitle">
+      <div class="panel-title">
+        <h2 id="draftTitle">选牌队列</h2>
+        <span class="sub" id="draftSub">本轮 4 张 · 按编号排序</span>
+      </div>
+      <div class="order-row" id="orderRow" aria-label="本轮选牌顺序"></div>
+      <div class="draft-grid" id="draftGrid" role="group" aria-label="本轮待选瓦片"></div>
+    </div>
+
+    <div class="pick-panel" aria-labelledby="pickTitle">
+      <div class="pick-head">
+        <h2 id="pickTitle">当前待选瓦片</h2>
+        <span id="pickHint">点选上方一张瓦片</span>
+      </div>
+      <div class="pick-body">
+        <div class="pick-preview" id="pickPreview">
+          <p class="pick-empty">点选上方待选瓦片。选好后可旋转 / 翻转，再点击你的棋盘格子落子。</p>
+        </div>
+        <div class="pick-tools">
+          <button class="btn" type="button" id="rotateBtn" aria-label="顺时针旋转瓦片" disabled>旋转</button>
+          <button class="btn" type="button" id="flipBtn" aria-label="左右翻转瓦片两半" disabled>翻转</button>
+          <button class="btn ghost" type="button" id="clearBtn" aria-label="取消当前瓦片选择" disabled>取消选择</button>
+        </div>
+      </div>
+    </div>
+
+    <p class="hint" id="hint" role="status" aria-live="polite">正在准备棋盘…</p>
+
+    <div class="ai-panel" aria-labelledby="aiBoardTitle">
+      <div class="panel-title">
+        <h2 id="aiBoardTitle">AI 的 5×5 王国</h2>
+        <span class="sub" id="aiSub">得分 0</span>
+      </div>
+      <div class="board-frame small">
+        <div class="board readonly" id="aiBoard" role="grid" aria-label="AI 的 5×5 王国"></div>
+      </div>
+    </div>
+
+    <div class="log-panel">
+      <h2>对局记录</h2>
+      <ol class="log" id="log" aria-label="对局记录"></ol>
+    </div>
+
+    <div class="setup-panel" aria-labelledby="setupTitle">
+      <label id="setupTitle" for="seedInput">随机种子（相同 seed 牌序相同）</label>
+      <div class="seed-row">
+        <input id="seedInput" type="number" inputmode="numeric" min="0" max="4294967295" step="1"
+          aria-label="随机种子，非负整数" placeholder="例如 2026">
+        <button class="btn" type="button" id="seedBtn" aria-label="用输入的种子重新开始">用此 seed 重开</button>
+        <button class="btn primary" type="button" id="restartBtn" aria-label="随机种子重新开始">随机新局</button>
+      </div>
+      <p class="seed-note">随机只来自 seed：同一个 seed 会得到相同的 24 张牌、草稿顺序和 AI 决策。</p>
+    </div>
+  </section>
+
+  <section class="info" aria-labelledby="howTitle">
+    <h2 class="sr-only" id="howTitle">玩法简介</h2>
+    <div class="info-grid">
+      <article class="info-card">
+        <h3>选牌顺序 1-2-1</h3>
+        <p>每轮按编号亮出 4 张。本轮先手选 1 张，后手连着选 2 张，先手再选最后 1 张；下一轮先手轮换。</p>
+      </article>
+      <article class="info-card">
+        <h3>邻接与朝向</h3>
+        <p>瓦片是两格多米诺。可旋转成横或竖，也可翻转两半；必须放进 5×5 内，且至少一格与已有领地上下左右相邻。</p>
+      </article>
+      <article class="info-card">
+        <h3>计分与胜负</h3>
+        <p>同一地形上下左右连通成区域，面积 × 区域内皇冠总数，六种地形分别求和；城堡不计分。六轮后总分高者胜。</p>
+      </article>
+    </div>
+    <div class="legend" aria-label="地形图例">
+      <span><i style="background:var(--t-wheat)"></i>麦田</span>
+      <span><i style="background:var(--t-forest)"></i>森林</span>
+      <span><i style="background:var(--t-water)"></i>湖泊</span>
+      <span><i style="background:var(--t-grass)"></i>草原</span>
+      <span><i style="background:var(--t-swamp)"></i>沼泽</span>
+      <span><i style="background:var(--t-mine)"></i>矿山</span>
+    </div>
+    <div class="cta">
+      <p>想先看清每一条放置与计分规则？完整规则、终局平局判定和常见问题都在规则页。</p>
+      <a class="link-btn" href="rules.html">阅读完整规则</a>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <a href="rules.html">规则与 FAQ</a>
+  <a href="../index.html">桌游目录</a>
+  <a href="../../index.html">全部游戏</a>
+  <span>离线单机 · 无外部请求</span>
+</footer>
+
+<div class="overlay" id="resultOverlay" role="dialog" aria-modal="true" aria-labelledby="resultTitle" hidden>
+  <div class="result-card">
+    <p class="eyebrow">Game Over</p>
+    <h2 id="resultTitle">对局结束</h2>
+    <p class="result-reason" id="resultReason"></p>
+    <div class="result-scores" id="resultScores"></div>
+    <div class="result-actions">
+      <button class="btn primary" type="button" id="restart">再来一局</button>
+      <button class="btn" type="button" id="viewBoard">查看棋盘</button>
+    </div>
+  </div>
+</div>
+
+<script src="engine.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var E = window.KingdominoEngine;
+  if (!E) {
+    var fail = document.getElementById('hint');
+    if (fail) {
+      fail.textContent = '引擎加载失败：请确认 engine.js 与页面在同一目录。';
+      fail.className = 'hint warn';
+    }
+    return;
+  }
+
+  var byId = function (id) { return document.getElementById(id); };
+  var yourBoardEl = byId('yourBoard');
+  var aiBoardEl = byId('aiBoard');
+  var draftGrid = byId('draftGrid');
+  var orderRow = byId('orderRow');
+  var logEl = byId('log');
+  var hintEl = byId('hint');
+  var seedInput = byId('seedInput');
+  var resultOverlay = byId('resultOverlay');
+  var reducedMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+  var ORIENTATION_LABELS = [
+    '横向 · A 左 B 右',
+    '横向 · B 左 A 右',
+    '纵向 · A 上 B 下',
+    '纵向 · B 上 A 下'
+  ];
+  var TERRAIN_GLYPH = { wheat: '麦', forest: '林', water: '湖', grass: '草', swamp: '沼', mine: '矿' };
+
+  var state = null;
+  var selectedTileId = null;
+  var orientation = 0;
+  var preview = null;
+  var aiTimer = null;
+  var aiBusy = false;
+  var boardFocus = { r: 2, c: 2 };
+  var endedAnnounced = false;
+
+  function esc(value) {
+    return String(value)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function seedNow() {
+    return ((Date.now() >>> 0) || 1);
+  }
+
+  function humanTurn() {
+    return !!state && !state.over && state.current === 0 && !aiBusy;
+  }
+
+  function currentPicker() {
+    if (!state || !state.order) return null;
+    var index = state.order[state.pickIndex];
+    return state.players[index] || null;
+  }
+
+  function halfLabel(half) {
+    return E.terrainName(half.terrain) + ' ' + half.crowns + ' 皇冠';
+  }
+
+  function crownDots(crowns) {
+    if (!crowns) return '';
+    var dots = '';
+    for (var i = 0; i < crowns; i++) dots += '<span class="crown-dot"></span>';
+    return '<span class="crown-dots" aria-hidden="true">' + dots + '</span>';
+  }
+
+  function halfHTML(half) {
+    return '<span class="half" data-terrain="' + half.terrain + '" title="' +
+      esc(E.terrainName(half.terrain) + '，' + half.crowns + ' 个皇冠') + '">' +
+      '<span class="terrain-glyph" aria-hidden="true">' + (TERRAIN_GLYPH[half.terrain] || '?') + '</span>' +
+      crownDots(half.crowns) + '</span>';
+  }
+
+  function dominoHTML(tile, orientationValue, sizeClass) {
+    var halves = E.orientationHalves(tile, orientationValue);
+    if (!halves) return '';
+    var cls = 'domino' + (sizeClass ? ' ' + sizeClass : '') + (orientationValue >= 2 ? ' vertical' : '');
+    return '<span class="' + cls + '" aria-hidden="true">' + halves.map(halfHTML).join('') + '</span>';
+  }
+
+  function setHint(text, kind) {
+    hintEl.textContent = text;
+    hintEl.className = 'hint' + (kind ? ' ' + kind : '');
+  }
+
+  function selectedTile() {
+    if (selectedTileId == null) return null;
+    var remaining = E.getRemainingDraft(state);
+    var found = null;
+    remaining.forEach(function (entry) {
+      if (entry.tileId === selectedTileId) found = entry.tile;
+    });
+    return found;
+  }
+
+  function bestMoveFor(tileId, orientationValue) {
+    if (!state || state.over || state.current !== 0) return null;
+    var moves = E.getLegalMoves(state);
+    for (var i = 0; i < moves.length; i++) {
+      if (moves[i].tileId === tileId && moves[i].orientation === orientationValue) return moves[i];
+    }
+    return null;
+  }
+
+  function firstMoveFor(tileId) {
+    if (!state || state.over || state.current !== 0) return null;
+    var moves = E.getLegalMoves(state);
+    for (var i = 0; i < moves.length; i++) {
+      if (moves[i].tileId === tileId) return moves[i];
+    }
+    return null;
+  }
+
+  function lastMoveKeys(player) {
+    var keys = Object.create(null);
+    if (player && player.lastMove && player.lastMove.cells) {
+      player.lastMove.cells.forEach(function (pos) { keys[pos[0] + ',' + pos[1]] = true; });
+    }
+    return keys;
+  }
+
+  function cellAria(cell, r, c) {
+    var label = '第 ' + (r + 1) + ' 行第 ' + (c + 1) + ' 列，';
+    if (!cell) return label + '空格';
+    if (cell.castle) return label + '城堡（不计分）';
+    return label + E.terrainName(cell.terrain) + '，' + cell.crowns + ' 个皇冠';
+  }
+
+  function cellInner(cell) {
+    if (!cell) return '';
+    if (cell.castle) return '<span class="terrain-glyph" aria-hidden="true">城</span>';
+    return '<span class="terrain-glyph" aria-hidden="true">' + (TERRAIN_GLYPH[cell.terrain] || '?') + '</span>' +
+      crownDots(cell.crowns);
+  }
+
+  function renderYourBoard(focusCell) {
+    var player = state.players[0];
+    var check = null;
+    var previewKeys = Object.create(null);
+    var human = humanTurn();
+
+    if (human && selectedTileId != null && preview) {
+      check = E.canPlaceFor(state, 0, selectedTileId, orientation, preview.row, preview.col);
+      E.orientationCells(orientation).forEach(function (offset) {
+        var r = preview.row + offset[0];
+        var c = preview.col + offset[1];
+        if (r >= 0 && c >= 0 && r < 5 && c < 5) previewKeys[r + ',' + c] = check.ok ? (preview.ghost ? 'ghost' : 'ok') : 'bad';
+      });
+    }
+    var last = lastMoveKeys(player);
+
+    var html = [];
+    for (var r = 0; r < 5; r++) {
+      for (var c = 0; c < 5; c++) {
+        var cell = player.grid[r][c];
+        var classes = ['cell'];
+        if ((r + c) % 2 === 1) classes.push('alt');
+        if (cell) classes.push(cell.castle ? 'castle' : 'occupied');
+        if (cell && cell.terrain) classes.push('terrain-' + cell.terrain);
+        if (last[r + ',' + c]) classes.push('last-move');
+        var pk = previewKeys[r + ',' + c];
+        if (pk === 'ok') classes.push('preview-ok');
+        else if (pk === 'ghost') classes.push('preview-ghost');
+        else if (pk === 'bad') classes.push('preview-bad');
+        if (preview && preview.row === r && preview.col === c) classes.push('preview-anchor');
+        var tab = boardFocus.r === r && boardFocus.c === c ? '0' : '-1';
+        var label = cellAria(cell, r, c);
+        if (pk) label += check && check.ok ? '，当前瓦片预览可放置' : '，当前瓦片预览不可放置';
+        html.push('<button type="button" role="gridcell" class="' + classes.join(' ') + '"' +
+          ' data-r="' + r + '" data-c="' + c + '" tabindex="' + tab + '"' +
+          ' aria-label="' + esc(label) + '" aria-disabled="' + (human ? 'false' : 'true') + '">' +
+          cellInner(cell) + '</button>');
+      }
+    }
+    yourBoardEl.innerHTML = html.join('');
+    yourBoardEl.setAttribute('aria-disabled', human ? 'false' : 'true');
+
+    var details = E.scoreDetails(player.grid);
+    byId('yourSub').textContent = '得分 ' + details.score + ' · 瓦片 ' + player.placedCount + '/12';
+    byId('yourMeta').textContent = boardMetaText(check);
+
+    if (focusCell) {
+      var target = yourBoardEl.querySelector('[data-r="' + focusCell.r + '"][data-c="' + focusCell.c + '"]');
+      if (target) target.focus({ preventScroll: true });
+    }
+  }
+
+  function boardMetaText(check) {
+    if (state.over) return '对局结束：' + state.overReason;
+    if (!humanTurn()) return 'AI 正在选牌与放置，完成后自动轮到你';
+    if (selectedTileId == null) return '从选牌队列点选一张瓦片';
+    if (!preview) return '当前朝向没有合法落点，试试旋转或翻转';
+    if (check && check.ok) return '绿色预览：点击格子即可落子';
+    return check ? check.reason : '这个位置不能放置';
+  }
+
+  function renderAIBoard() {
+    var player = state.players[1];
+    var last = lastMoveKeys(player);
+    var html = [];
+    for (var r = 0; r < 5; r++) {
+      for (var c = 0; c < 5; c++) {
+        var cell = player.grid[r][c];
+        var classes = ['cell'];
+        if ((r + c) % 2 === 1) classes.push('alt');
+        if (cell) classes.push(cell.castle ? 'castle' : 'occupied');
+        if (cell && cell.terrain) classes.push('terrain-' + cell.terrain);
+        if (last[r + ',' + c]) classes.push('last-move');
+        html.push('<div role="gridcell" class="' + classes.join(' ') + '" aria-label="' +
+          esc(cellAria(cell, r, c)) + '">' + cellInner(cell) + '</div>');
+      }
+    }
+    aiBoardEl.innerHTML = html.join('');
+    var details = E.scoreDetails(player.grid);
+    byId('aiSub').textContent = '得分 ' + details.score + ' · 瓦片 ' + player.placedCount + '/12';
+  }
+
+  function renderScoreboard() {
+    var result = E.getResults(state);
+    result.scores.forEach(function (row) {
+      var card = byId('player' + row.index);
+      card.classList.toggle('active', state.current === row.index && !state.over);
+      byId('score' + row.index).textContent = String(row.score);
+      byId('meta' + row.index).textContent = '瓦片 ' + row.placed + '/12 · 皇冠 ' + row.crowns +
+        ' · 最大区域 ' + row.maxRegion;
+      card.setAttribute('aria-label', row.name + '：' + row.score + ' 分，已放 ' + row.placed +
+        ' 张瓦片，皇冠 ' + row.crowns + ' 个');
+    });
+  }
+
+  function renderStatus() {
+    byId('roundLabel').textContent = '第 ' + state.round + ' / ' + state.maxRounds + ' 轮';
+    byId('seedLabel').textContent = 'seed ' + state.seed;
+    byId('firstLabel').textContent = '先手 ' + state.players[state.firstPlayer].name;
+    var label = state.over ? '对局结束' : (state.current === 0 ? '轮到你' : 'AI 回合');
+    byId('turnLabel').textContent = label;
+  }
+
+  function renderDraft() {
+    var entries = E.getDraft(state);
+    var picked = entries.filter(function (entry) { return entry.takenBy !== null; }).length;
+    var human = humanTurn();
+    var placeable = Object.create(null);
+    if (human) {
+      E.getLegalMoves(state).forEach(function (move) { placeable[move.tileId] = true; });
+    }
+
+    draftGrid.innerHTML = entries.map(function (entry) {
+      var tile = entry.tile;
+      var taken = entry.takenBy !== null;
+      var selected = selectedTileId === entry.tileId && !taken;
+      var canPlace = human && !taken && !!placeable[entry.tileId];
+      var status = taken ? (entry.takenBy === 0 ? '你已选' : 'AI 已选') :
+        (human ? (canPlace ? '可选' : '无处可放') : '等待');
+      var classes = ['draft-card'];
+      if (taken) classes.push('taken');
+      if (selected) classes.push('selected');
+      if (human && !taken && !canPlace) classes.push('unplaceable');
+      var disabled = taken || !canPlace;
+      return '<button type="button" class="' + classes.join(' ') + '" data-tile-id="' + entry.tileId + '"' +
+        ' aria-pressed="' + selected + '"' + (disabled ? ' disabled' : '') +
+        ' aria-label="' + esc('编号 ' + entry.tileId + '，' + halfLabel(tile.a) + '，' + halfLabel(tile.b) + '，' + status) + '">' +
+        '<span class="draft-top"><span class="tile-no">' + entry.tileId + '</span>' +
+        '<span class="draft-crowns">皇冠 ' + (tile.a.crowns + tile.b.crowns) + '</span></span>' +
+        '<span class="draft-domino">' + dominoHTML(tile, 0, 'mini') + '</span>' +
+        '<span class="draft-status">' + status + '</span></button>';
+    }).join('');
+
+    byId('draftSub').textContent = '第 ' + state.round + ' / ' + state.maxRounds + ' 轮 · 已选 ' +
+      picked + ' / 4 · 先手 ' + state.players[state.firstPlayer].name;
+  }
+
+  function renderOrder() {
+    var html = state.order.map(function (playerIndex, index) {
+      var classes = ['order-chip'];
+      if (state.over || index < state.pickIndex) classes.push('done');
+      else if (index === state.pickIndex) classes.push('current');
+      return '<span class="' + classes.join(' ') + '" aria-label="第 ' + (index + 1) + ' 选，' +
+        esc(state.players[playerIndex].name) + '">' + (index + 1) + ' · ' + esc(state.players[playerIndex].name) + '</span>';
+    });
+    orderRow.innerHTML = html.join('');
+  }
+
+  function renderPickPanel() {
+    var tile = selectedTile();
+    var human = humanTurn();
+    var info = byId('pickPreview');
+    var rotate = byId('rotateBtn');
+    var flip = byId('flipBtn');
+    var clear = byId('clearBtn');
+
+    if (!tile) {
+      info.innerHTML = '<p class="pick-empty">点选上方待选瓦片。选好后可旋转 / 翻转，再点击你的棋盘格子落子。</p>';
+      byId('pickHint').textContent = state.over ? '对局已结束' : '点选上方一张瓦片';
+      rotate.disabled = true;
+      flip.disabled = true;
+      clear.disabled = true;
+      return;
+    }
+
+    info.innerHTML = '<div class="pick-selected">' + dominoHTML(tile, orientation, 'big') +
+      '<div class="pick-info"><strong>' + tile.id + ' 号瓦片</strong>' +
+      '<span>A 半：' + halfLabel(tile.a) + '</span>' +
+      '<span>B 半：' + halfLabel(tile.b) + '</span>' +
+      '<span>朝向：' + ORIENTATION_LABELS[orientation] + '</span></div></div>';
+    byId('pickHint').textContent = human ? '旋转 / 翻转后点棋盘落子' : '等待 AI 完成';
+    rotate.disabled = !human;
+    flip.disabled = !human;
+    clear.disabled = !human;
+  }
+
+  function renderHint() {
+    if (state.over) {
+      setHint('对局结束：' + state.overReason + '。点击“查看结果”可看双方得分明细。', '');
+      return;
+    }
+    if (!humanTurn()) {
+      setHint('AI 正在选牌与放置，完成后自动轮到你。', '');
+      return;
+    }
+    if (selectedTileId == null) {
+      setHint('轮到你：从选牌队列点选一张瓦片。', '');
+      return;
+    }
+    if (!preview) {
+      setHint('这张瓦片的当前朝向没有合法落点，试试旋转或翻转。', 'warn');
+      return;
+    }
+    var check = E.canPlaceFor(state, 0, selectedTileId, orientation, preview.row, preview.col);
+    if (check.ok) {
+      setHint('已选 ' + selectedTileId + ' 号瓦片，绿色为预览位置；点击格子即可落子。', 'good');
+    } else {
+      setHint('这个位置不能放：' + check.reason + '。换个格子或调整方向。', 'warn');
+    }
+  }
+
+  function renderLog() {
+    var latest = state.log.slice(-8);
+    logEl.innerHTML = latest.map(function (entry, index) {
+      var cls = (entry.type === 'start' || entry.type === 'round' || entry.type === 'end' || entry.type === 'skip') ?
+        'system' : (entry.player === 1 ? 'ai' : 'human');
+      if (index === latest.length - 1) cls += ' latest';
+      var turn = entry.round ? 'R' + entry.round : '开局';
+      return '<li class="' + cls + '"><span class="log-turn">' + turn +
+        '</span><span class="log-dot" aria-hidden="true"></span><span class="log-text">' +
+        esc(entry.text) + '</span></li>';
+    }).join('');
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function renderAll(focus) {
+    if (!state) return;
+    renderScoreboard();
+    renderStatus();
+    renderYourBoard(focus && focus.type === 'board' ? focus : null);
+    renderAIBoard();
+    renderDraft();
+    renderOrder();
+    renderPickPanel();
+    renderHint();
+    renderLog();
+    if (focus && focus.type === 'draft') {
+      var card = draftGrid.querySelector('[data-tile-id="' + focus.tileId + '"]');
+      if (card && !card.disabled) card.focus({ preventScroll: true });
+    }
+  }
+
+  function refreshPreviewClasses() {
+    if (!yourBoardEl) return;
+    var nodes = yourBoardEl.querySelectorAll('.cell');
+    Array.prototype.forEach.call(nodes, function (node) {
+      node.classList.remove('preview-ok', 'preview-bad', 'preview-ghost', 'preview-anchor');
+    });
+    if (!humanTurn() || selectedTileId == null || !preview) return;
+    var check = E.canPlaceFor(state, 0, selectedTileId, orientation, preview.row, preview.col);
+    E.orientationCells(orientation).forEach(function (offset) {
+      var r = preview.row + offset[0];
+      var c = preview.col + offset[1];
+      if (r < 0 || c < 0 || r >= 5 || c >= 5) return;
+      var node = yourBoardEl.querySelector('[data-r="' + r + '"][data-c="' + c + '"]');
+      if (node) node.classList.add(check.ok ? (preview.ghost ? 'preview-ghost' : 'preview-ok') : 'preview-bad');
+    });
+    var anchor = yourBoardEl.querySelector('[data-r="' + preview.row + '"][data-c="' + preview.col + '"]');
+    if (anchor) anchor.classList.add('preview-anchor');
+    byId('yourMeta').textContent = boardMetaText(check);
+  }
+
+  function setPreview(row, col, ghost) {
+    if (!humanTurn() || selectedTileId == null) return;
+    preview = { row: row, col: col, ghost: !!ghost };
+    refreshPreviewClasses();
+    renderHint();
+  }
+
+  function selectTile(tileId) {
+    if (!humanTurn()) return;
+    var move = firstMoveFor(tileId);
+    if (!move) {
+      setHint('这张瓦片当前没有合法落点，换一张或取消选择。', 'warn');
+      return;
+    }
+    selectedTileId = tileId;
+    orientation = move.orientation;
+    preview = { row: move.row, col: move.col, ghost: true };
+    boardFocus = { r: move.row, c: move.col };
+    renderAll({ type: 'draft', tileId: tileId });
+  }
+
+  function adjustOrientation(which) {
+    if (!humanTurn() || selectedTileId == null) return;
+    orientation = which === 'flip' ? E.flipOrientation(orientation) : E.rotateOrientation(orientation);
+    var move = bestMoveFor(selectedTileId, orientation);
+    if (move) {
+      preview = { row: move.row, col: move.col, ghost: true };
+      boardFocus = { r: move.row, c: move.col };
+    } else if (preview) {
+      preview = { row: preview.row, col: preview.col, ghost: true };
+    }
+    renderAll({ type: 'pick' });
+  }
+
+  function clearSelection() {
+    if (!humanTurn() && selectedTileId != null) {
+      selectedTileId = null;
+      preview = null;
+      renderAll();
+      return;
+    }
+    selectedTileId = null;
+    preview = null;
+    renderAll();
+  }
+
+  function placeSelected(row, col) {
+    if (!humanTurn() || selectedTileId == null) return;
+    var check = E.canPlaceFor(state, 0, selectedTileId, orientation, row, col);
+    preview = { row: row, col: col, ghost: false };
+    if (!check.ok) {
+      refreshPreviewClasses();
+      renderHint();
+      return;
+    }
+
+    var tileId = selectedTileId;
+    var usedOrientation = orientation;
+    try {
+      state = E.applyMove(state, {
+        tileId: tileId,
+        orientation: usedOrientation,
+        row: row,
+        col: col
+      });
+      selectedTileId = null;
+      preview = null;
+      boardFocus = { r: row, c: col };
+      renderAll({ type: 'board', r: row, c: col });
+      if (state.over) {
+        aiBusy = false;
+        announceEnd();
+        showResult();
+      } else if (state.current === 1) {
+        scheduleAI();
+      } else {
+        aiBusy = false;
+      }
+    } catch (error) {
+      setHint(error && error.message ? error.message : '无法完成放置', 'warn');
+      renderAll();
+    }
+  }
+
+  function aiTurn() {
+    aiTimer = null;
+    if (!state || state.over || state.current !== 1) {
+      aiBusy = false;
+      renderAll();
+      return;
+    }
+    try {
+      var move = E.chooseAIMove(state);
+      if (!move) throw new Error('AI 没有返回合法动作');
+      state = E.applyMove(state, move);
+      selectedTileId = null;
+      preview = null;
+      aiBusy = false;
+      renderAll();
+      if (state.over) {
+        announceEnd();
+        showResult();
+      } else if (state.current === 1) {
+        scheduleAI();
+      }
+    } catch (error) {
+      aiBusy = false;
+      setHint('AI 动作异常：' + (error && error.message ? error.message : error), 'warn');
+      renderAll();
+      if (window.console) window.console.error(error);
+    }
+  }
+
+  function scheduleAI() {
+    if (!state || state.over) {
+      aiBusy = false;
+      return;
+    }
+    if (state.current !== 1) {
+      aiBusy = false;
+      renderAll();
+      return;
+    }
+    aiBusy = true;
+    renderAll();
+    if (aiTimer) window.clearTimeout(aiTimer);
+    aiTimer = window.setTimeout(aiTurn, reducedMotion ? 80 : 560);
+  }
+
+  function announceEnd() {
+    if (!state || !state.over || endedAnnounced) return;
+    endedAnnounced = true;
+  }
+
+  function showResult() {
+    if (!state || !state.over) return;
+    var result = state.result || E.getResults(state);
+    byId('resultTitle').textContent = result.winner == null ? '平局' :
+      (result.winner === 0 ? '你获胜' : 'AI 获胜');
+    var reason = state.overReason + (result.tieBreak ? ' · ' + result.tieBreak : '');
+    byId('resultReason').textContent = reason;
+    byId('resultScores').innerHTML = result.scores.map(function (row) {
+      return '<div class="result-row' + (result.winner === row.index ? ' winner' : '') + '">' +
+        '<div class="result-name"><strong>' + esc(row.name) + '</strong><span>瓦片 ' + row.placed +
+        ' · 区域 ' + row.regions + ' · 最大 ' + row.maxRegion + ' · 皇冠 ' + row.crowns + '</span></div>' +
+        '<div class="result-total"><span class="sr-only">总分</span>' + row.score +
+        '<span class="result-unit">分</span></div></div>';
+    }).join('');
+    resultOverlay.hidden = false;
+    document.body.classList.add('modal-open');
+    byId('restart').focus({ preventScroll: true });
+  }
+
+  function hideResult() {
+    resultOverlay.hidden = true;
+    document.body.classList.remove('modal-open');
+    if (state && state.over) byId('viewBoard').focus({ preventScroll: true });
+  }
+
+  function newGame(seedValue) {
+    if (aiTimer) {
+      window.clearTimeout(aiTimer);
+      aiTimer = null;
+    }
+    aiBusy = false;
+    selectedTileId = null;
+    preview = null;
+    boardFocus = { r: 2, c: 2 };
+    endedAnnounced = false;
+    state = E.createGame({ seed: seedValue >>> 0, aiPlayer: 1, names: ['你', 'AI 对手'] });
+    seedInput.value = String(state.seed);
+    resultOverlay.hidden = true;
+    document.body.classList.remove('modal-open');
+    renderAll();
+    if (state.current === 1) scheduleAI();
+  }
+
+  yourBoardEl.addEventListener('click', function (event) {
+    var cell = event.target.closest('[data-r]');
+    if (!cell) return;
+    var r = Number(cell.getAttribute('data-r'));
+    var c = Number(cell.getAttribute('data-c'));
+    boardFocus = { r: r, c: c };
+    placeSelected(r, c);
+  });
+
+  yourBoardEl.addEventListener('pointerover', function (event) {
+    var cell = event.target.closest('[data-r]');
+    if (!cell || !humanTurn() || selectedTileId == null) return;
+    setPreview(Number(cell.getAttribute('data-r')), Number(cell.getAttribute('data-c')), false);
+  });
+
+  yourBoardEl.addEventListener('pointerleave', function () {
+    if (!humanTurn() || selectedTileId == null) return;
+    var move = bestMoveFor(selectedTileId, orientation);
+    if (move) setPreview(move.row, move.col, true);
+  });
+
+  yourBoardEl.addEventListener('focusin', function (event) {
+    var cell = event.target.closest('[data-r]');
+    if (!cell) return;
+    var r = Number(cell.getAttribute('data-r'));
+    var c = Number(cell.getAttribute('data-c'));
+    boardFocus = { r: r, c: c };
+    if (humanTurn() && selectedTileId != null) setPreview(r, c, false);
+  });
+
+  yourBoardEl.addEventListener('keydown', function (event) {
+    var cell = event.target.closest('[data-r]');
+    if (!cell) return;
+    var r = Number(cell.getAttribute('data-r'));
+    var c = Number(cell.getAttribute('data-c'));
+    var nr = r;
+    var nc = c;
+    if (event.key === 'ArrowUp') nr = Math.max(0, r - 1);
+    else if (event.key === 'ArrowDown') nr = Math.min(4, r + 1);
+    else if (event.key === 'ArrowLeft') nc = Math.max(0, c - 1);
+    else if (event.key === 'ArrowRight') nc = Math.min(4, c + 1);
+    else return;
+    event.preventDefault();
+    boardFocus = { r: nr, c: nc };
+    var target = yourBoardEl.querySelector('[data-r="' + nr + '"][data-c="' + nc + '"]');
+    if (target) target.focus();
+  });
+
+  draftGrid.addEventListener('click', function (event) {
+    var card = event.target.closest('[data-tile-id]');
+    if (!card || card.disabled) return;
+    selectTile(Number(card.getAttribute('data-tile-id')));
+  });
+
+  byId('rotateBtn').addEventListener('click', function () { adjustOrientation('rotate'); });
+  byId('flipBtn').addEventListener('click', function () { adjustOrientation('flip'); });
+  byId('clearBtn').addEventListener('click', clearSelection);
+
+  byId('newGameTop').addEventListener('click', function () { newGame(seedNow()); });
+  byId('restartBtn').addEventListener('click', function () { newGame(seedNow()); });
+  byId('restart').addEventListener('click', function () { newGame(seedNow()); });
+  byId('viewBoard').addEventListener('click', hideResult);
+  byId('seedBtn').addEventListener('click', function () {
+    var raw = seedInput.value.trim();
+    var value = Number(raw);
+    if (raw === '' || !Number.isInteger(value) || value < 0 || value > 4294967295) {
+      setHint('seed 必须填写 0 到 4294967295 之间的整数。', 'warn');
+      seedInput.focus();
+      return;
+    }
+    newGame(value >>> 0);
+  });
+
+  document.addEventListener('keydown', function (event) {
+    if (resultOverlay.hidden) return;
+    if (event.key === 'Escape') {
+      hideResult();
+      return;
+    }
+    if (event.key !== 'Tab') return;
+    var restart = byId('restart');
+    var viewBoard = byId('viewBoard');
+    if (!resultOverlay.contains(document.activeElement)) {
+      event.preventDefault();
+      restart.focus();
+      return;
+    }
+    if (event.shiftKey && document.activeElement === restart) {
+      event.preventDefault();
+      viewBoard.focus();
+    } else if (!event.shiftKey && document.activeElement === viewBoard) {
+      event.preventDefault();
+      restart.focus();
+    }
+  });
+
+  newGame(seedNow());
+})();
+</script>
+</body>
+</html>

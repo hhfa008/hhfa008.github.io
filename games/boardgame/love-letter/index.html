@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>情书 Love Letter — 抽一打一单机桌游</title>
+<meta name="description" content="情书 Love Letter 中文单机版：16 张角色牌，卫兵、神父、男爵、侍女、王子、国王、女伯爵与公主，抽 1 打 1，最后存活或手牌最高者获胜。">
+<meta name="theme-color" content="#2a1220">
+<style>
+:root{--bg:#1d0f18;--panel:#301a27;--panel2:#412637;--ink:#f8eef3;--muted:#c6a9b7;
+--rose:#d76a8c;--rose2:#8e3c58;--gold:#e6c27a;--line:#573446}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:radial-gradient(900px 520px at 50% -10%,#3d1e30,var(--bg));color:var(--ink);
+font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
+padding-bottom:calc(26px + env(safe-area-inset-bottom))}
+.wrap{max-width:680px;margin:0 auto;padding:0 14px}
+header{padding:16px 0 8px;display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap}
+h1{font-size:1.35rem;margin:0}
+h1 small{display:block;font-size:.74rem;color:var(--muted);letter-spacing:.18em;font-weight:400;margin-top:3px}
+button{font:inherit;color:inherit;cursor:pointer;min-height:44px;border-radius:10px;border:1px solid var(--line);
+background:var(--panel2);padding:8px 12px}
+button:hover{filter:brightness(1.12)}
+button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+button:disabled{opacity:.45;cursor:default}
+button.primary{background:var(--rose);border-color:var(--rose);font-weight:700}
+.players{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0 12px}
+.player{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px}
+.player.turn{border-color:var(--rose);box-shadow:0 0 0 1px rgba(215,106,140,.3) inset}
+.player h2{font-size:.9rem;margin:0 0 6px;display:flex;justify-content:space-between;gap:6px}
+.badge{font-size:.68rem;color:var(--gold);border:1px solid var(--line);border-radius:99px;padding:1px 7px}
+.cards{display:flex;gap:6px;flex-wrap:wrap;min-height:56px}
+.card{flex:1 1 44%;min-height:56px;border-radius:9px;border:1px solid var(--line);background:#251521;
+display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4px;text-align:center}
+.card .v{font-size:.68rem;color:var(--gold)}
+.card .n{font-size:.88rem;font-weight:650}
+.card.back{color:var(--muted);font-size:.76rem}
+.discard{font-size:.72rem;color:var(--muted);margin-top:6px;min-height:18px}
+.status{background:rgba(48,26,39,.85);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:8px 0 12px}
+.status .big{font-weight:700}
+.status .sub{color:var(--muted);font-size:.86rem;margin-top:2px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.actions button{flex:1 1 140px}
+.log{max-height:150px;overflow:auto;border-top:1px solid var(--line);margin-top:14px;padding-top:8px;
+font-size:.82rem;color:var(--muted)}
+.log p{margin:3px 0}
+.banner{margin:10px 0;padding:10px;border-radius:10px;background:#3c2a3f;border:1px solid #7a4c64;
+text-align:center;font-weight:700}
+.links{display:flex;justify-content:space-between;margin-top:14px;font-size:.86rem;flex-wrap:wrap;gap:8px}
+.links a{color:var(--gold);text-decoration:none;min-height:44px;display:inline-flex;align-items:center}
+.hint{color:var(--muted);font-size:.78rem;margin:4px 2px}
+@media (max-width:360px){.wrap{padding:0 10px}.players{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>情书 <small>LOVE LETTER · 抽一打一</small></h1>
+  <button id="newGame">新对局</button>
+</header>
+<div class="players" id="players" aria-label="双方手牌与弃牌"></div>
+<div class="banner" id="banner" hidden></div>
+<div class="status" id="status" aria-live="polite"></div>
+<div class="actions" id="actions" aria-label="可打出的牌"></div>
+<div class="hint" id="hint"></div>
+<div class="log" id="log" aria-live="polite"></div>
+<div class="links">
+  <a href="rules.html">查看中文规则</a>
+  <a href="../index.html">返回桌游目录</a>
+</div>
+</div>
+<script src="engine.js"></script>
+<script>
+(function () {
+  'use strict';
+  var E = window.LoveLetterEngine;
+  var state = null;
+  var gen = 0;
+  var playersEl = document.getElementById('players');
+  var actionsEl = document.getElementById('actions');
+  var statusEl = document.getElementById('status');
+  var logEl = document.getElementById('log');
+  var banner = document.getElementById('banner');
+  var hintEl = document.getElementById('hint');
+
+  function esc(t) {
+    return String(t).replace(/[&<>"']/g, function (c) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+    });
+  }
+  function cardName(id) { return (E.CARD_BY_ID[id] && E.CARD_BY_ID[id].name) || ('#' + id); }
+  function cardNode(id, hidden) {
+    if (hidden) return '<div class="card back" aria-label="未知手牌">身份牌<br>未知</div>';
+    return '<div class="card" aria-label="' + esc(cardName(id)) + '，点数 ' + id + '">' +
+      '<span class="v">' + id + '</span><span class="n">' + esc(cardName(id)) + '</span></div>';
+  }
+
+  function render() {
+    if (!state) return;
+    var v = E.viewFor(state, 0);
+    playersEl.innerHTML = v.players.map(function (p) {
+      var cls = 'player' + (v.turn === p.id && v.phase === 'play' ? ' turn' : '');
+      return '<div class="' + cls + '"><h2><span>' + esc(p.name) +
+        (p.id === state.seat ? '（你）' : '') + '</span>' +
+        (p.protected ? '<span class="badge">侍女保护</span>' : '') +
+        (p.out ? '<span class="badge">出局</span>' : '') + '</h2><div class="cards">' +
+        p.hand.map(function (c) { return cardNode(c, c === 'hidden'); }).join('') +
+        '</div><div class="discard">弃牌：' +
+        (p.discard.length ? p.discard.map(function (c) { return '「' + esc(cardName(c)) + '」'; }).join(' ') : '无') +
+        '</div></div>';
+    }).join('');
+
+    var big = '', sub = '';
+    if (v.phase === 'over') {
+      big = '对局结束';
+      sub = v.winner === 0 ? '你获胜！' : (v.winner === 1 ? 'AI 获胜。' : '平局。');
+    } else if (v.turn === 0) {
+      big = '你的回合：选择一张牌打出';
+      sub = '牌堆剩余 ' + v.deckLeft + ' 张；抽 1 打 1，尽量留高点数的牌。';
+    } else {
+      big = 'AI 回合…';
+      sub = '牌堆剩余 ' + v.deckLeft + ' 张。';
+    }
+    statusEl.innerHTML = '<div class="big">' + esc(big) + '</div><div class="sub">' + esc(sub) + '</div>';
+    if (v.phase === 'over') {
+      banner.hidden = false;
+      banner.textContent = v.winner === 0 ? '你赢了这局情书！' : (v.winner === 1 ? 'AI 赢了，再来一局。' : '平局。');
+    } else banner.hidden = true;
+
+    var buttons = [];
+    if (v.phase === 'over') {
+      buttons.push('<button class="primary" data-act="new">再来一局</button>');
+    } else if (!E.needsHuman(state)) {
+      buttons.push('<button disabled>AI 出牌中…</button>');
+    } else {
+      E.legalActions(state).forEach(function (a, i) {
+        var label = cardName(a.card);
+        if (a.card === 1) label += '：猜 ' + a.guess;
+        else if (a.card === 5) label += a.target === 0 ? '：对自己' : '：对 AI';
+        else if (a.target != null) label += '：对 ' + (a.target === 0 ? '自己' : 'AI');
+        buttons.push('<button data-i="' + i + '">' + esc(label) + '</button>');
+      });
+    }
+    actionsEl.innerHTML = buttons.join('');
+    hintEl.textContent = v.phase === 'play' && v.turn === 0
+      ? '提示：公主不能主动打出；手上有女伯爵和国王/王子时必须先打女伯爵。' : '';
+    logEl.innerHTML = v.log.slice(-12).map(function (line) { return '<p>' + esc(line) + '</p>'; }).join('');
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function pump() {
+    var my = gen;
+    function step() {
+      if (my !== gen || !state || E.isOver(state) || E.needsHuman(state)) { render(); return; }
+      var a = E.aiAction(state);
+      if (!a) { render(); return; }
+      E.applyAction(state, a);
+      render();
+      setTimeout(step, 650);
+    }
+    setTimeout(step, 320);
+  }
+
+  actionsEl.addEventListener('click', function (ev) {
+    var btn = ev.target.closest('button[data-act], button[data-i]');
+    if (!btn || !state) return;
+    if (btn.getAttribute('data-act') === 'new') { newGame(); return; }
+    var i = Number(btn.getAttribute('data-i'));
+    var actions = E.legalActions(state);
+    var a = actions[i];
+    if (!a) return;
+    var r = E.applyAction(state, a);
+    if (!r.ok) { statusEl.innerHTML = '<div class="big">无法出牌</div><div class="sub">' + esc(r.error) + '</div>'; return; }
+    render();
+    if (!E.isOver(state) && !E.needsHuman(state)) pump();
+  });
+
+  function newGame() {
+    gen++;
+    state = E.createGame({ seed: (Date.now() % 1000000) + 5 });
+    render();
+    if (!E.needsHuman(state) && !E.isOver(state)) pump();
+  }
+
+  document.getElementById('newGame').addEventListener('click', newGame);
+  newGame();
+}());
+</script>
+</body>
+</html>

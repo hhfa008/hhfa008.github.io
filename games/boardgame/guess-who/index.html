@@ -1,0 +1,1188 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f6f1e7">
+<meta name="description" content="猜猜我是谁：24 位人物、7 种公开特征，用是或否的问题排除嫌疑，先猜中电脑人物的推理小游戏。">
+<title>猜猜我是谁 · 24 人物属性推理小游戏</title>
+<link rel="icon" href="data:,">
+<style>
+  :root {
+    --bg: #f6f1e7;
+    --surface: #fffdf8;
+    --surface-2: #f8f2e7;
+    --ink: #1f2b2d;
+    --muted: #6c6256;
+    --line: #ded3c1;
+    --line-strong: #c9bca7;
+    --accent: #c9502e;
+    --accent-dark: #9e3b1e;
+    --teal: #276b70;
+    --teal-dark: #1d5357;
+    --teal-soft: #e7f3f2;
+    --gold: #d9a441;
+    --danger: #9e3b1e;
+    --shadow: 0 12px 32px rgba(61, 47, 28, 0.08);
+    --radius: 18px;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    background:
+      radial-gradient(circle at 8% 0%, rgba(217, 164, 65, 0.17), transparent 34rem),
+      radial-gradient(circle at 100% 15%, rgba(39, 107, 112, 0.13), transparent 30rem),
+      var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+    line-height: 1.55;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  button, a { font: inherit; }
+  button { color: inherit; }
+  [hidden] { display: none !important; }
+
+  .wrap {
+    width: 100%;
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 18px 16px 40px;
+  }
+
+  .hero {
+    padding: 16px 4px 18px;
+  }
+  .eyebrow {
+    margin: 0 0 4px;
+    color: var(--accent);
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+  h1 {
+    margin: 0;
+    font-size: clamp(2rem, 8vw, 3.4rem);
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+  }
+  .lead {
+    max-width: 42rem;
+    margin: 10px 0 0;
+    color: var(--muted);
+    font-size: 0.98rem;
+  }
+
+  .panel {
+    min-width: 0;
+    padding: 16px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 9px 14px;
+    border: 1px solid var(--line-strong);
+    border-radius: 12px;
+    background: var(--surface);
+    color: var(--ink);
+    font-size: 0.9rem;
+    font-weight: 700;
+    line-height: 1.2;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+  }
+  .btn:hover:not(:disabled) { background: var(--surface-2); border-color: var(--teal); }
+  .btn:active:not(:disabled) { transform: translateY(1px); }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn-primary {
+    background: var(--teal);
+    border-color: var(--teal);
+    color: #fff;
+  }
+  .btn-primary:hover:not(:disabled) { background: var(--teal-dark); border-color: var(--teal-dark); }
+  .btn-accent {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .btn-accent:hover:not(:disabled) { background: var(--accent-dark); border-color: var(--accent-dark); }
+
+  button:focus-visible, a:focus-visible {
+    outline: 3px solid #1f6f78;
+    outline-offset: 3px;
+  }
+
+  .setup-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+  .setup-head h2 { margin: 0 0 4px; font-size: 1.2rem; }
+  .setup-head p { margin: 0; color: var(--muted); font-size: 0.9rem; }
+  .setup-head .btn { flex: 0 0 auto; }
+
+  .hud {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .you-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    padding: 10px 12px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+  }
+  .you-avatar {
+    flex: 0 0 auto;
+    width: 54px;
+    height: 54px;
+    padding: 2px;
+    background: var(--surface-2);
+    border-radius: 50%;
+  }
+  .you-avatar svg { display: block; width: 100%; height: 100%; }
+  .you-meta { min-width: 0; display: flex; flex-direction: column; }
+  .you-label { color: var(--muted); font-size: 0.68rem; font-weight: 800; letter-spacing: 0.08em; }
+  .you-name { font-size: 1.05rem; line-height: 1.2; }
+  .you-traits {
+    overflow: hidden;
+    color: var(--muted);
+    font-size: 0.72rem;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .counts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    min-width: 0;
+  }
+  .count-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+    padding: 8px 11px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+  }
+  .count-card span {
+    overflow: hidden;
+    color: var(--muted);
+    font-size: 0.66rem;
+    line-height: 1.3;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .count-card strong { font-size: 1.5rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+
+  .status {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 10px;
+    min-height: 44px;
+    margin-bottom: 10px;
+    padding: 10px 14px;
+    background: var(--teal-soft);
+    border: 1px solid #bfdcd9;
+    border-radius: 14px;
+  }
+  .status strong { font-size: 0.95rem; }
+  .status span { color: var(--muted); font-size: 0.82rem; }
+  .status.is-ai { background: #fbf1dd; border-color: #ead6ae; }
+  .status.is-over { background: #f5e9e4; border-color: #e2c4b8; }
+
+  .turn-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .turn-grid > * { min-width: 0; }
+  .panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  .panel-head h2, .board-panel h2, .log-panel h2 { margin: 0; font-size: 1.02rem; }
+  .pill {
+    flex: 0 0 auto;
+    padding: 3px 8px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--muted);
+    font-size: 0.68rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .hint { margin: 6px 0 0; color: var(--muted); font-size: 0.8rem; }
+
+  .q-group {
+    min-width: 0;
+    margin: 12px 0 0;
+    padding: 0;
+    border: 0;
+  }
+  .q-group legend {
+    padding: 0;
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+  }
+  .q-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 5px;
+  }
+  .q-btn {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 6px 10px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: #fff;
+    color: var(--ink);
+    font-size: 0.82rem;
+    font-weight: 650;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  .q-btn:hover:not(:disabled) { background: var(--teal-soft); border-color: var(--teal); }
+  .q-btn:disabled { opacity: 0.36; cursor: not-allowed; }
+
+  .ai-panel { background: #fffaf0; }
+  .ai-kicker {
+    margin: 8px 0 2px;
+    color: var(--accent);
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+  }
+  .question {
+    margin: 2px 0 8px;
+    font-size: 1.08rem;
+    font-weight: 800;
+    line-height: 1.4;
+  }
+  .ai-idle { margin: 10px 0 0; color: var(--muted); font-size: 0.88rem; }
+  .yesno {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .yesno .btn { min-height: 52px; font-size: 1rem; }
+  .feedback { min-height: 1.4em; margin: 8px 0 0; color: var(--danger); font-size: 0.78rem; font-weight: 700; }
+  .thinking {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 14px;
+    color: var(--muted);
+    font-size: 0.88rem;
+  }
+  .dot {
+    width: 9px;
+    height: 9px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 0.9s ease-in-out infinite alternate;
+  }
+  @keyframes pulse { from { opacity: 0.3; transform: scale(0.8); } to { opacity: 1; transform: scale(1.15); } }
+
+  .board-panel { margin-bottom: 10px; }
+  .board-panel .hint { margin-top: 2px; }
+  .board {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(74px, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 0;
+    min-height: 44px;
+    padding: 6px 4px 5px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 13px;
+    background: #fff;
+    color: var(--ink);
+    text-align: center;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease, opacity 0.15s ease;
+  }
+  .card:hover:not(:disabled) {
+    border-color: var(--teal);
+    box-shadow: 0 6px 16px rgba(39, 107, 112, 0.16);
+    transform: translateY(-1px);
+  }
+  .card:active:not(:disabled) { transform: translateY(0); }
+  .card:disabled { cursor: default; }
+  .card.is-excluded { opacity: 0.32; filter: grayscale(0.9); }
+  .card.is-excluded:disabled { cursor: not-allowed; }
+  .card.is-likely {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px rgba(217, 164, 65, 0.3);
+  }
+  .avatar {
+    display: block;
+    width: 54px;
+    height: 54px;
+    margin: 0 auto 2px;
+    pointer-events: none;
+  }
+  .avatar svg { display: block; width: 100%; height: 100%; }
+  .card .name {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    font-size: 0.76rem;
+    font-weight: 800;
+    line-height: 1.25;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    pointer-events: none;
+  }
+  .badges {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 2px;
+    max-width: 100%;
+    min-height: 15px;
+    margin-top: 2px;
+    pointer-events: none;
+  }
+  .badge {
+    padding: 1px 3px;
+    border-radius: 4px;
+    background: #f1e8d9;
+    color: #655441;
+    font-size: 0.54rem;
+    font-weight: 700;
+    line-height: 1.25;
+    white-space: nowrap;
+  }
+  .badge.hair { background: #ece4d8; color: #4c4034; }
+  .cross {
+    position: absolute;
+    inset: 0;
+    display: none;
+    place-items: center;
+    background: rgba(255, 253, 248, 0.4);
+    color: #8b3b2a;
+    font-size: 2rem;
+    font-weight: 700;
+    pointer-events: none;
+  }
+  .card.is-excluded .cross { display: grid; }
+
+  .result {
+    margin-bottom: 10px;
+    padding: 16px;
+    border: 2px solid var(--gold);
+    border-radius: var(--radius);
+    background: linear-gradient(135deg, #fffaf0, #fffdf8 55%, #f2f8f7);
+    box-shadow: var(--shadow);
+  }
+  .result h2 { margin: 0 0 4px; font-size: 1.4rem; }
+  .result p { margin: 0; color: var(--muted); font-size: 0.88rem; }
+  .reveal {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 14px 0;
+  }
+  .reveal-card {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+    padding: 8px 10px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 13px;
+  }
+  .reveal-card .avatar { flex: 0 0 auto; width: 46px; height: 46px; margin: 0; }
+  .reveal-meta { min-width: 0; display: flex; flex-direction: column; }
+  .reveal-meta span { color: var(--muted); font-size: 0.66rem; font-weight: 700; }
+  .reveal-meta strong { overflow: hidden; font-size: 0.92rem; white-space: nowrap; text-overflow: ellipsis; }
+  .result .btn { min-height: 46px; }
+
+  .log-panel { margin-bottom: 10px; }
+  .log-list {
+    display: grid;
+    gap: 6px;
+    max-height: 230px;
+    margin: 10px 0 0;
+    padding: 0;
+    overflow-y: auto;
+    list-style: none;
+  }
+  .log-item {
+    padding: 7px 10px;
+    border-radius: 9px;
+    background: var(--surface-2);
+    color: #4d4338;
+    font-size: 0.78rem;
+    line-height: 1.45;
+  }
+  .log-item.is-ai { background: #fbf1dd; }
+  .log-item.is-start { background: var(--teal-soft); }
+  .log-item.is-error { background: #f5e9e4; color: var(--danger); }
+
+  .footer-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .rules-link { margin: 22px 0 0; text-align: center; }
+  .rules-link a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 10px;
+    color: var(--teal-dark);
+    font-size: 0.88rem;
+    font-weight: 700;
+    text-underline-offset: 3px;
+  }
+
+  .sr-only {
+    position: absolute !important;
+    width: 1px; height: 1px;
+    margin: -1px; padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  @media (max-width: 760px) {
+    .turn-grid { grid-template-columns: 1fr; }
+    .hud { grid-template-columns: 1fr; }
+    .counts { order: -1; }
+  }
+
+  @media (max-width: 430px) {
+    .wrap { padding: 12px 12px 32px; }
+    .panel { padding: 13px; }
+    .setup-head { flex-direction: column; }
+    .setup-head .btn { width: 100%; }
+    .board { grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 6px; }
+    .avatar { width: 50px; height: 50px; }
+    .you-avatar { width: 50px; height: 50px; }
+    .reveal { grid-template-columns: 1fr; }
+    .count-card strong { font-size: 1.35rem; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header class="hero">
+    <p class="eyebrow">24 人物 · 属性推理</p>
+    <h1>猜猜我是谁</h1>
+    <p class="lead">双方各藏一个人物。用“是 / 否”问题排除嫌疑，先准确猜中电脑的人获胜。猜错一次，立刻出局。</p>
+  </header>
+
+  <section id="setup" class="panel" aria-labelledby="setupTitle">
+    <div class="setup-head">
+      <div>
+        <p class="eyebrow">准备</p>
+        <h2 id="setupTitle">先选一个只有你知道的人物</h2>
+        <p>点击下方任意人物卡选定自己，或让系统随机挑选。电脑随后也会秘密选一位。</p>
+      </div>
+      <button id="randomStart" class="btn btn-primary" type="button" aria-label="随机选择一个人物并开始游戏">随机选一个</button>
+    </div>
+    <div id="setupBoard" class="board" role="group" aria-labelledby="setupTitle"></div>
+  </section>
+
+  <section id="game" hidden aria-label="猜猜我是谁对局">
+    <div class="hud">
+      <div id="yourCharacter" class="you-card" aria-label="你的人物"></div>
+      <div class="counts" aria-label="双方候选计数">
+        <div class="count-card">
+          <span>你的候选 · AI 可能是</span>
+          <strong id="playerCount">24</strong>
+        </div>
+        <div class="count-card">
+          <span>AI 的候选 · 你可能是</span>
+          <strong id="aiCount">24</strong>
+        </div>
+      </div>
+    </div>
+
+    <div id="statusBanner" class="status"></div>
+    <div id="result" class="result" hidden></div>
+
+    <div class="turn-grid">
+      <section class="panel" aria-labelledby="askTitle">
+        <div class="panel-head">
+          <h2 id="askTitle">向 AI 提问</h2>
+          <span id="turnCounter" class="pill">已提问 0 / 40</span>
+        </div>
+        <p id="askHint" class="hint">点一个属性值提问；每个问题只回答“是”或“否”。</p>
+        <div id="askGroups"></div>
+      </section>
+
+      <section class="panel ai-panel" aria-labelledby="aiTitle">
+        <div class="panel-head">
+          <h2 id="aiTitle">AI 的回合</h2>
+        </div>
+        <div id="aiContent"></div>
+      </section>
+    </div>
+
+    <section class="panel board-panel" aria-labelledby="boardTitle">
+      <div class="panel-head">
+        <div>
+          <h2 id="boardTitle">人物卡（AI 的可能人物）</h2>
+          <p class="hint">轮到你时，点任意未排除的卡片即可直接猜人。猜错立即判负。</p>
+        </div>
+      </div>
+      <div id="board" class="board" role="group" aria-labelledby="boardTitle"></div>
+    </section>
+
+    <section class="panel log-panel" aria-labelledby="logTitle">
+      <h2 id="logTitle">对局记录</h2>
+      <ol id="log" class="log-list"></ol>
+    </section>
+
+    <div class="footer-actions">
+      <button id="restart" class="btn" type="button" aria-label="结束当前对局并重新开始">重新开始</button>
+    </div>
+  </section>
+
+  <p class="rules-link"><a href="rules.html" aria-label="查看猜猜我是谁的完整玩法规则">查看玩法规则</a></p>
+</main>
+
+<div id="live" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+
+<script src="engine.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var E = window.GuessWhoEngine;
+  var HAIR_COLORS = {
+    black: '#312821',
+    brown: '#7a4d2d',
+    blond: '#d6a23d',
+    red: '#a9482d',
+    gray: '#8d8a84'
+  };
+
+  var els = {
+    setup: document.getElementById('setup'),
+    setupBoard: document.getElementById('setupBoard'),
+    randomStart: document.getElementById('randomStart'),
+    game: document.getElementById('game'),
+    yourCharacter: document.getElementById('yourCharacter'),
+    playerCount: document.getElementById('playerCount'),
+    aiCount: document.getElementById('aiCount'),
+    statusBanner: document.getElementById('statusBanner'),
+    result: document.getElementById('result'),
+    turnCounter: document.getElementById('turnCounter'),
+    askHint: document.getElementById('askHint'),
+    askGroups: document.getElementById('askGroups'),
+    aiContent: document.getElementById('aiContent'),
+    board: document.getElementById('board'),
+    log: document.getElementById('log'),
+    restart: document.getElementById('restart'),
+    live: document.getElementById('live')
+  };
+
+  if (!E) {
+    els.setup.innerHTML = '<p role="alert">游戏引擎加载失败，请刷新页面后重试。</p>';
+    return;
+  }
+
+  var state = null;
+  var aiRng = null;
+  var aiThinking = false;
+  var gameToken = 0;
+  var logs = [];
+
+  /* ---------- small helpers ---------- */
+
+  function esc(value) {
+    return String(value).replace(/[&<>"']/g, function (ch) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+    });
+  }
+
+  function traitText(c) {
+    return E.optionLabel('hair', c.hair) + '，' +
+      (c.glasses ? '戴眼镜' : '不戴眼镜') + '，' +
+      (c.hat ? '戴帽子' : '不戴帽子') + '，' +
+      (c.longHair ? '长发' : '短发') + '，' +
+      (c.beard ? '有胡子' : '没胡子') + '，' +
+      (c.freckles ? '有雀斑' : '没有雀斑') + '，' +
+      (c.smile ? '在笑' : '没在笑');
+  }
+
+  function questionText(subject, attrKey, value) {
+    var label = E.optionLabel(attrKey, value);
+    if (attrKey === 'hair') return subject + '的发色是' + label + '吗？';
+    if (attrKey === 'longHair') return subject + '的头发是' + label + '吗？';
+    return subject + label + '吗？';
+  }
+
+  function avatarSvg(c) {
+    var hair = HAIR_COLORS[c.hair] || '#3a3029';
+    var back = c.longHair
+      ? '<path d="M12 29 Q9 48 15 58 L24 54 L22 34 Z" fill="' + hair + '"/>' +
+        '<path d="M52 29 Q55 48 49 58 L40 54 L42 34 Z" fill="' + hair + '"/>'
+      : '';
+    var face = '<circle cx="32" cy="39" r="16" fill="#f0c49b"/>' +
+      '<path d="M27 56 Q32 61 37 56" fill="#e4af87"/>';
+    var cap = '<path d="M15 35 Q14 17 32 15 Q50 17 49 35 Q45 25 32 24 Q19 25 15 35 Z" fill="' + hair + '"/>';
+    var hat = c.hat
+      ? '<path d="M13 24 Q32 3 51 24 L51 28 L13 28 Z" fill="#345569"/>' +
+        '<rect x="9" y="27" width="46" height="7" rx="3.5" fill="#24414f"/>'
+      : '';
+    var glasses = c.glasses
+      ? '<g fill="none" stroke="#26343a" stroke-width="2.6">' +
+        '<circle cx="23" cy="38" r="6.2"/><circle cx="41" cy="38" r="6.2"/>' +
+        '<path d="M29.2 38h5.6M16.8 37l-4.6-2M45.2 37l4.6-2"/></g>'
+      : '';
+    var beard = c.beard
+      ? '<path d="M18 45 Q18 57 32 59 Q46 57 46 45 Q41 51 32 51 Q23 51 18 45 Z" fill="' + hair + '"/>'
+      : '';
+    var freckles = c.freckles
+      ? '<g fill="#b56f4f"><circle cx="21" cy="45" r="1.2"/><circle cx="26" cy="47" r="1.1"/>' +
+        '<circle cx="38" cy="47" r="1.1"/><circle cx="43" cy="45" r="1.2"/></g>'
+      : '';
+    var mouth = c.smile
+      ? '<path d="M26 49 Q32 55 38 49" fill="none" stroke="#8a4335" stroke-width="2.4" stroke-linecap="round"/>'
+      : '<path d="M27 51h10" fill="none" stroke="#8a4335" stroke-width="2.4" stroke-linecap="round"/>';
+
+    return '<svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">' +
+      back + face + cap + glasses + hat + beard + freckles + mouth + '</svg>';
+  }
+
+  function badgesHtml(c) {
+    var badges = ['<span class="badge hair">' + esc(E.optionLabel('hair', c.hair)) + '</span>'];
+    if (c.glasses) badges.push('<span class="badge">镜</span>');
+    if (c.hat) badges.push('<span class="badge">帽</span>');
+    if (c.longHair) badges.push('<span class="badge">长</span>');
+    if (c.beard) badges.push('<span class="badge">须</span>');
+    if (c.freckles) badges.push('<span class="badge">斑</span>');
+    if (c.smile) badges.push('<span class="badge">笑</span>');
+    return '<span class="badges" aria-hidden="true">' + badges.join('') + '</span>';
+  }
+
+  function cardHtml(c, mode) {
+    var label = mode === 'setup'
+      ? '选择' + c.name + '作为你的人物，特征：' + traitText(c)
+      : '猜' + c.name + '，特征：' + traitText(c);
+    return '<button type="button" class="card" data-id="' + c.id + '" aria-label="' + esc(label) + '">' +
+      '<span class="avatar" aria-hidden="true">' + avatarSvg(c) + '</span>' +
+      '<span class="name" aria-hidden="true">' + esc(c.name) + '</span>' +
+      badgesHtml(c) +
+      '<span class="cross" aria-hidden="true">×</span>' +
+      '</button>';
+  }
+
+  function announce(message) {
+    els.live.textContent = '';
+    window.setTimeout(function () { els.live.textContent = message; }, 30);
+  }
+
+  function addLog(text, kind) {
+    logs.push({ text: text, kind: kind || 'info' });
+    if (logs.length > 60) logs.shift();
+  }
+
+  /* ---------- rendering ---------- */
+
+  function renderSetup() {
+    els.setup.hidden = false;
+    els.game.hidden = true;
+    els.result.hidden = true;
+    els.result.innerHTML = '';
+    els.setupBoard.innerHTML = E.CHARACTERS.map(function (c) {
+      return cardHtml(c, 'setup');
+    }).join('');
+  }
+
+  function buildAskGroups() {
+    var html = '';
+    E.ATTRIBUTES.forEach(function (attr, attrIndex) {
+      html += '<fieldset class="q-group"><legend>' + esc(attr.label) + '</legend><div class="q-options">';
+      attr.options.forEach(function (option, optionIndex) {
+        var q = questionText('AI', attr.key, option.value);
+        html += '<button type="button" class="q-btn" data-a="' + attrIndex + '" data-o="' + optionIndex + '"' +
+          ' aria-label="向 AI 提问：' + esc(q) + '">' + esc(option.label) + '</button>';
+      });
+      html += '</div></fieldset>';
+    });
+    els.askGroups.innerHTML = html;
+  }
+
+  function renderBoard() {
+    els.board.innerHTML = E.CHARACTERS.map(function (c) {
+      return cardHtml(c, 'guess');
+    }).join('');
+  }
+
+  function renderYourCharacter() {
+    var c = E.characterById(state.playerCharacterId);
+    els.yourCharacter.setAttribute('aria-label', '你的人物是' + c.name + '，特征：' + traitText(c));
+    els.yourCharacter.innerHTML =
+      '<span class="you-avatar" aria-hidden="true">' + avatarSvg(c) + '</span>' +
+      '<span class="you-meta">' +
+        '<span class="you-label">你的人物</span>' +
+        '<strong class="you-name">' + esc(c.name) + '</strong>' +
+        '<span class="you-traits">' + esc(traitText(c)) + '</span>' +
+      '</span>';
+  }
+
+  function updateCounts() {
+    els.playerCount.textContent = String(state.playerCandidates.length);
+    els.aiCount.textContent = String(state.aiCandidates.length);
+    els.turnCounter.textContent = '已提问 ' + state.turnCount + ' / ' + state.maxTurns;
+  }
+
+  function updateStatus() {
+    var cls = '';
+    var title = '';
+    var sub = '';
+
+    if (state.status === 'playing') {
+      if (state.turn === 'player') {
+        title = '轮到你';
+        sub = '选一个属性问题，或直接点人物卡猜人。';
+      } else if (state.pending) {
+        title = 'AI 提问中';
+        sub = '请用“是”或“否”如实回答。';
+        cls = 'is-ai';
+      } else {
+        title = 'AI 思考中';
+        sub = '它正在挑一个尽量把候选对半分的问题。';
+        cls = 'is-ai';
+      }
+    } else {
+      title = '对局结束';
+      sub = '结果已显示在下方。';
+      cls = 'is-over';
+    }
+
+    els.statusBanner.className = 'status ' + cls;
+    els.statusBanner.innerHTML = '<strong>' + esc(title) + '</strong><span>' + esc(sub) + '</span>';
+  }
+
+  function updateAskButtons() {
+    var enabledCount = 0;
+    var buttons = els.askGroups.querySelectorAll('.q-btn');
+
+    Array.prototype.forEach.call(buttons, function (btn) {
+      var attr = E.ATTRIBUTES[Number(btn.dataset.a)];
+      var option = attr.options[Number(btn.dataset.o)];
+      var yesCount = E.filterCandidates(state.playerCandidates, attr.key, option.value).length;
+      var useful = yesCount > 0 && yesCount < state.playerCandidates.length;
+      var enabled = state.status === 'playing' && state.turn === 'player' && !state.pending && useful;
+
+      btn.disabled = !enabled;
+      btn.setAttribute('aria-disabled', enabled ? 'false' : 'true');
+      btn.title = useful ? '' : '这个回答不会排除任何剩余候选';
+      if (enabled) enabledCount += 1;
+    });
+
+    if (state.status !== 'playing') {
+      els.askHint.textContent = '对局已经结束。';
+    } else if (state.turn === 'ai') {
+      els.askHint.textContent = state.pending ? 'AI 正在等你回答。' : 'AI 正在思考问题。';
+    } else if (!enabledCount) {
+      els.askHint.textContent = '现有问题已无法再排除候选。直接点人物卡猜人吧。';
+    } else {
+      els.askHint.textContent = '点一个属性值提问；每个问题只回答“是”或“否”。无法排除候选的问题已置灰。';
+    }
+  }
+
+  function updateCards() {
+    var candidates = Object.create(null);
+    state.playerCandidates.forEach(function (id) { candidates[id] = true; });
+    var sole = state.playerCandidates.length === 1 ? state.playerCandidates[0] : -1;
+
+    Array.prototype.forEach.call(els.board.querySelectorAll('button.card'), function (btn) {
+      var id = Number(btn.dataset.id);
+      var c = E.characterById(id);
+      var excluded = !candidates[id];
+      var disabled = state.status !== 'playing' || state.turn !== 'player' || excluded;
+
+      btn.disabled = disabled;
+      btn.setAttribute('aria-disabled', disabled ? 'true' : 'false');
+      btn.classList.toggle('is-excluded', excluded);
+      btn.classList.toggle('is-likely', !excluded && id === sole);
+      btn.setAttribute('aria-label', excluded
+        ? c.name + '，已排除'
+        : '猜' + c.name + '，特征：' + traitText(c));
+    });
+  }
+
+  function renderAIContent() {
+    if (state.status !== 'playing') {
+      els.aiContent.innerHTML = '<p class="ai-idle">本局已经结束。点“重新开始”可以再来一局。</p>';
+      return;
+    }
+
+    if (state.pending) {
+      var player = E.characterById(state.playerCharacterId);
+      var q = questionText('你', state.pending.attr, state.pending.value);
+      els.aiContent.innerHTML =
+        '<p class="ai-kicker">AI 提问</p>' +
+        '<p class="question">' + esc(q) + '</p>' +
+        '<p class="hint">你的人物是 <strong>' + esc(player.name) + '</strong>。请按真实特征回答。</p>' +
+        '<div class="yesno">' +
+          '<button type="button" class="btn btn-primary" data-answer="yes" aria-label="回答 AI：是">是</button>' +
+          '<button type="button" class="btn" data-answer="no" aria-label="回答 AI：否">否</button>' +
+        '</div>' +
+        '<p id="aiFeedback" class="feedback" role="alert"></p>';
+      return;
+    }
+
+    if (aiThinking) {
+      els.aiContent.innerHTML = '<div class="thinking"><span class="dot" aria-hidden="true"></span><span>AI 正在挑选问题…</span></div>';
+      return;
+    }
+
+    els.aiContent.innerHTML = '<p class="ai-idle">你提问之后，AI 会从自己的候选里挑一个尽量对半分的问题。到时候用“是 / 否”回答它。</p>';
+  }
+
+  function renderResult() {
+    if (state.status === 'playing') {
+      els.result.hidden = true;
+      els.result.innerHTML = '';
+      return;
+    }
+
+    var aiChar = E.characterById(state.aiCharacterId);
+    var playerChar = E.characterById(state.playerCharacterId);
+    var guessed = state.guess;
+    var title = '平局';
+    var text = '提问次数用完了，双方都没能确认对方的人物。';
+
+    if (state.status === 'player') {
+      title = '你赢了！';
+      if (guessed && guessed.side === 'player' && guessed.correct) {
+        text = '你准确猜中了 AI 的人物：' + aiChar.name + '。';
+      } else if (guessed && guessed.side === 'ai' && !guessed.correct) {
+        text = 'AI 猜你是 ' + E.characterById(guessed.characterId).name + '，猜错了。你的人物是 ' + playerChar.name + '。';
+      } else {
+        text = '你找出了 AI 的人物：' + aiChar.name + '。';
+      }
+    } else if (state.status === 'ai') {
+      title = '你输了';
+      if (guessed && guessed.side === 'player' && !guessed.correct) {
+        text = '你猜的是 ' + E.characterById(guessed.characterId).name + '，但 AI 的人物是 ' + aiChar.name + '。';
+      } else if (guessed && guessed.side === 'ai' && guessed.correct) {
+        text = 'AI 正确猜中了你的人物：' + playerChar.name + '。';
+      } else {
+        text = 'AI 赢得了本局。';
+      }
+    }
+
+    els.result.hidden = false;
+    els.result.innerHTML =
+      '<p class="eyebrow">对局结束</p>' +
+      '<h2>' + esc(title) + '</h2>' +
+      '<p>' + esc(text) + '</p>' +
+      '<div class="reveal">' +
+        '<div class="reveal-card">' +
+          '<span class="avatar" aria-hidden="true">' + avatarSvg(aiChar) + '</span>' +
+          '<span class="reveal-meta"><span>AI 的人物</span><strong>' + esc(aiChar.name) + '</strong></span>' +
+        '</div>' +
+        '<div class="reveal-card">' +
+          '<span class="avatar" aria-hidden="true">' + avatarSvg(playerChar) + '</span>' +
+          '<span class="reveal-meta"><span>你的人物</span><strong>' + esc(playerChar.name) + '</strong></span>' +
+        '</div>' +
+      '</div>' +
+      '<button type="button" class="btn btn-accent" id="again" aria-label="再来一局，重新选择人物">再来一局</button>';
+
+    var again = document.getElementById('again');
+    if (again) again.addEventListener('click', resetToSetup);
+  }
+
+  function renderLog() {
+    els.log.innerHTML = logs.map(function (entry) {
+      return '<li class="log-item ' + (entry.kind === 'ai' ? 'is-ai' : entry.kind === 'start' ? 'is-start' : entry.kind === 'error' ? 'is-error' : '') + '">' +
+        esc(entry.text) + '</li>';
+    }).join('');
+    els.log.scrollTop = els.log.scrollHeight;
+  }
+
+  function renderAll() {
+    renderYourCharacter();
+    updateCounts();
+    updateStatus();
+    updateAskButtons();
+    updateCards();
+    renderAIContent();
+    renderResult();
+    renderLog();
+  }
+
+  function focusResult() {
+    var again = els.result.querySelector('button');
+    if (again) again.focus();
+  }
+
+  /* ---------- game flow ---------- */
+
+  function startGame(playerCharacterId) {
+    gameToken += 1;
+    state = E.newGame(Date.now(), playerCharacterId);
+    aiRng = E.createRng((state.seed ^ 0x9e3779b9) >>> 0);
+    aiThinking = false;
+    logs = [];
+
+    els.setup.hidden = true;
+    els.game.hidden = false;
+    renderBoard();
+
+    var player = E.characterById(state.playerCharacterId);
+    if (Number.isInteger(playerCharacterId)) {
+      addLog('你选定了 ' + player.name + ' 作为自己的秘密人物。', 'start');
+    } else {
+      addLog('系统为你随机选定了 ' + player.name + ' 作为秘密人物。', 'start');
+    }
+    addLog('双方各有 24 个候选，总提问上限 ' + E.MAX_TURNS + ' 次。先问一个宽泛的问题吧。', 'start');
+
+    renderAll();
+    announce('对局开始。你的人物是 ' + player.name + '。轮到你提问。');
+
+    var first = els.askGroups.querySelector('.q-btn:not([disabled])');
+    if (first) first.focus();
+  }
+
+  function beginAiTurn() {
+    if (!state || state.status !== 'playing' || state.turn !== 'ai' || state.pending || aiThinking) return;
+
+    aiThinking = true;
+    renderAll();
+    var token = gameToken;
+
+    window.setTimeout(function () {
+      if (token !== gameToken) return;
+      if (!state || state.status !== 'playing' || state.turn !== 'ai' || state.pending) {
+        aiThinking = false;
+        return;
+      }
+
+      aiThinking = false;
+      var result = E.aiTurn(state, aiRng);
+
+      if (!result.ok) {
+        addLog('AI 行动失败：' + result.error + '。请重新开始。', 'error');
+        renderAll();
+        announce('电脑行动出现异常，请重新开始对局。');
+        return;
+      }
+
+      if (result.action === 'question') {
+        renderAll();
+        announce('AI 问：' + questionText('你', result.attr, result.value));
+        var yes = els.aiContent.querySelector('button[data-answer="yes"]');
+        if (yes) yes.focus();
+        return;
+      }
+
+      var guessed = E.characterById(result.characterId);
+      addLog(result.correct
+        ? 'AI 猜你是 ' + guessed.name + '——猜中了。'
+        : 'AI 猜你是 ' + guessed.name + '——猜错了。', 'ai');
+      renderAll();
+      announce(result.correct ? 'AI 猜中了你，你输了。' : 'AI 猜错了，你赢了。');
+      focusResult();
+    }, 520);
+  }
+
+  function handleAsk(attr, option) {
+    if (!state || state.status !== 'playing' || state.turn !== 'player') return;
+
+    var result = E.ask(state, 'player', attr.key, option.value);
+    if (!result.ok) {
+      announce('提问失败：' + result.error);
+      return;
+    }
+
+    addLog(
+      '你问：' + questionText('AI', attr.key, option.value) +
+      ' AI 回答：' + (result.answer ? '是' : '否') +
+      '。你的候选还剩 ' + result.remaining + ' 个。',
+      'info'
+    );
+
+    renderAll();
+
+    if (state.status === 'playing') {
+      announce('AI 回答：' + (result.answer ? '是' : '否') + '。AI 的回合。');
+      beginAiTurn();
+    } else {
+      announce('提问次数用尽，本局平局。');
+      focusResult();
+    }
+  }
+
+  function handleAnswerAi(answer) {
+    if (!state || state.status !== 'playing' || !state.pending) return;
+
+    var pending = state.pending;
+    var q = questionText('你', pending.attr, pending.value);
+    var result = E.answerAiQuestion(state, answer);
+
+    if (!result.ok) {
+      if (result.error === 'incorrectAnswer') {
+        var player = E.characterById(state.playerCharacterId);
+        var feedback = document.getElementById('aiFeedback');
+        if (feedback) {
+          feedback.textContent = '这个回答和你的秘密人物不一致。你的人物是 ' + player.name + '，请如实回答。';
+        }
+        announce('回答与你的秘密人物不一致，请重新回答。');
+        return;
+      }
+      announce('回答失败：' + result.error);
+      return;
+    }
+
+    addLog(
+      'AI 问：' + q +
+      ' 你回答：' + (result.answer ? '是' : '否') +
+      '。AI 的候选还剩 ' + result.remaining + ' 个。',
+      'ai'
+    );
+
+    renderAll();
+
+    if (state.status === 'playing') {
+      announce('已记录你的回答。轮到你提问或猜人。');
+      var first = els.askGroups.querySelector('.q-btn:not([disabled])');
+      if (first) first.focus();
+    } else {
+      announce('提问次数用尽，本局平局。');
+      focusResult();
+    }
+  }
+
+  function handleGuess(characterId) {
+    if (!state || state.status !== 'playing' || state.turn !== 'player') return;
+
+    var result = E.guess(state, 'player', characterId);
+    if (!result.ok) {
+      announce('猜人失败：' + result.error);
+      return;
+    }
+
+    var guessed = E.characterById(characterId);
+    var aiChar = E.characterById(state.aiCharacterId);
+
+    if (result.correct) {
+      addLog('你猜 ' + guessed.name + '——猜中了！', 'info');
+    } else {
+      addLog('你猜 ' + guessed.name + '——猜错了。AI 的人物是 ' + aiChar.name + '。', 'error');
+    }
+
+    renderAll();
+
+    if (result.correct) {
+      announce('猜中了！你赢了。');
+    } else {
+      announce('猜错了。AI 的人物是 ' + aiChar.name + '，你输了。');
+    }
+    focusResult();
+  }
+
+  function resetToSetup() {
+    gameToken += 1;
+    state = null;
+    aiRng = null;
+    aiThinking = false;
+    logs = [];
+    els.game.hidden = true;
+    els.setup.hidden = false;
+    els.result.hidden = true;
+    els.result.innerHTML = '';
+    announce('请选择你的人物，或让系统随机挑选。');
+    var first = els.setupBoard.querySelector('button.card');
+    if (first) first.focus();
+  }
+
+  /* ---------- events ---------- */
+
+  els.setupBoard.addEventListener('click', function (event) {
+    var button = event.target.closest('button.card[data-id]');
+    if (!button) return;
+    startGame(Number(button.dataset.id));
+  });
+
+  els.randomStart.addEventListener('click', function () {
+    startGame(undefined);
+  });
+
+  els.board.addEventListener('click', function (event) {
+    var button = event.target.closest('button.card[data-id]');
+    if (!button || button.disabled) return;
+    handleGuess(Number(button.dataset.id));
+  });
+
+  els.askGroups.addEventListener('click', function (event) {
+    var button = event.target.closest('button.q-btn');
+    if (!button || button.disabled) return;
+    var attr = E.ATTRIBUTES[Number(button.dataset.a)];
+    var option = attr.options[Number(button.dataset.o)];
+    handleAsk(attr, option);
+  });
+
+  els.aiContent.addEventListener('click', function (event) {
+    var button = event.target.closest('button[data-answer]');
+    if (!button) return;
+    handleAnswerAi(button.dataset.answer === 'yes');
+  });
+
+  els.restart.addEventListener('click', resetToSetup);
+
+  /* ---------- boot ---------- */
+
+  buildAskGroups();
+  renderSetup();
+  announce('欢迎来到猜猜我是谁。请选择你的人物，或点击随机选一个。');
+})();
+</script>
+</body>
+</html>

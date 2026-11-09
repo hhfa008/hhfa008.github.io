@@ -1,0 +1,1141 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#12140f">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%236b4a2a'/%3E%3Cpath d='M10 50V22l10-10 10 10v8h8v-8l10-10 8 10v28z' fill='%23f0d9b5'/%3E%3C/svg%3E">
+<title>卡卡颂 Carcassonne · 2 人对战</title>
+<meta name="description" content="卡卡颂 Carcassonne 单人版：2 人、你 vs AI、纯前端、移动端优先。50 张自绘瓦片，城市、道路、农田与修道院计分。">
+<style>
+:root{
+  --bg:#12140f;
+  --bg-2:#171b13;
+  --surface:#1c2117;
+  --surface-2:#252c1e;
+  --surface-3:#2f3826;
+  --line:#39402e;
+  --text:#eef2e2;
+  --muted:#a8b096;
+  --accent:#e0a83e;
+  --accent-ink:#20180a;
+  --green:#7fb069;
+  --field:#8fae63;
+  --field-2:#7d9c52;
+  --city:#b37b4a;
+  --city-2:#8a5a32;
+  --road:#efe2c2;
+  --road-2:#c8b388;
+  --danger:#e06c5f;
+  --cell:48px;
+  --radius:16px;
+  --shadow:0 14px 40px rgba(0,0,0,.35);
+  --font:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;
+  min-height:100vh;
+  background:
+    radial-gradient(1100px 500px at 15% -10%, rgba(127,176,105,.14), transparent 60%),
+    radial-gradient(900px 420px at 110% 10%, rgba(224,168,62,.10), transparent 55%),
+    var(--bg);
+  color:var(--text);
+  font-family:var(--font);
+  font-size:15px;
+  line-height:1.5;
+  overflow-x:hidden;
+}
+button,a{font-family:inherit}
+button{color:inherit}
+a{color:var(--accent)}
+.sr-only{
+  position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0,0,0,0);white-space:nowrap;border:0;
+}
+.skip-link{
+  position:absolute;left:8px;top:-60px;z-index:50;background:var(--accent);color:var(--accent-ink);
+  min-height:44px;display:inline-flex;align-items:center;padding:10px 14px;border-radius:10px;
+  text-decoration:none;font-weight:700;
+}
+.skip-link:focus{top:8px}
+.top{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  max-width:1080px;margin:0 auto;padding:14px 16px 8px;
+}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.brand-mark{
+  width:44px;height:44px;border-radius:13px;flex:0 0 auto;
+  background:linear-gradient(145deg,#c68a52,#7d4e2a);
+  border:2px solid rgba(255,255,255,.16);
+  display:grid;place-items:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.25);
+}
+.brand-mark svg{width:26px;height:26px;display:block}
+.brand h1{margin:0;font-size:20px;letter-spacing:.04em;line-height:1.15}
+.brand p{margin:2px 0 0;color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top-nav{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+.top-nav a,.top-nav button{
+  min-height:44px;display:inline-flex;align-items:center;justify-content:center;
+  padding:0 14px;border-radius:12px;border:1px solid var(--line);
+  background:var(--surface);color:var(--text);text-decoration:none;font-size:14px;cursor:pointer;
+}
+.top-nav a:hover,.top-nav button:hover{border-color:#59634a;background:var(--surface-2)}
+.wrap{max-width:1080px;margin:0 auto;padding:8px 16px 36px}
+.scoreboard{
+  display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+  gap:8px;align-items:stretch;margin:6px 0 14px;
+}
+.score-card{
+  display:flex;align-items:center;gap:10px;min-width:0;
+  padding:10px 12px;border:1px solid var(--line);border-radius:14px;
+  background:linear-gradient(180deg,var(--surface-2),var(--surface));
+  position:relative;overflow:hidden;
+}
+.score-card.active{border-color:var(--accent);box-shadow:0 0 0 1px rgba(224,168,62,.35) inset}
+.score-card .dot{width:12px;height:12px;border-radius:50%;flex:0 0 auto;box-shadow:0 0 0 2px rgba(255,255,255,.18)}
+.score-name{display:block;font-size:11px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
+.score-line{display:flex;align-items:baseline;gap:4px;min-width:0}
+.score-line strong{font-size:26px;line-height:1;font-variant-numeric:tabular-nums}
+.score-line .unit{color:var(--muted);font-size:11px}
+.meeples{margin-left:auto;font-size:11px;color:var(--muted);white-space:nowrap;display:flex;align-items:center;gap:4px}
+.meeple-pip{width:9px;height:9px;border-radius:50%;background:currentColor;display:inline-block}
+.turn-badge{
+  align-self:center;justify-self:center;padding:8px 10px;border-radius:999px;
+  background:var(--surface-3);border:1px solid var(--line);color:var(--muted);
+  font-size:11px;line-height:1.25;text-align:center;white-space:nowrap;
+}
+.turn-badge strong{display:block;color:var(--text);font-size:12px;letter-spacing:.03em}
+.play{display:grid;grid-template-columns:270px minmax(0,1fr);gap:12px;align-items:start}
+.tile-dock{
+  display:grid;grid-template-columns:80px minmax(0,1fr) auto;gap:10px;align-items:center;
+  padding:12px;border:1px solid var(--line);border-radius:var(--radius);
+  background:linear-gradient(180deg,var(--surface-2),var(--surface));
+}
+.tile-preview{
+  width:80px;height:80px;border-radius:10px;overflow:hidden;flex:0 0 auto;
+  background:#2a3122;border:1px solid rgba(255,255,255,.12);
+  box-shadow:inset 0 2px 8px rgba(0,0,0,.4);
+}
+.tile-preview svg{width:100%;height:100%;display:block}
+.tile-meta{min-width:0}
+.tile-meta strong{display:block;font-size:14px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile-meta span{display:block;color:var(--muted);font-size:11px;margin-top:3px}
+.rot-badge{display:inline-block;margin-top:6px;padding:2px 7px;border-radius:999px;background:var(--surface-3);border:1px solid var(--line);font-size:10px;color:var(--muted)}
+.rotate-row{display:flex;flex-direction:column;gap:6px}
+.icon-btn{
+  width:44px;height:44px;border-radius:12px;border:1px solid var(--line);
+  background:var(--surface-3);font-size:20px;line-height:1;cursor:pointer;
+}
+.icon-btn:hover{border-color:#6b7658}
+.icon-btn:disabled{opacity:.38;cursor:not-allowed}
+.board-panel{
+  min-width:0;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;
+  background:linear-gradient(180deg,#191e14,#141810);box-shadow:var(--shadow);
+}
+.board-toolbar{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:8px 10px;border-bottom:1px solid var(--line);background:rgba(0,0,0,.12);
+}
+.zoom-group{display:flex;align-items:center;gap:6px}
+.zoom-group button{
+  width:44px;height:44px;border-radius:10px;border:1px solid var(--line);
+  background:var(--surface-2);font-size:18px;cursor:pointer;line-height:1;
+}
+.zoom-group button:hover{border-color:#6b7658}
+#zoomLabel{min-width:42px;text-align:center;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.mini{
+  min-height:44px;padding:0 12px;border-radius:10px;border:1px solid var(--line);
+  background:var(--surface-2);font-size:12px;cursor:pointer;
+}
+.mini:hover{border-color:#6b7658}
+.board-scroll{
+  width:100%;max-height:min(54vh,560px);overflow:auto;overscroll-behavior:contain;
+  padding:8px;scrollbar-color:#4a543a #1a1f15;
+  -webkit-overflow-scrolling:touch;
+}
+.board-scroll:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+.board{
+  display:grid;
+  grid-template-columns:repeat(25,var(--cell));
+  grid-template-rows:repeat(25,var(--cell));
+  gap:1px;width:max-content;height:max-content;
+  background:#2b3322;padding:0;margin:0 auto;border-radius:6px;overflow:hidden;
+}
+.cell{
+  width:var(--cell);height:var(--cell);padding:0;margin:0;border:0;border-radius:2px;
+  background:#313a27;position:relative;display:block;overflow:hidden;color:var(--text);
+  font-size:9px;line-height:1;
+}
+.cell:disabled{opacity:1}
+.cell svg{width:100%;height:100%;display:block}
+.cell.legal{
+  cursor:pointer;background:rgba(224,168,62,.14);
+  box-shadow:inset 0 0 0 2px rgba(224,168,62,.75);
+}
+.cell.legal:hover{background:rgba(224,168,62,.26)}
+.cell.legal:focus-visible{outline:3px solid #fff;outline-offset:-3px;z-index:4}
+.cell.selected{background:rgba(224,168,62,.32);box-shadow:inset 0 0 0 3px var(--accent);z-index:3}
+.cell.selected svg{opacity:.72}
+.cell .meeple{
+  position:absolute;width:38%;height:38%;min-width:12px;min-height:12px;border-radius:50%;
+  border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.55);transform:translate(-50%,-50%);
+  pointer-events:none;z-index:2;
+}
+.action-bar{display:flex;gap:10px;margin-top:12px}
+.btn{
+  min-height:48px;flex:1;border-radius:13px;border:1px solid var(--line);
+  background:var(--surface-2);font-size:15px;font-weight:600;cursor:pointer;padding:0 16px;
+}
+.btn:hover:not(:disabled){border-color:#6b7658}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:#efbf63}
+.btn.primary:hover:not(:disabled){background:#efbb5c}
+.btn.ghost{background:transparent}
+.meeple-panel{
+  margin-top:12px;padding:14px;border:1px solid rgba(224,168,62,.5);border-radius:var(--radius);
+  background:linear-gradient(180deg,rgba(224,168,62,.10),rgba(224,168,62,.03)),var(--surface);
+}
+.panel-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.panel-head h2{margin:0;font-size:14px;letter-spacing:.04em}
+.panel-head span{font-size:11px;color:var(--muted)}
+.meeple-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:10px}
+.meeple-option{
+  min-height:54px;text-align:left;padding:8px 10px;border-radius:11px;
+  border:1px solid var(--line);background:var(--surface-3);cursor:pointer;
+  display:flex;flex-direction:column;justify-content:center;gap:1px;
+}
+.meeple-option:hover:not(:disabled){border-color:var(--accent)}
+.meeple-option:disabled{opacity:.45;cursor:not-allowed}
+.meeple-option b{font-size:13px;font-weight:600}
+.meeple-option small{font-size:10px;color:var(--muted)}
+.meeple-option .state{color:var(--accent)}
+.hint{
+  margin:12px 0 0;padding:10px 12px;border-radius:12px;border:1px solid var(--line);
+  background:rgba(0,0,0,.16);color:var(--muted);font-size:12px;min-height:42px;
+  display:flex;align-items:center;gap:8px;
+}
+.hint::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--green);flex:0 0 auto}
+.log-panel{margin-top:14px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);overflow:hidden}
+.log-panel .panel-head{padding:10px 14px;margin:0;border-bottom:1px solid var(--line);background:rgba(0,0,0,.12)}
+.log{list-style:none;margin:0;padding:0;max-height:190px;overflow:auto;overscroll-behavior:contain}
+.log li{
+  display:grid;grid-template-columns:44px minmax(0,1fr);gap:8px;padding:8px 14px;
+  border-top:1px solid rgba(255,255,255,.045);font-size:12px;color:var(--muted);
+}
+.log li:first-child{border-top:0}
+.log li .t{color:#7f8a6d;font-size:10px;font-variant-numeric:tabular-nums;padding-top:1px}
+.log li.score{color:var(--accent)}
+.log li.meeple{color:#d6c7a2}
+.log li.over{color:var(--green);font-weight:600}
+.log li.discard{color:var(--danger)}
+.foot{max-width:1080px;margin:0 auto;padding:0 16px 30px;color:var(--muted);font-size:12px;display:flex;gap:14px;flex-wrap:wrap}
+.foot a{color:var(--muted);min-height:44px;display:inline-flex;align-items:center}
+.foot a:hover{color:var(--accent)}
+.overlay{
+  position:fixed;inset:0;z-index:40;padding:16px;display:grid;place-items:center;
+  background:rgba(7,9,5,.78);backdrop-filter:blur(5px);
+}
+.dialog{
+  width:100%;max-width:460px;max-height:92vh;overflow:auto;
+  border:1px solid #4c553d;border-radius:20px;background:linear-gradient(180deg,#242b1c,#171b13);
+  box-shadow:0 28px 80px rgba(0,0,0,.6);padding:20px;
+}
+.eyebrow{margin:0 0 4px;color:var(--accent);font-size:11px;letter-spacing:.18em;text-transform:uppercase}
+.dialog h2{margin:0;font-size:25px;line-height:1.2}
+.result-reason{margin:6px 0 16px;color:var(--muted);font-size:13px}
+.final-scores{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0 0 14px}
+.final-score{
+  padding:12px;border:1px solid var(--line);border-radius:13px;background:rgba(0,0,0,.18);
+}
+.final-score.winner{border-color:var(--accent);background:rgba(224,168,62,.10)}
+.final-score span{display:block;font-size:11px;color:var(--muted)}
+.final-score strong{display:block;font-size:28px;line-height:1.15;font-variant-numeric:tabular-nums}
+.breakdown-title{margin:16px 0 8px;font-size:12px;color:var(--muted);letter-spacing:.06em}
+.breakdown{list-style:none;margin:0 0 18px;padding:0;max-height:170px;overflow:auto}
+.breakdown li{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-top:1px solid rgba(255,255,255,.06);font-size:12px}
+.breakdown li:first-child{border-top:0}
+.breakdown .pts{color:var(--accent);font-weight:700;white-space:nowrap}
+.breakdown .who{color:var(--muted);font-size:10px;display:block}
+.dialog-actions{display:flex;gap:8px}
+.dialog-actions .btn{min-height:48px}
+@media (max-width:760px){
+  .play{grid-template-columns:1fr}
+  .tile-dock{grid-template-columns:76px minmax(0,1fr) auto;padding:10px}
+  .tile-preview{width:76px;height:76px}
+  .board-scroll{max-height:52vh}
+}
+@media (max-width:430px){
+  .top{padding:10px 12px 6px;gap:8px}
+  .brand-mark{width:40px;height:40px;border-radius:11px}
+  .brand h1{font-size:18px}
+  .brand p{font-size:10px;max-width:150px}
+  .top-nav a,.top-nav button{min-height:44px;padding:0 10px;font-size:12px}
+  .wrap{padding:6px 10px 28px}
+  .scoreboard{gap:5px}
+  .score-card{padding:8px;gap:7px;border-radius:12px}
+  .score-line strong{font-size:22px}
+  .score-card .dot{width:10px;height:10px}
+  .meeples{font-size:10px}
+  .turn-badge{padding:6px 7px;font-size:10px}
+  .turn-badge strong{font-size:11px}
+  .meeple-options{grid-template-columns:1fr}
+  .action-bar{gap:8px}
+  .log li{grid-template-columns:38px minmax(0,1fr);padding:7px 11px}
+  .board-scroll{max-height:50vh;padding:6px}
+  .foot{padding:0 12px 26px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#boardScroll">跳转到棋盘</a>
+
+<header class="top">
+  <div class="brand">
+    <div class="brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#2a1a0d" stroke-width="1.6" stroke-linejoin="round">
+        <path d="M3 20V8l4-4 4 4v3h3V8l4-4 3 4v12z" fill="#f0d9b5"/>
+        <path d="M11 20v-5h2v5" stroke="#8a5a32"/>
+      </svg>
+    </div>
+    <div>
+      <h1>卡卡颂</h1>
+      <p>2 人对战 · 你 vs AI · 50 张瓦片</p>
+    </div>
+  </div>
+  <nav class="top-nav" aria-label="页面导航">
+    <a href="rules.html">规则</a>
+    <button type="button" id="newGame">重开</button>
+  </nav>
+</header>
+
+<main class="wrap">
+  <section class="scoreboard" aria-label="比分与回合">
+    <div class="score-card" id="card0">
+      <span class="dot" id="dot0" style="background:#c0392b"></span>
+      <div>
+        <span class="score-name">你</span>
+        <span class="score-line"><strong id="score0">0</strong><span class="unit">分</span></span>
+      </div>
+      <span class="meeples" id="meeples0"><span class="meeple-pip" style="color:#c0392b"></span>7</span>
+    </div>
+    <div class="turn-badge" id="turnBadge"><strong>第 1 回合</strong><span id="turnWho">你的回合</span></div>
+    <div class="score-card ai" id="card1">
+      <span class="dot" id="dot1" style="background:#2b6cb0"></span>
+      <div>
+        <span class="score-name">AI 对手</span>
+        <span class="score-line"><strong id="score1">0</strong><span class="unit">分</span></span>
+      </div>
+      <span class="meeples" id="meeples1"><span class="meeple-pip" style="color:#2b6cb0"></span>7</span>
+    </div>
+  </section>
+
+  <section class="play" aria-label="对局区域">
+    <div class="tile-dock">
+      <div class="tile-preview" id="preview" aria-label="当前瓦片预览"></div>
+      <div class="tile-meta">
+        <strong id="tileName">正在发牌…</strong>
+        <span id="deckLeft">牌堆 --</span>
+        <span class="rot-badge" id="rotBadge">朝向 0°</span>
+      </div>
+      <div class="rotate-row">
+        <button class="icon-btn" id="rotateLeft" type="button" aria-label="瓦片向左旋转 90 度" disabled>⟲</button>
+        <button class="icon-btn" id="rotateRight" type="button" aria-label="瓦片向右旋转 90 度" disabled>⟳</button>
+      </div>
+    </div>
+
+    <div class="board-panel">
+      <div class="board-toolbar">
+        <div class="zoom-group" role="group" aria-label="棋盘缩放">
+          <button type="button" id="zoomOut" aria-label="缩小棋盘">−</button>
+          <span id="zoomLabel">100%</span>
+          <button type="button" id="zoomIn" aria-label="放大棋盘">＋</button>
+        </div>
+        <button type="button" class="mini" id="fitBoard" aria-label="缩放到 15 乘 15 全览">15×15 全览</button>
+      </div>
+      <div class="board-scroll" id="boardScroll" tabindex="0" aria-label="棋盘区域，可左右上下滚动">
+        <div class="board" id="board" role="group" aria-label="25 乘 25 卡卡颂棋盘"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="action-bar" aria-label="放置操作">
+    <button class="btn primary" id="confirm" type="button" disabled>确认放置</button>
+    <button class="btn ghost" id="cancel" type="button" disabled>取消选择</button>
+  </section>
+
+  <section class="meeple-panel" id="meeplePanel" hidden aria-labelledby="meepleTitle">
+    <div class="panel-head">
+      <h2 id="meepleTitle">放置米宝（可选）</h2>
+      <span id="meepleHint">每方 7 枚</span>
+    </div>
+    <div class="meeple-options" id="meepleOptions"></div>
+    <button class="btn ghost" id="skipMeeple" type="button">跳过，不放米宝</button>
+  </section>
+
+  <p class="hint" id="hint" role="status" aria-live="polite">正在准备棋盘…</p>
+
+  <section class="log-panel" aria-labelledby="logTitle">
+    <div class="panel-head">
+      <h2 id="logTitle">对局记录</h2>
+      <span id="logCount"></span>
+    </div>
+    <ol class="log" id="log" aria-live="polite" aria-relevant="additions"></ol>
+  </section>
+</main>
+
+<footer class="foot">
+  <a href="rules.html">完整规则与计分说明</a>
+  <span>纯前端 · 无外部请求 · 可离线游玩</span>
+</footer>
+
+<div class="overlay" id="resultOverlay" hidden>
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="resultTitle" aria-describedby="resultReason">
+    <p class="eyebrow">终局结算</p>
+    <h2 id="resultTitle">对局结束</h2>
+    <p class="result-reason" id="resultReason"></p>
+    <div class="final-scores" id="finalScores"></div>
+    <p class="breakdown-title">终局明细</p>
+    <ul class="breakdown" id="breakdown"></ul>
+    <div class="dialog-actions">
+      <button class="btn primary" id="playAgain" type="button">再来一局</button>
+      <button class="btn ghost" id="viewBoard" type="button">查看棋盘</button>
+    </div>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script src="engine.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var Engine = window.CarcassonneEngine;
+  var DATA = window.CarcassonneData;
+  if (!Engine || !DATA) {
+    document.getElementById('hint').textContent = '引擎加载失败，请检查 data.js 与 engine.js。';
+    return;
+  }
+
+  var CELL_MIN = 20;
+  var CELL_MAX = 82;
+  var ZOOM_STEPS = [26, 32, 38, 46, 56, 68, 82];
+  var DEFAULT_CELL = 48;
+
+  var params = new URLSearchParams(window.location.search);
+  var seedParam = params.get('seed');
+  var speedParam = params.get('speed');
+  var AI_DELAY = speedParam != null ? Math.max(20, Math.min(2000, Number(speedParam) || 20)) : 620;
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    AI_DELAY = Math.min(AI_DELAY, 120);
+  }
+
+  var state = null;
+  var selected = null;
+  var aiTimer = null;
+  var aiPendingMeeple = null;
+  var cellSize = DEFAULT_CELL;
+  var cellEls = Object.create(null);
+  var currentLegal = [];
+  var overlayShown = false;
+  var resultDismissed = false;
+
+  var el = {
+    board: document.getElementById('board'),
+    boardScroll: document.getElementById('boardScroll'),
+    preview: document.getElementById('preview'),
+    tileName: document.getElementById('tileName'),
+    deckLeft: document.getElementById('deckLeft'),
+    rotBadge: document.getElementById('rotBadge'),
+    rotateLeft: document.getElementById('rotateLeft'),
+    rotateRight: document.getElementById('rotateRight'),
+    confirm: document.getElementById('confirm'),
+    cancel: document.getElementById('cancel'),
+    meeplePanel: document.getElementById('meeplePanel'),
+    meepleHint: document.getElementById('meepleHint'),
+    meepleOptions: document.getElementById('meepleOptions'),
+    skipMeeple: document.getElementById('skipMeeple'),
+    hint: document.getElementById('hint'),
+    log: document.getElementById('log'),
+    logCount: document.getElementById('logCount'),
+    score0: document.getElementById('score0'),
+    score1: document.getElementById('score1'),
+    meeples0: document.getElementById('meeples0'),
+    meeples1: document.getElementById('meeples1'),
+    card0: document.getElementById('card0'),
+    card1: document.getElementById('card1'),
+    turnBadge: document.getElementById('turnBadge'),
+    turnWho: document.getElementById('turnWho'),
+    zoomLabel: document.getElementById('zoomLabel'),
+    zoomIn: document.getElementById('zoomIn'),
+    zoomOut: document.getElementById('zoomOut'),
+    fitBoard: document.getElementById('fitBoard'),
+    overlay: document.getElementById('resultOverlay'),
+    resultTitle: document.getElementById('resultTitle'),
+    resultReason: document.getElementById('resultReason'),
+    finalScores: document.getElementById('finalScores'),
+    breakdown: document.getElementById('breakdown'),
+    playAgain: document.getElementById('playAgain'),
+    viewBoard: document.getElementById('viewBoard')
+  };
+
+  function esc(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function boardXY(key) {
+    var p = key.split(',');
+    return { x: Number(p[0]), y: Number(p[1]) };
+  }
+
+  function humanTurn() {
+    return state && state.currentPlayer === 0 && state.phase === 'placing';
+  }
+
+  function humanMeeple() {
+    return state && state.currentPlayer === 0 && state.phase === 'meeple';
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* 瓦片绘制                                                            */
+  /* ------------------------------------------------------------------ */
+
+  var EDGE_MID = [[50, 0], [100, 50], [50, 100], [0, 50]];
+  var CITY_BAND = [
+    'M0 0 H100 V27 Q50 40 0 27 Z',
+    'M100 0 V100 H73 Q60 50 73 0 Z',
+    'M0 100 H100 V73 Q50 60 0 73 Z',
+    'M0 0 V100 H27 Q40 50 27 0 Z'
+  ];
+
+  function tileSvg(tile) {
+    var out = [];
+    out.push('<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" focusable="false">');
+    out.push('<rect width="100" height="100" fill="#8fae63"/>');
+    out.push('<circle cx="22" cy="74" r="2.2" fill="#7d9c52"/>');
+    out.push('<circle cx="74" cy="24" r="2.2" fill="#7d9c52"/>');
+    out.push('<circle cx="80" cy="82" r="1.7" fill="#7d9c52"/>');
+
+    tile.cities.forEach(function (group) {
+      group.forEach(function (dir) {
+        out.push('<path d="' + CITY_BAND[dir] + '" fill="#b37b4a"/>');
+      });
+      if (group.length >= 2) {
+        out.push('<circle cx="50" cy="50" r="23" fill="#b37b4a"/>');
+      }
+      group.forEach(function (dir) {
+        out.push('<path d="' + CITY_BAND[dir] + '" fill="none" stroke="#7a4f2d" stroke-width="1.4" opacity=".65"/>');
+      });
+      out.push('<circle cx="50" cy="50" r="23" fill="none" stroke="#7a4f2d" stroke-width="1"/>');
+    });
+
+    tile.roads.forEach(function (group) {
+      group.forEach(function (dir) {
+        var p = EDGE_MID[dir];
+        out.push('<line x1="' + p[0] + '" y1="' + p[1] + '" x2="50" y2="50" stroke="#c8b388" stroke-width="14" stroke-linecap="round"/>');
+        out.push('<line x1="' + p[0] + '" y1="' + p[1] + '" x2="50" y2="50" stroke="#efe2c2" stroke-width="7" stroke-linecap="round"/>');
+        out.push('<line x1="' + p[0] + '" y1="' + p[1] + '" x2="50" y2="50" stroke="#d3c09a" stroke-width="1.2" stroke-dasharray="3 4" opacity=".8"/>');
+      });
+      out.push('<circle cx="50" cy="50" r="4.6" fill="#c8b388"/>');
+    });
+
+    if (tile.monastery) {
+      out.push('<g>');
+      out.push('<rect x="41" y="43" width="18" height="20" rx="2" fill="#f2e7cf" stroke="#6b4f33" stroke-width="1.8"/>');
+      out.push('<path d="M37 45 L50 33 L63 45 Z" fill="#a55239" stroke="#6b4f33" stroke-width="1.4"/>');
+      out.push('<path d="M50 33 V26 M46.5 29.5 H53.5" stroke="#f2e7cf" stroke-width="2" stroke-linecap="round"/>');
+      out.push('<rect x="48.5" y="53" width="3" height="10" rx="1" fill="#6b4f33"/>');
+      out.push('</g>');
+    }
+
+    out.push('<rect x="0.5" y="0.5" width="99" height="99" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="1"/>');
+    out.push('</svg>');
+    return out.join('');
+  }
+
+  function featureGroups(tile, kind) {
+    if (kind === 'city') return tile.cities;
+    if (kind === 'road') return tile.roads;
+    return tile.fields;
+  }
+
+  function meeplePosition(tile, meeple, index) {
+    var base = { x: 50, y: 50 };
+    if (meeple.kind === 'monastery') {
+      base = { x: 50, y: 62 };
+    } else {
+      var group = featureGroups(tile, meeple.kind)[meeple.group] || [];
+      var ax = 0, ay = 0;
+      group.forEach(function (dir) {
+        ax += EDGE_MID[dir][0];
+        ay += EDGE_MID[dir][1];
+      });
+      ax = group.length ? ax / group.length : 50;
+      ay = group.length ? ay / group.length : 50;
+      var pull = meeple.kind === 'field' ? 0.72 : (meeple.kind === 'road' ? 0.4 : 0.56);
+      base = { x: 50 + (ax - 50) * pull, y: 50 + (ay - 50) * pull };
+    }
+    var offset = (index % 3) * 6 - 6;
+    return { x: base.x + offset, y: base.y + Math.floor(index / 3) * 7 };
+  }
+
+  function tileHtml(tile) {
+    var html = tileSvg(tile);
+    tile.meeples.forEach(function (meeple, index) {
+      var player = state.players[meeple.player];
+      var pos = meeplePosition(tile, meeple, index);
+      var label = player ? player.name : '玩家';
+      html += '<span class="meeple" style="left:' + pos.x.toFixed(1) + '%;top:' + pos.y.toFixed(1) +
+        '%;background:' + (player ? player.color : '#fff') + '" title="' + esc(label) + '的米宝"></span>';
+    });
+    return html;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* 棋盘构建与渲染                                                      */
+  /* ------------------------------------------------------------------ */
+
+  function buildBoard() {
+    var frag = document.createDocumentFragment();
+    el.board.innerHTML = '';
+    for (var y = DATA.BOARD_MIN; y <= DATA.BOARD_MAX; y++) {
+      for (var x = DATA.BOARD_MIN; x <= DATA.BOARD_MAX; x++) {
+        var key = Engine.boardKey(x, y);
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'cell';
+        btn.dataset.key = key;
+        btn.dataset.x = String(x);
+        btn.dataset.y = String(y);
+        btn.setAttribute('aria-label', '坐标 ' + x + ', ' + y + '，不可放置');
+        btn.disabled = true;
+        btn.addEventListener('click', onCellClick);
+        btn.addEventListener('keydown', onCellKeydown);
+        cellEls[key] = btn;
+        frag.appendChild(btn);
+      }
+    }
+    el.board.appendChild(frag);
+  }
+
+  function selectCell(btn) {
+    if (btn.disabled || !humanTurn()) return;
+    var x = Number(btn.dataset.x), y = Number(btn.dataset.y);
+    if (cellSize < 44) {
+      setCellSize(46, true);
+      var scroll = el.boardScroll;
+      var indexX = x - DATA.BOARD_MIN;
+      var indexY = y - DATA.BOARD_MIN;
+      scroll.scrollLeft = Math.max(0, indexX * (cellSize + 1) + cellSize / 2 - scroll.clientWidth / 2);
+      scroll.scrollTop = Math.max(0, indexY * (cellSize + 1) + cellSize / 2 - scroll.clientHeight / 2);
+      setHint('已放大棋盘，请再次点击高亮格放置。');
+      return;
+    }
+    selected = { x: x, y: y };
+    renderBoard();
+    renderControls();
+    renderHint();
+  }
+
+  function onCellClick(event) {
+    selectCell(event.currentTarget);
+  }
+
+  function onCellKeydown(event) {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      selectCell(event.currentTarget);
+      return;
+    }
+    var dirs = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] };
+    var d = dirs[event.key];
+    if (!d) return;
+    event.preventDefault();
+    var x = Number(event.currentTarget.dataset.x);
+    var y = Number(event.currentTarget.dataset.y);
+    var best = null;
+    var bestScore = Infinity;
+    currentLegal.forEach(function (p) {
+      var dx = p.x - x, dy = p.y - y;
+      if (d[0] && Math.sign(dx) !== d[0]) return;
+      if (d[1] && Math.sign(dy) !== d[1]) return;
+      if (!dx && !dy) return;
+      var along = Math.abs(dx * d[0] + dy * d[1]);
+      var across = Math.abs(dx * d[1] + dy * d[0]);
+      var score = along * 10 + across;
+      if (score < bestScore) { bestScore = score; best = p; }
+    });
+    if (best) {
+      var next = cellEls[Engine.boardKey(best.x, best.y)];
+      if (next) next.focus();
+    }
+  }
+
+  function legalPlacements() {
+    if (!humanTurn()) return [];
+    return Engine.getLegalPlacements(state, state.currentTile.tileId, state.currentTile.rot);
+  }
+
+  function renderBoard() {
+    var legal = legalPlacements();
+    currentLegal = legal;
+    var legalMap = Object.create(null);
+    legal.forEach(function (p) { legalMap[Engine.boardKey(p.x, p.y)] = p; });
+
+    for (var y = DATA.BOARD_MIN; y <= DATA.BOARD_MAX; y++) {
+      for (var x = DATA.BOARD_MIN; x <= DATA.BOARD_MAX; x++) {
+        var key = Engine.boardKey(x, y);
+        var btn = cellEls[key];
+        if (!btn) continue;
+        var tile = state.board[key];
+        if (tile) {
+          btn.disabled = true;
+          btn.className = 'cell occupied';
+          btn.innerHTML = tileHtml(tile);
+          var ms = tile.meeples.map(function (m) {
+            var p = state.players[m.player];
+            return (p ? p.name : '玩家') + '的米宝';
+          }).join('、');
+          btn.setAttribute('aria-label', '坐标 ' + x + ', ' + y + '，' + tile.name +
+            '，朝向 ' + (tile.rot * 90) + ' 度' + (ms ? '，' + ms : ''));
+        } else if (legalMap[key]) {
+          btn.disabled = false;
+          var isSelected = selected && selected.x === x && selected.y === y;
+          btn.className = 'cell legal' + (isSelected ? ' selected' : '');
+          if (isSelected && state.currentTile) {
+            var def = Engine.currentTileDef(state);
+            var ghost = Engine.makeTile(def, state.currentTile.rot);
+            btn.innerHTML = tileSvg(ghost);
+          } else {
+            btn.innerHTML = '';
+          }
+          var label = '坐标 ' + x + ', ' + y + '，可放置' +
+            (state.currentTile ? '「' + (Engine.currentTileDef(state) || {}).name + '」' : '');
+          if (isSelected) label += '，已选中，按确认放置';
+          btn.setAttribute('aria-label', label);
+        } else {
+          btn.disabled = true;
+          btn.className = 'cell';
+          btn.innerHTML = '';
+          btn.setAttribute('aria-label', '坐标 ' + x + ', ' + y + '，不可放置');
+        }
+      }
+    }
+  }
+
+  function renderPreview() {
+    if (!state || state.phase === 'over' || !state.currentTile) {
+      el.preview.innerHTML = '<div style="height:100%;display:grid;place-items:center;color:#7f8a6d;font-size:11px">终局</div>';
+      el.tileName.textContent = state && state.phase === 'over' ? '对局结束' : '正在发牌…';
+      el.deckLeft.textContent = state ? ('牌堆剩 ' + state.deck.length + ' 张 · 已弃 ' + state.discard.length + ' 张') : '牌堆 --';
+      el.rotBadge.textContent = '朝向 --';
+      el.rotateLeft.disabled = true;
+      el.rotateRight.disabled = true;
+      return;
+    }
+    var def = Engine.currentTileDef(state);
+    var tile = Engine.makeTile(def, state.currentTile.rot);
+    el.preview.innerHTML = tileSvg(tile);
+    el.preview.setAttribute('aria-label', '当前瓦片：' + def.name + '，朝向 ' + (state.currentTile.rot * 90) + ' 度');
+    el.tileName.textContent = def.name;
+    el.deckLeft.textContent = '牌堆剩 ' + state.deck.length + ' 张 · 已弃 ' + state.discard.length + ' 张';
+    el.rotBadge.textContent = '朝向 ' + (state.currentTile.rot * 90) + '°';
+    var canRotate = humanTurn();
+    el.rotateLeft.disabled = !canRotate;
+    el.rotateRight.disabled = !canRotate;
+  }
+
+  function renderScoreboard() {
+    if (!state) return;
+    el.score0.textContent = state.players[0].score;
+    el.score1.textContent = state.players[1].score;
+    el.meeples0.innerHTML = '<span class="meeple-pip" style="color:' + state.players[0].color + '"></span>' + state.players[0].meeples;
+    el.meeples1.innerHTML = '<span class="meeple-pip" style="color:' + state.players[1].color + '"></span>' + state.players[1].meeples;
+    el.card0.classList.toggle('active', state.currentPlayer === 0 && state.phase !== 'over');
+    el.card1.classList.toggle('active', state.currentPlayer === 1 && state.phase !== 'over');
+    el.turnBadge.querySelector('strong').textContent = state.phase === 'over' ? '终局' : ('第 ' + state.turn + ' 回合');
+    el.turnWho.textContent = state.phase === 'over' ? '已结束' : (state.currentPlayer === 0 ? '你的回合' : 'AI 回合');
+  }
+
+  function renderControls() {
+    var canConfirm = humanTurn() && !!selected;
+    el.confirm.disabled = !canConfirm;
+    el.cancel.disabled = !selected || !humanTurn();
+  }
+
+  function renderMeeplePanel() {
+    var show = humanMeeple();
+    el.meeplePanel.hidden = !show;
+    if (!show) return;
+    var player = state.players[0];
+    var options = Engine.getMeepleOptions(state, 0);
+    el.meepleHint.textContent = '可用米宝 ' + player.meeples + ' 枚';
+    el.meepleOptions.innerHTML = '';
+    if (!options.length) {
+      var p = document.createElement('p');
+      p.style.margin = '0';
+      p.style.fontSize = '12px';
+      p.style.color = 'var(--muted)';
+      p.textContent = player.meeples <= 0 ? '米宝已用完，本次只能跳过。' : '这张瓦片没有可放置米宝的区域。';
+      el.meepleOptions.appendChild(p);
+    }
+    options.forEach(function (opt) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'meeple-option';
+      btn.disabled = opt.occupied;
+      var detail = opt.occupied ? '已有米宝' :
+        (opt.complete ? '完成即可得分' : '未完成 · ' + (opt.openEdges || 0) + ' 个开口') +
+        (opt.kind === 'monastery' ? ' · 周围 ' + Engine.monasteryNeighborCount(state, state.lastPlaced) + '/8' : '');
+      btn.innerHTML = '<b>' + esc(opt.label) + '</b><small class="' + (opt.complete ? 'state' : '') + '">' +
+        esc(detail) + '</small>';
+      btn.setAttribute('aria-label', '放置米宝到' + opt.label + (opt.occupied ? '，已有米宝，不可用' : ''));
+      btn.addEventListener('click', function () {
+        try {
+          Engine.placeMeeple(state, opt.kind, opt.group, 0);
+        } catch (error) {
+          setHint(error.message);
+          return;
+        }
+        selected = null;
+        renderAll();
+        scheduleAI();
+      });
+      el.meepleOptions.appendChild(btn);
+    });
+    var canSkip = player.meeples > 0 || options.length > 0;
+    el.skipMeeple.disabled = !canSkip;
+  }
+
+  function playerNames(players) {
+    if (!players || !players.length) return '无人';
+    return players.map(function (pi) { return state.players[pi] ? state.players[pi].name : ('玩家' + pi); }).join('、');
+  }
+
+  function renderLog() {
+    if (!state) return;
+    var entries = state.log.slice(-24).reverse();
+    el.log.innerHTML = '';
+    entries.forEach(function (entry) {
+      var li = document.createElement('li');
+      li.className = entry.type || '';
+      var t = document.createElement('span');
+      t.className = 't';
+      t.textContent = entry.turn ? ('#' + entry.turn) : '·';
+      var text = document.createElement('span');
+      text.textContent = entry.text;
+      li.appendChild(t);
+      li.appendChild(text);
+      el.log.appendChild(li);
+    });
+    el.logCount.textContent = '共 ' + state.log.length + ' 条';
+  }
+
+  function setHint(text) {
+    el.hint.textContent = text;
+  }
+
+  function renderHint() {
+    if (!state) return;
+    if (state.phase === 'over') {
+      setHint('对局结束。查看终局结算，或点「重开」再来一局。');
+    } else if (state.currentPlayer === 1) {
+      setHint(state.phase === 'meeple' ? 'AI 正在选择是否放置米宝…' : 'AI 正在寻找合法位置…');
+    } else if (state.phase === 'meeple') {
+      setHint('先决定是否在刚放置的瓦片上放一个米宝；完成后点击高亮位置继续。');
+    } else if (selected) {
+      setHint('已选中坐标 (' + selected.x + ', ' + selected.y + ')。点「确认放置」，或重新选择高亮格。');
+    } else if (state.currentTile) {
+      setHint('使用 ⟲ / ⟳ 旋转瓦片（键盘 R），再点击棋盘上的高亮格。');
+    } else {
+      setHint('正在发牌…');
+    }
+  }
+
+  function renderResult() {
+    if (!state || state.phase !== 'over' || !state.result) {
+      el.overlay.hidden = true;
+      overlayShown = false;
+      return;
+    }
+    var result = state.result;
+    var winnerNames = playerNames(result.winners);
+    el.resultTitle.textContent = result.tie ? '平局！' : (winnerNames + ' 获胜！');
+    el.resultReason.textContent = result.tie
+      ? '双方总分相同，共享胜利。'
+      : '总分更高的一方获胜。';
+    el.finalScores.innerHTML = '';
+    state.players.forEach(function (player, index) {
+      var card = document.createElement('div');
+      card.className = 'final-score' + (result.winners.indexOf(index) >= 0 ? ' winner' : '');
+      card.innerHTML = '<span>' + esc(player.name) + '</span><strong>' + result.scores[index] +
+        '</strong><span>剩余米宝 ' + player.meeples + ' 枚</span>';
+      el.finalScores.appendChild(card);
+    });
+    el.breakdown.innerHTML = '';
+    if (!result.breakdown.length) {
+      var none = document.createElement('li');
+      none.innerHTML = '<span>没有需要结算的未完成区域或农田。</span><span class="pts">+0</span>';
+      el.breakdown.appendChild(none);
+    }
+    result.breakdown.forEach(function (ev) {
+      var li = document.createElement('li');
+      li.innerHTML = '<span>' + esc(ev.label) + '<span class="who">' + esc(playerNames(ev.players)) +
+        ' · ' + ev.tiles + ' 块瓦片</span></span><span class="pts">+' + ev.points + '</span>';
+      el.breakdown.appendChild(li);
+    });
+    if (!resultDismissed && !overlayShown) {
+      el.overlay.hidden = false;
+      overlayShown = true;
+      window.setTimeout(function () { el.playAgain.focus(); }, 30);
+    }
+  }
+
+  function renderAll() {
+    if (!state) return;
+    renderScoreboard();
+    renderPreview();
+    renderBoard();
+    renderControls();
+    renderMeeplePanel();
+    renderLog();
+    renderHint();
+    renderResult();
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* 缩放与滚动                                                          */
+  /* ------------------------------------------------------------------ */
+
+  function setCellSize(size, keepCenter) {
+    size = Math.max(CELL_MIN, Math.min(CELL_MAX, Math.round(size)));
+    var scroll = el.boardScroll;
+    var old = cellSize;
+    var cx = old ? (scroll.scrollLeft + scroll.clientWidth / 2) / old : 0;
+    var cy = old ? (scroll.scrollTop + scroll.clientHeight / 2) / old : 0;
+    cellSize = size;
+    el.board.style.setProperty('--cell', size + 'px');
+    el.zoomLabel.textContent = Math.round(size / DEFAULT_CELL * 100) + '%';
+    if (keepCenter && old) {
+      scroll.scrollLeft = cx * size - scroll.clientWidth / 2;
+      scroll.scrollTop = cy * size - scroll.clientHeight / 2;
+    }
+  }
+
+  function zoomBy(direction) {
+    var index = ZOOM_STEPS.findIndex(function (s) { return s >= cellSize; });
+    if (index < 0) index = ZOOM_STEPS.length - 1;
+    if (direction > 0) index = Math.min(ZOOM_STEPS.length - 1, index + 1);
+    else index = Math.max(0, index - 1);
+    setCellSize(ZOOM_STEPS[index], true);
+  }
+
+  function fitBoard() {
+    var width = el.boardScroll.clientWidth || 360;
+    var size = Math.floor((width - 34) / 15);
+    setCellSize(size, true);
+    centerOnStart();
+  }
+
+  function centerOnStart() {
+    var scroll = el.boardScroll;
+    var startIndex = 12;
+    var gap = 1;
+    var target = startIndex * (cellSize + gap) + cellSize / 2;
+    scroll.scrollLeft = Math.max(0, target - scroll.clientWidth / 2);
+    scroll.scrollTop = Math.max(0, target - scroll.clientHeight / 2);
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* 回合驱动                                                            */
+  /* ------------------------------------------------------------------ */
+
+  function clearAITimer() {
+    if (aiTimer) {
+      window.clearTimeout(aiTimer);
+      aiTimer = null;
+    }
+  }
+
+  function scheduleAI() {
+    clearAITimer();
+    if (!state || state.phase === 'over') return;
+    if (state.currentPlayer !== 1) return;
+    aiTimer = window.setTimeout(aiStep, AI_DELAY);
+  }
+
+  function aiStep() {
+    aiTimer = null;
+    if (!state || state.phase === 'over' || state.currentPlayer !== 1) return;
+
+    if (state.phase === 'placing') {
+      var move = Engine.chooseAIMove(state, 1);
+      if (!move || move.type !== 'place') {
+        Engine.discardCurrentTile(state);
+        aiPendingMeeple = null;
+        renderAll();
+        scheduleAI();
+        return;
+      }
+      try {
+        Engine.placeCurrentTile(state, move);
+      } catch (error) {
+        setHint('AI 放置失败：' + error.message);
+        return;
+      }
+      aiPendingMeeple = move.meeple || null;
+      renderAll();
+      scheduleAI();
+      return;
+    }
+
+    if (state.phase === 'meeple') {
+      try {
+        if (aiPendingMeeple) {
+          Engine.placeMeeple(state, aiPendingMeeple.kind, aiPendingMeeple.group, 1);
+        } else {
+          Engine.skipMeeple(state);
+        }
+      } catch (error) {
+        try { Engine.skipMeeple(state); } catch (skipError) { /* 保持界面可用 */ }
+      }
+      aiPendingMeeple = null;
+      renderAll();
+      scheduleAI();
+    }
+  }
+
+  function afterHumanAction() {
+    selected = null;
+    renderAll();
+    scheduleAI();
+  }
+
+  function confirmPlacement() {
+    if (!humanTurn() || !selected) return;
+    try {
+      Engine.placeCurrentTile(state, {
+        x: selected.x, y: selected.y, rot: state.currentTile.rot
+      });
+    } catch (error) {
+      setHint(error.message);
+      return;
+    }
+    selected = null;
+    if (state.players[0].meeples <= 0) {
+      Engine.skipMeeple(state);
+      afterHumanAction();
+      return;
+    }
+    renderAll();
+    window.setTimeout(function () {
+      var first = el.meepleOptions.querySelector('button:not(:disabled)');
+      if (first) first.focus();
+      else el.skipMeeple.focus();
+    }, 30);
+  }
+
+  function cancelSelection() {
+    selected = null;
+    renderBoard();
+    renderControls();
+    renderHint();
+  }
+
+  function rotate(delta) {
+    if (!humanTurn()) return;
+    Engine.rotateCurrent(state, delta);
+    selected = null;
+    renderAll();
+    var btn = document.getElementById(delta > 0 ? 'rotateRight' : 'rotateLeft');
+    if (btn) btn.focus();
+  }
+
+  function skipMeeple() {
+    if (!humanMeeple()) return;
+    try {
+      Engine.skipMeeple(state);
+    } catch (error) {
+      setHint(error.message);
+      return;
+    }
+    afterHumanAction();
+  }
+
+  function startGame() {
+    clearAITimer();
+    aiPendingMeeple = null;
+    selected = null;
+    resultDismissed = false;
+    overlayShown = false;
+    el.overlay.hidden = true;
+    var seed = seedParam != null ? Number(seedParam) : undefined;
+    state = Engine.createGame({
+      seed: seed,
+      players: [{ name: '你', isAI: false }, { name: 'AI 对手', isAI: true }]
+    });
+    if (!Object.keys(cellEls).length) buildBoard();
+    setCellSize(cellSize || DEFAULT_CELL, false);
+    renderAll();
+    window.requestAnimationFrame(centerOnStart);
+    scheduleAI();
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* 事件绑定                                                            */
+  /* ------------------------------------------------------------------ */
+
+  el.rotateLeft.addEventListener('click', function () { rotate(-1); });
+  el.rotateRight.addEventListener('click', function () { rotate(1); });
+  el.confirm.addEventListener('click', confirmPlacement);
+  el.cancel.addEventListener('click', cancelSelection);
+  el.skipMeeple.addEventListener('click', skipMeeple);
+  el.zoomIn.addEventListener('click', function () { zoomBy(1); });
+  el.zoomOut.addEventListener('click', function () { zoomBy(-1); });
+  el.fitBoard.addEventListener('click', fitBoard);
+  el.playAgain.addEventListener('click', startGame);
+  el.viewBoard.addEventListener('click', function () {
+    resultDismissed = true;
+    el.overlay.hidden = true;
+    el.boardScroll.focus();
+  });
+  document.getElementById('newGame').addEventListener('click', startGame);
+
+  document.addEventListener('keydown', function (event) {
+    if (event.target && /^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName)) return;
+    if (event.key === 'r' || event.key === 'R') {
+      if (humanTurn()) { event.preventDefault(); rotate(1); }
+    } else if (event.key === 'Escape') {
+      if (selected) { event.preventDefault(); cancelSelection(); }
+    }
+  });
+
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) clearAITimer();
+    else if (state && state.currentPlayer === 1 && state.phase !== 'over') scheduleAI();
+  });
+
+  window.addEventListener('resize', function () {
+    if (cellSize < 30) fitBoard();
+  });
+
+  /* 供自动化冒烟测试读取的只读入口。 */
+  window.__carcassonne = {
+    getState: function () { return state; },
+    getCellSize: function () { return cellSize; },
+    engine: Engine,
+    data: DATA
+  };
+
+  startGame();
+})();
+</script>
+</body>
+</html>

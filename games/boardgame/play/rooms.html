@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="data:,">
+<title>房间 · 同机多标签</title>
+<style>
+  :root{
+    --bg:#0d1117;--panel:#161d26;--panel-2:#1e2833;--line:#2c3947;
+    --text:#e9eef5;--muted:#93a3b5;--accent:#4f9cf9;--danger:#ff7b72;--ok:#6fd18a;
+  }
+  *{box-sizing:border-box}
+  html,body{max-width:100%;overflow-x:hidden}
+  body{
+    margin:0;padding:10px;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    min-height:100dvh;display:flex;flex-direction:column;gap:10px;
+  }
+  [hidden]{display:none!important}
+  h1{font-size:18px;line-height:1.2;margin:0}
+  h2{font-size:14px;margin:12px 0 6px;color:var(--text)}
+  .top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+  .sub{margin:3px 0 0;color:var(--muted);font-size:12px;line-height:1.5}
+  a.link{color:var(--text);text-decoration:none;border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:10px 12px;min-height:44px;display:inline-flex;align-items:center;font-size:13px;white-space:nowrap}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;min-width:0}
+  .panel-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:8px}
+  .panel-head strong{font-size:14px}
+  .panel-head span{font-size:11px;color:var(--muted)}
+  form{display:flex;flex-direction:column;gap:8px}
+  .field{display:flex;flex-direction:column;gap:4px;min-width:0}
+  .field label{font-size:12px;color:var(--muted)}
+  input,select{
+    width:100%;min-height:44px;font-family:inherit;font-size:15px;color:var(--text);
+    background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:0 12px;outline:none;
+  }
+  input::placeholder{color:#667686}
+  input:focus-visible,select:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:8px;min-width:0}
+  button{
+    min-height:44px;min-width:72px;font-family:inherit;font-size:14px;color:var(--text);
+    background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:0 14px;cursor:pointer;
+    touch-action:manipulation;
+  }
+  button:active{filter:brightness(1.15)}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#08111d;font-weight:800}
+  button.ghost{background:transparent}
+  button.danger{border-color:#7a3733;color:#ffb4ad}
+  .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .msg{font-size:12px;line-height:1.5;min-height:16px;margin:4px 0 0;color:var(--muted);overflow-wrap:anywhere}
+  .msg.error{color:var(--danger)}
+  .msg.ok{color:var(--ok)}
+  .toast{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.5;overflow-wrap:anywhere}
+  .kv{display:flex;justify-content:space-between;gap:10px;align-items:baseline;padding:5px 0;border-bottom:1px dashed #25313d;font-size:13px}
+  .kv:last-of-type{border-bottom:0}
+  .kv span:first-child{color:var(--muted);flex:none}
+  .kv strong,.kv span:last-child{text-align:right;overflow-wrap:anywhere;min-width:0}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px}
+  ul.members{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+  ul.members li{display:flex;justify-content:space-between;gap:8px;background:var(--panel-2);border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-size:13px;min-width:0}
+  ul.members li .who{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  ul.members li .role{color:var(--muted);font-size:11px;flex:none}
+  .note{font-size:11px;color:#6f7f90;line-height:1.6;margin:0}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+  <header class="top">
+    <div>
+      <h1>房间 · 同机多标签</h1>
+      <p class="sub">密码房 / 邀请码 / 断线重连 / 语音占位（不接真实媒体）</p>
+    </div>
+    <a class="link" href="./mahjong.html">麻将</a>
+  </header>
+
+  <div class="toast" id="toast" role="status" aria-live="polite">创建或加入一个房间。</div>
+
+  <section class="panel" aria-labelledby="createTitle">
+    <div class="panel-head"><strong id="createTitle">创建房间</strong><span>房主标签页持有权威状态</span></div>
+    <form id="createForm" novalidate>
+      <div class="two">
+        <div class="field">
+          <label for="createNick">你的昵称</label>
+          <input id="createNick" name="nick" autocomplete="nickname" placeholder="房主" maxlength="24">
+        </div>
+        <div class="field">
+          <label for="createName">房间名</label>
+          <input id="createName" name="name" placeholder="我的房间" maxlength="32">
+        </div>
+      </div>
+      <div class="two">
+        <div class="field">
+          <label for="createPassword">密码（可选）</label>
+          <input id="createPassword" name="password" type="password" autocomplete="new-password" placeholder="留空则公开" maxlength="64">
+        </div>
+        <div class="field">
+          <label for="createMax">人数上限</label>
+          <select id="createMax" name="maxPlayers">
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4" selected>4</option>
+            <option value="6">6</option>
+            <option value="8">8</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="createGame">游戏</label>
+        <select id="createGame" name="game">
+          <option value="mahjong" selected>麻将</option>
+          <option value="pokemon">宝可梦卡牌</option>
+          <option value="other">其他桌游</option>
+        </select>
+      </div>
+      <button class="primary" type="submit">创建房间</button>
+      <p class="msg" id="createMsg" aria-live="polite"></p>
+    </form>
+  </section>
+
+  <section class="panel" aria-labelledby="joinTitle">
+    <div class="panel-head"><strong id="joinTitle">加入房间</strong><span>同机多标签：填房主标签页的房间 ID</span></div>
+    <form id="joinForm" novalidate>
+      <div class="field">
+        <label for="joinRoomId">房间 ID</label>
+        <input id="joinRoomId" name="roomId" placeholder="room-xxxxxxxxxx" maxlength="64" autocapitalize="off" spellcheck="false">
+      </div>
+      <div class="two">
+        <div class="field">
+          <label for="joinNick">你的昵称</label>
+          <input id="joinNick" name="nick" autocomplete="nickname" placeholder="玩家 2" maxlength="24">
+        </div>
+        <div class="field">
+          <label for="joinPassword">房间密码</label>
+          <input id="joinPassword" name="password" type="password" autocomplete="off" placeholder="无密码可留空" maxlength="64">
+        </div>
+      </div>
+      <div class="field">
+        <label for="joinInvite">邀请码（可选）</label>
+        <input id="joinInvite" name="invite" placeholder="6 位邀请码" maxlength="12" autocapitalize="characters" spellcheck="false">
+      </div>
+      <button type="submit">加入房间</button>
+      <p class="msg" id="joinMsg" aria-live="polite"></p>
+    </form>
+  </section>
+
+  <section class="panel" id="roomPanel" aria-labelledby="roomTitle" hidden>
+    <div class="panel-head"><strong id="roomTitle">当前房间</strong><span id="roomState">—</span></div>
+    <div class="kv"><span>房间 ID</span><strong class="mono" id="roomIdText">—</strong></div>
+    <div class="kv"><span>邀请码</span><strong class="mono" id="roomCodeText">—</strong></div>
+    <div class="kv"><span>游戏</span><span id="roomGameText">—</span></div>
+    <div class="kv"><span>密码</span><span id="roomPasswordFlag">—</span></div>
+    <div class="kv"><span>语音</span><span id="voiceState">未加入（占位）</span></div>
+    <h2>成员 <span id="memberCount" style="color:var(--muted);font-weight:400">0</span></h2>
+    <ul class="members" id="memberList"></ul>
+    <div class="actions">
+      <a class="link" id="startMatchLink" href="./card-battle.html" hidden>开始对局</a>
+      <button id="voiceBtn" type="button">加入语音（占位）</button>
+      <button id="leaveBtn" type="button" class="ghost">离开</button>
+      <button id="closeBtn" type="button" class="danger" hidden>关闭房间</button>
+    </div>
+    <p class="msg" id="roomStatus" aria-live="polite"></p>
+  </section>
+
+  <p class="note">同机演示：两个标签页都打开本页。房主创建房间后，另一个标签页用房间 ID + 密码加入；房主标签页关闭后房间即消失。语音按钮只切换占位状态，不请求麦克风、不建立媒体连接。</p>
+
+  <script type="module" src="./rooms.js"></script>
+</body>
+</html>
