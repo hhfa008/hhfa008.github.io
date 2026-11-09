@@ -12,6 +12,11 @@
 var fs = require('fs');
 var path = require('path');
 
+// Load the shared shuffle engine first: page cores that delegate to
+// globalThis.Shuffle then run against the same source in tests as in the
+// browser (where index.html includes it before the inline core).
+require('../shared/shuffle.js');
+
 function page(dir) {
   return fs.readFileSync(path.join(dir, 'index.html'), 'utf8');
 }

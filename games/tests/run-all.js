@@ -22,6 +22,14 @@ var TIMEOUT_MS = 120000;
 var SKIP_DIRS = { assets: 1, shared: 1, tests: 1 };
 var NON_GAME_DIRS = { en: 1, id: 1 };
 
+// Shared engines live outside the per-game dirs (games/shared/ is skipped by
+// the walk), so their tests are listed explicitly here.
+var EXTRA_TESTS = [
+  path.join(GAMES_DIR, 'shared', 'hand-eval.test.js'),
+  path.join(GAMES_DIR, 'shared', 'physics.test.js'),
+  path.join(GAMES_DIR, 'tests', 'rewards.test.js')
+];
+
 function walkTestFiles(dir, out) {
   var entries;
   try { entries = fs.readdirSync(dir, { withFileTypes: true }); }
@@ -133,6 +141,9 @@ function main() {
   var games = gameDirs();
   var files = [];
   games.forEach(function (g) { walkTestFiles(path.join(GAMES_DIR, g), files); });
+  EXTRA_TESTS.forEach(function (f) {
+    if (fs.existsSync(f) && files.indexOf(f) < 0) files.push(f);
+  });
   files.sort();
 
   var rows = files.map(runOne);
@@ -141,7 +152,13 @@ function main() {
 
   var labelW = displayWidth('游戏');
   rows.forEach(function (r) {
-    var label = testsByGame[r.game] > 1 ? r.game + '/' + path.basename(r.file) : r.game;
+    var label;
+    if (games.indexOf(r.game) < 0) {
+      // Shared engine test, e.g. "shared/hand-eval".
+      label = r.rel.replace(/\.test\.js$/, '');
+    } else {
+      label = testsByGame[r.game] > 1 ? r.game + '/' + path.basename(r.file) : r.game;
+    }
     r.label = label;
     labelW = Math.max(labelW, displayWidth(label));
   });
@@ -168,7 +185,9 @@ function main() {
     console.log(pad(r.label, labelW + 2) + pad(r.note, noteW + 2) + pad(time, timeW + 2) + r.status);
   });
 
-  var testedGames = Object.keys(testsByGame).length;
+  var testedGames = Object.keys(testsByGame).filter(function (g) {
+    return games.indexOf(g) >= 0;
+  }).length;
   var untested = games.filter(function (g) { return !testsByGame[g]; });
   console.log('');
   console.log('测试文件: ' + rows.length + ' 个 · 覆盖游戏: ' + testedGames + '/' + games.length +
