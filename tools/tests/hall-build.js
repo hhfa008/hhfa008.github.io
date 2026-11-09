@@ -2,7 +2,16 @@
 'use strict';
 
 /**
- * hall-build.js — build the three tool-hall pages from catalog.json.
+ * hall-build.js — 开发脚手架：从 catalog.json 重新生成三个工具大厅页。
+ *
+ * ⚠️ 这是开发脚手架，不是生产生成器；生产的唯一事实源是 `games/registry.json`
+ *    + `scripts/gen-hubs.js`（游戏大厅）。tools/ 大厅的线上内容以已提交的
+ *    tools/index.html 等页面为准，catalog.json 只是本脚本自带的一份快照，
+ *    不保证与大厅同步。
+ *
+ * 安全护栏：写入前先读取三个大厅的实际工具数与分类数，与本脚本的 catalog
+ * 比对；只要数量、分类或 slug 集合不一致（包括大厅里存在 catalog 没有的
+ * slug），就打印差异并 exit 1，不写任何文件。
  *
  * Usage:
  *   node tools/tests/hall-build.js
@@ -882,6 +891,81 @@ function checkGenerated(html, lang, tools, errors, stats) {
   }
 }
 
+// 大厅护栏：把磁盘上三个大厅的真实内容与 catalog.json 对照。任何不一致都
+// 说明 catalog 已经落后于线上页面，此时写入会覆盖掉大厅里更新的工具/文案。
+// 返回 true 表示通过；不通过时直接打印差异并退出（不写任何文件）。
+function checkHallGuard(tools) {
+  const catalogSlugs = new Set(tools.map(function (tool) { return tool.slug; }));
+  const catalogCats = Array.from(new Set(tools.map(function (tool) { return tool.category; }))).sort();
+  const problems = [];
+
+  ['zh', 'en', 'id'].forEach(function (lang) {
+    const file = OUTPUT_PATH[lang];
+    if (!fs.existsSync(file)) return; // 首次生成：没有可被覆盖的大厅
+    const html = fs.readFileSync(file, 'utf8');
+
+    let match;
+    const cardCount = (html.match(/<article class="tool-card"/g) || []).length;
+
+    const hallCats = [];
+    const catRe = /<section class="cat" id="([^"]+)"/g;
+    while ((match = catRe.exec(html)) !== null) hallCats.push(match[1]);
+
+    const hallSlugs = new Set();
+    const slugRe = /<a class="tool-link" href="\/tools\/([a-z0-9-]+)\//g;
+    while ((match = slugRe.exec(html)) !== null) hallSlugs.add(match[1]);
+
+    const extraSlugs = Array.from(hallSlugs).filter(function (slug) {
+      return !catalogSlugs.has(slug);
+    }).sort();
+    const missingSlugs = Array.from(catalogSlugs).filter(function (slug) {
+      return !hallSlugs.has(slug);
+    }).sort();
+    const extraCats = hallCats.filter(function (id) {
+      return catalogCats.indexOf(id) === -1;
+    });
+    const missingCats = catalogCats.filter(function (id) {
+      return hallCats.indexOf(id) === -1;
+    });
+
+    if (cardCount !== tools.length || hallCats.length !== catalogCats.length ||
+        extraSlugs.length || missingSlugs.length || extraCats.length || missingCats.length) {
+      problems.push({
+        file: file,
+        cardCount: cardCount,
+        catCount: hallCats.length,
+        extraSlugs: extraSlugs,
+        missingSlugs: missingSlugs,
+        extraCats: extraCats,
+        missingCats: missingCats
+      });
+    }
+  });
+
+  if (!problems.length) return true;
+
+  console.error('HALL GUARD REFUSED：大厅实际内容与 catalog.json 不一致，未写入任何文件。');
+  console.error('  catalog: ' + tools.length + ' 个工具，' + catalogCats.length + ' 个分类');
+  problems.forEach(function (problem) {
+    console.error('  ' + path.relative(ROOT, problem.file) + ': ' +
+      problem.cardCount + ' 个工具，' + problem.catCount + ' 个分类');
+    if (problem.extraSlugs.length) {
+      console.error('    大厅有、catalog 没有的 slug: ' + problem.extraSlugs.join(', '));
+    }
+    if (problem.missingSlugs.length) {
+      console.error('    catalog 有、大厅没有的 slug: ' + problem.missingSlugs.join(', '));
+    }
+    if (problem.extraCats.length) {
+      console.error('    大厅多出的分类: ' + problem.extraCats.join(', '));
+    }
+    if (problem.missingCats.length) {
+      console.error('    catalog 有、大厅没有的分类: ' + problem.missingCats.join(', '));
+    }
+  });
+  console.error('  这是开发脚手架，不是生产生成器；生产事实源见文件头注释。');
+  process.exit(1);
+}
+
 function main() {
   const errors = [];
   const tools = JSON.parse(fs.readFileSync(CATALOG_PATH, 'utf8'));
@@ -892,6 +976,7 @@ function main() {
   });
 
   const counts = validateCatalog(tools, errors);
+  checkHallGuard(tools);
 
   const stats = { existing: new Set(), pending: new Set(), missing: new Set() };
   ['zh', 'en', 'id'].forEach(function (lang) {
