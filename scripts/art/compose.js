@@ -26,10 +26,9 @@ const SCENES_FILE = path.join(__dirname, 'scenes.json');
 const TEMPLATE_FILE = path.join(__dirname, 'template.html');
 
 const CHROME_CANDIDATES = [
-  process.env.CHROME_PATH,
   '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
   path.join(os.homedir(), 'Applications/Google Chrome.app/Contents/MacOS/Google Chrome'),
-].filter(Boolean);
+];
 
 const PRESETS = new Set(['charcoal-warm', 'charcoal-cool', 'felt-green']);
 
@@ -134,12 +133,15 @@ function validateScenes(scenes) {
 }
 
 function findChrome() {
-  for (const candidate of CHROME_CANDIDATES) {
+  // An explicit CHROME_PATH is authoritative: if it is wrong, fail loudly
+  // instead of silently using a different Chrome.
+  const candidates = process.env.CHROME_PATH ? [process.env.CHROME_PATH] : CHROME_CANDIDATES;
+  for (const candidate of candidates) {
     if (candidate && fs.existsSync(candidate)) return candidate;
   }
   throw new Error(
     'Chrome not found. Looked at:\n  ' +
-      CHROME_CANDIDATES.join('\n  ') +
+      candidates.join('\n  ') +
       '\nInstall Google Chrome or set CHROME_PATH to its executable.'
   );
 }
@@ -324,7 +326,10 @@ function buildSheetHtml(slugs, outDir) {
     const col = index % SHEET.columns;
     const left = SHEET.margin + col * colStride;
     const top = SHEET.margin + row * rowStride;
-    const src = pathToFileURL(path.join(outDir, `${slug}-og.png`)).href;
+    // Inline the composed OG PNG so the screenshot never races file I/O while
+    // twelve large <img> elements are still being fetched/decoded.
+    const png = fs.readFileSync(path.join(outDir, `${slug}-og.png`));
+    const src = `data:image/png;base64,${png.toString('base64')}`;
     return (
       `<div class="cell" style="left:${round(left)}px;top:${round(top)}px;width:${round(cellW)}px">` +
       `<div class="frame" style="height:${cellH}px">` +
@@ -480,4 +485,9 @@ function main() {
   }
 }
 
-main();
+try {
+  main();
+} catch (err) {
+  console.error(`compose: ${err.message}`);
+  process.exit(1);
+}

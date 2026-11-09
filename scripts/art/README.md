@@ -34,7 +34,7 @@ node scripts/art/compose.js --list         # 列出场景、元素齐缺
 `games/assets/art/elements/` 下的透明 PNG，**不是**本管线生成的：
 
 - AI 图像模型（gpt-image-2 系列）按统一提示词逐件生成：深炭背景、左上暖光、30° 桌面视角、无文字。
-- 再用 ffmpeg / ImageMagick 抠成透明背景，按 `@2x` 导出（2 倍尺寸，供视网膜屏）。
+- 再用 ffmpeg / 像素级 floodfill 抠成透明背景，按 `@2x` 导出（2 倍尺寸，供视网膜屏）。
 - 每件元素是**单个物体**，构图留白、朝向稳定；不要带场景、地面或文字。
 
 命名规则：`<name>@2x.png`，`<name>` 与 `scenes.json` 里的 `el` 完全一致。`--list` 会按场景逐项标出哪些元素还缺图。
