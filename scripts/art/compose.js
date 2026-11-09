@@ -108,6 +108,10 @@ function validateScenes(scenes) {
     if (!PRESETS.has(scene.background)) {
       throw new Error(`${slug}: background "${scene.background}" is not one of ${[...PRESETS].join(', ')}`);
     }
+    const board = scene.board || 'none';
+    if (!BOARD_TYPES.has(board)) {
+      throw new Error(`${slug}: board "${board}" is not one of ${[...BOARD_TYPES].join(', ')}`);
+    }
     if (!Array.isArray(scene.items) || scene.items.length === 0) {
       throw new Error(`${slug}: items must be a non-empty array`);
     }
@@ -159,70 +163,386 @@ function round(n) {
   return Math.round(n * 1000) / 1000;
 }
 
+/**
+ * One shared tabletop camera. The CSS in template.html must mirror these
+ * numbers: perspective 1600px, plane rotateX(52deg) rotateZ(-14deg).
+ */
+const CAMERA = {
+  perspective: 1600,
+  planeScale: 1.6,
+  tiltX: 52,
+  rollZ: -14,
+  // Plane-local offset whose projection is roughly +10px/+10px down-right.
+  shadowOffsetX: 6,
+  shadowOffsetY: 18,
+};
+
+function planeSize(width, height) {
+  return {
+    PW: Math.round(width * CAMERA.planeScale),
+    PH: Math.round(height * CAMERA.planeScale),
+  };
+}
+
+/** Exact projection of a point on the table plane into screen coordinates. */
+function projectToScreen(nx, ny, width, height) {
+  const { PW, PH } = planeSize(width, height);
+  return projectPlanePoint(nx * PW, ny * PH, width, height);
+}
+
+/** Same projection, but the input is already in plane-local pixels. */
+function projectPlanePoint(px, py, width, height) {
+  const { PW, PH } = planeSize(width, height);
+  const u = px - PW / 2;
+  const v = py - PH / 2;
+  const rz = (CAMERA.rollZ * Math.PI) / 180;
+  const rx = (CAMERA.tiltX * Math.PI) / 180;
+  const cz = Math.cos(rz);
+  const sz = Math.sin(rz);
+  const u1 = u * cz - v * sz;
+  const v1 = u * sz + v * cz;
+  const y2 = v1 * Math.cos(rx);
+  const z2 = v1 * Math.sin(rx);
+  const k = CAMERA.perspective / (CAMERA.perspective - z2);
+  return { x: width / 2 + u1 * k, y: height / 2 + y2 * k, k };
+}
+
+/* ------------------------------------------------------------------ */
+/* Board geometry                                                      */
+/* ------------------------------------------------------------------ */
+
+const BOARD_TYPES = new Set([
+  'chess8',
+  'go19',
+  'xiangqi9x10',
+  'reversi8',
+  'connect4frame',
+  'backgammon',
+  'cardtable',
+  'none',
+]);
+
+// width: fraction of the table plane width. aspect: height / width.
+const BOARD_SPECS = {
+  chess8: { width: 0.50, aspect: 1 },
+  go19: { width: 0.50, aspect: 1 },
+  reversi8: { width: 0.50, aspect: 1 },
+  xiangqi9x10: { width: 0.46, aspect: 1.125 },
+  connect4frame: { width: 0.50, aspect: 6 / 7 },
+  backgammon: { width: 0.55, aspect: 0.5 },
+};
+
+const BOARD_LINE = 'rgba(245,238,220,0.20)';
+const BOARD_LINE_W = 1.5;
+
+function svgBoard(viewW, viewH, body) {
+  return (
+    `<svg viewBox="0 0 ${viewW} ${viewH}" preserveAspectRatio="none" ` +
+    `xmlns="http://www.w3.org/2000/svg">${body}</svg>`
+  );
+}
+
+function boardSvg(type) {
+  const stroke = `stroke="${BOARD_LINE}" stroke-width="${BOARD_LINE_W}" fill="none"`;
+
+  if (type === 'chess8') {
+    const m = 40;
+    const inner = 920;
+    const cell = inner / 8;
+    const rects = [];
+    for (let r = 0; r < 8; r++) {
+      for (let c = 0; c < 8; c++) {
+        const fill = (r + c) % 2 === 0 ? '#f2e4c8' : '#080604';
+        rects.push(
+          `<rect x="${m + c * cell}" y="${m + r * cell}" width="${cell}" ` +
+            `height="${cell}" fill="${fill}"/>`
+        );
+      }
+    }
+    return svgBoard(
+      1000,
+      1000,
+      `<g opacity="0.35">${rects.join('')}</g>` +
+        `<rect x="${m}" y="${m}" width="${inner}" height="${inner}" ${stroke}/>`
+    );
+  }
+
+  if (type === 'reversi8') {
+    const m = 40;
+    const inner = 920;
+    const step = inner / 8;
+    const lines = [];
+    for (let i = 0; i <= 8; i++) {
+      const p = m + i * step;
+      lines.push(`<line x1="${p}" y1="${m}" x2="${p}" y2="${m + inner}" ${stroke}/>`);
+      lines.push(`<line x1="${m}" y1="${p}" x2="${m + inner}" y2="${p}" ${stroke}/>`);
+    }
+    return svgBoard(1000, 1000, lines.join(''));
+  }
+
+  if (type === 'go19') {
+    const m = 40;
+    const inner = 920;
+    const step = inner / 18;
+    const lines = [];
+    for (let i = 0; i <= 18; i++) {
+      const p = m + i * step;
+      lines.push(`<line x1="${p}" y1="${m}" x2="${p}" y2="${m + inner}" ${stroke}/>`);
+      lines.push(`<line x1="${m}" y1="${p}" x2="${m + inner}" y2="${p}" ${stroke}/>`);
+    }
+    // four corner star points (4-4 points of a 19x19 board)
+    const stars = [3, 15]
+      .flatMap((r) => [3, 15].map((c) => [r, c]))
+      .map(
+        ([r, c]) =>
+          `<circle cx="${m + c * step}" cy="${m + r * step}" r="5.5" ` +
+          `fill="${BOARD_LINE}"/>`
+      );
+    return svgBoard(1000, 1000, lines.join('') + stars.join(''));
+  }
+
+  if (type === 'xiangqi9x10') {
+    const mx = 50;
+    const my = 56.25;
+    const step = 112.5;
+    const parts = [];
+    // 10 horizontal lines
+    for (let j = 0; j <= 9; j++) {
+      const y = my + j * step;
+      parts.push(`<line x1="${mx}" y1="${y}" x2="${mx + 8 * step}" y2="${y}" ${stroke}/>`);
+    }
+    // 9 vertical lines; inner ones stop at the river banks
+    for (let i = 0; i <= 8; i++) {
+      const x = mx + i * step;
+      if (i === 0 || i === 8) {
+        parts.push(`<line x1="${x}" y1="${my}" x2="${x}" y2="${my + 9 * step}" ${stroke}/>`);
+      } else {
+        parts.push(`<line x1="${x}" y1="${my}" x2="${x}" y2="${my + 4 * step}" ${stroke}/>`);
+        parts.push(
+          `<line x1="${x}" y1="${my + 5 * step}" x2="${x}" y2="${my + 9 * step}" ${stroke}/>`
+        );
+      }
+    }
+    // palace X at both ends (columns 3-5, rows 0-2 and 7-9)
+    const px0 = mx + 3 * step;
+    const px1 = mx + 5 * step;
+    const top0 = my;
+    const top1 = my + 2 * step;
+    const bot0 = my + 7 * step;
+    const bot1 = my + 9 * step;
+    parts.push(`<line x1="${px0}" y1="${top0}" x2="${px1}" y2="${top1}" ${stroke}/>`);
+    parts.push(`<line x1="${px1}" y1="${top0}" x2="${px0}" y2="${top1}" ${stroke}/>`);
+    parts.push(`<line x1="${px0}" y1="${bot0}" x2="${px1}" y2="${bot1}" ${stroke}/>`);
+    parts.push(`<line x1="${px1}" y1="${bot0}" x2="${px0}" y2="${bot1}" ${stroke}/>`);
+    return svgBoard(1000, 1125, parts.join(''));
+  }
+
+  if (type === 'connect4frame') {
+    const m = 30;
+    const w = 940;
+    const h = 797.142857;
+    const cols = 7;
+    const rows = 6;
+    const cw = w / cols;
+    const ch = h / rows;
+    const parts = [];
+    parts.push(
+      `<rect x="${m}" y="${m}" width="${w}" height="${h}" rx="42" ` +
+        `fill="rgba(0,0,0,0.16)" ${stroke}/>`
+    );
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const cx = m + (c + 0.5) * cw;
+        const cy = m + (r + 0.5) * ch;
+        parts.push(
+          `<circle cx="${cx}" cy="${cy}" r="52" fill="rgba(0,0,0,0.38)" ` +
+            `stroke="${BOARD_LINE}" stroke-width="${BOARD_LINE_W}"/>`
+        );
+        parts.push(
+          `<circle cx="${cx}" cy="${cy}" r="43" fill="none" ` +
+            `stroke="rgba(255,245,228,0.055)" stroke-width="1"/>`
+        );
+      }
+    }
+    return svgBoard(1000, 857.142857, parts.join(''));
+  }
+
+  if (type === 'backgammon') {
+    const top = 20;
+    const bottom = 480;
+    const barW = 28;
+    const leftEnd = 486;
+    const rightStart = 514;
+    const pointW = (leftEnd - top) / 6; // 77.667
+    const parts = [];
+    const tri = (x0, x1, base, tip, fill) =>
+      `<path d="M${x0} ${base} L${x1} ${base} L${(x0 + x1) / 2} ${tip} Z" ` +
+      `fill="${fill}" ${stroke}/>`;
+    for (let i = 0; i < 6; i++) {
+      const fill = i % 2 === 0 ? 'rgba(255,245,228,0.055)' : 'rgba(0,0,0,0.12)';
+      const lx0 = top + i * pointW;
+      const lx1 = lx0 + pointW;
+      const rx0 = rightStart + i * pointW;
+      const rx1 = rx0 + pointW;
+      parts.push(tri(lx0, lx1, top, 230, fill));
+      parts.push(tri(rx0, rx1, top, 230, fill));
+      parts.push(tri(lx0, lx1, bottom, 270, fill));
+      parts.push(tri(rx0, rx1, bottom, 270, fill));
+    }
+    parts.push(
+      `<rect x="${leftEnd}" y="${top}" width="${barW}" height="${bottom - top}" ` +
+        `fill="rgba(0,0,0,0.18)" ${stroke}/>`
+    );
+    parts.push(
+      `<rect x="${top}" y="${top}" width="960" height="${bottom - top}" ${stroke}/>`
+    );
+    return svgBoard(1000, 500, parts.join(''));
+  }
+
+  throw new Error(`unknown board type: ${type}`);
+}
+
+function buildBoard(type, width, height) {
+  if (!type || type === 'none') return '';
+  if (!BOARD_TYPES.has(type)) throw new Error(`unknown board type: ${type}`);
+
+  const { PW, PH } = planeSize(width, height);
+  if (type === 'cardtable') {
+    const w = PW * 0.62;
+    const h = PH * 0.78;
+    return (
+      `<div class="board board--cardtable" style="left:${round((PW - w) / 2)}px;` +
+      `top:${round((PH - h) / 2)}px;width:${round(w)}px;height:${round(h)}px"></div>`
+    );
+  }
+
+  const spec = BOARD_SPECS[type];
+  const w = spec.width * PW;
+  const h = w * spec.aspect;
+  return (
+    `<div class="board" style="left:${round((PW - w) / 2)}px;top:${round((PH - h) / 2)}px;` +
+    `width:${round(w)}px;height:${round(h)}px">${boardSvg(type)}</div>`
+  );
+}
+
+/** Approximate visible footprint of an element, in plane-local px. */
+function shadowFootprint(el, shape, size) {
+  if (shape === 'standing') return [size * 0.40, size * 0.15];
+  // Flat cards/tiles sit on top of most of their own shadow, so their
+  // footprint is a little wider than the visible card to keep the contact
+  // shadow as legible as the one under a disc.
+  if (/^(card-)/.test(el)) return [size * 0.76, size * 1.00];
+  if (/^(mahjong-)/.test(el)) return [size * 0.72, size * 0.96];
+  if (el === 'die') return [size * 0.80, size * 0.80];
+  if (/^(chip|connect4|go-stone|reversi|checker)/.test(el)) return [size * 0.82, size * 0.82];
+  return [size * 0.72, size * 0.72];
+}
+
+function shadowHtml(el, shape, size, cx, cy, rot) {
+  const [w, h] = shadowFootprint(el, shape, size);
+  const left = cx + CAMERA.shadowOffsetX - w / 2;
+  const top = cy + CAMERA.shadowOffsetY - h / 2;
+  const transform = shape === 'flat' ? `transform:rotate(${round(rot)}deg);` : '';
+  return (
+    `<div class="shadow" style="left:${round(left)}px;top:${round(top)}px;` +
+    `width:${round(w)}px;height:${round(h)}px;${transform}"></div>`
+  );
+}
+
 function buildItems(scene, width, height, elementsDir, missing) {
   const unit = Math.min(width, height);
-  const parts = [];
+  const { PW, PH } = planeSize(width, height);
+  const shadows = [];
+  const flats = [];
+  const billboards = [];
 
   for (const item of scene.items) {
     const size = item.scale * unit;
-    const cx = item.x * width;
-    const cy = item.y * height;
+    const shape = item.shape === 'standing' ? 'standing' : 'flat';
     const rot = item.rot || 0;
-    const shadow = item.shadow !== false;
-
-    const style = `left:${round(cx)}px;top:${round(cy)}px;width:${round(size)}px;height:${round(size)}px`;
+    const wantShadow = item.shadow !== false;
 
     const file = path.join(elementsDir, `${item.el}@2x.png`);
     const present = fs.existsSync(file);
 
-    // Contact shadow sits at the bottom of the element box. It is drawn behind
-    // the element, so any overlap with the artwork is hidden by the PNG itself.
-    // Missing elements are debug placeholders: no pretend contact shadow.
-    let contact = '';
-    if (shadow && present) {
-      const cw = size * 0.58;
-      const ch = size * 0.18;
-      contact =
-        `<div class="contact" style="width:${round(cw)}px;height:${round(ch)}px;` +
-        `left:${round((size - cw) / 2)}px;top:${round(size * 0.83)}px"></div>`;
-    }
-
     if (present) {
       const src = pathToFileURL(file).href;
-      const dx = round(unit * 0.018);
-      const dy = round(unit * 0.030);
-      const blur = round(unit * 0.035);
-      const filter = shadow ? ` style="filter:drop-shadow(${dx}px ${dy}px ${blur}px rgba(0,0,0,0.62))"` : '';
-      parts.push(
-        `<div class="item" style="${style}">${contact}` +
-          `<div class="shadowwrap"${filter}>` +
-          `<img src="${escapeHtml(src)}" alt="" style="transform:rotate(${round(rot)}deg)">` +
-          `</div></div>`
-      );
+
+      if (shape === 'standing') {
+        const p = projectToScreen(item.x, item.y, width, height);
+        const box = size * p.k;
+        if (wantShadow) {
+          shadows.push(shadowHtml(item.el, shape, size, item.x * PW, item.y * PH, rot));
+        }
+        billboards.push(
+          `<div class="billboard" style="left:${round(p.x)}px;top:${round(p.y)}px;` +
+            `width:${round(box)}px;height:${round(box)}px;` +
+            `transform:translate(-50%, -92%) rotate(${round(rot)}deg)">` +
+            `<img src="${escapeHtml(src)}" alt=""></div>`
+        );
+      } else {
+        const cx = item.x * PW;
+        const cy = item.y * PH;
+        if (wantShadow) shadows.push(shadowHtml(item.el, shape, size, cx, cy, rot));
+        flats.push(
+          `<div class="flat" style="left:${round(cx - size / 2)}px;top:${round(cy - size / 2)}px;` +
+            `width:${round(size)}px;height:${round(size)}px;` +
+            `transform:rotate(${round(rot)}deg)">` +
+            `<img src="${escapeHtml(src)}" alt=""></div>`
+        );
+      }
     } else {
       missing.add(item.el);
-      const fontSize = round(Math.max(9, Math.min(18, size * 0.07)));
-      parts.push(
-        `<div class="item" style="${style}">${contact}` +
-          `<div class="ph" style="font-size:${fontSize}px">` +
-          `<span>${escapeHtml(item.el)}</span>` +
-          `</div></div>`
-      );
+      if (shape === 'standing') {
+        const p = projectToScreen(item.x, item.y, width, height);
+        const box = size * p.k;
+        const fontSize = round(Math.max(9, Math.min(18, box * 0.07)));
+        billboards.push(
+          `<div class="billboard" style="left:${round(p.x)}px;top:${round(p.y)}px;` +
+            `width:${round(box)}px;height:${round(box)}px;` +
+            `transform:translate(-50%, -92%) rotate(${round(rot)}deg)">` +
+            `<div class="ph" style="font-size:${fontSize}px">` +
+            `<span>${escapeHtml(item.el)}</span></div></div>`
+        );
+      } else {
+        const cx = item.x * PW;
+        const cy = item.y * PH;
+        const fontSize = round(Math.max(9, Math.min(18, size * 0.07)));
+        flats.push(
+          `<div class="flat" style="left:${round(cx - size / 2)}px;top:${round(cy - size / 2)}px;` +
+            `width:${round(size)}px;height:${round(size)}px;` +
+            `transform:rotate(${round(rot)}deg)">` +
+            `<div class="ph" style="font-size:${fontSize}px">` +
+            `<span>${escapeHtml(item.el)}</span></div></div>`
+        );
+      }
     }
   }
 
-  return parts.join('\n  ');
+  return {
+    shadows: shadows.join('\n    '),
+    flats: flats.join('\n    '),
+    billboards: billboards.join('\n    '),
+  };
 }
 
-function buildHtml(scene, background, itemsHtml, width, height) {
+function buildHtml(scene, background, layers, width, height) {
+  const { PW, PH } = planeSize(width, height);
   const template = fs.readFileSync(TEMPLATE_FILE, 'utf8');
   return template
     .replace(/\{\{BACKGROUND\}\}/g, background)
     .replace(/\{\{WIDTH\}\}/g, String(width))
     .replace(/\{\{HEIGHT\}\}/g, String(height))
+    .replace(/\{\{PW\}\}/g, String(PW))
+    .replace(/\{\{PH\}\}/g, String(PH))
+    .replace(/\{\{PWH\}\}/g, String(PW / 2))
+    .replace(/\{\{PHH\}\}/g, String(PH / 2))
     .replace(/\{\{W\}\}/g, String(width))
     .replace(/\{\{H\}\}/g, String(height))
-    .replace('{{ITEMS}}', itemsHtml);
+    .replace('{{SHADOWS}}', layers.shadows)
+    .replace('{{FLATS}}', layers.flats)
+    .replace('{{BILLBOARDS}}', layers.billboards)
+    .replace('{{BOARD}}', buildBoard(scene.board || 'none', width, height));
 }
 
 function pngSize(file) {
@@ -282,8 +602,8 @@ function renderScene(slug, scene, opts, chrome) {
 
   try {
     for (const { suffix, width, height } of SIZES) {
-      const itemsHtml = buildItems(scene, width, height, opts.elements, missing);
-      const html = buildHtml(scene, scene.background, itemsHtml, width, height);
+      const layers = buildItems(scene, width, height, opts.elements, missing);
+      const html = buildHtml(scene, scene.background, layers, width, height);
       const htmlPath = path.join(tmpDir, `${slug}-${suffix}.html`);
       fs.writeFileSync(htmlPath, html);
 
