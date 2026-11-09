@@ -7,8 +7,20 @@
 
 - **站点仓库是唯一权威源**。`~/games` 只是开发工作区。
 - 合并方向单一：`~/games` → 站点仓库（`scripts/sync-to-site.sh`）；反向只允许
-  「共享区以站点仓库为准」拉回（`sync-to-site.sh --pull-shared`）。
-- 两边都不许各自演进。发现共享区不一致时，先修共享区，再继续开发。
+  「以站点仓库为准」拉回（`sync-to-site.sh --pull-shared`）。
+- 两边都不许各自演进。三路基线存在 `~/games/.games-baseline`，只比较两边的
+  共同路径：本地改了 → 允许同步；站点改了 → 先拉回；两边都改 → 中止。
+
+## 漂移检查的三类输出
+
+`scripts/check-games-drift.sh`（`../src/agentbus/tools/watchdog.py` 的
+`site_drift` 检查每轮调用它）：
+
+| 输出 | 含义 | 处理 |
+|---|---|---|
+| `SHARED-DRIFT` | 共享区不一致 | alert，必须修（同步或拉回） |
+| `CONTENT-DRIFT` | 两边都有这个文件，但内容不同 | alert，说明已经分叉；先确定用哪份 |
+| `LOCAL-ONLY` | 只有一侧有（各自独有） | info，不报红；不会因此拦截同步 |
 
 ## 共享区（只允许一份，权威源＝站点仓库）
 
@@ -32,7 +44,7 @@
 - **站点独有**：`games/agentnet/`、`games/agents/`、`games/ai-eval/`、
   `games/ai-play/`、`games/leaderboard/`、`games/profile/`、`games/mahjong/`、
   `games/tcg-deck/`、`games/tcg-sample/`，以及 `games/boardgame/<具体桌游>/`
-  里只在站点侧存在的对局实现。
+  里只在站点侧存在的对局实现。`--pull-shared` 会把它们镜像进工作区（只读使用）。
 - **游戏侧独有**：`games/<具体游戏>/`（如 `games/tictactoe*/`、`games/snake*/`、
   `games/boardgames/` 资料库）——这些是 `~/games` 开发出来的游戏内容，单向同步到站点。
 - 仓库根的其他目录（`tools/`、`scripts/`、`ai/`、`store/` 等）不属于本契约，
@@ -44,9 +56,9 @@
 # 开发完成后：把 ~/games/games 同步到站点仓库并在 master 上 merge --no-ff
 ~/games/scripts/sync-to-site.sh
 
-# 只检查漂移（共享区不一致 → exit 1；各自独有只打印 info）
+# 只检查漂移（SHARED-DRIFT / CONTENT-DRIFT → exit 1；LOCAL-ONLY 只打印 info）
 ~/games/scripts/check-games-drift.sh
 
-# 共享区被站点更新后拉回工作区
+# 站点更新后拉回工作区（先备份 games/，再以站点为准覆盖共同路径）
 ~/games/scripts/sync-to-site.sh --pull-shared
 ```
