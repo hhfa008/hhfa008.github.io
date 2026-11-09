@@ -97,6 +97,18 @@ function hostIdOf(members) {
   return s.length ? s[0].id : null;
 }
 
+// A disconnected host keeps the crown for the 60 s reconnect grace window.
+// Only after normalizeRoster() drops the seat does the next member inherit it.
+function hostIdWithGrace(roster, active) {
+  const s = sortMembers(roster);
+  if (s.length) return s[0].id;
+  return hostIdOf(active);
+}
+
+function hostOfflineOf(hostId, active) {
+  return !!hostId && !active.some((m) => m.id === hostId);
+}
+
 function seatsOf(members) {
   const s = sortMembers(members);
   return { xId: s[0] ? s[0].id : null, oId: s[1] ? s[1].id : null };
@@ -221,12 +233,14 @@ function alignGame(game, roster, activeRoster) {
   return norm;
 }
 
-function roomState(room, roster, hostId) {
+function roomState(room, roster, active) {
+  const hostId = hostIdWithGrace(roster, active);
   return {
     type: 'room_state',
     room,
     hostId,
-    members: publicMembers(roster),
+    hostOffline: hostOfflineOf(hostId, active),
+    members: publicMembers(active),
   };
 }
 
@@ -601,15 +615,17 @@ export class RoomDO {
     const game = alignGame(await this.loadGame(), roster, active);
     await this.saveGame(game);
 
+    const hostId = hostIdWithGrace(roster, active);
     this.send(server, {
       type: 'welcome',
       room,
       selfId: id,
-      hostId: hostIdOf(active),
+      hostId,
+      hostOffline: hostOfflineOf(hostId, active),
       members: publicMembers(active),
       game,
     });
-    this.broadcast(roomState(room, active, hostIdOf(active)));
+    this.broadcast(roomState(room, roster, active));
     this.broadcast({ type: 'game_state', room, game });
 
     return new Response(null, { status: 101, webSocket: client });
@@ -705,7 +721,7 @@ export class RoomDO {
     sender.mic = next;
     await this.saveMembers(members);
     const active = this.activeMembers(members);
-    this.broadcast(roomState(this.roomCode, active, hostIdOf(active)));
+    this.broadcast(roomState(this.roomCode, members, active));
   }
 
   async handleMove(members, sender, msg) {
@@ -815,7 +831,7 @@ export class RoomDO {
   async handleReset(members, sender, msg) {
     const ws = this.socketById(sender.id);
     const active = this.activeMembers(members);
-    if (sender.id !== hostIdOf(active)) {
+    if (sender.id !== hostIdWithGrace(members, active)) {
       return this.error(ws, 'host_only', '只有房主可以开新局');
     }
     const current = alignGame(await this.loadGame(), members, active);
@@ -828,7 +844,7 @@ export class RoomDO {
   async handleSelect(members, sender, msg) {
     const ws = this.socketById(sender.id);
     const active = this.activeMembers(members);
-    if (sender.id !== hostIdOf(active)) {
+    if (sender.id !== hostIdWithGrace(members, active)) {
       return this.error(ws, 'host_only', '只有房主可以换游戏');
     }
     const kind = String(msg.kind || '');
@@ -864,7 +880,7 @@ export class RoomDO {
     const active = this.activeMembers(roster, new Set([attachment.id]));
     const game = alignGame(await this.loadGame(), roster, active);
     await this.saveGame(game);
-    this.broadcast(roomState(this.roomCode, active, hostIdOf(active)));
+    this.broadcast(roomState(this.roomCode, roster, active));
     this.broadcast({ type: 'game_state', room: this.roomCode, game });
   }
 
@@ -895,7 +911,7 @@ export class RoomDO {
     const active = this.activeMembers(roster);
     const game = alignGame(await this.loadGame(), roster, active);
     await this.saveGame(game);
-    this.broadcast(roomState(this.roomCode, active, hostIdOf(active)));
+    this.broadcast(roomState(this.roomCode, roster, active));
     this.broadcast({ type: 'game_state', room: this.roomCode, game });
   }
 }

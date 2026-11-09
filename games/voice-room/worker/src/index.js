@@ -72,6 +72,9 @@ function allowedOrigin(origin) {
   try {
     const u = new URL(origin);
     if (u.hostname === 'hhfa008.github.io') return true;
+    // Cloudflare Pages mirror of the same site (and its branch previews).
+    if (u.hostname === 'hhfa008-pages.pages.dev') return true;
+    if (u.hostname.endsWith('.hhfa008-pages.pages.dev')) return true;
     if (u.hostname === 'localhost' || u.hostname === '127.0.0.1' || u.hostname === '[::1]') {
       return true;
     }
@@ -96,8 +99,12 @@ export default {
       });
     }
 
+    if (url.pathname === '/rev') {
+      return json({ rev: 'quality-reconnect-1', ts: Date.now() });
+    }
+
     if (url.pathname === '/health') {
-      return json({ ok: true, service: 'voice-room', ts: Date.now() });
+      return json({ ok: true, service: 'voice-room', rev: 'quality-reconnect-1', ts: Date.now() });
     }
 
     if (url.pathname === '/api/ice') {
