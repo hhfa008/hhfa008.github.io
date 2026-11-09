@@ -263,12 +263,13 @@ else
   mark_fail 3 "大厅卡片数不一致或卡片链接缺失（见上方 FAIL 行）"
 fi
 
-# --------------------------------------------- 4. CACHE_VERSION 与页面改动时间
-section 4 "sw.js CACHE_VERSION 与最近改动时间"
+# --------------------------------------------- 4. CACHE_VERSION 是否随页面改动升级
+section 4 "games/sw.js CACHE_VERSION 是否随页面改动升级"
 if ROOT="$ROOT" node <<'NODE'
 'use strict';
 const fs = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
 const ROOT = process.env.ROOT;
 const SW = path.join(ROOT, 'games/sw.js');
 
@@ -282,44 +283,77 @@ if (!m || !m[1].trim()) {
   console.log('  FAIL games/sw.js 中找不到有效的 CACHE_VERSION');
   process.exit(1);
 }
-const version = m[1];
-const swMtime = fs.statSync(SW).mtimeMs;
+const version = m[1].trim();
+console.log(`  当前 CACHE_VERSION=${version}`);
 
-function walk(dir, out) {
-  let entries;
-  try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch (e) { return out; }
-  for (const ent of entries) {
-    if (ent.name === 'node_modules' || ent.name === '.git' || ent.name === '.wrangler' || ent.name === 'tests') continue;
-    const full = path.join(dir, ent.name);
-    if (ent.isDirectory()) walk(full, out);
-    else if (ent.isFile() && full !== SW) out.push(full);
-  }
-  return out;
+if (process.env.PREDEPLOY_SKIP_CACHE_BUMP === '1') {
+  console.log('  ⚠️ 豁免已生效：PREDEPLOY_SKIP_CACHE_BUMP=1');
+  console.log('  ⚠️ 本次跳过 CACHE_VERSION 升级检查；发布后用户可能继续拿到旧缓存。');
+  process.exit(0);
 }
 
-const files = walk(path.join(ROOT, 'games'), []);
-const newer = files
-  .map(f => ({ rel: path.relative(ROOT, f), mtime: fs.statSync(f).mtimeMs }))
-  .filter(f => f.mtime > swMtime + 1000)
-  .sort((a, b) => b.mtime - a.mtime);
-
-console.log(`  当前 CACHE_VERSION=${version}；sw.js 修改时间: ${new Date(swMtime).toISOString()}`);
-if (newer.length) {
-  console.log(`  WARN 有 ${newer.length} 个 games 文件比 sw.js 新，页面已改但 CACHE_VERSION 可能未升级：`);
-  for (const f of newer.slice(0, 5)) {
-    console.log(`    ${f.rel}  ${new Date(f.mtime).toISOString()}`);
-  }
-  if (newer.length > 5) console.log(`    …另有 ${newer.length - 5} 个`);
-  console.log('  （WARN 非致命：确认是预期的页面改动后，发布前请升级 CACHE_VERSION）');
-} else {
-  console.log('  PASS 没有比 sw.js 更新的页面文件');
+function git(args) {
+  return execFileSync('git', args, { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
 }
-process.exit(0);
+
+let changedRaw;
+try {
+  git(['rev-parse', '--verify', 'HEAD~1']);
+  changedRaw = git(['diff', 'HEAD~1', '--name-only', '--', 'games/', 'tools/']);
+} catch (e) {
+  console.log('  无法判断，已跳过：拿不到上一次提交（HEAD~1），可能是浅克隆或首个提交。');
+  console.log('  这不是通过，只是本次无法验证 CACHE_VERSION 是否随页面改动升级。');
+  process.exit(0);
+}
+
+const changed = changedRaw.split('\n').map(s => s.trim()).filter(Boolean);
+// 页面内容变更：排除 service worker 自身与 tests/ 下的测试/脚手架文件。
+const pageChanges = changed.filter(f =>
+  f !== 'games/sw.js' &&
+  !f.startsWith('games/tests/') &&
+  !f.startsWith('tools/tests/') &&
+  !/\.test\.js$/.test(f)
+);
+
+let previousVersion = null;
+try {
+  const prevSw = git(['show', 'HEAD~1:games/sw.js']);
+  const pm = prevSw.match(/CACHE_VERSION\s*=\s*['"]([^'"]+)['"]/);
+  if (pm && pm[1].trim()) previousVersion = pm[1].trim();
+} catch (e) {
+  previousVersion = null;
+}
+
+if (previousVersion === null) {
+  console.log('  无法判断，已跳过：上一次提交里没有可解析的 games/sw.js CACHE_VERSION。');
+  console.log('  这不是通过，只是本次无法验证 CACHE_VERSION 是否随页面改动升级。');
+  process.exit(0);
+}
+
+console.log(`  上一次提交（HEAD~1）CACHE_VERSION=${previousVersion}`);
+if (!pageChanges.length) {
+  console.log('  PASS 上一次提交以来 games/、tools/ 没有页面内容变更，无需升级版本。');
+  process.exit(0);
+}
+
+if (version !== previousVersion) {
+  console.log(`  PASS 页面有 ${pageChanges.length} 处内容变更，且 CACHE_VERSION 已从 ${previousVersion} 升到 ${version}。`);
+  for (const f of pageChanges.slice(0, 8)) console.log(`    ${f}`);
+  if (pageChanges.length > 8) console.log(`    …另有 ${pageChanges.length - 8} 个`);
+  process.exit(0);
+}
+
+console.log(`  FAIL CACHE_VERSION 未变（仍为 ${version}），但上一次提交以来 games/、tools/ 有 ${pageChanges.length} 处页面内容变更：`);
+for (const f of pageChanges.slice(0, 8)) console.log(`    ${f}`);
+if (pageChanges.length > 8) console.log(`    …另有 ${pageChanges.length - 8} 个`);
+console.log('  CACHE_VERSION 未变但 games/ 下有内容变更，请升版本后重跑');
+console.log('  （升 games/sw.js 里的 CACHE_VERSION；确认无需升级时可显式设置 PREDEPLOY_SKIP_CACHE_BUMP=1）');
+process.exit(1);
 NODE
 then
-  mark_pass 4 "CACHE_VERSION 可解析；时间先后已检查（WARN 不影响闸门）"
+  mark_pass 4 "CACHE_VERSION 已升级，或本次无页面内容变更"
 else
-  mark_fail 4 "CACHE_VERSION 缺失或无法解析"
+  mark_fail 4 "CACHE_VERSION 未变但 games/ 下有内容变更，请升版本后重跑"
 fi
 
 # ------------------------------------------------ 5. sitemap 覆盖（games/tools）
