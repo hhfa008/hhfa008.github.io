@@ -32,10 +32,6 @@
   "@context": "https://schema.org",
   "@type": "VideoGame",
   "name": "2048 5×5",
-  "alternateName": [
-    "2048 5×5",
-    "2048 5×5"
-  ],
   "url": "https://hhfa008.github.io/games/2048-5/",
   "applicationCategory": "Game",
   "genre": "Browser game",
@@ -190,15 +186,21 @@ var I18N = {
   en: { eyebrow:'Classic puzzle game', title:'2048 5×5', tagline:'Join the tiles, get to 2048!', score:'Score', best:'Best', extraLabel:'Moves',
         boardAria:'Game board', playAgain:'Play again', newGame:'New game', hint:'Hint',
         note:'Use your keyboard or swipe to move the tiles. When two tiles with the same number touch, they merge into one!', rules:'Rules (Chinese)', hall:'All games', moreLink:'Built by an indie developer',
-        overlayWin:'You win!', overlayLose:'Game over', overlayDraw:'Draw', hintText:'No moves left' },
+        overlayWin:'You win!', overlayLose:'Game over', overlayDraw:'Draw', hintText:'No moves left',
+        hintLead:'Next, you can slide ', hintJoin:', ', hintSuffix:'.',
+        hintDirs:{ left:'left', right:'right', up:'up', down:'down' } },
   zh: { eyebrow:'经典益智游戏', title:'2048 5×5', tagline:'合并数字方块，达到2048！', score:'得分', best:'最高分', extraLabel:'步数',
         boardAria:'游戏棋盘', playAgain:'重新开始', newGame:'新游戏', hint:'提示',
         note:'使用键盘或滑动来移动方块。当两个相同数字的方块相碰时，它们会合并成一个！', rules:'规则（中文）', hall:'所有游戏', moreLink:'由独立开发者制作',
-        overlayWin:'你赢了！', overlayLose:'游戏结束', overlayDraw:'平局', hintText:'没有可移动的步数' },
+        overlayWin:'你赢了！', overlayLose:'游戏结束', overlayDraw:'平局', hintText:'没有可移动的步数',
+        hintLead:'下一步可以往', hintJoin:'、', hintSuffix:'滑动。',
+        hintDirs:{ left:'左', right:'右', up:'上', down:'下' } },
   id: { eyebrow:'Permainan teka-teki klasik', title:'2048 5×5', tagline:'Gabungkan ubin-ubin, capai 2048!', score:'Skor', best:'Tertinggi', extraLabel:'Langkah',
         boardAria:'Papan permainan', playAgain:'Main lagi', newGame:'Permainan baru', hint:'Petunjuk',
         note:'Gunakan keyboard atau gesek untuk memindahkan ubin. Ketika dua ubin dengan angka sama bersentuhan, mereka akan bergabung!', rules:'Aturan (Tiongkok)', hall:'Semua permainan', moreLink:'Dibuat oleh pengembang independen',
-        overlayWin:'Kamu menang!', overlayLose:'Permainan berakhir', overlayDraw:'Seri', hintText:'Tidak ada langkah tersisa' }
+        overlayWin:'Kamu menang!', overlayLose:'Permainan berakhir', overlayDraw:'Seri', hintText:'Tidak ada langkah tersisa',
+        hintLead:'Langkah berikutnya: geser ', hintJoin:', ', hintSuffix:'.',
+        hintDirs:{ left:'kiri', right:'kanan', up:'atas', down:'bawah' } }
 };
 
 (function () {
@@ -219,6 +221,13 @@ var I18N = {
   };
   var S = CORE.newGame(Math.random);
   var best = Arcade.best(BEST_KEY, 0);
+  var feedbackTimer = null;
+
+  function showFeedback(text, ms) {
+    E.feedback.textContent = text;
+    if (feedbackTimer) clearTimeout(feedbackTimer);
+    feedbackTimer = setTimeout(function () { E.feedback.textContent = ''; }, ms);
+  }
 
   function render() {
     var status = CORE.status(S);
@@ -248,8 +257,7 @@ var I18N = {
       best = Arcade.setBest(BEST_KEY, best, S.score);
       render();
     } else {
-      E.feedback.textContent = I18N[Arcade.lang()].hintText;
-      setTimeout(function () { E.feedback.textContent = ''; }, 1000);
+      showFeedback(I18N[Arcade.lang()].hintText, 1000);
     }
   }
 
@@ -259,8 +267,24 @@ var I18N = {
     render();
   }
 
+  // 提示是只读的：用固定 rng 在状态副本上试算四个方向，只读取 changed，
+  // 不修改 S，也不会替玩家走一步。
+  function hint() {
+    var i18n = I18N[Arcade.lang()];
+    var dirs = ['left', 'right', 'up', 'down'].filter(function (dir) {
+      return CORE.act(S, dir, function () { return 0; }).changed;
+    });
+    if (!dirs.length) {
+      showFeedback(i18n.hintText, 3000);
+      return;
+    }
+    var names = dirs.map(function (dir) { return i18n.hintDirs[dir]; });
+    showFeedback(i18n.hintLead + names.join(i18n.hintJoin) + i18n.hintSuffix, 3000);
+  }
+
   E.btnNew.addEventListener('click', newGame);
   E.btnOverlay.addEventListener('click', newGame);
+  E.btnHint.addEventListener('click', hint);
   Arcade.onKeys(Arcade.KEYMAP, input);
   Arcade.onSwipe(E.board, input);
   Arcade.onLang(render);
