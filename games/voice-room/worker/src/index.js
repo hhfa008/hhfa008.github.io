@@ -72,6 +72,9 @@ function allowedOrigin(origin) {
   try {
     const u = new URL(origin);
     if (u.hostname === 'hhfa008.github.io') return true;
+    // Cloudflare Pages mirror of the same site (and its branch previews).
+    if (u.hostname === 'hhfa008-pages.pages.dev') return true;
+    if (u.hostname.endsWith('.hhfa008-pages.pages.dev')) return true;
     if (u.hostname === 'localhost' || u.hostname === '127.0.0.1' || u.hostname === '[::1]') {
       return true;
     }

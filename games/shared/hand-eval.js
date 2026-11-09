@@ -201,8 +201,7 @@
   }
 
   function compareScores(a, b) {
-    var A = Array.isArray(a) ? a : scoreOf(a);
-    var B = Array.isArray(b) ? b : scoreOf(b);
+    var A = scoreOf(a), B = scoreOf(b);
     var n = Math.max(A.length, B.length);
     for (var i = 0; i < n; i++) {
       var x = A[i] || 0, y = B[i] || 0;
@@ -212,7 +211,11 @@
   }
 
   function scoreOf(x) {
-    if (Array.isArray(x)) return x;
+    if (Array.isArray(x)) {
+      // Raw card array: allow comparePoker(cardsA, cardsB) directly.
+      if (x.length >= 5 && x[0] && typeof x[0] === 'object') return evalPoker(x).score;
+      return x;
+    }
     if (!x) throw new Error('not a hand result');
     if (Array.isArray(x.score)) return x.score;
     if (x.rank != null) return [x.rank].concat(x.tiebreak || []);

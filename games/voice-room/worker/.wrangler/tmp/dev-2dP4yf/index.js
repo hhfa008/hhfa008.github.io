@@ -492,6 +492,16 @@ function hostIdOf(members) {
   return s.length ? s[0].id : null;
 }
 __name(hostIdOf, "hostIdOf");
+function hostIdWithGrace(roster, active) {
+  const s = sortMembers(roster);
+  if (s.length) return s[0].id;
+  return hostIdOf(active);
+}
+__name(hostIdWithGrace, "hostIdWithGrace");
+function hostOfflineOf(hostId, active) {
+  return !!hostId && !active.some((m) => m.id === hostId);
+}
+__name(hostOfflineOf, "hostOfflineOf");
 function seatsOf(members) {
   const s = sortMembers(members);
   return { xId: s[0] ? s[0].id : null, oId: s[1] ? s[1].id : null };
@@ -607,12 +617,14 @@ function alignGame(game, roster, activeRoster) {
   return norm;
 }
 __name(alignGame, "alignGame");
-function roomState(room, roster, hostId) {
+function roomState(room, roster, active) {
+  const hostId = hostIdWithGrace(roster, active);
   return {
     type: "room_state",
     room,
     hostId,
-    members: publicMembers(roster)
+    hostOffline: hostOfflineOf(hostId, active),
+    members: publicMembers(active)
   };
 }
 __name(roomState, "roomState");
@@ -940,15 +952,17 @@ var RoomDO = class {
     const active = this.activeMembers(roster);
     const game = alignGame(await this.loadGame(), roster, active);
     await this.saveGame(game);
+    const hostId = hostIdWithGrace(roster, active);
     this.send(server, {
       type: "welcome",
       room,
       selfId: id,
-      hostId: hostIdOf(active),
+      hostId,
+      hostOffline: hostOfflineOf(hostId, active),
       members: publicMembers(active),
       game
     });
-    this.broadcast(roomState(room, active, hostIdOf(active)));
+    this.broadcast(roomState(room, roster, active));
     this.broadcast({ type: "game_state", room, game });
     return new Response(null, { status: 101, webSocket: client });
   }
@@ -1036,7 +1050,7 @@ var RoomDO = class {
     sender.mic = next;
     await this.saveMembers(members);
     const active = this.activeMembers(members);
-    this.broadcast(roomState(this.roomCode, active, hostIdOf(active)));
+    this.broadcast(roomState(this.roomCode, members, active));
   }
   async handleMove(members, sender, msg) {
     const ws = this.socketById(sender.id);
@@ -1138,7 +1152,7 @@ var RoomDO = class {
   async handleReset(members, sender, msg) {
     const ws = this.socketById(sender.id);
     const active = this.activeMembers(members);
-    if (sender.id !== hostIdOf(active)) {
+    if (sender.id !== hostIdWithGrace(members, active)) {
       return this.error(ws, "host_only", "\u53EA\u6709\u623F\u4E3B\u53EF\u4EE5\u5F00\u65B0\u5C40");
     }
     const current = alignGame(await this.loadGame(), members, active);
@@ -1150,7 +1164,7 @@ var RoomDO = class {
   async handleSelect(members, sender, msg) {
     const ws = this.socketById(sender.id);
     const active = this.activeMembers(members);
-    if (sender.id !== hostIdOf(active)) {
+    if (sender.id !== hostIdWithGrace(members, active)) {
       return this.error(ws, "host_only", "\u53EA\u6709\u623F\u4E3B\u53EF\u4EE5\u6362\u6E38\u620F");
     }
     const kind = String(msg.kind || "");
@@ -1182,7 +1196,7 @@ var RoomDO = class {
     const active = this.activeMembers(roster, /* @__PURE__ */ new Set([attachment.id]));
     const game = alignGame(await this.loadGame(), roster, active);
     await this.saveGame(game);
-    this.broadcast(roomState(this.roomCode, active, hostIdOf(active)));
+    this.broadcast(roomState(this.roomCode, roster, active));
     this.broadcast({ type: "game_state", room: this.roomCode, game });
   }
   async webSocketClose(ws, code, reason, wasClean) {
@@ -1215,7 +1229,7 @@ var RoomDO = class {
     const active = this.activeMembers(roster);
     const game = alignGame(await this.loadGame(), roster, active);
     await this.saveGame(game);
-    this.broadcast(roomState(this.roomCode, active, hostIdOf(active)));
+    this.broadcast(roomState(this.roomCode, roster, active));
     this.broadcast({ type: "game_state", room: this.roomCode, game });
   }
 };
@@ -1289,6 +1303,8 @@ function allowedOrigin(origin) {
   try {
     const u = new URL(origin);
     if (u.hostname === "hhfa008.github.io") return true;
+    if (u.hostname === "hhfa008-pages.pages.dev") return true;
+    if (u.hostname.endsWith(".hhfa008-pages.pages.dev")) return true;
     if (u.hostname === "localhost" || u.hostname === "127.0.0.1" || u.hostname === "[::1]") {
       return true;
     }

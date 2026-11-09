@@ -238,9 +238,12 @@ a{color:inherit}
   </div>
 </div>
 
+<script src="/games/shared/shuffle.js"></script>
 <script id="freecell-core">
 (function (root) {
   'use strict';
+
+  var SH = root.Shuffle; // shared Fisher-Yates + CSPRNG, see games/shared/shuffle.js
 
   var SUITS = ['♠', '♥', '♦', '♣'];
   var RANK_NAMES = ['', 'A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
@@ -265,6 +268,9 @@ a{color:inherit}
   }
 
   function shuffle(deck, rng) {
+    // Delegate to the shared engine when the page loaded it. Passing the
+    // existing rng (not a seed) keeps old seeded deals bit-identical.
+    if (SH && SH.shuffleInPlace) return SH.shuffleInPlace(deck, rng ? { rng: rng } : {});
     for (var i = deck.length - 1; i > 0; i--) {
       var j = Math.floor(rng() * (i + 1));
       var tmp = deck[i]; deck[i] = deck[j]; deck[j] = tmp;
@@ -277,7 +283,9 @@ a{color:inherit}
   // Standard FreeCell deal, dealt row-wise: the first four columns get 7
   // cards, the last four get 6. Every card is face up.
   function newState(seed) {
-    var rng = (seed === undefined || seed === null) ? Math.random : mulberry32(seed >>> 0);
+    var rng = (seed === undefined || seed === null)
+      ? (SH ? SH.createRng() : Math.random)  // production: cryptographic source
+      : mulberry32(seed >>> 0);               // seed kept for replay/saved URLs
     var deck = shuffle(makeDeck(), rng);
     var cols = [[], [], [], [], [], [], [], []];
     var i = 0;
