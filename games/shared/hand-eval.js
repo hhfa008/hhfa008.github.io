@@ -81,6 +81,8 @@
   // A2345 is the wheel: high card 5 (A plays low).
   function straightHigh(ranksDesc) {
     if (ranksDesc.length !== 5) return 0;
+    // Five distinct ranks are required (77,44,3 spans 4 ranks but is two pair).
+    for (var i = 1; i < 5; i++) if (ranksDesc[i] === ranksDesc[i - 1]) return 0;
     if (ranksDesc[0] - ranksDesc[4] === 4) return ranksDesc[0];
     if (ranksDesc[0] === 14 && ranksDesc[1] === 5 && ranksDesc[2] === 4 &&
       ranksDesc[3] === 3 && ranksDesc[4] === 2) return 5;
@@ -199,8 +201,7 @@
   }
 
   function compareScores(a, b) {
-    var A = Array.isArray(a) ? a : scoreOf(a);
-    var B = Array.isArray(b) ? b : scoreOf(b);
+    var A = scoreOf(a), B = scoreOf(b);
     var n = Math.max(A.length, B.length);
     for (var i = 0; i < n; i++) {
       var x = A[i] || 0, y = B[i] || 0;
@@ -210,7 +211,11 @@
   }
 
   function scoreOf(x) {
-    if (Array.isArray(x)) return x;
+    if (Array.isArray(x)) {
+      // Raw card array: allow comparePoker(cardsA, cardsB) directly.
+      if (x.length >= 5 && x[0] && typeof x[0] === 'object') return evalPoker(x).score;
+      return x;
+    }
     if (!x) throw new Error('not a hand result');
     if (Array.isArray(x.score)) return x.score;
     if (x.rank != null) return [x.rank].concat(x.tiebreak || []);

@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>灯语者：余烬对决 — 世界观、规则与卡牌说明</title>
+<meta name="description" content="《灯语者：余烬对决》完整规则：长夜世界观、灯心胜利条件、点灯/传焰/掩灯三阶段、灯灵与灯语两类卡牌、灯力费用、光与焰、效果触发与目标选择，以及六张示例卡的结算说明。">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="author" content="Devin">
+<meta name="theme-color" content="#16101c">
+<link rel="canonical" href="https://hhfa008.github.io/games/tcg-sample/rules.html">
+<link rel="alternate" hreflang="zh-CN" href="https://hhfa008.github.io/games/tcg-sample/rules.html">
+<link rel="alternate" hreflang="x-default" href="https://hhfa008.github.io/games/tcg-sample/rules.html">
+<link rel="icon" href="/games/assets/icons/tcg-sample.svg" type="image/svg+xml">
+
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Devin">
+<meta property="og:title" content="灯语者：余烬对决 — 世界观、规则与卡牌说明">
+<meta property="og:description" content="灯心、灯力、灯灵与灯语：一份从世界观到结算顺序的完整原创卡牌规则。">
+<meta property="og:url" content="https://hhfa008.github.io/games/tcg-sample/rules.html">
+<meta property="og:locale" content="zh_CN">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="灯语者：余烬对决 — 完整规则">
+<meta name="twitter:description" content="长夜世界观、三阶段回合、两类卡牌、效果与目标选择。本作为原创设计。">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "灯语者：余烬对决 — 世界观、规则与卡牌说明",
+  "description": "原创集换式卡牌《灯语者：余烬对决》的完整规则：长夜世界观、灯心胜利条件、点灯/传焰/掩灯三阶段、灯灵与灯语、灯力费用、光与焰、触发效果与目标选择，以及示例卡结算。",
+  "inLanguage": "zh-CN",
+  "author": { "@type": "Person", "name": "Devin", "url": "https://hhfa008.github.io/" },
+  "publisher": { "@type": "Person", "name": "Devin", "url": "https://hhfa008.github.io/" },
+  "datePublished": "2026-11-10",
+  "dateModified": "2026-11-10",
+  "mainEntityOfPage": { "@type": "WebPage", "@id": "https://hhfa008.github.io/games/tcg-sample/rules.html" },
+  "about": { "@type": "VideoGame", "name": "灯语者：余烬对决", "url": "https://hhfa008.github.io/games/tcg-sample/" }
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "《灯语者：余烬对决》需要注册或付费吗？",
+      "acceptedAnswer": { "@type": "Answer", "text": "不需要。游戏是纯静态网页，免费、免登录、无内购，也不采集账号或个人数据。除首次加载页面外可以离线游玩。" }
+    },
+    {
+      "@type": "Question",
+      "name": "可以两个人联机对战吗？",
+      "acceptedAnswer": { "@type": "Answer", "text": "当前版本是单人对 AI，提供简单与中等两档。引擎本身是通用的双人对局框架，但本示例页只接入本地 AI，不含联网房间。" }
+    },
+    {
+      "@type": "Question",
+      "name": "为什么先手第一回合不抽牌，后手还有灯力补偿？",
+      "acceptedAnswer": { "@type": "Answer", "text": "先手拥有首次行动的时间优势。为了压低先手偏差，先手在全局第一回合跳过抽牌；后手在自己的第一回合额外获得两点灯力，并正常抽一张牌。200 局同水平 AI 自对弈的实测先手胜率约为 52.5%，落在 40% 到 60% 的可接受区间内。" }
+    },
+    {
+      "@type": "Question",
+      "name": "牌库抽空会怎样？",
+      "acceptedAnswer": { "@type": "Answer", "text": "当一方需要抽牌而牌库已经为空时，该方立即判负，称为灯枯。因此抽牌效果既是资源，也可能加速自己的失败。" }
+    },
+    {
+      "@type": "Question",
+      "name": "卡牌数据和规则可以修改或复用吗？",
+      "acceptedAnswer": { "@type": "Answer", "text": "可以。引擎把卡牌写成 JSON，一局的状态也是纯 JSON，支持固定种子的确定性对局与动作日志重放。示例卡组只是这套引擎的一组原创数据，替换卡牌定义即可构建别的世界观。" }
+    }
+  ]
+}
+</script>
+
+<style>
+:root{
+  --night:#110c17;--panel:#1d1528;--line:#3a2b4d;--ink:#f1eaf7;--muted:#b6a8c6;
+  --amber:#ffc86b;--moss:#8fd6a4;--vermilion:#ef6b4f;--indigo:#9db0ff;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  color:var(--ink);background:
+    radial-gradient(800px 420px at 50% -140px,rgba(255,190,90,.13),transparent 62%),
+    linear-gradient(180deg,var(--night),#0b0811);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC","PingFang SC",sans-serif;
+  line-height:1.85;-webkit-font-smoothing:antialiased;
+}
+a{color:var(--amber)}
+.wrap{max-width:760px;margin:0 auto;padding:22px 18px 60px}
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,.08);padding-bottom:14px;margin-bottom:22px}
+.top h1{font-size:22px;line-height:1.35;margin:0;flex:1 1 320px}
+.top .back{border:1px solid var(--line);border-radius:9px;padding:8px 13px;text-decoration:none;font-size:13px;color:var(--ink);background:var(--panel)}
+.top .back:hover{border-color:var(--amber)}
+.lede{color:var(--muted);font-size:15px;margin:0 0 22px}
+h2{font-size:18px;margin:34px 0 10px;padding-left:10px;border-left:3px solid var(--amber)}
+h3{font-size:15px;margin:20px 0 6px;color:var(--amber)}
+p{margin:0 0 12px}
+ul,ol{margin:0 0 14px;padding-left:22px}
+li{margin:4px 0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:12px 0}
+.card b{color:var(--amber)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:620px){.grid{grid-template-columns:1fr}}
+.tag{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:1px 8px;font-size:12px;color:var(--muted);margin-right:6px}
+.note{border-left:3px solid var(--vermilion);background:rgba(239,107,79,.08);padding:12px 14px;border-radius:0 10px 10px 0;margin:16px 0}
+.faq dt{font-weight:600;color:var(--ink);margin-top:14px}
+.faq dd{margin:4px 0 0;color:var(--muted)}
+footer{margin-top:38px;padding-top:16px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
+.nav{display:flex;flex-wrap:wrap;gap:10px;margin-top:24px}
+.nav a{border:1px solid var(--line);border-radius:9px;padding:9px 14px;text-decoration:none;font-size:14px;background:var(--panel)}
+.nav a:hover{border-color:var(--amber)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>灯语者：余烬对决 · 规则与世界观</h1>
+    <a class="back" href="./">返回游戏</a>
+  </header>
+
+  <p class="lede">一份写给第一次点灯的玩家的完整说明：从长夜的世界，到灯心归零的那一刻。</p>
+
+  <h2>一、长夜与灯语者</h2>
+  <p>太阳沉入地平线之后，世界进入了没有尽头的长夜。风会吹灭普通的火，只有以记忆为芯、以名字为油的余烬灯还能燃烧。能把灯中的影子唤成实体的人，被称为灯语者。他们不与黑夜争辩，只是把一盏又一盏灯点亮，让路重新出现。</p>
+  <p>灯语者之间的较量不在战场，而在余烬环。双方各守一盏灯心，用灯力从灯中唤出灯灵，或用灯语直接改写局面。灯灵的光可以切开黑暗，也可以击碎对方的灯灵；但灯心一旦熄灭，再亮的灯灵也会失去归处。</p>
+
+  <h2>二、胜利条件</h2>
+  <p>每位玩家有二十点灯心。把对手的灯心降到零或更低，你立刻获胜。若一方必须抽牌而牌库已经为空，该方立即判负，称为灯枯。全局最多六十个回合；到达上限依次比较灯心、场上光焰之和、手牌数、牌库数，仍相同则平局。</p>
+
+  <h2>三、开局与回合流程</h2>
+  <p>双方各用三十张牌组成牌库，洗牌后各抽五张作为起手，灯心均为二十点。先手先行动。为了削弱先手的时间优势，先手在全局第一回合跳过抽牌；后手在自己的第一回合额外获得两点灯力，并正常抽一张牌。</p>
+  <p>每个回合分为三个阶段，游戏会自动推进，你只需要在主阶段做决定。</p>
+  <ol>
+    <li><b>点灯阶段</b>：重置己方所有灯灵，使其本回合可以行动；按回合数获得灯力，第一回合三点，之后每回合加一点，最多八点；抽一张牌；结算所有“回合开始”效果。</li>
+    <li><b>传焰阶段</b>：支付灯力打出卡牌，指挥灯灵攻击，或发动灯灵的能力。</li>
+    <li><b>掩灯阶段</b>：结束回合，把行动权交给对手。若到达回合上限，则按胜利条件中的顺序判定。</li>
+  </ol>
+  <p>刚登场的灯灵当回合不能攻击，需要一整个回合稳住火焰。每个灯灵每回合最多攻击一次；攻击后它会暂时失去行动力，直到你的下一个点灯阶段才重新就绪。</p>
+
+  <h2>四、卡牌类型与数值</h2>
+  <div class="grid">
+    <div class="card">
+      <h3>灯灵</h3>
+      <p>打出后留在场上，拥有两个数值。<b>光</b>是它造成的伤害，<b>焰</b>是它的生命。焰降到零或更低时，灯灵熄灭并进入弃牌堆，同时触发它的“熄灭”效果。灯灵可以攻击敌方灯灵，也可以直接攻击敌方灯心。</p>
+    </div>
+    <div class="card">
+      <h3>灯语</h3>
+      <p>一次性的指令。支付灯力后立即结算，结算完毕进入弃牌堆。灯语通常提供伤害、恢复、抽牌或强化，</p>
+    </div>
+  </div>
+  <p>每张卡左上角的数字是<b>灯力</b>费用。灯力每回合重新补满，不会累积到下一回合；卡牌文字中的“登场”对应打出时触发，“熄灭”对应离场时触发，“回合开始”对应己方点灯阶段触发，“发动”则是留在场上、支付费用后主动使用的效果。</p>
+
+  <h2>五、战斗与结算顺序</h2>
+  <p>灯灵攻击敌方灯灵时，双方同时造成伤害：攻击方用光打目标，目标也用它的光回击攻击方。即使目标会被击碎，它的回击仍然有效。攻击敌方灯心时没有回击，只有攻击方造成伤害。</p>
+  <p>伤害与效果按声明顺序逐条结算。一条效果结算完毕后，先处理所有焰不大于零的灯灵：把它们移入弃牌堆，按场上顺序触发“熄灭”效果；这些效果又可能造成新的熄灭，直到没有待处理的灯灵为止。然后才检查灯心是否归零。一次群体伤害可能引发连锁熄灭，也可能在最后一次熄灭中打空对手灯心。</p>
+
+  <h2>六、效果与目标示例</h2>
+  <ul>
+    <li><b>暮色灯蛾</b>（两费灯灵，二光二焰）：登场时对一名敌方灯灵造成两点伤害。若目标只有两点焰，它会在效果结算后熄灭。</li>
+    <li><b>群焰回响</b>（四费灯语）：对所有敌方灯灵造成两点伤害。它不指定单一目标，因此不会因为“没有目标”而无法打出。</li>
+    <li><b>靛蓝织者</b>（三费灯灵，三光三焰）：登场时使一名友方灯灵获得一光一焰。它可以把增益给自己，也可以留给已经站场的同伴。</li>
+    <li><b>拾焰人</b>（两费灯灵，一光四焰）：你的回合开始时，灯心恢复一点。</li>
+    <li><b>银白巡灯</b>（四费灯灵，四光四焰）：发动能力需要两点灯力，对敌方灯心造成一点伤害；同一回合每个灯灵只能发动一次。</li>
+    <li><b>朱红余烬</b>（三费灯灵，四光二焰）：熄灭时对敌方灯心造成一点伤害。交换对手的大灯灵时，它能补上最后一点伤害。</li>
+  </ul>
+  <p>目标分为单体、全体与随机三种。单体效果在打出时选择目标；若场上没有任何合法目标，卡牌仍然可以打出，效果落空。全体效果自动覆盖所有合法目标；随机效果由固定序列抽取：同种子、同动作序列会得到完全相同的结果，可复盘重放。</p>
+
+  <h2>七、原创声明</h2>
+  <div class="note">
+    <p><b>本作为原创设计，与任何现有卡牌游戏无关。</b>灯语者、灯灵、灯语、灯力、灯心、光、焰等名词，以及全部卡名、卡面、世界观与规则文本，均为本作自创。引擎是一套通用的集换式卡牌框架，卡牌由 JSON 描述，效果由声明式原语组合而成；示例卡组只是这套框架的一组原创数据，不复制、不影射任何现有作品的卡名、术语、规则文本或美术。</p>
+  </div>
+
+  <h2>八、常见问题</h2>
+  <dl class="faq">
+    <dt>需要注册或付费吗？</dt>
+    <dd>不需要。游戏是纯静态网页，免费、免登录、无内购，也不采集账号或个人数据。除首次加载页面外可以离线游玩。</dd>
+    <dt>可以两个人联机对战吗？</dt>
+    <dd>当前版本是单人对 AI，提供简单与中等两档。引擎本身是通用的双人对局框架，但本示例页只接入本地 AI，不含联网房间。</dd>
+    <dt>为什么先手第一回合不抽牌，后手还有灯力补偿？</dt>
+    <dd>先手有首次行动优势，因此第一回合跳过抽牌；后手第一回合额外获得两点灯力并正常抽牌。同水平 AI 自对弈实测先手胜率约 52.5%。</dd>
+    <dt>牌库抽空会怎样？</dt>
+    <dd>当一方需要抽牌而牌库已经为空时，该方立即判负，称为灯枯。因此抽牌效果既是资源，也可能加速自己的失败。</dd>
+    <dt>卡牌数据和规则可以修改或复用吗？</dt>
+    <dd>可以。引擎把卡牌写成 JSON，一局的状态也是纯 JSON，支持固定种子的确定性对局与动作日志重放。替换卡牌定义即可构建别的世界观。</dd>
+  </dl>
+
+  <div class="nav">
+    <a href="./">开始一局</a>
+    <a href="/games/">返回游戏大厅</a>
+  </div>
+
+  <footer>
+    <p>灯语者：余烬对决 · 原创卡牌对战示例 · 通用集换式卡牌引擎 · 无外部资源、无追踪。</p>
+  </footer>
+</div>
+</body>
+</html>
