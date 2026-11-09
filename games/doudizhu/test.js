@@ -6,6 +6,10 @@
 var fs = require('fs');
 var path = require('path');
 
+// Page core delegates to globalThis.Shuffle when present; the browser loads
+// /games/shared/shuffle.js before the core, so the test loads it too.
+require('../shared/shuffle.js');
+
 var html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
 var a = html.indexOf('// __CORE_START__');
 var b = html.indexOf('// __CORE_END__');

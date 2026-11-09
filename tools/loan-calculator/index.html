@@ -1,0 +1,1418 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>贷款月供计算器 — 等额本息、等额本金与提前还款</title>
+<meta name="description" content="免费贷款月供计算器：输入贷款金额、年利率和期限，算出等额本息或等额本金的月供、总利息、总还款，并模拟每月额外还款能省多少利息、缩短多少月。附逐月还款计划与 CSV 下载，全部在本地计算。">
+<meta name="author" content="Devin">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="theme-color" content="#f2efe7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#101316" media="(prefers-color-scheme: dark)">
+<link rel="canonical" href="https://hhfa008.github.io/tools/loan-calculator/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23b93d12'/%3E%3Cpath d='M9 8h14v16H9z' fill='%23fbf9f4'/%3E%3Cpath d='M12 13h8M12 17h8M12 21h5' stroke='%23b93d12' stroke-width='1.7' stroke-linecap='round'/%3E%3C/svg%3E">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Devin">
+<meta property="og:title" content="贷款月供计算器 — 等额本息、等额本金与提前还款">
+<meta property="og:description" content="算月供、总利息与提前还款节省。附逐月还款计划和 CSV 下载，全部在浏览器本地完成。">
+<meta property="og:url" content="https://hhfa008.github.io/tools/loan-calculator/">
+<meta property="og:locale" content="zh_CN">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="贷款月供计算器">
+<meta name="twitter:description" content="等额本息 / 等额本金月供、总利息、额外还款节省与还款计划表。纯本地计算。">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "贷款月供计算器",
+  "url": "https://hhfa008.github.io/tools/loan-calculator/",
+  "applicationCategory": "FinanceApplication",
+  "operatingSystem": "Any",
+  "browserRequirements": "Requires JavaScript",
+  "isAccessibleForFree": true,
+  "inLanguage": ["zh-CN", "en", "id"],
+  "description": "计算等额本息与等额本金贷款的月供、总利息、总还款，并模拟每月额外还款节省的利息与缩短的月数。",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "featureList": [
+    "等额本息与等额本金月供",
+    "总利息、总还款与利息占本金比例",
+    "每月额外还款的节省与缩短月数",
+    "按年或逐月还款计划表",
+    "CSV 下载与摘要复制",
+    "四种币种与 Intl 格式化"
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "等额本息和等额本金有什么区别？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "等额本息每期还款额相同，前期利息占比高；等额本金每期归还相同本金，利息随剩余本金下降，所以月供逐月递减、首月最高，总利息通常更少，但前期还款压力更大。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "每月额外还款能省多少利息？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "页面会把额外还款直接冲减本金，逐月重算利息，并与不额外还款的方案对比，给出节省的利息和缩短的月数。节省额取决于利率、剩余期限和额外还款持续的时间。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "为什么计算结果和银行略有差异？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "这里按名义年利率除以 12 得到月利率，利息按分四舍五入，且不考虑放款日、还款日、计息天数、手续费、保险和提前还款罚金。银行可能按日计息或采用不同的取整规则，因此会有小幅差异。"
+      }
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "首页", "item": "https://hhfa008.github.io/" },
+    { "@type": "ListItem", "position": 2, "name": "工具大厅", "item": "https://hhfa008.github.io/tools/" },
+    { "@type": "ListItem", "position": 3, "name": "贷款月供计算器", "item": "https://hhfa008.github.io/tools/loan-calculator/" }
+  ]
+}
+</script>
+
+<style>
+:root{
+  --paper:#f2efe7;--paper-2:#fbf9f4;--panel:#fff;
+  --ink:#14171a;--muted:#5b615c;--muted-2:#7b807a;
+  --line:#d5d0c4;--line-strong:#bcb5a7;
+  --accent:#b93d12;--accent-soft:#f2a07a;--accent-wash:#f7e5da;
+  --ok:#2f6b3c;--ok-wash:#e8f2e7;--warn:#8a5a00;--warn-wash:#fbf1db;
+  --bad:#a32216;--bad-wash:#fbe7e3;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --radius:16px;--max:1040px;
+}
+@media (prefers-color-scheme:dark){:root{
+  --paper:#101316;--paper-2:#171b1f;--panel:#1a1f23;
+  --ink:#f2efe7;--muted:#b7b3a8;--muted-2:#948f85;
+  --line:#333a40;--line-strong:#4a535b;
+  --accent:#f08a5d;--accent-soft:#f2a07a;--accent-wash:#2b211c;
+  --ok:#8fd19e;--ok-wash:#1b2b1e;--warn:#f0c36a;--warn-wash:#2d2618;
+  --bad:#ff8a7a;--bad-wash:#321d1a;
+}}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;color-scheme:light dark;scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.6 var(--sans);overflow-x:clip;-webkit-font-smoothing:antialiased}
+[hidden]{display:none!important}
+p,h1,h2,h3,ul,ol{margin:0}
+a{color:inherit}
+button,input,select{font:inherit;color:inherit}
+.wrap{width:100%;max-width:var(--max);margin:0 auto;padding-left:18px;padding-right:18px}
+@media (min-width:720px){.wrap{padding-left:32px;padding-right:32px}}
+.skip-link{position:absolute;left:12px;top:-64px;z-index:50;padding:12px 16px;border-radius:8px;background:var(--ink);color:var(--paper);text-decoration:none}
+.skip-link:focus{top:12px}
+:focus-visible{outline:3px solid rgba(185,61,18,.5);outline-offset:3px}
+@media (prefers-color-scheme:dark){:focus-visible{outline-color:rgba(240,138,93,.7)}}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+.site-header{border-bottom:1px solid var(--line);background:var(--paper)}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:64px;flex-wrap:wrap;padding-top:8px;padding-bottom:8px}
+.brand{display:inline-flex;align-items:center;gap:10px;min-height:44px;font-weight:700;letter-spacing:-.02em;text-decoration:none}
+.brand-mark{width:26px;height:26px;border-radius:7px;background:var(--accent);display:inline-block;position:relative}
+.brand-mark::before,.brand-mark::after{content:"";position:absolute;left:6px;right:6px;height:2px;background:var(--paper-2);border-radius:1px}
+.brand-mark::before{top:9px}.brand-mark::after{top:15px;right:10px}
+.header-tools{display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:flex-end}
+.site-nav{display:flex;align-items:center;gap:15px;font-size:14px}
+.site-nav a{text-decoration:none;color:var(--muted);min-height:44px;display:inline-flex;align-items:center}
+.site-nav a:hover{color:var(--accent)}
+.langs{display:flex;gap:4px}
+.langs button{min-width:44px;min-height:44px;padding:0 6px;border:1px solid var(--line-strong);border-radius:9px;background:transparent;color:var(--muted);font-size:12.5px;font-weight:600;cursor:pointer}
+.langs button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+@media (max-width:560px){.site-nav{gap:12px;font-size:13px}.header-tools{gap:10px}}
+
+.hero{padding:36px 0 8px}
+.eyebrow{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:10px}
+.hero h1{font-size:clamp(1.8rem,5.6vw,2.7rem);line-height:1.1;letter-spacing:-.03em;max-width:22ch;margin-bottom:12px}
+.lede{max-width:72ch;color:var(--muted);font-size:clamp(1rem,2vw,1.08rem)}
+.notice{max-width:78ch;margin-top:16px;padding:12px 16px;border-left:4px solid var(--accent);background:var(--accent-wash);border-radius:0 10px 10px 0;font-size:14px}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px}
+@media (min-width:720px){.card{padding:24px 26px}}
+section{margin:18px 0}
+.section-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.section-head h2{font-size:clamp(1.15rem,2.4vw,1.4rem);letter-spacing:-.02em}
+.muted{color:var(--muted);font-size:14px}
+.kicker{font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.11em;text-transform:uppercase;color:var(--accent);margin-bottom:6px}
+
+.calc-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:18px}
+@media (min-width:900px){.calc-layout{grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);align-items:start}}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-top:14px}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field label{font-size:13px;font-weight:600;color:var(--ink)}
+.field .sub-label{font-size:12.5px;color:var(--muted-2)}
+.field input,.field select{width:100%;min-height:48px;padding:10px 12px;font-size:16px;background:var(--paper-2);border:1px solid var(--line-strong);border-radius:10px;appearance:none}
+.field select{padding-right:34px;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 18px) 50%,calc(100% - 13px) 50%;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+.field input:focus,.field select:focus{border-color:var(--accent);outline:3px solid rgba(185,61,18,.28);outline-offset:1px}
+.input-row{display:flex;align-items:center;gap:8px}
+.input-row input{flex:1 1 auto;min-width:0}
+.unit{flex:0 0 auto;font-family:var(--mono);font-size:13px;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.chip{min-width:48px;min-height:44px;padding:0 12px;border:1px solid var(--line-strong);border-radius:999px;background:var(--paper-2);font-family:var(--mono);font-size:13px;font-weight:600;cursor:pointer}
+.chip:hover{border-color:var(--accent);color:var(--accent)}
+.chip[aria-pressed="true"]{background:var(--accent-wash);border-color:var(--accent);color:var(--accent)}
+.field-wide{grid-column:1/-1}
+.err{min-height:18px;font-size:12.5px;color:var(--bad);font-weight:550}
+.field input[aria-invalid="true"],.field select[aria-invalid="true"]{border-color:var(--bad);background:var(--bad-wash)}
+.hint{margin-top:10px;font-size:12.5px;color:var(--muted-2)}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:10px 18px;border:1px solid var(--line-strong);border-radius:10px;background:var(--paper-2);font-size:15px;font-weight:600;cursor:pointer;text-decoration:none}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.05);color:#fff}
+.btn-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.btn-row .btn{flex:1 1 150px}
+
+.big{font-family:var(--mono);font-size:clamp(1.9rem,6vw,2.6rem);font-weight:600;line-height:1.05;letter-spacing:-.04em;color:var(--accent);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.big small{font-family:var(--sans);font-size:.38em;font-weight:600;letter-spacing:0;color:var(--muted);margin-left:6px}
+.sub{font-size:13px;color:var(--muted);margin-top:6px}
+.stat{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--line);font-size:13.5px}
+.stat:first-of-type{border-top:0}
+.stat span{color:var(--muted)}
+.stat strong{font-family:var(--mono);font-weight:600;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.result-stack{display:flex;flex-direction:column;gap:14px}
+@media (min-width:900px){.result-stack{position:sticky;top:14px}}
+.extra-note{margin-top:10px;padding:10px 12px;border-radius:9px;background:var(--ok-wash);color:var(--ok);font-size:12.5px}
+
+.seg{display:inline-flex;gap:4px;padding:3px;border:1px solid var(--line);border-radius:10px;background:var(--paper-2)}
+.seg button{min-height:44px;padding:0 14px;border:0;border-radius:8px;background:transparent;color:var(--muted);font-size:13.5px;font-weight:600;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--panel);color:var(--accent);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.table-wrap{margin-top:14px;border:1px solid var(--line);border-radius:12px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;min-width:620px;border-collapse:collapse;font-size:13px}
+caption{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+th,td{padding:9px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+thead th{background:var(--paper-2);font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+td.num,th.num{font-family:var(--mono);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover td{background:var(--paper-2)}
+
+details.formulas{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);padding:0 20px;margin-top:22px}
+details.formulas summary{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 0;cursor:pointer;font-weight:650;list-style:none}
+details.formulas summary::-webkit-details-marker{display:none}
+details.formulas summary::after{content:"+";font-family:var(--mono);font-size:20px;line-height:1;color:var(--accent)}
+details.formulas[open] summary::after{content:"\2212"}
+.f-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-bottom:16px}
+@media (min-width:760px){.f-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.formula{min-width:0;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--paper-2)}
+.formula h3{margin:0 0 7px;font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.formula code{display:inline-block;max-width:100%;padding:2px 6px;border-radius:5px;background:var(--accent-wash);font-size:12.5px;line-height:1.5;overflow-wrap:anywhere}
+.formula p{margin-top:7px;font-size:12.5px;color:var(--muted)}
+.assumptions{margin:0;padding:0 0 20px 20px;font-size:13px;color:var(--muted)}
+.assumptions li{margin-bottom:8px}
+
+.faq{margin-top:26px}
+.faq h2{font-size:clamp(1.3rem,3vw,1.7rem);letter-spacing:-.02em;margin-bottom:12px}
+.faq details{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:0 18px}
+.faq details+details{margin-top:10px}
+.faq summary{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px 0;cursor:pointer;font-weight:600;list-style:none;min-height:44px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";font-family:var(--mono);color:var(--accent);font-size:19px}
+.faq details[open] summary::after{content:"\2212"}
+.faq p{padding:0 0 18px;font-size:14px;color:var(--muted);max-width:80ch}
+
+.site-footer{margin-top:30px;padding:22px 0 34px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+.footer-inner{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:10px 20px}
+.site-footer a{display:inline-flex;align-items:center;min-height:44px;color:var(--accent);text-decoration:none}
+.site-footer a:hover{text-decoration:underline}
+.fine{font-size:12px;color:var(--muted-2);margin-top:10px}
+
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translate(-50%,12px);z-index:30;max-width:calc(100vw - 32px);padding:12px 18px;border-radius:12px;background:var(--ink);color:var(--paper);font-size:14px;font-weight:550;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.22);opacity:0;pointer-events:none;transition:opacity .16s,transform .16s}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}#toast.on{transform:translate(-50%,0)}}
+@media print{
+  .site-header,.site-footer,.langs,.btn,.seg,.skip-link,#toast,.no-print{display:none!important}
+  body{background:#fff;color:#000}
+  .card,details,table{border-color:#999}
+  .table-wrap{overflow:visible}
+  table{min-width:0}
+  details{display:block}
+}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#calculator" data-i="skipLink">跳到计算器</a>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="/" aria-label="Devin" data-i-aria="brandAria"><span class="brand-mark" aria-hidden="true"></span>Devin</a>
+    <div class="header-tools">
+      <nav class="site-nav" aria-label="站点导航" data-i-aria="siteNavAria">
+        <a id="nav-tools" href="/tools/" data-i="navTools">工具大厅</a>
+        <a id="nav-games" href="/games/" data-i="navGames">在线桌游</a>
+      </nav>
+      <div class="langs" role="group" aria-label="语言" data-i-aria="langLabel">
+        <button type="button" data-lang="zh" aria-pressed="true">中文</button>
+        <button type="button" data-lang="en" aria-pressed="false">EN</button>
+        <button type="button" data-lang="id" aria-pressed="false">ID</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero" aria-labelledby="page-title">
+    <p class="eyebrow" data-i="eyebrow">免费工具 · 贷款与分期</p>
+    <h1 id="page-title" data-i="appTitle">贷款月供计算器</h1>
+    <p class="lede" data-i="tagline">比较等额本息与等额本金，算清总利息，再看每月多还一点能省下多少。</p>
+    <p class="notice" data-i="estimateNote">所有结果均为估算，不构成金融建议。计算不含手续费、保险、浮动利率和提前还款罚金。</p>
+  </section>
+
+  <div class="calc-layout" id="calculator">
+    <section class="card" aria-labelledby="form-title">
+      <p class="kicker" data-i="formHint">输入</p>
+      <h2 id="form-title" data-i="formTitle">填写贷款条件</h2>
+      <form id="calc-form" class="form-grid" autocomplete="off" novalidate>
+        <div class="field">
+          <label for="amount" data-i="amountLabel">贷款金额</label>
+          <input id="amount" type="number" inputmode="decimal" min="0.01" step="0.01" value="100000" data-i-ph="amountPh" placeholder="例如 100000">
+          <p class="err" id="err-amount" role="alert"></p>
+        </div>
+        <div class="field">
+          <label for="currency" data-i="currencyLabel">币种</label>
+          <select id="currency">
+            <option value="CNY" data-i="curCNY">CNY — 人民币</option>
+            <option value="USD" data-i="curUSD">USD — 美元</option>
+            <option value="EUR" data-i="curEUR">EUR — 欧元</option>
+            <option value="IDR" data-i="curIDR">IDR — 印尼盾</option>
+          </select>
+          <p class="err" id="err-currency" role="alert"></p>
+        </div>
+        <div class="field">
+          <label for="rate" data-i="rateLabel">年利率（%）</label>
+          <div class="input-row">
+            <input id="rate" type="number" inputmode="decimal" min="0" max="100" step="0.01" value="6" data-i-ph="ratePh" placeholder="例如 6">
+            <span class="unit">%</span>
+          </div>
+          <p class="err" id="err-rate" role="alert"></p>
+        </div>
+        <div class="field">
+          <label for="months" data-i="monthsLabel">期限（月）</label>
+          <input id="months" type="number" inputmode="numeric" min="1" max="600" step="1" value="360" data-i-ph="monthsPh" placeholder="1–600">
+          <p class="err" id="err-months" role="alert"></p>
+        </div>
+        <div class="field field-wide">
+          <span class="sub-label" data-i="quickLabel">快捷期限</span>
+          <div class="chips" role="group" aria-label="快捷期限" data-i-aria="quickAria">
+            <button type="button" class="chip" data-months="12" aria-pressed="false">12</button>
+            <button type="button" class="chip" data-months="36" aria-pressed="false">36</button>
+            <button type="button" class="chip" data-months="60" aria-pressed="false">60</button>
+            <button type="button" class="chip" data-months="120" aria-pressed="false">120</button>
+            <button type="button" class="chip" data-months="240" aria-pressed="false">240</button>
+            <button type="button" class="chip" data-months="360" aria-pressed="true">360</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="method" data-i="methodLabel">还款方式</label>
+          <select id="method">
+            <option value="annuity" data-i="methodAnnuity">等额本息</option>
+            <option value="equal-principal" data-i="methodEqualPrincipal">等额本金</option>
+          </select>
+          <p class="err" id="err-method" role="alert"></p>
+        </div>
+        <div class="field">
+          <label for="extra" data-i="extraLabel">每月额外还款（可选）</label>
+          <input id="extra" type="number" inputmode="decimal" min="0" step="0.01" value="0" data-i-ph="extraPh" placeholder="0">
+          <p class="err" id="err-extra" role="alert"></p>
+        </div>
+        <p class="hint field-wide" data-i="extraHint">额外还款直接冲减本金，并按月重新计算利息；最后一期只还剩余余额。</p>
+        <p class="hint field-wide" data-i="rateHint">年利率可以为 0。月利率 = 年利率 ÷ 1200。</p>
+      </form>
+    </section>
+
+    <section class="result-stack" aria-labelledby="results-title" aria-live="polite">
+      <h2 class="sr-only" id="results-title" data-i="resultsTitle">计算结果</h2>
+      <article class="card">
+        <p class="kicker" data-i="firstPayment">首月月供</p>
+        <p class="big" id="first-payment">—</p>
+        <p class="sub" id="first-note" data-i="firstNoteAnnuity">等额本息：每月还款额相同。</p>
+        <div class="stat"><span data-i="actualMonths">实际还清</span><strong id="actual-months">—</strong></div>
+        <div class="stat"><span data-i="interestRatio">利息占本金</span><strong id="interest-ratio">—</strong></div>
+      </article>
+      <article class="card">
+        <div class="stat"><span data-i="totalInterest">总利息</span><strong id="total-interest">—</strong></div>
+        <div class="stat"><span data-i="totalPayment">总还款</span><strong id="total-payment">—</strong></div>
+      </article>
+      <article class="card">
+        <p class="kicker" data-i="extraTitle">额外还款效果</p>
+        <div class="stat"><span data-i="interestSaved">节省利息</span><strong id="interest-saved">—</strong></div>
+        <div class="stat"><span data-i="monthsShortened">缩短月数</span><strong id="months-shortened">—</strong></div>
+        <p class="extra-note" id="extra-note" hidden data-i="extraNote">与不额外还款相比，按相同利率估算。</p>
+      </article>
+      <button class="btn primary" type="button" id="copy-summary" data-i="copySummary">复制摘要</button>
+    </section>
+  </div>
+
+  <section class="card" aria-labelledby="schedule-title">
+    <div class="section-head">
+      <div>
+        <h2 id="schedule-title" data-i="scheduleTitle">还款计划表</h2>
+        <p class="muted" data-i="scheduleHint">默认按年汇总，可切换逐月。金额按分取整，最后一期只还剩余。</p>
+      </div>
+      <div class="seg" role="group" aria-label="计划表视图" data-i-aria="viewAria">
+        <button type="button" id="view-year" aria-pressed="true" data-i="viewYearly">按年汇总</button>
+        <button type="button" id="view-month" aria-pressed="false" data-i="viewMonthly">逐月</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <caption data-i="scheduleCaption">还款计划（估算）</caption>
+        <thead>
+          <tr>
+            <th scope="col" data-i="colPeriod">期数</th>
+            <th scope="col" class="num" data-i="colPayment">还款额</th>
+            <th scope="col" class="num" data-i="colPrincipal">本金</th>
+            <th scope="col" class="num" data-i="colInterest">利息</th>
+            <th scope="col" class="num" data-i="colExtra">额外还款</th>
+            <th scope="col" class="num" data-i="colBalance">期末余额</th>
+          </tr>
+        </thead>
+        <tbody id="schedule-body"></tbody>
+      </table>
+    </div>
+    <div class="btn-row no-print">
+      <button class="btn" type="button" id="download-csv" data-i="downloadCsv">下载 CSV</button>
+    </div>
+    <p class="hint" data-i="csvHint">CSV 包含完整逐月计划，由浏览器本地生成，不会上传任何数据。</p>
+  </section>
+
+  <details class="formulas">
+    <summary data-i="formulasTitle">公式与假设 — 展开核对</summary>
+    <div class="f-grid">
+      <div class="formula">
+        <h3 data-i="fPmtTitle">等额本息月供</h3>
+        <code>PMT = P × r × (1 + r)^n ÷ ((1 + r)^n − 1)</code>
+        <p data-i="fPmtBody">P 为贷款本金，n 为期限月数，r = 年利率 ÷ 1200。年利率为 0 时，月供 = P ÷ n。</p>
+      </div>
+      <div class="formula">
+        <h3 data-i="fEqualTitle">等额本金</h3>
+        <code>本金 = P0 ÷ n · 利息 = 剩余本金 × r</code>
+        <p data-i="fEqualBody">每期归还约 P0 ÷ n 的本金，利息按剩余本金计算，月供逐月递减；总利息约为 P0 × r × (n + 1) ÷ 2。</p>
+      </div>
+      <div class="formula">
+        <h3 data-i="fExtraTitle">额外还款</h3>
+        <code>余额 = 上期余额 − 常规本金 − 额外还款</code>
+        <p data-i="fExtraBody">额外还款全部冲减本金。逐月模拟直到余额小于等于 0，最后一期只还剩余本金与当期利息。</p>
+      </div>
+      <div class="formula">
+        <h3 data-i="fRoundTitle">取整规则</h3>
+        <code>金额以“分”为整数单位，0.5 向上取整</code>
+        <p data-i="fRoundBody">每期利息与月供按分四舍五入；计划表本金合计等于贷款本金，最终余额为 0。</p>
+      </div>
+      <div class="formula">
+        <h3 data-i="fLimitsTitle">不包含的项目</h3>
+        <code>浮动利率 · 手续费 · 保险 · 提前还款罚金</code>
+        <p data-i="fLimitsBody">本工具不模拟浮动利率、放款日与还款日差异、按日计息、手续费、保险、税费和提前还款罚金。</p>
+      </div>
+    </div>
+    <ul class="assumptions">
+      <li data-i="a1">年利率按名义利率处理，月利率 = 年利率 ÷ 1200，不考虑复利频率差异。</li>
+      <li data-i="a2">每月额外还款在当月常规还款之后冲减本金，并持续整个还款期。</li>
+      <li data-i="a3">所有金额按选定币种显示，小数位由 Intl 决定；计算本身始终以“分”为单位。</li>
+      <li data-i="a4">结果仅供规划和比较，实际还款以贷款合同与银行账单为准。</li>
+    </ul>
+  </details>
+
+  <section class="faq" aria-labelledby="faq-title">
+    <h2 id="faq-title" data-i="faqTitle">常见问题</h2>
+    <details>
+      <summary data-i="faqQ1">等额本息和等额本金有什么区别？</summary>
+      <p data-i="faqA1">等额本息每期还款额相同，前期利息占比高；等额本金每期归还相同本金，利息随剩余本金下降，所以月供逐月递减、首月最高，总利息通常更少，但前期还款压力更大。</p>
+    </details>
+    <details>
+      <summary data-i="faqQ2">每月额外还款能省多少利息？</summary>
+      <p data-i="faqA2">页面会把额外还款直接冲减本金，逐月重算利息，并与不额外还款的方案对比，给出节省的利息和缩短的月数。节省额取决于利率、剩余期限和额外还款持续的时间。</p>
+    </details>
+    <details>
+      <summary data-i="faqQ3">为什么计算结果和银行略有差异？</summary>
+      <p data-i="faqA3">这里按名义年利率除以 12 得到月利率，利息按分四舍五入，且不考虑放款日、还款日、计息天数、手续费、保险和提前还款罚金。银行可能按日计息或采用不同的取整规则，因此会有小幅差异。</p>
+    </details>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-inner">
+      <p data-i="footerNote">© 2026 Devin · 免费工具 · 结果仅供估算</p>
+      <p>
+        <a href="/tools/" id="foot-tools" data-i="footerTools">工具大厅</a> ·
+        <a href="/games/" data-i="footerGames">在线桌游</a> ·
+        <a href="/" data-i="footerHome">首页</a>
+      </p>
+    </div>
+    <p class="fine" data-i="footerPrivacy">纯前端页面，不收集、不上传任何数据。所有计算在您的浏览器本地完成。</p>
+  </div>
+</footer>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<noscript>
+  <div class="wrap"><p class="card" style="margin-top:16px" data-i="noscript">此计算器需要 JavaScript。所有计算都在您的设备本地完成，不会上传任何数据。</p></div>
+</noscript>
+
+<script id="engine">
+/* Loan math engine. Pure functions only: no DOM, no window, no dates.
+   Invalid input throws TypeError whose message is an error code:
+   'principal' | 'rate' | 'months' | 'extra' | 'method' | 'input'.
+   All schedule/summary money values are integer cents. */
+var ToolEngine = (function () {
+  'use strict';
+
+  var CURRENCIES = {
+    CNY: { decimals: 2 },
+    USD: { decimals: 2 },
+    EUR: { decimals: 2 },
+    IDR: { decimals: 0 }
+  };
+
+  function isNum(x) { return typeof x === 'number' && isFinite(x); }
+  function toCents(x) { return Math.round(x * 100); }
+  function fromCents(c) { return c / 100; }
+
+  function validateInputs(opts) {
+    if (!opts || typeof opts !== 'object') { return { ok: false, error: 'input' }; }
+    var p = opts.principal;
+    var rate = opts.annualRate;
+    var n = opts.months;
+    var extra = opts.extra == null ? 0 : opts.extra;
+    var method = opts.method == null ? 'annuity' : opts.method;
+    if (!isNum(p) || p < 0.01 || p > 1e12) { return { ok: false, error: 'principal' }; }
+    if (!isNum(rate) || rate < 0 || rate > 100) { return { ok: false, error: 'rate' }; }
+    if (!isNum(n) || Math.floor(n) !== n || n < 1 || n > 600) { return { ok: false, error: 'months' }; }
+    if (!isNum(extra) || extra < 0) { return { ok: false, error: 'extra' }; }
+    if (method !== 'annuity' && method !== 'equal-principal') { return { ok: false, error: 'method' }; }
+    return { ok: true };
+  }
+
+  function normalize(opts) {
+    var v = validateInputs(opts);
+    if (!v.ok) { throw new TypeError(v.error); }
+    return {
+      principal: opts.principal,
+      annualRate: opts.annualRate,
+      months: opts.months,
+      extra: opts.extra == null ? 0 : opts.extra,
+      method: opts.method == null ? 'annuity' : opts.method
+    };
+  }
+
+  function pmtCents(p0, annualRate, n) {
+    var r = annualRate / 1200;
+    if (r === 0) { return Math.round(p0 / n); }
+    var pow = Math.pow(1 + r, n);
+    return Math.round(p0 * r * pow / (pow - 1));
+  }
+
+  function monthlyPayment(principal, annualRate, months) {
+    var o = normalize({ principal: principal, annualRate: annualRate, months: months });
+    return fromCents(pmtCents(toCents(o.principal), o.annualRate, o.months));
+  }
+
+  /* Principal repaid in equal-principal period i (1..n), based on the ideal
+     balance P0 × (n − i) ÷ n. Rounding is distributed so the sum equals P0. */
+  function idealPrincipal(p0, n, i) {
+    var before = Math.round(p0 * (n - i + 1) / n);
+    var after = Math.round(p0 * (n - i) / n);
+    return before - after;
+  }
+
+  function equalPrincipalFirstPayment(principal, annualRate, months) {
+    var o = normalize({ principal: principal, annualRate: annualRate, months: months });
+    var p0 = toCents(o.principal);
+    var r = o.annualRate / 1200;
+    var principalPart = idealPrincipal(p0, o.months, 1);
+    return fromCents(principalPart + Math.round(p0 * r));
+  }
+
+  function buildSchedule(opts) {
+    var o = normalize(opts);
+    var p0 = toCents(o.principal);
+    var r = o.annualRate / 1200;
+    var n = o.months;
+    var extra = toCents(o.extra);
+    var basePmt = o.method === 'annuity' ? pmtCents(p0, o.annualRate, n) : 0;
+    var rows = [];
+    var balance = p0;
+
+    for (var i = 1; i <= n && balance > 0; i++) {
+      var interest = Math.round(balance * r);
+      var regular;
+      var extraPart = 0;
+
+      if (o.method === 'annuity') {
+        if (i === n || balance + interest <= basePmt) {
+          regular = balance;
+        } else {
+          regular = basePmt - interest;
+          if (regular > balance) { regular = balance; }
+          var room = balance - regular;
+          extraPart = Math.min(extra, room);
+        }
+      } else {
+        regular = i === n ? balance : idealPrincipal(p0, n, i);
+        if (regular > balance) { regular = balance; }
+        var room2 = balance - regular;
+        extraPart = room2 > 0 ? Math.min(extra, room2) : 0;
+      }
+
+      var totalPrincipal = regular + extraPart;
+      balance -= totalPrincipal;
+      rows.push({
+        period: i,
+        payment: totalPrincipal + interest,
+        principal: totalPrincipal,
+        regularPrincipal: regular,
+        interest: interest,
+        extra: extraPart,
+        balance: balance
+      });
+    }
+    return rows;
+  }
+
+  function sumRows(rows, key) {
+    var s = 0;
+    for (var i = 0; i < rows.length; i++) { s += rows[i][key]; }
+    return s;
+  }
+
+  function summarize(opts) {
+    var o = normalize(opts);
+    var rows = buildSchedule(o);
+    var p0 = toCents(o.principal);
+    var totalInterest = sumRows(rows, 'interest');
+    var totalPayment = sumRows(rows, 'payment');
+    var totalExtra = sumRows(rows, 'extra');
+    var result = {
+      method: o.method,
+      principal: p0,
+      firstPayment: rows.length ? rows[0].payment : 0,
+      firstInterest: rows.length ? rows[0].interest : 0,
+      totalInterest: totalInterest,
+      totalPayment: totalPayment,
+      totalPrincipal: sumRows(rows, 'principal'),
+      totalExtra: totalExtra,
+      actualMonths: rows.length,
+      interestRatio: p0 > 0 ? totalInterest / p0 : 0,
+      baselineInterest: totalInterest,
+      baselineMonths: rows.length,
+      extraInterestSaved: 0,
+      extraMonthsSaved: 0
+    };
+    if (toCents(o.extra) > 0) {
+      var baseline = buildSchedule({
+        principal: o.principal,
+        annualRate: o.annualRate,
+        months: o.months,
+        extra: 0,
+        method: o.method
+      });
+      var baseInterest = sumRows(baseline, 'interest');
+      result.baselineInterest = baseInterest;
+      result.baselineMonths = baseline.length;
+      result.extraInterestSaved = baseInterest - totalInterest;
+      result.extraMonthsSaved = baseline.length - rows.length;
+    }
+    return result;
+  }
+
+  function formatMoney(amount, currency, lang) {
+    if (!isNum(amount)) { return '—'; }
+    var code = CURRENCIES[currency] ? currency : 'CNY';
+    var decimals = CURRENCIES[code].decimals;
+    var locale = lang === 'zh' ? 'zh-CN' : lang === 'id' ? 'id-ID' : 'en-US';
+    try {
+      return new Intl.NumberFormat(locale, {
+        style: 'currency',
+        currency: code,
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals
+      }).format(amount);
+    } catch (e) {
+      return amount.toFixed(decimals);
+    }
+  }
+
+  function parseAmount(value) {
+    if (typeof value === 'number') { return isFinite(value) ? value : NaN; }
+    if (typeof value !== 'string') { return NaN; }
+    var s = value.trim().replace(/[\s,，]/g, '').replace(/[−–—]/g, '-');
+    if (!s) { return NaN; }
+    var direct = Number(s);
+    if (isFinite(direct)) { return direct; }
+    s = s.replace(/[^\d.\-+]/g, '');
+    if (!s || s === '-' || s === '+' || s === '.') { return NaN; }
+    var n = Number(s);
+    return isFinite(n) ? n : NaN;
+  }
+
+  return {
+    validateInputs: validateInputs,
+    monthlyPayment: monthlyPayment,
+    equalPrincipalFirstPayment: equalPrincipalFirstPayment,
+    buildSchedule: buildSchedule,
+    summarize: summarize,
+    formatMoney: formatMoney,
+    parseAmount: parseAmount,
+    toCents: toCents,
+    fromCents: fromCents,
+    roundCents: function (x) { return Math.round(x * 100) / 100; },
+    currencies: CURRENCIES
+  };
+})();
+</script>
+
+<script id="i18n">
+var TOOL_I18N = {
+  zh: {
+    docTitle: '贷款月供计算器 — 等额本息、等额本金与提前还款',
+    docDesc: '免费贷款月供计算器：输入贷款金额、年利率和期限，算出等额本息或等额本金的月供、总利息、总还款，并模拟每月额外还款能省多少利息、缩短多少月。附逐月还款计划与 CSV 下载，全部在本地计算。',
+    appTitle: '贷款月供计算器',
+    tagline: '比较等额本息与等额本金，算清总利息，再看每月多还一点能省下多少。',
+    privacy: '所有计算在浏览器本地完成，不采集、不上传任何数据。',
+    skipLink: '跳到计算器',
+    eyebrow: '免费工具 · 贷款与分期',
+    navTools: '工具大厅',
+    navGames: '在线桌游',
+    langLabel: '语言',
+    brandAria: 'Devin，返回首页',
+    siteNavAria: '站点导航',
+    viewAria: '计划表视图',
+    formTitle: '填写贷款条件',
+    formHint: '输入',
+    amountLabel: '贷款金额',
+    amountPh: '例如 100000',
+    currencyLabel: '币种',
+    curCNY: 'CNY — 人民币',
+    curUSD: 'USD — 美元',
+    curEUR: 'EUR — 欧元',
+    curIDR: 'IDR — 印尼盾',
+    rateLabel: '年利率（%）',
+    ratePh: '例如 6',
+    rateHint: '年利率可以为 0。月利率 = 年利率 ÷ 1200。',
+    monthsLabel: '期限（月）',
+    monthsPh: '1–600',
+    monthUnit: '个月',
+    quickLabel: '快捷期限',
+    quickAria: '快捷期限',
+    methodLabel: '还款方式',
+    methodAnnuity: '等额本息',
+    methodEqualPrincipal: '等额本金',
+    extraLabel: '每月额外还款（可选）',
+    extraPh: '0',
+    extraHint: '额外还款直接冲减本金，并按月重新计算利息；最后一期只还剩余余额。',
+    estimateNote: '所有结果均为估算，不构成金融建议。计算不含手续费、保险、浮动利率和提前还款罚金。',
+    resultsTitle: '计算结果',
+    firstPayment: '首月月供',
+    firstNoteAnnuity: '等额本息：每月还款额相同。',
+    firstNoteEqual: '等额本金：首月最高，之后逐月递减。',
+    totalInterest: '总利息',
+    totalPayment: '总还款',
+    actualMonths: '实际还清',
+    periodsUnit: '期',
+    interestRatio: '利息占本金',
+    extraTitle: '额外还款效果',
+    interestSaved: '节省利息',
+    monthsShortened: '缩短月数',
+    noExtra: '未设置',
+    extraNote: '与不额外还款相比，按相同利率估算。',
+    copySummary: '复制摘要',
+    copied: '已复制计算结果。',
+    copyFail: '无法自动复制，请手动选择结果文本。',
+    scheduleTitle: '还款计划表',
+    scheduleHint: '默认按年汇总，可切换逐月。金额按分取整，最后一期只还剩余。',
+    viewYearly: '按年汇总',
+    viewMonthly: '逐月',
+    scheduleCaption: '还款计划（估算）',
+    colPeriod: '期数',
+    colPayment: '还款额',
+    colPrincipal: '本金',
+    colInterest: '利息',
+    colExtra: '额外还款',
+    colBalance: '期末余额',
+    periodLabel: '第 {n} 期',
+    yearLabel: '第 {n} 年',
+    downloadCsv: '下载 CSV',
+    csvHint: 'CSV 包含完整逐月计划，由浏览器本地生成，不会上传任何数据。',
+    formulasTitle: '公式与假设 — 展开核对',
+    fPmtTitle: '等额本息月供',
+    fPmtBody: 'P 为贷款本金，n 为期限月数，r = 年利率 ÷ 1200。年利率为 0 时，月供 = P ÷ n。',
+    fEqualTitle: '等额本金',
+    fEqualBody: '每期归还约 P0 ÷ n 的本金，利息按剩余本金计算，月供逐月递减；总利息约为 P0 × r × (n + 1) ÷ 2。',
+    fExtraTitle: '额外还款',
+    fExtraBody: '额外还款全部冲减本金。逐月模拟直到余额小于等于 0，最后一期只还剩余本金与当期利息。',
+    fRoundTitle: '取整规则',
+    fRoundBody: '每期利息与月供按分四舍五入；计划表本金合计等于贷款本金，最终余额为 0。',
+    fLimitsTitle: '不包含的项目',
+    fLimitsBody: '本工具不模拟浮动利率、放款日与还款日差异、按日计息、手续费、保险、税费和提前还款罚金。',
+    a1: '年利率按名义利率处理，月利率 = 年利率 ÷ 1200，不考虑复利频率差异。',
+    a2: '每月额外还款在当月常规还款之后冲减本金，并持续整个还款期。',
+    a3: '所有金额按选定币种显示，小数位由 Intl 决定；计算本身始终以“分”为单位。',
+    a4: '结果仅供规划和比较，实际还款以贷款合同与银行账单为准。',
+    faqTitle: '常见问题',
+    faqQ1: '等额本息和等额本金有什么区别？',
+    faqA1: '等额本息每期还款额相同，前期利息占比高；等额本金每期归还相同本金，利息随剩余本金下降，所以月供逐月递减、首月最高，总利息通常更少，但前期还款压力更大。',
+    faqQ2: '每月额外还款能省多少利息？',
+    faqA2: '页面会把额外还款直接冲减本金，逐月重算利息，并与不额外还款的方案对比，给出节省的利息和缩短的月数。节省额取决于利率、剩余期限和额外还款持续的时间。',
+    faqQ3: '为什么计算结果和银行略有差异？',
+    faqA3: '这里按名义年利率除以 12 得到月利率，利息按分四舍五入，且不考虑放款日、还款日、计息天数、手续费、保险和提前还款罚金。银行可能按日计息或采用不同的取整规则，因此会有小幅差异。',
+    footerNote: '© 2026 Devin · 免费工具 · 结果仅供估算',
+    footerTools: '工具大厅',
+    footerGames: '在线桌游',
+    footerHome: '首页',
+    footerPrivacy: '纯前端页面，不收集、不上传任何数据。所有计算在您的浏览器本地完成。',
+    noscript: '此计算器需要 JavaScript。所有计算都在您的设备本地完成，不会上传任何数据。',
+    errPrincipal: '请输入大于或等于 0.01 的贷款金额。',
+    errRate: '年利率需在 0 到 100 之间。',
+    errMonths: '期限需为 1 到 600 之间的整数。',
+    errExtra: '额外还款不能为负数。',
+    errMethod: '请选择有效的还款方式。',
+    errGeneric: '输入无效，请检查后重试。',
+    summaryTitle: '贷款月供摘要（估算）',
+    summaryAmount: '贷款金额',
+    summaryRate: '年利率',
+    summaryTerm: '期限',
+    summaryMethod: '还款方式',
+    summaryFirst: '首月月供',
+    summaryInterest: '总利息',
+    summaryTotal: '总还款',
+    summaryActual: '实际还清',
+    summarySavedInterest: '额外还款节省利息',
+    summarySavedMonths: '缩短月数',
+    summaryRatio: '利息占本金'
+  },
+  en: {
+    docTitle: 'Loan payment calculator — amortization and extra payments',
+    docDesc: 'Free loan calculator: enter the amount, annual rate and term to see monthly payments for amortizing or equal-principal loans, total interest, total cost, and how much extra monthly payments save in interest and months. Includes a full schedule and CSV download, all computed locally.',
+    appTitle: 'Loan payment calculator',
+    tagline: 'Compare equal-payment and equal-principal loans, see the true interest cost, and find out what paying a little extra saves.',
+    privacy: 'Every calculation runs in your browser. No data is collected or uploaded.',
+    skipLink: 'Skip to calculator',
+    eyebrow: 'Free tool · loans and installments',
+    navTools: 'Tools',
+    navGames: 'Board games',
+    langLabel: 'Language',
+    brandAria: 'Devin, back to the home page',
+    siteNavAria: 'Site navigation',
+    viewAria: 'Schedule view',
+    formTitle: 'Enter the loan',
+    formHint: 'Inputs',
+    amountLabel: 'Loan amount',
+    amountPh: 'e.g. 100000',
+    currencyLabel: 'Currency',
+    curCNY: 'CNY — Chinese yuan',
+    curUSD: 'USD — US dollar',
+    curEUR: 'EUR — Euro',
+    curIDR: 'IDR — Indonesian rupiah',
+    rateLabel: 'Annual interest rate (%)',
+    ratePh: 'e.g. 6',
+    rateHint: 'The rate may be 0. Monthly rate = annual rate ÷ 1200.',
+    monthsLabel: 'Term (months)',
+    monthsPh: '1–600',
+    monthUnit: 'months',
+    quickLabel: 'Quick terms',
+    quickAria: 'Quick terms',
+    methodLabel: 'Repayment method',
+    methodAnnuity: 'Equal payments',
+    methodEqualPrincipal: 'Equal principal',
+    extraLabel: 'Extra monthly payment (optional)',
+    extraPh: '0',
+    extraHint: 'Extra payments go straight to principal and interest is recalculated each month. The final payment only covers what is left.',
+    estimateNote: 'All results are estimates, not financial advice. Fees, insurance, variable rates and prepayment penalties are not included.',
+    resultsTitle: 'Results',
+    firstPayment: 'First monthly payment',
+    firstNoteAnnuity: 'Equal payments: the amount stays the same every month.',
+    firstNoteEqual: 'Equal principal: highest in month one, then lower each month.',
+    totalInterest: 'Total interest',
+    totalPayment: 'Total paid',
+    actualMonths: 'Paid off in',
+    periodsUnit: 'payments',
+    interestRatio: 'Interest vs principal',
+    extraTitle: 'Effect of extra payments',
+    interestSaved: 'Interest saved',
+    monthsShortened: 'Months shortened',
+    noExtra: 'None',
+    extraNote: 'Compared with no extra payment, at the same interest rate.',
+    copySummary: 'Copy summary',
+    copied: 'Results copied.',
+    copyFail: 'Could not copy automatically. Select the result text manually.',
+    scheduleTitle: 'Repayment schedule',
+    scheduleHint: 'Yearly summary by default; switch to monthly. Amounts are rounded to cents and the final payment only covers the remaining balance.',
+    viewYearly: 'By year',
+    viewMonthly: 'Monthly',
+    scheduleCaption: 'Repayment schedule (estimate)',
+    colPeriod: 'Period',
+    colPayment: 'Payment',
+    colPrincipal: 'Principal',
+    colInterest: 'Interest',
+    colExtra: 'Extra',
+    colBalance: 'Balance',
+    periodLabel: 'Payment {n}',
+    yearLabel: 'Year {n}',
+    downloadCsv: 'Download CSV',
+    csvHint: 'The CSV contains the full monthly schedule, generated locally in your browser. Nothing is uploaded.',
+    formulasTitle: 'Formulas and assumptions — open to check',
+    fPmtTitle: 'Equal-payment formula',
+    fPmtBody: 'P is the principal, n is the term in months, and r = annual rate ÷ 1200. When the rate is 0, the payment is P ÷ n.',
+    fEqualTitle: 'Equal principal',
+    fEqualBody: 'About P0 ÷ n of principal is repaid each month and interest is charged on the remaining balance, so payments fall over time; total interest is about P0 × r × (n + 1) ÷ 2.',
+    fExtraTitle: 'Extra payments',
+    fExtraBody: 'Every extra payment reduces principal. The loan is simulated month by month until the balance reaches zero; the final payment only covers the remaining principal and that month interest.',
+    fRoundTitle: 'Rounding',
+    fRoundBody: 'Interest and payments are rounded to the nearest cent (half up). Schedule principal adds up to the loan amount and the final balance is zero.',
+    fLimitsTitle: 'Not included',
+    fLimitsBody: 'This tool does not model variable rates, disbursement or payment dates, daily interest, fees, insurance, taxes or prepayment penalties.',
+    a1: 'The annual rate is treated as a nominal rate: monthly rate = annual rate ÷ 1200, with no compounding-frequency adjustment.',
+    a2: 'The extra payment is applied to principal after the regular payment each month and continues for the whole term.',
+    a3: 'Amounts are displayed in the selected currency using Intl decimals; the underlying calculation always works in integer cents.',
+    a4: 'Results are for planning and comparison only. Your loan contract and bank statements are authoritative.',
+    faqTitle: 'Common questions',
+    faqQ1: 'What is the difference between equal-payment and equal-principal loans?',
+    faqA1: 'An equal-payment loan has the same payment every month, with more interest early on. An equal-principal loan repays the same amount of principal each month, so interest falls with the balance: payments start high and decrease, total interest is usually lower, and the early burden is higher.',
+    faqQ2: 'How much interest does an extra monthly payment save?',
+    faqA2: 'The page applies the extra amount directly to principal, recalculates interest month by month, and compares the result with the same loan without extra payments. The saving depends on the rate, the remaining term, and how long you keep paying extra.',
+    faqQ3: 'Why does this differ slightly from my bank?',
+    faqA3: 'This tool uses the nominal annual rate divided by 12, rounds interest to cents, and ignores disbursement and payment dates, day counts, fees, insurance and prepayment penalties. Banks may charge daily interest or round differently, so small differences are expected.',
+    footerNote: '© 2026 Devin · free tool · estimates only',
+    footerTools: 'Tools',
+    footerGames: 'Board games',
+    footerHome: 'Home',
+    footerPrivacy: 'A pure front-end page. No data is collected or uploaded; everything runs in your browser.',
+    noscript: 'This calculator needs JavaScript. All calculations run on your device; nothing is uploaded.',
+    errPrincipal: 'Enter a loan amount of at least 0.01.',
+    errRate: 'The annual rate must be between 0 and 100.',
+    errMonths: 'The term must be a whole number from 1 to 600.',
+    errExtra: 'The extra payment cannot be negative.',
+    errMethod: 'Choose a valid repayment method.',
+    errGeneric: 'Invalid input. Check the values and try again.',
+    summaryTitle: 'Loan payment summary (estimate)',
+    summaryAmount: 'Loan amount',
+    summaryRate: 'Annual rate',
+    summaryTerm: 'Term',
+    summaryMethod: 'Repayment method',
+    summaryFirst: 'First monthly payment',
+    summaryInterest: 'Total interest',
+    summaryTotal: 'Total paid',
+    summaryActual: 'Paid off in',
+    summarySavedInterest: 'Interest saved by extra payments',
+    summarySavedMonths: 'Months shortened',
+    summaryRatio: 'Interest vs principal'
+  },
+  id: {
+    docTitle: 'Kalkulator cicilan pinjaman — anuitas dan pokok tetap',
+    docDesc: 'Kalkulator pinjaman gratis: masukkan jumlah pinjaman, bunga tahunan, dan tenor untuk melihat cicilan anuitas atau pokok tetap, total bunga, total pembayaran, serta penghematan bunga dan pemendekan tenor dari cicilan tambahan. Dilengkapi tabel angsuran dan unduhan CSV, semuanya dihitung lokal.',
+    appTitle: 'Kalkulator cicilan pinjaman',
+    tagline: 'Bandingkan anuitas dan pokok tetap, lihat total bunga, lalu hitung penghematan dari cicilan tambahan.',
+    privacy: 'Semua perhitungan berjalan di browser Anda. Tidak ada data yang dikumpulkan atau diunggah.',
+    skipLink: 'Lompat ke kalkulator',
+    eyebrow: 'Alat gratis · pinjaman dan cicilan',
+    navTools: 'Ruang alat',
+    navGames: 'Permainan papan',
+    langLabel: 'Bahasa',
+    brandAria: 'Devin, kembali ke halaman utama',
+    siteNavAria: 'Navigasi situs',
+    viewAria: 'Tampilan tabel',
+    formTitle: 'Masukkan data pinjaman',
+    formHint: 'Input',
+    amountLabel: 'Jumlah pinjaman',
+    amountPh: 'mis. 100000',
+    currencyLabel: 'Mata uang',
+    curCNY: 'CNY — Yuan Tiongkok',
+    curUSD: 'USD — Dolar AS',
+    curEUR: 'EUR — Euro',
+    curIDR: 'IDR — Rupiah Indonesia',
+    rateLabel: 'Bunga tahunan (%)',
+    ratePh: 'mis. 6',
+    rateHint: 'Bunga boleh 0. Bunga bulanan = bunga tahunan ÷ 1200.',
+    monthsLabel: 'Tenor (bulan)',
+    monthsPh: '1–600',
+    monthUnit: 'bulan',
+    quickLabel: 'Tenor cepat',
+    quickAria: 'Tenor cepat',
+    methodLabel: 'Metode pembayaran',
+    methodAnnuity: 'Anuitas (cicilan tetap)',
+    methodEqualPrincipal: 'Pokok tetap',
+    extraLabel: 'Cicilan tambahan per bulan (opsional)',
+    extraPh: '0',
+    extraHint: 'Cicilan tambahan langsung mengurangi pokok dan bunga dihitung ulang tiap bulan. Pembayaran terakhir hanya melunasi sisa.',
+    estimateNote: 'Semua hasil adalah perkiraan, bukan nasihat keuangan. Biaya, asuransi, bunga mengambang, dan denda pelunasan dipercepat tidak dihitung.',
+    resultsTitle: 'Hasil',
+    firstPayment: 'Cicilan bulan pertama',
+    firstNoteAnnuity: 'Anuitas: jumlah cicilan sama setiap bulan.',
+    firstNoteEqual: 'Pokok tetap: tertinggi di bulan pertama, lalu menurun tiap bulan.',
+    totalInterest: 'Total bunga',
+    totalPayment: 'Total pembayaran',
+    actualMonths: 'Lunas dalam',
+    periodsUnit: 'angsuran',
+    interestRatio: 'Bunga terhadap pokok',
+    extraTitle: 'Efek cicilan tambahan',
+    interestSaved: 'Bunga yang dihemat',
+    monthsShortened: 'Bulan yang dipersingkat',
+    noExtra: 'Tidak ada',
+    extraNote: 'Dibandingkan tanpa cicilan tambahan, dengan bunga yang sama.',
+    copySummary: 'Salin ringkasan',
+    copied: 'Hasil disalin.',
+    copyFail: 'Tidak dapat menyalin otomatis. Pilih teks hasil secara manual.',
+    scheduleTitle: 'Tabel angsuran',
+    scheduleHint: 'Ringkasan per tahun secara default; bisa diganti per bulan. Nilai dibulatkan ke sen dan pembayaran terakhir hanya melunasi sisa.',
+    viewYearly: 'Per tahun',
+    viewMonthly: 'Per bulan',
+    scheduleCaption: 'Tabel angsuran (perkiraan)',
+    colPeriod: 'Periode',
+    colPayment: 'Cicilan',
+    colPrincipal: 'Pokok',
+    colInterest: 'Bunga',
+    colExtra: 'Tambahan',
+    colBalance: 'Sisa',
+    periodLabel: 'Angsuran {n}',
+    yearLabel: 'Tahun {n}',
+    downloadCsv: 'Unduh CSV',
+    csvHint: 'CSV berisi tabel angsuran bulanan lengkap, dibuat di browser Anda. Tidak ada data yang diunggah.',
+    formulasTitle: 'Rumus dan asumsi — buka untuk memeriksa',
+    fPmtTitle: 'Rumus anuitas',
+    fPmtBody: 'P adalah pokok, n adalah tenor dalam bulan, dan r = bunga tahunan ÷ 1200. Jika bunga 0, cicilan = P ÷ n.',
+    fEqualTitle: 'Pokok tetap',
+    fEqualBody: 'Sekitar P0 ÷ n pokok dibayar tiap bulan dan bunga dihitung dari sisa pokok, sehingga cicilan menurun; total bunga sekitar P0 × r × (n + 1) ÷ 2.',
+    fExtraTitle: 'Cicilan tambahan',
+    fExtraBody: 'Seluruh cicilan tambahan mengurangi pokok. Pinjaman disimulasikan bulan demi bulan sampai sisa nol; pembayaran terakhir hanya melunasi sisa pokok dan bunga bulan itu.',
+    fRoundTitle: 'Pembulatan',
+    fRoundBody: 'Bunga dan cicilan dibulatkan ke sen terdekat (0,5 ke atas). Jumlah pokok pada tabel sama dengan pokok pinjaman dan sisa akhir nol.',
+    fLimitsTitle: 'Tidak termasuk',
+    fLimitsBody: 'Alat ini tidak memodelkan bunga mengambang, tanggal pencairan atau pembayaran, bunga harian, biaya, asuransi, pajak, atau denda pelunasan dipercepat.',
+    a1: 'Bunga tahunan diperlakukan sebagai bunga nominal: bunga bulanan = bunga tahunan ÷ 1200, tanpa penyesuaian frekuensi majemuk.',
+    a2: 'Cicilan tambahan diterapkan ke pokok setelah cicilan reguler setiap bulan dan berlanjut sepanjang tenor.',
+    a3: 'Nilai ditampilkan dalam mata uang pilihan dengan desimal Intl; perhitungan selalu memakai satuan sen bulat.',
+    a4: 'Hasil hanya untuk perencanaan dan perbandingan. Kontrak pinjaman dan tagihan bank tetap menjadi acuan.',
+    faqTitle: 'Pertanyaan umum',
+    faqQ1: 'Apa beda pinjaman anuitas dan pokok tetap?',
+    faqA1: 'Anuitas memiliki cicilan yang sama setiap bulan dengan porsi bunga lebih besar di awal. Pokok tetap membayar pokok yang sama tiap bulan, sehingga bunga menurun seiring sisa pokok: cicilan dimulai tinggi lalu menurun, total bunga biasanya lebih kecil, tetapi beban awal lebih berat.',
+    faqQ2: 'Berapa bunga yang dihemat dari cicilan tambahan?',
+    faqA2: 'Halaman ini mengurangi pokok langsung dengan cicilan tambahan, menghitung ulang bunga tiap bulan, lalu membandingkannya dengan pinjaman tanpa tambahan. Penghematan bergantung pada bunga, sisa tenor, dan lama Anda membayar tambahan.',
+    faqQ3: 'Mengapa hasilnya sedikit berbeda dari bank?',
+    faqA3: 'Alat ini memakai bunga tahunan nominal dibagi 12, membulatkan bunga ke sen, dan mengabaikan tanggal pencairan dan pembayaran, hitungan hari, biaya, asuransi, serta denda pelunasan dipercepat. Bank mungkin memakai bunga harian atau pembulatan berbeda, jadi selisih kecil wajar terjadi.',
+    footerNote: '© 2026 Devin · alat gratis · hanya perkiraan',
+    footerTools: 'Ruang alat',
+    footerGames: 'Permainan papan',
+    footerHome: 'Beranda',
+    footerPrivacy: 'Halaman front-end murni. Tidak ada data yang dikumpulkan atau diunggah; semua berjalan di browser Anda.',
+    noscript: 'Kalkulator ini membutuhkan JavaScript. Semua perhitungan berjalan di perangkat Anda; tidak ada data yang diunggah.',
+    errPrincipal: 'Masukkan jumlah pinjaman minimal 0,01.',
+    errRate: 'Bunga tahunan harus antara 0 dan 100.',
+    errMonths: 'Tenor harus bilangan bulat antara 1 dan 600.',
+    errExtra: 'Cicilan tambahan tidak boleh negatif.',
+    errMethod: 'Pilih metode pembayaran yang valid.',
+    errGeneric: 'Input tidak valid. Periksa nilainya dan coba lagi.',
+    summaryTitle: 'Ringkasan cicilan (perkiraan)',
+    summaryAmount: 'Jumlah pinjaman',
+    summaryRate: 'Bunga tahunan',
+    summaryTerm: 'Tenor',
+    summaryMethod: 'Metode pembayaran',
+    summaryFirst: 'Cicilan bulan pertama',
+    summaryInterest: 'Total bunga',
+    summaryTotal: 'Total pembayaran',
+    summaryActual: 'Lunas dalam',
+    summarySavedInterest: 'Bunga dihemat dari cicilan tambahan',
+    summarySavedMonths: 'Bulan dipersingkat',
+    summaryRatio: 'Bunga terhadap pokok'
+  }
+};
+</script>
+
+<script>
+(function () {
+  'use strict';
+
+  var SLUG = 'loan-calculator';
+  var LANG_KEY = 'hhfa.tool.' + SLUG + '.lang';
+  var LANGS = ['zh', 'en', 'id'];
+  var state = { lang: 'zh', currency: 'CNY', view: 'year', summary: null, schedule: null, opts: null };
+
+  function $(id) { return document.getElementById(id); }
+  function t(key) {
+    var dict = TOOL_I18N[state.lang] || TOOL_I18N.zh;
+    var v = dict[key];
+    if (v == null) { v = TOOL_I18N.zh[key]; }
+    return v == null ? key : v;
+  }
+  function tf(key, vars) {
+    var s = t(key);
+    for (var k in vars) {
+      if (Object.prototype.hasOwnProperty.call(vars, k)) {
+        s = s.split('{' + k + '}').join(String(vars[k]));
+      }
+    }
+    return s;
+  }
+  function locale() { return state.lang === 'zh' ? 'zh-CN' : state.lang === 'id' ? 'id-ID' : 'en-US'; }
+  function fmtCents(v) { return ToolEngine.formatMoney(v / 100, state.currency, state.lang); }
+  function fmtPlain(v) {
+    try {
+      return new Intl.NumberFormat(locale(), { maximumFractionDigits: 2 }).format(v);
+    } catch (e) { return String(v); }
+  }
+  function fmtPct(ratio) {
+    try {
+      return new Intl.NumberFormat(locale(), { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 2 }).format(ratio);
+    } catch (e) { return (ratio * 100).toFixed(2) + '%'; }
+  }
+  function detectLang() {
+    var q = null;
+    try { q = new URLSearchParams(location.search).get('lang'); } catch (e) {}
+    if (q && LANGS.indexOf(q) !== -1) { return q; }
+    try {
+      var saved = localStorage.getItem(LANG_KEY);
+      if (saved && LANGS.indexOf(saved) !== -1) { return saved; }
+    } catch (e) {}
+    var nav = String((navigator.language || 'en')).toLowerCase();
+    if (nav.indexOf('zh') === 0) { return 'zh'; }
+    if (nav.indexOf('id') === 0) { return 'id'; }
+    return 'en';
+  }
+  function saveLang() {
+    try { localStorage.setItem(LANG_KEY, state.lang); } catch (e) {}
+  }
+
+  var toastTimer = null;
+  function toast(msg) {
+    var el = $('toast');
+    el.textContent = msg;
+    el.classList.add('on');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove('on'); }, 2600);
+  }
+
+  function applyLang() {
+    document.documentElement.lang = state.lang === 'zh' ? 'zh-CN' : state.lang;
+    var nodes = document.querySelectorAll('[data-i]');
+    for (var i = 0; i < nodes.length; i++) {
+      var k = nodes[i].getAttribute('data-i');
+      if (TOOL_I18N[state.lang][k] != null) { nodes[i].textContent = TOOL_I18N[state.lang][k]; }
+    }
+    var phs = document.querySelectorAll('[data-i-ph]');
+    for (var j = 0; j < phs.length; j++) {
+      var pk = phs[j].getAttribute('data-i-ph');
+      if (TOOL_I18N[state.lang][pk] != null) { phs[j].setAttribute('placeholder', TOOL_I18N[state.lang][pk]); }
+    }
+    var arias = document.querySelectorAll('[data-i-aria]');
+    for (var a = 0; a < arias.length; a++) {
+      var ak = arias[a].getAttribute('data-i-aria');
+      if (TOOL_I18N[state.lang][ak] != null) { arias[a].setAttribute('aria-label', TOOL_I18N[state.lang][ak]); }
+    }
+    document.title = t('docTitle');
+    setMeta('meta[name="description"]', 'content', t('docDesc'));
+    setMeta('meta[property="og:title"]', 'content', t('docTitle'));
+    setMeta('meta[property="og:description"]', 'content', t('docDesc'));
+    setMeta('meta[name="twitter:title"]', 'content', t('appTitle'));
+    setMeta('meta[name="twitter:description"]', 'content', t('docDesc'));
+    var toolsHref = state.lang === 'zh' ? '/tools/' : '/tools/' + state.lang + '/';
+    var navTools = $('nav-tools');
+    var footTools = $('foot-tools');
+    if (navTools) { navTools.setAttribute('href', toolsHref); }
+    if (footTools) { footTools.setAttribute('href', toolsHref); }
+    var langBtns = document.querySelectorAll('.langs button');
+    for (var b = 0; b < langBtns.length; b++) {
+      langBtns[b].setAttribute('aria-pressed', langBtns[b].getAttribute('data-lang') === state.lang ? 'true' : 'false');
+    }
+    if ($('calc-form')) { compute(); }
+  }
+
+  function setMeta(sel, attr, value) {
+    var node = document.querySelector(sel);
+    if (node) { node.setAttribute(attr, value); }
+  }
+
+  var ERROR_FIELD = {
+    principal: 'amount', rate: 'rate', months: 'months', extra: 'extra', method: 'method', input: 'amount'
+  };
+  var ERROR_KEY = {
+    principal: 'errPrincipal', rate: 'errRate', months: 'errMonths', extra: 'errExtra', method: 'errMethod'
+  };
+
+  function clearErrors() {
+    var errs = document.querySelectorAll('.err');
+    for (var i = 0; i < errs.length; i++) { errs[i].textContent = ''; }
+    var inputs = document.querySelectorAll('#calc-form input, #calc-form select');
+    for (var j = 0; j < inputs.length; j++) { inputs[j].removeAttribute('aria-invalid'); }
+  }
+
+  function showError(code) {
+    clearErrors();
+    var field = ERROR_FIELD[code] || 'amount';
+    var node = $('err-' + field);
+    if (node) { node.textContent = t(ERROR_KEY[code] || 'errGeneric'); }
+    var input = $(field);
+    if (input) { input.setAttribute('aria-invalid', 'true'); }
+    state.summary = null;
+    state.schedule = null;
+    state.opts = null;
+    renderEmpty();
+  }
+
+  function renderEmpty() {
+    var ids = ['first-payment', 'actual-months', 'interest-ratio', 'total-interest', 'total-payment', 'interest-saved', 'months-shortened'];
+    for (var i = 0; i < ids.length; i++) { $(ids[i]).textContent = '—'; }
+    $('first-note').textContent = t('firstNoteAnnuity');
+    $('extra-note').hidden = true;
+    $('schedule-body').innerHTML = '';
+  }
+
+  function parseField(id, fallback) {
+    var raw = $(id).value.trim();
+    if (raw === '') { return fallback; }
+    return ToolEngine.parseAmount(raw);
+  }
+
+  function compute() {
+    clearErrors();
+    state.currency = $('currency').value;
+    var opts = {
+      principal: parseField('amount', NaN),
+      annualRate: parseField('rate', NaN),
+      months: parseField('months', NaN),
+      extra: parseField('extra', 0),
+      method: $('method').value
+    };
+    var check = ToolEngine.validateInputs(opts);
+    if (!check.ok) { showError(check.error); return; }
+    try {
+      state.opts = opts;
+      state.summary = ToolEngine.summarize(opts);
+      state.schedule = ToolEngine.buildSchedule(opts);
+    } catch (e) {
+      showError(e && e.message ? e.message : 'generic');
+      return;
+    }
+    renderResults();
+    renderSchedule();
+    syncChips();
+  }
+
+  function renderResults() {
+    var s = state.summary;
+    if (!s) { return; }
+    $('first-payment').textContent = fmtCents(s.firstPayment);
+    $('first-note').textContent = t(s.method === 'annuity' ? 'firstNoteAnnuity' : 'firstNoteEqual');
+    $('actual-months').textContent = fmtPlain(s.actualMonths) + ' ' + t('periodsUnit');
+    $('interest-ratio').textContent = fmtPct(s.interestRatio);
+    $('total-interest').textContent = fmtCents(s.totalInterest);
+    $('total-payment').textContent = fmtCents(s.totalPayment);
+    if (state.opts && s.totalExtra > 0) {
+      $('interest-saved').textContent = fmtCents(s.extraInterestSaved);
+      $('months-shortened').textContent = fmtPlain(s.extraMonthsSaved) + ' ' + t('periodsUnit');
+      $('extra-note').hidden = false;
+    } else {
+      $('interest-saved').textContent = t('noExtra');
+      $('months-shortened').textContent = '—';
+      $('extra-note').hidden = true;
+    }
+  }
+
+  function renderSchedule() {
+    var rows = state.schedule;
+    var body = $('schedule-body');
+    if (!rows || !rows.length) { body.innerHTML = ''; return; }
+    var out = [];
+    if (state.view === 'year') {
+      var i;
+      for (i = 0; i < rows.length; i += 12) {
+        var slice = rows.slice(i, i + 12);
+        var payment = 0, principal = 0, interest = 0, extra = 0;
+        for (var j = 0; j < slice.length; j++) {
+          payment += slice[j].payment;
+          principal += slice[j].principal;
+          interest += slice[j].interest;
+          extra += slice[j].extra;
+        }
+        var yearNo = Math.floor(i / 12) + 1;
+        var last = slice[slice.length - 1];
+        out.push('<tr><th scope="row">' + esc(tf('yearLabel', { n: yearNo })) + '</th>' +
+          '<td class="num">' + esc(fmtCents(payment)) + '</td>' +
+          '<td class="num">' + esc(fmtCents(principal)) + '</td>' +
+          '<td class="num">' + esc(fmtCents(interest)) + '</td>' +
+          '<td class="num">' + esc(fmtCents(extra)) + '</td>' +
+          '<td class="num">' + esc(fmtCents(last.balance)) + '</td></tr>');
+      }
+    } else {
+      for (var k = 0; k < rows.length; k++) {
+        var r = rows[k];
+        out.push('<tr><th scope="row">' + esc(tf('periodLabel', { n: r.period })) + '</th>' +
+          '<td class="num">' + esc(fmtCents(r.payment)) + '</td>' +
+          '<td class="num">' + esc(fmtCents(r.principal)) + '</td>' +
+          '<td class="num">' + esc(fmtCents(r.interest)) + '</td>' +
+          '<td class="num">' + esc(fmtCents(r.extra)) + '</td>' +
+          '<td class="num">' + esc(fmtCents(r.balance)) + '</td></tr>');
+      }
+    }
+    body.innerHTML = out.join('');
+  }
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function syncChips() {
+    var chips = document.querySelectorAll('.chip');
+    var months = state.opts ? state.opts.months : NaN;
+    for (var i = 0; i < chips.length; i++) {
+      chips[i].setAttribute('aria-pressed', Number(chips[i].getAttribute('data-months')) === months ? 'true' : 'false');
+    }
+  }
+
+  function summaryText() {
+    var s = state.summary;
+    if (!s) { return ''; }
+    var o = state.opts;
+    var method = t(o.method === 'annuity' ? 'methodAnnuity' : 'methodEqualPrincipal');
+    var lines = [
+      t('summaryTitle'),
+      t('summaryAmount') + ': ' + fmtCents(ToolEngine.toCents(o.principal)),
+      t('summaryRate') + ': ' + fmtPlain(o.annualRate) + '%',
+      t('summaryTerm') + ': ' + fmtPlain(o.months) + ' ' + t('monthUnit'),
+      t('summaryMethod') + ': ' + method,
+      t('summaryFirst') + ': ' + fmtCents(s.firstPayment),
+      t('summaryInterest') + ': ' + fmtCents(s.totalInterest),
+      t('summaryTotal') + ': ' + fmtCents(s.totalPayment),
+      t('summaryActual') + ': ' + fmtPlain(s.actualMonths) + ' ' + t('periodsUnit'),
+      t('summaryRatio') + ': ' + fmtPct(s.interestRatio)
+    ];
+    if (s.totalExtra > 0) {
+      lines.push(t('summarySavedInterest') + ': ' + fmtCents(s.extraInterestSaved));
+      lines.push(t('summarySavedMonths') + ': ' + fmtPlain(s.extraMonthsSaved) + ' ' + t('periodsUnit'));
+    }
+    return lines.join('\n');
+  }
+
+  function copyText(text) {
+    if (!text) { return; }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () {
+        toast(t('copied'));
+      }).catch(function () { fallbackCopy(text); });
+    } else {
+      fallbackCopy(text);
+    }
+  }
+
+  function fallbackCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.top = '-1000px';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    document.body.removeChild(ta);
+    toast(t(ok ? 'copied' : 'copyFail'));
+  }
+
+  function csvText() {
+    var rows = state.schedule;
+    if (!rows) { return ''; }
+    var lines = ['period,payment,principal,interest,extra,balance,currency'];
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i];
+      lines.push([
+        r.period,
+        (r.payment / 100).toFixed(2),
+        (r.principal / 100).toFixed(2),
+        (r.interest / 100).toFixed(2),
+        (r.extra / 100).toFixed(2),
+        (r.balance / 100).toFixed(2),
+        state.currency
+      ].join(','));
+    }
+    return lines.join('\n');
+  }
+
+  function downloadCsv() {
+    var text = csvText();
+    if (!text) { return; }
+    var blob = new Blob(['﻿' + text], { type: 'text/csv;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'loan-schedule-' + new Date().toISOString().slice(0, 10) + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+
+  function bind() {
+    var langBtns = document.querySelectorAll('.langs button');
+    for (var i = 0; i < langBtns.length; i++) {
+      langBtns[i].addEventListener('click', function () {
+        state.lang = this.getAttribute('data-lang');
+        saveLang();
+        applyLang();
+      });
+    }
+    var inputs = document.querySelectorAll('#calc-form input, #calc-form select');
+    for (var j = 0; j < inputs.length; j++) {
+      inputs[j].addEventListener('input', compute);
+      inputs[j].addEventListener('change', compute);
+    }
+    $('currency').addEventListener('change', compute);
+
+    var chips = document.querySelectorAll('.chip');
+    for (var c = 0; c < chips.length; c++) {
+      chips[c].addEventListener('click', function () {
+        $('months').value = this.getAttribute('data-months');
+        compute();
+      });
+    }
+    $('view-year').addEventListener('click', function () {
+      state.view = 'year';
+      $('view-year').setAttribute('aria-pressed', 'true');
+      $('view-month').setAttribute('aria-pressed', 'false');
+      renderSchedule();
+    });
+    $('view-month').addEventListener('click', function () {
+      state.view = 'month';
+      $('view-year').setAttribute('aria-pressed', 'false');
+      $('view-month').setAttribute('aria-pressed', 'true');
+      renderSchedule();
+    });
+    $('copy-summary').addEventListener('click', function () { copyText(summaryText()); });
+    $('download-csv').addEventListener('click', downloadCsv);
+  }
+
+  function init() {
+    state.lang = detectLang();
+    state.currency = $('currency').value;
+    bind();
+    applyLang();
+    compute();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>

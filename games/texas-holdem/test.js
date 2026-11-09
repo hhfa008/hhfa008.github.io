@@ -10,6 +10,10 @@ var lib = require('../tests/lib.js');
 var s = lib.suite('texas-holdem');
 
 var html = lib.page(__dirname);
+// The page loads the shared hand evaluator before its inline engine; mirror
+// that here so the assertions run against the same code the browser runs.
+lib.evalCode(fs.readFileSync(path.join(__dirname, '..', 'shared', 'hand-eval.js'), 'utf8'),
+  'globalThis.HandEval');
 var P = lib.evalScript(html, 'engine', 'globalThis.Poker');
 
 function ev(str) { return P.evaluate(P.cards(str)); }

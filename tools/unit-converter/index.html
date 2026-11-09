@@ -1,0 +1,1335 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>单位换算器 — 长度、质量、温度、数据一次换算</title>
+<meta name="description" content="免费的单位换算器：长度、质量、面积、体积、温度、速度、数据和时间，实时换算并列出当前分类的全部单位。精确系数、离线可用，数据只留在本机。">
+<meta name="author" content="Devin">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="theme-color" content="#f2efe7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#101316" media="(prefers-color-scheme: dark)">
+<link rel="canonical" href="https://hhfa008.github.io/tools/unit-converter/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23b93d12'/%3E%3Cpath d='M8 8v16M24 8v16M8 12h4M8 16h6M8 20h4M8 24h6' stroke='%23fbf9f4' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Devin">
+<meta property="og:title" content="单位换算器 — 八类单位，实时换算">
+<meta property="og:description" content="长度、质量、面积、体积、温度、速度、数据和时间换算。精确系数、全部单位对照表、可复制结果，全部在本地计算。">
+<meta property="og:url" content="https://hhfa008.github.io/tools/unit-converter/">
+<meta property="og:locale" content="zh_CN">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="单位换算器 — 长度、质量、温度、数据一次换算">
+<meta name="twitter:description" content="八类单位实时换算，含温度仿射公式与十进制/二进制数据单位。结果可复制，数据留在本机。">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "单位换算器",
+  "url": "https://hhfa008.github.io/tools/unit-converter/",
+  "applicationCategory": "UtilitiesApplication",
+  "operatingSystem": "Any",
+  "browserRequirements": "Requires JavaScript",
+  "isAccessibleForFree": true,
+  "inLanguage": ["zh-CN", "en", "id"],
+  "description": "一个免费的单位换算器，支持长度、质量、面积、体积、温度、速度、数据和时间，并列出当前分类的全部单位。",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "为什么 1 KB 和 1 KiB 不一样？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "KB 是十进制单位，1 KB = 1000 B；KiB 是二进制单位，1 KiB = 1024 B。硬盘厂商标称通常用十进制，而操作系统常按二进制显示，所以同一容量看起来会“变小”。本工具把两套单位都列出来，避免混用。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "温度换算为什么不能直接乘系数？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "摄氏度、华氏度和开尔文的零点不同，属于仿射变换，而不是简单的比例关系。本工具先统一换到摄氏度，再换到目标单位，例如 °F = °C × 9 ÷ 5 + 32，K = °C + 273.15。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "换算结果为什么和别的网站略有差异？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "常见原因是系数版本、美制液量单位的定义，以及显示时的取整位数。这里使用精确系数（如 1 in = 0.0254 m、1 lb = 0.45359237 kg），内部保留完整精度，小数位只影响显示。"
+      }
+    }
+  ]
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "首页", "item": "https://hhfa008.github.io/" },
+    { "@type": "ListItem", "position": 2, "name": "工具大厅", "item": "https://hhfa008.github.io/tools/" },
+    { "@type": "ListItem", "position": 3, "name": "单位换算器", "item": "https://hhfa008.github.io/tools/unit-converter/" }
+  ]
+}
+</script>
+
+<style>
+:root{
+  --paper:#f2efe7; --paper-2:#fbf9f4; --panel:#ffffff;
+  --ink:#14171a; --muted:#5b615c; --muted-2:#7b807a;
+  --line:#d5d0c4; --line-strong:#bcb5a7;
+  --accent:#b93d12; --accent-soft:#f2a07a; --accent-wash:#f7e5da;
+  --ok:#2f6b3c; --ok-wash:#e8f2e7; --warn:#8a5a00; --warn-wash:#fbf1db;
+  --bad:#a32216; --bad-wash:#fbe7e3;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --radius:16px; --max:1040px;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --paper:#101316; --paper-2:#171b1f; --panel:#1a1f23;
+    --ink:#f2efe7; --muted:#b7b3a8; --muted-2:#948f85;
+    --line:#333a40; --line-strong:#4a535b;
+    --accent:#f08a5d; --accent-soft:#f2a07a; --accent-wash:#2b211c;
+    --ok:#8fd19e; --ok-wash:#1b2b1e; --warn:#f0c36a; --warn-wash:#2d2618;
+    --bad:#ff8a7a; --bad-wash:#321d1a;
+  }
+}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%;color-scheme:light dark;scroll-behavior:smooth}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font:16px/1.6 var(--sans);overflow-x:clip;
+  text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased;
+}
+p,h1,h2,h3,ul{margin:0}
+a{color:inherit}
+button,input,select{font:inherit;color:inherit}
+.wrap{width:100%;max-width:var(--max);margin:0 auto;padding-left:18px;padding-right:18px}
+@media (min-width:720px){.wrap{padding-left:32px;padding-right:32px}}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.skip-link{position:absolute;left:12px;top:-70px;z-index:100;padding:12px 16px;background:var(--ink);color:var(--paper);border-radius:8px;text-decoration:none}
+.skip-link:focus{top:12px}
+:focus-visible{outline:3px solid rgba(185,61,18,.55);outline-offset:3px}
+.site-header{border-bottom:1px solid var(--line);background:var(--paper)}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:64px;flex-wrap:wrap;padding-top:6px;padding-bottom:6px}
+.brand{display:inline-flex;align-items:center;gap:10px;font-weight:700;letter-spacing:-.02em;text-decoration:none;min-height:44px}
+.brand-mark{width:26px;height:26px;border-radius:7px;background:var(--accent);position:relative;flex:none}
+.brand-mark::before,.brand-mark::after{content:"";position:absolute;left:7px;right:7px;height:2px;background:var(--paper-2);border-radius:1px}
+.brand-mark::before{top:9px}
+.brand-mark::after{top:15px;right:11px}
+.header-tools{display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:flex-end}
+.site-nav{display:flex;align-items:center;gap:14px;font-size:13.5px}
+.site-nav a{display:inline-flex;align-items:center;min-height:44px;text-decoration:none;color:var(--muted)}
+.site-nav a:hover{color:var(--accent);text-decoration:underline}
+.langs{display:flex;gap:3px}
+.langs button{min-width:44px;min-height:44px;padding:0 8px;border:1px solid var(--line-strong);border-radius:9px;background:transparent;color:var(--muted);font-size:12.5px;font-weight:650;cursor:pointer}
+.langs button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+@media (prefers-color-scheme:dark){.langs button[aria-pressed="true"]{color:#101316}}
+.hero{padding:36px 0 22px}
+@media (min-width:720px){.hero{padding:52px 0 28px}}
+.eyebrow{margin:0 0 10px;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+h1{margin:0 0 12px;max-width:20ch;font-size:clamp(1.85rem,6vw,2.9rem);line-height:1.1;letter-spacing:-.035em;font-weight:700}
+.lede{max-width:70ch;color:var(--muted);font-size:clamp(1rem,2vw,1.08rem)}
+.privacy{display:flex;gap:9px;align-items:flex-start;max-width:78ch;margin:16px 0 0;padding:11px 14px;background:var(--accent-wash);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:0 10px 10px 0;font-size:13.5px}
+.privacy svg{width:17px;height:17px;flex:none;margin-top:2px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px}
+@media (min-width:720px){.card{padding:26px 28px}}
+.card-kicker{margin:0 0 7px;font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.11em;text-transform:uppercase;color:var(--accent)}
+.card h2{margin:0 0 14px;font-size:clamp(1.15rem,2.4vw,1.4rem);line-height:1.2;letter-spacing:-.02em}
+.controls{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
+@media (min-width:640px){.controls{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field>label{font-size:13px;font-weight:650;color:var(--muted)}
+.field input,.field select{width:100%;min-height:52px;padding:10px 12px;border:1px solid var(--line-strong);border-radius:12px;background:var(--paper-2);font-size:17px;appearance:none;min-width:0}
+.field select{padding-right:34px;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 18px) 50%,calc(100% - 13px) 50%;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+.field input:focus,.field select:focus{border-color:var(--accent);outline:3px solid rgba(185,61,18,.28);outline-offset:1px}
+.field input[aria-invalid="true"]{border-color:var(--bad)}
+.err{margin:0;color:var(--bad);font-size:12.5px;font-weight:600;line-height:1.4}
+.unit-row{display:grid;grid-template-columns:minmax(0,1fr) 44px minmax(0,1fr);gap:10px;align-items:end;margin-top:14px}
+.swap{width:44px;height:44px;min-height:44px;padding:0;border:1px solid var(--line-strong);border-radius:12px;background:var(--paper-2);color:var(--accent);font-size:20px;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+.swap:active{transform:translateY(1px)}
+.result-card{margin-top:18px;background:var(--paper-2)}
+.result-live{min-height:92px}
+.big{margin:2px 0 0;font-family:var(--mono);font-size:clamp(2.1rem,7.5vw,3rem);font-weight:650;line-height:1.08;letter-spacing:-.04em;color:var(--accent);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.context{margin-top:7px;color:var(--muted);font-size:14px;overflow-wrap:anywhere}
+.result-error{margin:10px 0 0;padding:9px 12px;border-radius:9px;background:var(--bad-wash);color:var(--bad);font-size:13px;font-weight:600;line-height:1.5}
+.result-controls{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;margin-top:16px}
+.result-controls .field{flex:1 1 100px}
+.result-controls .btn{flex:1 1 150px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 16px;border:1px solid var(--line-strong);border-radius:12px;background:var(--panel);font-size:14.5px;font-weight:650;cursor:pointer;text-decoration:none}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+@media (prefers-color-scheme:dark){.btn.primary{color:#101316}}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.hint{margin:10px 0 0;color:var(--muted-2);font-size:12.5px;line-height:1.55}
+.panel-desc{margin:0 0 12px;color:var(--muted);font-size:14px}
+.table-card{margin-top:18px}
+.table-wrap{margin-top:4px;border:1px solid var(--line);border-radius:12px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;min-width:460px;border-collapse:collapse;font-size:13.5px}
+caption{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+th,td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+thead th{background:var(--paper-2);font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+tbody th{font-family:var(--sans);font-size:13.5px;font-weight:600;color:var(--ink);background:transparent;overflow-wrap:anywhere}
+tbody tr:last-child th,tbody tr:last-child td{border-bottom:0}
+td.num{font-family:var(--mono);white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums}
+tbody tr.is-source th,tbody tr.is-source td{background:var(--accent-wash)}
+.explain{margin-top:18px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius)}
+.explain summary{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:18px 20px;cursor:pointer;font-weight:650;list-style:none}
+.explain summary::-webkit-details-marker{display:none}
+.explain summary::after{content:"+";flex:none;font-family:var(--mono);font-size:20px;line-height:1;color:var(--accent)}
+.explain[open] summary::after{content:"\2212"}
+.explain-body{padding:0 20px 22px}
+.formula-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;margin-bottom:18px}
+@media (min-width:760px){.formula-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.formula{min-width:0;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--paper-2)}
+.formula h3{margin:0 0 7px;font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.formula code{display:inline-block;max-width:100%;padding:2px 6px;border-radius:5px;background:var(--accent-wash);font-family:var(--mono);font-size:12.5px;line-height:1.6;overflow-wrap:anywhere}
+.assumptions{margin:0;padding-left:20px;color:var(--muted);font-size:13.5px}
+.assumptions li{margin:0 0 8px}
+.faq{margin-top:18px}
+.faq h2{margin:0 0 12px;font-size:clamp(1.3rem,3vw,1.7rem);letter-spacing:-.02em}
+.faq details{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:0 20px}
+.faq details+details{margin-top:10px}
+.faq summary{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px 0;cursor:pointer;font-weight:650;list-style:none}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";flex:none;font-family:var(--mono);font-size:19px;line-height:1;color:var(--accent)}
+.faq details[open] summary::after{content:"\2212"}
+.faq details p{margin:0;padding:0 0 18px;color:var(--muted);font-size:14px;max-width:80ch}
+.site-footer{margin-top:28px;padding:22px 0 34px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted)}
+.footer-inner{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 18px}
+.site-footer a{color:var(--accent);text-decoration:none;display:inline-flex;align-items:center;min-height:44px}
+.site-footer a:hover{text-decoration:underline}
+#toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translate(-50%,12px);z-index:20;max-width:calc(100vw - 32px);padding:12px 18px;border-radius:12px;background:var(--ink);color:var(--paper);font-size:14px;font-weight:600;text-align:center;box-shadow:0 8px 24px rgb(0 0 0 / .22);opacity:0;pointer-events:none;transition:opacity .16s,transform .16s}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .btn:active,.swap:active{transform:none}
+}
+@media print{
+  .site-header,.site-footer,.result-controls,.skip-link,#toast,.swap{display:none!important}
+  body{background:#fff;color:#000}
+  .card{border-color:#999;background:#fff;break-inside:avoid}
+  .big{color:#000}
+  .explain-body,.faq details p{display:block!important}
+  details{break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#converter" data-i="skip">跳到换算器</a>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true"></span>Devin</a>
+    <div class="header-tools">
+      <nav class="site-nav" aria-label="站点导航" data-i-aria="navAria">
+        <a id="nav-tools" href="/tools/" data-i="navTools">工具大厅</a>
+        <a href="/games/" data-i="navGames">在线桌游</a>
+      </nav>
+      <nav class="langs" aria-label="语言" data-i-aria="langAria">
+        <button type="button" data-lang="zh" aria-pressed="true">中文</button>
+        <button type="button" data-lang="en" aria-pressed="false">EN</button>
+        <button type="button" data-lang="id" aria-pressed="false">ID</button>
+      </nav>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero" aria-labelledby="page-title">
+    <p class="eyebrow" data-i="eyebrow">免费工具 · 度量衡换算</p>
+    <h1 id="page-title" data-i="appTitle">单位换算器</h1>
+    <p class="lede" data-i="tagline">长度、质量、面积、体积、温度、速度、数据和时间，一次换算到位。</p>
+    <p class="privacy">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+      <span data-i="privacy">所有换算都在你的浏览器里完成，输入不会上传。</span>
+    </p>
+  </section>
+
+  <section class="card" id="converter" aria-labelledby="input-title">
+    <p class="card-kicker" data-i="inputKicker">换算器</p>
+    <h2 id="input-title" data-i="inputTitle">选择分类与单位</h2>
+
+    <div class="controls">
+      <div class="field">
+        <label for="category" data-i="categoryLabel">分类</label>
+        <select id="category">
+          <option value="length" data-i="cat_length" selected>长度</option>
+          <option value="mass" data-i="cat_mass">质量</option>
+          <option value="area" data-i="cat_area">面积</option>
+          <option value="volume" data-i="cat_volume">体积</option>
+          <option value="temperature" data-i="cat_temperature">温度</option>
+          <option value="speed" data-i="cat_speed">速度</option>
+          <option value="data" data-i="cat_data">数据</option>
+          <option value="time" data-i="cat_time">时间</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="value" data-i="valueLabel">数值</label>
+        <input id="value" type="text" inputmode="decimal" autocomplete="off" value="1" placeholder="输入要换算的数值" data-i-ph="valuePh" aria-describedby="value-err">
+        <p class="err" id="value-err" role="alert" hidden></p>
+      </div>
+    </div>
+
+    <div class="unit-row">
+      <div class="field">
+        <label for="from" data-i="fromLabel">从</label>
+        <select id="from"></select>
+      </div>
+      <button class="swap" id="swap" type="button" aria-label="交换源单位与目标单位" data-i-aria="swapAria">
+        <span aria-hidden="true">⇄</span>
+      </button>
+      <div class="field">
+        <label for="to" data-i="toLabel">到</label>
+        <select id="to"></select>
+      </div>
+    </div>
+  </section>
+
+  <section class="card result-card" aria-labelledby="result-title">
+    <p class="card-kicker" data-i="resultKicker">结果</p>
+    <h2 id="result-title" data-i="resultTitle">换算结果</h2>
+    <div class="result-live" aria-live="polite">
+      <p class="big" id="result-big">—</p>
+      <p class="context" id="result-line"></p>
+    </div>
+    <p class="result-error" id="result-error" role="alert" hidden></p>
+    <div class="result-controls">
+      <div class="field">
+        <label for="precision" data-i="precisionLabel">小数位</label>
+        <select id="precision">
+          <option value="0">0</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4" selected>4</option>
+          <option value="5">5</option>
+          <option value="6">6</option>
+          <option value="7">7</option>
+          <option value="8">8</option>
+        </select>
+      </div>
+      <button class="btn primary" type="button" id="copy" disabled data-i="copy">复制结果</button>
+    </div>
+    <p class="hint" data-i="copyHint">复制的是纯数值，不包含千分位分隔符。</p>
+  </section>
+
+  <section class="card table-card" aria-labelledby="table-title">
+    <p class="card-kicker" data-i="tableKicker">对照表</p>
+    <h2 id="table-title" data-i="tableTitle">当前分类全部单位</h2>
+    <p class="panel-desc" id="table-note"></p>
+    <div class="table-wrap">
+      <table>
+        <caption data-i="tableCaption">换算表</caption>
+        <thead>
+          <tr>
+            <th scope="col" data-i="tableUnit">单位</th>
+            <th scope="col" data-i="tableValue">数值</th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <details class="explain" open>
+    <summary data-i="formulaTitle">公式与假设</summary>
+    <div class="explain-body">
+      <p class="panel-desc" data-i="formulaIntro">线性分类中每个单位对应一个固定系数；温度使用仿射公式，数据单位区分十进制和二进制。内部保留完整精度。</p>
+      <div class="formula-grid">
+        <div class="formula">
+          <h3 data-i="fLinearLabel">线性单位</h3>
+          <code data-i="fLinear">结果 = 数值 × 源单位系数 ÷ 目标单位系数</code>
+        </div>
+        <div class="formula">
+          <h3 data-i="fTempLabel">温度（仿射）</h3>
+          <code data-i="fTemp">°F = °C × 9 ÷ 5 + 32；K = °C + 273.15；反向同理</code>
+        </div>
+        <div class="formula">
+          <h3 data-i="fDataLabel">数据单位</h3>
+          <code data-i="fData">1 KB = 1000 B；1 KiB = 1024 B；1 GiB = 1073741824 B</code>
+        </div>
+        <div class="formula">
+          <h3 data-i="fRoundLabel">显示与取整</h3>
+          <code data-i="fRound">显示值 = 四舍五入(结果, 小数位)，默认 4 位，可选 0–8 位</code>
+        </div>
+      </div>
+      <h3 class="card-kicker" data-i="assumptionsTitle">假设与规则</h3>
+      <ul class="assumptions">
+        <li data-i="a1">长度、质量、面积、体积、速度、数据和时间按基准单位做比例换算，系数固定。</li>
+        <li data-i="a2">精确系数示例：1 in = 0.0254 m、1 lb = 0.45359237 kg、1 acre = 4046.8564224 m²、1 gal = 3.785411784 L。</li>
+        <li data-i="a3">美制液量单位（tsp、tbsp、cup、fl oz、gal）采用 US customary 定义。</li>
+        <li data-i="a4">温度是仿射换算，零点不同，不能只用比例。</li>
+        <li data-i="a5">数据单位区分十进制（KB、MB…）与二进制（KiB、MiB…）；1 GiB = 1073741824 B。</li>
+        <li data-i="a6">小数位只影响显示；极端大或极端小的值改用科学计数法。</li>
+      </ul>
+    </div>
+  </details>
+
+  <section class="faq" aria-labelledby="faq-title">
+    <h2 id="faq-title" data-i="faqTitle">常见问题</h2>
+    <details>
+      <summary data-i="faqQ1">为什么 1 KB 和 1 KiB 不一样？</summary>
+      <p data-i="faqA1">KB 是十进制单位，1 KB = 1000 B；KiB 是二进制单位，1 KiB = 1024 B。硬盘厂商标称通常用十进制，而操作系统常按二进制显示，所以同一容量看起来会“变小”。本工具把两套单位都列出来，避免混用。</p>
+    </details>
+    <details>
+      <summary data-i="faqQ2">温度换算为什么不能直接乘系数？</summary>
+      <p data-i="faqA2">摄氏度、华氏度和开尔文的零点不同，属于仿射变换，而不是简单的比例关系。本工具先统一换到摄氏度，再换到目标单位，例如 °F = °C × 9 ÷ 5 + 32，K = °C + 273.15。</p>
+    </details>
+    <details>
+      <summary data-i="faqQ3">换算结果为什么和别的网站略有差异？</summary>
+      <p data-i="faqA3">常见原因是系数版本、美制液量单位的定义，以及显示时的取整位数。这里使用精确系数（如 1 in = 0.0254 m、1 lb = 0.45359237 kg），内部保留完整精度，小数位只影响显示。</p>
+    </details>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <p>© 2026 Devin · <a href="/tools/" id="foot-tools" data-i="navTools">工具大厅</a> · <a href="/games/" data-i="navGames">在线桌游</a> · <a href="/" data-i="navHome">首页</a></p>
+    <p data-i="footerPrivacy">所有换算在本机完成，不上传任何数据。</p>
+  </div>
+</footer>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<noscript>
+  <div class="wrap"><p class="card" style="margin-top:16px">这个单位换算器需要 JavaScript。所有换算都在你的设备上完成，不会上传任何数据。</p></div>
+</noscript>
+
+<script id="engine">
+var ToolEngine = (function () {
+  'use strict';
+
+  /* Pure conversion engine. Linear categories store one factor to a base unit.
+     Temperature is affine, so it uses explicit to-base / from-base functions.
+     The engine never touches the DOM, storage, or the clock. */
+
+  function isNum(n) {
+    return typeof n === 'number' && isFinite(n);
+  }
+
+  function fail(code) {
+    return { ok: false, error: code };
+  }
+
+  function has(obj, key) {
+    return Object.prototype.hasOwnProperty.call(obj, key);
+  }
+
+  var CATS = {
+    length: {
+      base: 'm',
+      factor: {
+        mm: 0.001, cm: 0.01, m: 1, km: 1000,
+        in: 0.0254, ft: 0.3048, yd: 0.9144, mi: 1609.344, nmi: 1852
+      }
+    },
+    mass: {
+      base: 'kg',
+      factor: {
+        mg: 0.000001, g: 0.001, kg: 1, t: 1000,
+        oz: 0.028349523125, lb: 0.45359237, st: 6.35029318
+      }
+    },
+    area: {
+      base: 'm2',
+      factor: {
+        mm2: 0.000001, cm2: 0.0001, m2: 1, km2: 1000000,
+        ha: 10000, acre: 4046.8564224, ft2: 0.09290304, yd2: 0.83612736
+      }
+    },
+    volume: {
+      base: 'l',
+      factor: {
+        ml: 0.001, l: 1, m3: 1000,
+        tsp: 0.00492892159375,
+        tbsp: 0.01478676478125,
+        cup: 0.2365882365,
+        floz: 0.0295735295625,
+        gal: 3.785411784
+      }
+    },
+    temperature: {
+      base: 'c',
+      affine: true,
+      factor: { c: 1, f: 1, k: 1 }
+    },
+    speed: {
+      base: 'mps',
+      factor: {
+        mps: 1, kmh: 1 / 3.6, mph: 0.44704,
+        knot: 1852 / 3600, fps: 0.3048
+      }
+    },
+    data: {
+      base: 'byte',
+      factor: {
+        b: 1, kb: 1000, mb: 1000000, gb: 1000000000, tb: 1000000000000,
+        kib: 1024, mib: 1048576, gib: 1073741824, tib: 1099511627776
+      }
+    },
+    time: {
+      base: 's',
+      factor: {
+        ms: 0.001, s: 1, min: 60, h: 3600, d: 86400, wk: 604800
+      }
+    }
+  };
+
+  var ORDER = ['length', 'mass', 'area', 'volume', 'temperature', 'speed', 'data', 'time'];
+
+  function tempToC(value, id) {
+    if (id === 'c') return value;
+    if (id === 'f') return (value - 32) * 5 / 9;
+    return value - 273.15; /* k */
+  }
+
+  function tempFromC(value, id) {
+    if (id === 'c') return value;
+    if (id === 'f') return value * 9 / 5 + 32;
+    return value + 273.15; /* k */
+  }
+
+  /* Convert one value between two units of the same category. */
+  function convert(category, value, from, to) {
+    var cat = CATS[category];
+    if (!cat) return fail('unknown_category');
+    if (!isNum(value)) return fail('bad_value');
+    if (!has(cat.factor, from) || !has(cat.factor, to)) return fail('unknown_unit');
+    var out;
+    if (cat.affine) {
+      out = tempFromC(tempToC(value, from), to);
+    } else {
+      out = value * cat.factor[from] / cat.factor[to];
+    }
+    if (!isFinite(out)) return fail('overflow');
+    return { ok: true, value: out };
+  }
+
+  /* Convert one value into every unit of the category, in display order. */
+  function convertAll(category, value, from) {
+    var cat = CATS[category];
+    if (!cat) return fail('unknown_category');
+    if (!isNum(value)) return fail('bad_value');
+    if (!has(cat.factor, from)) return fail('unknown_unit');
+    var ids = Object.keys(cat.factor);
+    var out = [];
+    for (var i = 0; i < ids.length; i++) {
+      var r = convert(category, value, from, ids[i]);
+      if (!r.ok) return r;
+      out.push({ id: ids[i], value: r.value });
+    }
+    return { ok: true, value: out };
+  }
+
+  /* Unit metadata: id + factor (temperature factors are placeholders because
+     that category converts through the affine functions above). */
+  function units(category) {
+    var cat = CATS[category];
+    if (!cat) return fail('unknown_category');
+    var ids = Object.keys(cat.factor);
+    var out = [];
+    for (var i = 0; i < ids.length; i++) {
+      out.push({ id: ids[i], factor: cat.factor[ids[i]] });
+    }
+    return { ok: true, value: out };
+  }
+
+  function round(n, decimals) {
+    if (!isNum(n)) return fail('bad_value');
+    var d = decimals == null ? 4 : decimals;
+    if (!isNum(d) || d < 0 || d > 8 || Math.floor(d) !== d) return fail('bad_decimals');
+    var f = Math.pow(10, d);
+    var abs = Math.abs(n);
+    var rounded = Math.floor(abs * f + 0.5 + 1e-9) / f;
+    if (rounded === 0) return { ok: true, value: 0 };
+    return { ok: true, value: n < 0 ? -rounded : rounded };
+  }
+
+  return {
+    categories: ORDER.slice(),
+    units: units,
+    convert: convert,
+    convertAll: convertAll,
+    round: round
+  };
+})();
+</script>
+
+<script id="i18n">
+var TOOL_I18N = {
+  zh: {
+    docTitle: '单位换算器 — 长度、质量、温度、数据一次换算',
+    docDesc: '免费的单位换算器：长度、质量、面积、体积、温度、速度、数据和时间，实时换算并列出当前分类的全部单位。精确系数、离线可用，数据只留在本机。',
+    ogTitle: '单位换算器 — 八类单位，实时换算',
+    ogDesc: '长度、质量、面积、体积、温度、速度、数据和时间换算。精确系数、全部单位对照表、可复制结果，全部在本地计算。',
+    appTitle: '单位换算器',
+    tagline: '长度、质量、面积、体积、温度、速度、数据和时间，一次换算到位。',
+    privacy: '所有换算都在你的浏览器里完成，输入不会上传。',
+    eyebrow: '免费工具 · 度量衡换算',
+    skip: '跳到换算器',
+    navAria: '站点导航',
+    langAria: '语言',
+    navTools: '工具大厅',
+    navGames: '在线桌游',
+    navHome: '首页',
+    footerPrivacy: '所有换算在本机完成，不上传任何数据。',
+    inputKicker: '换算器',
+    inputTitle: '选择分类与单位',
+    categoryLabel: '分类',
+    cat_length: '长度',
+    cat_mass: '质量',
+    cat_area: '面积',
+    cat_volume: '体积',
+    cat_temperature: '温度',
+    cat_speed: '速度',
+    cat_data: '数据',
+    cat_time: '时间',
+    valueLabel: '数值',
+    valuePh: '输入要换算的数值',
+    fromLabel: '从',
+    toLabel: '到',
+    swapAria: '交换源单位与目标单位',
+    resultKicker: '结果',
+    resultTitle: '换算结果',
+    precisionLabel: '小数位',
+    copy: '复制结果',
+    copyHint: '复制的是纯数值，不包含千分位分隔符。',
+    copied: '已复制结果。',
+    copyFail: '无法自动复制，请手动选中结果。',
+    tableKicker: '对照表',
+    tableTitle: '当前分类全部单位',
+    tableNote: '同一输入（{v} {from}）换算到当前分类的所有单位。',
+    tableCaption: '换算表',
+    tableUnit: '单位',
+    tableValue: '数值',
+    resultLine: '{v} {from} = {r} {to}',
+    errRequired: '请输入数字。',
+    errNumber: '请输入有效的数字。',
+    errOverflow: '结果超出可计算范围。',
+    errUnit: '单位无效。',
+    errCategory: '分类无效。',
+    errDecimals: '小数位设置无效。',
+    errGeneric: '无法换算，请检查输入。',
+    formulaTitle: '公式与假设',
+    formulaIntro: '线性分类中每个单位对应一个固定系数；温度使用仿射公式，数据单位区分十进制和二进制。内部保留完整精度。',
+    fLinearLabel: '线性单位',
+    fLinear: '结果 = 数值 × 源单位系数 ÷ 目标单位系数',
+    fTempLabel: '温度（仿射）',
+    fTemp: '°F = °C × 9 ÷ 5 + 32；K = °C + 273.15；反向同理',
+    fDataLabel: '数据单位',
+    fData: '1 KB = 1000 B；1 KiB = 1024 B；1 GiB = 1073741824 B',
+    fRoundLabel: '显示与取整',
+    fRound: '显示值 = 四舍五入(结果, 小数位)，默认 4 位，可选 0–8 位',
+    assumptionsTitle: '假设与规则',
+    a1: '长度、质量、面积、体积、速度、数据和时间按基准单位做比例换算，系数固定。',
+    a2: '精确系数示例：1 in = 0.0254 m、1 lb = 0.45359237 kg、1 acre = 4046.8564224 m²、1 gal = 3.785411784 L。',
+    a3: '美制液量单位（tsp、tbsp、cup、fl oz、gal）采用 US customary 定义。',
+    a4: '温度是仿射换算，零点不同，不能只用比例。',
+    a5: '数据单位区分十进制（KB、MB…）与二进制（KiB、MiB…）；1 GiB = 1073741824 B。',
+    a6: '小数位只影响显示；极端大或极端小的值改用科学计数法。',
+    faqTitle: '常见问题',
+    faqQ1: '为什么 1 KB 和 1 KiB 不一样？',
+    faqA1: 'KB 是十进制单位，1 KB = 1000 B；KiB 是二进制单位，1 KiB = 1024 B。硬盘厂商标称通常用十进制，而操作系统常按二进制显示，所以同一容量看起来会“变小”。本工具把两套单位都列出来，避免混用。',
+    faqQ2: '温度换算为什么不能直接乘系数？',
+    faqA2: '摄氏度、华氏度和开尔文的零点不同，属于仿射变换，而不是简单的比例关系。本工具先统一换到摄氏度，再换到目标单位，例如 °F = °C × 9 ÷ 5 + 32，K = °C + 273.15。',
+    faqQ3: '换算结果为什么和别的网站略有差异？',
+    faqA3: '常见原因是系数版本、美制液量单位的定义，以及显示时的取整位数。这里使用精确系数（如 1 in = 0.0254 m、1 lb = 0.45359237 kg），内部保留完整精度，小数位只影响显示。',
+    u_mm: '毫米 (mm)',
+    u_cm: '厘米 (cm)',
+    u_m: '米 (m)',
+    u_km: '千米 (km)',
+    u_in: '英寸 (in)',
+    u_ft: '英尺 (ft)',
+    u_yd: '码 (yd)',
+    u_mi: '英里 (mi)',
+    u_nmi: '海里 (nmi)',
+    u_mg: '毫克 (mg)',
+    u_g: '克 (g)',
+    u_kg: '千克 (kg)',
+    u_t: '吨 (t)',
+    u_oz: '盎司 (oz)',
+    u_lb: '磅 (lb)',
+    u_st: '英石 (st)',
+    u_mm2: '平方毫米 (mm²)',
+    u_cm2: '平方厘米 (cm²)',
+    u_m2: '平方米 (m²)',
+    u_km2: '平方千米 (km²)',
+    u_ha: '公顷 (ha)',
+    u_acre: '英亩 (acre)',
+    u_ft2: '平方英尺 (ft²)',
+    u_yd2: '平方码 (yd²)',
+    u_ml: '毫升 (mL)',
+    u_l: '升 (L)',
+    u_m3: '立方米 (m³)',
+    u_tsp: '茶匙 (US tsp)',
+    u_tbsp: '汤匙 (US tbsp)',
+    u_cup: '杯 (US cup)',
+    u_floz: '液量盎司 (US fl oz)',
+    u_gal: '加仑 (US gal)',
+    u_c: '摄氏度 (°C)',
+    u_f: '华氏度 (°F)',
+    u_k: '开尔文 (K)',
+    u_mps: '米每秒 (m/s)',
+    u_kmh: '千米每小时 (km/h)',
+    u_mph: '英里每小时 (mph)',
+    u_knot: '节 (kn)',
+    u_fps: '英尺每秒 (ft/s)',
+    u_b: '字节 (B)',
+    u_kb: '千字节 (kB)',
+    u_mb: '兆字节 (MB)',
+    u_gb: '吉字节 (GB)',
+    u_tb: '太字节 (TB)',
+    u_kib: '千字节 (KiB)',
+    u_mib: '兆字节 (MiB)',
+    u_gib: '吉字节 (GiB)',
+    u_tib: '太字节 (TiB)',
+    u_ms: '毫秒 (ms)',
+    u_s: '秒 (s)',
+    u_min: '分钟 (min)',
+    u_h: '小时 (h)',
+    u_d: '天 (d)',
+    u_wk: '周 (wk)'
+  },
+  en: {
+    docTitle: 'Unit converter — length, mass, temperature, data, and more',
+    docDesc: 'A free unit converter for length, mass, area, volume, temperature, speed, data, and time. Convert instantly and see every unit in the category. Exact factors, offline, and nothing is uploaded.',
+    ogTitle: 'Unit converter — eight categories, instant conversion',
+    ogDesc: 'Convert length, mass, area, volume, temperature, speed, data, and time. Exact factors, a full category table, copyable results, all calculated locally.',
+    appTitle: 'Unit converter',
+    tagline: 'Length, mass, area, volume, temperature, speed, data, and time — converted in one place.',
+    privacy: 'Every conversion runs in your browser. Nothing you enter is uploaded.',
+    eyebrow: 'Free tool · units and measures',
+    skip: 'Skip to the converter',
+    navAria: 'Site navigation',
+    langAria: 'Language',
+    navTools: 'Tools',
+    navGames: 'Games',
+    navHome: 'Home',
+    footerPrivacy: 'All conversions run locally. No data is uploaded.',
+    inputKicker: 'Converter',
+    inputTitle: 'Pick a category and units',
+    categoryLabel: 'Category',
+    cat_length: 'Length',
+    cat_mass: 'Mass',
+    cat_area: 'Area',
+    cat_volume: 'Volume',
+    cat_temperature: 'Temperature',
+    cat_speed: 'Speed',
+    cat_data: 'Data',
+    cat_time: 'Time',
+    valueLabel: 'Value',
+    valuePh: 'Enter a value to convert',
+    fromLabel: 'From',
+    toLabel: 'To',
+    swapAria: 'Swap the source and target units',
+    resultKicker: 'Result',
+    resultTitle: 'Converted result',
+    precisionLabel: 'Decimals',
+    copy: 'Copy result',
+    copyHint: 'Copies a plain number without thousands separators.',
+    copied: 'Result copied.',
+    copyFail: 'Could not copy automatically. Select the result and copy it manually.',
+    tableKicker: 'Reference table',
+    tableTitle: 'All units in this category',
+    tableNote: 'Every unit in this category, converted from the same input ({v} {from}).',
+    tableCaption: 'Conversion table',
+    tableUnit: 'Unit',
+    tableValue: 'Value',
+    resultLine: '{v} {from} = {r} {to}',
+    errRequired: 'Enter a number.',
+    errNumber: 'Enter a valid number.',
+    errOverflow: 'The result is outside the calculable range.',
+    errUnit: 'That unit is not valid.',
+    errCategory: 'That category is not valid.',
+    errDecimals: 'That decimal setting is not valid.',
+    errGeneric: 'Could not convert. Check the input.',
+    formulaTitle: 'Formulas and assumptions',
+    formulaIntro: 'Each unit in a linear category has a fixed factor to the base unit. Temperature is affine, and data units come in decimal and binary variants. Internal math keeps full precision.',
+    fLinearLabel: 'Linear units',
+    fLinear: 'result = value × source factor ÷ target factor',
+    fTempLabel: 'Temperature (affine)',
+    fTemp: '°F = °C × 9 ÷ 5 + 32; K = °C + 273.15; reverse likewise',
+    fDataLabel: 'Data units',
+    fData: '1 KB = 1000 B; 1 KiB = 1024 B; 1 GiB = 1073741824 B',
+    fRoundLabel: 'Display and rounding',
+    fRound: 'display = round(result, decimals); default 4, selectable 0–8',
+    assumptionsTitle: 'Assumptions and rules',
+    a1: 'Length, mass, area, volume, speed, data, and time convert by a fixed ratio to a base unit.',
+    a2: 'Exact factors include 1 in = 0.0254 m, 1 lb = 0.45359237 kg, 1 acre = 4046.8564224 m², and 1 gal = 3.785411784 L.',
+    a3: 'US liquid measures (tsp, tbsp, cup, fl oz, gal) follow US customary definitions.',
+    a4: 'Temperature is an affine conversion because the zero points differ; a plain ratio is not enough.',
+    a5: 'Data units distinguish decimal (KB, MB…) from binary (KiB, MiB…); 1 GiB = 1073741824 B.',
+    a6: 'Decimals affect display only; extremely large or small values switch to scientific notation.',
+    faqTitle: 'Frequently asked questions',
+    faqQ1: 'Why is 1 KB different from 1 KiB?',
+    faqA1: 'KB is decimal: 1 KB = 1000 B. KiB is binary: 1 KiB = 1024 B. Drive vendors usually advertise decimal capacities while operating systems often display binary units, which is why a drive looks smaller than its label. This tool lists both systems so they are not mixed up.',
+    faqQ2: 'Why can’t temperature be converted with a simple multiplier?',
+    faqA2: 'Celsius, Fahrenheit, and Kelvin have different zero points, so the conversion is affine, not a plain ratio. This tool converts to Celsius first and then to the target unit, for example °F = °C × 9 ÷ 5 + 32 and K = °C + 273.15.',
+    faqQ3: 'Why does a result differ slightly from another site?',
+    faqA3: 'Common causes are different factor revisions, definitions of US liquid measures, and display rounding. This tool uses exact factors (for example 1 in = 0.0254 m and 1 lb = 0.45359237 kg), keeps full precision internally, and uses the decimal setting for display only.',
+    u_mm: 'Millimeter (mm)',
+    u_cm: 'Centimeter (cm)',
+    u_m: 'Meter (m)',
+    u_km: 'Kilometer (km)',
+    u_in: 'Inch (in)',
+    u_ft: 'Foot (ft)',
+    u_yd: 'Yard (yd)',
+    u_mi: 'Mile (mi)',
+    u_nmi: 'Nautical mile (nmi)',
+    u_mg: 'Milligram (mg)',
+    u_g: 'Gram (g)',
+    u_kg: 'Kilogram (kg)',
+    u_t: 'Metric ton (t)',
+    u_oz: 'Ounce (oz)',
+    u_lb: 'Pound (lb)',
+    u_st: 'Stone (st)',
+    u_mm2: 'Square millimeter (mm²)',
+    u_cm2: 'Square centimeter (cm²)',
+    u_m2: 'Square meter (m²)',
+    u_km2: 'Square kilometer (km²)',
+    u_ha: 'Hectare (ha)',
+    u_acre: 'Acre (acre)',
+    u_ft2: 'Square foot (ft²)',
+    u_yd2: 'Square yard (yd²)',
+    u_ml: 'Milliliter (mL)',
+    u_l: 'Liter (L)',
+    u_m3: 'Cubic meter (m³)',
+    u_tsp: 'Teaspoon (US tsp)',
+    u_tbsp: 'Tablespoon (US tbsp)',
+    u_cup: 'Cup (US cup)',
+    u_floz: 'Fluid ounce (US fl oz)',
+    u_gal: 'Gallon (US gal)',
+    u_c: 'Celsius (°C)',
+    u_f: 'Fahrenheit (°F)',
+    u_k: 'Kelvin (K)',
+    u_mps: 'Meter per second (m/s)',
+    u_kmh: 'Kilometer per hour (km/h)',
+    u_mph: 'Mile per hour (mph)',
+    u_knot: 'Knot (kn)',
+    u_fps: 'Foot per second (ft/s)',
+    u_b: 'Byte (B)',
+    u_kb: 'Kilobyte (kB)',
+    u_mb: 'Megabyte (MB)',
+    u_gb: 'Gigabyte (GB)',
+    u_tb: 'Terabyte (TB)',
+    u_kib: 'Kibibyte (KiB)',
+    u_mib: 'Mebibyte (MiB)',
+    u_gib: 'Gibibyte (GiB)',
+    u_tib: 'Tebibyte (TiB)',
+    u_ms: 'Millisecond (ms)',
+    u_s: 'Second (s)',
+    u_min: 'Minute (min)',
+    u_h: 'Hour (h)',
+    u_d: 'Day (d)',
+    u_wk: 'Week (wk)'
+  },
+  id: {
+    docTitle: 'Konverter satuan — panjang, massa, suhu, data, dan lainnya',
+    docDesc: 'Konverter satuan gratis untuk panjang, massa, luas, volume, suhu, kecepatan, data, dan waktu. Konversi langsung dan lihat semua satuan dalam kategori. Faktor presisi, offline, dan tidak ada data yang diunggah.',
+    ogTitle: 'Konverter satuan — delapan kategori, konversi langsung',
+    ogDesc: 'Konversi panjang, massa, luas, volume, suhu, kecepatan, data, dan waktu. Faktor presisi, tabel semua satuan, hasil bisa disalin, semua dihitung lokal.',
+    appTitle: 'Konverter satuan',
+    tagline: 'Panjang, massa, luas, volume, suhu, kecepatan, data, dan waktu — dikonversi di satu tempat.',
+    privacy: 'Semua konversi berjalan di browser Anda. Tidak ada yang diunggah.',
+    eyebrow: 'Alat gratis · satuan dan ukuran',
+    skip: 'Lompat ke konverter',
+    navAria: 'Navigasi situs',
+    langAria: 'Bahasa',
+    navTools: 'Alat',
+    navGames: 'Permainan',
+    navHome: 'Beranda',
+    footerPrivacy: 'Semua konversi berjalan lokal. Tidak ada data yang diunggah.',
+    inputKicker: 'Konverter',
+    inputTitle: 'Pilih kategori dan satuan',
+    categoryLabel: 'Kategori',
+    cat_length: 'Panjang',
+    cat_mass: 'Massa',
+    cat_area: 'Luas',
+    cat_volume: 'Volume',
+    cat_temperature: 'Suhu',
+    cat_speed: 'Kecepatan',
+    cat_data: 'Data',
+    cat_time: 'Waktu',
+    valueLabel: 'Nilai',
+    valuePh: 'Masukkan nilai yang akan dikonversi',
+    fromLabel: 'Dari',
+    toLabel: 'Ke',
+    swapAria: 'Tukar satuan asal dan tujuan',
+    resultKicker: 'Hasil',
+    resultTitle: 'Hasil konversi',
+    precisionLabel: 'Desimal',
+    copy: 'Salin hasil',
+    copyHint: 'Yang disalin adalah angka polos tanpa pemisah ribuan.',
+    copied: 'Hasil disalin.',
+    copyFail: 'Tidak bisa menyalin otomatis. Pilih hasil lalu salin manual.',
+    tableKicker: 'Tabel acuan',
+    tableTitle: 'Semua satuan dalam kategori ini',
+    tableNote: 'Semua satuan dalam kategori ini, dikonversi dari input yang sama ({v} {from}).',
+    tableCaption: 'Tabel konversi',
+    tableUnit: 'Satuan',
+    tableValue: 'Nilai',
+    resultLine: '{v} {from} = {r} {to}',
+    errRequired: 'Masukkan angka.',
+    errNumber: 'Masukkan angka yang valid.',
+    errOverflow: 'Hasil di luar rentang yang dapat dihitung.',
+    errUnit: 'Satuan tidak valid.',
+    errCategory: 'Kategori tidak valid.',
+    errDecimals: 'Pengaturan desimal tidak valid.',
+    errGeneric: 'Tidak dapat mengonversi. Periksa input.',
+    formulaTitle: 'Rumus dan asumsi',
+    formulaIntro: 'Setiap satuan dalam kategori linear memiliki faktor tetap terhadap satuan dasar. Suhu bersifat afin, dan satuan data memiliki varian desimal serta biner. Perhitungan internal memakai presisi penuh.',
+    fLinearLabel: 'Satuan linear',
+    fLinear: 'hasil = nilai × faktor asal ÷ faktor tujuan',
+    fTempLabel: 'Suhu (afin)',
+    fTemp: '°F = °C × 9 ÷ 5 + 32; K = °C + 273.15; sebaliknya juga',
+    fDataLabel: 'Satuan data',
+    fData: '1 KB = 1000 B; 1 KiB = 1024 B; 1 GiB = 1073741824 B',
+    fRoundLabel: 'Tampilan dan pembulatan',
+    fRound: 'tampilan = bulatkan(hasil, desimal); bawaan 4, pilihan 0–8',
+    assumptionsTitle: 'Asumsi dan aturan',
+    a1: 'Panjang, massa, luas, volume, kecepatan, data, dan waktu dikonversi dengan rasio tetap terhadap satuan dasar.',
+    a2: 'Faktor presisi antara lain 1 in = 0.0254 m, 1 lb = 0.45359237 kg, 1 acre = 4046.8564224 m², dan 1 gal = 3.785411784 L.',
+    a3: 'Satuan cairan AS (tsp, tbsp, cup, fl oz, gal) mengikuti definisi US customary.',
+    a4: 'Suhu adalah konversi afin karena titik nolnya berbeda; rasio biasa tidak cukup.',
+    a5: 'Satuan data membedakan desimal (KB, MB…) dan biner (KiB, MiB…); 1 GiB = 1073741824 B.',
+    a6: 'Desimal hanya memengaruhi tampilan; nilai yang sangat besar atau kecil memakai notasi ilmiah.',
+    faqTitle: 'Pertanyaan yang sering diajukan',
+    faqQ1: 'Mengapa 1 KB berbeda dengan 1 KiB?',
+    faqA1: 'KB adalah satuan desimal: 1 KB = 1000 B. KiB adalah satuan biner: 1 KiB = 1024 B. Produsen drive biasanya memakai kapasitas desimal, sedangkan sistem operasi sering menampilkan satuan biner, sehingga kapasitas terlihat lebih kecil. Alat ini menampilkan kedua sistem agar tidak tertukar.',
+    faqQ2: 'Mengapa suhu tidak bisa dikonversi dengan pengali sederhana?',
+    faqA2: 'Celsius, Fahrenheit, dan Kelvin memiliki titik nol berbeda, jadi konversinya bersifat afin, bukan rasio biasa. Alat ini mengubah ke Celsius lebih dulu lalu ke satuan tujuan, misalnya °F = °C × 9 ÷ 5 + 32 dan K = °C + 273.15.',
+    faqQ3: 'Mengapa hasilnya sedikit berbeda dari situs lain?',
+    faqA3: 'Penyebab umumnya adalah versi faktor yang berbeda, definisi satuan cairan AS, dan pembulatan tampilan. Alat ini memakai faktor presisi (misalnya 1 in = 0.0254 m dan 1 lb = 0.45359237 kg), menyimpan presisi penuh di dalam, dan desimal hanya untuk tampilan.',
+    u_mm: 'Milimeter (mm)',
+    u_cm: 'Sentimeter (cm)',
+    u_m: 'Meter (m)',
+    u_km: 'Kilometer (km)',
+    u_in: 'Inci (in)',
+    u_ft: 'Kaki (ft)',
+    u_yd: 'Yard (yd)',
+    u_mi: 'Mil (mi)',
+    u_nmi: 'Mil laut (nmi)',
+    u_mg: 'Miligram (mg)',
+    u_g: 'Gram (g)',
+    u_kg: 'Kilogram (kg)',
+    u_t: 'Ton metrik (t)',
+    u_oz: 'Ons (oz)',
+    u_lb: 'Pon (lb)',
+    u_st: 'Stone (st)',
+    u_mm2: 'Milimeter persegi (mm²)',
+    u_cm2: 'Sentimeter persegi (cm²)',
+    u_m2: 'Meter persegi (m²)',
+    u_km2: 'Kilometer persegi (km²)',
+    u_ha: 'Hektare (ha)',
+    u_acre: 'Acre (acre)',
+    u_ft2: 'Kaki persegi (ft²)',
+    u_yd2: 'Yard persegi (yd²)',
+    u_ml: 'Mililiter (mL)',
+    u_l: 'Liter (L)',
+    u_m3: 'Meter kubik (m³)',
+    u_tsp: 'Sendok teh (US tsp)',
+    u_tbsp: 'Sendok makan (US tbsp)',
+    u_cup: 'Cangkir (US cup)',
+    u_floz: 'Ons cair (US fl oz)',
+    u_gal: 'Galon (US gal)',
+    u_c: 'Celsius (°C)',
+    u_f: 'Fahrenheit (°F)',
+    u_k: 'Kelvin (K)',
+    u_mps: 'Meter per detik (m/s)',
+    u_kmh: 'Kilometer per jam (km/h)',
+    u_mph: 'Mil per jam (mph)',
+    u_knot: 'Knot (kn)',
+    u_fps: 'Kaki per detik (ft/s)',
+    u_b: 'Byte (B)',
+    u_kb: 'Kilobyte (kB)',
+    u_mb: 'Megabyte (MB)',
+    u_gb: 'Gigabyte (GB)',
+    u_tb: 'Terabyte (TB)',
+    u_kib: 'Kibibyte (KiB)',
+    u_mib: 'Mebibyte (MiB)',
+    u_gib: 'Gibibyte (GiB)',
+    u_tib: 'Tebibyte (TiB)',
+    u_ms: 'Milidetik (ms)',
+    u_s: 'Detik (s)',
+    u_min: 'Menit (min)',
+    u_h: 'Jam (h)',
+    u_d: 'Hari (d)',
+    u_wk: 'Minggu (wk)'
+  }
+};
+</script>
+
+<script>
+(function () {
+  'use strict';
+
+  var I18N = TOOL_I18N;
+  var ENG = ToolEngine;
+  var LANG_KEY = 'hhfa.tool.unit-converter.lang';
+  var DEFAULTS = {
+    length: ['m', 'cm'],
+    mass: ['kg', 'lb'],
+    area: ['m2', 'ft2'],
+    volume: ['l', 'gal'],
+    temperature: ['c', 'f'],
+    speed: ['kmh', 'mph'],
+    data: ['mb', 'mib'],
+    time: ['h', 'min']
+  };
+  var state = { lang: 'zh', precision: 4, ready: false };
+  var lastCopy = '';
+  var toastTimer = null;
+
+  function $(id) { return document.getElementById(id); }
+
+  function t(key) {
+    var d = I18N[state.lang] || I18N.zh;
+    if (d && d[key] != null) return d[key];
+    if (I18N.zh[key] != null) return I18N.zh[key];
+    return key;
+  }
+
+  function tf(key, vars) {
+    return t(key).replace(/\{(\w+)\}/g, function (m, name) {
+      return vars[name] != null ? String(vars[name]) : '';
+    });
+  }
+
+  function locale() {
+    if (state.lang === 'zh') return 'zh-CN';
+    if (state.lang === 'id') return 'id-ID';
+    return 'en-US';
+  }
+
+  function short(v) {
+    if (!isFinite(v)) return '—';
+    return String(v === 0 ? 0 : v);
+  }
+
+  function parseNum(raw) {
+    var s = String(raw == null ? '' : raw).trim().replace(/\s/g, '').replace(',', '.');
+    if (!s) return { ok: false, empty: true };
+    if (!/^[+-]?(\d+(\.\d*)?|\.\d+)(e[+-]?\d+)?$/i.test(s)) return { ok: false, invalid: true };
+    var n = Number(s);
+    if (!isFinite(n)) return { ok: false, invalid: true };
+    return { ok: true, value: n };
+  }
+
+  function setValueError(message) {
+    var input = $('value');
+    input.setAttribute('aria-invalid', 'true');
+    var err = $('value-err');
+    err.textContent = message;
+    err.hidden = false;
+  }
+
+  function clearValueError() {
+    $('value').removeAttribute('aria-invalid');
+    var err = $('value-err');
+    err.textContent = '';
+    err.hidden = true;
+  }
+
+  function sci(n) {
+    return n.toExponential(6)
+      .replace(/(\.\d*?)0+e/, '$1e')
+      .replace(/\.e/, 'e');
+  }
+
+  function displayNumber(value, d) {
+    var abs = Math.abs(value);
+    if (abs !== 0 && (abs >= 1e12 || abs < 0.5 * Math.pow(10, -d))) return sci(value);
+    var r = ENG.round(value, d);
+    var v = r.ok ? r.value : value;
+    return new Intl.NumberFormat(locale(), {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: d
+    }).format(v);
+  }
+
+  function plainNumber(value, d) {
+    var abs = Math.abs(value);
+    if (abs !== 0 && (abs >= 1e12 || abs < 0.5 * Math.pow(10, -d))) return sci(value);
+    var r = ENG.round(value, d);
+    return r.ok ? String(r.value) : String(value);
+  }
+
+  function errMessage(code) {
+    if (code === 'unknown_unit') return t('errUnit');
+    if (code === 'unknown_category') return t('errCategory');
+    if (code === 'overflow') return t('errOverflow');
+    if (code === 'bad_decimals') return t('errDecimals');
+    return t('errGeneric');
+  }
+
+  function clearOutput() {
+    $('result-big').textContent = '—';
+    $('result-line').textContent = '';
+    $('table-note').textContent = '';
+    var error = $('result-error');
+    error.textContent = '';
+    error.hidden = true;
+    $('copy').disabled = true;
+    lastCopy = '';
+    $('table-body').textContent = '';
+  }
+
+  function showEngineError(res) {
+    clearOutput();
+    var box = $('result-error');
+    box.textContent = errMessage(res && res.error);
+    box.hidden = false;
+  }
+
+  function fillSelect(select, units, wanted) {
+    while (select.firstChild) select.removeChild(select.firstChild);
+    for (var i = 0; i < units.length; i++) {
+      var option = document.createElement('option');
+      option.value = units[i].id;
+      option.textContent = t('u_' + units[i].id);
+      select.appendChild(option);
+    }
+    var valid = false;
+    for (var j = 0; j < units.length; j++) {
+      if (units[j].id === wanted) { valid = true; break; }
+    }
+    select.value = valid ? wanted : (units.length ? units[0].id : '');
+  }
+
+  function refreshUnits(useDefaults) {
+    var category = $('category').value;
+    var meta = ENG.units(category);
+    var units = meta.ok ? meta.value : [];
+    var fromWanted = useDefaults ? DEFAULTS[category][0] : $('from').value;
+    var toWanted = useDefaults ? DEFAULTS[category][1] : $('to').value;
+    fillSelect($('from'), units, fromWanted);
+    fillSelect($('to'), units, toWanted);
+    compute();
+  }
+
+  function renderTable(rows, fromId) {
+    var body = $('table-body');
+    body.textContent = '';
+    if (!rows) return;
+    for (var i = 0; i < rows.length; i++) {
+      var tr = document.createElement('tr');
+      if (rows[i].id === fromId) tr.className = 'is-source';
+      var th = document.createElement('th');
+      th.scope = 'row';
+      th.textContent = t('u_' + rows[i].id);
+      var td = document.createElement('td');
+      td.className = 'num';
+      td.textContent = displayNumber(rows[i].value, state.precision);
+      tr.appendChild(th);
+      tr.appendChild(td);
+      body.appendChild(tr);
+    }
+  }
+
+  function compute() {
+    var category = $('category').value;
+    var from = $('from').value;
+    var to = $('to').value;
+    var parsed = parseNum($('value').value);
+    if (!parsed.ok) {
+      setValueError(parsed.empty ? t('errRequired') : t('errNumber'));
+      clearOutput();
+      return;
+    }
+    clearValueError();
+
+    var result = ENG.convert(category, parsed.value, from, to);
+    if (!result.ok) { showEngineError(result); return; }
+    var all = ENG.convertAll(category, parsed.value, from);
+    if (!all.ok) { showEngineError(all); return; }
+
+    var d = state.precision;
+    var display = displayNumber(result.value, d);
+    $('result-big').textContent = display;
+    $('result-line').textContent = tf('resultLine', {
+      v: short(parsed.value),
+      from: t('u_' + from),
+      r: display,
+      to: t('u_' + to)
+    });
+    $('table-note').textContent = tf('tableNote', {
+      v: short(parsed.value),
+      from: t('u_' + from)
+    });
+    renderTable(all.value, from);
+    var box = $('result-error');
+    box.textContent = '';
+    box.hidden = true;
+    lastCopy = plainNumber(result.value, d);
+    $('copy').disabled = false;
+  }
+
+  function swapUnits() {
+    var from = $('from').value;
+    $('from').value = $('to').value;
+    $('to').value = from;
+    compute();
+  }
+
+  function toast(message) {
+    var el = $('toast');
+    el.textContent = message;
+    el.classList.add('on');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove('on'); }, 2600);
+  }
+
+  function fallbackCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.top = '-1000px';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    document.body.removeChild(ta);
+    return ok;
+  }
+
+  function copyResult() {
+    if (!lastCopy) return;
+    var done = function () { toast(t('copied')); };
+    var fail = function () { toast(t('copyFail')); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(lastCopy).then(done).catch(function () {
+        if (fallbackCopy(lastCopy)) done(); else fail();
+      });
+    } else if (fallbackCopy(lastCopy)) {
+      done();
+    } else {
+      fail();
+    }
+  }
+
+  function setMeta(attr, value, text) {
+    var metas = document.querySelectorAll('meta');
+    for (var i = 0; i < metas.length; i++) {
+      if (metas[i].getAttribute(attr) === value) {
+        metas[i].setAttribute('content', text);
+        return;
+      }
+    }
+  }
+
+  function applyLang() {
+    var lang = state.lang;
+    document.documentElement.lang = lang === 'zh' ? 'zh-CN' : lang;
+
+    var nodes = document.querySelectorAll('[data-i]');
+    for (var i = 0; i < nodes.length; i++) {
+      nodes[i].textContent = t(nodes[i].getAttribute('data-i'));
+    }
+    var phs = document.querySelectorAll('[data-i-ph]');
+    for (var j = 0; j < phs.length; j++) {
+      phs[j].setAttribute('placeholder', t(phs[j].getAttribute('data-i-ph')));
+    }
+    var arias = document.querySelectorAll('[data-i-aria]');
+    for (var k = 0; k < arias.length; k++) {
+      arias[k].setAttribute('aria-label', t(arias[k].getAttribute('data-i-aria')));
+    }
+    var buttons = document.querySelectorAll('.langs button');
+    for (var b = 0; b < buttons.length; b++) {
+      buttons[b].setAttribute('aria-pressed',
+        buttons[b].getAttribute('data-lang') === lang ? 'true' : 'false');
+    }
+
+    document.title = t('docTitle');
+    setMeta('name', 'description', t('docDesc'));
+    setMeta('property', 'og:title', t('ogTitle'));
+    setMeta('property', 'og:description', t('ogDesc'));
+    setMeta('name', 'twitter:title', t('ogTitle'));
+    setMeta('name', 'twitter:description', t('ogDesc'));
+
+    var toolsHref = lang === 'zh' ? '/tools/' : '/tools/' + lang + '/';
+    var navTools = $('nav-tools');
+    var footTools = $('foot-tools');
+    if (navTools) navTools.setAttribute('href', toolsHref);
+    if (footTools) footTools.setAttribute('href', toolsHref);
+
+    refreshUnits(!state.ready);
+  }
+
+  function detectLang() {
+    try {
+      var q = new URLSearchParams(window.location.search).get('lang');
+      if (q === 'zh' || q === 'en' || q === 'id') return q;
+    } catch (e) { /* ignore */ }
+    try {
+      var saved = localStorage.getItem(LANG_KEY);
+      if (saved === 'zh' || saved === 'en' || saved === 'id') return saved;
+    } catch (e) { /* ignore */ }
+    var nav = (navigator.language || '').toLowerCase();
+    if (nav.indexOf('zh') === 0) return 'zh';
+    if (nav.indexOf('id') === 0 || nav.indexOf('in') === 0) return 'id';
+    return 'en';
+  }
+
+  function saveLang() {
+    try { localStorage.setItem(LANG_KEY, state.lang); } catch (e) { /* ignore */ }
+  }
+
+  function bind() {
+    $('category').addEventListener('change', function () {
+      refreshUnits(true);
+    });
+    $('value').addEventListener('input', compute);
+    $('from').addEventListener('change', compute);
+    $('to').addEventListener('change', compute);
+    $('swap').addEventListener('click', swapUnits);
+    $('precision').addEventListener('change', function () {
+      var d = parseInt(this.value, 10);
+      state.precision = isFinite(d) ? Math.max(0, Math.min(8, d)) : 4;
+      compute();
+    });
+    $('copy').addEventListener('click', copyResult);
+
+    var langButtons = document.querySelectorAll('.langs button');
+    for (var i = 0; i < langButtons.length; i++) {
+      (function (btn) {
+        btn.addEventListener('click', function () {
+          state.lang = btn.getAttribute('data-lang');
+          saveLang();
+          applyLang();
+        });
+      })(langButtons[i]);
+    }
+  }
+
+  function init() {
+    state.lang = detectLang();
+    bind();
+    applyLang();
+    state.ready = true;
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>

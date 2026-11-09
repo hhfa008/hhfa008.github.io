@@ -1,0 +1,1449 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>BMI 与每日热量计算器 — 免费、离线、不收集数据</title>
+<meta name="description" content="输入身高、体重、年龄、性别与活动量，估算 BMI、健康体重范围、基础代谢（Mifflin–St Jeor）、每日总消耗（TDEE）和四个热量目标。公制/英制互转，计算都在本机完成，数据不上传。仅供估算，不构成医疗建议。">
+<meta name="author" content="Devin">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="theme-color" content="#f2efe7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#101316" media="(prefers-color-scheme: dark)">
+<link rel="canonical" href="https://hhfa008.github.io/tools/bmi-calculator/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23b93d12'/%3E%3Cpath d='M10 23V15M16 23V9M22 23V12' stroke='%23fbf9f4' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Devin">
+<meta property="og:title" content="BMI 与每日热量计算器 — 免费、离线、不收集数据">
+<meta property="og:description" content="估算 BMI、健康体重范围、BMR、TDEE 与四个热量目标。公制/英制互转，计算在本机完成，数据不上传。仅供估算，不构成医疗建议。">
+<meta property="og:url" content="https://hhfa008.github.io/tools/bmi-calculator/">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:locale:alternate" content="en_US">
+<meta property="og:locale:alternate" content="id_ID">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="BMI 与每日热量计算器">
+<meta name="twitter:description" content="BMI、健康体重、BMR、TDEE 与每日热量目标，一次算清。离线可用，数据不上传。">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "BMI 与每日热量计算器",
+  "url": "https://hhfa008.github.io/tools/bmi-calculator/",
+  "applicationCategory": "HealthApplication",
+  "operatingSystem": "Any",
+  "browserRequirements": "Requires JavaScript",
+  "description": "估算 BMI、健康体重范围、基础代谢（Mifflin–St Jeor）、每日总消耗和四个热量目标的免费离线计算器。支持公制与英制输入，所有计算在浏览器本地完成。仅供估算，不构成医疗建议。",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "inLanguage": ["zh-CN", "en", "id"],
+  "featureList": [
+    "BMI 与 WHO 成人分类",
+    "该身高的健康体重范围",
+    "Mifflin–St Jeor 基础代谢",
+    "活动系数与 TDEE",
+    "四个每日热量目标",
+    "公制与英制互换"
+  ]
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "BMI 正常就代表健康吗？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "不代表。BMI 只是一个筛查指标，不反映体脂率、腰围、肌肉量、血压或血糖。需要结合其他指标，由专业人员判断。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "为什么男女 BMR 公式差 166？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Mifflin–St Jeor 对女性常数项为 −161，男性为 +5，相差 166 千卡/天。它反映的是人群平均差异，个体差异仍然很大。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "减脂 500 千卡是怎么来的？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "常见做法是在 TDEE 基础上制造约 500 千卡/天的缺口，理论上约每周减少 0.45 千克脂肪。实际速度会因依从性、活动变化和水分波动而不同，这不是医疗建议。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "英制输入如何换算？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "英寸先换算为厘米（×2.54），磅换算为千克（×0.45359237），再套用同一公式；结果展示会跟随单位制。"
+      }
+    }
+  ]
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "首页", "item": "https://hhfa008.github.io/" },
+    { "@type": "ListItem", "position": 2, "name": "工具大厅", "item": "https://hhfa008.github.io/tools/" },
+    { "@type": "ListItem", "position": 3, "name": "BMI 与每日热量计算器", "item": "https://hhfa008.github.io/tools/bmi-calculator/" }
+  ]
+}
+</script>
+
+<style>
+:root{
+  --paper:#f2efe7;--paper-2:#fbf9f4;--panel:#ffffff;
+  --ink:#14171a;--muted:#5b615c;--muted-2:#7b807a;
+  --line:#d5d0c4;--line-strong:#bcb5a7;
+  --accent:#b93d12;--accent-soft:#f2a07a;--accent-wash:#f7e5da;
+  --ok:#2f6b3c;--ok-wash:#e8f2e7;--warn:#8a5a00;--warn-wash:#fbf1db;
+  --bad:#a32216;--bad-wash:#fbe7e3;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --radius:16px;--max:1040px;
+}
+@media (prefers-color-scheme:dark){
+  :root{--paper:#101316;--paper-2:#171b1f;--panel:#1a1f23;--ink:#f2efe7;--muted:#b7b3a8;
+    --muted-2:#948f85;--line:#333a40;--line-strong:#4a535b;--accent:#f08a5d;
+    --accent-soft:#7a4a35;--accent-wash:#2b211c;--ok:#8fd19e;--ok-wash:#1b2b1e;
+    --warn:#f0c36a;--warn-wash:#2d2618;--bad:#ff8a7a;--bad-wash:#321d1a;}
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%;color-scheme:light dark;scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.6 var(--sans);
+  overflow-x:clip;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+.wrap{width:100%;max-width:var(--max);margin:0 auto;padding-left:18px;padding-right:18px}
+@media (min-width:720px){.wrap{padding-left:32px;padding-right:32px}}
+p{margin:0 0 1em}p:last-child{margin-bottom:0}
+a{color:inherit}
+h1,h2,h3{margin:0}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.skip-link{position:absolute;left:12px;top:-64px;z-index:100;padding:12px 16px;
+  background:var(--ink);color:var(--paper);border-radius:8px;text-decoration:none}
+.skip-link:focus{top:12px}
+:focus-visible{outline:3px solid rgba(185,61,18,.55);outline-offset:3px}
+@media (prefers-color-scheme:dark){:focus-visible{outline-color:rgba(240,138,93,.7)}}
+
+.site-header{border-bottom:1px solid var(--line);background:var(--paper)}
+.header-inner{display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap;min-height:64px;padding-top:8px;padding-bottom:8px}
+.brand{display:inline-flex;align-items:center;gap:9px;margin-right:auto;font-weight:700;
+  letter-spacing:-.02em;text-decoration:none;min-height:44px}
+.brand-mark{width:24px;height:24px;border-radius:7px;background:var(--accent);flex:none;position:relative}
+.brand-mark::before,.brand-mark::after{content:"";position:absolute;left:6px;right:6px;height:2px;background:var(--paper-2);border-radius:1px}
+.brand-mark::before{top:8px}.brand-mark::after{top:14px;right:10px}
+.site-nav{display:flex;align-items:center;gap:2px;flex-wrap:wrap;font-size:14px}
+.site-nav a{display:inline-flex;align-items:center;min-height:44px;padding:0 10px;border-radius:9px;
+  color:var(--muted);text-decoration:none}
+.site-nav a:hover{color:var(--accent)}
+.langs{display:flex;gap:2px;border:1px solid var(--line);border-radius:11px;padding:2px;background:var(--paper-2)}
+.langs button{min-width:44px;min-height:44px;padding:0 8px;border:0;border-radius:8px;background:transparent;
+  color:var(--muted);font:600 13px/1 var(--sans);cursor:pointer}
+.langs button[aria-pressed="true"]{background:var(--accent);color:#fff}
+@media (prefers-color-scheme:dark){.langs button[aria-pressed="true"]{color:#14171a}}
+@media (max-width:560px){.site-nav{order:3;width:100%;justify-content:flex-start}}
+
+.hero{padding:40px 0 20px}
+.eyebrow{margin:0 0 10px;font:600 11px/1.4 var(--mono);letter-spacing:.12em;
+  text-transform:uppercase;color:var(--accent)}
+h1{margin:0 0 14px;max-width:20ch;font-size:clamp(2rem,6vw,3rem);line-height:1.08;letter-spacing:-.035em}
+.lede{max-width:68ch;color:var(--muted);font-size:clamp(1rem,2vw,1.1rem);margin:0 0 16px}
+.notice,.privacy{display:flex;gap:10px;align-items:flex-start;max-width:78ch;margin:0 0 10px;
+  padding:12px 14px;border-radius:10px;font-size:13.5px;line-height:1.55}
+.notice{border-left:4px solid var(--accent);background:var(--accent-wash);border-radius:0 10px 10px 0}
+.privacy{background:var(--paper-2);border:1px solid var(--line);color:var(--muted)}
+.notice svg,.privacy svg{width:18px;height:18px;flex:none;margin-top:2px;color:var(--accent)}
+
+.layout{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;margin-top:8px}
+@media (min-width:920px){
+  .layout{grid-template-columns:minmax(0,.92fr) minmax(0,1.08fr);align-items:start}
+  .form-card{position:sticky;top:16px}
+}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px}
+@media (min-width:720px){.card{padding:24px 26px}}
+.card h2{font-size:1.15rem;line-height:1.25;letter-spacing:-.02em;margin-bottom:12px}
+.card h3{font-size:.85rem;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);
+  font-family:var(--mono);margin:18px 0 8px}
+.muted{color:var(--muted);font-size:13px;line-height:1.55}
+.hint{margin:12px 0 0;padding:10px 12px;border-radius:9px;background:var(--paper-2);
+  border:1px solid var(--line);color:var(--muted);font-size:12.5px;line-height:1.55}
+form{margin:0}
+fieldset{border:0;padding:0;margin:0}
+legend{padding:0;font-size:13px;font-weight:650;margin-bottom:6px}
+.field{margin-bottom:14px}
+.field:last-of-type{margin-bottom:0}
+label,.group-label{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
+input,select{width:100%;min-height:48px;padding:10px 12px;border:1px solid var(--line-strong);
+  border-radius:10px;background:var(--panel);color:var(--ink);font:inherit;font-size:16px}
+select{appearance:none;padding-right:34px;
+  background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);
+  background-position:calc(100% - 18px) 50%,calc(100% - 13px) 50%;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+input:focus,select:focus{border-color:var(--accent);outline:3px solid rgba(185,61,18,.25);outline-offset:1px}
+input[aria-invalid="true"]{border-color:var(--bad);background:var(--bad-wash)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px;min-width:0}
+.two > div{min-width:0}
+.error{margin:6px 0 0;padding:8px 10px;border-radius:8px;background:var(--bad-wash);
+  color:var(--bad);font-size:12.5px;font-weight:550}
+
+.btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;
+  padding:0 18px;border:1px solid var(--line-strong);border-radius:11px;background:var(--panel);
+  color:var(--ink);font:600 15px/1 var(--sans);cursor:pointer;text-decoration:none}
+.btn:hover{border-color:var(--accent)}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+@media (prefers-color-scheme:dark){.btn.primary{color:#14171a}}
+.btn[disabled]{opacity:.55;cursor:not-allowed}
+.btn-row .btn{flex:1 1 150px}
+
+.results .bmi-top{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:2px}
+.big{margin:0;font-family:var(--mono);font-size:clamp(2.8rem,11vw,3.8rem);font-weight:600;
+  line-height:1;letter-spacing:-.05em;color:var(--accent);font-variant-numeric:tabular-nums}
+.chip{display:inline-flex;align-items:center;min-height:32px;padding:4px 12px;border-radius:999px;
+  font-size:13px;font-weight:650;background:var(--paper-2);border:1px solid var(--line);color:var(--muted)}
+.chip-under{background:var(--warn-wash);border-color:var(--warn);color:var(--warn)}
+.chip-normal{background:var(--ok-wash);border-color:var(--ok);color:var(--ok)}
+.chip-over{background:var(--warn-wash);border-color:var(--warn);color:var(--warn)}
+.chip-obese{background:var(--bad-wash);border-color:var(--bad);color:var(--bad)}
+.stat{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+  padding:10px 0;border-top:1px solid var(--line);font-size:14px}
+.stat:first-of-type{border-top:0}
+.stat span{color:var(--muted)}
+.stat strong{font-family:var(--mono);font-size:14.5px;font-weight:650;text-align:right;
+  min-width:0;white-space:normal;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.targets{list-style:none;padding:0;margin:8px 0 0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.targets li{position:relative;min-width:0;padding:10px 12px;border:1px solid var(--line);
+  border-radius:10px;background:var(--paper-2);font-size:13px}
+.targets li.selected{border-color:var(--accent);background:var(--accent-wash)}
+.t-label{display:block;color:var(--muted);font-size:12px;margin-bottom:2px}
+.t-value{display:block;font-family:var(--mono);font-weight:650;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.t-tag{display:inline-block;margin-top:4px;font-size:10.5px;font-weight:700;letter-spacing:.05em;
+  text-transform:uppercase;color:var(--accent)}
+.results .hint{clear:both}
+
+.explain{margin-top:18px}
+.formula-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;margin-top:12px}
+@media (min-width:760px){.formula-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.formula{min-width:0;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--paper-2)}
+.formula h3{margin:0 0 6px;font-size:10.5px;color:var(--muted)}
+.formula code{display:inline-block;max-width:100%;padding:2px 6px;border-radius:5px;
+  background:var(--accent-wash);font:12.5px/1.5 var(--mono);overflow-wrap:anywhere}
+.formula p{margin:7px 0 0;font-size:12.5px;color:var(--muted);line-height:1.55}
+.assumptions{margin:6px 0 0;padding-left:20px;color:var(--muted);font-size:13.5px}
+.assumptions li{margin:0 0 8px}
+.assumptions li:last-child{margin-bottom:0}
+
+.faq{margin-top:18px}
+.faq h2{font-size:1.35rem;letter-spacing:-.02em;margin-bottom:10px}
+.faq details{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:0 16px}
+.faq details + details{margin-top:8px}
+.faq summary{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  min-height:52px;padding:10px 0;cursor:pointer;font-weight:650;list-style:none}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";font-family:var(--mono);font-size:20px;color:var(--accent);line-height:1}
+.faq details[open] summary::after{content:"−"}
+.faq details p{padding:0 0 16px;margin:0;color:var(--muted);font-size:14px;max-width:80ch}
+
+.site-footer{margin-top:26px;padding:20px 0 34px;border-top:1px solid var(--line);
+  color:var(--muted);font-size:13px}
+.footer-inner{display:flex;align-items:baseline;justify-content:space-between;gap:10px 18px;flex-wrap:wrap}
+.footer-links{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.footer-links a{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;padding:0 6px;
+  color:var(--accent);text-decoration:none}
+.footer-links a:hover{text-decoration:underline}
+.footer-fine{width:100%;margin:0;color:var(--muted-2);font-size:12px}
+
+#toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));
+  transform:translate(-50%,12px);z-index:30;max-width:calc(100vw - 32px);padding:12px 18px;
+  border-radius:12px;background:var(--ink);color:var(--paper);font-size:14px;font-weight:550;
+  text-align:center;box-shadow:0 8px 24px rgb(0 0 0 / .22);opacity:0;pointer-events:none;
+  transition:opacity .16s,transform .16s}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+
+@media (max-width:400px){
+  .targets{grid-template-columns:1fr}
+  .langs button{min-width:44px;padding:0 6px}
+  .card{padding:16px}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *{animation:none!important;transition:none!important}
+  .btn:active{transform:none}
+}
+@media print{
+  .site-header,.site-footer,.langs,.skip-link,.btn-row,#toast,.faq,.form-card{display:none!important}
+  body{background:#fff;color:#000}
+  .card,.formula{break-inside:avoid;border-color:#999}
+  .layout{display:block}
+  .results{margin-top:0}
+}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#calculator" data-i="skipLink">跳到计算器</a>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true"></span>Devin</a>
+    <nav class="site-nav" data-i-aria="siteNavLabel" aria-label="站点导航">
+      <a href="/tools/" id="nav-tools" data-i="navTools">工具大厅</a>
+      <a href="/games/" data-i="navGames">在线桌游</a>
+    </nav>
+    <div class="langs" role="group" data-i-aria="langLabel" aria-label="语言">
+      <button type="button" data-lang="zh" aria-pressed="true" data-i="langZh">中文</button>
+      <button type="button" data-lang="en" aria-pressed="false" data-i="langEn">EN</button>
+      <button type="button" data-lang="id" aria-pressed="false" data-i="langId">ID</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero" aria-labelledby="page-title">
+    <p class="eyebrow" data-i="eyebrow">免费工具 · 健康与营养</p>
+    <h1 id="page-title" data-i="appTitle">BMI 与每日热量计算器</h1>
+    <p class="lede" data-i="tagline">一次算清 BMI、健康体重、基础代谢与每日热量目标。</p>
+    <p class="notice">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2.8 19.5h18.4L12 3z"/><path d="M12 9v4.5M12 17.2v.1"/></svg>
+      <span data-i="medicalNotice">仅供估算，不构成医疗建议。孕妇、运动员、儿童、肌肉量极高者不适用；BMI 不区分肌肉与脂肪。</span>
+    </p>
+    <p class="privacy">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+      <span data-i="privacy">所有计算都在你的浏览器里完成，输入不会上传。</span>
+    </p>
+  </section>
+
+  <div class="layout" id="calculator">
+    <section class="card form-card" aria-labelledby="form-title">
+      <h2 id="form-title" data-i="inputTitle">填写身体数据</h2>
+      <form id="bmi-form" novalidate autocomplete="off">
+        <div class="field">
+          <label for="unit" data-i="unitLabel">单位制</label>
+          <select id="unit">
+            <option value="metric" selected data-i="unitMetric">公制</option>
+            <option value="imperial" data-i="unitImperial">英制</option>
+          </select>
+        </div>
+
+        <div class="field" id="height-metric">
+          <label for="height-cm" data-i="heightCmLabel">身高（厘米）</label>
+          <input id="height-cm" type="number" inputmode="decimal" min="50" max="272" step="0.1" value="175">
+        </div>
+        <div class="field" id="height-imperial" hidden>
+          <span class="group-label" data-i="heightLabel">身高</span>
+          <div class="two">
+            <div>
+              <label for="height-ft" data-i="heightFt">英尺 (ft)</label>
+              <input id="height-ft" type="number" inputmode="decimal" min="1" max="8" step="0.1" value="5">
+            </div>
+            <div>
+              <label for="height-in" data-i="heightIn">英寸 (in)</label>
+              <input id="height-in" type="number" inputmode="decimal" min="0" max="11.9" step="0.1" value="9">
+            </div>
+          </div>
+        </div>
+        <p class="error" id="err-height" role="alert" hidden></p>
+
+        <div class="field">
+          <label for="age" data-i="ageLabel">年龄（岁）</label>
+          <input id="age" type="number" inputmode="numeric" min="14" max="120" step="1" value="30">
+        </div>
+        <p class="error" id="err-age" role="alert" hidden></p>
+
+        <div class="field">
+          <label for="sex" data-i="sexLabel">性别</label>
+          <select id="sex">
+            <option value="male" selected data-i="sexMale">男</option>
+            <option value="female" data-i="sexFemale">女</option>
+          </select>
+          <p class="muted" style="margin:6px 0 0" data-i="sexHint">用于 Mifflin–St Jeor 公式。</p>
+        </div>
+
+        <div class="field" id="weight-metric">
+          <label for="weight-kg" data-i="weightKg">体重（千克）</label>
+          <input id="weight-kg" type="number" inputmode="decimal" min="10" max="500" step="0.1" value="70">
+        </div>
+        <div class="field" id="weight-imperial" hidden>
+          <label for="weight-lb" data-i="weightLb">体重（磅）</label>
+          <input id="weight-lb" type="number" inputmode="decimal" min="22" max="1100" step="0.1" value="154">
+        </div>
+        <p class="error" id="err-weight" role="alert" hidden></p>
+
+        <div class="field">
+          <label for="activity" data-i="activityLabel">日常活动水平</label>
+          <select id="activity">
+            <option value="sedentary" data-i="actSedentary">久坐（几乎不运动，×1.2）</option>
+            <option value="light" data-i="actLight">轻度活动（每周 1–3 次，×1.375）</option>
+            <option value="moderate" selected data-i="actModerate">中度活动（每周 3–5 次，×1.55）</option>
+            <option value="active" data-i="actActive">高度活动（每周 6–7 次，×1.725）</option>
+            <option value="veryActive" data-i="actVeryActive">极高活动（体力工作或每天高强度，×1.9）</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="goal" data-i="goalLabel">目标</label>
+          <select id="goal">
+            <option value="maintain" selected data-i="goalMaintain">维持体重</option>
+            <option value="mildLoss" data-i="goalMildLoss">温和减脂（−250 kcal）</option>
+            <option value="loss" data-i="goalLoss">减脂（−500 kcal）</option>
+            <option value="gain" data-i="goalGain">增重（+300 kcal）</option>
+          </select>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn" id="reset" type="button" data-i="reset">重置为默认值</button>
+        </div>
+        <p class="hint" data-i="formHint">修改任一输入即自动更新结果。</p>
+      </form>
+    </section>
+
+    <section class="card results" aria-labelledby="results-title" aria-live="polite" aria-atomic="false">
+      <h2 id="results-title" data-i="resultsTitle">计算结果</h2>
+      <div class="bmi-top">
+        <p class="big" id="bmi-value">22.9</p>
+        <p style="margin:0 0 8px"><span class="chip chip-normal" id="bmi-category" data-i="categoryNormal">正常</span></p>
+      </div>
+      <p class="muted" data-i="categoryNote">按 WHO 成人 BMI 分级：&lt;18.5 偏瘦，18.5–24.9 正常，25–29.9 超重，≥30 肥胖；分类按未四舍五入的原始 BMI 判断，显示值四舍五入到 1 位小数。</p>
+
+      <div class="stat">
+        <span data-i="healthyRangeLabel">该身高的健康体重范围</span>
+        <strong id="healthy-range">56.7–76.3 kg</strong>
+      </div>
+      <div class="stat">
+        <span data-i="bmrLabel">基础代谢 BMR</span>
+        <strong id="bmr-value">1,649 kcal/天</strong>
+      </div>
+      <div class="stat">
+        <span data-i="tdeeLabel">每日总消耗 TDEE</span>
+        <strong id="tdee-value">2,556 kcal/天</strong>
+      </div>
+      <p class="muted" style="margin-top:8px" data-i="tdeeNote">BMR × 活动系数。</p>
+
+      <h3 data-i="targetsTitle">四个每日热量目标</h3>
+      <ul class="targets" id="targets"></ul>
+
+      <div class="btn-row">
+        <button class="btn primary" id="copy" type="button" data-i="copy">复制结果</button>
+      </div>
+      <p class="hint" data-i="rounding">BMI 显示 1 位小数；BMR、TDEE 与热量目标四舍五入到整数千卡；健康体重范围显示到 0.1 千克或磅。</p>
+    </section>
+  </div>
+
+  <section class="card explain" aria-labelledby="formulas-title">
+    <h2 id="formulas-title" data-i="formulaTitle">公式与假设</h2>
+    <div class="formula-grid">
+      <div class="formula">
+        <h3 data-i="formulaBmiTitle">BMI</h3>
+        <code>BMI = kg ÷ m²</code>
+        <p data-i="formulaBmiNote">先统一换算为千克与厘米，再计算 BMI。</p>
+      </div>
+      <div class="formula">
+        <h3 data-i="formulaRangeTitle">健康体重范围</h3>
+        <code>18.5 × m² — 24.9 × m²</code>
+        <p data-i="formulaRangeNote">取 WHO 正常 BMI 区间，再换算回当前单位。</p>
+      </div>
+      <div class="formula">
+        <h3 data-i="formulaBmrTitle">基础代谢 BMR</h3>
+        <code>M: 10w + 6.25h − 5a + 5</code>
+        <p data-i="formulaBmrNote">F: 同式 − 161。w 为千克，h 为厘米，a 为年龄。</p>
+      </div>
+      <div class="formula">
+        <h3 data-i="formulaTdeeTitle">TDEE</h3>
+        <code>TDEE = BMR × 活动系数</code>
+        <p data-i="formulaTdeeNote">久坐 1.2、轻度 1.375、中度 1.55、高度 1.725、极高 1.9。</p>
+      </div>
+      <div class="formula">
+        <h3 data-i="formulaTargetTitle">热量目标</h3>
+        <code>TDEE + 0 / −250 / −500 / +300</code>
+        <p data-i="formulaTargetNote">依次为维持、温和减脂、减脂、增重。</p>
+      </div>
+      <div class="formula">
+        <h3 data-i="formulaConvertTitle">单位换算</h3>
+        <code>1 in = 2.54 cm · 1 lb = 0.45359237 kg</code>
+        <p data-i="formulaConvertNote">换算按定义精确进行，只有最终展示会取整。</p>
+      </div>
+    </div>
+
+    <h3 data-i="assumptionsTitle">假设与限制</h3>
+    <ul class="assumptions">
+      <li data-i="a1">Mifflin–St Jeor（1990）是成人静息能量消耗的常用估算，不是测量值。</li>
+      <li data-i="a2">BMI 只按身高和体重计算，不区分肌肉与脂肪；肌肉量高的人可能被归为超重。</li>
+      <li data-i="a3">活动系数是粗略分类；实际消耗还受训练强度、步数、职业与基因影响。</li>
+      <li data-i="a4">孕期、哺乳期、未成年人、运动员、进食障碍患者或慢性病患者请咨询医生或注册营养师。</li>
+      <li data-i="a5">热量目标是规划参考，不是处方；如出现不适请停止并就医。</li>
+    </ul>
+  </section>
+
+  <section class="faq" aria-labelledby="faq-title">
+    <h2 id="faq-title" data-i="faqTitle">常见问题</h2>
+    <details>
+      <summary data-i="faq1q">BMI 正常就代表健康吗？</summary>
+      <p data-i="faq1a">不代表。BMI 只是一个筛查指标，不反映体脂率、腰围、肌肉量、血压或血糖。需要结合其他指标，由专业人员判断。</p>
+    </details>
+    <details>
+      <summary data-i="faq2q">为什么男女 BMR 公式差 166？</summary>
+      <p data-i="faq2a">Mifflin–St Jeor 对女性常数项为 −161，男性为 +5，相差 166 千卡/天。它反映的是人群平均差异，个体差异仍然很大。</p>
+    </details>
+    <details>
+      <summary data-i="faq3q">减脂 500 千卡是怎么来的？</summary>
+      <p data-i="faq3a">常见做法是在 TDEE 基础上制造约 500 千卡/天的缺口，理论上约每周减少 0.45 千克脂肪。实际速度会因依从性、活动变化和水分波动而不同，这不是医疗建议。</p>
+    </details>
+    <details>
+      <summary data-i="faq4q">英制输入如何换算？</summary>
+      <p data-i="faq4a">英寸先换算为厘米（×2.54），磅换算为千克（×0.45359237），再套用同一公式；结果展示会跟随单位制。</p>
+    </details>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <p>© 2026 Devin</p>
+    <nav class="footer-links" data-i-aria="footerNavLabel" aria-label="页脚导航">
+      <a href="/tools/" id="foot-tools" data-i="footerTools">工具大厅</a>
+      <span aria-hidden="true">·</span>
+      <a href="/games/" data-i="footerGames">在线桌游</a>
+      <span aria-hidden="true">·</span>
+      <a href="/" data-i="footerHome">首页</a>
+    </nav>
+    <p class="footer-fine" data-i="footerNote">免费工具 · 仅供估算 · 不构成医疗建议</p>
+    <p class="footer-fine" data-i="footerPrivacy">所有计算在本机完成；本页不设置 Cookie，也不上传任何输入。</p>
+  </div>
+</footer>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<noscript>
+  <div class="wrap"><p class="card" style="margin-top:16px" data-i="noscript">这个计算器需要 JavaScript。所有计算都在你的设备上完成，不会上传任何数据。</p></div>
+</noscript>
+
+<script id="engine">
+/*
+ * Pure calculation engine. Invalid arguments throw TypeError or RangeError;
+ * the UI validates ranges before calling in and translates error codes.
+ */
+var ToolEngine = (function () {
+  'use strict';
+
+  var ACTIVITY = Object.freeze({
+    sedentary: 1.2,
+    light: 1.375,
+    moderate: 1.55,
+    active: 1.725,
+    veryActive: 1.9
+  });
+
+  var GOAL_DELTAS = Object.freeze({
+    maintain: 0,
+    mildLoss: -250,
+    loss: -500,
+    gain: 300
+  });
+
+  var LB_TO_KG = 0.45359237;
+  var IN_TO_CM = 2.54;
+
+  function num(x, name) {
+    if (typeof x !== 'number' || !isFinite(x)) {
+      throw new TypeError(name + ' must be a finite number');
+    }
+    return x;
+  }
+
+  function positive(x, name) {
+    num(x, name);
+    if (x <= 0) { throw new RangeError(name + ' must be greater than zero'); }
+    return x;
+  }
+
+  function bmi(kg, cm) {
+    positive(kg, 'weight');
+    positive(cm, 'height');
+    var m = cm / 100;
+    return kg / (m * m);
+  }
+
+  function bmiCategory(value) {
+    num(value, 'bmi');
+    if (value < 0) { throw new RangeError('bmi must not be negative'); }
+    if (value < 18.5) { return 'under'; }
+    if (value < 25) { return 'normal'; }
+    if (value < 30) { return 'over'; }
+    return 'obese';
+  }
+
+  function healthyWeightRange(cm) {
+    positive(cm, 'height');
+    var m = cm / 100;
+    var low = 18.5 * m * m;
+    var high = 24.9 * m * m;
+    return { min: low, max: high };
+  }
+
+  function bmrMifflin(sex, kg, cm, age) {
+    positive(kg, 'weight');
+    positive(cm, 'height');
+    num(age, 'age');
+    if (age < 0) { throw new RangeError('age must not be negative'); }
+    var base = 10 * kg + 6.25 * cm - 5 * age;
+    if (sex === 'male') { return base + 5; }
+    if (sex === 'female') { return base - 161; }
+    throw new TypeError('sex must be male or female');
+  }
+
+  function tdee(bmr, activity) {
+    positive(bmr, 'bmr');
+    var factor;
+    if (typeof activity === 'string') {
+      factor = ACTIVITY[activity];
+      if (!factor) { throw new TypeError('unknown activity'); }
+    } else {
+      factor = num(activity, 'activity');
+      if (factor <= 0) { throw new RangeError('activity factor must be positive'); }
+    }
+    return bmr * factor;
+  }
+
+  function calorieTargets(tdeeValue) {
+    positive(tdeeValue, 'tdee');
+    return {
+      maintain: tdeeValue + GOAL_DELTAS.maintain,
+      mildLoss: tdeeValue + GOAL_DELTAS.mildLoss,
+      loss: tdeeValue + GOAL_DELTAS.loss,
+      gain: tdeeValue + GOAL_DELTAS.gain
+    };
+  }
+
+  function kgFromLb(lb) {
+    num(lb, 'pounds');
+    if (lb < 0) { throw new RangeError('pounds must not be negative'); }
+    return lb * LB_TO_KG;
+  }
+
+  function cmFromFtIn(ft, inches) {
+    num(ft, 'feet');
+    num(inches, 'inches');
+    if (ft < 0 || inches < 0) { throw new RangeError('height must not be negative'); }
+    return (ft * 12 + inches) * IN_TO_CM;
+  }
+
+  return {
+    bmi: bmi,
+    bmiCategory: bmiCategory,
+    healthyWeightRange: healthyWeightRange,
+    bmrMifflin: bmrMifflin,
+    tdee: tdee,
+    calorieTargets: calorieTargets,
+    kgFromLb: kgFromLb,
+    cmFromFtIn: cmFromFtIn,
+    activities: ACTIVITY,
+    goals: GOAL_DELTAS
+  };
+})();
+</script>
+
+<script id="i18n">
+var TOOL_I18N = {
+  zh: {
+    docTitle: 'BMI 与每日热量计算器 — 免费、离线、不收集数据',
+    docDesc: '输入身高、体重、年龄、性别与活动量，估算 BMI、健康体重范围、基础代谢（Mifflin–St Jeor）、每日总消耗（TDEE）和四个热量目标。公制/英制互转，计算都在本机完成，数据不上传。仅供估算，不构成医疗建议。',
+    appTitle: 'BMI 与每日热量计算器',
+    tagline: '一次算清 BMI、健康体重、基础代谢与每日热量目标。',
+    eyebrow: '免费工具 · 健康与营养',
+    privacy: '所有计算都在你的浏览器里完成，输入不会上传。',
+    medicalNotice: '仅供估算，不构成医疗建议。孕妇、运动员、儿童、肌肉量极高者不适用；BMI 不区分肌肉与脂肪。',
+    navTools: '工具大厅',
+    navGames: '在线桌游',
+    siteNavLabel: '站点导航',
+    footerNavLabel: '页脚导航',
+    langLabel: '语言',
+    langZh: '中文',
+    langEn: 'EN',
+    langId: 'ID',
+    skipLink: '跳到计算器',
+    inputTitle: '填写身体数据',
+    formHint: '修改任一输入即自动更新结果。',
+    unitLabel: '单位制',
+    unitMetric: '公制',
+    unitImperial: '英制',
+    heightLabel: '身高',
+    heightCmLabel: '身高（厘米）',
+    heightFt: '英尺 (ft)',
+    heightIn: '英寸 (in)',
+    weightLabel: '体重',
+    weightKg: '体重（千克）',
+    weightLb: '体重（磅）',
+    ageLabel: '年龄（岁）',
+    sexLabel: '性别',
+    sexMale: '男',
+    sexFemale: '女',
+    sexHint: '用于 Mifflin–St Jeor 公式。',
+    activityLabel: '日常活动水平',
+    actSedentary: '久坐（几乎不运动，×1.2）',
+    actLight: '轻度活动（每周 1–3 次，×1.375）',
+    actModerate: '中度活动（每周 3–5 次，×1.55）',
+    actActive: '高度活动（每周 6–7 次，×1.725）',
+    actVeryActive: '极高活动（体力工作或每天高强度，×1.9）',
+    goalLabel: '目标',
+    goalMaintain: '维持体重',
+    goalMildLoss: '温和减脂（−250 kcal）',
+    goalLoss: '减脂（−500 kcal）',
+    goalGain: '增重（+300 kcal）',
+    reset: '重置为默认值',
+    resultsTitle: '计算结果',
+    bmiLabel: 'BMI（身体质量指数）',
+    categoryUnder: '偏瘦',
+    categoryNormal: '正常',
+    categoryOver: '超重',
+    categoryObese: '肥胖',
+    categoryNote: '按 WHO 成人 BMI 分级：<18.5 偏瘦，18.5–24.9 正常，25–29.9 超重，≥30 肥胖；分类按未四舍五入的原始 BMI 判断，显示值四舍五入到 1 位小数。',
+    healthyRangeLabel: '该身高的健康体重范围',
+    rangeKg: '{min}–{max} kg（BMI 18.5–24.9）',
+    rangeLb: '{min}–{max} lb（BMI 18.5–24.9）',
+    bmrLabel: '基础代谢 BMR',
+    bmrNote: 'Mifflin–St Jeor，单位为千卡/天 (kcal/day)。',
+    tdeeLabel: '每日总消耗 TDEE',
+    tdeeNote: 'BMR × 活动系数。',
+    targetsTitle: '四个每日热量目标',
+    targetMaintain: '维持',
+    targetMildLoss: '温和减脂',
+    targetLoss: '减脂',
+    targetGain: '增重',
+    selectedTag: '当前选择',
+    kcalDay: 'kcal/天',
+    copy: '复制结果',
+    copied: '已复制结果。',
+    copyFail: '无法自动复制，请手动选择结果文本。',
+    copyInvalid: '请先修正标红的输入再复制。',
+    rounding: 'BMI 显示 1 位小数；BMR、TDEE 与热量目标四舍五入到整数千卡；健康体重范围显示到 0.1 千克或磅。',
+    formulaTitle: '公式与假设',
+    formulaBmiTitle: 'BMI',
+    formulaBmi: 'BMI = 体重(kg) ÷ 身高(m)²',
+    formulaBmiNote: '先统一换算为千克与厘米，再计算 BMI。',
+    formulaRangeTitle: '健康体重范围',
+    formulaRange: '18.5 × 身高(m)² 到 24.9 × 身高(m)²',
+    formulaRangeNote: '取 WHO 正常 BMI 区间，再换算回当前单位。',
+    formulaBmrTitle: '基础代谢 BMR',
+    formulaBmr: '男：10w + 6.25h − 5a + 5；女：同式 − 161',
+    formulaBmrNote: 'w 为千克，h 为厘米，a 为年龄。',
+    formulaTdeeTitle: 'TDEE',
+    formulaTdee: 'TDEE = BMR × 活动系数',
+    formulaTdeeNote: '久坐 1.2、轻度 1.375、中度 1.55、高度 1.725、极高 1.9。',
+    formulaTargetTitle: '热量目标',
+    formulaTarget: 'TDEE + 0 / −250 / −500 / +300 kcal',
+    formulaTargetNote: '依次为维持、温和减脂、减脂、增重。',
+    formulaConvertTitle: '单位换算',
+    formulaConvert: '1 in = 2.54 cm · 1 lb = 0.45359237 kg',
+    formulaConvertNote: '换算按定义精确进行，只有最终展示会取整。',
+    assumptionsTitle: '假设与限制',
+    a1: 'Mifflin–St Jeor（1990）是成人静息能量消耗的常用估算，不是测量值。',
+    a2: 'BMI 只按身高和体重计算，不区分肌肉与脂肪；肌肉量高的人可能被归为超重。',
+    a3: '活动系数是粗略分类；实际消耗还受训练强度、步数、职业与基因影响。',
+    a4: '孕期、哺乳期、未成年人、运动员、进食障碍患者或慢性病患者请咨询医生或注册营养师。',
+    a5: '热量目标是规划参考，不是处方；如出现不适请停止并就医。',
+    faqTitle: '常见问题',
+    faq1q: 'BMI 正常就代表健康吗？',
+    faq1a: '不代表。BMI 只是一个筛查指标，不反映体脂率、腰围、肌肉量、血压或血糖。需要结合其他指标，由专业人员判断。',
+    faq2q: '为什么男女 BMR 公式差 166？',
+    faq2a: 'Mifflin–St Jeor 对女性常数项为 −161，男性为 +5，相差 166 千卡/天。它反映的是人群平均差异，个体差异仍然很大。',
+    faq3q: '减脂 500 千卡是怎么来的？',
+    faq3a: '常见做法是在 TDEE 基础上制造约 500 千卡/天的缺口，理论上约每周减少 0.45 千克脂肪。实际速度会因依从性、活动变化和水分波动而不同，这不是医疗建议。',
+    faq4q: '英制输入如何换算？',
+    faq4a: '英寸先换算为厘米（×2.54），磅换算为千克（×0.45359237），再套用同一公式；结果展示会跟随单位制。',
+    footerNote: '免费工具 · 仅供估算 · 不构成医疗建议',
+    footerTools: '工具大厅',
+    footerGames: '在线桌游',
+    footerHome: '首页',
+    footerPrivacy: '所有计算在本机完成；本页不设置 Cookie，也不上传任何输入。',
+    noscript: '这个计算器需要 JavaScript。所有计算都在你的设备上完成，不会上传任何数据。',
+    errHeightMetric: '身高需在 50–272 厘米之间。',
+    errHeightImperial: '身高需在 20–107 英寸之间（约 1 英尺 8 英寸到 8 英尺 11 英寸）。',
+    errWeightMetric: '体重需在 10–500 千克之间。',
+    errWeightImperial: '体重需在 22–1100 磅之间。',
+    errAge: '年龄需在 14–120 岁之间。',
+    copyHeader: 'BMI 与每日热量估算',
+    copyBmi: 'BMI：{value}（{category}）',
+    copyHealthy: '健康体重范围：{range}',
+    copyBmr: '基础代谢 BMR：{value} kcal/天',
+    copyTdee: '每日总消耗 TDEE：{value} kcal/天',
+    copyTargets: '每日热量目标：',
+    copyTargetLine: '· {label}：{value} kcal/天',
+    copyDisclaimer: '仅供估算，不构成医疗建议。'
+  },
+  en: {
+    docTitle: 'BMI & Daily Calorie Calculator — Free, Offline, No Sign-Up',
+    docDesc: 'Estimate BMI, a healthy weight range, basal metabolic rate (Mifflin–St Jeor), total daily energy expenditure, and four calorie targets from your height, weight, age, sex, and activity level. Metric and imperial units. Everything runs in your browser; nothing is uploaded. Estimates only, not medical advice.',
+    appTitle: 'BMI & daily calorie calculator',
+    tagline: 'See your BMI, healthy weight range, BMR, TDEE, and calorie targets in one pass.',
+    eyebrow: 'Free tool · health & nutrition',
+    privacy: 'Every calculation runs in your browser. Your inputs are never uploaded.',
+    medicalNotice: 'Estimates only, not medical advice. Not suitable for pregnancy, athletes, children, or people with very high muscle mass; BMI does not distinguish muscle from fat.',
+    navTools: 'Tools',
+    navGames: 'Games',
+    siteNavLabel: 'Site navigation',
+    footerNavLabel: 'Footer navigation',
+    langLabel: 'Language',
+    langZh: 'Chinese',
+    langEn: 'EN',
+    langId: 'ID',
+    skipLink: 'Skip to calculator',
+    inputTitle: 'Enter your measurements',
+    formHint: 'Results update automatically as you type.',
+    unitLabel: 'Units',
+    unitMetric: 'Metric',
+    unitImperial: 'Imperial',
+    heightLabel: 'Height',
+    heightCmLabel: 'Height (cm)',
+    heightFt: 'Feet (ft)',
+    heightIn: 'Inches (in)',
+    weightLabel: 'Weight',
+    weightKg: 'Weight (kg)',
+    weightLb: 'Weight (lb)',
+    ageLabel: 'Age (years)',
+    sexLabel: 'Sex',
+    sexMale: 'Male',
+    sexFemale: 'Female',
+    sexHint: 'Used only for the Mifflin–St Jeor equation.',
+    activityLabel: 'Daily activity level',
+    actSedentary: 'Sedentary (little exercise, ×1.2)',
+    actLight: 'Lightly active (1–3 days/week, ×1.375)',
+    actModerate: 'Moderately active (3–5 days/week, ×1.55)',
+    actActive: 'Very active (6–7 days/week, ×1.725)',
+    actVeryActive: 'Extremely active (physical job or hard training, ×1.9)',
+    goalLabel: 'Goal',
+    goalMaintain: 'Maintain weight',
+    goalMildLoss: 'Mild fat loss (−250 kcal)',
+    goalLoss: 'Fat loss (−500 kcal)',
+    goalGain: 'Weight gain (+300 kcal)',
+    reset: 'Reset defaults',
+    resultsTitle: 'Results',
+    bmiLabel: 'BMI (body mass index)',
+    categoryUnder: 'Underweight',
+    categoryNormal: 'Normal',
+    categoryOver: 'Overweight',
+    categoryObese: 'Obesity',
+    categoryNote: 'WHO adult cut-offs: <18.5 underweight, 18.5–24.9 normal, 25–29.9 overweight, ≥30 obesity. Categories use the unrounded BMI; the displayed value is rounded to one decimal.',
+    healthyRangeLabel: 'Healthy weight range for this height',
+    rangeKg: '{min}–{max} kg (BMI 18.5–24.9)',
+    rangeLb: '{min}–{max} lb (BMI 18.5–24.9)',
+    bmrLabel: 'Basal metabolic rate (BMR)',
+    bmrNote: 'Mifflin–St Jeor, in kcal/day.',
+    tdeeLabel: 'Total daily energy expenditure (TDEE)',
+    tdeeNote: 'BMR × activity factor.',
+    targetsTitle: 'Four daily calorie targets',
+    targetMaintain: 'Maintain',
+    targetMildLoss: 'Mild loss',
+    targetLoss: 'Fat loss',
+    targetGain: 'Gain',
+    selectedTag: 'Selected',
+    kcalDay: 'kcal/day',
+    copy: 'Copy results',
+    copied: 'Results copied.',
+    copyFail: 'Could not copy automatically. Select the results and copy manually.',
+    copyInvalid: 'Fix the highlighted inputs before copying.',
+    rounding: 'BMI is shown to 1 decimal; BMR, TDEE, and calorie targets are rounded to the nearest whole kcal; the healthy weight range is shown to 0.1 kg or lb.',
+    formulaTitle: 'Formulas and assumptions',
+    formulaBmiTitle: 'BMI',
+    formulaBmi: 'BMI = weight (kg) ÷ height (m)²',
+    formulaBmiNote: 'Convert to kilograms and centimetres first, then compute BMI.',
+    formulaRangeTitle: 'Healthy weight range',
+    formulaRange: '18.5 × height (m)² to 24.9 × height (m)²',
+    formulaRangeNote: 'The WHO normal-BMI band, converted back to your selected units.',
+    formulaBmrTitle: 'Basal metabolic rate',
+    formulaBmr: 'Men: 10w + 6.25h − 5a + 5 · Women: 10w + 6.25h − 5a − 161',
+    formulaBmrNote: 'w = kg, h = cm, a = age in years.',
+    formulaTdeeTitle: 'TDEE',
+    formulaTdee: 'TDEE = BMR × activity factor',
+    formulaTdeeNote: 'Sedentary 1.2, light 1.375, moderate 1.55, very active 1.725, extremely active 1.9.',
+    formulaTargetTitle: 'Calorie targets',
+    formulaTarget: 'TDEE + 0 / −250 / −500 / +300 kcal',
+    formulaTargetNote: 'Maintain, mild fat loss, fat loss, and weight gain, respectively.',
+    formulaConvertTitle: 'Unit conversions',
+    formulaConvert: '1 in = 2.54 cm · 1 lb = 0.45359237 kg',
+    formulaConvertNote: 'Conversions are exact by definition; only the final display is rounded.',
+    assumptionsTitle: 'Assumptions and limits',
+    a1: 'Mifflin–St Jeor (1990) is a common estimate of resting energy expenditure in adults, not a measurement.',
+    a2: 'BMI uses only height and weight. It does not distinguish muscle from fat, so muscular people can be classified as overweight.',
+    a3: 'Activity factors are broad categories. Actual expenditure also depends on training intensity, step count, occupation, and genetics.',
+    a4: 'Pregnancy, breastfeeding, children, athletes, people with eating disorders, and people with chronic conditions should consult a clinician or registered dietitian.',
+    a5: 'A calorie target is a planning figure, not a prescription. Stop and seek medical advice if you feel unwell.',
+    faqTitle: 'Frequently asked questions',
+    faq1q: 'Is a normal BMI the same as being healthy?',
+    faq1a: 'No. BMI is a screening measure. It says nothing about body-fat percentage, waist circumference, muscle mass, blood pressure, or blood sugar. A clinician should interpret it alongside other signals.',
+    faq2q: 'Why do the male and female BMR formulas differ by 166?',
+    faq2a: 'Mifflin–St Jeor uses +5 for men and −161 for women, a 166 kcal/day difference. It reflects a population average; individual variation is much larger.',
+    faq3q: 'Where does the −500 kcal fat-loss target come from?',
+    faq3a: 'A 500 kcal/day deficit is a common planning assumption that corresponds to roughly 0.45 kg of fat per week. Real progress varies with adherence, activity changes, and water weight. This is not medical advice.',
+    faq4q: 'How are imperial inputs converted?',
+    faq4a: 'Inches are multiplied by 2.54 to get centimetres, and pounds by 0.45359237 to get kilograms. The same formulas then apply, and results are shown in your selected units.',
+    footerNote: 'Free tool · estimates only · not medical advice',
+    footerTools: 'Tools',
+    footerGames: 'Games',
+    footerHome: 'Home',
+    footerPrivacy: 'All calculations run on this device. No cookies, no analytics, and no uploaded inputs.',
+    noscript: 'This calculator needs JavaScript. Everything runs on your device; nothing is uploaded.',
+    errHeightMetric: 'Height must be between 50 and 272 cm.',
+    errHeightImperial: 'Height must be between 20 and 107 inches (about 1 ft 8 in to 8 ft 11 in).',
+    errWeightMetric: 'Weight must be between 10 and 500 kg.',
+    errWeightImperial: 'Weight must be between 22 and 1100 lb.',
+    errAge: 'Age must be between 14 and 120.',
+    copyHeader: 'BMI and daily calorie estimate',
+    copyBmi: 'BMI: {value} ({category})',
+    copyHealthy: 'Healthy weight range: {range}',
+    copyBmr: 'Basal metabolic rate (BMR): {value} kcal/day',
+    copyTdee: 'Total daily energy expenditure (TDEE): {value} kcal/day',
+    copyTargets: 'Daily calorie targets:',
+    copyTargetLine: '· {label}: {value} kcal/day',
+    copyDisclaimer: 'Estimates only, not medical advice.'
+  },
+  id: {
+    docTitle: 'Kalkulator BMI & Kalori Harian — Gratis, Offline, Tanpa Daftar',
+    docDesc: 'Perkirakan BMI, rentang berat badan sehat, laju metabolisme basal (Mifflin–St Jeor), pengeluaran energi harian (TDEE), dan empat target kalori dari tinggi, berat, usia, jenis kelamin, dan aktivitas Anda. Satuan metrik dan imperial. Semua dihitung di browser; tidak ada data yang diunggah. Hanya perkiraan, bukan nasihat medis.',
+    appTitle: 'Kalkulator BMI & kalori harian',
+    tagline: 'Hitung BMI, rentang berat sehat, BMR, TDEE, dan target kalori dalam sekali isi.',
+    eyebrow: 'Alat gratis · kesehatan & gizi',
+    privacy: 'Semua perhitungan berjalan di browser Anda. Data yang Anda masukkan tidak diunggah.',
+    medicalNotice: 'Hanya perkiraan, bukan nasihat medis. Tidak berlaku untuk kehamilan, atlet, anak-anak, atau orang dengan massa otot sangat tinggi; BMI tidak membedakan otot dan lemak.',
+    navTools: 'Alat',
+    navGames: 'Game',
+    siteNavLabel: 'Navigasi situs',
+    footerNavLabel: 'Navigasi footer',
+    langLabel: 'Bahasa',
+    langZh: 'Tionghoa',
+    langEn: 'EN',
+    langId: 'ID',
+    skipLink: 'Lompat ke kalkulator',
+    inputTitle: 'Masukkan data tubuh',
+    formHint: 'Hasil diperbarui otomatis saat Anda mengetik.',
+    unitLabel: 'Satuan',
+    unitMetric: 'Metrik',
+    unitImperial: 'Imperial',
+    heightLabel: 'Tinggi badan',
+    heightCmLabel: 'Tinggi badan (cm)',
+    heightFt: 'Kaki (ft)',
+    heightIn: 'Inci (in)',
+    weightLabel: 'Berat badan',
+    weightKg: 'Berat badan (kg)',
+    weightLb: 'Berat badan (lb)',
+    ageLabel: 'Usia (tahun)',
+    sexLabel: 'Jenis kelamin',
+    sexMale: 'Pria',
+    sexFemale: 'Wanita',
+    sexHint: 'Hanya dipakai untuk rumus Mifflin–St Jeor.',
+    activityLabel: 'Tingkat aktivitas harian',
+    actSedentary: 'Jarang bergerak (hampir tanpa olahraga, ×1,2)',
+    actLight: 'Aktivitas ringan (1–3 hari/minggu, ×1,375)',
+    actModerate: 'Aktivitas sedang (3–5 hari/minggu, ×1,55)',
+    actActive: 'Aktivitas tinggi (6–7 hari/minggu, ×1,725)',
+    actVeryActive: 'Aktivitas sangat tinggi (kerja fisik atau latihan berat, ×1,9)',
+    goalLabel: 'Tujuan',
+    goalMaintain: 'Menjaga berat badan',
+    goalMildLoss: 'Penurunan lemak ringan (−250 kkal)',
+    goalLoss: 'Penurunan lemak (−500 kkal)',
+    goalGain: 'Menambah berat (+300 kkal)',
+    reset: 'Atur ulang',
+    resultsTitle: 'Hasil',
+    bmiLabel: 'BMI (indeks massa tubuh)',
+    categoryUnder: 'Kurus',
+    categoryNormal: 'Normal',
+    categoryOver: 'Berlebih',
+    categoryObese: 'Obesitas',
+    categoryNote: 'Batas dewasa WHO: <18,5 kurus, 18,5–24,9 normal, 25–29,9 berlebih, ≥30 obesitas. Kategori memakai BMI sebelum pembulatan; nilai yang tampil dibulatkan ke 1 desimal.',
+    healthyRangeLabel: 'Rentang berat badan sehat untuk tinggi ini',
+    rangeKg: '{min}–{max} kg (BMI 18,5–24,9)',
+    rangeLb: '{min}–{max} lb (BMI 18,5–24,9)',
+    bmrLabel: 'Laju metabolisme basal (BMR)',
+    bmrNote: 'Mifflin–St Jeor, dalam kkal/hari.',
+    tdeeLabel: 'Total pengeluaran energi harian (TDEE)',
+    tdeeNote: 'BMR × faktor aktivitas.',
+    targetsTitle: 'Empat target kalori harian',
+    targetMaintain: 'Menjaga',
+    targetMildLoss: 'Turun ringan',
+    targetLoss: 'Turun lemak',
+    targetGain: 'Naik',
+    selectedTag: 'Dipilih',
+    kcalDay: 'kkal/hari',
+    copy: 'Salin hasil',
+    copied: 'Hasil disalin.',
+    copyFail: 'Tidak bisa menyalin otomatis. Pilih hasil lalu salin manual.',
+    copyInvalid: 'Perbaiki input yang ditandai sebelum menyalin.',
+    rounding: 'BMI ditampilkan 1 desimal; BMR, TDEE, dan target kalori dibulatkan ke kkal terdekat; rentang berat sehat ditampilkan ke 0,1 kg atau lb.',
+    formulaTitle: 'Rumus dan asumsi',
+    formulaBmiTitle: 'BMI',
+    formulaBmi: 'BMI = berat (kg) ÷ tinggi (m)²',
+    formulaBmiNote: 'Ubah dulu ke kilogram dan sentimeter, lalu hitung BMI.',
+    formulaRangeTitle: 'Rentang berat sehat',
+    formulaRange: '18,5 × tinggi (m)² hingga 24,9 × tinggi (m)²',
+    formulaRangeNote: 'Batas BMI normal WHO, diubah kembali ke satuan pilihan Anda.',
+    formulaBmrTitle: 'Metabolisme basal',
+    formulaBmr: 'Pria: 10w + 6,25h − 5a + 5 · Wanita: 10w + 6,25h − 5a − 161',
+    formulaBmrNote: 'w = kg, h = cm, a = usia dalam tahun.',
+    formulaTdeeTitle: 'TDEE',
+    formulaTdee: 'TDEE = BMR × faktor aktivitas',
+    formulaTdeeNote: 'Jarang bergerak 1,2; ringan 1,375; sedang 1,55; tinggi 1,725; sangat tinggi 1,9.',
+    formulaTargetTitle: 'Target kalori',
+    formulaTarget: 'TDEE + 0 / −250 / −500 / +300 kkal',
+    formulaTargetNote: 'Berurutan: menjaga, turun ringan, turun lemak, dan naik.',
+    formulaConvertTitle: 'Konversi satuan',
+    formulaConvert: '1 in = 2,54 cm · 1 lb = 0,45359237 kg',
+    formulaConvertNote: 'Konversi tepat menurut definisi; hanya tampilan akhir yang dibulatkan.',
+    assumptionsTitle: 'Asumsi dan batasan',
+    a1: 'Mifflin–St Jeor (1990) adalah perkiraan umum pengeluaran energi istirahat orang dewasa, bukan hasil pengukuran.',
+    a2: 'BMI hanya memakai tinggi dan berat. BMI tidak membedakan otot dan lemak, sehingga orang berotot bisa masuk kategori berlebih.',
+    a3: 'Faktor aktivitas adalah kategori kasar. Pengeluaran nyata juga dipengaruhi intensitas latihan, jumlah langkah, pekerjaan, dan genetika.',
+    a4: 'Kehamilan, menyusui, anak-anak, atlet, orang dengan gangguan makan, dan penderita penyakit kronis sebaiknya berkonsultasi dengan dokter atau ahli gizi.',
+    a5: 'Target kalori adalah angka perencanaan, bukan resep. Hentikan dan cari bantuan medis jika Anda merasa tidak nyaman.',
+    faqTitle: 'Pertanyaan umum',
+    faq1q: 'Apakah BMI normal berarti sehat?',
+    faq1a: 'Tidak. BMI hanyalah alat skrining. BMI tidak menunjukkan persentase lemak tubuh, lingkar pinggang, massa otot, tekanan darah, atau gula darah. Tenaga kesehatan perlu menafsirkannya bersama indikator lain.',
+    faq2q: 'Mengapa rumus BMR pria dan wanita berbeda 166?',
+    faq2a: 'Mifflin–St Jeor memakai +5 untuk pria dan −161 untuk wanita, selisih 166 kkal/hari. Angka ini mencerminkan rata-rata populasi; variasi individu jauh lebih besar.',
+    faq3q: 'Dari mana target penurunan lemak −500 kkal?',
+    faq3a: 'Defisit 500 kkal/hari adalah asumsi perencanaan umum yang setara dengan sekitar 0,45 kg lemak per minggu. Kemajuan nyata bergantung pada kepatuhan, perubahan aktivitas, dan berat air. Ini bukan nasihat medis.',
+    faq4q: 'Bagaimana input imperial dikonversi?',
+    faq4a: 'Inci dikalikan 2,54 untuk menjadi sentimeter, dan pon dikalikan 0,45359237 untuk menjadi kilogram. Rumus yang sama lalu dipakai, dan hasil ditampilkan dalam satuan pilihan Anda.',
+    footerNote: 'Alat gratis · hanya perkiraan · bukan nasihat medis',
+    footerTools: 'Alat',
+    footerGames: 'Game',
+    footerHome: 'Beranda',
+    footerPrivacy: 'Semua perhitungan berjalan di perangkat ini. Tidak ada cookie, analitik, atau input yang diunggah.',
+    noscript: 'Kalkulator ini membutuhkan JavaScript. Semua perhitungan berjalan di perangkat Anda; tidak ada data yang diunggah.',
+    errHeightMetric: 'Tinggi badan harus antara 50 dan 272 cm.',
+    errHeightImperial: 'Tinggi badan harus antara 20 dan 107 inci (sekitar 1 kaki 8 inci sampai 8 kaki 11 inci).',
+    errWeightMetric: 'Berat badan harus antara 10 dan 500 kg.',
+    errWeightImperial: 'Berat badan harus antara 22 dan 1100 lb.',
+    errAge: 'Usia harus antara 14 dan 120 tahun.',
+    copyHeader: 'Perkiraan BMI dan kalori harian',
+    copyBmi: 'BMI: {value} ({category})',
+    copyHealthy: 'Rentang berat sehat: {range}',
+    copyBmr: 'Laju metabolisme basal (BMR): {value} kkal/hari',
+    copyTdee: 'Total pengeluaran energi harian (TDEE): {value} kkal/hari',
+    copyTargets: 'Target kalori harian:',
+    copyTargetLine: '· {label}: {value} kkal/hari',
+    copyDisclaimer: 'Hanya perkiraan, bukan nasihat medis.'
+  }
+};
+</script>
+
+<script>
+(function () {
+  'use strict';
+
+  var LANG_KEY = 'hhfa.tool.bmi-calculator.lang';
+  var DEFAULTS = { cm: 175, kg: 70, ft: 5, inches: 9, lb: 154, age: 30, sex: 'male', activity: 'moderate', goal: 'maintain' };
+  var TARGETS = [
+    ['maintain', 'targetMaintain'],
+    ['mildLoss', 'targetMildLoss'],
+    ['loss', 'targetLoss'],
+    ['gain', 'targetGain']
+  ];
+  var lang = 'zh';
+  var lastSummary = '';
+  var toastTimer = null;
+
+  function $(id) { return document.getElementById(id); }
+  function T(key) {
+    var d = TOOL_I18N[lang] || TOOL_I18N.zh;
+    return d[key] != null ? d[key] : (TOOL_I18N.zh[key] != null ? TOOL_I18N.zh[key] : key);
+  }
+  function locale() {
+    return lang === 'id' ? 'id-ID' : (lang === 'zh' ? 'zh-CN' : 'en-US');
+  }
+  function nf(value, min, max) {
+    return new Intl.NumberFormat(locale(), {
+      minimumFractionDigits: min || 0,
+      maximumFractionDigits: max == null ? (min || 0) : max
+    }).format(value);
+  }
+  function fmtInt(value) { return nf(value, 0, 0); }
+  function fmt1(value) { return nf(value, 1, 1); }
+  function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+  function categoryLabel(cat) { return T('category' + cap(cat)); }
+
+  function toast(msg) {
+    var el = $('toast');
+    el.textContent = msg;
+    el.classList.add('on');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove('on'); }, 2600);
+  }
+
+  function setMeta(selector, value) {
+    var el = document.querySelector(selector);
+    if (el) { el.setAttribute('content', value); }
+  }
+
+  function detectLang() {
+    var m = /[?&]lang=(zh|en|id)(?:&|$)/.exec(location.search);
+    if (m) { return m[1]; }
+    try {
+      var saved = localStorage.getItem(LANG_KEY);
+      if (saved === 'zh' || saved === 'en' || saved === 'id') { return saved; }
+    } catch (e) { /* storage can be unavailable */ }
+    var n = (navigator.language || 'en').toLowerCase();
+    if (n.indexOf('zh') === 0) { return 'zh'; }
+    if (n.indexOf('id') === 0) { return 'id'; }
+    return 'en';
+  }
+
+  function currentUnit() {
+    return $('unit').value === 'imperial' ? 'imperial' : 'metric';
+  }
+
+  function syncUnitFields() {
+    var imperial = currentUnit() === 'imperial';
+    $('height-metric').hidden = imperial;
+    $('height-imperial').hidden = !imperial;
+    $('weight-metric').hidden = imperial;
+    $('weight-imperial').hidden = !imperial;
+  }
+
+  function convertUnits(from, to) {
+    if (from === to) { return; }
+    if (to === 'imperial') {
+      var cm = parseFloat($('height-cm').value);
+      var kg = parseFloat($('weight-kg').value);
+      if (isFinite(cm) && cm > 0) {
+        var totalIn = cm / 2.54;
+        var ft = Math.floor(totalIn / 12);
+        var inch = Math.round((totalIn - ft * 12) * 10) / 10;
+        if (inch >= 12) { ft += 1; inch = 0; }
+        $('height-ft').value = String(ft);
+        $('height-in').value = String(inch);
+      }
+      if (isFinite(kg) && kg > 0) {
+        $('weight-lb').value = String(Math.round((kg / 0.45359237) * 10) / 10);
+      }
+    } else {
+      var ftN = parseFloat($('height-ft').value);
+      var inN = parseFloat($('height-in').value);
+      var lbN = parseFloat($('weight-lb').value);
+      if (isFinite(ftN) && isFinite(inN)) {
+        $('height-cm').value = String(Math.round(((ftN * 12 + inN) * 2.54) * 10) / 10);
+      }
+      if (isFinite(lbN) && lbN > 0) {
+        $('weight-kg').value = String(Math.round((lbN * 0.45359237) * 10) / 10);
+      }
+    }
+  }
+
+  function readForm() {
+    var unit = currentUnit();
+    var age = parseFloat($('age').value);
+    var errs = {};
+    var out = {
+      unit: unit,
+      age: age,
+      sex: $('sex').value,
+      activity: $('activity').value,
+      goal: $('goal').value,
+      cm: NaN,
+      kg: NaN,
+      valid: false
+    };
+
+    if (unit === 'metric') {
+      out.cm = parseFloat($('height-cm').value);
+      out.kg = parseFloat($('weight-kg').value);
+      if (!(out.cm >= 50 && out.cm <= 272)) { errs.height = T('errHeightMetric'); }
+      if (!(out.kg >= 10 && out.kg <= 500)) { errs.weight = T('errWeightMetric'); }
+    } else {
+      var ft = parseFloat($('height-ft').value);
+      var inches = parseFloat($('height-in').value);
+      if (!isFinite(ft) || !isFinite(inches) || ft < 0 || inches < 0 || inches >= 12) {
+        errs.height = T('errHeightImperial');
+      } else {
+        var totalIn = ft * 12 + inches;
+        if (totalIn < 20 || totalIn > 107) {
+          errs.height = T('errHeightImperial');
+        } else {
+          out.cm = totalIn * 2.54;
+        }
+      }
+      var lb = parseFloat($('weight-lb').value);
+      if (!(lb >= 22 && lb <= 1100)) {
+        errs.weight = T('errWeightImperial');
+      } else {
+        out.kg = lb * 0.45359237;
+      }
+    }
+
+    if (!(age >= 14 && age <= 120)) { errs.age = T('errAge'); }
+
+    out.valid = !errs.height && !errs.weight && !errs.age &&
+      isFinite(out.cm) && isFinite(out.kg) && out.cm > 0 && out.kg > 0;
+    return { data: out, errors: errs };
+  }
+
+  function markInvalid(ids, invalid) {
+    for (var i = 0; i < ids.length; i++) {
+      var el = $(ids[i]);
+      if (!el) { continue; }
+      if (invalid) { el.setAttribute('aria-invalid', 'true'); }
+      else { el.removeAttribute('aria-invalid'); }
+    }
+  }
+
+  function showError(id, message) {
+    var el = $(id);
+    el.textContent = message || '';
+    el.hidden = !message;
+  }
+
+  function renderTargets(targets, selectedGoal) {
+    var list = $('targets');
+    list.textContent = '';
+    for (var i = 0; i < TARGETS.length; i++) {
+      var key = TARGETS[i][0];
+      var li = document.createElement('li');
+      if (key === selectedGoal) { li.className = 'selected'; }
+      var label = document.createElement('span');
+      label.className = 't-label';
+      label.textContent = T(TARGETS[i][1]);
+      var value = document.createElement('span');
+      value.className = 't-value';
+      value.textContent = fmtInt(targets[key]) + ' ' + T('kcalDay');
+      li.appendChild(label);
+      li.appendChild(value);
+      if (key === selectedGoal) {
+        var tag = document.createElement('span');
+        tag.className = 't-tag';
+        tag.textContent = T('selectedTag');
+        li.appendChild(tag);
+      }
+      list.appendChild(li);
+    }
+  }
+
+  function renderPlaceholderTargets() {
+    var list = $('targets');
+    list.textContent = '';
+    for (var i = 0; i < TARGETS.length; i++) {
+      var li = document.createElement('li');
+      var label = document.createElement('span');
+      label.className = 't-label';
+      label.textContent = T(TARGETS[i][1]);
+      var value = document.createElement('span');
+      value.className = 't-value';
+      value.textContent = '—';
+      li.appendChild(label);
+      li.appendChild(value);
+      list.appendChild(li);
+    }
+  }
+
+  function setEmpty() {
+    lastSummary = '';
+    $('bmi-value').textContent = '—';
+    var chip = $('bmi-category');
+    chip.textContent = '—';
+    chip.className = 'chip';
+    $('healthy-range').textContent = '—';
+    $('bmr-value').textContent = '—';
+    $('tdee-value').textContent = '—';
+    renderPlaceholderTargets();
+    $('copy').disabled = true;
+  }
+
+  function buildSummary(data, value, category, bmr, tdee, targets) {
+    var lines = [T('copyHeader'), ''];
+    lines.push(T('copyBmi').replace('{value}', fmt1(value)).replace('{category}', categoryLabel(category)));
+    lines.push(T('copyHealthy').replace('{range}', $('healthy-range').textContent));
+    lines.push(T('copyBmr').replace('{value}', fmtInt(bmr)));
+    lines.push(T('copyTdee').replace('{value}', fmtInt(tdee)));
+    lines.push('');
+    lines.push(T('copyTargets'));
+    for (var i = 0; i < TARGETS.length; i++) {
+      var key = TARGETS[i][0];
+      lines.push(T('copyTargetLine').replace('{label}', T(TARGETS[i][1])).replace('{value}', fmtInt(targets[key])));
+    }
+    lines.push('');
+    lines.push(T('copyDisclaimer'));
+    return lines.join('\n');
+  }
+
+  function render() {
+    var read = readForm();
+    var data = read.data;
+    var errs = read.errors;
+
+    showError('err-height', errs.height);
+    showError('err-weight', errs.weight);
+    showError('err-age', errs.age);
+    var imperial = data.unit === 'imperial';
+    markInvalid(['height-cm'], !!errs.height && !imperial);
+    markInvalid(['height-ft', 'height-in'], !!errs.height && imperial);
+    markInvalid(['weight-kg'], !!errs.weight && !imperial);
+    markInvalid(['weight-lb'], !!errs.weight && imperial);
+    markInvalid(['age'], !!errs.age);
+
+    if (!data.valid) { setEmpty(); return; }
+
+    try {
+      var value = ToolEngine.bmi(data.kg, data.cm);
+      var category = ToolEngine.bmiCategory(value);
+      var range = ToolEngine.healthyWeightRange(data.cm);
+      var bmr = ToolEngine.bmrMifflin(data.sex, data.kg, data.cm, data.age);
+      var tdeeValue = ToolEngine.tdee(bmr, data.activity);
+      var targets = ToolEngine.calorieTargets(tdeeValue);
+
+      $('bmi-value').textContent = fmt1(value);
+      var chip = $('bmi-category');
+      chip.textContent = categoryLabel(category);
+      chip.className = 'chip chip-' + category;
+
+      var lo = range.min;
+      var hi = range.max;
+      var rangeText;
+      if (imperial) {
+        rangeText = T('rangeLb').replace('{min}', fmt1(lo / 0.45359237)).replace('{max}', fmt1(hi / 0.45359237));
+      } else {
+        rangeText = T('rangeKg').replace('{min}', fmt1(lo)).replace('{max}', fmt1(hi));
+      }
+      $('healthy-range').textContent = rangeText;
+      $('bmr-value').textContent = fmtInt(bmr) + ' ' + T('kcalDay');
+      $('tdee-value').textContent = fmtInt(tdeeValue) + ' ' + T('kcalDay');
+
+      renderTargets(targets, data.goal);
+      lastSummary = buildSummary(data, value, category, bmr, tdeeValue, targets);
+      $('copy').disabled = false;
+    } catch (e) {
+      setEmpty();
+    }
+  }
+
+  function fallbackCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.top = '-1000px';
+    document.body.appendChild(ta);
+    ta.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    document.body.removeChild(ta);
+    return ok;
+  }
+
+  function copySummary() {
+    if (!lastSummary) { toast(T('copyInvalid')); return; }
+    var done = function () { toast(T('copied')); };
+    var fail = function () { toast(T('copyFail')); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(lastSummary).then(done, function () {
+        if (fallbackCopy(lastSummary)) { done(); } else { fail(); }
+      });
+    } else if (fallbackCopy(lastSummary)) {
+      done();
+    } else {
+      fail();
+    }
+  }
+
+  function applyLang(next) {
+    lang = next;
+    document.documentElement.lang = lang === 'zh' ? 'zh-CN' : lang;
+    document.title = T('docTitle');
+    setMeta('meta[name="description"]', T('docDesc'));
+    setMeta('meta[property="og:title"]', T('docTitle'));
+    setMeta('meta[property="og:description"]', T('docDesc'));
+    setMeta('meta[name="twitter:title"]', T('docTitle'));
+    setMeta('meta[name="twitter:description"]', T('docDesc'));
+
+    var nodes = document.querySelectorAll('[data-i]');
+    for (var i = 0; i < nodes.length; i++) {
+      nodes[i].textContent = T(nodes[i].getAttribute('data-i'));
+    }
+    var phs = document.querySelectorAll('[data-i-ph]');
+    for (var j = 0; j < phs.length; j++) {
+      phs[j].setAttribute('placeholder', T(phs[j].getAttribute('data-i-ph')));
+    }
+    var arias = document.querySelectorAll('[data-i-aria]');
+    for (var k = 0; k < arias.length; k++) {
+      arias[k].setAttribute('aria-label', T(arias[k].getAttribute('data-i-aria')));
+    }
+
+    var toolsHref = lang === 'zh' ? '/tools/' : '/tools/' + lang + '/';
+    var navTools = $('nav-tools');
+    var footTools = $('foot-tools');
+    if (navTools) { navTools.setAttribute('href', toolsHref); }
+    if (footTools) { footTools.setAttribute('href', toolsHref); }
+
+    var buttons = document.querySelectorAll('.langs button');
+    for (var n = 0; n < buttons.length; n++) {
+      buttons[n].setAttribute('aria-pressed', buttons[n].getAttribute('data-lang') === lang ? 'true' : 'false');
+    }
+
+    render();
+  }
+
+  var previousUnit = 'metric';
+
+  function bind() {
+    var buttons = document.querySelectorAll('.langs button');
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].addEventListener('click', function () {
+        var next = this.getAttribute('data-lang');
+        try { localStorage.setItem(LANG_KEY, next); } catch (e) { /* ignore */ }
+        applyLang(next);
+      });
+    }
+
+    $('bmi-form').addEventListener('input', function (event) {
+      if (event.target.id !== 'unit') { render(); }
+    });
+
+    $('bmi-form').addEventListener('change', function (event) {
+      if (event.target.id === 'unit') {
+        var nextUnit = currentUnit();
+        convertUnits(previousUnit, nextUnit);
+        previousUnit = nextUnit;
+        syncUnitFields();
+      }
+      render();
+    });
+
+    $('reset').addEventListener('click', function () {
+      $('unit').value = 'metric';
+      previousUnit = 'metric';
+      syncUnitFields();
+      $('height-cm').value = String(DEFAULTS.cm);
+      $('height-ft').value = String(DEFAULTS.ft);
+      $('height-in').value = String(DEFAULTS.inches);
+      $('weight-kg').value = String(DEFAULTS.kg);
+      $('weight-lb').value = String(DEFAULTS.lb);
+      $('age').value = String(DEFAULTS.age);
+      $('sex').value = DEFAULTS.sex;
+      $('activity').value = DEFAULTS.activity;
+      $('goal').value = DEFAULTS.goal;
+      render();
+    });
+
+    $('copy').addEventListener('click', copySummary);
+  }
+
+  function init() {
+    previousUnit = currentUnit();
+    syncUnitFields();
+    bind();
+    applyLang(detectLang());
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>

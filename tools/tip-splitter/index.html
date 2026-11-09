@@ -1,0 +1,1246 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>小费与分账计算器 — 税额、小费、逐人金额，精确到分</title>
+<meta id="meta-desc" name="description" content="免费小费与分账计算器：输入税前账单、税率、小费比例和人数，选择小费按税前或含税计算、三种取整方式与 CNY/USD/EUR/IDR 币种。所有金额以最小货币单位整数计算，用最大余数法逐人分配，分项之和恒等于总额，可复制分账文本。">
+<meta name="author" content="Devin">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="theme-color" content="#f2efe7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#101316" media="(prefers-color-scheme: dark)">
+<link rel="canonical" href="https://hhfa008.github.io/tools/tip-splitter/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23b93d12'/%3E%3Cpath d='M8 22h16v2H8zM8 17h16v2H8zM8 12h9v2H8z' fill='%23fbf9f4'/%3E%3Ccircle cx='22' cy='11' r='3' fill='none' stroke='%23fbf9f4' stroke-width='2'/%3E%3C/svg%3E">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Devin">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:locale:alternate" content="en_US">
+<meta property="og:locale:alternate" content="id_ID">
+<meta id="og-title" property="og:title" content="小费与分账计算器 — 税额、小费、逐人金额">
+<meta id="og-desc" property="og:description" content="税前账单、税率、小费、人数与取整方式一次算清。整数最小单位计算，最大余数法分账，分项之和恒等于总额。">
+<meta property="og:url" content="https://hhfa008.github.io/tools/tip-splitter/">
+<meta name="twitter:card" content="summary">
+<meta id="tw-title" name="twitter:title" content="小费与分账计算器 — 精确到分的逐人金额">
+<meta id="tw-desc" name="twitter:description" content="税额、小费、总额与逐人金额，支持含税/税前小费、三种取整方式和四种币种。仅作估算。">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "小费与分账计算器",
+  "url": "https://hhfa008.github.io/tools/tip-splitter/",
+  "applicationCategory": "FinanceApplication",
+  "operatingSystem": "Any",
+  "browserRequirements": "Requires JavaScript",
+  "isAccessibleForFree": true,
+  "inLanguage": ["zh-CN", "en", "id"],
+  "description": "计算税前账单的税额、小费、总额与逐人金额。支持小费按税前或含税计算、三种取整方式、CNY/USD/EUR/IDR 币种，并以最小货币单位整数和最大余数法保证分项之和等于总额。",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "featureList": [
+    "税额、小费、总额与逐人金额",
+    "小费按税前或含税总额计算",
+    "精确到分 / 每人向上取整 / 总额向上取整到整元",
+    "最大余数法分配，分项之和恒等于总额",
+    "CNY、USD、EUR、IDR（0 位小数）",
+    "复制可直接发送的分账文本"
+  ]
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "小费应该按税前还是含税金额计算？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "两种做法都常见，取决于当地习惯和约定。按税前计算时，小费基于账单金额本身；按含税计算时，小费基于账单加税额。本页把两种结果都算清楚，默认按税前计算。无论哪种，都应在付款前和服务方确认。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "为什么逐人金额相加和总额完全一致？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "所有金额先换成最小货币单位整数（例如人民币的分），再把总额除以人数得到商和余数。每人先拿商，余下的若干个最小单位按固定顺序各分给一个人，这就是最大余数法。因此逐人金额之和严格等于总额，不会因为浮点误差少一分或多一分。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "三种取整方式有什么区别？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "精确到分保留计算出的总额，再尽量平均分配；每人向上取整把每人应付金额向上取到最小单位，实收会略高于应付，差额小于人数个最小单位；总额向上取整到整元把总额向上取到一整个货币单位后再分配，差额小于一个货币单位。IDR 没有小数位，最小单位就是 1 印尼盾。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "IDR 为什么没有小数位？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "印尼盾在日常使用中通常不保留小数，最小单位就是 1 印尼盾。因此本页把 IDR 的小数位设为 0，所有金额都是整数印尼盾；选择“总额向上取整到整元”时，因为整元就是 1 印尼盾，结果与精确到分相同。"
+      }
+    }
+  ]
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Devin", "item": "https://hhfa008.github.io/" },
+    { "@type": "ListItem", "position": 2, "name": "工具大厅", "item": "https://hhfa008.github.io/tools/" },
+    { "@type": "ListItem", "position": 3, "name": "小费与分账计算器", "item": "https://hhfa008.github.io/tools/tip-splitter/" }
+  ]
+}
+</script>
+
+<style>
+:root{
+  --paper:#f2efe7;--paper-2:#fbf9f4;--panel:#ffffff;
+  --ink:#14171a;--muted:#5b615c;--muted-2:#7b807a;
+  --line:#d5d0c4;--line-strong:#bcb5a7;
+  --accent:#b93d12;--accent-soft:#f2a07a;--accent-wash:#f7e5da;
+  --ok:#2f6b3c;--ok-wash:#e8f2e7;--warn:#8a5a00;--warn-wash:#fbf1db;
+  --bad:#a32216;--bad-wash:#fbe7e3;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --radius:16px;--max:1040px;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --paper:#101316;--paper-2:#171b1f;--panel:#1a1f23;
+    --ink:#f2efe7;--muted:#b7b3a8;--muted-2:#948f85;
+    --line:#333a40;--line-strong:#4a535b;
+    --accent:#f08a5d;--accent-wash:#2b211c;
+    --ok:#8fd19e;--ok-wash:#1b2b1e;--warn:#f0c36a;--warn-wash:#2d2618;
+    --bad:#ff8a7a;--bad-wash:#321d1a;
+  }
+}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%;color-scheme:light dark;scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.6 var(--sans);
+  overflow-x:clip;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+p{margin:0 0 1em}p:last-child{margin-bottom:0}
+a{color:inherit}
+button,input,select{font:inherit;color:inherit}
+code{font-family:var(--mono)}
+.wrap{width:100%;max-width:var(--max);margin:0 auto;padding-left:18px;padding-right:18px}
+@media (min-width:720px){.wrap{padding-left:32px;padding-right:32px}}
+.skip-link{position:absolute;left:12px;top:-64px;z-index:50;padding:12px 16px;border-radius:8px;
+  background:var(--ink);color:var(--paper);text-decoration:none}
+.skip-link:focus{top:12px}
+:focus-visible{outline:3px solid rgba(185,61,18,.55);outline-offset:3px}
+@media (prefers-color-scheme:dark){:focus-visible{outline-color:rgba(240,138,93,.65)}}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+.site-header{border-bottom:1px solid var(--line);background:var(--paper)}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  flex-wrap:wrap;min-height:64px;padding-top:8px;padding-bottom:8px}
+.brand{display:inline-flex;align-items:center;gap:10px;font-weight:700;letter-spacing:-.02em;
+  text-decoration:none;min-height:44px}
+.brand-mark{width:26px;height:26px;border-radius:7px;background:var(--accent);
+  display:inline-block;position:relative;flex:none}
+.brand-mark::before,.brand-mark::after{content:"";position:absolute;left:6px;right:6px;height:2px;
+  background:var(--paper-2);border-radius:1px}
+.brand-mark::before{top:9px}
+.brand-mark::after{top:15px;right:10px}
+.site-nav{display:flex;align-items:center;gap:6px;font-size:14px}
+.site-nav a{display:inline-flex;align-items:center;min-height:44px;padding:0 8px;border-radius:8px;
+  color:var(--muted);text-decoration:none}
+.site-nav a:hover{color:var(--accent)}
+.langs{display:flex;gap:4px}
+.langs button{min-width:48px;min-height:44px;padding:0 10px;border:1px solid var(--line-strong);
+  border-radius:10px;background:var(--panel);color:var(--muted);font-size:13px;font-weight:650;cursor:pointer}
+.langs button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+@media (max-width:560px){.site-nav{font-size:13px}.header-inner{gap:8px}}
+
+.hero{padding:40px 0 24px}
+@media (min-width:720px){.hero{padding:56px 0 30px}}
+.eyebrow{margin:0 0 10px;font-family:var(--mono);font-size:11px;font-weight:650;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--accent)}
+h1{margin:0 0 14px;max-width:24ch;font-size:clamp(1.85rem,5.6vw,2.9rem);line-height:1.1;
+  letter-spacing:-.035em;font-weight:700}
+.lede{max-width:74ch;margin:0 0 16px;font-size:clamp(1rem,2vw,1.12rem);color:var(--muted)}
+.notice{max-width:80ch;margin:0;padding:12px 15px;border-left:4px solid var(--accent);
+  border-radius:0 10px 10px 0;background:var(--accent-wash);font-size:14px;font-weight:550}
+
+.layout{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}
+@media (min-width:900px){.layout{grid-template-columns:minmax(0,1fr) minmax(0,1.04fr)}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px}
+@media (min-width:720px){.card{padding:24px}}
+.card h2{margin:0 0 14px;font-size:1.2rem;line-height:1.25;letter-spacing:-.02em}
+.field{margin-bottom:15px;min-width:0}
+.field > label,.fieldset legend{display:block;font-family:var(--mono);font-size:10.5px;font-weight:650;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+.field input,.field select{width:100%;min-height:48px;padding:9px 12px;font-size:16px;color:var(--ink);
+  background:var(--paper-2);border:1px solid var(--line-strong);border-radius:10px;appearance:none}
+.field input[type="number"]{font-variant-numeric:tabular-nums}
+.field select{padding-right:36px;
+  background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);
+  background-position:calc(100% - 19px) 50%,calc(100% - 14px) 50%;
+  background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+.field input:focus,.field select:focus{border-color:var(--accent)}
+.field-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:420px){.field-row{grid-template-columns:minmax(0,1fr)}}
+.unit-hint{margin:5px 0 0;font-size:12px;color:var(--muted-2)}
+.check{display:flex;align-items:flex-start;gap:9px;min-height:48px;padding:10px 11px;border:1px solid var(--line);
+  border-radius:11px;background:var(--paper-2);cursor:pointer;font-size:14px;line-height:1.35;margin-bottom:6px}
+.check:hover{border-color:var(--line-strong)}
+.check input{width:44px;height:44px;padding:12px;margin:0;flex:none;accent-color:var(--accent);cursor:pointer}
+.check small{display:block;margin-top:2px;color:var(--muted-2);font-size:11.5px}
+.error{margin:0 0 12px;padding:10px 12px;border:1px solid var(--bad);border-radius:10px;
+  background:var(--bad-wash);color:var(--bad);font-size:13.5px;font-weight:600}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 18px;
+  border:1px solid var(--line-strong);border-radius:12px;background:var(--paper-2);font-size:15px;
+  font-weight:650;cursor:pointer;text-decoration:none;transition:transform .15s ease,filter .15s ease}
+.btn:hover{filter:brightness(1.03)}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.06)}
+.btn:disabled{opacity:.5;cursor:not-allowed;filter:none;transform:none}
+.hint{margin:10px 0 0;font-size:12.5px;color:var(--muted-2);line-height:1.55}
+
+.big-label{margin:0;font-family:var(--mono);font-size:10.5px;font-weight:650;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--muted)}
+.big{margin:2px 0 4px;font-family:var(--mono);font-size:clamp(2rem,7vw,2.8rem);font-weight:600;
+  line-height:1.1;letter-spacing:-.035em;color:var(--accent);font-variant-numeric:tabular-nums;
+  overflow-wrap:anywhere}
+.big small{margin-left:6px;font-family:var(--sans);font-size:.38em;font-weight:600;letter-spacing:0;color:var(--muted)}
+.sub{margin:0 0 14px;font-size:13px;color:var(--muted)}
+.stat-row{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:9px 0;
+  border-top:1px solid var(--line);font-size:13.5px}
+.stat-row span{color:var(--muted);min-width:0}
+.stat-row strong{font-family:var(--mono);font-weight:600;text-align:right;font-variant-numeric:tabular-nums;
+  overflow-wrap:anywhere}
+.stat-row.total strong{color:var(--accent);font-size:15px}
+.shares-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:18px 0 8px;
+  flex-wrap:wrap}
+.shares-head h3{margin:0;font-size:.98rem}
+.shares-head .btn{min-height:44px;padding:0 14px;font-size:13px}
+.shares{list-style:none;margin:0;padding:0;max-height:340px;overflow-y:auto;border:1px solid var(--line);
+  border-radius:11px;background:var(--paper-2)}
+.shares li{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:9px 12px;
+  border-bottom:1px solid var(--line);font-size:13.5px}
+.shares li:last-child{border-bottom:0}
+.shares .n{color:var(--muted);font-family:var(--mono);font-size:12px}
+.shares .v{font-family:var(--mono);font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+details.split{margin-top:14px;border:1px solid var(--line);border-radius:11px;padding:0 14px;background:var(--paper-2)}
+details.split summary{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;
+  padding:10px 0;cursor:pointer;font-weight:650;font-size:14px;list-style:none}
+details.split summary::-webkit-details-marker{display:none}
+details.split summary::after{content:"+";font-family:var(--mono);font-size:19px;line-height:1;color:var(--accent)}
+details.split[open] summary::after{content:"\2212"}
+.split-text{margin:0 0 14px;padding:12px;border:1px solid var(--line);border-radius:9px;background:var(--panel);
+  font-family:var(--mono);font-size:12.5px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere;
+  user-select:all;-webkit-user-select:all}
+
+.explain{margin-top:22px}
+.explain h2{margin-bottom:8px}
+.explain-intro{color:var(--muted);font-size:14.5px;max-width:80ch}
+.formulas{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;margin-top:16px}
+@media (min-width:760px){.formulas{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.formula{min-width:0;padding:13px 14px;border:1px solid var(--line);border-radius:11px;background:var(--paper-2)}
+.formula h3{margin:0 0 7px;font-family:var(--mono);font-size:10.5px;font-weight:650;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.formula code{display:inline-block;max-width:100%;padding:2px 6px;border-radius:5px;background:var(--accent-wash);
+  font-size:12.5px;line-height:1.5;overflow-wrap:anywhere}
+.formula p{margin:7px 0 0;font-size:12.5px;color:var(--muted)}
+.assumptions-title{margin:18px 0 8px;font-family:var(--mono);font-size:10.5px;font-weight:650;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.assumptions{margin:0;padding:0 0 0 20px;font-size:13.5px;color:var(--muted)}
+.assumptions li{margin:0 0 8px}
+.disclaimer{margin:16px 0 0;padding:12px 14px;border:1px solid var(--line);border-left:4px solid var(--bad);
+  border-radius:8px;background:var(--bad-wash);color:var(--bad);font-size:13px;line-height:1.55}
+.faq{margin-top:22px}
+.faq h2{margin:0 0 12px;font-size:clamp(1.35rem,3vw,1.7rem);line-height:1.2;letter-spacing:-.02em}
+.faq details{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:0 18px}
+.faq details + details{margin-top:9px}
+.faq summary{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:52px;
+  padding:12px 0;cursor:pointer;font-weight:650;list-style:none}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";flex:none;font-family:var(--mono);font-size:20px;line-height:1;color:var(--accent)}
+.faq details[open] summary::after{content:"\2212"}
+.faq details p{margin:0;padding:0 0 16px;max-width:80ch;font-size:14px;color:var(--muted)}
+
+.site-footer{margin-top:28px;padding:20px 0 32px;border-top:1px solid var(--line);font-size:12.5px;
+  color:var(--muted-2)}
+.footer-inner{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline;justify-content:space-between}
+.site-footer a{display:inline-flex;align-items:center;min-height:44px;padding:0 2px;color:var(--accent);text-decoration:none}
+.site-footer a:hover{text-decoration:underline}
+.site-footer p{margin:0}
+
+#toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));z-index:60;
+  max-width:calc(100vw - 32px);padding:11px 18px;border-radius:11px;background:var(--ink);color:var(--paper);
+  font-size:14px;font-weight:550;text-align:center;box-shadow:0 8px 24px rgb(0 0 0 / .22);
+  transform:translate(-50%,12px);opacity:0;pointer-events:none;
+  transition:opacity .16s ease,transform .16s ease}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+
+@media (prefers-color-scheme:dark){
+  .btn.primary{color:#14171a}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .btn:active{transform:none}
+}
+@media print{
+  .site-header,.site-footer,.btn,.shares-head .btn,#toast,.skip-link,details.split summary{display:none!important}
+  body{background:#fff;color:#000}
+  .card{border-color:#999;break-inside:avoid}
+  .layout{display:block}
+  .shares{max-height:none;overflow:visible}
+}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#tool" data-i="skip">跳到计算器</a>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="/" aria-label="Devin"><span class="brand-mark" aria-hidden="true"></span>Devin</a>
+    <nav class="site-nav" aria-label="Site" data-i-aria="siteNavAria">
+      <a id="nav-tools" href="/tools/" data-i="navTools">工具大厅</a>
+      <a href="/games/" data-i="navGames">在线桌游</a>
+    </nav>
+    <div class="langs" role="group" aria-label="Language" data-i-aria="langAria">
+      <button type="button" data-lang="zh" aria-pressed="true">中文</button>
+      <button type="button" data-lang="en" aria-pressed="false">EN</button>
+      <button type="button" data-lang="id" aria-pressed="false">ID</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <section class="hero" aria-labelledby="page-title">
+      <p class="eyebrow" data-i="heroEyebrow">免费工具 · 聚餐分账</p>
+      <h1 id="page-title" data-i="appTitle">小费与分账计算器</h1>
+      <p class="lede" data-i="tagline">输入税前账单、税率、小费比例和人数，选择小费按税前或含税计算、取整方式与币种。税额、小费、总额和逐人金额一次算清。</p>
+      <p class="notice" data-i="heroNotice">所有金额先换算成最小货币单位整数再计算，避免浮点误差；逐人金额用最大余数法分配，分项之和严格等于总额。结果仅供估算，不构成消费或财务建议。</p>
+    </section>
+
+    <div class="layout" id="tool">
+      <form class="card" id="calc-form" autocomplete="off" novalidate>
+        <h2 data-i="formTitle">账单信息</h2>
+
+        <div class="field">
+          <label for="amount" data-i="billLabel">账单金额（税前）</label>
+          <input id="amount" type="number" inputmode="decimal" min="0" max="1000000000000" step="0.01" value="100" aria-describedby="bill-hint">
+          <p class="unit-hint" id="bill-hint" data-i="billHint">不含税和小费的原始账单金额。</p>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="tax" data-i="taxLabel">税率 %</label>
+            <input id="tax" type="number" inputmode="decimal" min="0" max="100" step="0.01" value="0">
+          </div>
+          <div class="field">
+            <label for="tip" data-i="tipLabel">小费 %</label>
+            <input id="tip" type="number" inputmode="decimal" min="0" max="100" step="0.01" value="10">
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="people" data-i="peopleLabel">人数</label>
+            <input id="people" type="number" inputmode="numeric" min="1" max="100" step="1" value="3">
+          </div>
+          <div class="field">
+            <label for="currency" data-i="currencyLabel">币种</label>
+            <select id="currency">
+              <option value="CNY" selected>CNY ¥</option>
+              <option value="USD">USD $</option>
+              <option value="EUR">EUR €</option>
+              <option value="IDR">IDR Rp</option>
+            </select>
+          </div>
+        </div>
+        <p class="unit-hint" id="currency-note"></p>
+
+        <label class="check" for="tip-on-total">
+          <input type="checkbox" id="tip-on-total">
+          <span><span data-i="tipOnTotalLabel">小费按含税总额计算</span><small data-i="tipOnTotalHint">关闭时按税前账单计算小费（默认）。</small></span>
+        </label>
+
+        <div class="field" style="margin-top:10px">
+          <label for="rounding" data-i="roundingLabel">取整方式</label>
+          <select id="rounding">
+            <option value="exact" selected data-i="roundingExact">精确到分</option>
+            <option value="person-up" data-i="roundingPersonUp">每人向上取整到最小单位</option>
+            <option value="total-up" data-i="roundingTotalUp">总额向上取整到整元</option>
+          </select>
+          <p class="unit-hint" data-i="roundingHint">“整元”表示一个完整货币单位；IDR 的最小单位是 1 印尼盾。</p>
+        </div>
+
+        <p class="error" id="error" role="alert" hidden></p>
+        <button class="btn primary" type="submit" data-i="recalc" data-i-aria="recalcAria" style="width:100%">重新计算</button>
+        <p class="hint" data-i="calcNote">修改任意输入后结果会立即更新。税额、小费均按四舍五入（0.5 向上）取到最小货币单位。</p>
+      </form>
+
+      <section class="card" aria-labelledby="results-title" aria-live="polite">
+        <h2 id="results-title" data-i="resultsTitle">计算结果</h2>
+        <p class="big-label" data-i="collectedOut">实收合计</p>
+        <p class="big"><span id="collected-big">¥110.00</span><small id="currency-code">CNY</small></p>
+        <p class="sub" id="diff-line"></p>
+
+        <div class="stat-row"><span data-i="billOut">账单（税前）</span><strong id="bill-out">—</strong></div>
+        <div class="stat-row"><span data-i="taxOut">税额</span><strong id="tax-out">—</strong></div>
+        <div class="stat-row"><span data-i="tipOut">小费</span><strong id="tip-out">—</strong></div>
+        <div class="stat-row"><span data-i="exactTotalOut">应付总额（未取整）</span><strong id="exact-total-out">—</strong></div>
+        <div class="stat-row total"><span data-i="collectedOut">实收合计</span><strong id="collected-out">—</strong></div>
+        <div class="stat-row"><span data-i="diffOut">差额</span><strong id="diff-out">—</strong></div>
+        <div class="stat-row"><span data-i="perPersonOut">每人金额</span><strong id="per-person-out">—</strong></div>
+        <div class="stat-row"><span data-i="roundingUsed">取整方式</span><strong id="rounding-out">—</strong></div>
+
+        <div class="shares-head">
+          <h3 id="shares-title" data-i="sharesTitle">逐人金额</h3>
+          <button class="btn" type="button" id="copy-split" data-i="copySplit" data-i-aria="copySplitAria">复制分账文本</button>
+        </div>
+        <ol class="shares" id="shares-list" aria-labelledby="shares-title"></ol>
+
+        <details class="split">
+          <summary data-i="splitTextTitle">查看可分账文本</summary>
+          <pre class="split-text" id="split-text" tabindex="0"></pre>
+        </details>
+        <p class="hint" data-i="copyHint">复制失败时，文本会自动选中，可手动复制。</p>
+      </section>
+    </div>
+
+    <section class="card explain" aria-labelledby="explain-title">
+      <h2 id="explain-title" data-i="explainTitle">计算方式与取整规则</h2>
+      <p class="explain-intro" data-i="explainIntro">所有金额先换算成最小货币单位整数（人民币、美元、欧元为分，印尼盾为 1 印尼盾），税额、小费按 0.5 向上取整，再做分配。下面是页面实际使用的公式与规则。</p>
+      <div class="formulas">
+        <div class="formula">
+          <h3 data-i="formulaTaxTitle">税额</h3>
+          <code>tax = round(billMinor × tax% ÷ 100)</code>
+          <p data-i="formulaTaxNote">账单金额先乘 100（两位小数币种）取整为最小单位，再乘税率并四舍五入到最小单位。</p>
+        </div>
+        <div class="formula">
+          <h3 data-i="formulaTipTitle">小费</h3>
+          <code>tip = round(base × tip% ÷ 100)</code>
+          <p data-i="formulaTipNote">base 为税前账单（默认）或账单加税额（勾选“按含税总额计算”）。两种口径的差异会在结果中体现。</p>
+        </div>
+        <div class="formula">
+          <h3 data-i="formulaTotalTitle">总额</h3>
+          <code>exact = bill + tax + tip</code>
+          <p data-i="formulaTotalNote">精确到分时实收合计等于 exact；每人向上取整时实收为每人金额 × 人数；总额向上取整时实收为 exact 向上取到一个完整货币单位。</p>
+        </div>
+        <div class="formula">
+          <h3 data-i="formulaShareTitle">逐人分配</h3>
+          <code>base = floor(total ÷ people); rem = total mod people</code>
+          <p data-i="formulaShareNote">先给每人商，再把余数按固定顺序各分一个最小单位给前 rem 个人。这保证逐人金额之和严格等于实收合计。</p>
+        </div>
+      </div>
+      <h3 class="assumptions-title" data-i="assumptionsTitle">假设与边界</h3>
+      <ul class="assumptions">
+        <li data-i="assumption1">账单金额必须大于等于 0，人数必须是 1–100 的整数；非法输入会就地提示，不输出结果。</li>
+        <li data-i="assumption2">税率和小费比例允许 0–100 之间的小数；本页不判断当地小费习惯是否合理。</li>
+        <li data-i="assumption3">税率、小费各自独立四舍五入到最小货币单位，因此中间步骤可能产生 1 个最小单位的差异。</li>
+        <li data-i="assumption4">最大余数法在本页把余数平均分配给前 rem 个人；它只保证总额守恒，不代表每个人应付完全相同的金额。</li>
+        <li data-i="assumption5">IDR 小数位为 0；“整元”就是 1 印尼盾，因此总额向上取整与精确到分的结果相同。</li>
+      </ul>
+      <p class="disclaimer" data-i="disclaimer">说明：本工具仅供估算和分账参考，不构成财务、税务或消费建议。实际应付金额、服务费和小费习惯以商家账单、当地法规和双方约定为准。</p>
+    </section>
+
+    <section class="faq" aria-labelledby="faq-title">
+      <h2 id="faq-title" data-i="faqTitle">常见问题</h2>
+      <details>
+        <summary data-i="faqQ1">小费应该按税前还是含税金额计算？</summary>
+        <p data-i="faqA1">两种做法都常见，取决于当地习惯和约定。按税前计算时，小费基于账单金额本身；按含税计算时，小费基于账单加税额。本页把两种结果都算清楚，默认按税前计算。无论哪种，都应在付款前和服务方确认。</p>
+      </details>
+      <details>
+        <summary data-i="faqQ2">为什么逐人金额相加和总额完全一致？</summary>
+        <p data-i="faqA2">所有金额先换成最小货币单位整数（例如人民币的分），再把总额除以人数得到商和余数。每人先拿商，余下的若干个最小单位按固定顺序各分给一个人，这就是最大余数法。因此逐人金额之和严格等于总额，不会因为浮点误差少一分或多一分。</p>
+      </details>
+      <details>
+        <summary data-i="faqQ3">三种取整方式有什么区别？</summary>
+        <p data-i="faqA3">精确到分保留计算出的总额，再尽量平均分配；每人向上取整把每人应付金额向上取到最小单位，实收会略高于应付，差额小于人数个最小单位；总额向上取整到整元把总额向上取到一整个货币单位后再分配，差额小于一个货币单位。IDR 没有小数位，最小单位就是 1 印尼盾。</p>
+      </details>
+      <details>
+        <summary data-i="faqQ4">IDR 为什么没有小数位？</summary>
+        <p data-i="faqA4">印尼盾在日常使用中通常不保留小数，最小单位就是 1 印尼盾。因此本页把 IDR 的小数位设为 0，所有金额都是整数印尼盾；选择“总额向上取整到整元”时，因为整元就是 1 印尼盾，结果与精确到分相同。</p>
+      </details>
+    </section>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <p><span data-i="footerCopy">© 2026 Devin</span> · <a id="foot-tools" href="/tools/" data-i="footerTools">工具大厅</a> · <a href="/games/" data-i="footerGames">在线桌游</a> · <a href="/" data-i="footerHome">首页</a></p>
+    <p data-i="footerPrivacy">纯前端工具，不收集数据；所有计算都在本地完成。</p>
+  </div>
+</footer>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<noscript>
+  <div class="wrap"><p class="card" style="margin-top:16px" data-i="noscript">本工具需要 JavaScript 才能计算。所有金额都在你的浏览器本地处理，不会上传。</p></div>
+</noscript>
+
+<script id="engine">
+var ToolEngine = (function () {
+  'use strict';
+
+  /*
+   * Pure engine. No globals, no clock.
+   * computeSplit returns {ok:false,error:'code'} for invalid options.
+   * distribute / roundMinor / formatMoney throw TypeError on invalid
+   * arguments, as noted in the file header and covered by tests.
+   */
+
+  var CURRENCIES = {
+    CNY: { decimals: 2, symbol: '¥' },
+    USD: { decimals: 2, symbol: '$' },
+    EUR: { decimals: 2, symbol: '€' },
+    IDR: { decimals: 0, symbol: 'Rp ' }
+  };
+  var ROUNDING = { EXACT: 'exact', PERSON_UP: 'person-up', TOTAL_UP: 'total-up' };
+
+  function isNum(n) { return typeof n === 'number' && isFinite(n); }
+  function isInt(n) { return isNum(n) && Math.floor(n) === n; }
+
+  function minorUnit(currency) {
+    var c = CURRENCIES[currency];
+    return c ? Math.pow(10, c.decimals) : null;
+  }
+
+  function roundMinor(n) {
+    if (!isNum(n)) throw new TypeError('roundMinor: number required');
+    return Math.floor(n + 0.5);
+  }
+
+  function distribute(totalMinor, people) {
+    if (!isInt(totalMinor) || totalMinor < 0) throw new TypeError('distribute: bad total');
+    if (!isInt(people) || people < 1 || people > 100) throw new TypeError('distribute: bad people');
+    var base = Math.floor(totalMinor / people);
+    var rem = totalMinor % people;
+    var out = [];
+    for (var i = 0; i < people; i++) out.push(base + (i < rem ? 1 : 0));
+    return out;
+  }
+
+  function computeSplit(opts) {
+    if (!opts || typeof opts !== 'object') return { ok: false, error: 'bad-options' };
+    if (!CURRENCIES.hasOwnProperty(opts.currency)) return { ok: false, error: 'bad-currency' };
+    var rounding = opts.rounding;
+    if (rounding !== ROUNDING.EXACT && rounding !== ROUNDING.PERSON_UP && rounding !== ROUNDING.TOTAL_UP) {
+      return { ok: false, error: 'bad-rounding' };
+    }
+    var amount = opts.amount;
+    var taxPct = opts.taxPct;
+    var tipPct = opts.tipPct;
+    var people = opts.people;
+    if (!isNum(amount) || amount < 0 || amount > 1e12) return { ok: false, error: 'bad-amount' };
+    if (!isNum(taxPct) || taxPct < 0 || taxPct > 100) return { ok: false, error: 'bad-tax' };
+    if (!isNum(tipPct) || tipPct < 0 || tipPct > 100) return { ok: false, error: 'bad-tip' };
+    if (!isInt(people) || people < 1 || people > 100) return { ok: false, error: 'bad-people' };
+
+    var decimals = CURRENCIES[opts.currency].decimals;
+    var unit = Math.pow(10, decimals);
+    var billMinor = Math.round(amount * unit);
+    var taxMinor = roundMinor(billMinor * taxPct / 100);
+    var tipOnTotal = opts.tipOnTotal === true;
+    var tipBase = tipOnTotal ? billMinor + taxMinor : billMinor;
+    var tipMinor = roundMinor(tipBase * tipPct / 100);
+    var exactTotalMinor = billMinor + taxMinor + tipMinor;
+
+    var collectedMinor;
+    var shares;
+    if (rounding === ROUNDING.PERSON_UP) {
+      var per = Math.ceil(exactTotalMinor / people);
+      collectedMinor = per * people;
+      shares = [];
+      for (var p = 0; p < people; p++) shares.push(per);
+    } else if (rounding === ROUNDING.TOTAL_UP) {
+      collectedMinor = Math.ceil(exactTotalMinor / unit) * unit;
+      shares = distribute(collectedMinor, people);
+    } else {
+      collectedMinor = exactTotalMinor;
+      shares = distribute(exactTotalMinor, people);
+    }
+
+    var minShare = shares[0];
+    var maxShare = shares[0];
+    for (var s = 1; s < shares.length; s++) {
+      if (shares[s] < minShare) minShare = shares[s];
+      if (shares[s] > maxShare) maxShare = shares[s];
+    }
+
+    return {
+      ok: true,
+      currency: opts.currency,
+      decimals: decimals,
+      people: people,
+      rounding: rounding,
+      tipOnTotal: tipOnTotal,
+      billMinor: billMinor,
+      taxMinor: taxMinor,
+      tipMinor: tipMinor,
+      exactTotalMinor: exactTotalMinor,
+      totalMinor: collectedMinor,
+      diffMinor: collectedMinor - exactTotalMinor,
+      shares: shares,
+      minShareMinor: minShare,
+      maxShareMinor: maxShare
+    };
+  }
+
+  function formatMoney(minor, currency) {
+    var c = CURRENCIES[currency];
+    if (!c) throw new TypeError('formatMoney: unknown currency');
+    if (!isInt(minor)) throw new TypeError('formatMoney: integer minor units required');
+    var sign = minor < 0 ? '-' : '';
+    var abs = Math.abs(minor);
+    var unit = Math.pow(10, c.decimals);
+    var whole = Math.floor(abs / unit);
+    var frac = abs % unit;
+    var text = String(whole).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    if (c.decimals > 0) text += '.' + ('0' + frac).slice(-c.decimals);
+    return sign + c.symbol + text;
+  }
+
+  return {
+    computeSplit: computeSplit,
+    distribute: distribute,
+    minorUnit: minorUnit,
+    roundMinor: roundMinor,
+    formatMoney: formatMoney
+  };
+})();
+</script>
+
+<script id="i18n">
+var TOOL_I18N = {
+  zh: {
+    docTitle: '小费与分账计算器 — 税额、小费、逐人金额，精确到分',
+    docDesc: '免费小费与分账计算器：输入税前账单、税率、小费比例和人数，选择小费按税前或含税计算、三种取整方式与 CNY/USD/EUR/IDR 币种。所有金额以最小货币单位整数计算，用最大余数法逐人分配，分项之和恒等于总额，可复制分账文本。',
+    skip: '跳到计算器',
+    heroEyebrow: '免费工具 · 聚餐分账',
+    appTitle: '小费与分账计算器',
+    tagline: '输入税前账单、税率、小费比例和人数，选择小费按税前或含税计算、取整方式与币种。税额、小费、总额和逐人金额一次算清。',
+    heroNotice: '所有金额先换算成最小货币单位整数再计算，避免浮点误差；逐人金额用最大余数法分配，分项之和严格等于总额。结果仅供估算，不构成消费或财务建议。',
+    navTools: '工具大厅',
+    navGames: '在线桌游',
+    siteNavAria: '站点导航',
+    langAria: '语言切换',
+    formTitle: '账单信息',
+    billLabel: '账单金额（税前）',
+    billHint: '不含税和小费的原始账单金额。',
+    taxLabel: '税率 %',
+    tipLabel: '小费 %',
+    peopleLabel: '人数',
+    currencyLabel: '币种',
+    tipOnTotalLabel: '小费按含税总额计算',
+    tipOnTotalHint: '关闭时按税前账单计算小费（默认）。',
+    roundingLabel: '取整方式',
+    roundingExact: '精确到分',
+    roundingPersonUp: '每人向上取整到最小单位',
+    roundingTotalUp: '总额向上取整到整元',
+    roundingHint: '“整元”表示一个完整货币单位；IDR 的最小单位是 1 印尼盾。',
+    decimalsNote: '{code} 保留 {dec} 位小数，最小单位是 {unit}。',
+    recalc: '重新计算',
+    recalcAria: '按当前输入重新计算分账',
+    calcNote: '修改任意输入后结果会立即更新。税额、小费均按四舍五入（0.5 向上）取到最小货币单位。',
+    resultsTitle: '计算结果',
+    collectedOut: '实收合计',
+    billOut: '账单（税前）',
+    taxOut: '税额',
+    tipOut: '小费',
+    exactTotalOut: '应付总额（未取整）',
+    diffOut: '差额',
+    perPersonOut: '每人金额',
+    roundingUsed: '取整方式',
+    sharesTitle: '逐人金额',
+    perPersonRange: '{min} – {max}',
+    diffLine: '实收比应付多 {v}',
+    diffLineZero: '实收合计与应付总额一致',
+    copySplit: '复制分账文本',
+    copySplitAria: '复制包含总额和逐人金额的分账文本',
+    splitTextTitle: '查看可分账文本',
+    splitHead: '小费与分账',
+    splitPersonLine: '第 {n} 位：{v}',
+    personLabel: '第 {n} 位',
+    tipBasePreTax: '按税前',
+    tipBaseTotal: '按含税',
+    copied: '已复制到剪贴板。',
+    copyFail: '无法自动复制，文本已选中，请手动复制。',
+    copyHint: '复制失败时，文本会自动选中，可手动复制。',
+    errorAmount: '账单金额必须是 0 到 1 万亿之间的数字。',
+    errorTax: '税率必须是 0–100 之间的数字。',
+    errorTip: '小费比例必须是 0–100 之间的数字。',
+    errorPeople: '人数必须是 1–100 之间的整数。',
+    errorCurrency: '请选择支持的币种。',
+    errorRounding: '请选择有效的取整方式。',
+    errorGeneric: '输入有误，请检查后重试。',
+    explainTitle: '计算方式与取整规则',
+    explainIntro: '所有金额先换算成最小货币单位整数（人民币、美元、欧元为分，印尼盾为 1 印尼盾），税额、小费按 0.5 向上取整，再做分配。下面是页面实际使用的公式与规则。',
+    formulaTaxTitle: '税额',
+    formulaTax: 'tax = round(billMinor × tax% ÷ 100)',
+    formulaTaxNote: '账单金额先乘 100（两位小数币种）取整为最小单位，再乘税率并四舍五入到最小单位。',
+    formulaTipTitle: '小费',
+    formulaTip: 'tip = round(base × tip% ÷ 100)',
+    formulaTipNote: 'base 为税前账单（默认）或账单加税额（勾选“按含税总额计算”）。两种口径的差异会在结果中体现。',
+    formulaTotalTitle: '总额',
+    formulaTotal: 'exact = bill + tax + tip',
+    formulaTotalNote: '精确到分时实收合计等于 exact；每人向上取整时实收为每人金额 × 人数；总额向上取整时实收为 exact 向上取到一个完整货币单位。',
+    formulaShareTitle: '逐人分配',
+    formulaShare: 'base = floor(total ÷ people); rem = total mod people',
+    formulaShareNote: '先给每人商，再把余数按固定顺序各分一个最小单位给前 rem 个人。这保证逐人金额之和严格等于实收合计。',
+    assumptionsTitle: '假设与边界',
+    assumption1: '账单金额必须大于等于 0，人数必须是 1–100 的整数；非法输入会就地提示，不输出结果。',
+    assumption2: '税率和小费比例允许 0–100 之间的小数；本页不判断当地小费习惯是否合理。',
+    assumption3: '税率、小费各自独立四舍五入到最小货币单位，因此中间步骤可能产生 1 个最小单位的差异。',
+    assumption4: '最大余数法在本页把余数平均分配给前 rem 个人；它只保证总额守恒，不代表每个人应付完全相同的金额。',
+    assumption5: 'IDR 小数位为 0；“整元”就是 1 印尼盾，因此总额向上取整与精确到分的结果相同。',
+    disclaimer: '说明：本工具仅供估算和分账参考，不构成财务、税务或消费建议。实际应付金额、服务费和小费习惯以商家账单、当地法规和双方约定为准。',
+    faqTitle: '常见问题',
+    faqQ1: '小费应该按税前还是含税金额计算？',
+    faqA1: '两种做法都常见，取决于当地习惯和约定。按税前计算时，小费基于账单金额本身；按含税计算时，小费基于账单加税额。本页把两种结果都算清楚，默认按税前计算。无论哪种，都应在付款前和服务方确认。',
+    faqQ2: '为什么逐人金额相加和总额完全一致？',
+    faqA2: '所有金额先换成最小货币单位整数（例如人民币的分），再把总额除以人数得到商和余数。每人先拿商，余下的若干个最小单位按固定顺序各分给一个人，这就是最大余数法。因此逐人金额之和严格等于总额，不会因为浮点误差少一分或多一分。',
+    faqQ3: '三种取整方式有什么区别？',
+    faqA3: '精确到分保留计算出的总额，再尽量平均分配；每人向上取整把每人应付金额向上取到最小单位，实收会略高于应付，差额小于人数个最小单位；总额向上取整到整元把总额向上取到一整个货币单位后再分配，差额小于一个货币单位。IDR 没有小数位，最小单位就是 1 印尼盾。',
+    faqQ4: 'IDR 为什么没有小数位？',
+    faqA4: '印尼盾在日常使用中通常不保留小数，最小单位就是 1 印尼盾。因此本页把 IDR 的小数位设为 0，所有金额都是整数印尼盾；选择“总额向上取整到整元”时，因为整元就是 1 印尼盾，结果与精确到分相同。',
+    footerCopy: '© 2026 Devin',
+    footerTools: '工具大厅',
+    footerGames: '在线桌游',
+    footerHome: '首页',
+    footerPrivacy: '纯前端工具，不收集数据；所有计算都在本地完成。',
+    noscript: '本工具需要 JavaScript 才能计算。所有金额都在你的浏览器本地处理，不会上传。'
+  },
+  en: {
+    docTitle: 'Tip & Bill Splitter — tax, tip, and per-person amounts to the cent',
+    docDesc: 'A free tip and bill splitter: enter the pre-tax bill, tax rate, tip percentage, and party size, then choose whether the tip applies before or after tax, one of three rounding modes, and CNY/USD/EUR/IDR. All amounts use integer minor units, and the largest-remainder method makes every share add up exactly to the total. Copy a ready-to-share split.',
+    skip: 'Skip to the calculator',
+    heroEyebrow: 'Free tool · splitting the bill',
+    appTitle: 'Tip & bill splitter',
+    tagline: 'Enter the pre-tax bill, tax rate, tip percentage, and party size, then choose the tip base, rounding mode, and currency. Tax, tip, total, and per-person amounts are calculated together.',
+    heroNotice: 'Every amount is converted to integer minor units first to avoid floating-point drift; shares use the largest-remainder method, so they always add up exactly to the total. Results are estimates, not spending or financial advice.',
+    navTools: 'Tools',
+    navGames: 'Board games',
+    siteNavAria: 'Site navigation',
+    langAria: 'Language',
+    formTitle: 'Bill details',
+    billLabel: 'Bill amount (pre-tax)',
+    billHint: 'The original bill, before tax and tip.',
+    taxLabel: 'Tax rate %',
+    tipLabel: 'Tip %',
+    peopleLabel: 'People',
+    currencyLabel: 'Currency',
+    tipOnTotalLabel: 'Calculate the tip on the tax-inclusive total',
+    tipOnTotalHint: 'Off means the tip is calculated on the pre-tax bill (default).',
+    roundingLabel: 'Rounding mode',
+    roundingExact: 'Exact to the minor unit',
+    roundingPersonUp: 'Round each person up to the minor unit',
+    roundingTotalUp: 'Round the total up to a whole currency unit',
+    roundingHint: '“Whole currency unit” means one full unit; for IDR the minor unit is 1 rupiah.',
+    decimalsNote: '{code} uses {dec} decimal places; the minor unit is {unit}.',
+    recalc: 'Recalculate',
+    recalcAria: 'Recalculate the split with the current inputs',
+    calcNote: 'Results update as you change any input. Tax and tip are rounded half-up to the minor unit.',
+    resultsTitle: 'Result',
+    collectedOut: 'Total collected',
+    billOut: 'Bill (pre-tax)',
+    taxOut: 'Tax',
+    tipOut: 'Tip',
+    exactTotalOut: 'Total before rounding',
+    diffOut: 'Difference',
+    perPersonOut: 'Per person',
+    roundingUsed: 'Rounding',
+    sharesTitle: 'Amounts per person',
+    perPersonRange: '{min} – {max}',
+    diffLine: '{v} more than the exact total',
+    diffLineZero: 'The collected total matches the exact total',
+    copySplit: 'Copy split text',
+    copySplitAria: 'Copy the split text with the total and per-person amounts',
+    splitTextTitle: 'View shareable split text',
+    splitHead: 'Tip and bill split',
+    splitPersonLine: 'Person {n}: {v}',
+    personLabel: 'Person {n}',
+    tipBasePreTax: 'pre-tax',
+    tipBaseTotal: 'tax-inclusive',
+    copied: 'Copied to the clipboard.',
+    copyFail: 'Could not copy automatically. The text is selected; copy it manually.',
+    copyHint: 'If copying fails, the text is selected so you can copy it manually.',
+    errorAmount: 'The bill must be a number from 0 to 1 trillion.',
+    errorTax: 'The tax rate must be a number from 0 to 100.',
+    errorTip: 'The tip percentage must be a number from 0 to 100.',
+    errorPeople: 'People must be a whole number from 1 to 100.',
+    errorCurrency: 'Choose a supported currency.',
+    errorRounding: 'Choose a valid rounding mode.',
+    errorGeneric: 'Some inputs are invalid. Check them and try again.',
+    explainTitle: 'How it is calculated',
+    explainIntro: 'Every amount is first converted to integer minor units (cents for CNY, USD, and EUR; 1 rupiah for IDR). Tax and tip are rounded half-up to the minor unit, then the split is made. These are the exact formulas and rules this page applies.',
+    formulaTaxTitle: 'Tax',
+    formulaTax: 'tax = round(billMinor × tax% ÷ 100)',
+    formulaTaxNote: 'The bill is multiplied by 100 for two-decimal currencies, rounded to minor units, then multiplied by the tax rate and rounded again.',
+    formulaTipTitle: 'Tip',
+    formulaTip: 'tip = round(base × tip% ÷ 100)',
+    formulaTipNote: 'base is the pre-tax bill (default) or the bill plus tax (when “tax-inclusive” is checked). The difference between the two bases is shown in the result.',
+    formulaTotalTitle: 'Total',
+    formulaTotal: 'exact = bill + tax + tip',
+    formulaTotalNote: 'Exact mode collects exactly this total; per-person rounding collects the rounded per-person amount times the party size; total rounding collects the exact total rounded up to a whole currency unit.',
+    formulaShareTitle: 'Splitting',
+    formulaShare: 'base = floor(total ÷ people); rem = total mod people',
+    formulaShareNote: 'Everyone receives the quotient first, then the remainder is handed out one minor unit at a time to the first rem people. That makes the shares add up exactly to the collected total.',
+    assumptionsTitle: 'Assumptions and limits',
+    assumption1: 'The bill must be at least 0 and the party size must be a whole number from 1 to 100. Invalid input is reported in place and no result is shown.',
+    assumption2: 'Tax and tip rates accept decimals from 0 to 100. This page does not judge whether a local tipping custom is reasonable.',
+    assumption3: 'Tax and tip are rounded to the minor unit independently, so an intermediate step can introduce a one-minor-unit difference.',
+    assumption4: 'The largest-remainder method here gives the remainder to the first rem people. It preserves the total, but it does not mean everyone owes exactly the same amount.',
+    assumption5: 'IDR has 0 decimal places, and a whole unit is 1 rupiah, so total-rounding and exact mode produce the same result.',
+    disclaimer: 'Note: this tool is for estimation and splitting only. It is not financial, tax, or spending advice. The amount due, service charges, and tipping customs are governed by the merchant’s bill, local rules, and what everyone agrees to.',
+    faqTitle: 'Frequently asked questions',
+    faqQ1: 'Should the tip be calculated before or after tax?',
+    faqA1: 'Both are common and depend on local custom and what was agreed. A pre-tax tip is based on the bill itself; a tax-inclusive tip is based on the bill plus tax. This page calculates both and defaults to pre-tax. Either way, confirm before paying.',
+    faqQ2: 'Why do the per-person amounts add up exactly to the total?',
+    faqA2: 'Every amount is converted to integer minor units (cents, for example), then the total is divided by the party size to get a quotient and a remainder. Everyone gets the quotient first, and the remaining minor units are handed out one each in a fixed order. That is the largest-remainder method, so the shares sum to the total with no floating-point drift.',
+    faqQ3: 'What is the difference between the three rounding modes?',
+    faqA3: 'Exact mode keeps the calculated total and distributes it as evenly as possible. Per-person rounding rounds each person’s share up to the minor unit, so the collected total is slightly higher and the difference is less than the party size in minor units. Total rounding rounds the total up to a whole currency unit before splitting, so the difference is less than one currency unit. IDR has no decimal places; its minor unit is 1 rupiah.',
+    faqQ4: 'Why does IDR have no decimal places?',
+    faqA4: 'In everyday use the Indonesian rupiah usually does not keep fractions; its minor unit is 1 rupiah. This page therefore sets IDR to 0 decimal places, so every amount is a whole rupiah. When total rounding is selected, a whole unit is 1 rupiah, so the result matches exact mode.',
+    footerCopy: '© 2026 Devin',
+    footerTools: 'Tools',
+    footerGames: 'Board games',
+    footerHome: 'Home',
+    footerPrivacy: 'Static front-end tool. No data collection; all calculations run locally.',
+    noscript: 'This tool needs JavaScript to calculate. Every amount is processed locally in your browser and never uploaded.'
+  },
+  id: {
+    docTitle: 'Kalkulator Tip & Bagi Tagihan — pajak, tip, dan porsi per orang',
+    docDesc: 'Kalkulator tip dan bagi tagihan gratis: masukkan tagihan sebelum pajak, tarif pajak, persentase tip, dan jumlah orang, lalu pilih apakah tip dihitung sebelum atau sesudah pajak, salah satu dari tiga mode pembulatan, dan CNY/USD/EUR/IDR. Semua nilai memakai satuan mata uang terkecil dalam bilangan bulat, dan metode sisa terbesar membuat setiap porsi berjumlah tepat sama dengan total. Salin teks pembagian yang siap dikirim.',
+    skip: 'Lompat ke kalkulator',
+    heroEyebrow: 'Alat gratis · bagi tagihan',
+    appTitle: 'Kalkulator tip & bagi tagihan',
+    tagline: 'Masukkan tagihan sebelum pajak, tarif pajak, persentase tip, dan jumlah orang, lalu pilih dasar tip, mode pembulatan, dan mata uang. Pajak, tip, total, dan porsi per orang dihitung sekaligus.',
+    heroNotice: 'Setiap nilai diubah dulu menjadi satuan mata uang terkecil dalam bilangan bulat agar tidak ada galat pecahan; porsi memakai metode sisa terbesar sehingga jumlahnya selalu tepat sama dengan total. Hasilnya hanya perkiraan, bukan saran keuangan atau belanja.',
+    navTools: 'Alat',
+    navGames: 'Permainan papan',
+    siteNavAria: 'Navigasi situs',
+    langAria: 'Bahasa',
+    formTitle: 'Detail tagihan',
+    billLabel: 'Jumlah tagihan (sebelum pajak)',
+    billHint: 'Tagihan asli, sebelum pajak dan tip.',
+    taxLabel: 'Tarif pajak %',
+    tipLabel: 'Tip %',
+    peopleLabel: 'Jumlah orang',
+    currencyLabel: 'Mata uang',
+    tipOnTotalLabel: 'Hitung tip dari total termasuk pajak',
+    tipOnTotalHint: 'Jika mati, tip dihitung dari tagihan sebelum pajak (bawaan).',
+    roundingLabel: 'Mode pembulatan',
+    roundingExact: 'Tepat ke satuan terkecil',
+    roundingPersonUp: 'Bulatkan setiap orang ke atas ke satuan terkecil',
+    roundingTotalUp: 'Bulatkan total ke atas ke satuan mata uang penuh',
+    roundingHint: '“Satuan mata uang penuh” berarti satu unit penuh; untuk IDR satuan terkecilnya 1 rupiah.',
+    decimalsNote: '{code} memakai {dec} angka desimal; satuan terkecilnya {unit}.',
+    recalc: 'Hitung ulang',
+    recalcAria: 'Hitung ulang pembagian dengan input saat ini',
+    calcNote: 'Hasil diperbarui setiap kali input berubah. Pajak dan tip dibulatkan setengah ke atas ke satuan terkecil.',
+    resultsTitle: 'Hasil',
+    collectedOut: 'Total diterima',
+    billOut: 'Tagihan (sebelum pajak)',
+    taxOut: 'Pajak',
+    tipOut: 'Tip',
+    exactTotalOut: 'Total sebelum pembulatan',
+    diffOut: 'Selisih',
+    perPersonOut: 'Per orang',
+    roundingUsed: 'Pembulatan',
+    sharesTitle: 'Jumlah per orang',
+    perPersonRange: '{min} – {max}',
+    diffLine: '{v} lebih banyak dari total tepat',
+    diffLineZero: 'Total diterima sama dengan total tepat',
+    copySplit: 'Salin teks pembagian',
+    copySplitAria: 'Salin teks pembagian berisi total dan jumlah per orang',
+    splitTextTitle: 'Lihat teks pembagian yang bisa dibagikan',
+    splitHead: 'Tip dan pembagian tagihan',
+    splitPersonLine: 'Orang ke-{n}: {v}',
+    personLabel: 'Orang ke-{n}',
+    tipBasePreTax: 'sebelum pajak',
+    tipBaseTotal: 'termasuk pajak',
+    copied: 'Disalin ke papan klip.',
+    copyFail: 'Tidak bisa menyalin otomatis. Teks sudah dipilih; salin secara manual.',
+    copyHint: 'Jika penyalinan gagal, teks akan dipilih agar bisa disalin manual.',
+    errorAmount: 'Tagihan harus angka antara 0 dan 1 triliun.',
+    errorTax: 'Tarif pajak harus angka antara 0 dan 100.',
+    errorTip: 'Persentase tip harus angka antara 0 dan 100.',
+    errorPeople: 'Jumlah orang harus bilangan bulat 1 sampai 100.',
+    errorCurrency: 'Pilih mata uang yang didukung.',
+    errorRounding: 'Pilih mode pembulatan yang valid.',
+    errorGeneric: 'Ada input yang tidak valid. Periksa lalu coba lagi.',
+    explainTitle: 'Cara perhitungan dan aturan pembulatan',
+    explainIntro: 'Setiap nilai diubah dulu menjadi satuan mata uang terkecil dalam bilangan bulat (sen untuk CNY, USD, dan EUR; 1 rupiah untuk IDR). Pajak dan tip dibulatkan setengah ke atas ke satuan terkecil, lalu dibagi. Berikut rumus dan aturan yang benar-benar diterapkan halaman ini.',
+    formulaTaxTitle: 'Pajak',
+    formulaTax: 'tax = round(billMinor × tax% ÷ 100)',
+    formulaTaxNote: 'Tagihan dikalikan 100 untuk mata uang dua desimal, dibulatkan ke satuan terkecil, lalu dikalikan tarif pajak dan dibulatkan lagi.',
+    formulaTipTitle: 'Tip',
+    formulaTip: 'tip = round(base × tip% ÷ 100)',
+    formulaTipNote: 'base adalah tagihan sebelum pajak (bawaan) atau tagihan ditambah pajak (saat “termasuk pajak” dicentang). Selisih kedua dasar ditampilkan di hasil.',
+    formulaTotalTitle: 'Total',
+    formulaTotal: 'exact = bill + tax + tip',
+    formulaTotalNote: 'Mode tepat menerima total ini persis; pembulatan per orang menerima porsi bulat dikali jumlah orang; pembulatan total menerima total tepat yang dibulatkan ke atas ke satuan mata uang penuh.',
+    formulaShareTitle: 'Pembagian',
+    formulaShare: 'base = floor(total ÷ people); rem = total mod people',
+    formulaShareNote: 'Setiap orang menerima hasil bagi lebih dulu, lalu sisanya dibagikan satu satuan terkecil kepada orang pertama sebanyak rem. Dengan begitu jumlah porsi tepat sama dengan total yang diterima.',
+    assumptionsTitle: 'Asumsi dan batasan',
+    assumption1: 'Tagihan minimal 0 dan jumlah orang harus bilangan bulat 1 sampai 100. Input tidak valid ditampilkan di tempat dan tidak ada hasil.',
+    assumption2: 'Tarif pajak dan tip menerima desimal 0 sampai 100. Halaman ini tidak menilai apakah kebiasaan tip setempat wajar.',
+    assumption3: 'Pajak dan tip dibulatkan ke satuan terkecil secara terpisah, sehingga langkah antara bisa menimbulkan selisih satu satuan terkecil.',
+    assumption4: 'Metode sisa terbesar di sini memberikan sisa kepada orang pertama sebanyak rem. Total tetap terjaga, tetapi bukan berarti setiap orang membayar jumlah yang persis sama.',
+    assumption5: 'IDR memiliki 0 angka desimal, dan satu unit penuh adalah 1 rupiah, sehingga pembulatan total dan mode tepat memberi hasil yang sama.',
+    disclaimer: 'Catatan: alat ini hanya untuk perkiraan dan pembagian tagihan. Ini bukan saran keuangan, pajak, atau belanja. Jumlah yang harus dibayar, biaya layanan, dan kebiasaan tip mengikuti tagihan merchant, aturan setempat, dan kesepakatan bersama.',
+    faqTitle: 'Pertanyaan umum',
+    faqQ1: 'Apakah tip dihitung sebelum atau sesudah pajak?',
+    faqA1: 'Keduanya umum dan bergantung pada kebiasaan setempat serta kesepakatan. Tip sebelum pajak dihitung dari tagihan itu sendiri; tip termasuk pajak dihitung dari tagihan ditambah pajak. Halaman ini menghitung keduanya dan memakai bawaan sebelum pajak. Apa pun pilihannya, konfirmasikan sebelum membayar.',
+    faqQ2: 'Mengapa jumlah per orang tepat sama dengan total?',
+    faqA2: 'Setiap nilai diubah menjadi satuan terkecil bilangan bulat (misalnya sen), lalu total dibagi jumlah orang untuk mendapat hasil bagi dan sisa. Setiap orang menerima hasil bagi lebih dulu, dan satuan terkecil yang tersisa dibagikan satu per satu dengan urutan tetap. Itulah metode sisa terbesar, sehingga jumlah porsi sama dengan total tanpa galat pecahan.',
+    faqQ3: 'Apa beda ketiga mode pembulatan?',
+    faqA3: 'Mode tepat mempertahankan total hasil hitung lalu membaginya semerata mungkin. Pembulatan per orang membulatkan porsi setiap orang ke atas ke satuan terkecil, sehingga total diterima sedikit lebih tinggi dan selisihnya kurang dari jumlah orang kali satuan terkecil. Pembulatan total membulatkan total ke atas ke satuan mata uang penuh sebelum dibagi, sehingga selisihnya kurang dari satu satuan mata uang. IDR tidak punya desimal; satuan terkecilnya 1 rupiah.',
+    faqQ4: 'Mengapa IDR tidak punya angka desimal?',
+    faqA4: 'Dalam pemakaian sehari-hari rupiah biasanya tidak memakai pecahan; satuan terkecilnya 1 rupiah. Karena itu halaman ini memakai 0 angka desimal untuk IDR, sehingga semua nilai adalah rupiah bulat. Saat memilih pembulatan total, satu unit penuh adalah 1 rupiah, jadi hasilnya sama dengan mode tepat.',
+    footerCopy: '© 2026 Devin',
+    footerTools: 'Alat',
+    footerGames: 'Permainan papan',
+    footerHome: 'Beranda',
+    footerPrivacy: 'Alat front-end statis. Tidak mengumpulkan data; semua perhitungan berjalan lokal.',
+    noscript: 'Alat ini memerlukan JavaScript untuk menghitung. Semua nilai diproses lokal di peramban Anda dan tidak pernah diunggah.'
+  }
+};
+</script>
+
+<script>
+(function () {
+  'use strict';
+
+  var STORE_KEY = 'hhfa.tool.tip-splitter.lang';
+  var CURRENCIES = {
+    CNY: { sym: '¥', dec: 2 },
+    USD: { sym: '$', dec: 2 },
+    EUR: { sym: '€', dec: 2 },
+    IDR: { sym: 'Rp ', dec: 0 }
+  };
+  var ERROR_KEYS = {
+    'bad-amount': 'errorAmount',
+    'bad-tax': 'errorTax',
+    'bad-tip': 'errorTip',
+    'bad-people': 'errorPeople',
+    'bad-currency': 'errorCurrency',
+    'bad-rounding': 'errorRounding'
+  };
+  var ui = { lang: 'zh' };
+  var state = { last: null, rates: null };
+
+  function $(id) { return document.getElementById(id); }
+
+  function detectLang() {
+    var q = /[?&]lang=(zh|en|id)(?:&|$)/.exec(location.search);
+    if (q) return q[1];
+    try {
+      var saved = localStorage.getItem(STORE_KEY);
+      if (saved === 'zh' || saved === 'en' || saved === 'id') return saved;
+    } catch (e) {}
+    var nav = (navigator.language || '').toLowerCase();
+    if (nav.indexOf('zh') === 0) return 'zh';
+    if (nav.indexOf('id') === 0 || nav.indexOf('in') === 0) return 'id';
+    return 'en';
+  }
+
+  function t(key, vars) {
+    var dict = TOOL_I18N[ui.lang] || TOOL_I18N.zh;
+    var s = dict[key] != null ? dict[key] : (TOOL_I18N.zh[key] != null ? TOOL_I18N.zh[key] : key);
+    if (vars) {
+      Object.keys(vars).forEach(function (k) { s = s.split('{' + k + '}').join(String(vars[k])); });
+    }
+    return s;
+  }
+
+  function locale() {
+    return ui.lang === 'id' ? 'id-ID' : (ui.lang === 'zh' ? 'zh-CN' : 'en-US');
+  }
+
+  function fmtRate(n) {
+    return new Intl.NumberFormat(locale(), {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2
+    }).format(n);
+  }
+
+  function saveLang() {
+    try { localStorage.setItem(STORE_KEY, ui.lang); } catch (e) {}
+  }
+
+  function readNumber(id) {
+    var raw = $(id).value;
+    if (raw == null) return NaN;
+    return parseFloat(String(raw).replace(',', '.'));
+  }
+
+  function fmt(minor) {
+    var meta = CURRENCIES[$('currency').value] || CURRENCIES.CNY;
+    var major = minor / Math.pow(10, meta.dec);
+    var text = new Intl.NumberFormat(locale(), {
+      minimumFractionDigits: meta.dec,
+      maximumFractionDigits: meta.dec
+    }).format(major);
+    return meta.sym + text;
+  }
+
+  function currentOpts() {
+    return {
+      amount: readNumber('amount'),
+      taxPct: readNumber('tax'),
+      tipPct: readNumber('tip'),
+      people: readNumber('people'),
+      tipOnTotal: $('tip-on-total').checked,
+      rounding: $('rounding').value,
+      currency: $('currency').value
+    };
+  }
+
+  function showError(key) {
+    var el = $('error');
+    if (!key) {
+      el.hidden = true;
+      el.textContent = '';
+      return;
+    }
+    el.textContent = t(key);
+    el.hidden = false;
+  }
+
+  function clearNode(node) {
+    while (node.firstChild) node.removeChild(node.firstChild);
+  }
+
+  function emptyResult() {
+    state.last = null;
+    state.rates = null;
+    $('collected-big').textContent = '—';
+    $('currency-code').textContent = '—';
+    $('diff-line').textContent = '';
+    ['bill-out', 'tax-out', 'tip-out', 'exact-total-out', 'collected-out', 'diff-out', 'per-person-out', 'rounding-out'].forEach(function (id) {
+      $(id).textContent = '—';
+    });
+    clearNode($('shares-list'));
+    $('split-text').textContent = '';
+    $('copy-split').disabled = true;
+  }
+
+  function perPersonText(r) {
+    if (r.minShareMinor === r.maxShareMinor) return fmt(r.minShareMinor);
+    return t('perPersonRange', { min: fmt(r.minShareMinor), max: fmt(r.maxShareMinor) });
+  }
+
+  function roundingLabel(r) {
+    if (r.rounding === 'person-up') return t('roundingPersonUp');
+    if (r.rounding === 'total-up') return t('roundingTotalUp');
+    return t('roundingExact');
+  }
+
+  function buildSplitText() {
+    var r = state.last;
+    if (!r || !state.rates) return '';
+    var lines = [t('splitHead'), ''];
+    lines.push(t('billOut') + ': ' + fmt(r.billMinor));
+    lines.push(t('taxOut') + ' (' + fmtRate(state.rates.taxPct) + '%): ' + fmt(r.taxMinor));
+    lines.push(t('tipOut') + ' (' + fmtRate(state.rates.tipPct) + '%, ' +
+      t(r.tipOnTotal ? 'tipBaseTotal' : 'tipBasePreTax') + '): ' + fmt(r.tipMinor));
+    lines.push(t('exactTotalOut') + ': ' + fmt(r.exactTotalMinor));
+    lines.push(t('collectedOut') + ': ' + fmt(r.totalMinor));
+    lines.push(t('diffOut') + ': ' + fmt(r.diffMinor));
+    lines.push(t('roundingUsed') + ': ' + roundingLabel(r));
+    lines.push(t('peopleLabel') + ': ' + r.people);
+    lines.push(t('perPersonOut') + ': ' + perPersonText(r));
+    lines.push('');
+    r.shares.forEach(function (s, i) {
+      lines.push(t('splitPersonLine', { n: i + 1, v: fmt(s) }));
+    });
+    return lines.join('\n');
+  }
+
+  function render(r) {
+    state.last = r;
+    state.rates = { taxPct: currentOpts().taxPct, tipPct: currentOpts().tipPct };
+
+    $('collected-big').textContent = fmt(r.totalMinor);
+    $('currency-code').textContent = r.currency;
+    $('diff-line').textContent = r.diffMinor === 0
+      ? t('diffLineZero')
+      : t('diffLine', { v: fmt(r.diffMinor) });
+    $('bill-out').textContent = fmt(r.billMinor);
+    $('tax-out').textContent = fmt(r.taxMinor) + ' · ' + fmtRate(state.rates.taxPct) + '%';
+    $('tip-out').textContent = fmt(r.tipMinor) + ' · ' + fmtRate(state.rates.tipPct) + '% · ' +
+      t(r.tipOnTotal ? 'tipBaseTotal' : 'tipBasePreTax');
+    $('exact-total-out').textContent = fmt(r.exactTotalMinor);
+    $('collected-out').textContent = fmt(r.totalMinor);
+    $('diff-out').textContent = fmt(r.diffMinor);
+    $('per-person-out').textContent = perPersonText(r);
+    $('rounding-out').textContent = roundingLabel(r);
+
+    var list = $('shares-list');
+    clearNode(list);
+    r.shares.forEach(function (share, i) {
+      var li = document.createElement('li');
+      var n = document.createElement('span');
+      n.className = 'n';
+      n.textContent = t('personLabel', { n: i + 1 });
+      var v = document.createElement('span');
+      v.className = 'v';
+      v.textContent = fmt(share);
+      li.appendChild(n);
+      li.appendChild(v);
+      list.appendChild(li);
+    });
+
+    var text = buildSplitText();
+    $('split-text').textContent = text;
+    $('copy-split').disabled = !text;
+  }
+
+  function compute() {
+    var opts = currentOpts();
+    var r = ToolEngine.computeSplit(opts);
+    if (!r.ok) {
+      showError(ERROR_KEYS[r.error] || 'errorGeneric');
+      emptyResult();
+      return;
+    }
+    showError(null);
+    render(r);
+
+    var meta = CURRENCIES[opts.currency];
+    var unit = ToolEngine.minorUnit(opts.currency);
+    $('currency-note').textContent = t('decimalsNote', {
+      code: opts.currency,
+      dec: meta.dec,
+      unit: meta.dec === 0 ? fmtRate(1) : fmtRate(1 / unit)
+    });
+  }
+
+  function selectNode(node) {
+    if (!node) return;
+    try {
+      var range = document.createRange();
+      range.selectNodeContents(node);
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    } catch (e) {}
+  }
+
+  var toastTimer = null;
+  function toast(msg) {
+    var el = $('toast');
+    el.textContent = msg;
+    el.classList.add('on');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove('on'); }, 2600);
+  }
+
+  function copySplit() {
+    var text = $('split-text').textContent;
+    if (!text) return;
+    function done() { toast(t('copied')); }
+    function fallback() {
+      selectNode($('split-text'));
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) {}
+      if (ok) done(); else toast(t('copyFail'));
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(fallback);
+    } else {
+      fallback();
+    }
+  }
+
+  function applyLang() {
+    document.documentElement.lang = ui.lang === 'zh' ? 'zh-CN' : ui.lang;
+    var dict = TOOL_I18N[ui.lang] || TOOL_I18N.zh;
+
+    document.title = t('docTitle');
+    var desc = $('meta-desc');
+    if (desc) desc.setAttribute('content', t('docDesc'));
+    var ogTitle = $('og-title');
+    if (ogTitle) ogTitle.setAttribute('content', t('docTitle'));
+    var ogDesc = $('og-desc');
+    if (ogDesc) ogDesc.setAttribute('content', t('docDesc'));
+    var twTitle = $('tw-title');
+    if (twTitle) twTitle.setAttribute('content', t('docTitle'));
+    var twDesc = $('tw-desc');
+    if (twDesc) twDesc.setAttribute('content', t('docDesc'));
+    var ogLocale = document.querySelector('meta[property="og:locale"]');
+    if (ogLocale) ogLocale.setAttribute('content', ui.lang === 'zh' ? 'zh_CN' : (ui.lang === 'id' ? 'id_ID' : 'en_US'));
+
+    var nodes = document.querySelectorAll('[data-i]');
+    for (var i = 0; i < nodes.length; i++) {
+      var k = nodes[i].getAttribute('data-i');
+      if (dict[k] != null) nodes[i].textContent = dict[k];
+    }
+    var phs = document.querySelectorAll('[data-i-ph]');
+    for (var j = 0; j < phs.length; j++) {
+      var pk = phs[j].getAttribute('data-i-ph');
+      if (dict[pk] != null) phs[j].setAttribute('placeholder', dict[pk]);
+    }
+    var arias = document.querySelectorAll('[data-i-aria]');
+    for (var a = 0; a < arias.length; a++) {
+      var ak = arias[a].getAttribute('data-i-aria');
+      if (dict[ak] != null) arias[a].setAttribute('aria-label', dict[ak]);
+    }
+
+    var langBtns = document.querySelectorAll('.langs button');
+    for (var n = 0; n < langBtns.length; n++) {
+      langBtns[n].setAttribute('aria-pressed', langBtns[n].getAttribute('data-lang') === ui.lang ? 'true' : 'false');
+    }
+
+    var toolsPath = ui.lang === 'zh' ? '/tools/' : '/tools/' + ui.lang + '/';
+    $('nav-tools').setAttribute('href', toolsPath);
+    $('foot-tools').setAttribute('href', toolsPath);
+
+    compute();
+  }
+
+  function bind() {
+    var langBtns = document.querySelectorAll('.langs button');
+    for (var i = 0; i < langBtns.length; i++) {
+      langBtns[i].addEventListener('click', function () {
+        ui.lang = this.getAttribute('data-lang');
+        saveLang();
+        applyLang();
+      });
+    }
+
+    $('calc-form').addEventListener('input', compute);
+    $('calc-form').addEventListener('change', compute);
+    $('calc-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      compute();
+    });
+    $('currency').addEventListener('change', compute);
+    $('copy-split').addEventListener('click', copySplit);
+  }
+
+  function init() {
+    ui.lang = detectLang();
+    bind();
+    applyLang();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>

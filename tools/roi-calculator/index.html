@@ -1,0 +1,1312 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>投资回报率计算器（ROI）</title>
+<meta name="description" content="输入投入成本、回报金额和持有年数，算出净收益、ROI 与年化 ROI，亏损场景也会明确标出。全部在本地计算，无需注册；仅为估算，不构成财务建议。">
+<meta name="author" content="Devin">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="theme-color" content="#f2efe7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#101316" media="(prefers-color-scheme: dark)">
+<link rel="canonical" href="https://hhfa008.github.io/tools/roi-calculator/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23b93d12'/%3E%3Cpath d='M9 23 23 9' stroke='%23fbf9f4' stroke-width='2.4' stroke-linecap='round'/%3E%3Ccircle cx='11' cy='11' r='3' fill='%23fbf9f4'/%3E%3Ccircle cx='21' cy='21' r='3' fill='%23fbf9f4'/%3E%3C/svg%3E">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Devin">
+<meta property="og:title" content="投资回报率计算器（ROI）">
+<meta property="og:description" content="输入投入成本、回报金额和持有年数，算出净收益、ROI 与年化 ROI，亏损场景也会明确标出。全部在本地计算，无需注册；仅为估算，不构成财务建议。">
+<meta property="og:url" content="https://hhfa008.github.io/tools/roi-calculator/">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:locale:alternate" content="en_US">
+<meta property="og:locale:alternate" content="id_ID">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="投资回报率计算器（ROI）">
+<meta name="twitter:description" content="输入投入成本、回报金额和持有年数，算出净收益、ROI 与年化 ROI，亏损场景也会明确标出。全部在本地计算，无需注册；仅为估算，不构成财务建议。">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "ROI 计算器",
+  "url": "https://hhfa008.github.io/tools/roi-calculator/",
+  "applicationCategory": "FinanceApplication",
+  "operatingSystem": "Any",
+  "browserRequirements": "Requires JavaScript",
+  "isAccessibleForFree": true,
+  "inLanguage": ["zh-CN", "en", "id"],
+  "description": "输入投入成本、回报金额和持有年数，算出净收益、ROI 与年化 ROI，亏损场景也会明确标出。全部在本地计算，无需注册；仅为估算，不构成财务建议。",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+  {
+    "@type": "Question",
+    "name": "投入 1000、回报 1500、持有 2 年，年化多少？",
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "总 ROI 为 50%，年化 ROI 约为 22.47%。年化不是把 50% 除以 2，而是按复利折算每年等效增长率。"
+    }
+  },
+  {
+    "@type": "Question",
+    "name": "ROI 和年化 ROI 该看哪个？",
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "比较不同期限的项目看年化 ROI；看单笔交易赚了多少看总 ROI。年化假设收益按同等速度复利，波动大的投资只能作粗略参考。"
+    }
+  },
+  {
+    "@type": "Question",
+    "name": "成本可以填 0 吗？",
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "不可以。ROI 的公式是净收益除以投入成本，成本为 0 会除以零。无现金投入的项目请用时间成本或机会成本估算一个合理分母。以上仅为估算，不构成财务建议。"
+    }
+  }
+]
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "首页", "item": "https://hhfa008.github.io/" },
+    { "@type": "ListItem", "position": 2, "name": "工具大厅", "item": "https://hhfa008.github.io/tools/" },
+    { "@type": "ListItem", "position": 3, "name": "ROI 计算器", "item": "https://hhfa008.github.io/tools/roi-calculator/" }
+  ]
+}
+</script>
+
+<style>
+/* ==========================================================================
+   Design tokens — keep in sync with the existing tools pages.
+   ========================================================================== */
+:root{
+  --paper:#f2efe7; --paper-2:#fbf9f4; --panel:#ffffff;
+  --ink:#14171a; --muted:#5b615c; --muted-2:#7b807a;
+  --line:#d5d0c4; --line-strong:#bcb5a7;
+  --accent:#b93d12; --accent-soft:#f2a07a; --accent-wash:#f7e5da;
+  --ok:#2f6b3c; --ok-wash:#e8f2e7; --warn:#8a5a00; --warn-wash:#fbf1db;
+  --bad:#a32216; --bad-wash:#fbe7e3;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --radius:16px; --max:1040px;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --paper:#101316; --paper-2:#171b1f; --panel:#1a1f23;
+    --ink:#f2efe7; --muted:#b7b3a8; --muted-2:#948f85;
+    --line:#333a40; --line-strong:#4a535b;
+    --accent:#f08a5d; --accent-soft:#f2a07a; --accent-wash:#2b211c;
+    --ok:#8fd19e; --ok-wash:#1b2b1e; --warn:#f0c36a; --warn-wash:#2d2618;
+    --bad:#ff8a7a; --bad-wash:#321d1a;
+  }
+}
+
+/* Reset */
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%;color-scheme:light dark;scroll-behavior:smooth;overflow-x:clip}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font:16px/1.6 var(--sans);overflow-x:clip;
+  text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+p,h1,h2,h3,ul,ol,figure{margin:0}
+a{color:inherit}
+button,input,select,textarea{font:inherit;color:inherit}
+code,pre{font-family:var(--mono)}
+
+/* Layout */
+.wrap{width:100%;max-width:var(--max);margin:0 auto;padding-left:18px;padding-right:18px;min-width:0}
+@media (min-width:720px){.wrap{padding-left:32px;padding-right:32px}}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.skip-link{position:absolute;left:12px;top:-80px;z-index:100;padding:12px 16px;background:var(--ink);color:var(--paper);border-radius:8px;text-decoration:none}
+.skip-link:focus{top:12px}
+:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+
+/* Header */
+.site-header{border-bottom:1px solid var(--line);background:var(--paper)}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:10px 16px;min-height:64px;flex-wrap:wrap;padding-top:6px;padding-bottom:6px}
+.brand{display:inline-flex;align-items:center;gap:10px;font-weight:700;letter-spacing:-.02em;text-decoration:none;min-height:44px}
+.brand-mark{width:26px;height:26px;border-radius:7px;background:var(--accent);position:relative;flex:none}
+.brand-mark::before,.brand-mark::after{content:"";position:absolute;left:7px;height:2px;background:var(--paper-2);border-radius:1px}
+.brand-mark::before{right:7px;top:9px}
+.brand-mark::after{right:11px;top:15px}
+.header-tools{display:flex;align-items:center;gap:12px 16px;flex-wrap:wrap;justify-content:flex-end;min-width:0}
+.site-nav{display:flex;align-items:center;gap:14px;font-size:13.5px;flex-wrap:wrap}
+.site-nav a{display:inline-flex;align-items:center;min-height:44px;text-decoration:none;color:var(--muted)}
+.site-nav a:hover{color:var(--accent);text-decoration:underline}
+.lang-switch{display:flex;gap:4px}
+.lang-switch button{
+  min-width:44px;min-height:44px;padding:0 8px;border:1px solid var(--line-strong);
+  border-radius:9px;background:transparent;color:var(--muted);font-size:12.5px;
+  font-weight:650;cursor:pointer;line-height:1
+}
+.lang-switch button:hover{border-color:var(--accent);color:var(--accent)}
+.lang-switch button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+@media (prefers-color-scheme:dark){
+  .lang-switch button[aria-pressed="true"],
+  .btn.primary,.btn.danger{color:#101316}
+}
+
+/* Hero */
+.hero{padding:36px 0 22px}
+@media (min-width:720px){.hero{padding:52px 0 28px}}
+.eyebrow{margin:0 0 10px;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+h1{margin:0 0 12px;max-width:22ch;font-size:clamp(1.85rem,6vw,2.9rem);line-height:1.1;letter-spacing:-.035em;font-weight:700;overflow-wrap:anywhere}
+.lede{max-width:70ch;color:var(--muted);font-size:clamp(1rem,2vw,1.08rem);overflow-wrap:anywhere}
+.privacy{
+  display:flex;gap:9px;align-items:flex-start;max-width:78ch;margin:16px 0 0;padding:11px 14px;
+  background:var(--accent-wash);border:1px solid var(--line);border-left:4px solid var(--accent);
+  border-radius:0 10px 10px 0;font-size:13.5px
+}
+.privacy svg{width:17px;height:17px;flex:none;margin-top:3px}
+
+/* Cards and tool layout */
+.tool-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;align-items:start}
+.tool-layout>*{min-width:0}
+@media (min-width:900px){
+  .tool-layout{grid-template-columns:minmax(0,1.04fr) minmax(0,.96fr)}
+  .result-col{position:sticky;top:18px}
+}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;min-width:0}
+@media (min-width:720px){.card{padding:26px 28px}}
+.card-kicker{margin:0 0 7px;font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.11em;text-transform:uppercase;color:var(--accent)}
+.card h2{margin:0 0 14px;font-size:clamp(1.15rem,2.4vw,1.4rem);line-height:1.2;letter-spacing:-.02em;overflow-wrap:anywhere}
+.panel-desc{margin:0 0 14px;color:var(--muted);font-size:14px;overflow-wrap:anywhere}
+
+/* Fields */
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field>label,.field>span.label{font-size:13px;font-weight:650;color:var(--muted)}
+.field input,.field select,.field textarea,.field .input{
+  width:100%;min-height:46px;padding:10px 12px;border:1px solid var(--line-strong);
+  border-radius:12px;background:var(--paper-2);font-size:16px;line-height:1.4;min-width:0
+}
+.field textarea{min-height:120px;resize:vertical;line-height:1.55}
+.field select{
+  appearance:none;padding-right:34px;
+  background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);
+  background-position:calc(100% - 18px) 50%,calc(100% - 13px) 50%;
+  background-size:5px 5px,5px 5px;background-repeat:no-repeat
+}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);outline:3px solid var(--accent-wash);outline-offset:1px}
+.field input[aria-invalid="true"],.field select[aria-invalid="true"],.field textarea[aria-invalid="true"]{border-color:var(--bad)}
+.field-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+@media (min-width:600px){.field-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Buttons */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  min-height:46px;padding:0 16px;border:1px solid var(--line-strong);border-radius:12px;
+  background:var(--panel);color:var(--ink);font-size:14.5px;font-weight:650;
+  cursor:pointer;text-decoration:none;text-align:center;line-height:1.25
+}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.06);color:#fff}
+.btn.dark{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.btn.ghost{background:transparent}
+.btn.danger{background:var(--bad);border-color:var(--bad);color:#fff}
+.btn.danger:hover{filter:brightness(1.06);color:#fff}
+.btn-row{display:flex;flex-wrap:wrap;gap:8px;min-width:0}
+.btn-row .btn{flex:1 1 140px}
+
+/* Chips / segmented controls */
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px;padding:0;list-style:none}
+.chips button,.chip{
+  display:inline-flex;align-items:center;justify-content:center;min-height:44px;
+  padding:8px 14px;border:1px solid var(--line-strong);border-radius:999px;
+  background:var(--paper-2);color:var(--ink);font-size:13.5px;font-weight:650;
+  cursor:pointer;line-height:1.2;text-decoration:none
+}
+.chips button:hover,.chip:hover{border-color:var(--accent);color:var(--accent)}
+.chips button[aria-pressed="true"],.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+@media (prefers-color-scheme:dark){
+  .chips button[aria-pressed="true"],.chip.on{color:#101316}
+}
+
+/* Tabs */
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
+.tabs [role="tab"]{
+  min-height:44px;padding:9px 14px;border:1px solid var(--line-strong);border-radius:999px;
+  background:var(--paper-2);color:var(--ink);font-size:13.5px;font-weight:650;
+  cursor:pointer;line-height:1.2
+}
+.tabs [role="tab"][aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+@media (prefers-color-scheme:dark){.tabs [role="tab"][aria-selected="true"]{color:#101316}}
+
+/* Result */
+.result{background:var(--paper-2)}
+.result-live{min-height:96px}
+.result-big{
+  margin:2px 0 0;font-family:var(--mono);font-size:clamp(2rem,7.5vw,3rem);
+  font-weight:650;line-height:1.08;letter-spacing:-.04em;color:var(--accent);
+  font-variant-numeric:tabular-nums;overflow-wrap:anywhere
+}
+.result-note{margin-top:7px;color:var(--muted);font-size:14px;overflow-wrap:anywhere}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px;margin-top:14px}
+.stat{min-width:0;padding:10px 11px;border:1px solid var(--line);border-radius:11px;background:var(--paper-2)}
+.stat span{display:block;font-size:11.5px;color:var(--muted);line-height:1.3}
+.stat b{display:block;margin-top:2px;font-family:var(--mono);font-size:1.12rem;font-weight:650;font-variant-numeric:tabular-nums;letter-spacing:-.02em;overflow-wrap:anywhere}
+
+/* Tables must scroll inside their own wrapper, never the page. */
+.table-wrap{width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.table-wrap table{width:100%;border-collapse:collapse;font-size:13.5px}
+.table-wrap caption{padding:10px 12px;text-align:left;color:var(--muted);font-size:12.5px}
+.table-wrap th,.table-wrap td{padding:9px 11px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap;font-variant-numeric:tabular-nums}
+.table-wrap th{font-weight:650;color:var(--muted);font-size:12.5px}
+.table-wrap tr:last-child td{border-bottom:0}
+
+/* Notes and status */
+.hint{margin:10px 0 0;color:var(--muted-2);font-size:12.5px;line-height:1.55;overflow-wrap:anywhere}
+.error{margin:10px 0 0;padding:9px 12px;border-radius:9px;background:var(--bad-wash);border:1px solid var(--bad);color:var(--bad);font-size:13px;font-weight:600;line-height:1.5;overflow-wrap:anywhere}
+.badge{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:2px 9px;border-radius:999px;background:var(--accent-wash);color:var(--accent);font-size:12px;font-weight:650;line-height:1.6;vertical-align:middle}
+.badge.ok{background:var(--ok-wash);color:var(--ok)}
+.badge.warn{background:var(--warn-wash);color:var(--warn)}
+.badge.bad{background:var(--bad-wash);color:var(--bad)}
+
+/* Checkbox rows: browser-check measures the input box itself, so keep it 44x44. */
+.check{display:inline-flex;align-items:center;gap:8px;min-height:44px;font-size:14px;cursor:pointer}
+.check input[type="checkbox"],.check input[type="radio"]{width:44px;height:44px;flex:none;accent-color:var(--accent);cursor:pointer}
+.check-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin-top:10px}
+/* Safety net for builders: any main control must stay touchable. */
+main button{min-height:44px}
+main select{min-height:44px}
+main input[type="checkbox"],main input[type="radio"]{width:44px;height:44px;flex:none;accent-color:var(--accent)}
+
+/* Explain */
+.explain{margin-top:18px}
+.explain h2{margin:0 0 12px;font-size:clamp(1.3rem,3vw,1.7rem);letter-spacing:-.02em}
+.explain-body{padding-bottom:2px}
+.explain-body p{max-width:82ch;color:var(--muted);font-size:14px;margin-bottom:10px;overflow-wrap:anywhere}
+.explain-body p:last-child{margin-bottom:0}
+.explain-body strong{color:var(--ink)}
+.formula-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;margin:14px 0 18px}
+@media (min-width:760px){.formula-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.formula{min-width:0;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--paper-2)}
+.formula h3,.formula-title{margin:0 0 7px;font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.formula code{display:inline-block;max-width:100%;padding:2px 6px;border-radius:5px;background:var(--accent-wash);font-family:var(--mono);font-size:12.5px;line-height:1.6;overflow-wrap:anywhere}
+.assumptions{margin:0;padding-left:20px;color:var(--muted);font-size:13.5px}
+.assumptions li{margin:0 0 8px;overflow-wrap:anywhere}
+
+/* FAQ */
+.faq{margin-top:18px}
+.faq h2{margin:0 0 12px;font-size:clamp(1.3rem,3vw,1.7rem);letter-spacing:-.02em}
+.faq details{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:0 20px}
+.faq details+details{margin-top:10px}
+.faq summary{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:44px;padding:16px 0;cursor:pointer;font-weight:650;list-style:none}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";flex:none;font-family:var(--mono);font-size:19px;line-height:1;color:var(--accent)}
+.faq details[open] summary::after{content:"\2212"}
+.faq details p{margin:0;padding:0 0 18px;color:var(--muted);font-size:14px;max-width:80ch;overflow-wrap:anywhere}
+
+/* Footer */
+.site-footer{margin-top:28px;padding:22px 0 34px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted)}
+.footer-inner{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 18px}
+.footer-links{display:flex;flex-wrap:wrap;gap:4px 14px}
+.site-footer a{color:var(--accent);text-decoration:none;display:inline-flex;align-items:center;min-height:44px}
+.site-footer a:hover{text-decoration:underline}
+.footer-note{margin:8px 0 0;max-width:82ch;color:var(--muted-2);overflow-wrap:anywhere}
+.noscript{margin-top:18px}
+
+/* Toast */
+.toast{
+  position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));
+  transform:translate(-50%,12px);z-index:20;max-width:calc(100vw - 32px);
+  padding:12px 18px;border-radius:12px;background:var(--ink);color:var(--paper);
+  font-size:14px;font-weight:600;text-align:center;box-shadow:0 8px 24px rgb(0 0 0 / .22);
+  opacity:0;pointer-events:none;transition:opacity .16s,transform .16s;overflow-wrap:anywhere
+}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+
+/* Motion and print */
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .btn:active{transform:none}
+}
+@media print{
+  .site-header,.site-footer,.skip-link,.lang-switch,.tabs,.chips,.btn-row,.toast,.no-print{display:none!important}
+  body{background:#fff;color:#000;padding:0}
+  .card,.table-wrap{border-color:#999;background:#fff;break-inside:avoid}
+  .result-col{position:static}
+  .result-big{color:#000}
+  .explain,.faq{display:block}
+  details{break-inside:avoid}
+  .faq details p{display:block!important}
+}
+</style>
+</head>
+<body data-slug="roi-calculator" data-category="calc-finance">
+<a class="skip-link" href="#tool" data-i="skip">跳到工具</a>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="/" aria-label="Devin" data-i-aria="brandHome">
+      <span class="brand-mark" aria-hidden="true"></span><span data-i="brandName">Devin</span>
+    </a>
+    <div class="header-tools">
+      <nav class="site-nav" aria-label="站点导航" data-i-aria="navAria">
+        <a id="nav-tools" href="/tools/" data-tools-link data-i="navHall">工具大厅</a>
+        <a href="/games/" data-i="navGames">在线桌游</a>
+      </nav>
+      <nav class="lang-switch" aria-label="语言" data-i-aria="langLabel">
+        <button type="button" data-lang="zh" aria-pressed="true" data-i="langZh">中文</button>
+        <button type="button" data-lang="en" aria-pressed="false" data-i="langEn">EN</button>
+        <button type="button" data-lang="id" aria-pressed="false" data-i="langId">ID</button>
+      </nav>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero" aria-labelledby="page-title">
+    <p class="eyebrow" data-i="eyebrow">免费工具 · 本地运行</p>
+    <h1 id="page-title" data-i="appTitle">ROI 计算器</h1>
+    <p class="lede" data-i="tagline">赚了多少，年化又是多少。</p>
+    <p class="privacy">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+      <span data-i="privacy">所有计算都在你的浏览器里完成，输入不会上传。</span>
+    </p>
+  </section>
+
+  <!-- ======================================================================
+       TOOL BODY — builder replaces this marker with the tool UI.
+       Everything between the marker and the explain section belongs to the tool.
+       Keep labels, data-i hooks, aria-live results and 44px targets.
+       ====================================================================== -->
+<div class="tool-layout">
+  <section class="card" id="tool" aria-labelledby="tool-heading">
+    <p class="card-kicker" data-i="cardKicker">投入与回报</p>
+    <h2 id="tool-heading" data-i="cardTitle">算清 ROI 与年化</h2>
+    <p class="panel-desc" data-i="cardDesc">输入投入成本、回报金额和持有年数，得到净收益、总 ROI 与年化 ROI；亏损也会直接标出。</p>
+    <form id="calc-form" novalidate>
+      <div class="field-grid two">
+        <div class="field">
+          <label for="cost" data-i="costLabel">投入成本（元）</label>
+          <input id="cost" name="cost" type="number" inputmode="decimal" step="any" min="0" value="1000" data-default="1000" placeholder="例如 1000" data-i-ph="costPh">
+        </div>
+        <div class="field">
+          <label for="return" data-i="returnLabel">回报金额（元）</label>
+          <input id="return" name="return" type="number" inputmode="decimal" step="any" min="0" value="1500" data-default="1500" placeholder="例如 1500" data-i-ph="returnPh">
+        </div>
+        <div class="field">
+          <label for="years" data-i="yearsLabel">持有年数（可留空）</label>
+          <input id="years" name="years" type="number" inputmode="decimal" step="any" min="0" value="2" data-default="2" placeholder="例如 2" data-i-ph="yearsPh">
+        </div>
+      </div>
+      <p class="hint" data-i="yearsHint">年数留空时只计算总 ROI；填入大于 0 的年数才会按复利折算年化 ROI。</p>
+      <p class="error" id="form-error" role="alert" hidden></p>
+      <div class="btn-row" style="margin-top:14px">
+        <button class="btn primary" type="submit" data-i="calcBtn">计算 ROI</button>
+        <button class="btn ghost" type="button" id="reset-btn" data-i="reset">重置</button>
+      </div>
+    </form>
+  </section>
+  <section class="card result result-col" aria-labelledby="result-heading">
+    <p class="card-kicker" data-i="result">结果</p>
+    <h2 id="result-heading" data-i="resultTitle">投资回报</h2>
+    <div class="result-live" aria-live="polite">
+      <div class="result-big" id="result-big">—</div>
+      <p class="result-note" id="result-note" data-i="resultIdle">填入投入与回报后自动计算，结果显示在这里。</p>
+      <div class="stat-grid" id="stats"></div>
+    </div>
+    <p class="hint" data-i="moneyNote">金额以 2 位小数显示，可对应任意货币。</p>
+    <p class="hint" data-i="copyHint">复制的是未加千分位的原始数值。</p>
+    <div class="btn-row" style="margin-top:12px">
+      <button class="btn dark" type="button" id="copy-btn" data-i="copy" disabled>复制结果</button>
+    </div>
+  </section>
+</div>
+
+  <section class="explain" id="explain" aria-labelledby="explain-title">
+    <h2 id="explain-title" data-i="explainTitle">公式与假设</h2>
+    <div class="explain-body">
+      <!-- ==================================================================
+           TOOL EXPLAIN — formula, assumptions, rounding rules, limitations.
+           ================================================================== -->
+<p data-i="explainIntro">总 ROI 衡量整笔交易赚了百分之多少；年化 ROI 把同样的收益率折算成每年等效的复利增长率。</p>
+<div class="formula-grid">
+  <div class="formula">
+    <h3 class="formula-title" data-i="formulaTitle">公式</h3>
+    <p><code data-i="formula1">净收益 = 回报金额 − 投入成本</code></p>
+    <p><code data-i="formula2">总 ROI = 净收益 ÷ 投入成本 × 100%</code></p>
+    <p><code data-i="formula3">年化 ROI = (回报 ÷ 投入)^(1 ÷ 年数) − 1</code></p>
+  </div>
+  <div class="formula">
+    <h3 class="formula-title" data-i="assumptionsTitle">假设与规则</h3>
+    <ul class="assumptions">
+      <li data-i="assume1">投入成本必须大于 0；成本为 0 时公式除以零，工具会报错。</li>
+      <li data-i="assume2">回报金额按期末一次性收回理解，中途的现金流、分红和追加投入都没有单独建模。</li>
+      <li data-i="assume3">年化 ROI 假设收益按同等速度复利；回报为 0 时年化记为 −100%。</li>
+      <li data-i="assume4">总 ROI 和年化 ROI 都按名义值计算，没有扣除通胀、税费和交易成本。</li>
+    </ul>
+  </div>
+</div>
+<p data-i="explainLimit">波动大的投资用年化收益只能作粗略参考，过去收益也不代表未来表现。</p>
+<p class="hint" data-i="notFinancial">仅供估算，不构成财务建议。</p>
+    </div>
+  </section>
+
+  <section class="faq" id="faq" aria-labelledby="faq-title">
+    <h2 id="faq-title" data-i="faqTitle">常见问题</h2>
+    <!-- ====================================================================
+         TOOL FAQ — generator injects the Chinese FAQ from config.faqs.
+         Keep the faqQ1..faqA3 data-i keys in all three dictionaries.
+         ==================================================================== -->
+    <details>
+          <summary data-i="faqQ1">投入 1000、回报 1500、持有 2 年，年化多少？</summary>
+          <p data-i="faqA1">总 ROI 为 50%，年化 ROI 约为 22.47%。年化不是把 50% 除以 2，而是按复利折算每年等效增长率。</p>
+        </details>
+    <details>
+          <summary data-i="faqQ2">ROI 和年化 ROI 该看哪个？</summary>
+          <p data-i="faqA2">比较不同期限的项目看年化 ROI；看单笔交易赚了多少看总 ROI。年化假设收益按同等速度复利，波动大的投资只能作粗略参考。</p>
+        </details>
+    <details>
+          <summary data-i="faqQ3">成本可以填 0 吗？</summary>
+          <p data-i="faqA3">不可以。ROI 的公式是净收益除以投入成本，成本为 0 会除以零。无现金投入的项目请用时间成本或机会成本估算一个合理分母。以上仅为估算，不构成财务建议。</p>
+        </details>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <p data-i="copyright">© 2026 Devin</p>
+    <nav class="footer-links" aria-label="页脚导航" data-i-aria="footerAria">
+      <a href="/tools/" data-tools-link data-i="backTools">工具大厅</a>
+      <a href="/games/" data-i="navGames">在线桌游</a>
+      <a href="/" data-i="navHome">首页</a>
+    </nav>
+  </div>
+  <div class="wrap"><p class="footer-note" data-i="footerNote">所有处理都在本地完成，不上传任何数据。</p></div>
+</footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<noscript>
+  <div class="wrap"><p class="card noscript" data-i="noscript">这个工具需要 JavaScript 才能运行。所有计算都在你的设备上完成，不会上传任何数据。</p></div>
+</noscript>
+
+<!-- ==========================================================================
+     ENGINE — pure functions only. No DOM, no window, no clock, no storage.
+     Builder replaces everything between TOOL_ENGINE_START and TOOL_ENGINE_END,
+     then updates the return object. Must stay Node-evaluable.
+     ========================================================================== -->
+<script id="engine">
+var ToolEngine = (function () {
+  'use strict';
+
+  // TOOL_ENGINE_START
+  var LIMIT = 1e15;
+
+  function isNum(n) {
+    return typeof n === 'number' && isFinite(n);
+  }
+  function fail(code) {
+    return { ok: false, error: code };
+  }
+
+  function netGain(costCents, returnCents) {
+    if (!isNum(costCents)) return fail('bad_value');
+    if (costCents === 0) return fail('zero_cost');
+    if (costCents < 0) return fail('bad_value');
+    if (!isNum(returnCents) || returnCents < 0) return fail('bad_value');
+    var net = returnCents - costCents;
+    if (!isFinite(net) || Math.abs(net) > LIMIT) return fail('overflow');
+    return { ok: true, value: net };
+  }
+
+  function roi(costCents, returnCents) {
+    var net = netGain(costCents, returnCents);
+    if (!net.ok) return net;
+    return {
+      ok: true,
+      costCents: costCents,
+      returnCents: returnCents,
+      netGainCents: net.value,
+      roiPct: net.value / costCents * 100
+    };
+  }
+
+  function annualizedRoi(costCents, returnCents, years) {
+    var base = netGain(costCents, returnCents);
+    if (!base.ok) return base;
+    if (!isNum(years) || years <= 0) return fail('bad_years');
+    if (returnCents <= 0) return { ok: true, value: -100 };
+    var ratio = returnCents / costCents;
+    var pct = (Math.pow(ratio, 1 / years) - 1) * 100;
+    if (!isFinite(pct)) return fail('overflow');
+    return { ok: true, value: pct };
+  }
+
+  function compute(opts) {
+    opts = opts || {};
+    var r = roi(opts.costCents, opts.returnCents);
+    if (!r.ok) return r;
+    var annual = null;
+    if (opts.years != null) {
+      var a = annualizedRoi(opts.costCents, opts.returnCents, opts.years);
+      if (!a.ok) return a;
+      annual = a.value;
+    }
+    var verdict = r.netGainCents > 0 ? 'gain' : (r.netGainCents < 0 ? 'loss' : 'even');
+    return {
+      ok: true,
+      costCents: r.costCents,
+      returnCents: r.returnCents,
+      netGainCents: r.netGainCents,
+      roiPct: r.roiPct,
+      annualizedPct: annual,
+      years: opts.years == null ? null : opts.years,
+      multiple: r.returnCents / r.costCents,
+      verdict: verdict
+    };
+  }
+  // TOOL_ENGINE_END
+
+  return {
+    netGain: netGain,
+    roi: roi,
+    annualizedRoi: annualizedRoi,
+    compute: compute,
+    isNum: isNum
+  };
+})();
+</script>
+
+<!-- ==========================================================================
+     DICTIONARIES — zh / en / id must always expose exactly the same keys.
+     Generic keys live above the TOOL_DICT_* marker.
+     Tool-specific keys (including faqQ1..faqA3) live below the marker and are
+     replaced by the builder. No hard-coded visible copy anywhere in the page.
+     ========================================================================== -->
+<script id="i18n">
+var TOOL_I18N = {
+  zh: {
+    /* ---- generic keys: do not remove ---- */
+    docTitle: '投资回报率计算器（ROI）',
+    docDesc: '输入投入成本、回报金额和持有年数，算出净收益、ROI 与年化 ROI，亏损场景也会明确标出。全部在本地计算，无需注册；仅为估算，不构成财务建议。',
+    appTitle: 'ROI 计算器',
+    tagline: '赚了多少，年化又是多少。',
+    eyebrow: '免费工具 · 本地运行',
+    privacy: '所有计算都在你的浏览器里完成，输入不会上传。',
+    skip: '跳到工具',
+    navAria: '站点导航',
+    navHall: '工具大厅',
+    navGames: '在线桌游',
+    langLabel: '语言',
+    langZh: '中文',
+    langEn: 'EN',
+    langId: 'ID',
+    brandName: 'Devin',
+    brandHome: 'Devin 首页',
+    navHome: '首页',
+    footerAria: '页脚导航',
+    footerNote: '所有处理都在本地完成，不上传任何数据。',
+    copyright: '© 2026 Devin',
+    copy: '复制结果',
+    copied: '已复制。',
+    copyFail: '无法自动复制，请手动选中后复制。',
+    copyHint: '复制的是未加千分位的原始数值。',
+    reset: '重置',
+    result: '结果',
+    explainTitle: '公式与假设',
+    faqTitle: '常见问题',
+    formulaTitle: '公式',
+    assumptionsTitle: '假设与规则',
+    backTools: '工具大厅',
+    moreTools: '更多工具',
+    notMedical: '仅供估算，不构成医疗建议。',
+    notFinancial: '仅供估算，不构成财务建议。',
+    unitNote: '换算结果按四舍五入显示。',
+    download: '下载',
+    downloadFail: '下载失败，请重试。',
+    clear: '清除',
+    swap: '交换',
+    add: '添加',
+    remove: '删除',
+    close: '关闭',
+    yes: '是',
+    no: '否',
+    errorInvalid: '请输入有效的数字。',
+    errorRequired: '请填写这一项。',
+    errorGeneric: '无法计算，请检查输入。',
+    storageFail: '无法写入本地存储，本次设置不会被保存。',
+    noscript: '这个工具需要 JavaScript 才能运行。所有计算都在你的设备上完成，不会上传任何数据。',
+
+    /* ---- tool-specific keys: replace below this line ---- */
+    // TOOL_DICT_ZH
+    cardKicker: "投入与回报",
+    cardTitle: "算清 ROI 与年化",
+    cardDesc: "输入投入成本、回报金额和持有年数，得到净收益、总 ROI 与年化 ROI；亏损也会直接标出。",
+    costLabel: "投入成本（元）",
+    costPh: "例如 1000",
+    returnLabel: "回报金额（元）",
+    returnPh: "例如 1500",
+    yearsLabel: "持有年数（可留空）",
+    yearsPh: "例如 2",
+    yearsHint: "年数留空时只计算总 ROI；填入大于 0 的年数才会按复利折算年化 ROI。",
+    calcBtn: "计算 ROI",
+    resultTitle: "投资回报",
+    resultIdle: "填入投入与回报后自动计算，结果显示在这里。",
+    annualNote: "总 ROI {roi}，持有 {years} 年，折合年化 {annual}，净收益 {net}。",
+    roiNote: "总 ROI {roi}，净收益 {net}；未填写年数，因此不计算年化。",
+    statNet: "净收益",
+    statRoi: "总 ROI",
+    statAnnual: "年化 ROI",
+    statMultiple: "回报倍数",
+    statVerdict: "盈亏状态",
+    verdictGain: "盈利",
+    verdictLoss: "亏损",
+    verdictEven: "持平",
+    errZeroCost: "投入成本必须大于 0，ROI 不能除以 0。",
+    errBadYears: "持有年数必须大于 0；不需要年化时请留空。",
+    moneyNote: "金额以 2 位小数显示，可对应任意货币。",
+    explainIntro: "总 ROI 衡量整笔交易赚了百分之多少；年化 ROI 把同样的收益率折算成每年等效的复利增长率。",
+    formula1: "净收益 = 回报金额 − 投入成本",
+    formula2: "总 ROI = 净收益 ÷ 投入成本 × 100%",
+    formula3: "年化 ROI = (回报 ÷ 投入)^(1 ÷ 年数) − 1",
+    assume1: "投入成本必须大于 0；成本为 0 时公式除以零，工具会报错。",
+    assume2: "回报金额按期末一次性收回理解，中途的现金流、分红和追加投入都没有单独建模。",
+    assume3: "年化 ROI 假设收益按同等速度复利；回报为 0 时年化记为 −100%。",
+    assume4: "总 ROI 和年化 ROI 都按名义值计算，没有扣除通胀、税费和交易成本。",
+    explainLimit: "波动大的投资用年化收益只能作粗略参考，过去收益也不代表未来表现。",
+    faqQ1: "投入 1000、回报 1500、持有 2 年，年化多少？",
+    faqA1: "总 ROI 为 50%，年化 ROI 约为 22.47%。年化不是把 50% 除以 2，而是按复利折算每年等效增长率。",
+    faqQ2: "ROI 和年化 ROI 该看哪个？",
+    faqA2: "比较不同期限的项目看年化 ROI；看单笔交易赚了多少看总 ROI。年化假设收益按同等速度复利，波动大的投资只能作粗略参考。",
+    faqQ3: "成本可以填 0 吗？",
+    faqA3: "不可以。ROI 的公式是净收益除以投入成本，成本为 0 会除以零。无现金投入的项目请用时间成本或机会成本估算一个合理分母。",
+  },
+  en: {
+    /* ---- generic keys: do not remove ---- */
+    docTitle: 'ROI Calculator',
+    docDesc: 'Enter cost, return and holding years to see net gain, ROI and annualised ROI, with losses clearly marked. Local, no sign-up. Estimates only, not financial advice.',
+    appTitle: 'ROI Calculator',
+    tagline: 'Total return and yearly return.',
+    eyebrow: 'Free tool · runs locally',
+    privacy: 'Everything runs in your browser. Nothing you type is uploaded.',
+    skip: 'Skip to the tool',
+    navAria: 'Site navigation',
+    navHall: 'Tools',
+    navGames: 'Games',
+    langLabel: 'Language',
+    langZh: '中文',
+    langEn: 'EN',
+    langId: 'ID',
+    brandName: 'Devin',
+    brandHome: 'Devin home',
+    navHome: 'Home',
+    footerAria: 'Footer navigation',
+    footerNote: 'Everything runs locally. No data is uploaded.',
+    copyright: '© 2026 Devin',
+    copy: 'Copy result',
+    copied: 'Copied.',
+    copyFail: 'Could not copy automatically. Select the text and copy it manually.',
+    copyHint: 'Copies the plain number without thousands separators.',
+    reset: 'Reset',
+    result: 'Result',
+    explainTitle: 'Formulas and assumptions',
+    faqTitle: 'Frequently asked questions',
+    formulaTitle: 'Formula',
+    assumptionsTitle: 'Assumptions and rules',
+    backTools: 'Tools',
+    moreTools: 'More tools',
+    notMedical: 'Estimates only, not medical advice.',
+    notFinancial: 'Estimates only, not financial advice.',
+    unitNote: 'Converted values are rounded for display.',
+    download: 'Download',
+    downloadFail: 'Download failed. Try again.',
+    clear: 'Clear',
+    swap: 'Swap',
+    add: 'Add',
+    remove: 'Remove',
+    close: 'Close',
+    yes: 'Yes',
+    no: 'No',
+    errorInvalid: 'Enter a valid number.',
+    errorRequired: 'Fill in this field.',
+    errorGeneric: 'Could not calculate. Check the inputs.',
+    storageFail: 'Could not write to local storage, so this setting will not be saved.',
+    noscript: 'This tool needs JavaScript to run. All calculations happen on your device; nothing is uploaded.',
+
+    /* ---- tool-specific keys: replace below this line ---- */
+    // TOOL_DICT_EN
+    cardKicker: "Cost and return",
+    cardTitle: "See total and annualised ROI",
+    cardDesc: "Enter cost, return and holding years to get net gain, total ROI and annualised ROI, with losses clearly marked.",
+    costLabel: "Cost (currency)",
+    costPh: "e.g. 1000",
+    returnLabel: "Return (currency)",
+    returnPh: "e.g. 1500",
+    yearsLabel: "Holding years (optional)",
+    yearsPh: "e.g. 2",
+    yearsHint: "Leave years blank for total ROI only. Enter a value above 0 to compound it into an annualised ROI.",
+    calcBtn: "Calculate ROI",
+    resultTitle: "Return on investment",
+    resultIdle: "Enter cost and return; the result appears here as you type.",
+    annualNote: "Total ROI {roi} over {years} years, an annualised {annual}, net gain {net}.",
+    roiNote: "Total ROI {roi}, net gain {net}. No years entered, so no annualised figure.",
+    statNet: "Net gain",
+    statRoi: "Total ROI",
+    statAnnual: "Annualised ROI",
+    statMultiple: "Return multiple",
+    statVerdict: "Outcome",
+    verdictGain: "Profit",
+    verdictLoss: "Loss",
+    verdictEven: "Break-even",
+    errZeroCost: "Cost must be greater than 0; ROI cannot divide by zero.",
+    errBadYears: "Holding years must be greater than 0. Leave it blank for no annualisation.",
+    moneyNote: "Amounts are shown to 2 decimals and work with any currency.",
+    explainIntro: "Total ROI measures the percentage gained on the whole deal; annualised ROI converts that into an equivalent compound yearly growth rate.",
+    formula1: "net gain = return − cost",
+    formula2: "total ROI = net gain ÷ cost × 100%",
+    formula3: "annualised ROI = (return ÷ cost)^(1 ÷ years) − 1",
+    assume1: "Cost must be greater than 0; at zero the formula divides by zero and the tool returns an error.",
+    assume2: "The return is treated as a single amount received at the end. Interim cash flows, dividends and top-ups are not modelled separately.",
+    assume3: "Annualised ROI assumes steady compounding. A return of 0 is reported as −100% annualised.",
+    assume4: "Both figures are nominal and ignore inflation, tax and transaction costs.",
+    explainLimit: "For volatile investments, annualised returns are only a rough guide, and past performance does not guarantee future results.",
+    faqQ1: "Cost 1000, return 1500, held 2 years — what is the annualised ROI?",
+    faqA1: "Total ROI is 50% and annualised ROI is about 22.47%. Annualising is not 50% divided by 2; it is the equivalent compound yearly growth rate.",
+    faqQ2: "Should I look at ROI or annualised ROI?",
+    faqA2: "Use annualised ROI to compare projects of different lengths, and total ROI to see how much a single deal made. Annualisation assumes steady compounding, so treat it as a rough guide for volatile assets.",
+    faqQ3: "Can cost be zero?",
+    faqA3: "No. ROI is net gain divided by cost, so zero cost divides by zero. For projects with no cash outlay, estimate a sensible denominator from time or opportunity cost.",
+  },
+  id: {
+    /* ---- generic keys: do not remove ---- */
+    docTitle: 'Kalkulator ROI',
+    docDesc: 'Biaya, hasil, dan lama investasi untuk melihat laba bersih, ROI, dan ROI tahunan, termasuk saat merugi. Lokal, tanpa daftar. Hanya perkiraan, bukan saran keuangan.',
+    appTitle: 'Kalkulator ROI',
+    tagline: 'Laba total dan laba per tahun.',
+    eyebrow: 'Alat gratis · berjalan lokal',
+    privacy: 'Semua perhitungan berjalan di browser Anda. Tidak ada yang diunggah.',
+    skip: 'Lompat ke alat',
+    navAria: 'Navigasi situs',
+    navHall: 'Alat',
+    navGames: 'Permainan',
+    langLabel: 'Bahasa',
+    langZh: '中文',
+    langEn: 'EN',
+    langId: 'ID',
+    brandName: 'Devin',
+    brandHome: 'Beranda Devin',
+    navHome: 'Beranda',
+    footerAria: 'Navigasi footer',
+    footerNote: 'Semua diproses secara lokal. Tidak ada data yang diunggah.',
+    copyright: '© 2026 Devin',
+    copy: 'Salin hasil',
+    copied: 'Tersalin.',
+    copyFail: 'Tidak bisa menyalin otomatis. Pilih teksnya lalu salin manual.',
+    copyHint: 'Menyalin angka polos tanpa pemisah ribuan.',
+    reset: 'Atur ulang',
+    result: 'Hasil',
+    explainTitle: 'Rumus dan asumsi',
+    faqTitle: 'Pertanyaan yang sering diajukan',
+    formulaTitle: 'Rumus',
+    assumptionsTitle: 'Asumsi dan aturan',
+    backTools: 'Alat',
+    moreTools: 'Alat lainnya',
+    notMedical: 'Hanya perkiraan, bukan saran medis.',
+    notFinancial: 'Hanya perkiraan, bukan saran keuangan.',
+    unitNote: 'Nilai hasil konversi dibulatkan untuk tampilan.',
+    download: 'Unduh',
+    downloadFail: 'Unduh gagal. Coba lagi.',
+    clear: 'Bersihkan',
+    swap: 'Tukar',
+    add: 'Tambah',
+    remove: 'Hapus',
+    close: 'Tutup',
+    yes: 'Ya',
+    no: 'Tidak',
+    errorInvalid: 'Masukkan angka yang valid.',
+    errorRequired: 'Isi kolom ini.',
+    errorGeneric: 'Tidak dapat menghitung. Periksa input.',
+    storageFail: 'Tidak bisa menulis ke penyimpanan lokal, jadi pengaturan ini tidak akan disimpan.',
+    noscript: 'Alat ini memerlukan JavaScript. Semua perhitungan terjadi di perangkat Anda; tidak ada yang diunggah.',
+
+    /* ---- tool-specific keys: replace below this line ---- */
+    // TOOL_DICT_ID
+    cardKicker: "Biaya dan hasil",
+    cardTitle: "Lihat ROI total dan tahunan",
+    cardDesc: "Masukkan biaya, hasil, dan lama investasi untuk melihat laba bersih, ROI total, dan ROI tahunan; kerugian ditandai jelas.",
+    costLabel: "Biaya (mata uang)",
+    costPh: "mis. 1000",
+    returnLabel: "Hasil (mata uang)",
+    returnPh: "mis. 1500",
+    yearsLabel: "Lama investasi, tahun (opsional)",
+    yearsPh: "mis. 2",
+    yearsHint: "Kosongkan lama investasi untuk ROI total saja. Isi lebih dari 0 untuk menghitung ROI tahunan berbunga majemuk.",
+    calcBtn: "Hitung ROI",
+    resultTitle: "Hasil investasi",
+    resultIdle: "Masukkan biaya dan hasil; hasil muncul di sini saat Anda mengetik.",
+    annualNote: "ROI total {roi} selama {years} tahun, setara tahunan {annual}, laba bersih {net}.",
+    roiNote: "ROI total {roi}, laba bersih {net}. Lama investasi kosong, jadi ROI tahunan tidak dihitung.",
+    statNet: "Laba bersih",
+    statRoi: "ROI total",
+    statAnnual: "ROI tahunan",
+    statMultiple: "Kelipatan hasil",
+    statVerdict: "Status",
+    verdictGain: "Untung",
+    verdictLoss: "Rugi",
+    verdictEven: "Impas",
+    errZeroCost: "Biaya harus lebih dari 0; ROI tidak boleh dibagi nol.",
+    errBadYears: "Lama investasi harus lebih dari 0. Kosongkan bila tidak perlu tahunan.",
+    moneyNote: "Nominal ditampilkan dengan 2 desimal dan berlaku untuk mata uang apa pun.",
+    explainIntro: "ROI total mengukur persentase keuntungan seluruh transaksi; ROI tahunan mengubahnya menjadi tingkat pertumbuhan majemuk per tahun.",
+    formula1: "laba bersih = hasil − biaya",
+    formula2: "ROI total = laba bersih ÷ biaya × 100%",
+    formula3: "ROI tahunan = (hasil ÷ biaya)^(1 ÷ tahun) − 1",
+    assume1: "Biaya harus lebih dari 0; pada nol rumus membagi nol dan alat mengembalikan galat.",
+    assume2: "Hasil dianggap diterima sekaligus di akhir periode. Arus kas antara, dividen, dan tambahan modal tidak dimodelkan terpisah.",
+    assume3: "ROI tahunan mengasumsikan pertumbuhan majemuk yang stabil. Hasil 0 dilaporkan sebagai −100% tahunan.",
+    assume4: "Kedua angka bersifat nominal dan mengabaikan inflasi, pajak, serta biaya transaksi.",
+    explainLimit: "Untuk investasi yang fluktuatif, imbal hasil tahunan hanya perkiraan kasar, dan kinerja masa lalu bukan jaminan masa depan.",
+    faqQ1: "Biaya 1000, hasil 1500, dipegang 2 tahun — berapa ROI tahunannya?",
+    faqA1: "ROI total 50% dan ROI tahunan sekitar 22,47%. Tahunan bukan 50% dibagi 2, melainkan tingkat pertumbuhan majemuk per tahun yang setara.",
+    faqQ2: "Sebaiknya lihat ROI atau ROI tahunan?",
+    faqA2: "Gunakan ROI tahunan untuk membandingkan proyek dengan durasi berbeda, dan ROI total untuk melihat keuntungan satu transaksi. Tahunan mengasumsikan bunga majemuk stabil, jadi hanya panduan kasar untuk aset fluktuatif.",
+    faqQ3: "Bolehkah biaya diisi 0?",
+    faqA3: "Tidak. ROI adalah laba bersih dibagi biaya, sehingga biaya nol berarti membagi nol. Untuk proyek tanpa modal tunai, perkirakan penyebut yang wajar dari biaya waktu atau peluang.",
+  }
+};
+</script>
+
+<!-- ==========================================================================
+     UI RUNTIME — language switching plus the global ToolUI helpers.
+     Builder replaces only the TOOL_UI_START / TOOL_UI_END block.
+     ========================================================================== -->
+<script>
+(function () {
+  'use strict';
+
+  var I18N = (typeof TOOL_I18N !== 'undefined') ? TOOL_I18N : { zh: {}, en: {}, id: {} };
+  var TOOL_SLUG = 'roi-calculator';
+  var LANG_KEY = 'hhfa.tool.' + TOOL_SLUG + '.lang';
+  var LANGS = ['zh', 'en', 'id'];
+  var LOCALES = { zh: 'zh-CN', en: 'en-US', id: 'id-ID' };
+  var OG_LOCALES = { zh: 'zh_CN', en: 'en_US', id: 'id_ID' };
+  var state = { lang: 'zh' };
+  var toastTimer = null;
+  var started = false;
+  var langHooks = [];
+
+  function $(sel) {
+    return typeof sel === 'string' ? document.querySelector(sel) : sel;
+  }
+
+  function $$(sel) {
+    return Array.prototype.slice.call(document.querySelectorAll(sel));
+  }
+
+  function T(key, vars) {
+    var dict = I18N[state.lang] || {};
+    var value = Object.prototype.hasOwnProperty.call(dict, key) ? dict[key] : null;
+    if (typeof value !== 'string' && I18N.zh && typeof I18N.zh[key] === 'string') {
+      value = I18N.zh[key];
+    }
+    if (typeof value !== 'string') return key;
+    if (vars) {
+      value = value.replace(/\{(\w+)\}/g, function (match, name) {
+        return vars[name] != null ? String(vars[name]) : '';
+      });
+    }
+    return value;
+  }
+
+  function locale() {
+    return LOCALES[state.lang] || 'en-US';
+  }
+
+  function fmt(n, opts) {
+    if (typeof n !== 'number' || !isFinite(n)) return '—';
+    try {
+      return new Intl.NumberFormat(locale(), opts || {}).format(n);
+    } catch (e) {
+      return String(n);
+    }
+  }
+
+  function toast(message) {
+    var el = $('#toast');
+    if (!el) return;
+    el.textContent = message == null ? '' : String(message);
+    el.classList.add('on');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove('on'); }, 2600);
+  }
+
+  function legacyCopy(text) {
+    try {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.top = '-1000px';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { ta.setSelectionRange(0, ta.value.length); } catch (e) { /* ignore */ }
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      document.body.removeChild(ta);
+      return ok;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function copy(text) {
+    var value = text == null ? '' : String(text);
+    return new Promise(function (resolve) {
+      function done() { toast(T('copied')); resolve(true); }
+      function fail() { toast(T('copyFail')); resolve(false); }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(value).then(done, function () {
+          if (legacyCopy(value)) done(); else fail();
+        });
+      } else if (legacyCopy(value)) {
+        done();
+      } else {
+        fail();
+      }
+    });
+  }
+
+  function download(name, content, mime) {
+    try {
+      var blob = new Blob([content], { type: mime || 'text/plain;charset=utf-8' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = name || 'download.txt';
+      a.rel = 'noopener';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function () {
+        try {
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        } catch (e) { /* ignore */ }
+      }, 0);
+      return true;
+    } catch (e) {
+      toast(T('downloadFail'));
+      return false;
+    }
+  }
+
+  function readStore(key, fallback) {
+    try {
+      var raw = localStorage.getItem(key);
+      if (raw == null) return fallback;
+      var value = JSON.parse(raw);
+      return value == null ? fallback : value;
+    } catch (e) {
+      return fallback;
+    }
+  }
+
+  function writeStore(key, value) {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+      return true;
+    } catch (e) {
+      toast(T('storageFail'));
+      return false;
+    }
+  }
+
+  function debounce(fn, ms) {
+    var timer = null;
+    var wait = isFinite(ms) ? ms : 150;
+    return function () {
+      var ctx = this;
+      var args = arguments;
+      clearTimeout(timer);
+      timer = setTimeout(function () { fn.apply(ctx, args); }, wait);
+    };
+  }
+
+  function on(target, event, handler) {
+    var el = typeof target === 'string' ? $(target) : target;
+    if (!el || !el.addEventListener) return function () {};
+    el.addEventListener(event, handler);
+    return function () { el.removeEventListener(event, handler); };
+  }
+
+  function setError(el, message) {
+    if (!el) return;
+    if (!message) { clearError(el); return; }
+    el.textContent = String(message);
+    el.hidden = false;
+    el.classList.add('on');
+  }
+
+  function clearError(el) {
+    if (!el) return;
+    el.textContent = '';
+    el.hidden = true;
+    el.classList.remove('on');
+  }
+
+  function onLangChange(fn) {
+    if (typeof fn !== 'function') return function () {};
+    langHooks.push(fn);
+    if (started) {
+      try { fn(state.lang); } catch (e) { /* a broken hook must not break switching */ }
+    }
+    return function () {
+      var i = langHooks.indexOf(fn);
+      if (i !== -1) langHooks.splice(i, 1);
+    };
+  }
+
+  function setMeta(attr, name, content) {
+    var nodes = document.querySelectorAll('meta');
+    for (var i = 0; i < nodes.length; i++) {
+      if (nodes[i].getAttribute(attr) === name) {
+        nodes[i].setAttribute('content', content);
+        return;
+      }
+    }
+  }
+
+  function renderLanguage() {
+    var lang = state.lang;
+    document.documentElement.lang = lang === 'zh' ? 'zh-CN' : lang;
+
+    var nodes = $$('[data-i]');
+    for (var i = 0; i < nodes.length; i++) {
+      nodes[i].textContent = T(nodes[i].getAttribute('data-i'));
+    }
+    var placeholders = $$('[data-i-ph]');
+    for (var j = 0; j < placeholders.length; j++) {
+      placeholders[j].setAttribute('placeholder', T(placeholders[j].getAttribute('data-i-ph')));
+    }
+    var labelled = $$('[data-i-aria]');
+    for (var k = 0; k < labelled.length; k++) {
+      labelled[k].setAttribute('aria-label', T(labelled[k].getAttribute('data-i-aria')));
+    }
+    var buttons = $$('[data-lang]');
+    for (var b = 0; b < buttons.length; b++) {
+      buttons[b].setAttribute('aria-pressed', buttons[b].getAttribute('data-lang') === lang ? 'true' : 'false');
+    }
+
+    document.title = T('docTitle');
+    setMeta('name', 'description', T('docDesc'));
+    setMeta('property', 'og:title', T('docTitle'));
+    setMeta('property', 'og:description', T('docDesc'));
+    setMeta('property', 'og:locale', OG_LOCALES[lang] || 'en_US');
+    setMeta('name', 'twitter:title', T('docTitle'));
+    setMeta('name', 'twitter:description', T('docDesc'));
+
+    var toolsHref = lang === 'zh' ? '/tools/' : '/tools/' + lang + '/';
+    var links = $$('[data-tools-link]');
+    for (var l = 0; l < links.length; l++) links[l].setAttribute('href', toolsHref);
+  }
+
+  function applyLang() {
+    renderLanguage();
+    for (var i = 0; i < langHooks.length; i++) {
+      try { langHooks[i](state.lang); } catch (e) { /* keep the page usable */ }
+    }
+    started = true;
+  }
+
+  function detectLang() {
+    try {
+      var q = new URLSearchParams(window.location.search).get('lang');
+      if (LANGS.indexOf(q) !== -1) return q;
+    } catch (e) { /* ignore */ }
+    try {
+      var saved = localStorage.getItem(LANG_KEY);
+      if (LANGS.indexOf(saved) !== -1) return saved;
+    } catch (e) { /* ignore */ }
+    var nav = String(navigator.language || '').toLowerCase();
+    if (nav.indexOf('zh') === 0) return 'zh';
+    if (nav.indexOf('id') === 0 || nav.indexOf('in') === 0) return 'id';
+    return 'en';
+  }
+
+  function saveLang() {
+    try { localStorage.setItem(LANG_KEY, state.lang); } catch (e) { /* ignore */ }
+  }
+
+  function bindLanguages() {
+    var buttons = $$('[data-lang]');
+    for (var i = 0; i < buttons.length; i++) {
+      (function (button) {
+        button.addEventListener('click', function () {
+          var next = button.getAttribute('data-lang');
+          if (LANGS.indexOf(next) === -1 || next === state.lang) return;
+          state.lang = next;
+          saveLang();
+          applyLang();
+        });
+      })(buttons[i]);
+    }
+  }
+
+  function init() {
+    state.lang = detectLang();
+    bindLanguages();
+    applyLang();
+  }
+
+  var ToolUI = {
+    T: T,
+    fmt: fmt,
+    copy: copy,
+    toast: toast,
+    download: download,
+    readStore: readStore,
+    writeStore: writeStore,
+    debounce: debounce,
+    on: on,
+    setError: setError,
+    clearError: clearError,
+    onLangChange: onLangChange,
+    lang: function () { return state.lang; },
+    locale: locale,
+    $: $,
+    $$: $$
+  };
+
+  window.ToolUI = ToolUI;
+  window.T = T;
+
+  // TOOL_UI_START
+  (function () {
+    var form = ToolUI.$('#calc-form');
+    if (!form) return;
+    var errorBox = ToolUI.$('#form-error');
+    var big = ToolUI.$('#result-big');
+    var note = ToolUI.$('#result-note');
+    var stats = ToolUI.$('#stats');
+    var copyBtn = ToolUI.$('#copy-btn');
+    var lastCopy = '';
+    var ERR = { empty_input: 'errorRequired', bad_value: 'errorInvalid', overflow: 'errorGeneric', zero_cost: 'errZeroCost', bad_years: 'errBadYears' };
+
+    function money(cents) {
+      return ToolUI.fmt(cents / 100, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    function pct(n) {
+      return ToolUI.fmt(n, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
+    }
+    function num(n) {
+      return ToolUI.fmt(n, { maximumFractionDigits: 2 });
+    }
+    function msg(code) { return ToolUI.T(ERR[code] || 'errorGeneric'); }
+    function readNumber(el) {
+      var raw = String(el.value == null ? '' : el.value).trim().replace(/\s/g, '').replace(',', '.');
+      if (!raw) return { ok: false, error: 'empty_input' };
+      if (!/^[+-]?(\d+(\.\d*)?|\.\d+)$/.test(raw)) return { ok: false, error: 'bad_value' };
+      var n = Number(raw);
+      if (!isFinite(n)) return { ok: false, error: 'bad_value' };
+      return { ok: true, value: n };
+    }
+    function readMoney(el) {
+      var r = readNumber(el);
+      if (!r.ok) return r;
+      var cents = Math.floor(Math.abs(r.value) * 100 + 0.5 + 1e-9);
+      if (!isFinite(cents)) return { ok: false, error: 'overflow' };
+      return { ok: true, value: r.value < 0 ? -cents : cents };
+    }
+    function readOptionalNumber(el) {
+      var raw = String(el.value == null ? '' : el.value).trim();
+      if (!raw) return { ok: true, value: null };
+      return readNumber(el);
+    }
+    function stat(labelKey, value) {
+      var box = document.createElement('div');
+      box.className = 'stat';
+      var label = document.createElement('span');
+      label.textContent = ToolUI.T(labelKey);
+      var b = document.createElement('b');
+      b.textContent = value;
+      box.appendChild(label);
+      box.appendChild(b);
+      return box;
+    }
+    function clearView() {
+      big.textContent = '—';
+      note.textContent = ToolUI.T('resultIdle');
+      stats.textContent = '';
+      copyBtn.disabled = true;
+      lastCopy = '';
+    }
+    function render() {
+      var cost = readMoney(ToolUI.$('#cost'));
+      if (!cost.ok) { ToolUI.setError(errorBox, msg(cost.error)); clearView(); return; }
+      var ret = readMoney(ToolUI.$('#return'));
+      if (!ret.ok) { ToolUI.setError(errorBox, msg(ret.error)); clearView(); return; }
+      var years = readOptionalNumber(ToolUI.$('#years'));
+      if (!years.ok) { ToolUI.setError(errorBox, msg(years.error)); clearView(); return; }
+      var res = ToolEngine.compute({ costCents: cost.value, returnCents: ret.value, years: years.value });
+      if (!res.ok) {
+        ToolUI.setError(errorBox, msg(res.error));
+        clearView();
+        return;
+      }
+      ToolUI.clearError(errorBox);
+      if (res.annualizedPct != null) {
+        big.textContent = pct(res.annualizedPct);
+        note.textContent = ToolUI.T('annualNote', { roi: pct(res.roiPct), years: num(res.years), net: money(res.netGainCents) });
+      } else {
+        big.textContent = pct(res.roiPct);
+        note.textContent = ToolUI.T('roiNote', { net: money(res.netGainCents) });
+      }
+      stats.textContent = '';
+      stats.appendChild(stat('statNet', money(res.netGainCents)));
+      stats.appendChild(stat('statRoi', pct(res.roiPct)));
+      stats.appendChild(stat('statAnnual', res.annualizedPct == null ? '—' : pct(res.annualizedPct)));
+      stats.appendChild(stat('statMultiple', num(res.multiple) + '×'));
+      stats.appendChild(stat('statVerdict', ToolUI.T(res.verdict === 'gain' ? 'verdictGain' : (res.verdict === 'loss' ? 'verdictLoss' : 'verdictEven'))));
+      var lines = [
+        ToolUI.T('appTitle'),
+        ToolUI.T('statNet') + ': ' + money(res.netGainCents),
+        ToolUI.T('statRoi') + ': ' + pct(res.roiPct),
+        ToolUI.T('statAnnual') + ': ' + (res.annualizedPct == null ? '—' : pct(res.annualizedPct)),
+        ToolUI.T('statMultiple') + ': ' + num(res.multiple) + '×'
+      ];
+      lastCopy = lines.join('\n');
+      copyBtn.disabled = false;
+    }
+    ToolUI.on(form, 'input', ToolUI.debounce(render, 150));
+    ToolUI.on(form, 'submit', function (e) { e.preventDefault(); render(); });
+    ToolUI.on('#reset-btn', 'click', function () {
+      ToolUI.$$('#calc-form input').forEach(function (input) {
+        if (input.hasAttribute('data-default')) input.value = input.getAttribute('data-default');
+      });
+      render();
+      ToolUI.$('#cost').focus();
+    });
+    ToolUI.on(copyBtn, 'click', function () { if (lastCopy) ToolUI.copy(lastCopy); });
+    ToolUI.onLangChange(function () { render(); });
+    render();
+  })();
+  // TOOL_UI_END
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>

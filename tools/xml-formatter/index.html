@@ -1,0 +1,1577 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>XML 格式化与压缩</title>
+<meta name="description" content="在本地格式化或压缩 XML，保留注释和 CDATA，并提示标签不配对的位置，便于排查配置和接口报文。全部在本地处理，无需注册。">
+<meta name="author" content="Devin">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="theme-color" content="#f2efe7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#101316" media="(prefers-color-scheme: dark)">
+<link rel="canonical" href="https://hhfa008.github.io/tools/xml-formatter/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23b93d12'/%3E%3Cpath d='M9 23 23 9' stroke='%23fbf9f4' stroke-width='2.4' stroke-linecap='round'/%3E%3Ccircle cx='11' cy='11' r='3' fill='%23fbf9f4'/%3E%3Ccircle cx='21' cy='21' r='3' fill='%23fbf9f4'/%3E%3C/svg%3E">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Devin">
+<meta property="og:title" content="XML 格式化与压缩">
+<meta property="og:description" content="在本地格式化或压缩 XML，保留注释和 CDATA，并提示标签不配对的位置，便于排查配置和接口报文。全部在本地处理，无需注册。">
+<meta property="og:url" content="https://hhfa008.github.io/tools/xml-formatter/">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:locale:alternate" content="en_US">
+<meta property="og:locale:alternate" content="id_ID">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="XML 格式化与压缩">
+<meta name="twitter:description" content="在本地格式化或压缩 XML，保留注释和 CDATA，并提示标签不配对的位置，便于排查配置和接口报文。全部在本地处理，无需注册。">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "XML 格式化器",
+  "url": "https://hhfa008.github.io/tools/xml-formatter/",
+  "applicationCategory": "UtilitiesApplication",
+  "operatingSystem": "Any",
+  "browserRequirements": "Requires JavaScript",
+  "isAccessibleForFree": true,
+  "inLanguage": ["zh-CN", "en", "id"],
+  "description": "在本地格式化或压缩 XML，保留注释和 CDATA，并提示标签不配对的位置，便于排查配置和接口报文。全部在本地处理，无需注册。",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+  {
+    "@type": "Question",
+    "name": "会验证 XML Schema 吗？",
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "不会。工具只检查标签嵌套和基本语法，不校验 XSD、DTD 或业务字段。结构合法的 XML 仍可能不符合你的接口约定。"
+    }
+  },
+  {
+    "@type": "Question",
+    "name": "CDATA 和注释会被改动吗？",
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "默认保留原内容。格式化只调整标签之间的缩进，不会改写 CDATA 里的文本或注释内容；压缩模式会保留它们但去掉多余空白。"
+    }
+  },
+  {
+    "@type": "Question",
+    "name": "为什么有些自闭合标签被展开？",
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "工具统一按你选择的风格输出，自闭合标签可保留为 />。若原文件混用两种写法，格式化后会被归一，这是预期行为。"
+    }
+  }
+]
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "首页", "item": "https://hhfa008.github.io/" },
+    { "@type": "ListItem", "position": 2, "name": "工具大厅", "item": "https://hhfa008.github.io/tools/" },
+    { "@type": "ListItem", "position": 3, "name": "XML 格式化器", "item": "https://hhfa008.github.io/tools/xml-formatter/" }
+  ]
+}
+</script>
+
+<style>
+/* ==========================================================================
+   Design tokens — keep in sync with the existing tools pages.
+   ========================================================================== */
+:root{
+  --paper:#f2efe7; --paper-2:#fbf9f4; --panel:#ffffff;
+  --ink:#14171a; --muted:#5b615c; --muted-2:#7b807a;
+  --line:#d5d0c4; --line-strong:#bcb5a7;
+  --accent:#b93d12; --accent-soft:#f2a07a; --accent-wash:#f7e5da;
+  --ok:#2f6b3c; --ok-wash:#e8f2e7; --warn:#8a5a00; --warn-wash:#fbf1db;
+  --bad:#a32216; --bad-wash:#fbe7e3;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --radius:16px; --max:1040px;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --paper:#101316; --paper-2:#171b1f; --panel:#1a1f23;
+    --ink:#f2efe7; --muted:#b7b3a8; --muted-2:#948f85;
+    --line:#333a40; --line-strong:#4a535b;
+    --accent:#f08a5d; --accent-soft:#f2a07a; --accent-wash:#2b211c;
+    --ok:#8fd19e; --ok-wash:#1b2b1e; --warn:#f0c36a; --warn-wash:#2d2618;
+    --bad:#ff8a7a; --bad-wash:#321d1a;
+  }
+}
+
+/* Reset */
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%;color-scheme:light dark;scroll-behavior:smooth;overflow-x:clip}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font:16px/1.6 var(--sans);overflow-x:clip;
+  text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+p,h1,h2,h3,ul,ol,figure{margin:0}
+a{color:inherit}
+button,input,select,textarea{font:inherit;color:inherit}
+code,pre{font-family:var(--mono)}
+
+/* Layout */
+.wrap{width:100%;max-width:var(--max);margin:0 auto;padding-left:18px;padding-right:18px;min-width:0}
+@media (min-width:720px){.wrap{padding-left:32px;padding-right:32px}}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.skip-link{position:absolute;left:12px;top:-80px;z-index:100;padding:12px 16px;background:var(--ink);color:var(--paper);border-radius:8px;text-decoration:none}
+.skip-link:focus{top:12px}
+:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+
+/* Header */
+.site-header{border-bottom:1px solid var(--line);background:var(--paper)}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:10px 16px;min-height:64px;flex-wrap:wrap;padding-top:6px;padding-bottom:6px}
+.brand{display:inline-flex;align-items:center;gap:10px;font-weight:700;letter-spacing:-.02em;text-decoration:none;min-height:44px}
+.brand-mark{width:26px;height:26px;border-radius:7px;background:var(--accent);position:relative;flex:none}
+.brand-mark::before,.brand-mark::after{content:"";position:absolute;left:7px;height:2px;background:var(--paper-2);border-radius:1px}
+.brand-mark::before{right:7px;top:9px}
+.brand-mark::after{right:11px;top:15px}
+.header-tools{display:flex;align-items:center;gap:12px 16px;flex-wrap:wrap;justify-content:flex-end;min-width:0}
+.site-nav{display:flex;align-items:center;gap:14px;font-size:13.5px;flex-wrap:wrap}
+.site-nav a{display:inline-flex;align-items:center;min-height:44px;text-decoration:none;color:var(--muted)}
+.site-nav a:hover{color:var(--accent);text-decoration:underline}
+.lang-switch{display:flex;gap:4px}
+.lang-switch button{
+  min-width:44px;min-height:44px;padding:0 8px;border:1px solid var(--line-strong);
+  border-radius:9px;background:transparent;color:var(--muted);font-size:12.5px;
+  font-weight:650;cursor:pointer;line-height:1
+}
+.lang-switch button:hover{border-color:var(--accent);color:var(--accent)}
+.lang-switch button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+@media (prefers-color-scheme:dark){
+  .lang-switch button[aria-pressed="true"],
+  .btn.primary,.btn.danger{color:#101316}
+}
+
+/* Hero */
+.hero{padding:36px 0 22px}
+@media (min-width:720px){.hero{padding:52px 0 28px}}
+.eyebrow{margin:0 0 10px;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+h1{margin:0 0 12px;max-width:22ch;font-size:clamp(1.85rem,6vw,2.9rem);line-height:1.1;letter-spacing:-.035em;font-weight:700;overflow-wrap:anywhere}
+.lede{max-width:70ch;color:var(--muted);font-size:clamp(1rem,2vw,1.08rem);overflow-wrap:anywhere}
+.privacy{
+  display:flex;gap:9px;align-items:flex-start;max-width:78ch;margin:16px 0 0;padding:11px 14px;
+  background:var(--accent-wash);border:1px solid var(--line);border-left:4px solid var(--accent);
+  border-radius:0 10px 10px 0;font-size:13.5px
+}
+.privacy svg{width:17px;height:17px;flex:none;margin-top:3px}
+
+/* Cards and tool layout */
+.tool-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;align-items:start}
+.tool-layout>*{min-width:0}
+@media (min-width:900px){
+  .tool-layout{grid-template-columns:minmax(0,1.04fr) minmax(0,.96fr)}
+  .result-col{position:sticky;top:18px}
+}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;min-width:0}
+@media (min-width:720px){.card{padding:26px 28px}}
+.card-kicker{margin:0 0 7px;font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.11em;text-transform:uppercase;color:var(--accent)}
+.card h2{margin:0 0 14px;font-size:clamp(1.15rem,2.4vw,1.4rem);line-height:1.2;letter-spacing:-.02em;overflow-wrap:anywhere}
+.panel-desc{margin:0 0 14px;color:var(--muted);font-size:14px;overflow-wrap:anywhere}
+
+/* Fields */
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field>label,.field>span.label{font-size:13px;font-weight:650;color:var(--muted)}
+.field input,.field select,.field textarea,.field .input{
+  width:100%;min-height:46px;padding:10px 12px;border:1px solid var(--line-strong);
+  border-radius:12px;background:var(--paper-2);font-size:16px;line-height:1.4;min-width:0
+}
+.field textarea{min-height:120px;resize:vertical;line-height:1.55}
+.field select{
+  appearance:none;padding-right:34px;
+  background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);
+  background-position:calc(100% - 18px) 50%,calc(100% - 13px) 50%;
+  background-size:5px 5px,5px 5px;background-repeat:no-repeat
+}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);outline:3px solid var(--accent-wash);outline-offset:1px}
+.field input[aria-invalid="true"],.field select[aria-invalid="true"],.field textarea[aria-invalid="true"]{border-color:var(--bad)}
+.field-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+@media (min-width:600px){.field-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Buttons */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  min-height:46px;padding:0 16px;border:1px solid var(--line-strong);border-radius:12px;
+  background:var(--panel);color:var(--ink);font-size:14.5px;font-weight:650;
+  cursor:pointer;text-decoration:none;text-align:center;line-height:1.25
+}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.06);color:#fff}
+.btn.dark{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.btn.ghost{background:transparent}
+.btn.danger{background:var(--bad);border-color:var(--bad);color:#fff}
+.btn.danger:hover{filter:brightness(1.06);color:#fff}
+.btn-row{display:flex;flex-wrap:wrap;gap:8px;min-width:0}
+.btn-row .btn{flex:1 1 140px}
+
+/* Chips / segmented controls */
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px;padding:0;list-style:none}
+.chips button,.chip{
+  display:inline-flex;align-items:center;justify-content:center;min-height:44px;
+  padding:8px 14px;border:1px solid var(--line-strong);border-radius:999px;
+  background:var(--paper-2);color:var(--ink);font-size:13.5px;font-weight:650;
+  cursor:pointer;line-height:1.2;text-decoration:none
+}
+.chips button:hover,.chip:hover{border-color:var(--accent);color:var(--accent)}
+.chips button[aria-pressed="true"],.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+@media (prefers-color-scheme:dark){
+  .chips button[aria-pressed="true"],.chip.on{color:#101316}
+}
+
+/* Tabs */
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
+.tabs [role="tab"]{
+  min-height:44px;padding:9px 14px;border:1px solid var(--line-strong);border-radius:999px;
+  background:var(--paper-2);color:var(--ink);font-size:13.5px;font-weight:650;
+  cursor:pointer;line-height:1.2
+}
+.tabs [role="tab"][aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+@media (prefers-color-scheme:dark){.tabs [role="tab"][aria-selected="true"]{color:#101316}}
+
+/* Result */
+.result{background:var(--paper-2)}
+.result-live{min-height:96px}
+.result-big{
+  margin:2px 0 0;font-family:var(--mono);font-size:clamp(2rem,7.5vw,3rem);
+  font-weight:650;line-height:1.08;letter-spacing:-.04em;color:var(--accent);
+  font-variant-numeric:tabular-nums;overflow-wrap:anywhere
+}
+.result-note{margin-top:7px;color:var(--muted);font-size:14px;overflow-wrap:anywhere}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px;margin-top:14px}
+.stat{min-width:0;padding:10px 11px;border:1px solid var(--line);border-radius:11px;background:var(--paper-2)}
+.stat span{display:block;font-size:11.5px;color:var(--muted);line-height:1.3}
+.stat b{display:block;margin-top:2px;font-family:var(--mono);font-size:1.12rem;font-weight:650;font-variant-numeric:tabular-nums;letter-spacing:-.02em;overflow-wrap:anywhere}
+
+/* Tables must scroll inside their own wrapper, never the page. */
+.table-wrap{width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.table-wrap table{width:100%;border-collapse:collapse;font-size:13.5px}
+.table-wrap caption{padding:10px 12px;text-align:left;color:var(--muted);font-size:12.5px}
+.table-wrap th,.table-wrap td{padding:9px 11px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap;font-variant-numeric:tabular-nums}
+.table-wrap th{font-weight:650;color:var(--muted);font-size:12.5px}
+.table-wrap tr:last-child td{border-bottom:0}
+
+/* Notes and status */
+.hint{margin:10px 0 0;color:var(--muted-2);font-size:12.5px;line-height:1.55;overflow-wrap:anywhere}
+.error{margin:10px 0 0;padding:9px 12px;border-radius:9px;background:var(--bad-wash);border:1px solid var(--bad);color:var(--bad);font-size:13px;font-weight:600;line-height:1.5;overflow-wrap:anywhere}
+.badge{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:2px 9px;border-radius:999px;background:var(--accent-wash);color:var(--accent);font-size:12px;font-weight:650;line-height:1.6;vertical-align:middle}
+.badge.ok{background:var(--ok-wash);color:var(--ok)}
+.badge.warn{background:var(--warn-wash);color:var(--warn)}
+.badge.bad{background:var(--bad-wash);color:var(--bad)}
+
+/* Checkbox rows: browser-check measures the input box itself, so keep it 44x44. */
+.check{display:inline-flex;align-items:center;gap:8px;min-height:44px;font-size:14px;cursor:pointer}
+.check input[type="checkbox"],.check input[type="radio"]{width:44px;height:44px;flex:none;accent-color:var(--accent);cursor:pointer}
+.check-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin-top:10px}
+/* Safety net for builders: any main control must stay touchable. */
+main button{min-height:44px}
+main select{min-height:44px}
+main input[type="checkbox"],main input[type="radio"]{width:44px;height:44px;flex:none;accent-color:var(--accent)}
+
+/* Explain */
+.explain{margin-top:18px}
+.explain h2{margin:0 0 12px;font-size:clamp(1.3rem,3vw,1.7rem);letter-spacing:-.02em}
+.explain-body{padding-bottom:2px}
+.explain-body p{max-width:82ch;color:var(--muted);font-size:14px;margin-bottom:10px;overflow-wrap:anywhere}
+.explain-body p:last-child{margin-bottom:0}
+.explain-body strong{color:var(--ink)}
+.formula-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;margin:14px 0 18px}
+@media (min-width:760px){.formula-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.formula{min-width:0;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--paper-2)}
+.formula h3,.formula-title{margin:0 0 7px;font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.formula code{display:inline-block;max-width:100%;padding:2px 6px;border-radius:5px;background:var(--accent-wash);font-family:var(--mono);font-size:12.5px;line-height:1.6;overflow-wrap:anywhere}
+.assumptions{margin:0;padding-left:20px;color:var(--muted);font-size:13.5px}
+.assumptions li{margin:0 0 8px;overflow-wrap:anywhere}
+
+/* FAQ */
+.faq{margin-top:18px}
+.faq h2{margin:0 0 12px;font-size:clamp(1.3rem,3vw,1.7rem);letter-spacing:-.02em}
+.faq details{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:0 20px}
+.faq details+details{margin-top:10px}
+.faq summary{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:44px;padding:16px 0;cursor:pointer;font-weight:650;list-style:none}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";flex:none;font-family:var(--mono);font-size:19px;line-height:1;color:var(--accent)}
+.faq details[open] summary::after{content:"\2212"}
+.faq details p{margin:0;padding:0 0 18px;color:var(--muted);font-size:14px;max-width:80ch;overflow-wrap:anywhere}
+
+/* Footer */
+.site-footer{margin-top:28px;padding:22px 0 34px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted)}
+.footer-inner{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 18px}
+.footer-links{display:flex;flex-wrap:wrap;gap:4px 14px}
+.site-footer a{color:var(--accent);text-decoration:none;display:inline-flex;align-items:center;min-height:44px}
+.site-footer a:hover{text-decoration:underline}
+.footer-note{margin:8px 0 0;max-width:82ch;color:var(--muted-2);overflow-wrap:anywhere}
+.noscript{margin-top:18px}
+
+/* Toast */
+.toast{
+  position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));
+  transform:translate(-50%,12px);z-index:20;max-width:calc(100vw - 32px);
+  padding:12px 18px;border-radius:12px;background:var(--ink);color:var(--paper);
+  font-size:14px;font-weight:600;text-align:center;box-shadow:0 8px 24px rgb(0 0 0 / .22);
+  opacity:0;pointer-events:none;transition:opacity .16s,transform .16s;overflow-wrap:anywhere
+}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+
+/* Motion and print */
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .btn:active{transform:none}
+}
+@media print{
+  .site-header,.site-footer,.skip-link,.lang-switch,.tabs,.chips,.btn-row,.toast,.no-print{display:none!important}
+  body{background:#fff;color:#000;padding:0}
+  .card,.table-wrap{border-color:#999;background:#fff;break-inside:avoid}
+  .result-col{position:static}
+  .result-big{color:#000}
+  .explain,.faq{display:block}
+  details{break-inside:avoid}
+  .faq details p{display:block!important}
+}
+</style>
+</head>
+<body data-slug="xml-formatter" data-category="text-dev">
+<a class="skip-link" href="#tool" data-i="skip">跳到工具</a>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="/" aria-label="Devin" data-i-aria="brandHome">
+      <span class="brand-mark" aria-hidden="true"></span><span data-i="brandName">Devin</span>
+    </a>
+    <div class="header-tools">
+      <nav class="site-nav" aria-label="站点导航" data-i-aria="navAria">
+        <a id="nav-tools" href="/tools/" data-tools-link data-i="navHall">工具大厅</a>
+        <a href="/games/" data-i="navGames">在线桌游</a>
+      </nav>
+      <nav class="lang-switch" aria-label="语言" data-i-aria="langLabel">
+        <button type="button" data-lang="zh" aria-pressed="true" data-i="langZh">中文</button>
+        <button type="button" data-lang="en" aria-pressed="false" data-i="langEn">EN</button>
+        <button type="button" data-lang="id" aria-pressed="false" data-i="langId">ID</button>
+      </nav>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero" aria-labelledby="page-title">
+    <p class="eyebrow" data-i="eyebrow">免费工具 · 本地运行</p>
+    <h1 id="page-title" data-i="appTitle">XML 格式化器</h1>
+    <p class="lede" data-i="tagline">缩进对齐，结构问题才看得见。</p>
+    <p class="privacy">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+      <span data-i="privacy">所有计算都在你的浏览器里完成，输入不会上传。</span>
+    </p>
+  </section>
+
+  <!-- ======================================================================
+       TOOL BODY — builder replaces this marker with the tool UI.
+       Everything between the marker and the explain section belongs to the tool.
+       Keep labels, data-i hooks, aria-live results and 44px targets.
+       ====================================================================== -->
+  
+<style>
+.out-pre{margin:12px 0 0;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--paper-2);font-size:13px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere;max-height:440px;overflow:auto;min-height:140px}
+</style>
+<div class="tool-layout">
+  <section class="card" aria-labelledby="xml-in-label">
+    <p class="card-kicker" data-i="kickerInput">输入</p>
+    <h2 id="xml-in-label" data-i="appTitle">XML 格式化器</h2>
+    <div class="field">
+      <label for="xml-input" data-i="inputLabel">XML 文本</label>
+      <textarea id="xml-input" rows="13" spellcheck="false" autocomplete="off" autocapitalize="off" data-i-ph="inputPh" placeholder="粘贴 XML，或打开本地文件。"></textarea>
+    </div>
+    <div class="field-grid two" style="margin-top:12px">
+      <div class="field">
+        <label for="indent" data-i="indentLabel">缩进</label>
+        <select id="indent">
+          <option value="2" data-i="indent2">2 个空格</option>
+          <option value="4" data-i="indent4">4 个空格</option>
+          <option value="tab" data-i="indentTab">Tab</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="check" style="min-height:46px"><input type="checkbox" id="keep-comments" checked><span data-i="keepCommentsLabel">压缩时保留注释</span></label>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn primary" type="button" id="format" data-i="btnFormat">格式化</button>
+      <button class="btn" type="button" id="minify" data-i="btnMinify">压缩为单行</button>
+      <button class="btn" type="button" id="open-file" data-i="btnOpenFile">打开本地文件</button>
+      <button class="btn" type="button" id="example" data-i="btnExample">加载示例</button>
+      <button class="btn ghost" type="button" id="clear" data-i="btnClear">清空</button>
+    </div>
+    <input type="file" id="file" accept=".xml,application/xml,text/xml,text/plain" hidden>
+    <p class="error" id="xml-error" role="alert" hidden></p>
+    <p class="hint" data-i="fileHint">文件通过浏览器 FileReader 读取，不会上传，也不会自动保存。</p>
+    <p class="hint" data-i="exampleNote">示例包含声明、注释、属性、自闭合标签和 CDATA。</p>
+  </section>
+
+  <section class="card result-col" aria-labelledby="xml-out-label">
+    <p class="card-kicker" data-i="kickerOutput">输出</p>
+    <h2 id="xml-out-label" data-i="result">结果</h2>
+    <div class="result" aria-live="polite">
+      <p class="result-note" id="xml-summary" data-i="emptyState">等待输入</p>
+      <div class="stat-grid" id="xml-stats" hidden>
+        <div class="stat"><span data-i="statLines">行数</span><b id="stat-lines">—</b></div>
+        <div class="stat"><span data-i="statElements">元素</span><b id="stat-elements">—</b></div>
+        <div class="stat"><span data-i="statChars">字符</span><b id="stat-chars">—</b></div>
+      </div>
+    </div>
+    <pre class="out-pre" id="xml-output" aria-live="polite" tabindex="0" data-i-aria="outputAria"></pre>
+    <div class="btn-row">
+      <button class="btn" type="button" id="copy" data-i="btnCopy">复制结果</button>
+      <button class="btn" type="button" id="download" data-i="btnDownload">下载 .xml</button>
+    </div>
+  </section>
+</div>
+
+
+  <section class="explain" id="explain" aria-labelledby="explain-title">
+    <h2 id="explain-title" data-i="explainTitle">公式与假设</h2>
+    <div class="explain-body">
+      <!-- ==================================================================
+           TOOL EXPLAIN — formula, assumptions, rounding rules, limitations.
+           ================================================================== -->
+      
+<div class="formula-grid">
+  <div class="formula"><h3 data-i="eTitle1">校验范围</h3><p data-i="eText1">只检查标签是否闭合、嵌套是否交叉、注释与 CDATA 是否完整，不校验 XSD、DTD 或业务字段。标签名区分大小写。</p></div>
+  <div class="formula"><h3 data-i="eTitle2">格式化规则</h3><p data-i="eText2">每个标签独占一行并按层级缩进；纯文本元素保持同一行，属性原样保留，自闭合标签保留 /&gt; 写法。</p></div>
+  <div class="formula"><h3 data-i="eTitle3">CDATA 与注释</h3><p data-i="eText3">CDATA 内容不做改写，注释内容不变。压缩模式默认保留注释，可关闭；两种模式都保留 CDATA。</p></div>
+  <div class="formula"><h3 data-i="eTitle4">压缩与错误</h3><p data-i="eText4">压缩会去掉标签之间的缩进空白，文本内容保持原样。标签不配对时返回第一个异常的行列，便于定位漏写或多余的闭合标签。</p></div>
+</div>
+
+    </div>
+  </section>
+
+  <section class="faq" id="faq" aria-labelledby="faq-title">
+    <h2 id="faq-title" data-i="faqTitle">常见问题</h2>
+    <!-- ====================================================================
+         TOOL FAQ — generator injects the Chinese FAQ from config.faqs.
+         Keep the faqQ1..faqA3 data-i keys in all three dictionaries.
+         ==================================================================== -->
+    <details>
+          <summary data-i="faqQ1">会验证 XML Schema 吗？</summary>
+          <p data-i="faqA1">不会。工具只检查标签嵌套和基本语法，不校验 XSD、DTD 或业务字段。结构合法的 XML 仍可能不符合你的接口约定。</p>
+        </details>
+    <details>
+          <summary data-i="faqQ2">CDATA 和注释会被改动吗？</summary>
+          <p data-i="faqA2">默认保留原内容。格式化只调整标签之间的缩进，不会改写 CDATA 里的文本或注释内容；压缩模式会保留它们但去掉多余空白。</p>
+        </details>
+    <details>
+          <summary data-i="faqQ3">为什么有些自闭合标签被展开？</summary>
+          <p data-i="faqA3">工具统一按你选择的风格输出，自闭合标签可保留为 /&gt;。若原文件混用两种写法，格式化后会被归一，这是预期行为。</p>
+        </details>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <p data-i="copyright">© 2026 Devin</p>
+    <nav class="footer-links" aria-label="页脚导航" data-i-aria="footerAria">
+      <a href="/tools/" data-tools-link data-i="backTools">工具大厅</a>
+      <a href="/games/" data-i="navGames">在线桌游</a>
+      <a href="/" data-i="navHome">首页</a>
+    </nav>
+  </div>
+  <div class="wrap"><p class="footer-note" data-i="footerNote">所有处理都在本地完成，不上传任何数据。</p></div>
+</footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<noscript>
+  <div class="wrap"><p class="card noscript" data-i="noscript">这个工具需要 JavaScript 才能运行。所有计算都在你的设备上完成，不会上传任何数据。</p></div>
+</noscript>
+
+<!-- ==========================================================================
+     ENGINE — pure functions only. No DOM, no window, no clock, no storage.
+     Builder replaces everything between TOOL_ENGINE_START and TOOL_ENGINE_END,
+     then updates the return object. Must stay Node-evaluable.
+     ========================================================================== -->
+<script id="engine">
+var ToolEngine = (function () {
+  'use strict';
+
+  function fail(code) { return { ok: false, error: code }; }
+
+  function tokenize(xml) {
+    if (typeof xml !== 'string') return fail('invalid_input');
+    if (!xml.trim()) return fail('empty_input');
+
+    var source = xml;
+    var length = source.length;
+    var index = 0;
+    var line = 1;
+    var column = 1;
+    var tokens = [];
+
+    function advance(count) {
+      for (var k = 0; k < count; k++) {
+        if (source.charAt(index) === '\n') { line += 1; column = 1; } else { column += 1; }
+        index += 1;
+      }
+    }
+
+    function findTagEnd(from) {
+      var quote = '';
+      for (var j = from; j < length; j++) {
+        var ch = source.charAt(j);
+        if (quote) {
+          if (ch === quote) quote = '';
+          continue;
+        }
+        if (ch === '"' || ch === "'") { quote = ch; continue; }
+        if (ch === '>') return j;
+      }
+      return -1;
+    }
+
+    while (index < length) {
+      var startLine = line;
+      var startColumn = column;
+      var startIndex = index;
+
+      if (source.charAt(index) !== '<') {
+        while (index < length && source.charAt(index) !== '<') advance(1);
+        tokens.push({ type: 'text', raw: source.slice(startIndex, index), line: startLine, column: startColumn });
+        continue;
+      }
+
+      if (source.substr(index, 4) === '<!--') {
+        var commentEnd = source.indexOf('-->', index + 4);
+        if (commentEnd < 0) return { ok: false, error: 'unclosed_comment', line: startLine, column: startColumn };
+        var commentRaw = source.slice(index, commentEnd + 3);
+        tokens.push({ type: 'comment', raw: commentRaw, line: startLine, column: startColumn });
+        advance(commentRaw.length);
+        continue;
+      }
+
+      if (source.substr(index, 9) === '<![CDATA[') {
+        var cdataEnd = source.indexOf(']]>', index + 9);
+        if (cdataEnd < 0) return { ok: false, error: 'unclosed_cdata', line: startLine, column: startColumn };
+        var cdataRaw = source.slice(index, cdataEnd + 3);
+        tokens.push({ type: 'cdata', raw: cdataRaw, line: startLine, column: startColumn });
+        advance(cdataRaw.length);
+        continue;
+      }
+
+      if (source.substr(index, 2) === '<?') {
+        var piEnd = source.indexOf('?>', index + 2);
+        if (piEnd < 0) return { ok: false, error: 'unclosed_pi', line: startLine, column: startColumn };
+        var piRaw = source.slice(index, piEnd + 2);
+        tokens.push({ type: 'pi', raw: piRaw, line: startLine, column: startColumn });
+        advance(piRaw.length);
+        continue;
+      }
+
+      if (/^<!doctype/i.test(source.substr(index, 9))) {
+        var doctypeEnd = findTagEnd(index + 1);
+        if (doctypeEnd < 0) return { ok: false, error: 'unclosed_tag', line: startLine, column: startColumn };
+        var doctypeRaw = source.slice(index, doctypeEnd + 1);
+        tokens.push({ type: 'doctype', raw: doctypeRaw, line: startLine, column: startColumn });
+        advance(doctypeRaw.length);
+        continue;
+      }
+
+      if (source.charAt(index + 1) === '/') {
+        var closeEnd = source.indexOf('>', index + 2);
+        if (closeEnd < 0) return { ok: false, error: 'unclosed_tag', line: startLine, column: startColumn };
+        var closeRaw = source.slice(index, closeEnd + 1);
+        var closeName = closeRaw.slice(2, -1).trim();
+        if (!closeName || /\s/.test(closeName)) {
+          return { ok: false, error: 'bad_tag_name', line: startLine, column: startColumn };
+        }
+        tokens.push({ type: 'close', name: closeName, raw: closeRaw, line: startLine, column: startColumn });
+        advance(closeRaw.length);
+        continue;
+      }
+
+      var tagEnd = findTagEnd(index + 1);
+      if (tagEnd < 0) return { ok: false, error: 'unclosed_tag', line: startLine, column: startColumn };
+      var tagRaw = source.slice(index, tagEnd + 1);
+      var inner = tagRaw.slice(1, -1);
+      var selfClosing = /\/\s*$/.test(inner);
+      if (selfClosing) inner = inner.replace(/\/\s*$/, '');
+      var nameMatch = /^\s*([^\s\/>]+)/.exec(inner);
+      if (!nameMatch) return { ok: false, error: 'bad_tag_name', line: startLine, column: startColumn };
+      tokens.push({
+        type: 'open',
+        name: nameMatch[1],
+        raw: tagRaw,
+        selfClosing: selfClosing,
+        line: startLine,
+        column: startColumn
+      });
+      advance(tagRaw.length);
+    }
+
+    return { ok: true, tokens: tokens };
+  }
+
+  function parse(xml) {
+    var tokenized = tokenize(xml);
+    if (!tokenized.ok) return tokenized;
+    var root = { type: 'root', children: [] };
+    var stack = [root];
+    var tokens = tokenized.tokens;
+
+    for (var i = 0; i < tokens.length; i++) {
+      var token = tokens[i];
+      var parent = stack[stack.length - 1];
+      if (token.type === 'open') {
+        var node = {
+          type: 'element', name: token.name, raw: token.raw, selfClosing: token.selfClosing,
+          line: token.line, column: token.column, children: []
+        };
+        parent.children.push(node);
+        if (!token.selfClosing) stack.push(node);
+      } else if (token.type === 'close') {
+        if (stack.length === 1) {
+          return { ok: false, error: 'unexpected_close', name: token.name, line: token.line, column: token.column };
+        }
+        var top = stack[stack.length - 1];
+        if (top.name !== token.name) {
+          return {
+            ok: false, error: 'mismatched_tag', expected: top.name, got: token.name,
+            line: token.line, column: token.column
+          };
+        }
+        stack.pop();
+      } else {
+        parent.children.push({ type: token.type, raw: token.raw, line: token.line, column: token.column });
+      }
+    }
+
+    if (stack.length > 1) {
+      var unclosed = stack[stack.length - 1];
+      return { ok: false, error: 'unclosed_tag', name: unclosed.name, line: unclosed.line, column: unclosed.column };
+    }
+
+    return { ok: true, tree: root, tokens: tokens };
+  }
+
+  function countElements(node) {
+    var total = 0;
+    var children = node.children || [];
+    for (var i = 0; i < children.length; i++) {
+      if (children[i].type === 'element') {
+        total += 1 + countElements(children[i]);
+      }
+    }
+    return total;
+  }
+
+  function indentUnit(opts) {
+    opts = opts || {};
+    if (opts.indent === 'tab' || opts.indent === '\t') return '\t';
+    return opts.indent === 4 ? '    ' : '  ';
+  }
+
+  function pad(depth, unit) {
+    var out = '';
+    for (var i = 0; i < depth; i++) out += unit;
+    return out;
+  }
+
+  function renderChildren(node, depth, unit, lines) {
+    var children = node.children || [];
+    for (var i = 0; i < children.length; i++) {
+      var child = children[i];
+      if (child.type === 'element') {
+        renderElement(child, depth, unit, lines);
+      } else if (child.type === 'text') {
+        var text = child.raw.trim();
+        if (text) lines.push(pad(depth, unit) + text);
+      } else {
+        lines.push(pad(depth, unit) + child.raw.trim());
+      }
+    }
+  }
+
+  function renderElement(element, depth, unit, lines) {
+    var openTag = element.raw.trim();
+    if (element.selfClosing) {
+      lines.push(pad(depth, unit) + openTag);
+      return;
+    }
+    var onlyText = element.children.length > 0 && element.children.every(function (child) {
+      return child.type === 'text';
+    });
+    if (onlyText) {
+      var text = element.children.map(function (child) { return child.raw; }).join('').trim();
+      lines.push(pad(depth, unit) + openTag + text + '</' + element.name + '>');
+      return;
+    }
+    if (element.children.length === 0) {
+      lines.push(pad(depth, unit) + openTag + '</' + element.name + '>');
+      return;
+    }
+    lines.push(pad(depth, unit) + openTag);
+    renderChildren(element, depth + 1, unit, lines);
+    lines.push(pad(depth, unit) + '</' + element.name + '>');
+  }
+
+  function formatXml(xml, opts) {
+    var parsed = parse(xml);
+    if (!parsed.ok) return parsed;
+    var unit = indentUnit(opts);
+    var lines = [];
+    renderChildren(parsed.tree, 0, unit, lines);
+    return {
+      ok: true,
+      xml: lines.join('\n'),
+      lines: lines.length,
+      elements: countElements(parsed.tree)
+    };
+  }
+
+  function minifyXml(xml, opts) {
+    var parsed = parse(xml);
+    if (!parsed.ok) return parsed;
+    opts = opts || {};
+    var keepComments = opts.keepComments === true;
+    var out = '';
+
+    function walk(node) {
+      var children = node.children || [];
+      for (var i = 0; i < children.length; i++) {
+        var child = children[i];
+        if (child.type === 'element') {
+          out += child.raw.trim();
+          if (!child.selfClosing) {
+            walk(child);
+            out += '</' + child.name + '>';
+          }
+        } else if (child.type === 'comment') {
+          if (keepComments) out += child.raw;
+        } else if (child.type === 'text') {
+          if (/\S/.test(child.raw)) {
+            out += child.raw.indexOf('\n') !== -1 ? child.raw.trim() : child.raw;
+          }
+        } else {
+          out += child.raw;
+        }
+      }
+    }
+
+    walk(parsed.tree);
+    return {
+      ok: true,
+      xml: out,
+      lines: out ? 1 : 0,
+      elements: countElements(parsed.tree)
+    };
+  }
+
+  return {
+    tokenize: tokenize,
+    parse: parse,
+    formatXml: formatXml,
+    minifyXml: minifyXml,
+    countElements: countElements
+  };
+})();
+</script>
+
+<!-- ==========================================================================
+     DICTIONARIES — zh / en / id must always expose exactly the same keys.
+     Generic keys live above the TOOL_DICT_* marker.
+     Tool-specific keys (including faqQ1..faqA3) live below the marker and are
+     replaced by the builder. No hard-coded visible copy anywhere in the page.
+     ========================================================================== -->
+<script id="i18n">
+var TOOL_I18N = {
+  zh: {
+    /* ---- generic keys: do not remove ---- */
+    docTitle: 'XML 格式化与压缩',
+    docDesc: '在本地格式化或压缩 XML，保留注释和 CDATA，并提示标签不配对的位置，便于排查配置和接口报文。全部在本地处理，无需注册。',
+    appTitle: 'XML 格式化器',
+    tagline: '缩进对齐，结构问题才看得见。',
+    eyebrow: '免费工具 · 本地运行',
+    privacy: '所有计算都在你的浏览器里完成，输入不会上传。',
+    skip: '跳到工具',
+    navAria: '站点导航',
+    navHall: '工具大厅',
+    navGames: '在线桌游',
+    langLabel: '语言',
+    langZh: '中文',
+    langEn: 'EN',
+    langId: 'ID',
+    brandName: 'Devin',
+    brandHome: 'Devin 首页',
+    navHome: '首页',
+    footerAria: '页脚导航',
+    footerNote: '所有处理都在本地完成，不上传任何数据。',
+    copyright: '© 2026 Devin',
+    copy: '复制结果',
+    copied: '已复制。',
+    copyFail: '无法自动复制，请手动选中后复制。',
+    copyHint: '复制的是未加千分位的原始数值。',
+    reset: '重置',
+    result: '结果',
+    explainTitle: '公式与假设',
+    faqTitle: '常见问题',
+    formulaTitle: '公式',
+    assumptionsTitle: '假设与规则',
+    backTools: '工具大厅',
+    moreTools: '更多工具',
+    notMedical: '仅供估算，不构成医疗建议。',
+    notFinancial: '仅供估算，不构成财务建议。',
+    unitNote: '换算结果按四舍五入显示。',
+    download: '下载',
+    downloadFail: '下载失败，请重试。',
+    clear: '清除',
+    swap: '交换',
+    add: '添加',
+    remove: '删除',
+    close: '关闭',
+    yes: '是',
+    no: '否',
+    errorInvalid: '请输入有效的数字。',
+    errorRequired: '请填写这一项。',
+    errorGeneric: '无法计算，请检查输入。',
+    storageFail: '无法写入本地存储，本次设置不会被保存。',
+    noscript: '这个工具需要 JavaScript 才能运行。所有计算都在你的设备上完成，不会上传任何数据。',
+
+    /* ---- tool-specific keys: replace below this line ---- */
+    // TOOL_DICT_ZH
+    kickerInput: '输入',
+    kickerOutput: '输出',
+    inputLabel: 'XML 文本',
+    inputPh: '粘贴 XML，或打开本地文件。',
+    indentLabel: '缩进',
+    indent2: '2 个空格',
+    indent4: '4 个空格',
+    indentTab: 'Tab',
+    keepCommentsLabel: '压缩时保留注释',
+    keepCommentsHint: '保留注释内容',
+    btnFormat: '格式化',
+    btnMinify: '压缩为单行',
+    btnOpenFile: '打开本地文件',
+    btnExample: '加载示例',
+    btnClear: '清空',
+    btnCopy: '复制结果',
+    btnDownload: '下载 .xml',
+    outputAria: 'XML 输出',
+    emptyState: '等待输入',
+    summaryFormat: '{lines} 行 · {elements} 个元素',
+    summaryMinified: '已压缩为 {chars} 个字符',
+    statLines: '行数',
+    statElements: '元素',
+    statChars: '字符',
+    errEmpty: '请输入 XML 内容。',
+    errUnclosedTag: '标签未闭合：{name}',
+    errUnexpectedClose: '出现了多余的闭合标签：{name}',
+    errMismatched: '标签不配对：期望 {expected}，实际 {got}',
+    errUnclosedComment: '注释没有闭合。',
+    errUnclosedCdata: 'CDATA 没有闭合。',
+    errUnclosedPi: '处理指令没有闭合。',
+    errBadTagName: '标签名无效。',
+    errorAt: '第 {line} 行，第 {column} 列',
+    fileHint: '文件通过浏览器 FileReader 读取，不会上传，也不会自动保存。',
+    fileTooLarge: '文件超过 2 MB，已停止读取。',
+    fileReadFail: '无法读取文件，请重试。',
+    exampleNote: '示例包含声明、注释、属性、自闭合标签和 CDATA。',
+    eTitle1: '校验范围',
+    eText1: '只检查标签是否闭合、嵌套是否交叉、注释与 CDATA 是否完整，不校验 XSD、DTD 或业务字段。标签名区分大小写。',
+    eTitle2: '格式化规则',
+    eText2: '每个标签独占一行并按层级缩进；纯文本元素保持同一行，属性原样保留，自闭合标签保留 /> 写法。',
+    eTitle3: 'CDATA 与注释',
+    eText3: 'CDATA 内容不做改写，注释内容不变。压缩模式默认保留注释，可关闭；两种模式都保留 CDATA。',
+    eTitle4: '压缩与错误',
+    eText4: '压缩会去掉标签之间的缩进空白，文本内容保持原样。标签不配对时返回第一个异常的行列，便于定位漏写或多余的闭合标签。',
+    faqQ1: '会验证 XML Schema 吗？',
+    faqA1: '不会。工具只检查标签嵌套和基本语法，不校验 XSD、DTD 或业务字段。结构合法的 XML 仍可能不符合你的接口约定。',
+    faqQ2: 'CDATA 和注释会被改动吗？',
+    faqA2: '默认保留原内容。格式化只调整标签之间的缩进，不会改写 CDATA 里的文本或注释内容；压缩模式会保留它们但去掉多余空白。',
+    faqQ3: '为什么有些自闭合标签被展开？',
+    faqA3: '工具统一按你选择的风格输出，自闭合标签可保留为 />。若原文件混用两种写法，格式化后会被归一，这是预期行为。'
+  },
+  en: {
+    /* ---- generic keys: do not remove ---- */
+    docTitle: 'XML Formatter',
+    docDesc: 'Pretty-print or minify XML locally, keep comments and CDATA, and get location hints for mismatched tags in configs or API payloads. Local, no sign-up.',
+    appTitle: 'XML Formatter',
+    tagline: 'Align the structure, spot the problem.',
+    eyebrow: 'Free tool · runs locally',
+    privacy: 'Everything runs in your browser. Nothing you type is uploaded.',
+    skip: 'Skip to the tool',
+    navAria: 'Site navigation',
+    navHall: 'Tools',
+    navGames: 'Games',
+    langLabel: 'Language',
+    langZh: '中文',
+    langEn: 'EN',
+    langId: 'ID',
+    brandName: 'Devin',
+    brandHome: 'Devin home',
+    navHome: 'Home',
+    footerAria: 'Footer navigation',
+    footerNote: 'Everything runs locally. No data is uploaded.',
+    copyright: '© 2026 Devin',
+    copy: 'Copy result',
+    copied: 'Copied.',
+    copyFail: 'Could not copy automatically. Select the text and copy it manually.',
+    copyHint: 'Copies the plain number without thousands separators.',
+    reset: 'Reset',
+    result: 'Result',
+    explainTitle: 'Formulas and assumptions',
+    faqTitle: 'Frequently asked questions',
+    formulaTitle: 'Formula',
+    assumptionsTitle: 'Assumptions and rules',
+    backTools: 'Tools',
+    moreTools: 'More tools',
+    notMedical: 'Estimates only, not medical advice.',
+    notFinancial: 'Estimates only, not financial advice.',
+    unitNote: 'Converted values are rounded for display.',
+    download: 'Download',
+    downloadFail: 'Download failed. Try again.',
+    clear: 'Clear',
+    swap: 'Swap',
+    add: 'Add',
+    remove: 'Remove',
+    close: 'Close',
+    yes: 'Yes',
+    no: 'No',
+    errorInvalid: 'Enter a valid number.',
+    errorRequired: 'Fill in this field.',
+    errorGeneric: 'Could not calculate. Check the inputs.',
+    storageFail: 'Could not write to local storage, so this setting will not be saved.',
+    noscript: 'This tool needs JavaScript to run. All calculations happen on your device; nothing is uploaded.',
+
+    /* ---- tool-specific keys: replace below this line ---- */
+    // TOOL_DICT_EN
+    kickerInput: 'Input',
+    kickerOutput: 'Output',
+    inputLabel: 'XML text',
+    inputPh: 'Paste XML, or open a local file.',
+    indentLabel: 'Indent',
+    indent2: '2 spaces',
+    indent4: '4 spaces',
+    indentTab: 'Tab',
+    keepCommentsLabel: 'Keep comments when minifying',
+    keepCommentsHint: 'Keep comment contents',
+    btnFormat: 'Format',
+    btnMinify: 'Minify to one line',
+    btnOpenFile: 'Open local file',
+    btnExample: 'Load example',
+    btnClear: 'Clear',
+    btnCopy: 'Copy result',
+    btnDownload: 'Download .xml',
+    outputAria: 'XML output',
+    emptyState: 'Waiting for input',
+    summaryFormat: '{lines} lines · {elements} elements',
+    summaryMinified: 'Minified to {chars} characters',
+    statLines: 'Lines',
+    statElements: 'Elements',
+    statChars: 'Characters',
+    errEmpty: 'Enter some XML first.',
+    errUnclosedTag: 'Tag is not closed: {name}',
+    errUnexpectedClose: 'Unexpected closing tag: {name}',
+    errMismatched: 'Tags do not match: expected {expected}, got {got}',
+    errUnclosedComment: 'A comment is not closed.',
+    errUnclosedCdata: 'CDATA is not closed.',
+    errUnclosedPi: 'A processing instruction is not closed.',
+    errBadTagName: 'Invalid tag name.',
+    errorAt: 'line {line}, column {column}',
+    fileHint: 'Files are read with the browser FileReader. Nothing is uploaded or saved automatically.',
+    fileTooLarge: 'The file is larger than 2 MB, so reading stopped.',
+    fileReadFail: 'Could not read the file. Try again.',
+    exampleNote: 'The example includes a declaration, comments, attributes, a self-closing tag and CDATA.',
+    eTitle1: 'What is checked',
+    eText1: 'Only tag closure, crossed nesting, and complete comments and CDATA are checked. XSD, DTD and business fields are not validated. Tag names are case-sensitive.',
+    eTitle2: 'Formatting rules',
+    eText2: 'Each tag gets its own line with indentation by depth. Text-only elements stay on one line, attributes are preserved, and self-closing tags keep the /> form.',
+    eTitle3: 'CDATA and comments',
+    eText3: 'CDATA content is never rewritten and comment content is unchanged. Minify keeps comments by default; you can turn that off. Both modes keep CDATA.',
+    eTitle4: 'Minify and errors',
+    eText4: 'Minifying removes indentation whitespace between tags and keeps text content. Mismatched tags return the first failing line and column so missing or extra closing tags are easy to find.',
+    faqQ1: 'Does it validate XML Schema?',
+    faqA1: 'No. It only checks tag nesting and basic syntax, not XSD, DTD or business fields. Structurally valid XML can still violate your API contract.',
+    faqQ2: 'Are CDATA and comments changed?',
+    faqA2: 'They are preserved by default. Formatting only adjusts indentation between tags and never rewrites CDATA text or comment contents. Minify keeps them but removes extra whitespace.',
+    faqQ3: 'Why are some self-closing tags expanded?',
+    faqA3: 'The tool outputs the style you choose, and self-closing tags keep the /> form. If the source mixes both styles, formatting normalizes them, which is expected.'
+  },
+  id: {
+    /* ---- generic keys: do not remove ---- */
+    docTitle: 'Formatter XML',
+    docDesc: 'Rapikan atau minify XML secara lokal, pertahankan komentar dan CDATA, serta tampilkan lokasi tag tidak cocok untuk konfigurasi dan payload API. Diproses lokal, tanpa daftar.',
+    appTitle: 'Formatter XML',
+    tagline: 'Rapikan struktur, temukan masalahnya.',
+    eyebrow: 'Alat gratis · berjalan lokal',
+    privacy: 'Semua perhitungan berjalan di browser Anda. Tidak ada yang diunggah.',
+    skip: 'Lompat ke alat',
+    navAria: 'Navigasi situs',
+    navHall: 'Alat',
+    navGames: 'Permainan',
+    langLabel: 'Bahasa',
+    langZh: '中文',
+    langEn: 'EN',
+    langId: 'ID',
+    brandName: 'Devin',
+    brandHome: 'Beranda Devin',
+    navHome: 'Beranda',
+    footerAria: 'Navigasi footer',
+    footerNote: 'Semua diproses secara lokal. Tidak ada data yang diunggah.',
+    copyright: '© 2026 Devin',
+    copy: 'Salin hasil',
+    copied: 'Tersalin.',
+    copyFail: 'Tidak bisa menyalin otomatis. Pilih teksnya lalu salin manual.',
+    copyHint: 'Menyalin angka polos tanpa pemisah ribuan.',
+    reset: 'Atur ulang',
+    result: 'Hasil',
+    explainTitle: 'Rumus dan asumsi',
+    faqTitle: 'Pertanyaan yang sering diajukan',
+    formulaTitle: 'Rumus',
+    assumptionsTitle: 'Asumsi dan aturan',
+    backTools: 'Alat',
+    moreTools: 'Alat lainnya',
+    notMedical: 'Hanya perkiraan, bukan saran medis.',
+    notFinancial: 'Hanya perkiraan, bukan saran keuangan.',
+    unitNote: 'Nilai hasil konversi dibulatkan untuk tampilan.',
+    download: 'Unduh',
+    downloadFail: 'Unduh gagal. Coba lagi.',
+    clear: 'Bersihkan',
+    swap: 'Tukar',
+    add: 'Tambah',
+    remove: 'Hapus',
+    close: 'Tutup',
+    yes: 'Ya',
+    no: 'Tidak',
+    errorInvalid: 'Masukkan angka yang valid.',
+    errorRequired: 'Isi kolom ini.',
+    errorGeneric: 'Tidak dapat menghitung. Periksa input.',
+    storageFail: 'Tidak bisa menulis ke penyimpanan lokal, jadi pengaturan ini tidak akan disimpan.',
+    noscript: 'Alat ini memerlukan JavaScript. Semua perhitungan terjadi di perangkat Anda; tidak ada yang diunggah.',
+
+    /* ---- tool-specific keys: replace below this line ---- */
+    // TOOL_DICT_ID
+    kickerInput: 'Masukan',
+    kickerOutput: 'Keluaran',
+    inputLabel: 'Teks XML',
+    inputPh: 'Tempel XML, atau buka berkas lokal.',
+    indentLabel: 'Indentasi',
+    indent2: '2 spasi',
+    indent4: '4 spasi',
+    indentTab: 'Tab',
+    keepCommentsLabel: 'Pertahankan komentar saat minify',
+    keepCommentsHint: 'Pertahankan isi komentar',
+    btnFormat: 'Rapikan',
+    btnMinify: 'Minify jadi satu baris',
+    btnOpenFile: 'Buka berkas lokal',
+    btnExample: 'Muat contoh',
+    btnClear: 'Bersihkan',
+    btnCopy: 'Salin hasil',
+    btnDownload: 'Unduh .xml',
+    outputAria: 'Keluaran XML',
+    emptyState: 'Menunggu masukan',
+    summaryFormat: '{lines} baris · {elements} elemen',
+    summaryMinified: 'Diringkas menjadi {chars} karakter',
+    statLines: 'Baris',
+    statElements: 'Elemen',
+    statChars: 'Karakter',
+    errEmpty: 'Masukkan XML terlebih dahulu.',
+    errUnclosedTag: 'Tag belum ditutup: {name}',
+    errUnexpectedClose: 'Ada tag penutup berlebih: {name}',
+    errMismatched: 'Tag tidak cocok: diharapkan {expected}, ditemukan {got}',
+    errUnclosedComment: 'Komentar belum ditutup.',
+    errUnclosedCdata: 'CDATA belum ditutup.',
+    errUnclosedPi: 'Instruksi pemrosesan belum ditutup.',
+    errBadTagName: 'Nama tag tidak valid.',
+    errorAt: 'baris {line}, kolom {column}',
+    fileHint: 'Berkas dibaca dengan FileReader browser. Tidak ada yang diunggah atau disimpan otomatis.',
+    fileTooLarge: 'Berkas lebih dari 2 MB, pembacaan dihentikan.',
+    fileReadFail: 'Berkas tidak dapat dibaca. Coba lagi.',
+    exampleNote: 'Contoh memuat deklarasi, komentar, atribut, tag self-closing, dan CDATA.',
+    eTitle1: 'Cakupan pemeriksaan',
+    eText1: 'Hanya penutupan tag, persilangan sarang, serta kelengkapan komentar dan CDATA yang diperiksa. XSD, DTD, dan bidang bisnis tidak divalidasi. Nama tag peka huruf besar-kecil.',
+    eTitle2: 'Aturan perapian',
+    eText2: 'Setiap tag mendapat baris sendiri dengan indentasi sesuai kedalaman. Elemen berisi teks saja tetap satu baris, atribut dipertahankan, dan tag self-closing tetap memakai bentuk />.',
+    eTitle3: 'CDATA dan komentar',
+    eText3: 'Isi CDATA tidak pernah diubah dan isi komentar tetap. Minify mempertahankan komentar secara bawaan dan bisa dimatikan. Kedua mode mempertahankan CDATA.',
+    eTitle4: 'Minify dan galat',
+    eText4: 'Minify menghapus spasi indentasi antartag dan mempertahankan isi teks. Tag yang tidak cocok menampilkan baris dan kolom pertama yang bermasalah agar tag penutup yang hilang atau berlebih mudah ditemukan.',
+    faqQ1: 'Apakah XML Schema divalidasi?',
+    faqA1: 'Tidak. Hanya sarang tag dan sintaks dasar yang diperiksa, bukan XSD, DTD, atau bidang bisnis. XML yang valid secara struktur tetap bisa melanggar kontrak API Anda.',
+    faqQ2: 'Apakah CDATA dan komentar diubah?',
+    faqA2: 'Keduanya dipertahankan secara bawaan. Perapian hanya menyesuaikan indentasi antartag dan tidak menulis ulang teks CDATA atau isi komentar. Minify mempertahankannya tetapi menghapus spasi berlebih.',
+    faqQ3: 'Mengapa sebagian tag self-closing diperluas?',
+    faqA3: 'Alat mengeluarkan gaya yang Anda pilih, dan tag self-closing tetap memakai bentuk />. Jika sumber mencampur kedua gaya, perapian menormalkannya, dan itu memang diharapkan.'
+  }
+};
+</script>
+
+<!-- ==========================================================================
+     UI RUNTIME — language switching plus the global ToolUI helpers.
+     Builder replaces only the TOOL_UI_START / TOOL_UI_END block.
+     ========================================================================== -->
+<script>
+(function () {
+  'use strict';
+
+  var I18N = (typeof TOOL_I18N !== 'undefined') ? TOOL_I18N : { zh: {}, en: {}, id: {} };
+  var TOOL_SLUG = 'xml-formatter';
+  var LANG_KEY = 'hhfa.tool.' + TOOL_SLUG + '.lang';
+  var LANGS = ['zh', 'en', 'id'];
+  var LOCALES = { zh: 'zh-CN', en: 'en-US', id: 'id-ID' };
+  var OG_LOCALES = { zh: 'zh_CN', en: 'en_US', id: 'id_ID' };
+  var state = { lang: 'zh' };
+  var toastTimer = null;
+  var started = false;
+  var langHooks = [];
+
+  function $(sel) {
+    return typeof sel === 'string' ? document.querySelector(sel) : sel;
+  }
+
+  function $$(sel) {
+    return Array.prototype.slice.call(document.querySelectorAll(sel));
+  }
+
+  function T(key, vars) {
+    var dict = I18N[state.lang] || {};
+    var value = Object.prototype.hasOwnProperty.call(dict, key) ? dict[key] : null;
+    if (typeof value !== 'string' && I18N.zh && typeof I18N.zh[key] === 'string') {
+      value = I18N.zh[key];
+    }
+    if (typeof value !== 'string') return key;
+    if (vars) {
+      value = value.replace(/\{(\w+)\}/g, function (match, name) {
+        return vars[name] != null ? String(vars[name]) : '';
+      });
+    }
+    return value;
+  }
+
+  function locale() {
+    return LOCALES[state.lang] || 'en-US';
+  }
+
+  function fmt(n, opts) {
+    if (typeof n !== 'number' || !isFinite(n)) return '—';
+    try {
+      return new Intl.NumberFormat(locale(), opts || {}).format(n);
+    } catch (e) {
+      return String(n);
+    }
+  }
+
+  function toast(message) {
+    var el = $('#toast');
+    if (!el) return;
+    el.textContent = message == null ? '' : String(message);
+    el.classList.add('on');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove('on'); }, 2600);
+  }
+
+  function legacyCopy(text) {
+    try {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.top = '-1000px';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { ta.setSelectionRange(0, ta.value.length); } catch (e) { /* ignore */ }
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      document.body.removeChild(ta);
+      return ok;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function copy(text) {
+    var value = text == null ? '' : String(text);
+    return new Promise(function (resolve) {
+      function done() { toast(T('copied')); resolve(true); }
+      function fail() { toast(T('copyFail')); resolve(false); }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(value).then(done, function () {
+          if (legacyCopy(value)) done(); else fail();
+        });
+      } else if (legacyCopy(value)) {
+        done();
+      } else {
+        fail();
+      }
+    });
+  }
+
+  function download(name, content, mime) {
+    try {
+      var blob = new Blob([content], { type: mime || 'text/plain;charset=utf-8' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = name || 'download.txt';
+      a.rel = 'noopener';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function () {
+        try {
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        } catch (e) { /* ignore */ }
+      }, 0);
+      return true;
+    } catch (e) {
+      toast(T('downloadFail'));
+      return false;
+    }
+  }
+
+  function readStore(key, fallback) {
+    try {
+      var raw = localStorage.getItem(key);
+      if (raw == null) return fallback;
+      var value = JSON.parse(raw);
+      return value == null ? fallback : value;
+    } catch (e) {
+      return fallback;
+    }
+  }
+
+  function writeStore(key, value) {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+      return true;
+    } catch (e) {
+      toast(T('storageFail'));
+      return false;
+    }
+  }
+
+  function debounce(fn, ms) {
+    var timer = null;
+    var wait = isFinite(ms) ? ms : 150;
+    return function () {
+      var ctx = this;
+      var args = arguments;
+      clearTimeout(timer);
+      timer = setTimeout(function () { fn.apply(ctx, args); }, wait);
+    };
+  }
+
+  function on(target, event, handler) {
+    var el = typeof target === 'string' ? $(target) : target;
+    if (!el || !el.addEventListener) return function () {};
+    el.addEventListener(event, handler);
+    return function () { el.removeEventListener(event, handler); };
+  }
+
+  function setError(el, message) {
+    if (!el) return;
+    if (!message) { clearError(el); return; }
+    el.textContent = String(message);
+    el.hidden = false;
+    el.classList.add('on');
+  }
+
+  function clearError(el) {
+    if (!el) return;
+    el.textContent = '';
+    el.hidden = true;
+    el.classList.remove('on');
+  }
+
+  function onLangChange(fn) {
+    if (typeof fn !== 'function') return function () {};
+    langHooks.push(fn);
+    if (started) {
+      try { fn(state.lang); } catch (e) { /* a broken hook must not break switching */ }
+    }
+    return function () {
+      var i = langHooks.indexOf(fn);
+      if (i !== -1) langHooks.splice(i, 1);
+    };
+  }
+
+  function setMeta(attr, name, content) {
+    var nodes = document.querySelectorAll('meta');
+    for (var i = 0; i < nodes.length; i++) {
+      if (nodes[i].getAttribute(attr) === name) {
+        nodes[i].setAttribute('content', content);
+        return;
+      }
+    }
+  }
+
+  function renderLanguage() {
+    var lang = state.lang;
+    document.documentElement.lang = lang === 'zh' ? 'zh-CN' : lang;
+
+    var nodes = $$('[data-i]');
+    for (var i = 0; i < nodes.length; i++) {
+      nodes[i].textContent = T(nodes[i].getAttribute('data-i'));
+    }
+    var placeholders = $$('[data-i-ph]');
+    for (var j = 0; j < placeholders.length; j++) {
+      placeholders[j].setAttribute('placeholder', T(placeholders[j].getAttribute('data-i-ph')));
+    }
+    var labelled = $$('[data-i-aria]');
+    for (var k = 0; k < labelled.length; k++) {
+      labelled[k].setAttribute('aria-label', T(labelled[k].getAttribute('data-i-aria')));
+    }
+    var buttons = $$('[data-lang]');
+    for (var b = 0; b < buttons.length; b++) {
+      buttons[b].setAttribute('aria-pressed', buttons[b].getAttribute('data-lang') === lang ? 'true' : 'false');
+    }
+
+    document.title = T('docTitle');
+    setMeta('name', 'description', T('docDesc'));
+    setMeta('property', 'og:title', T('docTitle'));
+    setMeta('property', 'og:description', T('docDesc'));
+    setMeta('property', 'og:locale', OG_LOCALES[lang] || 'en_US');
+    setMeta('name', 'twitter:title', T('docTitle'));
+    setMeta('name', 'twitter:description', T('docDesc'));
+
+    var toolsHref = lang === 'zh' ? '/tools/' : '/tools/' + lang + '/';
+    var links = $$('[data-tools-link]');
+    for (var l = 0; l < links.length; l++) links[l].setAttribute('href', toolsHref);
+  }
+
+  function applyLang() {
+    renderLanguage();
+    for (var i = 0; i < langHooks.length; i++) {
+      try { langHooks[i](state.lang); } catch (e) { /* keep the page usable */ }
+    }
+    started = true;
+  }
+
+  function detectLang() {
+    try {
+      var q = new URLSearchParams(window.location.search).get('lang');
+      if (LANGS.indexOf(q) !== -1) return q;
+    } catch (e) { /* ignore */ }
+    try {
+      var saved = localStorage.getItem(LANG_KEY);
+      if (LANGS.indexOf(saved) !== -1) return saved;
+    } catch (e) { /* ignore */ }
+    var nav = String(navigator.language || '').toLowerCase();
+    if (nav.indexOf('zh') === 0) return 'zh';
+    if (nav.indexOf('id') === 0 || nav.indexOf('in') === 0) return 'id';
+    return 'en';
+  }
+
+  function saveLang() {
+    try { localStorage.setItem(LANG_KEY, state.lang); } catch (e) { /* ignore */ }
+  }
+
+  function bindLanguages() {
+    var buttons = $$('[data-lang]');
+    for (var i = 0; i < buttons.length; i++) {
+      (function (button) {
+        button.addEventListener('click', function () {
+          var next = button.getAttribute('data-lang');
+          if (LANGS.indexOf(next) === -1 || next === state.lang) return;
+          state.lang = next;
+          saveLang();
+          applyLang();
+        });
+      })(buttons[i]);
+    }
+  }
+
+  function init() {
+    state.lang = detectLang();
+    bindLanguages();
+    applyLang();
+  }
+
+  var ToolUI = {
+    T: T,
+    fmt: fmt,
+    copy: copy,
+    toast: toast,
+    download: download,
+    readStore: readStore,
+    writeStore: writeStore,
+    debounce: debounce,
+    on: on,
+    setError: setError,
+    clearError: clearError,
+    onLangChange: onLangChange,
+    lang: function () { return state.lang; },
+    locale: locale,
+    $: $,
+    $$: $$
+  };
+
+  window.ToolUI = ToolUI;
+  window.T = T;
+
+  // TOOL_UI_START
+  (function () {
+    var input = ToolUI.$('#xml-input');
+    var indent = ToolUI.$('#indent');
+    var keepComments = ToolUI.$('#keep-comments');
+    var output = ToolUI.$('#xml-output');
+    var summary = ToolUI.$('#xml-summary');
+    var stats = ToolUI.$('#xml-stats');
+    var statLines = ToolUI.$('#stat-lines');
+    var statElements = ToolUI.$('#stat-elements');
+    var statChars = ToolUI.$('#stat-chars');
+    var errorBox = ToolUI.$('#xml-error');
+    var copyButton = ToolUI.$('#copy');
+    var downloadButton = ToolUI.$('#download');
+    var fileInput = ToolUI.$('#file');
+    if (!input || !output) return;
+
+    var lastOutput = '';
+    var lastMinified = false;
+
+    function clearView() {
+      lastOutput = '';
+      lastMinified = false;
+      output.textContent = '';
+      if (summary) { summary.textContent = ToolUI.T('emptyState'); summary.removeAttribute('data-i'); }
+      if (stats) stats.hidden = true;
+      if (copyButton) copyButton.disabled = true;
+      if (downloadButton) downloadButton.disabled = true;
+      ToolUI.clearError(errorBox);
+      input.removeAttribute('aria-invalid');
+    }
+
+    function errorText(result) {
+      var at = '';
+      if (result.line != null && result.column != null) {
+        at = ' ' + ToolUI.T('errorAt', { line: result.line, column: result.column });
+      }
+      if (result.error === 'empty_input') return ToolUI.T('errEmpty');
+      if (result.error === 'unclosed_tag') return ToolUI.T('errUnclosedTag', { name: result.name || '' });
+      if (result.error === 'unexpected_close') return ToolUI.T('errUnexpectedClose', { name: result.name || '' }) + at;
+      if (result.error === 'mismatched_tag') {
+        return ToolUI.T('errMismatched', { expected: result.expected || '', got: result.got || '' }) + at;
+      }
+      if (result.error === 'unclosed_comment') return ToolUI.T('errUnclosedComment') + at;
+      if (result.error === 'unclosed_cdata') return ToolUI.T('errUnclosedCdata') + at;
+      if (result.error === 'unclosed_pi') return ToolUI.T('errUnclosedPi') + at;
+      if (result.error === 'bad_tag_name') return ToolUI.T('errBadTagName') + at;
+      return ToolUI.T('errorGeneric') + at;
+    }
+
+    function showError(result) {
+      output.textContent = '';
+      lastOutput = '';
+      if (summary) { summary.textContent = ToolUI.T('emptyState'); summary.removeAttribute('data-i'); }
+      if (stats) stats.hidden = true;
+      if (copyButton) copyButton.disabled = true;
+      if (downloadButton) downloadButton.disabled = true;
+      input.setAttribute('aria-invalid', 'true');
+      ToolUI.setError(errorBox, errorText(result));
+    }
+
+    function publish(result, minified) {
+      if (!result.ok) { showError(result); return; }
+      lastMinified = !!minified;
+      input.removeAttribute('aria-invalid');
+      ToolUI.clearError(errorBox);
+      lastOutput = result.xml;
+      output.textContent = result.xml;
+      if (summary) {
+        summary.removeAttribute('data-i');
+        summary.textContent = minified
+          ? ToolUI.T('summaryMinified', { chars: result.xml.length })
+          : ToolUI.T('summaryFormat', { lines: result.lines, elements: result.elements });
+      }
+      if (stats) stats.hidden = false;
+      if (statLines) statLines.textContent = ToolUI.fmt(result.lines);
+      if (statElements) statElements.textContent = ToolUI.fmt(result.elements);
+      if (statChars) statChars.textContent = ToolUI.fmt(result.xml.length);
+      if (copyButton) copyButton.disabled = false;
+      if (downloadButton) downloadButton.disabled = false;
+    }
+
+    function run(minified) {
+      var text = input.value;
+      if (!text.trim()) { clearView(); return; }
+      var options = {
+        indent: indent ? indent.value : '2',
+        keepComments: keepComments ? keepComments.checked : true
+      };
+      publish(minified ? ToolEngine.minifyXml(text, options) : ToolEngine.formatXml(text, options), minified);
+    }
+
+    ToolUI.on('#format', 'click', function () { run(false); });
+    ToolUI.on('#minify', 'click', function () { run(true); });
+    ToolUI.on(indent, 'change', function () { if (lastOutput) run(lastMinified); });
+    ToolUI.on(keepComments, 'change', function () { if (lastOutput) run(true); });
+    ToolUI.on('#open-file', 'click', function () { if (fileInput) fileInput.click(); });
+    ToolUI.on(fileInput, 'change', function () {
+      var file = fileInput.files && fileInput.files[0];
+      if (!file) return;
+      if (file.size > 2 * 1024 * 1024) {
+        ToolUI.setError(errorBox, ToolUI.T('fileTooLarge'));
+        return;
+      }
+      try {
+        var reader = new FileReader();
+        reader.onload = function () {
+          input.value = String(reader.result || '');
+          run(false);
+        };
+        reader.onerror = function () { ToolUI.setError(errorBox, ToolUI.T('fileReadFail')); };
+        reader.readAsText(file, 'utf-8');
+      } catch (error) {
+        ToolUI.setError(errorBox, ToolUI.T('fileReadFail'));
+      }
+    });
+    ToolUI.on('#example', 'click', function () {
+      input.value = '<?xml version="1.0" encoding="UTF-8"?>\n<config>\n  <!-- application settings -->\n  <server host="example.com" port="8080">\n    <timeout unit="ms">30000</timeout>\n    <retry count="3"/>\n  </server>\n  <script><![CDATA[\n    if (a < b && c > d) { run(); }\n  ]]></scr' + 'ipt>\n</config>\n';
+      run(false);
+      input.focus();
+    });
+    ToolUI.on('#clear', 'click', function () {
+      input.value = '';
+      if (fileInput) fileInput.value = '';
+      clearView();
+      input.focus();
+    });
+    ToolUI.on(copyButton, 'click', function () { if (lastOutput) ToolUI.copy(lastOutput); });
+    ToolUI.on(downloadButton, 'click', function () {
+      if (lastOutput) ToolUI.download('formatted.xml', lastOutput, 'application/xml;charset=utf-8');
+    });
+    ToolUI.onLangChange(function () {
+      if (!input.value.trim()) {
+        if (summary) summary.textContent = ToolUI.T('emptyState');
+      } else {
+        run(lastMinified);
+      }
+    });
+    clearView();
+  })();
+  // TOOL_UI_END
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>

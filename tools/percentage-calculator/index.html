@@ -1,0 +1,1229 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>百分比计算器 — 四种模式，实时显示公式</title>
+<meta name="description" content="免费的百分比计算器：求一个数的百分之几、计算占比、算出变化幅度、按百分比增减，实时展示代入数字后的公式。支持负数与 0–6 位小数，数据只留在本机。">
+<meta name="author" content="Devin">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="theme-color" content="#f2efe7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#101316" media="(prefers-color-scheme: dark)">
+<link rel="canonical" href="https://hhfa008.github.io/tools/percentage-calculator/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23b93d12'/%3E%3Cpath d='M9 23 23 9' stroke='%23fbf9f4' stroke-width='2.4' stroke-linecap='round'/%3E%3Ccircle cx='11' cy='11' r='3' fill='%23fbf9f4'/%3E%3Ccircle cx='21' cy='21' r='3' fill='%23fbf9f4'/%3E%3C/svg%3E">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Devin">
+<meta property="og:title" content="百分比计算器 — 求占比、变化率与增减">
+<meta property="og:description" content="四种百分比模式、实时公式步骤、一键复制。负数与自定义小数位可选，全部在浏览器本地计算。">
+<meta property="og:url" content="https://hhfa008.github.io/tools/percentage-calculator/">
+<meta property="og:locale" content="zh_CN">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="百分比计算器 — 四种模式，实时显示公式">
+<meta name="twitter:description" content="求百分比值、占比、变化率与增减。公式代入数字实时显示，数据留在本机。">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "百分比计算器",
+  "url": "https://hhfa008.github.io/tools/percentage-calculator/",
+  "applicationCategory": "UtilitiesApplication",
+  "operatingSystem": "Any",
+  "browserRequirements": "Requires JavaScript",
+  "isAccessibleForFree": true,
+  "inLanguage": ["zh-CN", "en", "id"],
+  "description": "一个免费的百分比计算器，支持求一个数的百分之几、计算占比、算出变化幅度、按百分比增减，并实时展示代入数字后的公式。",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "为什么基数为 0 时算不出占比或变化率？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "占比是“数值 ÷ 基数 × 100”，变化率也要除以原值的绝对值。除数为 0 时结果没有定义，所以计算器会直接提示，而不是给出无穷大。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "负数百分比怎么理解？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "按同一公式代入即可。例如“增加 −10%”等价于减少 10%，“从 −100 到 −50”的变化率是 50%，因为分母取原值的绝对值。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "改变小数位会影响计算精度吗？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "不会。内部始终保留完整精度，小数位只决定结果显示和复制时的位数；默认 2 位，可选 0–6 位，采用四舍五入。"
+      }
+    }
+  ]
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "首页", "item": "https://hhfa008.github.io/" },
+    { "@type": "ListItem", "position": 2, "name": "工具大厅", "item": "https://hhfa008.github.io/tools/" },
+    { "@type": "ListItem", "position": 3, "name": "百分比计算器", "item": "https://hhfa008.github.io/tools/percentage-calculator/" }
+  ]
+}
+</script>
+
+<style>
+:root{
+  --paper:#f2efe7; --paper-2:#fbf9f4; --panel:#ffffff;
+  --ink:#14171a; --muted:#5b615c; --muted-2:#7b807a;
+  --line:#d5d0c4; --line-strong:#bcb5a7;
+  --accent:#b93d12; --accent-soft:#f2a07a; --accent-wash:#f7e5da;
+  --ok:#2f6b3c; --ok-wash:#e8f2e7; --warn:#8a5a00; --warn-wash:#fbf1db;
+  --bad:#a32216; --bad-wash:#fbe7e3;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --radius:16px; --max:1040px;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --paper:#101316; --paper-2:#171b1f; --panel:#1a1f23;
+    --ink:#f2efe7; --muted:#b7b3a8; --muted-2:#948f85;
+    --line:#333a40; --line-strong:#4a535b;
+    --accent:#f08a5d; --accent-soft:#f2a07a; --accent-wash:#2b211c;
+    --ok:#8fd19e; --ok-wash:#1b2b1e; --warn:#f0c36a; --warn-wash:#2d2618;
+    --bad:#ff8a7a; --bad-wash:#321d1a;
+  }
+}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%;color-scheme:light dark;scroll-behavior:smooth}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font:16px/1.6 var(--sans);overflow-x:clip;
+  text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased;
+}
+p,h1,h2,h3,ul{margin:0}
+a{color:inherit}
+button,input,select{font:inherit;color:inherit}
+.wrap{width:100%;max-width:var(--max);margin:0 auto;padding-left:18px;padding-right:18px}
+@media (min-width:720px){.wrap{padding-left:32px;padding-right:32px}}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.skip-link{position:absolute;left:12px;top:-70px;z-index:100;padding:12px 16px;background:var(--ink);color:var(--paper);border-radius:8px;text-decoration:none}
+.skip-link:focus{top:12px}
+:focus-visible{outline:3px solid rgba(185,61,18,.55);outline-offset:3px}
+.site-header{border-bottom:1px solid var(--line);background:var(--paper)}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:64px;flex-wrap:wrap;padding-top:6px;padding-bottom:6px}
+.brand{display:inline-flex;align-items:center;gap:10px;font-weight:700;letter-spacing:-.02em;text-decoration:none;min-height:44px}
+.brand-mark{width:26px;height:26px;border-radius:7px;background:var(--accent);position:relative;flex:none}
+.brand-mark::before,.brand-mark::after{content:"";position:absolute;left:7px;right:7px;height:2px;background:var(--paper-2);border-radius:1px}
+.brand-mark::before{top:9px}
+.brand-mark::after{top:15px;right:11px}
+.header-tools{display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:flex-end}
+.site-nav{display:flex;align-items:center;gap:14px;font-size:13.5px}
+.site-nav a{display:inline-flex;align-items:center;min-height:44px;text-decoration:none;color:var(--muted)}
+.site-nav a:hover{color:var(--accent);text-decoration:underline}
+.langs{display:flex;gap:3px}
+.langs button{min-width:44px;min-height:44px;padding:0 8px;border:1px solid var(--line-strong);border-radius:9px;background:transparent;color:var(--muted);font-size:12.5px;font-weight:650;cursor:pointer}
+.langs button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+@media (prefers-color-scheme:dark){.langs button[aria-pressed="true"]{color:#101316}}
+.hero{padding:36px 0 22px}
+@media (min-width:720px){.hero{padding:52px 0 28px}}
+.eyebrow{margin:0 0 10px;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+h1{margin:0 0 12px;max-width:20ch;font-size:clamp(1.85rem,6vw,2.9rem);line-height:1.1;letter-spacing:-.035em;font-weight:700}
+.lede{max-width:70ch;color:var(--muted);font-size:clamp(1rem,2vw,1.08rem)}
+.privacy{display:flex;gap:9px;align-items:flex-start;max-width:78ch;margin:16px 0 0;padding:11px 14px;background:var(--accent-wash);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:0 10px 10px 0;font-size:13.5px}
+.privacy svg{width:17px;height:17px;flex:none;margin-top:2px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;align-items:start}
+@media (min-width:900px){
+  .layout{grid-template-columns:minmax(0,1.04fr) minmax(0,.96fr)}
+  .results-col{position:sticky;top:18px}
+}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px}
+@media (min-width:720px){.card{padding:26px 28px}}
+.card-kicker{margin:0 0 7px;font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.11em;text-transform:uppercase;color:var(--accent)}
+.card h2{margin:0 0 14px;font-size:clamp(1.15rem,2.4vw,1.4rem);line-height:1.2;letter-spacing:-.02em}
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
+.tabs [role="tab"]{min-height:44px;padding:9px 14px;border:1px solid var(--line-strong);border-radius:999px;background:var(--paper-2);font-size:13.5px;font-weight:650;cursor:pointer;line-height:1.2}
+.tabs [role="tab"][aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+@media (prefers-color-scheme:dark){.tabs [role="tab"][aria-selected="true"]{color:#101316}}
+.panel-desc{margin:0 0 14px;color:var(--muted);font-size:14px}
+.panel-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
+@media (min-width:600px){.panel-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field>label{font-size:13px;font-weight:650;color:var(--muted)}
+.field input,.field select{width:100%;min-height:52px;padding:10px 12px;border:1px solid var(--line-strong);border-radius:12px;background:var(--paper-2);font-size:17px;appearance:none}
+.field select{padding-right:34px;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 18px) 50%,calc(100% - 13px) 50%;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+.field input:focus,.field select:focus{border-color:var(--accent);outline:3px solid rgba(185,61,18,.28);outline-offset:1px}
+.field input[aria-invalid="true"]{border-color:var(--bad)}
+.err{margin:0;color:var(--bad);font-size:12.5px;font-weight:600;line-height:1.4}
+.result-card{background:var(--paper-2)}
+.result-live{min-height:96px}
+.big{margin:2px 0 0;font-family:var(--mono);font-size:clamp(2.1rem,7.5vw,3rem);font-weight:650;line-height:1.08;letter-spacing:-.04em;color:var(--accent);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.context{margin-top:7px;color:var(--muted);font-size:14px;overflow-wrap:anywhere}
+.context.dir-increase{color:var(--ok);font-weight:600}
+.context.dir-decrease{color:var(--bad);font-weight:600}
+.context.dir-none{color:var(--muted-2);font-weight:600}
+.result-error{margin:10px 0 0;padding:9px 12px;border-radius:9px;background:var(--bad-wash);color:var(--bad);font-size:13px;font-weight:600;line-height:1.5}
+.steps{margin-top:16px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+.steps-label{margin:0 0 5px;font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.steps code{display:block;font-family:var(--mono);font-size:13.5px;line-height:1.65;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.result-controls{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;margin-top:16px}
+.result-controls .field{flex:1 1 100px}
+.result-controls .btn{flex:1 1 150px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 16px;border:1px solid var(--line-strong);border-radius:12px;background:var(--panel);font-size:14.5px;font-weight:650;cursor:pointer;text-decoration:none}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+@media (prefers-color-scheme:dark){.btn.primary{color:#101316}}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.hint{margin:10px 0 0;color:var(--muted-2);font-size:12.5px;line-height:1.55}
+.explain{margin-top:18px}
+.explain summary{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:18px 20px;cursor:pointer;font-weight:650;list-style:none}
+.explain summary::-webkit-details-marker{display:none}
+.explain summary::after{content:"+";flex:none;font-family:var(--mono);font-size:20px;line-height:1;color:var(--accent)}
+.explain[open] summary::after{content:"\2212"}
+.explain-body{padding:0 20px 22px}
+.formula-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;margin-bottom:18px}
+@media (min-width:760px){.formula-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.formula{min-width:0;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--paper-2)}
+.formula h3{margin:0 0 7px;font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.formula code{display:inline-block;max-width:100%;padding:2px 6px;border-radius:5px;background:var(--accent-wash);font-family:var(--mono);font-size:12.5px;line-height:1.6;overflow-wrap:anywhere}
+.assumptions{margin:0;padding-left:20px;color:var(--muted);font-size:13.5px}
+.assumptions li{margin:0 0 8px}
+.faq{margin-top:18px}
+.faq h2{margin:0 0 12px;font-size:clamp(1.3rem,3vw,1.7rem);letter-spacing:-.02em}
+.faq details{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:0 20px}
+.faq details+details{margin-top:10px}
+.faq summary{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px 0;cursor:pointer;font-weight:650;list-style:none}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";flex:none;font-family:var(--mono);font-size:19px;line-height:1;color:var(--accent)}
+.faq details[open] summary::after{content:"\2212"}
+.faq details p{margin:0;padding:0 0 18px;color:var(--muted);font-size:14px;max-width:80ch}
+.site-footer{margin-top:28px;padding:22px 0 34px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted)}
+.footer-inner{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 18px}
+.site-footer a{color:var(--accent);text-decoration:none;display:inline-flex;align-items:center;min-height:44px}
+.site-footer a:hover{text-decoration:underline}
+#toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translate(-50%,12px);z-index:20;max-width:calc(100vw - 32px);padding:12px 18px;border-radius:12px;background:var(--ink);color:var(--paper);font-size:14px;font-weight:600;text-align:center;box-shadow:0 8px 24px rgb(0 0 0 / .22);opacity:0;pointer-events:none;transition:opacity .16s,transform .16s}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .btn:active{transform:none}
+}
+@media print{
+  .site-header,.site-footer,.tabs,.result-controls,.skip-link,#toast{display:none!important}
+  body{background:#fff;color:#000}
+  .card{border-color:#999;background:#fff;break-inside:avoid}
+  .results-col{position:static}
+  .big{color:#000}
+  .explain-body,.faq details p{display:block!important}
+  details{break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#calculator" data-i="skip">跳到计算器</a>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true"></span>Devin</a>
+    <div class="header-tools">
+      <nav class="site-nav" aria-label="站点导航" data-i-aria="navAria">
+        <a id="nav-tools" href="/tools/" data-i="navTools">工具大厅</a>
+        <a href="/games/" data-i="navGames">在线桌游</a>
+      </nav>
+      <nav class="langs" aria-label="语言" data-i-aria="langAria">
+        <button type="button" data-lang="zh" aria-pressed="true">中文</button>
+        <button type="button" data-lang="en" aria-pressed="false">EN</button>
+        <button type="button" data-lang="id" aria-pressed="false">ID</button>
+      </nav>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero" aria-labelledby="page-title">
+    <p class="eyebrow" data-i="eyebrow">免费工具 · 百分比与比例</p>
+    <h1 id="page-title" data-i="appTitle">百分比计算器</h1>
+    <p class="lede" data-i="tagline">四种模式，输入即算，步骤和公式一眼看清。</p>
+    <p class="privacy">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+      <span data-i="privacy">所有计算都在你的浏览器里完成，输入不会上传。</span>
+    </p>
+  </section>
+
+  <div class="layout">
+    <section class="card" id="calculator" aria-labelledby="input-title">
+      <p class="card-kicker" data-i="inputKicker">计算器</p>
+      <h2 id="input-title" data-i="inputTitle">选择模式并输入数值</h2>
+
+      <div class="tabs" role="tablist" id="tabs" aria-label="计算模式" data-i-aria="tabsAria">
+        <button type="button" role="tab" id="tab-1" data-mode="1" aria-controls="panel-1" aria-selected="true" tabindex="0" data-i="tab1">求百分比值</button>
+        <button type="button" role="tab" id="tab-2" data-mode="2" aria-controls="panel-2" aria-selected="false" tabindex="-1" data-i="tab2">求占比</button>
+        <button type="button" role="tab" id="tab-3" data-mode="3" aria-controls="panel-3" aria-selected="false" tabindex="-1" data-i="tab3">求变化率</button>
+        <button type="button" role="tab" id="tab-4" data-mode="4" aria-controls="panel-4" aria-selected="false" tabindex="-1" data-i="tab4">增减计算</button>
+      </div>
+
+      <div id="panel-1" role="tabpanel" aria-labelledby="tab-1">
+        <p class="panel-desc" data-i="mode1Desc">计算一个数在指定百分比下是多少，例如 200 的 15%。</p>
+        <div class="panel-grid two">
+          <div class="field">
+            <label for="p1-percent" data-i="labelPercent">百分比 (%)</label>
+            <input id="p1-percent" type="text" inputmode="decimal" autocomplete="off" value="15" placeholder="例如 15" data-i-ph="phPercent" aria-describedby="e1-percent">
+            <p class="err" id="e1-percent" role="alert" hidden></p>
+          </div>
+          <div class="field">
+            <label for="p1-value" data-i="labelValue">数值</label>
+            <input id="p1-value" type="text" inputmode="decimal" autocomplete="off" value="200" placeholder="例如 200" data-i-ph="phValue" aria-describedby="e1-value">
+            <p class="err" id="e1-value" role="alert" hidden></p>
+          </div>
+        </div>
+      </div>
+
+      <div id="panel-2" role="tabpanel" aria-labelledby="tab-2" hidden>
+        <p class="panel-desc" data-i="mode2Desc">计算一个数占另一个数的百分比，例如 30 是 200 的百分之几。</p>
+        <div class="panel-grid two">
+          <div class="field">
+            <label for="p2-x" data-i="labelX">数值 X</label>
+            <input id="p2-x" type="text" inputmode="decimal" autocomplete="off" value="30" placeholder="例如 30" data-i-ph="phX" aria-describedby="e2-x">
+            <p class="err" id="e2-x" role="alert" hidden></p>
+          </div>
+          <div class="field">
+            <label for="p2-y" data-i="labelY">基数 Y</label>
+            <input id="p2-y" type="text" inputmode="decimal" autocomplete="off" value="200" placeholder="例如 200（不能为 0）" data-i-ph="phY" aria-describedby="e2-y">
+            <p class="err" id="e2-y" role="alert" hidden></p>
+          </div>
+        </div>
+      </div>
+
+      <div id="panel-3" role="tabpanel" aria-labelledby="tab-3" hidden>
+        <p class="panel-desc" data-i="mode3Desc">计算从原值到新值的变化百分比，例如从 200 到 250。</p>
+        <div class="panel-grid two">
+          <div class="field">
+            <label for="p3-from" data-i="labelFrom">原值</label>
+            <input id="p3-from" type="text" inputmode="decimal" autocomplete="off" value="200" placeholder="例如 200" data-i-ph="phFrom" aria-describedby="e3-from">
+            <p class="err" id="e3-from" role="alert" hidden></p>
+          </div>
+          <div class="field">
+            <label for="p3-to" data-i="labelTo">新值</label>
+            <input id="p3-to" type="text" inputmode="decimal" autocomplete="off" value="250" placeholder="例如 250" data-i-ph="phTo" aria-describedby="e3-to">
+            <p class="err" id="e3-to" role="alert" hidden></p>
+          </div>
+        </div>
+      </div>
+
+      <div id="panel-4" role="tabpanel" aria-labelledby="tab-4" hidden>
+        <p class="panel-desc" data-i="mode4Desc">在原值基础上增加或减少指定百分比。</p>
+        <div class="panel-grid two">
+          <div class="field">
+            <label for="p4-value" data-i="labelApplyValue">原值</label>
+            <input id="p4-value" type="text" inputmode="decimal" autocomplete="off" value="200" placeholder="例如 200" data-i-ph="phApplyValue" aria-describedby="e4-value">
+            <p class="err" id="e4-value" role="alert" hidden></p>
+          </div>
+          <div class="field">
+            <label for="p4-percent" data-i="labelApplyPercent">百分比 (%)</label>
+            <input id="p4-percent" type="text" inputmode="decimal" autocomplete="off" value="10" placeholder="例如 10" data-i-ph="phApplyPercent" aria-describedby="e4-percent">
+            <p class="err" id="e4-percent" role="alert" hidden></p>
+          </div>
+          <div class="field">
+            <label for="p4-mode" data-i="labelDirection">方向</label>
+            <select id="p4-mode">
+              <option value="increase" data-i="dirIncreaseOption">增加</option>
+              <option value="decrease" data-i="dirDecreaseOption">减少</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="results-col">
+      <section class="card result-card" aria-labelledby="result-title">
+        <p class="card-kicker" data-i="resultKicker">结果</p>
+        <h2 id="result-title" data-i="resultTitle">计算结果</h2>
+        <div class="result-live" aria-live="polite">
+          <p class="big" id="result-big">—</p>
+          <p class="context" id="result-context"></p>
+        </div>
+        <p class="result-error" id="result-error" role="alert" hidden></p>
+        <div class="steps">
+          <p class="steps-label" data-i="stepsLabel">计算步骤</p>
+          <code id="result-steps">—</code>
+        </div>
+        <div class="result-controls">
+          <div class="field">
+            <label for="decimals" data-i="decimalsLabel">小数位</label>
+            <select id="decimals">
+              <option value="0">0</option>
+              <option value="1">1</option>
+              <option value="2" selected>2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+              <option value="6">6</option>
+            </select>
+          </div>
+          <button class="btn primary" type="button" id="copy" disabled data-i="copy">复制结果</button>
+        </div>
+        <p class="hint" data-i="copyHint">复制的是未加千分位的纯数值，方便粘贴到表格或脚本。</p>
+      </section>
+    </div>
+  </div>
+
+  <details class="explain" open>
+    <summary data-i="formulaTitle">公式与假设</summary>
+    <div class="explain-body">
+      <p class="panel-desc" data-i="formulaIntro">四种模式共用一组基础公式。页面先按完整精度计算，再按所选小数位四舍五入用于显示。</p>
+      <div class="formula-grid">
+        <div class="formula">
+          <h3 data-i="fPercentOfLabel">求百分比值</h3>
+          <code data-i="fPercentOf">结果 = 数值 × 百分比 ÷ 100</code>
+        </div>
+        <div class="formula">
+          <h3 data-i="fWhatPercentLabel">求占比</h3>
+          <code data-i="fWhatPercent">百分比 = 数值 ÷ 基数 × 100</code>
+        </div>
+        <div class="formula">
+          <h3 data-i="fChangeLabel">求变化率</h3>
+          <code data-i="fChange">变化率 = (新值 − 原值) ÷ |原值| × 100</code>
+        </div>
+        <div class="formula">
+          <h3 data-i="fApplyLabel">按百分比增减</h3>
+          <code data-i="fApply">结果 = 原值 × (1 ± 百分比 ÷ 100)</code>
+        </div>
+      </div>
+      <h3 class="card-kicker" data-i="assumptionsTitle">假设与规则</h3>
+      <ul class="assumptions">
+        <li data-i="a1">允许负数金额和负数百分比，直接代入公式计算；负百分比相当于反方向变化。</li>
+        <li data-i="a2">基数为 0 时，占比和变化率没有定义，页面会就地提示。</li>
+        <li data-i="a3">小数位只影响显示，不改变内部计算精度；默认 2 位，可选 0–6 位，采用四舍五入。</li>
+        <li data-i="a4">所有计算都在浏览器本地完成，输入不会上传。</li>
+        <li data-i="a5">结果仅供估算，不构成财务或商业建议。</li>
+      </ul>
+    </div>
+  </details>
+
+  <section class="faq" aria-labelledby="faq-title">
+    <h2 id="faq-title" data-i="faqTitle">常见问题</h2>
+    <details>
+      <summary data-i="faqQ1">为什么基数为 0 时算不出占比或变化率？</summary>
+      <p data-i="faqA1">占比是“数值 ÷ 基数 × 100”，变化率也要除以原值的绝对值。除数为 0 时结果没有定义，所以计算器会直接提示，而不是给出无穷大。</p>
+    </details>
+    <details>
+      <summary data-i="faqQ2">负数百分比怎么理解？</summary>
+      <p data-i="faqA2">按同一公式代入即可。例如“增加 −10%”等价于减少 10%，“从 −100 到 −50”的变化率是 50%，因为分母取原值的绝对值。</p>
+    </details>
+    <details>
+      <summary data-i="faqQ3">改变小数位会影响计算精度吗？</summary>
+      <p data-i="faqA3">不会。内部始终保留完整精度，小数位只决定结果显示和复制时的位数；默认 2 位，可选 0–6 位，采用四舍五入。</p>
+    </details>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <p>© 2026 Devin · <a href="/tools/" id="foot-tools" data-i="navTools">工具大厅</a> · <a href="/games/" data-i="navGames">在线桌游</a> · <a href="/" data-i="navHome">首页</a></p>
+    <p data-i="footerPrivacy">所有计算在本机完成，不上传任何数据。</p>
+  </div>
+</footer>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<noscript>
+  <div class="wrap"><p class="card" style="margin-top:16px">这个百分比计算器需要 JavaScript。所有计算都在你的设备上完成，不会上传任何数据。</p></div>
+</noscript>
+
+<script id="engine">
+var ToolEngine = (function () {
+  'use strict';
+
+  /* All functions take and return plain numbers or { ok, error } objects.
+     The engine never touches the DOM, storage, or the clock. */
+
+  function isNum(n) {
+    return typeof n === 'number' && isFinite(n);
+  }
+
+  function fail(code) {
+    return { ok: false, error: code };
+  }
+
+  /* Round half away from zero at `decimals` places, working in decimal space
+     so binary artifacts such as 1.005 * 100 = 100.49999999999999 do not flip
+     the result. This is a display helper; callers keep full precision. */
+  function round(n, decimals) {
+    if (!isNum(n)) return fail('bad_value');
+    var d = decimals == null ? 2 : decimals;
+    if (!isNum(d) || d < 0 || d > 6 || Math.floor(d) !== d) return fail('bad_decimals');
+    var f = Math.pow(10, d);
+    var abs = Math.abs(n);
+    var scaled = abs * f;
+    var rounded = Math.floor(scaled + 0.5 + 1e-9) / f;
+    if (rounded === 0) return { ok: true, value: 0 };
+    return { ok: true, value: n < 0 ? -rounded : rounded };
+  }
+
+  /* p percent of n. */
+  function percentOf(p, n) {
+    if (!isNum(p)) return fail('bad_percent');
+    if (!isNum(n)) return fail('bad_value');
+    var out = n * p / 100;
+    if (!isFinite(out)) return fail('overflow');
+    return { ok: true, value: out };
+  }
+
+  /* x as a percentage of y. */
+  function whatPercent(x, y) {
+    if (!isNum(x)) return fail('bad_value');
+    if (!isNum(y)) return fail('bad_base');
+    if (y === 0) return fail('zero_base');
+    var out = x / y * 100;
+    if (!isFinite(out)) return fail('overflow');
+    return { ok: true, value: out };
+  }
+
+  /* Percentage change from `from` to `to`, using |from| as the denominator. */
+  function percentChange(from, to) {
+    if (!isNum(from)) return fail('bad_from');
+    if (!isNum(to)) return fail('bad_to');
+    if (from === 0) return fail('zero_base');
+    var out = (to - from) / Math.abs(from) * 100;
+    if (!isFinite(out)) return fail('overflow');
+    var direction = out > 0 ? 'increase' : out < 0 ? 'decrease' : 'none';
+    return { ok: true, value: out, direction: direction };
+  }
+
+  /* Apply a percentage increase or decrease to `value`. A negative percentage
+     reverses the direction, which is the expected algebraic behavior. */
+  function applyPercent(value, percent, mode) {
+    if (!isNum(value)) return fail('bad_value');
+    if (!isNum(percent)) return fail('bad_percent');
+    var dir = mode == null ? 'increase' : mode;
+    if (dir !== 'increase' && dir !== 'decrease') return fail('bad_mode');
+    var factor = 1 + (dir === 'increase' ? percent : -percent) / 100;
+    var out = value * factor;
+    if (!isFinite(out)) return fail('overflow');
+    return { ok: true, value: out };
+  }
+
+  /* Fixed-decimal display text plus the rounded numeric value. */
+  function formatNumber(n, decimals) {
+    var r = round(n, decimals);
+    if (!r.ok) return r;
+    var d = decimals == null ? 2 : decimals;
+    return { ok: true, value: r.value, text: r.value.toFixed(d) };
+  }
+
+  return {
+    percentOf: percentOf,
+    whatPercent: whatPercent,
+    percentChange: percentChange,
+    applyPercent: applyPercent,
+    formatNumber: formatNumber,
+    round: round
+  };
+})();
+</script>
+
+<script id="i18n">
+var TOOL_I18N = {
+  zh: {
+    docTitle: '百分比计算器 — 四种模式，实时显示公式',
+    docDesc: '免费的百分比计算器：求一个数的百分之几、计算占比、算出变化幅度、按百分比增减，实时展示代入数字后的公式。支持负数与 0–6 位小数，数据只留在本机。',
+    ogTitle: '百分比计算器 — 求占比、变化率与增减',
+    ogDesc: '四种百分比模式、实时公式步骤、一键复制。负数与自定义小数位可选，全部在浏览器本地计算。',
+    appTitle: '百分比计算器',
+    tagline: '四种模式，输入即算，步骤和公式一眼看清。',
+    privacy: '所有计算都在你的浏览器里完成，输入不会上传。',
+    eyebrow: '免费工具 · 百分比与比例',
+    skip: '跳到计算器',
+    navAria: '站点导航',
+    langAria: '语言',
+    navTools: '工具大厅',
+    navGames: '在线桌游',
+    navHome: '首页',
+    footerPrivacy: '所有计算在本机完成，不上传任何数据。',
+    tabsAria: '计算模式',
+    tab1: '求百分比值',
+    tab2: '求占比',
+    tab3: '求变化率',
+    tab4: '增减计算',
+    inputKicker: '计算器',
+    inputTitle: '选择模式并输入数值',
+    mode1Desc: '计算一个数在指定百分比下是多少，例如 200 的 15%。',
+    labelPercent: '百分比 (%)',
+    labelValue: '数值',
+    phPercent: '例如 15',
+    phValue: '例如 200',
+    mode2Desc: '计算一个数占另一个数的百分比，例如 30 是 200 的百分之几。',
+    labelX: '数值 X',
+    labelY: '基数 Y',
+    phX: '例如 30',
+    phY: '例如 200（不能为 0）',
+    mode3Desc: '计算从原值到新值的变化百分比，例如从 200 到 250。',
+    labelFrom: '原值',
+    labelTo: '新值',
+    phFrom: '例如 200',
+    phTo: '例如 250',
+    mode4Desc: '在原值基础上增加或减少指定百分比。',
+    labelApplyValue: '原值',
+    labelApplyPercent: '百分比 (%)',
+    labelDirection: '方向',
+    dirIncreaseOption: '增加',
+    dirDecreaseOption: '减少',
+    phApplyValue: '例如 200',
+    phApplyPercent: '例如 10',
+    resultKicker: '结果',
+    resultTitle: '计算结果',
+    stepsLabel: '计算步骤',
+    decimalsLabel: '小数位',
+    copy: '复制结果',
+    copyHint: '复制的是未加千分位的纯数值，方便粘贴到表格或脚本。',
+    copied: '已复制结果。',
+    copyFail: '无法自动复制，请手动选中结果。',
+    ctx1: '{n} 的 {p}%',
+    ctx2: '{x} 占 {y} 的百分比',
+    ctx3: '从 {from} 到 {to} 的变化',
+    ctx4: '{x} {dir} {p}% 后',
+    dirUp: '增加',
+    dirDown: '减少',
+    changeUp: '增长',
+    changeDown: '下降',
+    changeNone: '无变化',
+    errRequired: '请输入数字。',
+    errNumber: '请输入有效的数字。',
+    errZeroBase: '基数为 0，无法计算百分比。',
+    errOverflow: '结果超出可计算范围。',
+    errDecimals: '小数位设置无效。',
+    errGeneric: '无法计算，请检查输入。',
+    formulaTitle: '公式与假设',
+    formulaIntro: '四种模式共用一组基础公式。页面先按完整精度计算，再按所选小数位四舍五入用于显示。',
+    fPercentOfLabel: '求百分比值',
+    fPercentOf: '结果 = 数值 × 百分比 ÷ 100',
+    fWhatPercentLabel: '求占比',
+    fWhatPercent: '百分比 = 数值 ÷ 基数 × 100',
+    fChangeLabel: '求变化率',
+    fChange: '变化率 = (新值 − 原值) ÷ |原值| × 100',
+    fApplyLabel: '按百分比增减',
+    fApply: '结果 = 原值 × (1 ± 百分比 ÷ 100)',
+    assumptionsTitle: '假设与规则',
+    a1: '允许负数金额和负数百分比，直接代入公式计算；负百分比相当于反方向变化。',
+    a2: '基数为 0 时，占比和变化率没有定义，页面会就地提示。',
+    a3: '小数位只影响显示，不改变内部计算精度；默认 2 位，可选 0–6 位，采用四舍五入。',
+    a4: '所有计算都在浏览器本地完成，输入不会上传。',
+    a5: '结果仅供估算，不构成财务或商业建议。',
+    faqTitle: '常见问题',
+    faqQ1: '为什么基数为 0 时算不出占比或变化率？',
+    faqA1: '占比是“数值 ÷ 基数 × 100”，变化率也要除以原值的绝对值。除数为 0 时结果没有定义，所以计算器会直接提示，而不是给出无穷大。',
+    faqQ2: '负数百分比怎么理解？',
+    faqA2: '按同一公式代入即可。例如“增加 −10%”等价于减少 10%，“从 −100 到 −50”的变化率是 50%，因为分母取原值的绝对值。',
+    faqQ3: '改变小数位会影响计算精度吗？',
+    faqA3: '不会。内部始终保留完整精度，小数位只决定结果显示和复制时的位数；默认 2 位，可选 0–6 位，采用四舍五入。'
+  },
+  en: {
+    docTitle: 'Percentage calculator — four modes with live formulas',
+    docDesc: 'A free percentage calculator for percent-of, share of a total, percentage change, and increase or decrease. See the substituted formula, allow negatives, pick 0–6 decimals. Everything runs locally; nothing is uploaded.',
+    ogTitle: 'Percentage calculator — percent of, share, change, increase/decrease',
+    ogDesc: 'Four percentage modes with live formula steps and one-click copy. Negative values and custom decimals are supported; all math stays in your browser.',
+    appTitle: 'Percentage calculator',
+    tagline: 'Four modes, instant results, and the formula shown with your numbers.',
+    privacy: 'Everything runs in your browser. Nothing you type is uploaded.',
+    eyebrow: 'Free tool · percentages and ratios',
+    skip: 'Skip to the calculator',
+    navAria: 'Site navigation',
+    langAria: 'Language',
+    navTools: 'Tools',
+    navGames: 'Games',
+    navHome: 'Home',
+    footerPrivacy: 'All calculations run locally. No data is uploaded.',
+    tabsAria: 'Calculation mode',
+    tab1: 'Percent of a value',
+    tab2: 'Share of a total',
+    tab3: 'Percentage change',
+    tab4: 'Increase / decrease',
+    inputKicker: 'Calculator',
+    inputTitle: 'Pick a mode and enter your numbers',
+    mode1Desc: 'Find a value at a given percentage, such as 15% of 200.',
+    labelPercent: 'Percentage (%)',
+    labelValue: 'Value',
+    phPercent: 'e.g. 15',
+    phValue: 'e.g. 200',
+    mode2Desc: 'Find what percentage one value is of another, such as 30 out of 200.',
+    labelX: 'Value X',
+    labelY: 'Base Y',
+    phX: 'e.g. 30',
+    phY: 'e.g. 200 (must not be 0)',
+    mode3Desc: 'Find the percentage change from an old value to a new one, such as 200 to 250.',
+    labelFrom: 'Original value',
+    labelTo: 'New value',
+    phFrom: 'e.g. 200',
+    phTo: 'e.g. 250',
+    mode4Desc: 'Increase or decrease a value by a given percentage.',
+    labelApplyValue: 'Original value',
+    labelApplyPercent: 'Percentage (%)',
+    labelDirection: 'Direction',
+    dirIncreaseOption: 'Increase',
+    dirDecreaseOption: 'Decrease',
+    phApplyValue: 'e.g. 200',
+    phApplyPercent: 'e.g. 10',
+    resultKicker: 'Result',
+    resultTitle: 'Result',
+    stepsLabel: 'Calculation steps',
+    decimalsLabel: 'Decimals',
+    copy: 'Copy result',
+    copyHint: 'Copies a plain number without thousands separators, ready for a spreadsheet or script.',
+    copied: 'Result copied.',
+    copyFail: 'Could not copy automatically. Select the result and copy it manually.',
+    ctx1: '{p}% of {n}',
+    ctx2: '{x} as a share of {y}',
+    ctx3: 'Change from {from} to {to}',
+    ctx4: '{x} after a {p}% {dir}',
+    dirUp: 'increase',
+    dirDown: 'decrease',
+    changeUp: 'Increased',
+    changeDown: 'Decreased',
+    changeNone: 'No change',
+    errRequired: 'Enter a number.',
+    errNumber: 'Enter a valid number.',
+    errZeroBase: 'The base is 0, so the percentage cannot be calculated.',
+    errOverflow: 'The result is outside the calculable range.',
+    errDecimals: 'That decimal setting is not valid.',
+    errGeneric: 'Could not calculate. Check the inputs.',
+    formulaTitle: 'Formulas and assumptions',
+    formulaIntro: 'All four modes share the same core formulas. The page calculates at full precision, then rounds only for display.',
+    fPercentOfLabel: 'Percent of a value',
+    fPercentOf: 'result = value × percentage ÷ 100',
+    fWhatPercentLabel: 'Share of a total',
+    fWhatPercent: 'percentage = value ÷ base × 100',
+    fChangeLabel: 'Percentage change',
+    fChange: 'change = (new − old) ÷ |old| × 100',
+    fApplyLabel: 'Increase or decrease',
+    fApply: 'result = original × (1 ± percentage ÷ 100)',
+    assumptionsTitle: 'Assumptions and rules',
+    a1: 'Negative amounts and negative percentages are allowed and plugged straight into the formula; a negative percentage reverses the direction.',
+    a2: 'When the base is 0, share and percentage change are undefined, so the page shows an inline message instead.',
+    a3: 'Decimals affect display only, never internal precision. The default is 2, with 0–6 selectable, rounded half away from zero.',
+    a4: 'All calculations run locally in the browser. Nothing is uploaded.',
+    a5: 'Results are estimates only and are not financial or business advice.',
+    faqTitle: 'Frequently asked questions',
+    faqQ1: 'Why can’t I calculate a share or change when the base is 0?',
+    faqA1: 'A share is “value ÷ base × 100”, and percentage change also divides by the absolute original value. Dividing by 0 is undefined, so the calculator shows a message instead of infinity.',
+    faqQ2: 'How do negative percentages work?',
+    faqA2: 'Plug them into the same formula. For example, “increase by −10%” is the same as a 10% decrease, and going from −100 to −50 is a 50% increase because the denominator uses the absolute original value.',
+    faqQ3: 'Do fewer decimal places reduce accuracy?',
+    faqA3: 'No. Full precision is kept internally; the decimal setting only controls the displayed and copied result. The default is 2, with 0–6 selectable, rounded half away from zero.'
+  },
+  id: {
+    docTitle: 'Kalkulator persentase — empat mode dengan rumus langsung',
+    docDesc: 'Kalkulator persentase gratis untuk menghitung persen dari nilai, proporsi, perubahan persentase, serta kenaikan atau penurunan. Rumus ditampilkan langsung, angka negatif didukung, dan data tidak diunggah.',
+    ogTitle: 'Kalkulator persentase — persen nilai, proporsi, perubahan, naik/turun',
+    ogDesc: 'Empat mode persentase dengan langkah rumus langsung dan salin sekali klik. Nilai negatif dan desimal khusus didukung; semua dihitung di browser.',
+    appTitle: 'Kalkulator persentase',
+    tagline: 'Empat mode, hasil langsung, dan rumus dengan angka Anda.',
+    privacy: 'Semua perhitungan berjalan di browser Anda. Tidak ada yang diunggah.',
+    eyebrow: 'Alat gratis · persentase dan rasio',
+    skip: 'Lompat ke kalkulator',
+    navAria: 'Navigasi situs',
+    langAria: 'Bahasa',
+    navTools: 'Alat',
+    navGames: 'Permainan',
+    navHome: 'Beranda',
+    footerPrivacy: 'Semua perhitungan berjalan lokal. Tidak ada data yang diunggah.',
+    tabsAria: 'Mode perhitungan',
+    tab1: 'Persen dari nilai',
+    tab2: 'Proporsi',
+    tab3: 'Perubahan persen',
+    tab4: 'Naik / turun',
+    inputKicker: 'Kalkulator',
+    inputTitle: 'Pilih mode dan masukkan angka',
+    mode1Desc: 'Hitung nilai pada persentase tertentu, misalnya 15% dari 200.',
+    labelPercent: 'Persentase (%)',
+    labelValue: 'Nilai',
+    phPercent: 'mis. 15',
+    phValue: 'mis. 200',
+    mode2Desc: 'Hitung berapa persen satu nilai terhadap nilai lain, misalnya 30 dari 200.',
+    labelX: 'Nilai X',
+    labelY: 'Dasar Y',
+    phX: 'mis. 30',
+    phY: 'mis. 200 (tidak boleh 0)',
+    mode3Desc: 'Hitung persentase perubahan dari nilai lama ke nilai baru, misalnya 200 ke 250.',
+    labelFrom: 'Nilai awal',
+    labelTo: 'Nilai baru',
+    phFrom: 'mis. 200',
+    phTo: 'mis. 250',
+    mode4Desc: 'Naikkan atau turunkan nilai sebesar persentase tertentu.',
+    labelApplyValue: 'Nilai awal',
+    labelApplyPercent: 'Persentase (%)',
+    labelDirection: 'Arah',
+    dirIncreaseOption: 'Naik',
+    dirDecreaseOption: 'Turun',
+    phApplyValue: 'mis. 200',
+    phApplyPercent: 'mis. 10',
+    resultKicker: 'Hasil',
+    resultTitle: 'Hasil perhitungan',
+    stepsLabel: 'Langkah perhitungan',
+    decimalsLabel: 'Desimal',
+    copy: 'Salin hasil',
+    copyHint: 'Yang disalin adalah angka polos tanpa pemisah ribuan, siap ditempel ke spreadsheet atau skrip.',
+    copied: 'Hasil disalin.',
+    copyFail: 'Tidak bisa menyalin otomatis. Pilih hasil lalu salin manual.',
+    ctx1: '{p}% dari {n}',
+    ctx2: '{x} terhadap {y}',
+    ctx3: 'Perubahan dari {from} ke {to}',
+    ctx4: '{x} setelah {dir} {p}%',
+    dirUp: 'naik',
+    dirDown: 'turun',
+    changeUp: 'Naik',
+    changeDown: 'Turun',
+    changeNone: 'Tidak berubah',
+    errRequired: 'Masukkan angka.',
+    errNumber: 'Masukkan angka yang valid.',
+    errZeroBase: 'Dasar bernilai 0, jadi persentase tidak dapat dihitung.',
+    errOverflow: 'Hasil di luar rentang yang dapat dihitung.',
+    errDecimals: 'Pengaturan desimal tidak valid.',
+    errGeneric: 'Tidak dapat menghitung. Periksa input.',
+    formulaTitle: 'Rumus dan asumsi',
+    formulaIntro: 'Keempat mode memakai rumus dasar yang sama. Halaman menghitung dengan presisi penuh, lalu membulatkan hanya untuk tampilan.',
+    fPercentOfLabel: 'Persen dari nilai',
+    fPercentOf: 'hasil = nilai × persentase ÷ 100',
+    fWhatPercentLabel: 'Proporsi',
+    fWhatPercent: 'persentase = nilai ÷ dasar × 100',
+    fChangeLabel: 'Perubahan persentase',
+    fChange: 'perubahan = (baru − lama) ÷ |lama| × 100',
+    fApplyLabel: 'Naik atau turun',
+    fApply: 'hasil = nilai awal × (1 ± persentase ÷ 100)',
+    assumptionsTitle: 'Asumsi dan aturan',
+    a1: 'Nilai dan persentase negatif diperbolehkan dan langsung dimasukkan ke rumus; persentase negatif membalik arah.',
+    a2: 'Jika dasar bernilai 0, proporsi dan perubahan persentase tidak terdefinisi, jadi halaman menampilkan pesan.',
+    a3: 'Desimal hanya memengaruhi tampilan, bukan presisi internal. Bawaannya 2, bisa dipilih 0–6, dibulatkan setengah menjauhi nol.',
+    a4: 'Semua perhitungan berjalan lokal di browser. Tidak ada yang diunggah.',
+    a5: 'Hasil hanya perkiraan dan bukan saran keuangan atau bisnis.',
+    faqTitle: 'Pertanyaan yang sering diajukan',
+    faqQ1: 'Mengapa proporsi atau perubahan tidak bisa dihitung saat dasar 0?',
+    faqA1: 'Proporsi adalah “nilai ÷ dasar × 100”, dan perubahan persentase juga membagi dengan nilai absolut awal. Pembagian oleh 0 tidak terdefinisi, jadi kalkulator menampilkan pesan, bukan tak hingga.',
+    faqQ2: 'Bagaimana memahami persentase negatif?',
+    faqA2: 'Masukkan saja ke rumus yang sama. Misalnya “naik −10%” sama dengan turun 10%, dan dari −100 ke −50 adalah kenaikan 50% karena penyebutnya memakai nilai absolut awal.',
+    faqQ3: 'Apakah mengurangi desimal menurunkan akurasi?',
+    faqA3: 'Tidak. Presisi penuh tetap disimpan di dalam; pengaturan desimal hanya mengatur hasil yang ditampilkan dan disalin. Bawaannya 2, bisa dipilih 0–6, dibulatkan setengah menjauhi nol.'
+  }
+};
+</script>
+
+<script>
+(function () {
+  'use strict';
+
+  var I18N = TOOL_I18N;
+  var ENG = ToolEngine;
+  var LANG_KEY = 'hhfa.tool.percentage-calculator.lang';
+  var state = { lang: 'zh', mode: '1', decimals: 2 };
+  var lastCopy = '';
+  var toastTimer = null;
+
+  function $(id) { return document.getElementById(id); }
+
+  function t(key) {
+    var d = I18N[state.lang] || I18N.zh;
+    if (d && d[key] != null) return d[key];
+    if (I18N.zh[key] != null) return I18N.zh[key];
+    return key;
+  }
+
+  function tf(key, vars) {
+    return t(key).replace(/\{(\w+)\}/g, function (m, name) {
+      return vars[name] != null ? String(vars[name]) : '';
+    });
+  }
+
+  function locale() {
+    if (state.lang === 'zh') return 'zh-CN';
+    if (state.lang === 'id') return 'id-ID';
+    return 'en-US';
+  }
+
+  function short(v) {
+    if (!isFinite(v)) return '—';
+    return String(v === 0 ? 0 : v);
+  }
+
+  function parseNum(raw) {
+    var s = String(raw == null ? '' : raw).trim().replace(/\s/g, '').replace(',', '.');
+    if (!s) return { ok: false, empty: true };
+    if (!/^[+-]?(\d+(\.\d*)?|\.\d+)(e[+-]?\d+)?$/i.test(s)) return { ok: false, invalid: true };
+    var n = Number(s);
+    if (!isFinite(n)) return { ok: false, invalid: true };
+    return { ok: true, value: n };
+  }
+
+  function setErr(input, errEl, message) {
+    input.setAttribute('aria-invalid', 'true');
+    errEl.textContent = message;
+    errEl.hidden = false;
+  }
+
+  function clearErr(input, errEl) {
+    input.removeAttribute('aria-invalid');
+    errEl.textContent = '';
+    errEl.hidden = true;
+  }
+
+  function fieldNum(inputId, errId) {
+    var input = $(inputId);
+    var errEl = $(errId);
+    var parsed = parseNum(input.value);
+    if (parsed.ok) {
+      clearErr(input, errEl);
+      return parsed.value;
+    }
+    setErr(input, errEl, parsed.empty ? t('errRequired') : t('errNumber'));
+    return null;
+  }
+
+  function errMessage(code) {
+    if (code === 'zero_base') return t('errZeroBase');
+    if (code === 'overflow') return t('errOverflow');
+    if (code === 'bad_decimals') return t('errDecimals');
+    return t('errGeneric');
+  }
+
+  function clearResultForError() {
+    $('result-big').textContent = '—';
+    $('result-context').textContent = '';
+    $('result-context').className = 'context';
+    $('result-steps').textContent = '—';
+    $('copy').disabled = true;
+    lastCopy = '';
+  }
+
+  function showEngineError(res) {
+    clearResultForError();
+    var box = $('result-error');
+    box.textContent = errMessage(res && res.error);
+    box.hidden = false;
+  }
+
+  function emptyResult() {
+    clearResultForError();
+    var box = $('result-error');
+    box.textContent = '';
+    box.hidden = true;
+  }
+
+  function sci(n) {
+    return n.toExponential(6)
+      .replace(/(\.\d*?)0+e/, '$1e')
+      .replace(/\.e/, 'e');
+  }
+
+  function displayNumber(value, d) {
+    var abs = Math.abs(value);
+    if (abs !== 0 && (abs >= 1e12 || abs < 0.5 * Math.pow(10, -d))) return sci(value);
+    var r = ENG.round(value, d);
+    var v = r.ok ? r.value : value;
+    return new Intl.NumberFormat(locale(), {
+      minimumFractionDigits: d,
+      maximumFractionDigits: d
+    }).format(v);
+  }
+
+  function plainNumber(value, d) {
+    var f = ENG.formatNumber(value, d);
+    return f.ok ? f.text : String(value);
+  }
+
+  function renderSuccess(value, isPercent, context, direction, steps) {
+    var d = state.decimals;
+    var f = ENG.formatNumber(value, d);
+    if (!f.ok) { showEngineError(f); return; }
+    $('result-big').textContent = displayNumber(value, d) + (isPercent ? '%' : '');
+    var ctx = $('result-context');
+    ctx.textContent = context;
+    ctx.className = 'context' + (direction ? ' dir-' + direction : '');
+    $('result-steps').textContent = steps;
+    var box = $('result-error');
+    box.textContent = '';
+    box.hidden = true;
+    lastCopy = f.text + (isPercent ? '%' : '');
+    $('copy').disabled = false;
+  }
+
+  function compute1() {
+    var p = fieldNum('p1-percent', 'e1-percent');
+    var n = fieldNum('p1-value', 'e1-value');
+    if (p === null || n === null) { emptyResult(); return; }
+    var r = ENG.percentOf(p, n);
+    if (!r.ok) { showEngineError(r); return; }
+    var d = state.decimals;
+    renderSuccess(
+      r.value, false,
+      tf('ctx1', { n: short(n), p: short(p) }),
+      '',
+      short(n) + ' × ' + short(p) + ' ÷ 100 = ' + plainNumber(r.value, d)
+    );
+  }
+
+  function compute2() {
+    var x = fieldNum('p2-x', 'e2-x');
+    var y = fieldNum('p2-y', 'e2-y');
+    if (x === null || y === null) { emptyResult(); return; }
+    if (y === 0) {
+      setErr($('p2-y'), $('e2-y'), t('errZeroBase'));
+      emptyResult();
+      return;
+    }
+    var r = ENG.whatPercent(x, y);
+    if (!r.ok) { showEngineError(r); return; }
+    var d = state.decimals;
+    renderSuccess(
+      r.value, true,
+      tf('ctx2', { x: short(x), y: short(y) }),
+      '',
+      short(x) + ' ÷ ' + short(y) + ' × 100 = ' + plainNumber(r.value, d) + '%'
+    );
+  }
+
+  function compute3() {
+    var from = fieldNum('p3-from', 'e3-from');
+    var to = fieldNum('p3-to', 'e3-to');
+    if (from === null || to === null) { emptyResult(); return; }
+    if (from === 0) {
+      setErr($('p3-from'), $('e3-from'), t('errZeroBase'));
+      emptyResult();
+      return;
+    }
+    var r = ENG.percentChange(from, to);
+    if (!r.ok) { showEngineError(r); return; }
+    var word = r.direction === 'increase' ? t('changeUp')
+      : r.direction === 'decrease' ? t('changeDown') : t('changeNone');
+    var d = state.decimals;
+    renderSuccess(
+      r.value, true,
+      tf('ctx3', { from: short(from), to: short(to) }) + ' · ' + word,
+      r.direction,
+      '(' + short(to) + ' − ' + short(from) + ') ÷ |' + short(from) + '| × 100 = ' +
+        plainNumber(r.value, d) + '%'
+    );
+  }
+
+  function compute4() {
+    var x = fieldNum('p4-value', 'e4-value');
+    var p = fieldNum('p4-percent', 'e4-percent');
+    if (x === null || p === null) { emptyResult(); return; }
+    var dir = $('p4-mode').value === 'decrease' ? 'decrease' : 'increase';
+    var r = ENG.applyPercent(x, p, dir);
+    if (!r.ok) { showEngineError(r); return; }
+    var d = state.decimals;
+    renderSuccess(
+      r.value, false,
+      tf('ctx4', { x: short(x), dir: dir === 'decrease' ? t('dirDown') : t('dirUp'), p: short(p) }),
+      '',
+      short(x) + ' × (1 ' + (dir === 'decrease' ? '−' : '+') + ' ' + short(p) +
+        ' ÷ 100) = ' + plainNumber(r.value, d)
+    );
+  }
+
+  function compute() {
+    if (state.mode === '1') { compute1(); return; }
+    if (state.mode === '2') { compute2(); return; }
+    if (state.mode === '3') { compute3(); return; }
+    compute4();
+  }
+
+  var tabs = [];
+
+  function selectMode(mode, focusTab) {
+    state.mode = mode;
+    for (var i = 0; i < tabs.length; i++) {
+      var tab = tabs[i];
+      var on = tab.getAttribute('data-mode') === mode;
+      tab.setAttribute('aria-selected', on ? 'true' : 'false');
+      tab.tabIndex = on ? 0 : -1;
+      var panel = $(tab.getAttribute('aria-controls'));
+      if (panel) panel.hidden = !on;
+      if (on && focusTab) tab.focus();
+    }
+    compute();
+  }
+
+  function toast(message) {
+    var el = $('toast');
+    el.textContent = message;
+    el.classList.add('on');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove('on'); }, 2600);
+  }
+
+  function fallbackCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.top = '-1000px';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    document.body.removeChild(ta);
+    return ok;
+  }
+
+  function copyResult() {
+    if (!lastCopy) return;
+    var done = function () { toast(t('copied')); };
+    var fail = function () { toast(t('copyFail')); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(lastCopy).then(done).catch(function () {
+        if (fallbackCopy(lastCopy)) done(); else fail();
+      });
+    } else if (fallbackCopy(lastCopy)) {
+      done();
+    } else {
+      fail();
+    }
+  }
+
+  function setMeta(attr, value, text) {
+    var metas = document.querySelectorAll('meta');
+    for (var i = 0; i < metas.length; i++) {
+      if (metas[i].getAttribute(attr) === value) {
+        metas[i].setAttribute('content', text);
+        return;
+      }
+    }
+  }
+
+  function applyLang() {
+    var lang = state.lang;
+    document.documentElement.lang = lang === 'zh' ? 'zh-CN' : lang;
+
+    var nodes = document.querySelectorAll('[data-i]');
+    for (var i = 0; i < nodes.length; i++) {
+      nodes[i].textContent = t(nodes[i].getAttribute('data-i'));
+    }
+    var phs = document.querySelectorAll('[data-i-ph]');
+    for (var j = 0; j < phs.length; j++) {
+      phs[j].setAttribute('placeholder', t(phs[j].getAttribute('data-i-ph')));
+    }
+    var arias = document.querySelectorAll('[data-i-aria]');
+    for (var k = 0; k < arias.length; k++) {
+      arias[k].setAttribute('aria-label', t(arias[k].getAttribute('data-i-aria')));
+    }
+    var buttons = document.querySelectorAll('.langs button');
+    for (var b = 0; b < buttons.length; b++) {
+      buttons[b].setAttribute('aria-pressed',
+        buttons[b].getAttribute('data-lang') === lang ? 'true' : 'false');
+    }
+
+    document.title = t('docTitle');
+    setMeta('name', 'description', t('docDesc'));
+    setMeta('property', 'og:title', t('ogTitle'));
+    setMeta('property', 'og:description', t('ogDesc'));
+    setMeta('name', 'twitter:title', t('ogTitle'));
+    setMeta('name', 'twitter:description', t('ogDesc'));
+
+    var toolsHref = lang === 'zh' ? '/tools/' : '/tools/' + lang + '/';
+    var navTools = $('nav-tools');
+    var footTools = $('foot-tools');
+    if (navTools) navTools.setAttribute('href', toolsHref);
+    if (footTools) footTools.setAttribute('href', toolsHref);
+
+    compute();
+  }
+
+  function detectLang() {
+    try {
+      var q = new URLSearchParams(window.location.search).get('lang');
+      if (q === 'zh' || q === 'en' || q === 'id') return q;
+    } catch (e) { /* ignore */ }
+    try {
+      var saved = localStorage.getItem(LANG_KEY);
+      if (saved === 'zh' || saved === 'en' || saved === 'id') return saved;
+    } catch (e) { /* ignore */ }
+    var nav = (navigator.language || '').toLowerCase();
+    if (nav.indexOf('zh') === 0) return 'zh';
+    if (nav.indexOf('id') === 0 || nav.indexOf('in') === 0) return 'id';
+    return 'en';
+  }
+
+  function saveLang() {
+    try { localStorage.setItem(LANG_KEY, state.lang); } catch (e) { /* ignore */ }
+  }
+
+  function bind() {
+    tabs = [];
+    var tabNodes = document.querySelectorAll('[role="tab"]');
+    for (var i = 0; i < tabNodes.length; i++) {
+      tabs.push(tabNodes[i]);
+      (function (tab) {
+        tab.addEventListener('click', function () {
+          selectMode(tab.getAttribute('data-mode'), false);
+        });
+      })(tabNodes[i]);
+    }
+
+    var tablist = $('tabs');
+    tablist.addEventListener('keydown', function (e) {
+      var index = tabs.indexOf(document.activeElement);
+      if (index < 0) return;
+      var next = -1;
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = (index + 1) % tabs.length;
+      else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = (index - 1 + tabs.length) % tabs.length;
+      else if (e.key === 'Home') next = 0;
+      else if (e.key === 'End') next = tabs.length - 1;
+      if (next >= 0) {
+        e.preventDefault();
+        selectMode(tabs[next].getAttribute('data-mode'), true);
+      }
+    });
+
+    var inputs = document.querySelectorAll('#calculator input, #calculator select');
+    for (var j = 0; j < inputs.length; j++) {
+      inputs[j].addEventListener('input', compute);
+      inputs[j].addEventListener('change', compute);
+    }
+
+    $('decimals').addEventListener('change', function () {
+      var d = parseInt(this.value, 10);
+      state.decimals = isFinite(d) ? Math.max(0, Math.min(6, d)) : 2;
+      compute();
+    });
+
+    $('copy').addEventListener('click', copyResult);
+
+    var langButtons = document.querySelectorAll('.langs button');
+    for (var l = 0; l < langButtons.length; l++) {
+      (function (btn) {
+        btn.addEventListener('click', function () {
+          state.lang = btn.getAttribute('data-lang');
+          saveLang();
+          applyLang();
+        });
+      })(langButtons[l]);
+    }
+  }
+
+  function init() {
+    state.lang = detectLang();
+    bind();
+    applyLang();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>

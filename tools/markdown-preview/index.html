@@ -1,0 +1,1358 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Markdown 预览与安全渲染</title>
+<meta name="description" content="在本地把 Markdown 的安全子集渲染成 HTML，支持标题、粗斜体、代码、列表、引用、链接和分割线，可复制导出。全部在本地处理，无需注册。">
+<meta name="author" content="Devin">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="theme-color" content="#f2efe7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#101316" media="(prefers-color-scheme: dark)">
+<link rel="canonical" href="https://hhfa008.github.io/tools/markdown-preview/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23b93d12'/%3E%3Cpath d='M9 23 23 9' stroke='%23fbf9f4' stroke-width='2.4' stroke-linecap='round'/%3E%3Ccircle cx='11' cy='11' r='3' fill='%23fbf9f4'/%3E%3Ccircle cx='21' cy='21' r='3' fill='%23fbf9f4'/%3E%3C/svg%3E">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Devin">
+<meta property="og:title" content="Markdown 预览与安全渲染">
+<meta property="og:description" content="在本地把 Markdown 的安全子集渲染成 HTML，支持标题、粗斜体、代码、列表、引用、链接和分割线，可复制导出。全部在本地处理，无需注册。">
+<meta property="og:url" content="https://hhfa008.github.io/tools/markdown-preview/">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:locale:alternate" content="en_US">
+<meta property="og:locale:alternate" content="id_ID">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Markdown 预览与安全渲染">
+<meta name="twitter:description" content="在本地把 Markdown 的安全子集渲染成 HTML，支持标题、粗斜体、代码、列表、引用、链接和分割线，可复制导出。全部在本地处理，无需注册。">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Markdown 预览",
+  "url": "https://hhfa008.github.io/tools/markdown-preview/",
+  "applicationCategory": "UtilitiesApplication",
+  "operatingSystem": "Any",
+  "browserRequirements": "Requires JavaScript",
+  "isAccessibleForFree": true,
+  "inLanguage": ["zh-CN", "en", "id"],
+  "description": "在本地把 Markdown 的安全子集渲染成 HTML，支持标题、粗斜体、代码、列表、引用、链接和分割线，可复制导出。全部在本地处理，无需注册。",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+  {
+    "@type": "Question",
+    "name": "这里的 HTML 为什么安全？",
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "渲染前会先转义原始 HTML 标签，只生成受控的标签，避免脚本注入。即便如此，导出的 HTML 放到你自己的站点前仍应复查。"
+    }
+  },
+  {
+    "@type": "Question",
+    "name": "支持表格和任务列表吗？",
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "当前只覆盖安全子集，表格、任务列表和脚注暂不支持。遇到未支持语法会按普通文本显示，不会报错。"
+    }
+  },
+  {
+    "@type": "Question",
+    "name": "导出的 HTML 可以直接发布吗？",
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "可以用于简单页面，但不含完整样式和站点结构。发布前请补上标题层级、语言属性和必要的可访问性标记。"
+    }
+  }
+]
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "首页", "item": "https://hhfa008.github.io/" },
+    { "@type": "ListItem", "position": 2, "name": "工具大厅", "item": "https://hhfa008.github.io/tools/" },
+    { "@type": "ListItem", "position": 3, "name": "Markdown 预览", "item": "https://hhfa008.github.io/tools/markdown-preview/" }
+  ]
+}
+</script>
+
+<style>
+/* ==========================================================================
+   Design tokens — keep in sync with the existing tools pages.
+   ========================================================================== */
+:root{
+  --paper:#f2efe7; --paper-2:#fbf9f4; --panel:#ffffff;
+  --ink:#14171a; --muted:#5b615c; --muted-2:#7b807a;
+  --line:#d5d0c4; --line-strong:#bcb5a7;
+  --accent:#b93d12; --accent-soft:#f2a07a; --accent-wash:#f7e5da;
+  --ok:#2f6b3c; --ok-wash:#e8f2e7; --warn:#8a5a00; --warn-wash:#fbf1db;
+  --bad:#a32216; --bad-wash:#fbe7e3;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --radius:16px; --max:1040px;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --paper:#101316; --paper-2:#171b1f; --panel:#1a1f23;
+    --ink:#f2efe7; --muted:#b7b3a8; --muted-2:#948f85;
+    --line:#333a40; --line-strong:#4a535b;
+    --accent:#f08a5d; --accent-soft:#f2a07a; --accent-wash:#2b211c;
+    --ok:#8fd19e; --ok-wash:#1b2b1e; --warn:#f0c36a; --warn-wash:#2d2618;
+    --bad:#ff8a7a; --bad-wash:#321d1a;
+  }
+}
+
+/* Reset */
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%;color-scheme:light dark;scroll-behavior:smooth;overflow-x:clip}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font:16px/1.6 var(--sans);overflow-x:clip;
+  text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+p,h1,h2,h3,ul,ol,figure{margin:0}
+a{color:inherit}
+button,input,select,textarea{font:inherit;color:inherit}
+code,pre{font-family:var(--mono)}
+
+/* Layout */
+.wrap{width:100%;max-width:var(--max);margin:0 auto;padding-left:18px;padding-right:18px;min-width:0}
+@media (min-width:720px){.wrap{padding-left:32px;padding-right:32px}}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.skip-link{position:absolute;left:12px;top:-80px;z-index:100;padding:12px 16px;background:var(--ink);color:var(--paper);border-radius:8px;text-decoration:none}
+.skip-link:focus{top:12px}
+:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+
+/* Header */
+.site-header{border-bottom:1px solid var(--line);background:var(--paper)}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:10px 16px;min-height:64px;flex-wrap:wrap;padding-top:6px;padding-bottom:6px}
+.brand{display:inline-flex;align-items:center;gap:10px;font-weight:700;letter-spacing:-.02em;text-decoration:none;min-height:44px}
+.brand-mark{width:26px;height:26px;border-radius:7px;background:var(--accent);position:relative;flex:none}
+.brand-mark::before,.brand-mark::after{content:"";position:absolute;left:7px;height:2px;background:var(--paper-2);border-radius:1px}
+.brand-mark::before{right:7px;top:9px}
+.brand-mark::after{right:11px;top:15px}
+.header-tools{display:flex;align-items:center;gap:12px 16px;flex-wrap:wrap;justify-content:flex-end;min-width:0}
+.site-nav{display:flex;align-items:center;gap:14px;font-size:13.5px;flex-wrap:wrap}
+.site-nav a{display:inline-flex;align-items:center;min-height:44px;text-decoration:none;color:var(--muted)}
+.site-nav a:hover{color:var(--accent);text-decoration:underline}
+.lang-switch{display:flex;gap:4px}
+.lang-switch button{
+  min-width:44px;min-height:44px;padding:0 8px;border:1px solid var(--line-strong);
+  border-radius:9px;background:transparent;color:var(--muted);font-size:12.5px;
+  font-weight:650;cursor:pointer;line-height:1
+}
+.lang-switch button:hover{border-color:var(--accent);color:var(--accent)}
+.lang-switch button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+@media (prefers-color-scheme:dark){
+  .lang-switch button[aria-pressed="true"],
+  .btn.primary,.btn.danger{color:#101316}
+}
+
+/* Hero */
+.hero{padding:36px 0 22px}
+@media (min-width:720px){.hero{padding:52px 0 28px}}
+.eyebrow{margin:0 0 10px;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+h1{margin:0 0 12px;max-width:22ch;font-size:clamp(1.85rem,6vw,2.9rem);line-height:1.1;letter-spacing:-.035em;font-weight:700;overflow-wrap:anywhere}
+.lede{max-width:70ch;color:var(--muted);font-size:clamp(1rem,2vw,1.08rem);overflow-wrap:anywhere}
+.privacy{
+  display:flex;gap:9px;align-items:flex-start;max-width:78ch;margin:16px 0 0;padding:11px 14px;
+  background:var(--accent-wash);border:1px solid var(--line);border-left:4px solid var(--accent);
+  border-radius:0 10px 10px 0;font-size:13.5px
+}
+.privacy svg{width:17px;height:17px;flex:none;margin-top:3px}
+
+/* Cards and tool layout */
+.tool-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;align-items:start}
+.tool-layout>*{min-width:0}
+@media (min-width:900px){
+  .tool-layout{grid-template-columns:minmax(0,1.04fr) minmax(0,.96fr)}
+  .result-col{position:sticky;top:18px}
+}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;min-width:0}
+@media (min-width:720px){.card{padding:26px 28px}}
+.card-kicker{margin:0 0 7px;font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.11em;text-transform:uppercase;color:var(--accent)}
+.card h2{margin:0 0 14px;font-size:clamp(1.15rem,2.4vw,1.4rem);line-height:1.2;letter-spacing:-.02em;overflow-wrap:anywhere}
+.panel-desc{margin:0 0 14px;color:var(--muted);font-size:14px;overflow-wrap:anywhere}
+
+/* Fields */
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field>label,.field>span.label{font-size:13px;font-weight:650;color:var(--muted)}
+.field input,.field select,.field textarea,.field .input{
+  width:100%;min-height:46px;padding:10px 12px;border:1px solid var(--line-strong);
+  border-radius:12px;background:var(--paper-2);font-size:16px;line-height:1.4;min-width:0
+}
+.field textarea{min-height:120px;resize:vertical;line-height:1.55}
+.field select{
+  appearance:none;padding-right:34px;
+  background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);
+  background-position:calc(100% - 18px) 50%,calc(100% - 13px) 50%;
+  background-size:5px 5px,5px 5px;background-repeat:no-repeat
+}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);outline:3px solid var(--accent-wash);outline-offset:1px}
+.field input[aria-invalid="true"],.field select[aria-invalid="true"],.field textarea[aria-invalid="true"]{border-color:var(--bad)}
+.field-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+@media (min-width:600px){.field-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Buttons */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  min-height:46px;padding:0 16px;border:1px solid var(--line-strong);border-radius:12px;
+  background:var(--panel);color:var(--ink);font-size:14.5px;font-weight:650;
+  cursor:pointer;text-decoration:none;text-align:center;line-height:1.25
+}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.06);color:#fff}
+.btn.dark{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.btn.ghost{background:transparent}
+.btn.danger{background:var(--bad);border-color:var(--bad);color:#fff}
+.btn.danger:hover{filter:brightness(1.06);color:#fff}
+.btn-row{display:flex;flex-wrap:wrap;gap:8px;min-width:0}
+.btn-row .btn{flex:1 1 140px}
+
+/* Chips / segmented controls */
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px;padding:0;list-style:none}
+.chips button,.chip{
+  display:inline-flex;align-items:center;justify-content:center;min-height:44px;
+  padding:8px 14px;border:1px solid var(--line-strong);border-radius:999px;
+  background:var(--paper-2);color:var(--ink);font-size:13.5px;font-weight:650;
+  cursor:pointer;line-height:1.2;text-decoration:none
+}
+.chips button:hover,.chip:hover{border-color:var(--accent);color:var(--accent)}
+.chips button[aria-pressed="true"],.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+@media (prefers-color-scheme:dark){
+  .chips button[aria-pressed="true"],.chip.on{color:#101316}
+}
+
+/* Tabs */
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
+.tabs [role="tab"]{
+  min-height:44px;padding:9px 14px;border:1px solid var(--line-strong);border-radius:999px;
+  background:var(--paper-2);color:var(--ink);font-size:13.5px;font-weight:650;
+  cursor:pointer;line-height:1.2
+}
+.tabs [role="tab"][aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+@media (prefers-color-scheme:dark){.tabs [role="tab"][aria-selected="true"]{color:#101316}}
+
+/* Result */
+.result{background:var(--paper-2)}
+.result-live{min-height:96px}
+.result-big{
+  margin:2px 0 0;font-family:var(--mono);font-size:clamp(2rem,7.5vw,3rem);
+  font-weight:650;line-height:1.08;letter-spacing:-.04em;color:var(--accent);
+  font-variant-numeric:tabular-nums;overflow-wrap:anywhere
+}
+.result-note{margin-top:7px;color:var(--muted);font-size:14px;overflow-wrap:anywhere}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px;margin-top:14px}
+.stat{min-width:0;padding:10px 11px;border:1px solid var(--line);border-radius:11px;background:var(--paper-2)}
+.stat span{display:block;font-size:11.5px;color:var(--muted);line-height:1.3}
+.stat b{display:block;margin-top:2px;font-family:var(--mono);font-size:1.12rem;font-weight:650;font-variant-numeric:tabular-nums;letter-spacing:-.02em;overflow-wrap:anywhere}
+
+/* Tables must scroll inside their own wrapper, never the page. */
+.table-wrap{width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.table-wrap table{width:100%;border-collapse:collapse;font-size:13.5px}
+.table-wrap caption{padding:10px 12px;text-align:left;color:var(--muted);font-size:12.5px}
+.table-wrap th,.table-wrap td{padding:9px 11px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap;font-variant-numeric:tabular-nums}
+.table-wrap th{font-weight:650;color:var(--muted);font-size:12.5px}
+.table-wrap tr:last-child td{border-bottom:0}
+
+/* Notes and status */
+.hint{margin:10px 0 0;color:var(--muted-2);font-size:12.5px;line-height:1.55;overflow-wrap:anywhere}
+.error{margin:10px 0 0;padding:9px 12px;border-radius:9px;background:var(--bad-wash);border:1px solid var(--bad);color:var(--bad);font-size:13px;font-weight:600;line-height:1.5;overflow-wrap:anywhere}
+.badge{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:2px 9px;border-radius:999px;background:var(--accent-wash);color:var(--accent);font-size:12px;font-weight:650;line-height:1.6;vertical-align:middle}
+.badge.ok{background:var(--ok-wash);color:var(--ok)}
+.badge.warn{background:var(--warn-wash);color:var(--warn)}
+.badge.bad{background:var(--bad-wash);color:var(--bad)}
+
+/* Checkbox rows: browser-check measures the input box itself, so keep it 44x44. */
+.check{display:inline-flex;align-items:center;gap:8px;min-height:44px;font-size:14px;cursor:pointer}
+.check input[type="checkbox"],.check input[type="radio"]{width:44px;height:44px;flex:none;accent-color:var(--accent);cursor:pointer}
+.check-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin-top:10px}
+/* Safety net for builders: any main control must stay touchable. */
+main button{min-height:44px}
+main select{min-height:44px}
+main input[type="checkbox"],main input[type="radio"]{width:44px;height:44px;flex:none;accent-color:var(--accent)}
+
+/* Explain */
+.explain{margin-top:18px}
+.explain h2{margin:0 0 12px;font-size:clamp(1.3rem,3vw,1.7rem);letter-spacing:-.02em}
+.explain-body{padding-bottom:2px}
+.explain-body p{max-width:82ch;color:var(--muted);font-size:14px;margin-bottom:10px;overflow-wrap:anywhere}
+.explain-body p:last-child{margin-bottom:0}
+.explain-body strong{color:var(--ink)}
+.formula-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;margin:14px 0 18px}
+@media (min-width:760px){.formula-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.formula{min-width:0;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--paper-2)}
+.formula h3,.formula-title{margin:0 0 7px;font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.formula code{display:inline-block;max-width:100%;padding:2px 6px;border-radius:5px;background:var(--accent-wash);font-family:var(--mono);font-size:12.5px;line-height:1.6;overflow-wrap:anywhere}
+.assumptions{margin:0;padding-left:20px;color:var(--muted);font-size:13.5px}
+.assumptions li{margin:0 0 8px;overflow-wrap:anywhere}
+
+/* FAQ */
+.faq{margin-top:18px}
+.faq h2{margin:0 0 12px;font-size:clamp(1.3rem,3vw,1.7rem);letter-spacing:-.02em}
+.faq details{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:0 20px}
+.faq details+details{margin-top:10px}
+.faq summary{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:44px;padding:16px 0;cursor:pointer;font-weight:650;list-style:none}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";flex:none;font-family:var(--mono);font-size:19px;line-height:1;color:var(--accent)}
+.faq details[open] summary::after{content:"\2212"}
+.faq details p{margin:0;padding:0 0 18px;color:var(--muted);font-size:14px;max-width:80ch;overflow-wrap:anywhere}
+
+/* Footer */
+.site-footer{margin-top:28px;padding:22px 0 34px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted)}
+.footer-inner{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 18px}
+.footer-links{display:flex;flex-wrap:wrap;gap:4px 14px}
+.site-footer a{color:var(--accent);text-decoration:none;display:inline-flex;align-items:center;min-height:44px}
+.site-footer a:hover{text-decoration:underline}
+.footer-note{margin:8px 0 0;max-width:82ch;color:var(--muted-2);overflow-wrap:anywhere}
+.noscript{margin-top:18px}
+
+/* Toast */
+.toast{
+  position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));
+  transform:translate(-50%,12px);z-index:20;max-width:calc(100vw - 32px);
+  padding:12px 18px;border-radius:12px;background:var(--ink);color:var(--paper);
+  font-size:14px;font-weight:600;text-align:center;box-shadow:0 8px 24px rgb(0 0 0 / .22);
+  opacity:0;pointer-events:none;transition:opacity .16s,transform .16s;overflow-wrap:anywhere
+}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+
+/* Motion and print */
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .btn:active{transform:none}
+}
+@media print{
+  .site-header,.site-footer,.skip-link,.lang-switch,.tabs,.chips,.btn-row,.toast,.no-print{display:none!important}
+  body{background:#fff;color:#000;padding:0}
+  .card,.table-wrap{border-color:#999;background:#fff;break-inside:avoid}
+  .result-col{position:static}
+  .result-big{color:#000}
+  .explain,.faq{display:block}
+  details{break-inside:avoid}
+  .faq details p{display:block!important}
+}
+</style>
+</head>
+<body data-slug="markdown-preview" data-category="text-dev">
+<a class="skip-link" href="#tool" data-i="skip">跳到工具</a>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="/" aria-label="Devin" data-i-aria="brandHome">
+      <span class="brand-mark" aria-hidden="true"></span><span data-i="brandName">Devin</span>
+    </a>
+    <div class="header-tools">
+      <nav class="site-nav" aria-label="站点导航" data-i-aria="navAria">
+        <a id="nav-tools" href="/tools/" data-tools-link data-i="navHall">工具大厅</a>
+        <a href="/games/" data-i="navGames">在线桌游</a>
+      </nav>
+      <nav class="lang-switch" aria-label="语言" data-i-aria="langLabel">
+        <button type="button" data-lang="zh" aria-pressed="true" data-i="langZh">中文</button>
+        <button type="button" data-lang="en" aria-pressed="false" data-i="langEn">EN</button>
+        <button type="button" data-lang="id" aria-pressed="false" data-i="langId">ID</button>
+      </nav>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero" aria-labelledby="page-title">
+    <p class="eyebrow" data-i="eyebrow">免费工具 · 本地运行</p>
+    <h1 id="page-title" data-i="appTitle">Markdown 预览</h1>
+    <p class="lede" data-i="tagline">先转义，再渲染，别让脚本跑进来。</p>
+    <p class="privacy">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+      <span data-i="privacy">所有计算都在你的浏览器里完成，输入不会上传。</span>
+    </p>
+  </section>
+
+  <!-- ======================================================================
+       TOOL BODY — builder replaces this marker with the tool UI.
+       Everything between the marker and the explain section belongs to the tool.
+       Keep labels, data-i hooks, aria-live results and 44px targets.
+       ====================================================================== -->
+  <style>
+    .md-warn{padding:10px 13px;border-radius:10px;background:var(--warn-wash);border:1px solid var(--warn);color:var(--warn);font-size:13px;font-weight:600;line-height:1.55;overflow-wrap:anywhere;margin-bottom:14px}
+    .md-source{font-family:var(--mono);font-size:13.5px;line-height:1.6}
+    .md-preview{min-height:200px;padding:16px;border:1px solid var(--line);border-radius:12px;background:var(--panel);overflow-wrap:anywhere;font-size:15px;line-height:1.7}
+    .md-preview:empty::before{content:"";}
+    .md-empty{color:var(--muted);font-size:14px}
+    .md-preview h1,.md-preview h2,.md-preview h3,.md-preview h4,.md-preview h5,.md-preview h6{margin:.9em 0 .45em;line-height:1.25;letter-spacing:-.02em}
+    .md-preview h1{font-size:1.7rem}
+    .md-preview h2{font-size:1.4rem}
+    .md-preview h3{font-size:1.2rem}
+    .md-preview h4,.md-preview h5,.md-preview h6{font-size:1.05rem}
+    .md-preview p{margin:.5em 0 .9em;color:var(--ink)}
+    .md-preview ul,.md-preview ol{margin:.4em 0 .9em;padding-left:1.5em}
+    .md-preview li{margin:.2em 0}
+    .md-preview blockquote{margin:.7em 0;padding:2px 0 2px 13px;border-left:3px solid var(--accent-soft);color:var(--muted)}
+    .md-preview pre{margin:.7em 0;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--paper-2);overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}
+    .md-preview code{font-family:var(--mono);font-size:.9em;padding:1px 4px;border-radius:4px;background:var(--accent-wash);color:var(--ink)}
+    .md-preview pre code{padding:0;background:none;font-size:.86rem;line-height:1.55}
+    .md-preview a{color:var(--accent);text-decoration:underline;overflow-wrap:anywhere}
+    .md-preview hr{margin:1.1em 0;border:0;border-top:1px solid var(--line-strong)}
+  </style>
+  <section class="tool-layout" id="tool">
+    <div class="card">
+      <h2 data-i="inputTitle">Markdown 源码</h2>
+      <p class="md-warn" data-i="securityNote">渲染前会先转义全部原始 HTML，再只生成受控的安全标签；不支持内嵌 HTML、脚本或事件属性。</p>
+      <div class="field">
+        <label for="md-input" data-i="inputLabel">Markdown</label>
+        <textarea id="md-input" class="md-source" rows="14" spellcheck="false" data-i-ph="inputPh" placeholder="在这里输入 Markdown…"></textarea>
+      </div>
+      <div class="btn-row" style="margin-top:12px">
+        <button class="btn" id="md-sample" type="button" data-i="sampleBtn">载入示例</button>
+        <button class="btn ghost" id="md-clear" type="button" data-i="clear">清除</button>
+      </div>
+      <p class="error" id="md-error" role="alert" hidden></p>
+      <p class="hint" data-i="inputHint">支持标题、粗体、斜体、行内代码、代码块、有序/无序列表（可嵌套）、引用、链接与水平线。导出按钮会生成一个可直接打开的完整 HTML 文件。</p>
+    </div>
+    <div class="card result result-col" aria-live="polite">
+      <h2 data-i="previewTitle">安全预览</h2>
+      <div class="md-preview" id="md-preview">预览会显示在这里。</div>
+      <div class="btn-row" style="margin-top:12px">
+        <button class="btn primary" id="md-copy-html" type="button" data-i="copyHtml">复制 HTML</button>
+        <button class="btn" id="md-export" type="button" data-i="exportHtml">导出 HTML</button>
+      </div>
+      <p class="hint" data-i="previewHint">预览与导出都只包含受控标签；链接仅允许 http、https、mailto 和相对地址。导出前请自行复查内容。</p>
+    </div>
+  </section>
+
+  <section class="explain" id="explain" aria-labelledby="explain-title">
+    <h2 id="explain-title" data-i="explainTitle">公式与假设</h2>
+    <div class="explain-body">
+      <!-- ==================================================================
+           TOOL EXPLAIN — formula, assumptions, rounding rules, limitations.
+           ================================================================== -->
+      <p data-i="explainIntro">渲染分两步：先把整段输入中的 &amp; &lt; &gt; &quot; ' 全部转义，避免被浏览器当作标签；再按块级和行内规则生成固定的白名单标签。因此原始 HTML 只会显示为文字，不会执行。</p>
+      <div class="formula-grid">
+        <div class="formula">
+          <h3 class="formula-title" data-i="formulaTitle">安全模型</h3>
+          <code>escape(input) → whitelisted block/inline tags → escaped attributes</code>
+        </div>
+      </div>
+      <ul class="assumptions">
+        <li data-i="explainRule1">块级支持：1–6 级标题（# 加空格）、围栏代码块（三个反引号）、引用（&gt;）、无序列表（- * +）、有序列表（1.）、水平线（三个以上 - * _）。</li>
+        <li data-i="explainRule2">行内支持：**粗体**、__粗体__、*斜体*、_斜体_、`行内代码`、[文字](链接)。代码内容先占位，不再参与粗斜体解析。</li>
+        <li data-i="explainRule3">链接仅允许 http、https、mailto 和相对地址；javascript:、data:、vbscript: 等协议会被拒绝，只保留链接文字。带实体的伪装协议同样会被拒绝。</li>
+        <li data-i="explainRule4">列表按缩进嵌套（建议两个空格）；空行会结束当前列表。段落内的单个换行显示为 &lt;br&gt;。不支持的语法按普通文字显示。</li>
+        <li data-i="explainRule5">不支持表格、任务列表、脚注、图片和原始 HTML；未闭合的代码块会一直延续到文本末尾。输入上限 200,000 字符，所有处理都在本地完成。</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="faq" id="faq" aria-labelledby="faq-title">
+    <h2 id="faq-title" data-i="faqTitle">常见问题</h2>
+    <!-- ====================================================================
+         TOOL FAQ — generator injects the Chinese FAQ from config.faqs.
+         Keep the faqQ1..faqA3 data-i keys in all three dictionaries.
+         ==================================================================== -->
+    <details>
+          <summary data-i="faqQ1">这里的 HTML 为什么安全？</summary>
+          <p data-i="faqA1">渲染前会先转义原始 HTML 标签，只生成受控的标签，避免脚本注入。即便如此，导出的 HTML 放到你自己的站点前仍应复查。</p>
+        </details>
+    <details>
+          <summary data-i="faqQ2">支持表格和任务列表吗？</summary>
+          <p data-i="faqA2">当前只覆盖安全子集，表格、任务列表和脚注暂不支持。遇到未支持语法会按普通文本显示，不会报错。</p>
+        </details>
+    <details>
+          <summary data-i="faqQ3">导出的 HTML 可以直接发布吗？</summary>
+          <p data-i="faqA3">可以用于简单页面，但不含完整样式和站点结构。发布前请补上标题层级、语言属性和必要的可访问性标记。</p>
+        </details>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <p data-i="copyright">© 2026 Devin</p>
+    <nav class="footer-links" aria-label="页脚导航" data-i-aria="footerAria">
+      <a href="/tools/" data-tools-link data-i="backTools">工具大厅</a>
+      <a href="/games/" data-i="navGames">在线桌游</a>
+      <a href="/" data-i="navHome">首页</a>
+    </nav>
+  </div>
+  <div class="wrap"><p class="footer-note" data-i="footerNote">所有处理都在本地完成，不上传任何数据。</p></div>
+</footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<noscript>
+  <div class="wrap"><p class="card noscript" data-i="noscript">这个工具需要 JavaScript 才能运行。所有计算都在你的设备上完成，不会上传任何数据。</p></div>
+</noscript>
+
+<!-- ==========================================================================
+     ENGINE — pure functions only. No DOM, no window, no clock, no storage.
+     Builder replaces everything between TOOL_ENGINE_START and TOOL_ENGINE_END,
+     then updates the return object. Must stay Node-evaluable.
+     ========================================================================== -->
+<script id="engine">
+var ToolEngine = (function () {
+  'use strict';
+
+  // TOOL_ENGINE_START
+  var MAX_INPUT = 200000;
+
+  function fail(code) {
+    return { ok: false, error: code };
+  }
+
+  function esc(input) {
+    return input
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function escapeHtml(input) {
+    if (typeof input !== 'string') return fail('bad_value');
+    return { ok: true, value: esc(input) };
+  }
+
+  function decodeMinimal(input) {
+    return input
+      .replace(/&amp;/g, '&')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>');
+  }
+
+  // Only http, https, mailto and relative targets are allowed.
+  function safeUrl(raw) {
+    if (typeof raw !== 'string') return null;
+    var url = raw.trim();
+    if (!url) return null;
+    var decoded = decodeMinimal(url);
+    if (/&(?:#x?[0-9a-f]+|[a-z][a-z0-9]+);/i.test(decoded)) return null;
+    var probe = decoded.replace(/[\u0000- \u007f]+/g, '').toLowerCase();
+    if (/^(?:javascript|data|vbscript|file):/.test(probe)) return null;
+    var scheme = /^([a-z][a-z0-9+.-]*):/.exec(probe);
+    if (scheme && !/^(?:https?|mailto)$/.test(scheme[1])) return null;
+    return decoded;
+  }
+
+  function renderEmphasis(text) {
+    var out = text
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/__([^_]+)__/g, '<strong>$1</strong>')
+      .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+      .replace(/(^|[^\w])_([^_]+)_(?!\w)/g, '$1<em>$2</em>');
+    return out;
+  }
+
+  // Input is already HTML-escaped; placeholders keep code and links out of
+  // emphasis processing and are restored at the end.
+  function renderInline(escaped) {
+    var store = [];
+    function hold(html) {
+      store.push(html);
+      return '\u0000' + (store.length - 1) + '\u0000';
+    }
+    var text = escaped.replace(/`([^`]+)`/g, function (all, code) {
+      return hold('<code>' + code + '</code>');
+    });
+    text = text.replace(/!\[([^\]]*)\]\(([^()\s]*)\)/g, '$1');
+    text = text.replace(/\[([^\]]+)\]\(((?:[^()\s]|\([^()\s]*\))*)\)/g, function (all, label, url) {
+      var safe = safeUrl(url);
+      var inner = renderEmphasis(label);
+      if (!safe) return inner;
+      return hold('<a href="' + esc(safe) + '" rel="noopener noreferrer" target="_blank">' + inner + '</a>');
+    });
+    text = renderEmphasis(text);
+    return text.replace(/\u0000(\d+)\u0000/g, function (all, index) {
+      return store[Number(index)] || '';
+    });
+  }
+
+  function isBlockStart(line) {
+    return /^\s*$/.test(line) ||
+      /^ {0,3}```/.test(line) ||
+      /^#{1,6}\s+/.test(line) ||
+      /^ {0,3}>/.test(line) ||
+      /^ {0,3}([-*+]|\d+\.)\s+/.test(line) ||
+      /^ {0,3}(-{3,}|\*{3,}|_{3,})\s*$/.test(line);
+  }
+
+  function listItem(line) {
+    var m = line.match(/^(\s*)([-*+]|\d+\.)\s+(.*)$/);
+    if (!m) return null;
+    return {
+      indent: m[1].replace(/\t/g, '    ').length,
+      ordered: /^\d+\.$/.test(m[2]),
+      text: m[3]
+    };
+  }
+
+  function parseList(lines, start) {
+    var root = { ordered: false, items: [] };
+    var stack = [{ indent: -1, list: root }];
+    var i = start;
+    while (i < lines.length) {
+      var item = listItem(lines[i]);
+      if (!item) break;
+      if (/^ {0,3}(-{3,}|\*{3,}|_{3,})\s*$/.test(lines[i])) break;
+      while (stack.length > 1 && item.indent < stack[stack.length - 1].indent) stack.pop();
+      var top = stack[stack.length - 1];
+      if (item.indent > top.indent && top.list.items.length) {
+        var parent = top.list.items[top.list.items.length - 1];
+        var child = { ordered: item.ordered, items: [] };
+        parent.children.push(child);
+        stack.push({ indent: item.indent, list: child });
+        top = stack[stack.length - 1];
+      } else if (top.list === root && !root.items.length) {
+        root.ordered = item.ordered;
+        stack[0].indent = item.indent;
+      }
+      top.list.items.push({ text: item.text, children: [] });
+      i++;
+    }
+    function renderList(list) {
+      var tag = list.ordered ? 'ol' : 'ul';
+      var out = '<' + tag + '>';
+      for (var k = 0; k < list.items.length; k++) {
+        var entry = list.items[k];
+        out += '<li>' + renderInline(esc(entry.text));
+        for (var c = 0; c < entry.children.length; c++) {
+          out += renderList(entry.children[c]);
+        }
+        out += '</li>';
+      }
+      return out + '</' + tag + '>';
+    }
+    return { html: renderList(root), next: i };
+  }
+
+  function renderBlocks(lines, depth) {
+    var out = [];
+    var i = 0;
+    while (i < lines.length) {
+      var line = lines[i];
+      if (/^\s*$/.test(line)) { i++; continue; }
+      var fence = line.match(/^ {0,3}```([A-Za-z0-9_+#.-]*)\s*$/);
+      if (fence) {
+        var lang = fence[1];
+        var code = [];
+        i++;
+        while (i < lines.length && !/^ {0,3}```\s*$/.test(lines[i])) {
+          code.push(lines[i]);
+          i++;
+        }
+        if (i < lines.length) i++;
+        out.push('<pre><code' + (lang ? ' class="language-' + esc(lang) + '"' : '') + '>' +
+          esc(code.join('\n')) + '</code></pre>');
+        continue;
+      }
+      var heading = line.match(/^(#{1,6})\s+(.*)$/);
+      if (heading) {
+        var level = heading[1].length;
+        out.push('<h' + level + '>' + renderInline(esc(heading[2].trim())) + '</h' + level + '>');
+        i++;
+        continue;
+      }
+      if (/^ {0,3}(-{3,}|\*{3,}|_{3,})\s*$/.test(line)) {
+        out.push('<hr>');
+        i++;
+        continue;
+      }
+      if (/^ {0,3}>/.test(line)) {
+        var quoted = [];
+        while (i < lines.length && /^ {0,3}>/.test(lines[i])) {
+          quoted.push(lines[i].replace(/^ {0,3}>\s?/, ''));
+          i++;
+        }
+        if (depth < 20) {
+          out.push('<blockquote>' + renderBlocks(quoted, depth + 1) + '</blockquote>');
+        } else {
+          out.push('<blockquote><p>' + renderInline(esc(quoted.join('\n'))) + '</p></blockquote>');
+        }
+        continue;
+      }
+      if (listItem(line)) {
+        var list = parseList(lines, i);
+        out.push(list.html);
+        i = list.next;
+        continue;
+      }
+      var para = [];
+      while (i < lines.length && !isBlockStart(lines[i])) {
+        para.push(lines[i]);
+        i++;
+      }
+      if (para.length) {
+        out.push('<p>' + para.map(function (l) { return renderInline(esc(l)); }).join('<br>') + '</p>');
+      } else {
+        i++;
+      }
+    }
+    return out.join('\n');
+  }
+
+  function renderMarkdown(input) {
+    if (typeof input !== 'string') return fail('bad_value');
+    if (input.length > MAX_INPUT) return fail('too_large');
+    var clean = input.replace(/\r\n?/g, '\n').replace(/\u0000/g, '');
+    var warnings = [];
+    var fenceCount = (clean.match(/^ {0,3}```/gm) || []).length;
+    if (fenceCount % 2 !== 0) warnings.push('unclosed_fence');
+    return { ok: true, html: renderBlocks(clean.split('\n'), 0), warnings: warnings };
+  }
+  // TOOL_ENGINE_END
+
+  return {
+    escapeHtml: escapeHtml,
+    safeUrl: safeUrl,
+    renderInline: renderInline,
+    renderMarkdown: renderMarkdown
+  };
+})();
+</script>
+
+<!-- ==========================================================================
+     DICTIONARIES — zh / en / id must always expose exactly the same keys.
+     Generic keys live above the TOOL_DICT_* marker.
+     Tool-specific keys (including faqQ1..faqA3) live below the marker and are
+     replaced by the builder. No hard-coded visible copy anywhere in the page.
+     ========================================================================== -->
+<script id="i18n">
+var TOOL_I18N = {
+  zh: {
+    /* ---- generic keys: do not remove ---- */
+    docTitle: 'Markdown 预览与安全渲染',
+    docDesc: '在本地把 Markdown 的安全子集渲染成 HTML，支持标题、粗斜体、代码、列表、引用、链接和分割线，可复制导出。全部在本地处理，无需注册。',
+    appTitle: 'Markdown 预览',
+    tagline: '先转义，再渲染，别让脚本跑进来。',
+    eyebrow: '免费工具 · 本地运行',
+    privacy: '所有计算都在你的浏览器里完成，输入不会上传。',
+    skip: '跳到工具',
+    navAria: '站点导航',
+    navHall: '工具大厅',
+    navGames: '在线桌游',
+    langLabel: '语言',
+    langZh: '中文',
+    langEn: 'EN',
+    langId: 'ID',
+    brandName: 'Devin',
+    brandHome: 'Devin 首页',
+    navHome: '首页',
+    footerAria: '页脚导航',
+    footerNote: '所有处理都在本地完成，不上传任何数据。',
+    copyright: '© 2026 Devin',
+    copy: '复制结果',
+    copied: '已复制。',
+    copyFail: '无法自动复制，请手动选中后复制。',
+    copyHint: '复制的是未加千分位的原始数值。',
+    reset: '重置',
+    result: '结果',
+    explainTitle: '公式与假设',
+    faqTitle: '常见问题',
+    formulaTitle: '公式',
+    assumptionsTitle: '假设与规则',
+    backTools: '工具大厅',
+    moreTools: '更多工具',
+    notMedical: '仅供估算，不构成医疗建议。',
+    notFinancial: '仅供估算，不构成财务建议。',
+    unitNote: '换算结果按四舍五入显示。',
+    download: '下载',
+    downloadFail: '下载失败，请重试。',
+    clear: '清除',
+    swap: '交换',
+    add: '添加',
+    remove: '删除',
+    close: '关闭',
+    yes: '是',
+    no: '否',
+    errorInvalid: '请输入有效的数字。',
+    errorRequired: '请填写这一项。',
+    errorGeneric: '无法计算，请检查输入。',
+    storageFail: '无法写入本地存储，本次设置不会被保存。',
+    noscript: '这个工具需要 JavaScript 才能运行。所有计算都在你的设备上完成，不会上传任何数据。',
+
+    /* ---- tool-specific keys: replace below this line ---- */
+    // TOOL_DICT_ZH
+    inputTitle: 'Markdown 源码',
+    securityNote: '渲染前会先转义全部原始 HTML，再只生成受控的安全标签；不支持内嵌 HTML、脚本或事件属性。',
+    inputLabel: 'Markdown',
+    inputPh: '在这里输入 Markdown…',
+    sampleBtn: '载入示例',
+    inputHint: '支持标题、粗体、斜体、行内代码、代码块、有序/无序列表（可嵌套）、引用、链接与水平线。导出按钮会生成一个可直接打开的完整 HTML 文件。',
+    previewTitle: '安全预览',
+    previewHint: '预览与导出都只包含受控标签；链接仅允许 http、https、mailto 和相对地址。导出前请自行复查内容。',
+    copyHtml: '复制 HTML',
+    exportHtml: '导出 HTML',
+    exportTitle: 'Markdown 预览',
+    emptyPreview: '预览会显示在这里。',
+    errTooLarge: '输入超过 200,000 个字符，请分段预览。',
+    sampleMd: '# Markdown 示例\n\n这是**安全**渲染，支持*斜体*与 `行内代码`。\n\n## 列表\n\n- 第一项\n  - 嵌套项\n- 第二项\n\n1. 有序一\n2. 有序二\n\n> 引用里的 **重点**。\n\n```js\nconst safe = "<b>转义</b>";\n```\n\n[示例链接](https://example.com)\n\n---\n',
+    explainIntro: '渲染分两步：先把整段输入中的 & < > " \' 全部转义，成对避免被浏览器当作标签；再按块级和行内规则生成固定的白名单标签。因此原始 HTML 只会显示为文字，不会执行。',
+    explainRule1: '块级支持：1–6 级标题（# 加空格）、围栏代码块（三个反引号）、引用（>）、无序列表（- * +）、有序列表（1.）、水平线（三个以上 - * _）。',
+    explainRule2: '行内支持：**粗体**、__粗体__、*斜体*、_斜体_、`行内代码`、[文字](链接)。代码内容先占位，不再参与粗斜体解析。',
+    explainRule3: '链接仅允许 http、https、mailto 和相对地址；javascript:、data:、vbscript: 等协议会被拒绝，只保留链接文字。带实体的伪装协议同样会被拒绝。',
+    explainRule4: '列表按缩进嵌套（建议两个空格）；空行会结束当前列表。段落内的单个换行显示为 <br>。不支持的语法按普通文字显示。',
+    explainRule5: '不支持表格、任务列表、脚注、图片和原始 HTML；未闭合的代码块会一直延续到文本末尾。输入上限 200,000 字符，所有处理都在本地完成。',
+    faqQ1: '这里的 HTML 为什么安全？',
+    faqA1: '渲染前会先转义原始 HTML 标签，只生成受控的标签，避免脚本注入。即便如此，导出的 HTML 放到你自己的站点前仍应复查。',
+    faqQ2: '支持表格和任务列表吗？',
+    faqA2: '当前只覆盖安全子集，表格、任务列表和脚注暂不支持。遇到未支持语法会按普通文本显示，不会报错。',
+    faqQ3: '导出的 HTML 可以直接发布吗？',
+    faqA3: '可以用于简单页面，但不含完整样式和站点结构。发布前请补上标题层级、语言属性和必要的可访问性标记。'
+  },
+  en: {
+    /* ---- generic keys: do not remove ---- */
+    docTitle: 'Markdown Preview',
+    docDesc: 'Render a safe subset of Markdown to HTML locally, covering headings, emphasis, code, lists, quotes and links, with copy and export. Local, no sign-up.',
+    appTitle: 'Markdown Preview',
+    tagline: 'Escape first, then render safely.',
+    eyebrow: 'Free tool · runs locally',
+    privacy: 'Everything runs in your browser. Nothing you type is uploaded.',
+    skip: 'Skip to the tool',
+    navAria: 'Site navigation',
+    navHall: 'Tools',
+    navGames: 'Games',
+    langLabel: 'Language',
+    langZh: '中文',
+    langEn: 'EN',
+    langId: 'ID',
+    brandName: 'Devin',
+    brandHome: 'Devin home',
+    navHome: 'Home',
+    footerAria: 'Footer navigation',
+    footerNote: 'Everything runs locally. No data is uploaded.',
+    copyright: '© 2026 Devin',
+    copy: 'Copy result',
+    copied: 'Copied.',
+    copyFail: 'Could not copy automatically. Select the text and copy it manually.',
+    copyHint: 'Copies the plain number without thousands separators.',
+    reset: 'Reset',
+    result: 'Result',
+    explainTitle: 'Formulas and assumptions',
+    faqTitle: 'Frequently asked questions',
+    formulaTitle: 'Formula',
+    assumptionsTitle: 'Assumptions and rules',
+    backTools: 'Tools',
+    moreTools: 'More tools',
+    notMedical: 'Estimates only, not medical advice.',
+    notFinancial: 'Estimates only, not financial advice.',
+    unitNote: 'Converted values are rounded for display.',
+    download: 'Download',
+    downloadFail: 'Download failed. Try again.',
+    clear: 'Clear',
+    swap: 'Swap',
+    add: 'Add',
+    remove: 'Remove',
+    close: 'Close',
+    yes: 'Yes',
+    no: 'No',
+    errorInvalid: 'Enter a valid number.',
+    errorRequired: 'Fill in this field.',
+    errorGeneric: 'Could not calculate. Check the inputs.',
+    storageFail: 'Could not write to local storage, so this setting will not be saved.',
+    noscript: 'This tool needs JavaScript to run. All calculations happen on your device; nothing is uploaded.',
+
+    /* ---- tool-specific keys: replace below this line ---- */
+    // TOOL_DICT_EN
+    inputTitle: 'Markdown source',
+    securityNote: 'Every raw HTML character is escaped before rendering, and only controlled safe tags are generated. Inline HTML, scripts, and event attributes are not supported.',
+    inputLabel: 'Markdown',
+    inputPh: 'Type Markdown here…',
+    sampleBtn: 'Load sample',
+    inputHint: 'Supports headings, bold, italic, inline code, fenced code, ordered and unordered lists (nested), blockquotes, links, and horizontal rules. Export creates a complete HTML file you can open directly.',
+    previewTitle: 'Safe preview',
+    previewHint: 'The preview and export contain only controlled tags. Links allow http, https, mailto, and relative targets. Review the content before exporting.',
+    copyHtml: 'Copy HTML',
+    exportHtml: 'Export HTML',
+    exportTitle: 'Markdown preview',
+    emptyPreview: 'The preview appears here.',
+    errTooLarge: 'The input exceeds 200,000 characters. Preview it in smaller parts.',
+    sampleMd: '# Markdown sample\n\nThis is **safe** rendering with *italic* and `inline code`.\n\n## Lists\n\n- First item\n  - Nested item\n- Second item\n\n1. Ordered one\n2. Ordered two\n\n> A quote with **emphasis**.\n\n```js\nconst safe = "<b>escaped</b>";\n```\n\n[Example link](https://example.com)\n\n---\n',
+    explainIntro: 'Rendering happens in two steps: the whole input has & < > " \' escaped first so the browser never treats it as markup, then block and inline rules emit a fixed whitelist of tags. Raw HTML therefore appears as text and cannot execute.',
+    explainRule1: 'Block support: heading levels 1–6 (# plus a space), fenced code blocks (three backticks), blockquotes (>), unordered lists (- * +), ordered lists (1.), and horizontal rules (three or more - * _).',
+    explainRule2: 'Inline support: **bold**, __bold__, *italic*, _italic_, `inline code`, and [text](link). Code content is held as a placeholder and never parsed for emphasis.',
+    explainRule3: 'Links allow only http, https, mailto, and relative targets. javascript:, data:, vbscript:, and similar schemes are rejected and only the link text remains. Entity-obfuscated schemes are rejected too.',
+    explainRule4: 'Lists nest by indentation (two spaces recommended); a blank line ends the current list. A single newline inside a paragraph becomes <br>. Unsupported syntax is shown as plain text.',
+    explainRule5: 'Tables, task lists, footnotes, images, and raw HTML are not supported; an unclosed code fence runs to the end of the input. The input limit is 200,000 characters and everything runs locally.',
+    faqQ1: 'Why is the HTML here safe?',
+    faqA1: 'Raw HTML tags are escaped before rendering, and only controlled tags are generated, which blocks script injection. Even so, review the exported HTML before putting it on your own site.',
+    faqQ2: 'Are tables and task lists supported?',
+    faqA2: 'Only the safe subset is covered. Tables, task lists, and footnotes are not supported yet. Unsupported syntax appears as plain text instead of raising an error.',
+    faqQ3: 'Can I publish the exported HTML directly?',
+    faqA3: 'It works for simple pages but does not include a full stylesheet or site structure. Add heading levels, a language attribute, and the accessibility markup you need before publishing.'
+  },
+  id: {
+    /* ---- generic keys: do not remove ---- */
+    docTitle: 'Pratinjau Markdown',
+    docDesc: 'Render subset Markdown yang aman ke HTML secara lokal, mencakup judul, penekanan, kode, daftar, kutipan, dan tautan, dengan salin dan ekspor. Diproses lokal, tanpa daftar.',
+    appTitle: 'Pratinjau Markdown',
+    tagline: 'Escape dulu, baru render dengan aman.',
+    eyebrow: 'Alat gratis · berjalan lokal',
+    privacy: 'Semua perhitungan berjalan di browser Anda. Tidak ada yang diunggah.',
+    skip: 'Lompat ke alat',
+    navAria: 'Navigasi situs',
+    navHall: 'Alat',
+    navGames: 'Permainan',
+    langLabel: 'Bahasa',
+    langZh: '中文',
+    langEn: 'EN',
+    langId: 'ID',
+    brandName: 'Devin',
+    brandHome: 'Beranda Devin',
+    navHome: 'Beranda',
+    footerAria: 'Navigasi footer',
+    footerNote: 'Semua diproses secara lokal. Tidak ada data yang diunggah.',
+    copyright: '© 2026 Devin',
+    copy: 'Salin hasil',
+    copied: 'Tersalin.',
+    copyFail: 'Tidak bisa menyalin otomatis. Pilih teksnya lalu salin manual.',
+    copyHint: 'Menyalin angka polos tanpa pemisah ribuan.',
+    reset: 'Atur ulang',
+    result: 'Hasil',
+    explainTitle: 'Rumus dan asumsi',
+    faqTitle: 'Pertanyaan yang sering diajukan',
+    formulaTitle: 'Rumus',
+    assumptionsTitle: 'Asumsi dan aturan',
+    backTools: 'Alat',
+    moreTools: 'Alat lainnya',
+    notMedical: 'Hanya perkiraan, bukan saran medis.',
+    notFinancial: 'Hanya perkiraan, bukan saran keuangan.',
+    unitNote: 'Nilai hasil konversi dibulatkan untuk tampilan.',
+    download: 'Unduh',
+    downloadFail: 'Unduh gagal. Coba lagi.',
+    clear: 'Bersihkan',
+    swap: 'Tukar',
+    add: 'Tambah',
+    remove: 'Hapus',
+    close: 'Tutup',
+    yes: 'Ya',
+    no: 'Tidak',
+    errorInvalid: 'Masukkan angka yang valid.',
+    errorRequired: 'Isi kolom ini.',
+    errorGeneric: 'Tidak dapat menghitung. Periksa input.',
+    storageFail: 'Tidak bisa menulis ke penyimpanan lokal, jadi pengaturan ini tidak akan disimpan.',
+    noscript: 'Alat ini memerlukan JavaScript. Semua perhitungan terjadi di perangkat Anda; tidak ada yang diunggah.',
+
+    /* ---- tool-specific keys: replace below this line ---- */
+    // TOOL_DICT_ID
+    inputTitle: 'Sumber Markdown',
+    securityNote: 'Semua karakter HTML mentah di-escape sebelum render, dan hanya tag aman yang dikendalikan yang dihasilkan. HTML inline, skrip, dan atribut event tidak didukung.',
+    inputLabel: 'Markdown',
+    inputPh: 'Ketik Markdown di sini…',
+    sampleBtn: 'Muat contoh',
+    inputHint: 'Mendukung judul, tebal, miring, kode inline, blok kode, daftar berurut dan tak berurut (bersarang), kutipan, tautan, dan garis horizontal. Ekspor membuat file HTML lengkap yang bisa langsung dibuka.',
+    previewTitle: 'Pratinjau aman',
+    previewHint: 'Pratinjau dan ekspor hanya berisi tag terkendali. Tautan hanya mengizinkan http, https, mailto, dan alamat relatif. Periksa konten sebelum mengekspor.',
+    copyHtml: 'Salin HTML',
+    exportHtml: 'Ekspor HTML',
+    exportTitle: 'Pratinjau Markdown',
+    emptyPreview: 'Pratinjau muncul di sini.',
+    errTooLarge: 'Masukan melebihi 200.000 karakter. Pratinjau per bagian.',
+    sampleMd: '# Contoh Markdown\n\nIni render **aman** dengan *miring* dan `kode inline`.\n\n## Daftar\n\n- Item pertama\n  - Item bersarang\n- Item kedua\n\n1. Urut satu\n2. Urut dua\n\n> Kutipan dengan **penekanan**.\n\n```js\nconst safe = "<b>escaped</b>";\n```\n\n[Tautan contoh](https://example.com)\n\n---\n',
+    explainIntro: 'Render berjalan dua langkah: seluruh masukan & < > " \' di-escape lebih dulu agar browser tidak menganggapnya markup, lalu aturan blok dan inline menghasilkan daftar tag putih yang tetap. Jadi HTML mentah tampil sebagai teks dan tidak bisa dieksekusi.',
+    explainRule1: 'Dukungan blok: judul tingkat 1–6 (# diikuti spasi), blok kode berpagar (tiga backtick), kutipan (>), daftar tak berurut (- * +), daftar berurut (1.), dan garis horizontal (tiga atau lebih - * _).',
+    explainRule2: 'Dukungan inline: **tebal**, __tebal__, *miring*, _miring_, `kode inline`, dan [teks](tautan). Isi kode disimpan sebagai placeholder dan tidak pernah diurai untuk penekanan.',
+    explainRule3: 'Tautan hanya mengizinkan http, https, mailto, dan alamat relatif. Skema javascript:, data:, vbscript:, dan sejenisnya ditolak dan hanya teks tautan yang tersisa. Skema yang disamarkan entitas juga ditolak.',
+    explainRule4: 'Daftar bersarang berdasarkan indentasi (disarankan dua spasi); baris kosong mengakhiri daftar saat ini. Satu baris baru di dalam paragraf menjadi <br>. Sintaks yang tidak didukung tampil sebagai teks biasa.',
+    explainRule5: 'Tabel, daftar tugas, catatan kaki, gambar, dan HTML mentah tidak didukung; blok kode yang tidak ditutup berlanjut sampai akhir masukan. Batas masukan 200.000 karakter dan semua diproses lokal.',
+    faqQ1: 'Mengapa HTML di sini aman?',
+    faqA1: 'Tag HTML mentah di-escape sebelum render, dan hanya tag terkendali yang dihasilkan, sehingga injeksi skrip dicegah. Meski begitu, periksa HTML hasil ekspor sebelum dipasang di situs Anda.',
+    faqQ2: 'Apakah tabel dan daftar tugas didukung?',
+    faqA2: 'Hanya subset aman yang dicakup. Tabel, daftar tugas, dan catatan kaki belum didukung. Sintaks yang tidak didukung tampil sebagai teks biasa, bukan galat.',
+    faqQ3: 'Bisakah HTML hasil ekspor langsung diterbitkan?',
+    faqA3: 'Bisa untuk halaman sederhana, tetapi tidak menyertakan stylesheet lengkap atau struktur situs. Tambahkan tingkat judul, atribut bahasa, dan markup aksesibilitas yang diperlukan sebelum menerbitkan.'
+  }
+};
+</script>
+
+<!-- ==========================================================================
+     UI RUNTIME — language switching plus the global ToolUI helpers.
+     Builder replaces only the TOOL_UI_START / TOOL_UI_END block.
+     ========================================================================== -->
+<script>
+(function () {
+  'use strict';
+
+  var I18N = (typeof TOOL_I18N !== 'undefined') ? TOOL_I18N : { zh: {}, en: {}, id: {} };
+  var TOOL_SLUG = 'markdown-preview';
+  var LANG_KEY = 'hhfa.tool.' + TOOL_SLUG + '.lang';
+  var LANGS = ['zh', 'en', 'id'];
+  var LOCALES = { zh: 'zh-CN', en: 'en-US', id: 'id-ID' };
+  var OG_LOCALES = { zh: 'zh_CN', en: 'en_US', id: 'id_ID' };
+  var state = { lang: 'zh' };
+  var toastTimer = null;
+  var started = false;
+  var langHooks = [];
+
+  function $(sel) {
+    return typeof sel === 'string' ? document.querySelector(sel) : sel;
+  }
+
+  function $$(sel) {
+    return Array.prototype.slice.call(document.querySelectorAll(sel));
+  }
+
+  function T(key, vars) {
+    var dict = I18N[state.lang] || {};
+    var value = Object.prototype.hasOwnProperty.call(dict, key) ? dict[key] : null;
+    if (typeof value !== 'string' && I18N.zh && typeof I18N.zh[key] === 'string') {
+      value = I18N.zh[key];
+    }
+    if (typeof value !== 'string') return key;
+    if (vars) {
+      value = value.replace(/\{(\w+)\}/g, function (match, name) {
+        return vars[name] != null ? String(vars[name]) : '';
+      });
+    }
+    return value;
+  }
+
+  function locale() {
+    return LOCALES[state.lang] || 'en-US';
+  }
+
+  function fmt(n, opts) {
+    if (typeof n !== 'number' || !isFinite(n)) return '—';
+    try {
+      return new Intl.NumberFormat(locale(), opts || {}).format(n);
+    } catch (e) {
+      return String(n);
+    }
+  }
+
+  function toast(message) {
+    var el = $('#toast');
+    if (!el) return;
+    el.textContent = message == null ? '' : String(message);
+    el.classList.add('on');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove('on'); }, 2600);
+  }
+
+  function legacyCopy(text) {
+    try {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.top = '-1000px';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { ta.setSelectionRange(0, ta.value.length); } catch (e) { /* ignore */ }
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      document.body.removeChild(ta);
+      return ok;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function copy(text) {
+    var value = text == null ? '' : String(text);
+    return new Promise(function (resolve) {
+      function done() { toast(T('copied')); resolve(true); }
+      function fail() { toast(T('copyFail')); resolve(false); }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(value).then(done, function () {
+          if (legacyCopy(value)) done(); else fail();
+        });
+      } else if (legacyCopy(value)) {
+        done();
+      } else {
+        fail();
+      }
+    });
+  }
+
+  function download(name, content, mime) {
+    try {
+      var blob = new Blob([content], { type: mime || 'text/plain;charset=utf-8' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = name || 'download.txt';
+      a.rel = 'noopener';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function () {
+        try {
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        } catch (e) { /* ignore */ }
+      }, 0);
+      return true;
+    } catch (e) {
+      toast(T('downloadFail'));
+      return false;
+    }
+  }
+
+  function readStore(key, fallback) {
+    try {
+      var raw = localStorage.getItem(key);
+      if (raw == null) return fallback;
+      var value = JSON.parse(raw);
+      return value == null ? fallback : value;
+    } catch (e) {
+      return fallback;
+    }
+  }
+
+  function writeStore(key, value) {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+      return true;
+    } catch (e) {
+      toast(T('storageFail'));
+      return false;
+    }
+  }
+
+  function debounce(fn, ms) {
+    var timer = null;
+    var wait = isFinite(ms) ? ms : 150;
+    return function () {
+      var ctx = this;
+      var args = arguments;
+      clearTimeout(timer);
+      timer = setTimeout(function () { fn.apply(ctx, args); }, wait);
+    };
+  }
+
+  function on(target, event, handler) {
+    var el = typeof target === 'string' ? $(target) : target;
+    if (!el || !el.addEventListener) return function () {};
+    el.addEventListener(event, handler);
+    return function () { el.removeEventListener(event, handler); };
+  }
+
+  function setError(el, message) {
+    if (!el) return;
+    if (!message) { clearError(el); return; }
+    el.textContent = String(message);
+    el.hidden = false;
+    el.classList.add('on');
+  }
+
+  function clearError(el) {
+    if (!el) return;
+    el.textContent = '';
+    el.hidden = true;
+    el.classList.remove('on');
+  }
+
+  function onLangChange(fn) {
+    if (typeof fn !== 'function') return function () {};
+    langHooks.push(fn);
+    if (started) {
+      try { fn(state.lang); } catch (e) { /* a broken hook must not break switching */ }
+    }
+    return function () {
+      var i = langHooks.indexOf(fn);
+      if (i !== -1) langHooks.splice(i, 1);
+    };
+  }
+
+  function setMeta(attr, name, content) {
+    var nodes = document.querySelectorAll('meta');
+    for (var i = 0; i < nodes.length; i++) {
+      if (nodes[i].getAttribute(attr) === name) {
+        nodes[i].setAttribute('content', content);
+        return;
+      }
+    }
+  }
+
+  function renderLanguage() {
+    var lang = state.lang;
+    document.documentElement.lang = lang === 'zh' ? 'zh-CN' : lang;
+
+    var nodes = $$('[data-i]');
+    for (var i = 0; i < nodes.length; i++) {
+      nodes[i].textContent = T(nodes[i].getAttribute('data-i'));
+    }
+    var placeholders = $$('[data-i-ph]');
+    for (var j = 0; j < placeholders.length; j++) {
+      placeholders[j].setAttribute('placeholder', T(placeholders[j].getAttribute('data-i-ph')));
+    }
+    var labelled = $$('[data-i-aria]');
+    for (var k = 0; k < labelled.length; k++) {
+      labelled[k].setAttribute('aria-label', T(labelled[k].getAttribute('data-i-aria')));
+    }
+    var buttons = $$('[data-lang]');
+    for (var b = 0; b < buttons.length; b++) {
+      buttons[b].setAttribute('aria-pressed', buttons[b].getAttribute('data-lang') === lang ? 'true' : 'false');
+    }
+
+    document.title = T('docTitle');
+    setMeta('name', 'description', T('docDesc'));
+    setMeta('property', 'og:title', T('docTitle'));
+    setMeta('property', 'og:description', T('docDesc'));
+    setMeta('property', 'og:locale', OG_LOCALES[lang] || 'en_US');
+    setMeta('name', 'twitter:title', T('docTitle'));
+    setMeta('name', 'twitter:description', T('docDesc'));
+
+    var toolsHref = lang === 'zh' ? '/tools/' : '/tools/' + lang + '/';
+    var links = $$('[data-tools-link]');
+    for (var l = 0; l < links.length; l++) links[l].setAttribute('href', toolsHref);
+  }
+
+  function applyLang() {
+    renderLanguage();
+    for (var i = 0; i < langHooks.length; i++) {
+      try { langHooks[i](state.lang); } catch (e) { /* keep the page usable */ }
+    }
+    started = true;
+  }
+
+  function detectLang() {
+    try {
+      var q = new URLSearchParams(window.location.search).get('lang');
+      if (LANGS.indexOf(q) !== -1) return q;
+    } catch (e) { /* ignore */ }
+    try {
+      var saved = localStorage.getItem(LANG_KEY);
+      if (LANGS.indexOf(saved) !== -1) return saved;
+    } catch (e) { /* ignore */ }
+    var nav = String(navigator.language || '').toLowerCase();
+    if (nav.indexOf('zh') === 0) return 'zh';
+    if (nav.indexOf('id') === 0 || nav.indexOf('in') === 0) return 'id';
+    return 'en';
+  }
+
+  function saveLang() {
+    try { localStorage.setItem(LANG_KEY, state.lang); } catch (e) { /* ignore */ }
+  }
+
+  function bindLanguages() {
+    var buttons = $$('[data-lang]');
+    for (var i = 0; i < buttons.length; i++) {
+      (function (button) {
+        button.addEventListener('click', function () {
+          var next = button.getAttribute('data-lang');
+          if (LANGS.indexOf(next) === -1 || next === state.lang) return;
+          state.lang = next;
+          saveLang();
+          applyLang();
+        });
+      })(buttons[i]);
+    }
+  }
+
+  function init() {
+    state.lang = detectLang();
+    bindLanguages();
+    applyLang();
+  }
+
+  var ToolUI = {
+    T: T,
+    fmt: fmt,
+    copy: copy,
+    toast: toast,
+    download: download,
+    readStore: readStore,
+    writeStore: writeStore,
+    debounce: debounce,
+    on: on,
+    setError: setError,
+    clearError: clearError,
+    onLangChange: onLangChange,
+    lang: function () { return state.lang; },
+    locale: locale,
+    $: $,
+    $$: $$
+  };
+
+  window.ToolUI = ToolUI;
+  window.T = T;
+
+  // TOOL_UI_START
+  (function () {
+    var EXPORT_CSS = 'body{margin:0;background:#f2efe7;color:#14171a;font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}main{max-width:760px;margin:0 auto;padding:28px 20px}h1,h2,h3,h4,h5,h6{margin:.9em 0 .45em;line-height:1.25;letter-spacing:-.02em}h1{font-size:1.8rem}h2{font-size:1.45rem}h3{font-size:1.2rem}p{margin:.5em 0 .9em}ul,ol{padding-left:1.5em}blockquote{margin:.7em 0;padding:2px 0 2px 13px;border-left:3px solid #f2a07a;color:#5b615c}pre{padding:12px 14px;border:1px solid #d5d0c4;border-radius:10px;background:#fbf9f4;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.9em;padding:1px 4px;border-radius:4px;background:#f7e5da}pre code{padding:0;background:none}a{color:#b93d12}hr{margin:1.1em 0;border:0;border-top:1px solid #bcb5a7} @media (prefers-color-scheme:dark){body{background:#101316;color:#f2efe7}blockquote{color:#b7b3a8}pre{background:#171b1f;border-color:#333a40}code{background:#2b211c}a{color:#f08a5d}hr{border-color:#4a535b}}';
+    var input = $('#md-input');
+    var preview = $('#md-preview');
+    var errorBox = $('#md-error');
+    var lastHtml = '';
+
+    function render() {
+      if (!input || !preview) return;
+      ToolUI.clearError(errorBox);
+      var source = input.value;
+      if (!source.trim()) {
+        lastHtml = '';
+        preview.textContent = ToolUI.T('emptyPreview');
+        return;
+      }
+      var result = ToolEngine.renderMarkdown(source);
+      if (!result.ok) {
+        lastHtml = '';
+        preview.textContent = '';
+        ToolUI.setError(errorBox, ToolUI.T(result.error === 'too_large' ? 'errTooLarge' : 'errorGeneric'));
+        return;
+      }
+      lastHtml = result.html;
+      // The engine escapes every user character before emitting whitelisted tags,
+      // so this insertion never receives raw HTML from the source text.
+      preview.innerHTML = result.html;
+    }
+
+    function exportDocument() {
+      var title = ToolEngine.escapeHtml(ToolUI.T('exportTitle')).value;
+      var lang = ToolUI.lang() === 'zh' ? 'zh-CN' : ToolUI.lang();
+      return '<!doctype html>\n<html lang="' + lang + '">\n<head>\n<meta charset="utf-8">\n' +
+        '<meta name="viewport" content="width=device-width, initial-scale=1">\n' +
+        '<title>' + title + '</title>\n<style>' + EXPORT_CSS + '</style>\n</head>\n' +
+        '<body>\n<main class="md-preview">\n' + lastHtml + '\n</main>\n</body>\n</html>\n';
+    }
+
+    ToolUI.on(input, 'input', ToolUI.debounce(render, 160));
+    ToolUI.on('#md-sample', 'click', function () {
+      if (!input) return;
+      input.value = ToolUI.T('sampleMd');
+      render();
+      input.focus();
+    });
+    ToolUI.on('#md-clear', 'click', function () {
+      if (!input) return;
+      input.value = '';
+      render();
+      ToolUI.clearError(errorBox);
+      input.focus();
+    });
+    ToolUI.on('#md-copy-html', 'click', function () {
+      if (lastHtml) ToolUI.copy(lastHtml);
+    });
+    ToolUI.on('#md-export', 'click', function () {
+      if (!lastHtml) return;
+      ToolUI.download('markdown-preview.html', exportDocument(), 'text/html;charset=utf-8');
+    });
+    ToolUI.onLangChange(render);
+  })();
+  // TOOL_UI_END
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>

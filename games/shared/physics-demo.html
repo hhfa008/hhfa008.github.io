@@ -1,0 +1,767 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>物理引擎演示 · Physics</title>
+<meta name="description" content="games/shared/physics.js 的可视化演示：物理发牌（弹簧吸附、落地弹跳）与棋子跳跃（抛物线、落地压缩）。纯 JS、无依赖、确定性。">
+<meta name="robots" content="noindex,follow">
+<meta name="theme-color" content="#12161b">
+<style>
+  :root{
+    --bg:#0f1318; --panel:#161c23; --panel2:#1b232c; --line:#2a3440;
+    --ink:#e9edf2; --muted:#96a3b2; --dim:#6b7886;
+    --gold:#e0b46c; --gold-d:#b98a45; --felt:#1f3b34; --red:#e8645c;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:ui-sans-serif,system-ui,-apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(1000px 600px at 12% -10%, #1d2a33 0%, transparent 60%),
+      radial-gradient(900px 520px at 92% 0%, #232a22 0%, transparent 55%),
+      var(--bg);
+    color:var(--ink); font-family:var(--sans); line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1120px;margin:0 auto;padding:28px 18px 64px}
+  header.top{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:22px}
+  .eyebrow{font:600 11px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--gold);margin:0 0 8px}
+  h1{font-size:clamp(1.6rem,4vw,2.35rem);line-height:1.08;letter-spacing:-.02em;margin:0 0 8px}
+  .lede{color:var(--muted);margin:0;max-width:66ch;font-size:14.5px}
+  .badges{display:flex;gap:8px;flex-wrap:wrap}
+  .badge{font:600 11px/1 var(--mono);letter-spacing:.04em;color:var(--muted);
+    border:1px solid var(--line);border-radius:999px;padding:7px 11px;background:rgba(255,255,255,.02)}
+  .badge.on{color:var(--gold);border-color:rgba(224,180,108,.4)}
+  .grid{display:grid;grid-template-columns:1fr;gap:18px}
+  @media(min-width:960px){.grid{grid-template-columns:1fr 1fr}}
+  .panel{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);
+    border-radius:18px;padding:16px;box-shadow:0 18px 50px rgba(0,0,0,.28);min-width:0}
+  .panel h2{font-size:16px;margin:0 0 3px;letter-spacing:-.01em}
+  .panel .sub{margin:0 0 12px;color:var(--muted);font-size:12.5px;min-height:36px}
+  .stage{position:relative;height:340px;border-radius:14px;overflow:hidden;
+    background:
+      radial-gradient(120% 90% at 50% -10%,#26313a 0%,transparent 60%),
+      linear-gradient(180deg,#1b242c,#141a20);
+    border:1px solid #2b3742}
+  @media(max-width:520px){.stage{height:300px}}
+  .layer{position:absolute;inset:0;pointer-events:none}
+  .slot{position:absolute;border:1.5px dashed rgba(233,237,242,.16);border-radius:8px;
+    background:rgba(233,237,242,.02)}
+  .deck{position:absolute;width:54px;height:76px;border-radius:8px;
+    background:linear-gradient(145deg,#c59358,#8b6134);border:1px solid rgba(243,234,217,.35);
+    box-shadow:0 6px 16px rgba(0,0,0,.4),inset 0 0 0 2px rgba(43,47,54,.25)}
+  .deck::after{content:"";position:absolute;inset:12%;border:1px solid rgba(243,234,217,.5);border-radius:5px}
+  .fxcard{position:absolute;left:0;top:0;border-radius:7px;overflow:hidden;
+    background:linear-gradient(155deg,#f6efdf,#e7d9bf);color:#242a31;
+    box-shadow:0 2px 6px rgba(0,0,0,.35),inset 0 0 0 1px rgba(43,47,54,.18);
+    transform-origin:50% 50%;will-change:transform}
+  .fxcard .r{position:absolute;top:5%;left:8%;font:800 12px/1 var(--sans);letter-spacing:-.02em}
+  .fxcard .s{position:absolute;bottom:5%;right:8%;font:400 12px/1 var(--sans)}
+  .fxcard.red{color:#c0392b}
+  .fxcard .pip{position:absolute;inset:0;display:grid;place-items:center;font-size:20px;opacity:.22}
+  .dealstats{display:flex;gap:14px;flex-wrap:wrap;font:600 11px/1 var(--mono);color:var(--dim);
+    margin-top:10px;letter-spacing:.03em}
+  .dealstats b{color:var(--muted);font-weight:700}
+  .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  button{font:700 13px/1 var(--sans);color:#171c21;background:linear-gradient(180deg,#ecc783,#d5a75f);
+    border:1px solid #b98a45;border-radius:10px;padding:11px 16px;cursor:pointer;
+    box-shadow:0 4px 14px rgba(185,138,69,.22);min-height:42px}
+  button:hover{filter:brightness(1.05)}
+  button:active{transform:translateY(1px)}
+  button.ghost{background:#222b34;color:var(--ink);border-color:#37424e;box-shadow:none}
+  button:disabled{opacity:.45;cursor:default}
+  .boardwrap{position:absolute;inset:0;display:grid;place-items:center}
+  .board{position:relative;display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr);
+    border-radius:10px;overflow:hidden;box-shadow:0 14px 40px rgba(0,0,0,.45),0 0 0 6px #2a231a,0 0 0 7px #4a3b28}
+  .cell{position:relative}
+  .cell.light{background:#d9c9a8}
+  .cell.dark{background:#5b7a6a}
+  .cell.target::after{content:"";position:absolute;inset:12%;border-radius:50%;
+    border:2px solid rgba(224,180,108,.95);box-shadow:0 0 14px rgba(224,180,108,.5)}
+  .piece{position:absolute;left:0;top:0;display:grid;place-items:center;border-radius:50%;
+    background:radial-gradient(circle at 34% 28%,#fff8e8,#e8d8b8 46%,#b79a68 100%);
+    color:#232a20;border:1px solid #8d7348;
+    box-shadow:0 5px 12px rgba(0,0,0,.45),inset 0 -3px 0 rgba(0,0,0,.14);
+    font-size:22px;line-height:1;transform-origin:50% 100%;will-change:transform}
+  .jumpstats{position:absolute;left:12px;bottom:10px;right:12px;display:flex;gap:12px;flex-wrap:wrap;
+    font:600 11px/1 var(--mono);color:#a9b6a8;letter-spacing:.03em;pointer-events:none}
+  .jumpstats b{color:#e6ecdf}
+  .jumpinfo{font:600 12px/1 var(--mono);color:var(--gold);position:absolute;right:12px;top:10px}
+  pre{background:#0c1014;border:1px solid var(--line);border-radius:12px;padding:14px 16px;overflow:auto;
+    font:12.5px/1.6 var(--mono);color:#c7d2dd;margin:18px 0 0}
+  pre .k{color:#e0b46c}
+  pre .c{color:#6f7f8e}
+  .foot{margin-top:18px;color:var(--dim);font-size:12px;display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+  a{color:var(--gold)}
+  @media(prefers-reduced-motion:reduce){
+    .fxcard,.piece{transition:none}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <p class="eyebrow">games/shared/physics.js</p>
+      <h1>轻量 2D 物理引擎演示</h1>
+      <p class="lede">固定步长 + 子步进、圆 / AABB 碰撞、弹簧与固定点约束、休眠与确定性。下面两个场景都由同一个引擎驱动，没有使用 CSS 关键帧伪造运动。</p>
+    </div>
+    <div class="badges">
+      <span class="badge on">无依赖</span>
+      <span class="badge on">确定性</span>
+      <span class="badge">60Hz 固定步长</span>
+      <span class="badge" id="verBadge">v1.0.0</span>
+    </div>
+  </header>
+
+  <div class="grid">
+    <section class="panel" aria-labelledby="dealTitle">
+      <h2 id="dealTitle">① 发牌动效</h2>
+      <p class="sub">牌从牌堆以不同初速度射出，落地弹跳，随后由弹簧吸进目标位。每张牌都是 AABB 刚体，旋转角只用于渲染。</p>
+      <div class="stage" id="dealStage">
+        <div class="layer" id="dealSlots"></div>
+        <div class="layer" id="dealCards"></div>
+        <div class="deck" id="dealDeck" aria-hidden="true"></div>
+      </div>
+      <div class="btns">
+        <button type="button" id="dealBtn">重新发牌</button>
+        <button type="button" class="ghost" id="dealFastBtn">瞬间落位</button>
+      </div>
+      <div class="dealstats" id="dealStats" aria-live="polite"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="jumpTitle">
+      <h2 id="jumpTitle">② 棋子跳跃</h2>
+      <p class="sub">从 A 格到 B 格的一次抛物线跳跃，落地时由物理碰撞触发渲染层的压缩变形（缩放，不改变刚体）。</p>
+      <div class="stage" id="jumpStage">
+        <div class="boardwrap"><div class="board" id="board" aria-hidden="true"></div></div>
+        <div class="layer" id="pieceLayer"></div>
+        <div class="jumpinfo" id="jumpInfo">—</div>
+        <div class="jumpstats" id="jumpStats" aria-live="polite"></div>
+      </div>
+      <div class="btns">
+        <button type="button" id="jumpBtn">再跳一次</button>
+      </div>
+    </section>
+  </div>
+
+  <pre><code><span class="c">// 两行就能跑起来</span>
+const world = Physics.createWorld({ gravity: { x: 0, y: 900 } })
+const card  = world.addBody({ shape: 'aabb', w: 80, h: 110, x, y, mass: 1,
+                               restitution: 0.3, friction: 0.4 })
+Physics.spring(card, { x: targetX, y: targetY }, { stiffness: 120, damping: 14 })
+Physics.applyImpulse(card, { x: 260, y: -380 })
+world.step(dt)   <span class="c">// 内部按 1/60 固定步长推进</span></code></pre>
+
+  <p class="foot">
+    <span>引擎：<code>games/shared/physics.js</code></span>
+    <span>演示：<code>games/shared/physics-demo.html</code></span>
+    <span><a href="/games/">← 返回游戏集合</a></span>
+  </p>
+</div>
+
+<script src="./physics.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var P = window.Physics;
+  if (!P) {
+    document.body.insertAdjacentHTML('beforeend',
+      '<p style="padding:20px;color:#e8645c">physics.js 加载失败。</p>');
+    return;
+  }
+  var verBadge = document.getElementById('verBadge');
+  verBadge.textContent = 'v' + P.VERSION;
+
+  var reduceMotion = false;
+  try { reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      var t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+  function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
+  function nowMs() { return performance.now(); }
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+
+  /* ================================================================== *
+   * Scene 1: dealing                                                   *
+   * ================================================================== */
+
+  var deckCards = [];
+  (function buildDeckFaces() {
+    for (var s = 0; s < 4; s++) {
+      for (var r = 1; r <= 13; r++) deckCards.push({ r: r, s: s });
+    }
+  })();
+  var SUITS = ['♠', '♥', '♦', '♣'];
+  var RANKS = ['', 'A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+  var CARD_COUNT = 7; // one flying card per slot, so the demo settles cleanly
+  var DEAL_SLOTS = 7;
+
+  var deal = {
+    world: null,
+    cards: [],
+    pending: [],
+    nodes: [],
+    slots: [],
+    raf: 0,
+    seed: 20261109,
+    startedAt: 0,
+    lastFrame: 0,
+    spawnDelay: 0,
+    msAvg: 0,
+    done: false,
+    colors: []
+  };
+
+  var dealStage = document.getElementById('dealStage');
+  var dealSlotsEl = document.getElementById('dealSlots');
+  var dealCardsEl = document.getElementById('dealCards');
+  var dealDeckEl = document.getElementById('dealDeck');
+  var dealStatsEl = document.getElementById('dealStats');
+  var dealBtn = document.getElementById('dealBtn');
+  var dealFastBtn = document.getElementById('dealFastBtn');
+
+  function dealMetrics() {
+    var W = dealStage.clientWidth || 420;
+    var H = dealStage.clientHeight || 340;
+    var cw = clamp(W / 10.5, 34, 58);
+    var ch = cw * 1.4;
+    var deckX = 16 + cw / 2;
+    var deckY = H * 0.52;
+    var startX = W * 0.34;
+    var endX = W - cw / 2 - 12;
+    var targets = [];
+    for (var i = 0; i < DEAL_SLOTS; i++) {
+      var t = DEAL_SLOTS === 1 ? 0 : i / (DEAL_SLOTS - 1);
+      targets.push({
+        x: startX + (endX - startX) * t,
+        y: H - ch / 2 - 20 - Math.sin(t * Math.PI) * 30
+      });
+    }
+    return { W: W, H: H, cw: cw, ch: ch, deckX: deckX, deckY: deckY, targets: targets };
+  }
+
+  function makeCardNode(face) {
+    var n = document.createElement('div');
+    n.className = 'fxcard' + (face.s === 1 || face.s === 2 ? ' red' : '');
+    n.innerHTML = '<span class="r">' + RANKS[face.r] + '</span>' +
+      '<span class="pip">' + SUITS[face.s] + '</span>' +
+      '<span class="s">' + SUITS[face.s] + '</span>';
+    return n;
+  }
+
+  function buildDealLayout(m) {
+    // Slot outlines
+    while (dealSlotsEl.firstChild) dealSlotsEl.removeChild(dealSlotsEl.firstChild);
+    deal.slots = [];
+    for (var i = 0; i < DEAL_SLOTS; i++) {
+      var el = document.createElement('div');
+      el.className = 'slot';
+      el.style.left = (m.targets[i].x - m.cw / 2) + 'px';
+      el.style.top = (m.targets[i].y - m.ch / 2) + 'px';
+      el.style.width = m.cw + 'px';
+      el.style.height = m.ch + 'px';
+      dealSlotsEl.appendChild(el);
+      deal.slots.push(el);
+    }
+    dealDeckEl.style.width = m.cw + 'px';
+    dealDeckEl.style.height = m.ch + 'px';
+    dealDeckEl.style.left = (m.deckX - m.cw / 2) + 'px';
+    dealDeckEl.style.top = (m.deckY - m.ch / 2) + 'px';
+  }
+
+  function clearDeal() {
+    if (deal.raf) cancelAnimationFrame(deal.raf);
+    deal.raf = 0;
+    while (dealCardsEl.firstChild) dealCardsEl.removeChild(dealCardsEl.firstChild);
+    deal.cards = [];
+    deal.pending = [];
+    deal.nodes = [];
+    deal.done = false;
+  }
+
+  function renderDealCard(card) {
+    var b = card.body;
+    var cw = card.w, ch = card.h;
+    // Straighten the visual angle as the card arrives; physics keeps its own
+    // angle (rotation only exists in the render layer for AABB cards).
+    var dx = card.target.x - b.x;
+    var dy = card.target.y - b.y;
+    var d = Math.sqrt(dx * dx + dy * dy);
+    var ang = d < 6 ? 0 : b.angle * Math.min(1, d / 30);
+    card.node.style.transform = 'translate3d(' +
+      (b.x - cw / 2).toFixed(2) + 'px,' + (b.y - ch / 2).toFixed(2) + 'px,0) rotate(' +
+      ang.toFixed(4) + 'rad)';
+  }
+
+  function snapDealCard(card) {
+    card.body.x = card.target.x;
+    card.body.y = card.target.y;
+    card.body.vx = 0;
+    card.body.vy = 0;
+    card.body.angle = 0;
+    card.body.angularVelocity = 0;
+    card.body.sleep();
+    renderDealCard(card);
+  }
+
+  function startDeal(instant) {
+    clearDeal();
+    var m = dealMetrics();
+    buildDealLayout(m);
+    deal.seed = (deal.seed + 0x9e3779b9) >>> 0;
+    var rng = mulberry32(deal.seed);
+
+    deal.world = P.createWorld({
+      gravity: { x: 0, y: 1300 },
+      substeps: 4,
+      iterations: 4,
+      sleepTime: 0.4,
+      sleepLinear: 10,
+      sleepAngular: 0.1,
+      wakeSpeed: 3
+    });
+    // Table edges + a floor just below the stage keep strays on screen.
+    deal.world.addBody({ shape: 'aabb', w: m.W * 2, h: 40, x: m.W / 2, y: m.H + 26, static: true, restitution: 0.25, friction: 0.6 });
+    deal.world.addBody({ shape: 'aabb', w: 20, h: m.H * 2, x: -8, y: m.H / 2, static: true, restitution: 0.2, friction: 0.5 });
+    deal.world.addBody({ shape: 'aabb', w: 20, h: m.H * 2, x: m.W + 8, y: m.H / 2, static: true, restitution: 0.2, friction: 0.5 });
+
+    // Faces are dealt off the top of a deterministic shuffled deck.
+    var faces = deckCards.slice();
+    for (var i = faces.length - 1; i > 0; i--) {
+      var j = Math.floor(rng() * (i + 1));
+      var tmp = faces[i]; faces[i] = faces[j]; faces[j] = tmp;
+    }
+
+    var spawnAt = 0;
+    for (var n = 0; n < CARD_COUNT; n++) {
+      var slot = m.targets[n % DEAL_SLOTS];
+      var target = {
+        x: slot.x + (rng() - 0.5) * 2.2,
+        y: slot.y + (rng() - 0.5) * 2.2
+      };
+      spawnAt += 0.075 + rng() * 0.03;
+      deal.pending.push({
+        index: n,
+        face: faces[n % faces.length],
+        target: target,
+        spawnAt: spawnAt,
+        springAt: spawnAt + 0.12 + rng() * 0.05,
+        w: m.cw,
+        h: m.ch,
+        seedVX: rng(),
+        seedVY: rng(),
+        seedAv: rng(),
+        stiffness: 430 + rng() * 170,
+        damping: 30 + rng() * 12
+      });
+    }
+
+    if (instant || reduceMotion) {
+      while (deal.pending.length) {
+        var p = deal.pending.shift();
+        spawnDealCard(p, m, true);
+      }
+      deal.done = true;
+      updateDealStats();
+      return;
+    }
+
+    deal.startedAt = nowMs();
+    deal.lastFrame = deal.startedAt;
+    deal.raf = requestAnimationFrame(dealFrame);
+  }
+
+  function spawnDealCard(p, m, instant) {
+    var face = p.face;
+    var node = makeCardNode(face);
+    node.style.width = p.w + 'px';
+    node.style.height = p.h + 'px';
+    dealCardsEl.appendChild(node);
+
+    var body = deal.world.addBody({
+      shape: 'aabb',
+      w: p.w, h: p.h,
+      x: m.deckX + (p.seedVX - 0.5) * 8,
+      y: m.deckY + (p.seedVY - 0.5) * 8,
+      angle: (p.seedVX - 0.5) * 0.5,
+      mass: 1,
+      restitution: 0.34,
+      friction: 0.4,
+      linearDamping: 4.5,
+      angularDamping: 2.6,
+      group: 2,
+      mask: -3 // cards pass through each other, still bounce off table/walls
+    });
+    body.angularVelocity = (p.seedAv - 0.5) * 9;
+
+    var card = {
+      body: body,
+      node: node,
+      w: p.w,
+      h: p.h,
+      target: p.target,
+      springAt: p.springAt,
+      spring: null,
+      stiffness: p.stiffness,
+      damping: p.damping,
+      spawnedAt: (nowMs() - deal.startedAt) / 1000
+    };
+    if (instant) {
+      card.spawnedAt = p.spawnAt;
+      snapDealCard(card);
+      deal.cards.push(card);
+      return card;
+    }
+
+    var dx = p.target.x - body.x;
+    var dy = p.target.y - body.y;
+    var len = Math.sqrt(dx * dx + dy * dy) || 1;
+    var speed = 380 + p.seedVX * 320;
+    body.vx = dx / len * speed + (p.seedVY - 0.5) * 70;
+    body.vy = dy / len * speed - 300 - p.seedVX * 120;
+
+    deal.cards.push(card);
+    deal.nodes.push(node);
+    renderDealCard(card);
+    return card;
+  }
+
+  function updateDealStats(elapsed) {
+    if (!deal.world) return;
+    var bodies = deal.world.bodies;
+    var sleeping = 0;
+    for (var i = 0; i < bodies.length; i++) if (bodies[i].sleeping || bodies[i].static) sleeping++;
+    var spawned = deal.cards.length;
+    var status = deal.done ? '落位完成' : (elapsed == null ? '' : '飞行中');
+    dealStatsEl.innerHTML =
+      '<span>牌 <b>' + spawned + '/' + CARD_COUNT + '</b></span>' +
+      '<span>刚体 <b>' + bodies.length + '</b></span>' +
+      '<span>休眠 <b>' + sleeping + '</b></span>' +
+      '<span>接触 <b>' + deal.world.contactCount + '</b></span>' +
+      '<span>单步 <b>' + (deal.msAvg ? deal.msAvg.toFixed(3) : '—') + ' ms</b></span>' +
+      '<span><b>' + status + '</b></span>';
+  }
+
+  function dealFrame(now) {
+    var dt = clamp((now - deal.lastFrame) / 1000, 0, 1 / 30);
+    deal.lastFrame = now;
+    var elapsed = (now - deal.startedAt) / 1000;
+
+    // Spawn cards one at a time, like a real deal.
+    while (deal.pending.length && deal.pending[0].spawnAt <= elapsed) {
+      spawnDealCard(deal.pending.shift(), dealMetrics(), false);
+    }
+
+    // Attach the magnetic spring once the card has had its flight moment.
+    for (var i = 0; i < deal.cards.length; i++) {
+      var c = deal.cards[i];
+      if (!c.spring && elapsed >= c.springAt) {
+        c.spring = P.spring(c.body, c.target, {
+          stiffness: c.stiffness,
+          damping: c.damping,
+          restLength: 0
+        });
+      }
+    }
+
+    var t0 = nowMs();
+    deal.world.step(dt);
+    var ms = nowMs() - t0;
+    deal.msAvg = deal.msAvg ? deal.msAvg * 0.9 + ms * 0.1 : ms;
+
+    for (var k = 0; k < deal.cards.length; k++) renderDealCard(deal.cards[k]);
+
+    var allSpawned = deal.pending.length === 0;
+    var allSleeping = allSpawned;
+    if (allSleeping) {
+      for (var q = 0; q < deal.cards.length; q++) {
+        if (!deal.cards[q].body.sleeping) { allSleeping = false; break; }
+      }
+    }
+    if (allSleeping || elapsed > 6) {
+      deal.done = true;
+      updateDealStats(elapsed);
+      deal.raf = 0;
+      return;
+    }
+    updateDealStats(elapsed);
+    deal.raf = requestAnimationFrame(dealFrame);
+  }
+
+  dealBtn.addEventListener('click', function () { startDeal(false); });
+  dealFastBtn.addEventListener('click', function () { startDeal(true); });
+
+  /* ================================================================== *
+   * Scene 2: chess-piece hop                                           *
+   * ================================================================== */
+
+  var jumpStage = document.getElementById('jumpStage');
+  var boardEl = document.getElementById('board');
+  var pieceLayer = document.getElementById('pieceLayer');
+  var jumpInfo = document.getElementById('jumpInfo');
+  var jumpStatsEl = document.getElementById('jumpStats');
+
+  var JUMP = {
+    world: null,
+    body: null,
+    pieceEl: null,
+    pad: null,
+    raf: 0,
+    last: 0,
+    squash: 0,
+    cells: [],
+    boardSize: 0,
+    cellSize: 0,
+    at: { col: 1, row: 6 },
+    step: 0,
+    msAvg: 0,
+    done: true,
+    G: 1900,
+    T: 0.62,
+    r: 14
+  };
+  var HOP_PATH = [
+    [5, 1], [2, 4], [6, 6], [3, 2], [1, 5], [4, 0], [0, 3], [7, 7], [2, 1], [6, 3]
+  ];
+
+  function cellLabel(col, row) {
+    return 'abcdefgh'[col] + (8 - row);
+  }
+
+  function buildBoard() {
+    var rect = jumpStage.getBoundingClientRect();
+    var size = Math.floor(Math.min(rect.width - 44, rect.height - 46));
+    size = clamp(size, 200, 380);
+    JUMP.boardSize = size;
+    JUMP.cellSize = size / 8;
+    boardEl.style.width = size + 'px';
+    boardEl.style.height = size + 'px';
+    while (boardEl.firstChild) boardEl.removeChild(boardEl.firstChild);
+    JUMP.cells = [];
+    for (var row = 0; row < 8; row++) {
+      for (var col = 0; col < 8; col++) {
+        var cell = document.createElement('div');
+        cell.className = 'cell ' + ((row + col) % 2 === 0 ? 'light' : 'dark');
+        boardEl.appendChild(cell);
+        JUMP.cells.push(cell);
+      }
+    }
+  }
+
+  function cellCenter(col, row) {
+    var board = boardEl.getBoundingClientRect();
+    var stage = jumpStage.getBoundingClientRect();
+    var cs = JUMP.cellSize;
+    return {
+      x: board.left - stage.left + col * cs + cs / 2,
+      y: board.top - stage.top + row * cs + cs / 2
+    };
+  }
+
+  function setTargetHighlight(col, row) {
+    for (var i = 0; i < JUMP.cells.length; i++) JUMP.cells[i].classList.remove('target');
+    var idx = row * 8 + col;
+    if (JUMP.cells[idx]) JUMP.cells[idx].classList.add('target');
+  }
+
+  function makePad(x, y, r, cellSize) {
+    // Top surface sits at the piece's resting centre height.
+    var h = 10;
+    return JUMP.world.addBody({
+      shape: 'aabb',
+      w: cellSize * 0.62,
+      h: h,
+      x: x,
+      y: y + r + h / 2,
+      static: true,
+      restitution: 0.16,
+      friction: 0.7
+    });
+  }
+
+  function ensureJumpWorld() {
+    if (JUMP.world) return;
+    JUMP.world = P.createWorld({
+      gravity: { x: 0, y: JUMP.G },
+      substeps: 4,
+      iterations: 4,
+      sleepTime: 0.45,
+      sleepLinear: 6,
+      sleepAngular: 0.08
+    });
+    JUMP.pieceEl = document.createElement('div');
+    JUMP.pieceEl.className = 'piece';
+    JUMP.pieceEl.textContent = '♟';
+    pieceLayer.appendChild(JUMP.pieceEl);
+  }
+
+  function renderPiece() {
+    if (!JUMP.body) return;
+    var b = JUMP.body;
+    var r = JUMP.r;
+    var sq = JUMP.squash;
+    var sx = 1 + 0.24 * sq;
+    var sy = 1 - 0.32 * sq;
+    JUMP.pieceEl.style.width = (r * 2) + 'px';
+    JUMP.pieceEl.style.height = (r * 2) + 'px';
+    JUMP.pieceEl.style.fontSize = (r * 1.5) + 'px';
+    JUMP.pieceEl.style.transform = 'translate3d(' + (b.x - r).toFixed(2) + 'px,' +
+      (b.y - r).toFixed(2) + 'px,0) scale(' + sx.toFixed(4) + ',' + sy.toFixed(4) + ')';
+  }
+
+  function startJump() {
+    ensureJumpWorld();
+    if (JUMP.raf) cancelAnimationFrame(JUMP.raf);
+    JUMP.raf = 0;
+
+    var from = JUMP.at;
+    var hop = HOP_PATH[JUMP.step % HOP_PATH.length];
+    JUMP.step++;
+    var to = { col: hop[0], row: hop[1] };
+    if (to.col === from.col && to.row === from.row) {
+      to = { col: (to.col + 3) % 8, row: (to.row + 3) % 8 };
+    }
+    JUMP.at = to;
+
+    var start = cellCenter(from.col, from.row);
+    var target = cellCenter(to.col, to.row);
+    var r = JUMP.r;
+    var cs = JUMP.cellSize;
+
+    if (JUMP.pad) { JUMP.world.removeBody(JUMP.pad); JUMP.pad = null; }
+    JUMP.pad = makePad(target.x, target.y, r, cs);
+
+    if (JUMP.body) JUMP.world.removeBody(JUMP.body);
+
+    JUMP.body = JUMP.world.addBody({
+      shape: 'circle',
+      r: r,
+      x: start.x,
+      y: start.y,
+      mass: 1,
+      restitution: 0.18,
+      friction: 0.6,
+      linearDamping: 0.02,
+      angularDamping: 1
+    });
+
+    if (reduceMotion) {
+      JUMP.body.x = target.x;
+      JUMP.body.y = target.y;
+      JUMP.body.sleep();
+      JUMP.squash = 0;
+      setTargetHighlight(to.col, to.row);
+      renderPiece();
+      updateJumpStats(0, false);
+      jumpInfo.textContent = cellLabel(from.col, from.row) + ' → ' + cellLabel(to.col, to.row) + '（已落位）';
+      return;
+    }
+
+    var T = JUMP.T;
+    var dx = target.x - start.x;
+    var dy = target.y - start.y;
+    JUMP.body.vx = dx / T;
+    JUMP.body.vy = (dy - 0.5 * JUMP.G * T * T) / T;
+    JUMP.squash = 0;
+    JUMP.done = false;
+
+    setTargetHighlight(to.col, to.row);
+    renderPiece();
+    jumpInfo.textContent = cellLabel(from.col, from.row) + ' → ' + cellLabel(to.col, to.row);
+    JUMP.last = nowMs();
+    JUMP.raf = requestAnimationFrame(jumpFrame);
+  }
+
+  function updateJumpStats(ms, flying) {
+    jumpStatsEl.innerHTML =
+      '<span>重力 <b>' + JUMP.G + ' px/s²</b></span>' +
+      '<span>飞行 <b>' + JUMP.T.toFixed(2) + ' s</b></span>' +
+      '<span>子步 <b>' + (JUMP.world ? JUMP.world.substeps : '—') + '</b></span>' +
+      '<span>单步 <b>' + (ms ? ms.toFixed(3) : '—') + ' ms</b></span>' +
+      '<span>状态 <b>' + (flying ? '飞行中' : '落位') + '</b></span>';
+  }
+
+  function jumpFrame(now) {
+    var dt = clamp((now - JUMP.last) / 1000, 0, 1 / 30);
+    JUMP.last = now;
+    var b = JUMP.body;
+    var prevVy = b.vy;
+
+    var t0 = nowMs();
+    JUMP.world.step(dt);
+    var ms = nowMs() - t0;
+    JUMP.msAvg = JUMP.msAvg ? JUMP.msAvg * 0.9 + ms * 0.1 : ms;
+
+    // Landing: the vertical velocity collapses in one step. Turn that impact
+    // into a short render-layer squash; the physics body stays a circle.
+    if (prevVy > 160 && b.vy < prevVy * 0.5) {
+      JUMP.squash = Math.max(JUMP.squash, clamp(prevVy / 620, 0.35, 1));
+    }
+    JUMP.squash *= Math.exp(-dt * 12);
+    if (JUMP.squash < 0.002) JUMP.squash = 0;
+
+    renderPiece();
+    updateJumpStats(JUMP.msAvg, true);
+
+    if (b.sleeping) {
+      JUMP.squash = 0;
+      renderPiece();
+      updateJumpStats(JUMP.msAvg, false);
+      JUMP.done = true;
+      JUMP.raf = 0;
+      return;
+    }
+    JUMP.raf = requestAnimationFrame(jumpFrame);
+  }
+
+  document.getElementById('jumpBtn').addEventListener('click', startJump);
+
+  /* ================================================================== *
+   * Boot                                                               *
+   * ================================================================== */
+
+  function boot() {
+    buildBoard();
+    startDeal(reduceMotion);
+    // Wait one frame so the board has its final size, then hop.
+    requestAnimationFrame(function () {
+      buildBoard();
+      startJump();
+    });
+  }
+
+  var resizeTimer = 0;
+  window.addEventListener('resize', function () {
+    if (resizeTimer) clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function () {
+      if (deal.raf) { cancelAnimationFrame(deal.raf); deal.raf = 0; }
+      if (JUMP.raf) { cancelAnimationFrame(JUMP.raf); JUMP.raf = 0; }
+      buildBoard();
+      startDeal(reduceMotion);
+      // Recreate the piece world against the new geometry on the next hop.
+      if (JUMP.world) {
+        JUMP.world = null;
+        JUMP.body = null;
+        JUMP.pad = null;
+        if (JUMP.pieceEl && JUMP.pieceEl.parentNode) JUMP.pieceEl.parentNode.removeChild(JUMP.pieceEl);
+        JUMP.pieceEl = null;
+      }
+      startJump();
+    }, 180);
+  });
+
+  boot();
+})();
+</script>
+</body>
+</html>

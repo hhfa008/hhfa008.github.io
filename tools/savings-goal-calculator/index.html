@@ -1,0 +1,1487 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>储蓄目标计算器：每月该存多少</title>
+<meta name="description" content="设定目标金额、现有储蓄、年利率和目标期限，反推每月需存金额；也能从每月储蓄推算达成时间。全部在本地计算，无需注册；仅为估算，不构成财务建议。">
+<meta name="author" content="Devin">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="theme-color" content="#f2efe7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#101316" media="(prefers-color-scheme: dark)">
+<link rel="canonical" href="https://hhfa008.github.io/tools/savings-goal-calculator/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23b93d12'/%3E%3Cpath d='M9 23 23 9' stroke='%23fbf9f4' stroke-width='2.4' stroke-linecap='round'/%3E%3Ccircle cx='11' cy='11' r='3' fill='%23fbf9f4'/%3E%3Ccircle cx='21' cy='21' r='3' fill='%23fbf9f4'/%3E%3C/svg%3E">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Devin">
+<meta property="og:title" content="储蓄目标计算器：每月该存多少">
+<meta property="og:description" content="设定目标金额、现有储蓄、年利率和目标期限，反推每月需存金额；也能从每月储蓄推算达成时间。全部在本地计算，无需注册；仅为估算，不构成财务建议。">
+<meta property="og:url" content="https://hhfa008.github.io/tools/savings-goal-calculator/">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:locale:alternate" content="en_US">
+<meta property="og:locale:alternate" content="id_ID">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="储蓄目标计算器：每月该存多少">
+<meta name="twitter:description" content="设定目标金额、现有储蓄、年利率和目标期限，反推每月需存金额；也能从每月储蓄推算达成时间。全部在本地计算，无需注册；仅为估算，不构成财务建议。">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "储蓄目标计算器",
+  "url": "https://hhfa008.github.io/tools/savings-goal-calculator/",
+  "applicationCategory": "FinanceApplication",
+  "operatingSystem": "Any",
+  "browserRequirements": "Requires JavaScript",
+  "isAccessibleForFree": true,
+  "inLanguage": ["zh-CN", "en", "id"],
+  "description": "设定目标金额、现有储蓄、年利率和目标期限，反推每月需存金额；也能从每月储蓄推算达成时间。全部在本地计算，无需注册；仅为估算，不构成财务建议。",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+  {
+    "@type": "Question",
+    "name": "利息是月初还是月末计入？",
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "模型按每月月末计息，先计息再加入当月存款；若你的账户按日计息，实际结果会有少量差异，目标期限越长差异越明显。"
+    }
+  },
+  {
+    "@type": "Question",
+    "name": "已有目标存款超过目标金额怎么办？",
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "工具会直接提示已达成，并把每月所需设为 0。剩余资金可继续按利率增值，页面仍会显示按当前储蓄增长后的预计余额。"
+    }
+  },
+  {
+    "@type": "Question",
+    "name": "可以处理负利率或通胀吗？",
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "不接受负利率。若想考虑通胀，可把年利率减去预期通胀率作为“实际利率”再计算，这样得到的是按今天购买力衡量的结果。"
+    }
+  }
+]
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "首页", "item": "https://hhfa008.github.io/" },
+    { "@type": "ListItem", "position": 2, "name": "工具大厅", "item": "https://hhfa008.github.io/tools/" },
+    { "@type": "ListItem", "position": 3, "name": "储蓄目标计算器", "item": "https://hhfa008.github.io/tools/savings-goal-calculator/" }
+  ]
+}
+</script>
+
+<style>
+/* ==========================================================================
+   Design tokens — keep in sync with the existing tools pages.
+   ========================================================================== */
+:root{
+  --paper:#f2efe7; --paper-2:#fbf9f4; --panel:#ffffff;
+  --ink:#14171a; --muted:#5b615c; --muted-2:#7b807a;
+  --line:#d5d0c4; --line-strong:#bcb5a7;
+  --accent:#b93d12; --accent-soft:#f2a07a; --accent-wash:#f7e5da;
+  --ok:#2f6b3c; --ok-wash:#e8f2e7; --warn:#8a5a00; --warn-wash:#fbf1db;
+  --bad:#a32216; --bad-wash:#fbe7e3;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --radius:16px; --max:1040px;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --paper:#101316; --paper-2:#171b1f; --panel:#1a1f23;
+    --ink:#f2efe7; --muted:#b7b3a8; --muted-2:#948f85;
+    --line:#333a40; --line-strong:#4a535b;
+    --accent:#f08a5d; --accent-soft:#f2a07a; --accent-wash:#2b211c;
+    --ok:#8fd19e; --ok-wash:#1b2b1e; --warn:#f0c36a; --warn-wash:#2d2618;
+    --bad:#ff8a7a; --bad-wash:#321d1a;
+  }
+}
+
+/* Reset */
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%;color-scheme:light dark;scroll-behavior:smooth;overflow-x:clip}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font:16px/1.6 var(--sans);overflow-x:clip;
+  text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+p,h1,h2,h3,ul,ol,figure{margin:0}
+a{color:inherit}
+button,input,select,textarea{font:inherit;color:inherit}
+code,pre{font-family:var(--mono)}
+
+/* Layout */
+.wrap{width:100%;max-width:var(--max);margin:0 auto;padding-left:18px;padding-right:18px;min-width:0}
+@media (min-width:720px){.wrap{padding-left:32px;padding-right:32px}}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.skip-link{position:absolute;left:12px;top:-80px;z-index:100;padding:12px 16px;background:var(--ink);color:var(--paper);border-radius:8px;text-decoration:none}
+.skip-link:focus{top:12px}
+:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+
+/* Header */
+.site-header{border-bottom:1px solid var(--line);background:var(--paper)}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:10px 16px;min-height:64px;flex-wrap:wrap;padding-top:6px;padding-bottom:6px}
+.brand{display:inline-flex;align-items:center;gap:10px;font-weight:700;letter-spacing:-.02em;text-decoration:none;min-height:44px}
+.brand-mark{width:26px;height:26px;border-radius:7px;background:var(--accent);position:relative;flex:none}
+.brand-mark::before,.brand-mark::after{content:"";position:absolute;left:7px;height:2px;background:var(--paper-2);border-radius:1px}
+.brand-mark::before{right:7px;top:9px}
+.brand-mark::after{right:11px;top:15px}
+.header-tools{display:flex;align-items:center;gap:12px 16px;flex-wrap:wrap;justify-content:flex-end;min-width:0}
+.site-nav{display:flex;align-items:center;gap:14px;font-size:13.5px;flex-wrap:wrap}
+.site-nav a{display:inline-flex;align-items:center;min-height:44px;text-decoration:none;color:var(--muted)}
+.site-nav a:hover{color:var(--accent);text-decoration:underline}
+.lang-switch{display:flex;gap:4px}
+.lang-switch button{
+  min-width:44px;min-height:44px;padding:0 8px;border:1px solid var(--line-strong);
+  border-radius:9px;background:transparent;color:var(--muted);font-size:12.5px;
+  font-weight:650;cursor:pointer;line-height:1
+}
+.lang-switch button:hover{border-color:var(--accent);color:var(--accent)}
+.lang-switch button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+@media (prefers-color-scheme:dark){
+  .lang-switch button[aria-pressed="true"],
+  .btn.primary,.btn.danger{color:#101316}
+}
+
+/* Hero */
+.hero{padding:36px 0 22px}
+@media (min-width:720px){.hero{padding:52px 0 28px}}
+.eyebrow{margin:0 0 10px;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+h1{margin:0 0 12px;max-width:22ch;font-size:clamp(1.85rem,6vw,2.9rem);line-height:1.1;letter-spacing:-.035em;font-weight:700;overflow-wrap:anywhere}
+.lede{max-width:70ch;color:var(--muted);font-size:clamp(1rem,2vw,1.08rem);overflow-wrap:anywhere}
+.privacy{
+  display:flex;gap:9px;align-items:flex-start;max-width:78ch;margin:16px 0 0;padding:11px 14px;
+  background:var(--accent-wash);border:1px solid var(--line);border-left:4px solid var(--accent);
+  border-radius:0 10px 10px 0;font-size:13.5px
+}
+.privacy svg{width:17px;height:17px;flex:none;margin-top:3px}
+
+/* Cards and tool layout */
+.tool-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;align-items:start}
+.tool-layout>*{min-width:0}
+@media (min-width:900px){
+  .tool-layout{grid-template-columns:minmax(0,1.04fr) minmax(0,.96fr)}
+  .result-col{position:sticky;top:18px}
+}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;min-width:0}
+@media (min-width:720px){.card{padding:26px 28px}}
+.card-kicker{margin:0 0 7px;font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.11em;text-transform:uppercase;color:var(--accent)}
+.card h2{margin:0 0 14px;font-size:clamp(1.15rem,2.4vw,1.4rem);line-height:1.2;letter-spacing:-.02em;overflow-wrap:anywhere}
+.panel-desc{margin:0 0 14px;color:var(--muted);font-size:14px;overflow-wrap:anywhere}
+
+/* Fields */
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field>label,.field>span.label{font-size:13px;font-weight:650;color:var(--muted)}
+.field input,.field select,.field textarea,.field .input{
+  width:100%;min-height:46px;padding:10px 12px;border:1px solid var(--line-strong);
+  border-radius:12px;background:var(--paper-2);font-size:16px;line-height:1.4;min-width:0
+}
+.field textarea{min-height:120px;resize:vertical;line-height:1.55}
+.field select{
+  appearance:none;padding-right:34px;
+  background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);
+  background-position:calc(100% - 18px) 50%,calc(100% - 13px) 50%;
+  background-size:5px 5px,5px 5px;background-repeat:no-repeat
+}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);outline:3px solid var(--accent-wash);outline-offset:1px}
+.field input[aria-invalid="true"],.field select[aria-invalid="true"],.field textarea[aria-invalid="true"]{border-color:var(--bad)}
+.field-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+@media (min-width:600px){.field-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Buttons */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  min-height:46px;padding:0 16px;border:1px solid var(--line-strong);border-radius:12px;
+  background:var(--panel);color:var(--ink);font-size:14.5px;font-weight:650;
+  cursor:pointer;text-decoration:none;text-align:center;line-height:1.25
+}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.06);color:#fff}
+.btn.dark{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.btn.ghost{background:transparent}
+.btn.danger{background:var(--bad);border-color:var(--bad);color:#fff}
+.btn.danger:hover{filter:brightness(1.06);color:#fff}
+.btn-row{display:flex;flex-wrap:wrap;gap:8px;min-width:0}
+.btn-row .btn{flex:1 1 140px}
+
+/* Chips / segmented controls */
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px;padding:0;list-style:none}
+.chips button,.chip{
+  display:inline-flex;align-items:center;justify-content:center;min-height:44px;
+  padding:8px 14px;border:1px solid var(--line-strong);border-radius:999px;
+  background:var(--paper-2);color:var(--ink);font-size:13.5px;font-weight:650;
+  cursor:pointer;line-height:1.2;text-decoration:none
+}
+.chips button:hover,.chip:hover{border-color:var(--accent);color:var(--accent)}
+.chips button[aria-pressed="true"],.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+@media (prefers-color-scheme:dark){
+  .chips button[aria-pressed="true"],.chip.on{color:#101316}
+}
+
+/* Tabs */
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
+.tabs [role="tab"]{
+  min-height:44px;padding:9px 14px;border:1px solid var(--line-strong);border-radius:999px;
+  background:var(--paper-2);color:var(--ink);font-size:13.5px;font-weight:650;
+  cursor:pointer;line-height:1.2
+}
+.tabs [role="tab"][aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+@media (prefers-color-scheme:dark){.tabs [role="tab"][aria-selected="true"]{color:#101316}}
+
+/* Result */
+.result{background:var(--paper-2)}
+.result-live{min-height:96px}
+.result-big{
+  margin:2px 0 0;font-family:var(--mono);font-size:clamp(2rem,7.5vw,3rem);
+  font-weight:650;line-height:1.08;letter-spacing:-.04em;color:var(--accent);
+  font-variant-numeric:tabular-nums;overflow-wrap:anywhere
+}
+.result-note{margin-top:7px;color:var(--muted);font-size:14px;overflow-wrap:anywhere}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px;margin-top:14px}
+.stat{min-width:0;padding:10px 11px;border:1px solid var(--line);border-radius:11px;background:var(--paper-2)}
+.stat span{display:block;font-size:11.5px;color:var(--muted);line-height:1.3}
+.stat b{display:block;margin-top:2px;font-family:var(--mono);font-size:1.12rem;font-weight:650;font-variant-numeric:tabular-nums;letter-spacing:-.02em;overflow-wrap:anywhere}
+
+/* Tables must scroll inside their own wrapper, never the page. */
+.table-wrap{width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.table-wrap table{width:100%;border-collapse:collapse;font-size:13.5px}
+.table-wrap caption{padding:10px 12px;text-align:left;color:var(--muted);font-size:12.5px}
+.table-wrap th,.table-wrap td{padding:9px 11px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap;font-variant-numeric:tabular-nums}
+.table-wrap th{font-weight:650;color:var(--muted);font-size:12.5px}
+.table-wrap tr:last-child td{border-bottom:0}
+
+/* Notes and status */
+.hint{margin:10px 0 0;color:var(--muted-2);font-size:12.5px;line-height:1.55;overflow-wrap:anywhere}
+.error{margin:10px 0 0;padding:9px 12px;border-radius:9px;background:var(--bad-wash);border:1px solid var(--bad);color:var(--bad);font-size:13px;font-weight:600;line-height:1.5;overflow-wrap:anywhere}
+.badge{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:2px 9px;border-radius:999px;background:var(--accent-wash);color:var(--accent);font-size:12px;font-weight:650;line-height:1.6;vertical-align:middle}
+.badge.ok{background:var(--ok-wash);color:var(--ok)}
+.badge.warn{background:var(--warn-wash);color:var(--warn)}
+.badge.bad{background:var(--bad-wash);color:var(--bad)}
+
+/* Checkbox rows: browser-check measures the input box itself, so keep it 44x44. */
+.check{display:inline-flex;align-items:center;gap:8px;min-height:44px;font-size:14px;cursor:pointer}
+.check input[type="checkbox"],.check input[type="radio"]{width:44px;height:44px;flex:none;accent-color:var(--accent);cursor:pointer}
+.check-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin-top:10px}
+
+/* Explain */
+.explain{margin-top:18px}
+.explain h2{margin:0 0 12px;font-size:clamp(1.3rem,3vw,1.7rem);letter-spacing:-.02em}
+.explain-body{padding-bottom:2px}
+.explain-body p{max-width:82ch;color:var(--muted);font-size:14px;margin-bottom:10px;overflow-wrap:anywhere}
+.explain-body p:last-child{margin-bottom:0}
+.explain-body strong{color:var(--ink)}
+.formula-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;margin:14px 0 18px}
+@media (min-width:760px){.formula-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.formula{min-width:0;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--paper-2)}
+.formula h3,.formula-title{margin:0 0 7px;font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.formula code{display:inline-block;max-width:100%;padding:2px 6px;border-radius:5px;background:var(--accent-wash);font-family:var(--mono);font-size:12.5px;line-height:1.6;overflow-wrap:anywhere}
+.assumptions{margin:0;padding-left:20px;color:var(--muted);font-size:13.5px}
+.assumptions li{margin:0 0 8px;overflow-wrap:anywhere}
+
+/* FAQ */
+.faq{margin-top:18px}
+.faq h2{margin:0 0 12px;font-size:clamp(1.3rem,3vw,1.7rem);letter-spacing:-.02em}
+.faq details{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:0 20px}
+.faq details+details{margin-top:10px}
+.faq summary{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:44px;padding:16px 0;cursor:pointer;font-weight:650;list-style:none}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";flex:none;font-family:var(--mono);font-size:19px;line-height:1;color:var(--accent)}
+.faq details[open] summary::after{content:"\2212"}
+.faq details p{margin:0;padding:0 0 18px;color:var(--muted);font-size:14px;max-width:80ch;overflow-wrap:anywhere}
+
+/* Footer */
+.site-footer{margin-top:28px;padding:22px 0 34px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted)}
+.footer-inner{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 18px}
+.footer-links{display:flex;flex-wrap:wrap;gap:4px 14px}
+.site-footer a{color:var(--accent);text-decoration:none;display:inline-flex;align-items:center;min-height:44px}
+.site-footer a:hover{text-decoration:underline}
+.footer-note{margin:8px 0 0;max-width:82ch;color:var(--muted-2);overflow-wrap:anywhere}
+.noscript{margin-top:18px}
+
+/* Toast */
+.toast{
+  position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));
+  transform:translate(-50%,12px);z-index:20;max-width:calc(100vw - 32px);
+  padding:12px 18px;border-radius:12px;background:var(--ink);color:var(--paper);
+  font-size:14px;font-weight:600;text-align:center;box-shadow:0 8px 24px rgb(0 0 0 / .22);
+  opacity:0;pointer-events:none;transition:opacity .16s,transform .16s;overflow-wrap:anywhere
+}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+
+/* Motion and print */
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .btn:active{transform:none}
+}
+@media print{
+  .site-header,.site-footer,.skip-link,.lang-switch,.tabs,.chips,.btn-row,.toast,.no-print{display:none!important}
+  body{background:#fff;color:#000;padding:0}
+  .card,.table-wrap{border-color:#999;background:#fff;break-inside:avoid}
+  .result-col{position:static}
+  .result-big{color:#000}
+  .explain,.faq{display:block}
+  details{break-inside:avoid}
+  .faq details p{display:block!important}
+}
+</style>
+</head>
+<body data-slug="savings-goal-calculator" data-category="calc-finance">
+<a class="skip-link" href="#tool" data-i="skip">跳到工具</a>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="/" aria-label="Devin" data-i-aria="brandHome">
+      <span class="brand-mark" aria-hidden="true"></span><span data-i="brandName">Devin</span>
+    </a>
+    <div class="header-tools">
+      <nav class="site-nav" aria-label="站点导航" data-i-aria="navAria">
+        <a id="nav-tools" href="/tools/" data-tools-link data-i="navHall">工具大厅</a>
+        <a href="/games/" data-i="navGames">在线桌游</a>
+      </nav>
+      <nav class="lang-switch" aria-label="语言" data-i-aria="langLabel">
+        <button type="button" data-lang="zh" aria-pressed="true" data-i="langZh">中文</button>
+        <button type="button" data-lang="en" aria-pressed="false" data-i="langEn">EN</button>
+        <button type="button" data-lang="id" aria-pressed="false" data-i="langId">ID</button>
+      </nav>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero" aria-labelledby="page-title">
+    <p class="eyebrow" data-i="eyebrow">免费工具 · 本地运行</p>
+    <h1 id="page-title" data-i="appTitle">储蓄目标计算器</h1>
+    <p class="lede" data-i="tagline">把大目标拆成每月的一小步。</p>
+    <p class="privacy">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+      <span data-i="privacy">所有计算都在你的浏览器里完成，输入不会上传。</span>
+    </p>
+  </section>
+
+  <!-- ======================================================================
+       TOOL BODY — builder replaces this marker with the tool UI.
+       Everything between the marker and the explain section belongs to the tool.
+       Keep labels, data-i hooks, aria-live results and 44px targets.
+       ====================================================================== -->
+  <section class="tool-layout" aria-label="储蓄目标计算表单" data-i-aria="toolAria">
+    <div class="card">
+      <p class="card-kicker" data-i="kicker">输入</p>
+      <h2 data-i="formTitle">目标与现状</h2>
+      <div class="tabs" role="tablist" aria-label="计算方向" data-i-aria="tabsAria">
+        <button type="button" role="tab" id="sg-tab-need" aria-selected="true" aria-controls="sg-panel-need" data-i="tabNeed">每月需存多少</button>
+        <button type="button" role="tab" id="sg-tab-time" aria-selected="false" aria-controls="sg-panel-time" data-i="tabTime">多久能达成</button>
+      </div>
+      <div class="field-grid two">
+        <div class="field">
+          <label for="sg-target" data-i="targetLabel">目标金额</label>
+          <input id="sg-target" type="number" inputmode="decimal" min="0.01" step="1000" value="100000" data-i-ph="targetPh" placeholder="例如 100000">
+        </div>
+        <div class="field">
+          <label for="sg-current" data-i="currentLabel">现有储蓄</label>
+          <input id="sg-current" type="number" inputmode="decimal" min="0" step="1000" value="10000" data-i-ph="currentPh" placeholder="例如 10000">
+        </div>
+        <div class="field">
+          <label for="sg-rate" data-i="rateLabel">年利率（%）</label>
+          <input id="sg-rate" type="number" inputmode="decimal" min="0" max="100" step="0.1" value="5" data-i-ph="ratePh" placeholder="例如 5">
+        </div>
+      </div>
+      <div id="sg-panel-need" role="tabpanel" aria-labelledby="sg-tab-need">
+        <div class="field-grid two" style="margin-top:12px">
+          <div class="field">
+            <label for="sg-months" data-i="monthsLabel">目标月数</label>
+            <input id="sg-months" type="number" inputmode="numeric" min="1" max="1200" step="1" value="60" data-i-ph="monthsPh" placeholder="例如 60">
+          </div>
+        </div>
+      </div>
+      <div id="sg-panel-time" role="tabpanel" aria-labelledby="sg-tab-time" hidden>
+        <div class="field-grid two" style="margin-top:12px">
+          <div class="field">
+            <label for="sg-monthly" data-i="monthlyLabel">每月可存</label>
+            <input id="sg-monthly" type="number" inputmode="decimal" min="0.01" step="100" value="1000" data-i-ph="monthlyPh" placeholder="例如 1000">
+          </div>
+        </div>
+      </div>
+      <p class="hint" data-i="formHint">按月复利，存款在每月月末计入；金额按分四舍五入。</p>
+      <p class="error" id="sg-error" role="alert" hidden></p>
+      <div class="btn-row" style="margin-top:14px">
+        <button type="button" class="btn primary" id="sg-calc" data-i="calc">计算</button>
+        <button type="button" class="btn ghost" id="sg-reset" data-i="reset">重置</button>
+      </div>
+    </div>
+    <div class="result-col">
+      <div class="card result" aria-live="polite">
+        <p class="card-kicker" data-i="resultKicker">结果</p>
+        <h2 id="sg-result-title" data-i="monthlyTitle">每月需存</h2>
+        <p class="result-big" id="sg-big">—</p>
+        <p class="result-note" id="sg-note"></p>
+        <div class="stat-grid">
+          <div class="stat"><span data-i="projectedLabel">预计到期余额</span><b id="sg-projected">—</b></div>
+          <div class="stat"><span data-i="depositsLabel">累计存入</span><b id="sg-deposits">—</b></div>
+          <div class="stat"><span data-i="interestLabel">利息收益</span><b id="sg-interest">—</b></div>
+          <div class="stat"><span data-i="statusLabel">状态</span><b id="sg-status">—</b></div>
+        </div>
+        <div class="btn-row" style="margin-top:14px">
+          <button type="button" class="btn" id="sg-copy" data-i="copy">复制结果</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="explain" id="explain" aria-labelledby="explain-title">
+    <h2 id="explain-title" data-i="explainTitle">公式与假设</h2>
+    <div class="explain-body">
+      <!-- ==================================================================
+           TOOL EXPLAIN — formula, assumptions, rounding rules, limitations.
+           ================================================================== -->
+      <p data-i="explainIntro">先算出目标金额在期末的缺口，再用普通年金公式反推每月存款；反过来也能根据每月存款推算需要多少个月。两种方向都按月复利、月末存入。</p>
+      <div class="formula-grid">
+        <div class="formula">
+          <h3 class="formula-title" data-i="formulaNeedLabel">每月需存</h3>
+          <code>A = (F − P × (1+i)^n) × i ÷ ((1+i)^n − 1)</code>
+        </div>
+        <div class="formula">
+          <h3 class="formula-title" data-i="formulaTimeLabel">达成月数</h3>
+          <code>n = ln((A + F×i) ÷ (A + P×i)) ÷ ln(1+i)</code>
+        </div>
+      </div>
+      <p class="hint" data-i="formulaVars">F = 目标金额，P = 现有储蓄，A = 每月存款，i = 年利率 ÷ 12 ÷ 100，n = 月数。i = 0 时退化为 A = (F − P) ÷ n，n = (F − P) ÷ A。</p>
+      <ul class="assumptions">
+        <li data-i="assumption1">目标金额必须大于 0；现有储蓄不能为负；年利率不能为负。</li>
+        <li data-i="assumption2">目标月数取 1–1200 的整数；每月存款必须大于 0。</li>
+        <li data-i="assumption3">按月末存入、月末计息，每月复利一次；不使用实际天数。</li>
+        <li data-i="assumption4">每月需存按分四舍五入；预计余额用四舍五入后的月存款计算，因此可能与目标相差几分钱。</li>
+        <li data-i="assumption5">不含税费、账户管理费和浮动利率，仅供参考，不构成财务建议。</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="faq" id="faq" aria-labelledby="faq-title">
+    <h2 id="faq-title" data-i="faqTitle">常见问题</h2>
+    <!-- ====================================================================
+         TOOL FAQ — generator injects the Chinese FAQ from config.faqs.
+         Keep the faqQ1..faqA3 data-i keys in all three dictionaries.
+         ==================================================================== -->
+    <details>
+          <summary data-i="faqQ1">利息是月初还是月末计入？</summary>
+          <p data-i="faqA1">模型按每月月末计息，先计息再加入当月存款；若你的账户按日计息，实际结果会有少量差异，目标期限越长差异越明显。</p>
+        </details>
+    <details>
+          <summary data-i="faqQ2">已有目标存款超过目标金额怎么办？</summary>
+          <p data-i="faqA2">工具会直接提示已达成，并把每月所需设为 0。剩余资金可继续按利率增值，页面仍会显示按当前储蓄增长后的预计余额。</p>
+        </details>
+    <details>
+          <summary data-i="faqQ3">可以处理负利率或通胀吗？</summary>
+          <p data-i="faqA3">不接受负利率。若想考虑通胀，可把年利率减去预期通胀率作为“实际利率”再计算，这样得到的是按今天购买力衡量的结果。</p>
+        </details>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <p data-i="copyright">© 2026 Devin</p>
+    <nav class="footer-links" aria-label="页脚导航" data-i-aria="footerAria">
+      <a href="/tools/" data-tools-link data-i="backTools">工具大厅</a>
+      <a href="/games/" data-i="navGames">在线桌游</a>
+      <a href="/" data-i="navHome">首页</a>
+    </nav>
+  </div>
+  <div class="wrap"><p class="footer-note" data-i="footerNote">所有处理都在本地完成，不上传任何数据。</p></div>
+</footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<noscript>
+  <div class="wrap"><p class="card noscript" data-i="noscript">这个工具需要 JavaScript 才能运行。所有计算都在你的设备上完成，不会上传任何数据。</p></div>
+</noscript>
+
+<!-- ==========================================================================
+     ENGINE — pure functions only. No DOM, no window, no clock, no storage.
+     Builder replaces everything between TOOL_ENGINE_START and TOOL_ENGINE_END,
+     then updates the return object. Must stay Node-evaluable.
+     ========================================================================== -->
+<script id="engine">
+var ToolEngine = (function () {
+  'use strict';
+
+  // TOOL_ENGINE_START
+  var MAX_MONTHS = 1200;
+
+  function isNum(x) {
+    return typeof x === 'number' && isFinite(x);
+  }
+
+  function round2(x) {
+    if (!isNum(x)) return NaN;
+    var neg = x < 0;
+    var abs = Math.abs(x);
+    var r = Math.floor(abs * 100 + 0.5 + 1e-9) / 100;
+    return neg ? -r : r;
+  }
+
+  // The required deposit is rounded UP to cents so the plan always reaches
+  // the target; projections use that rounded deposit.
+  function ceil2(x) {
+    if (!isNum(x)) return NaN;
+    var neg = x < 0;
+    var abs = Math.abs(x);
+    var r = Math.ceil(abs * 100 - 1e-9) / 100;
+    return neg ? -r : r;
+  }
+
+  function monthlyRate(annualRatePct) {
+    return annualRatePct / 100 / 12;
+  }
+
+  function validCommon(target, current, annualRatePct) {
+    if (!isNum(target) || target <= 0) return 'bad_target';
+    if (!isNum(current) || current < 0) return 'bad_current';
+    if (!isNum(annualRatePct) || annualRatePct < 0 || annualRatePct > 100) return 'bad_rate';
+    return '';
+  }
+
+  /*
+   * monthlyNeeded(target, current, annualRatePct, months)
+   * End-of-month deposits, monthly compounding. Returns the deposit rounded
+   * to cents (half away from zero) plus the projection using that rounded
+   * deposit, so the displayed plan can be reproduced exactly.
+   */
+  function monthlyNeeded(target, current, annualRatePct, months) {
+    var bad = validCommon(target, current, annualRatePct);
+    if (bad) return { ok: false, error: bad };
+    if (!isNum(months) || months <= 0 || Math.floor(months) !== months) {
+      return { ok: false, error: 'bad_months' };
+    }
+    if (months > MAX_MONTHS) return { ok: false, error: 'range' };
+
+    var i = monthlyRate(annualRatePct);
+    var growth = Math.pow(1 + i, months);
+    var fvCurrent = current * growth;
+    if (current >= target || fvCurrent >= target) {
+      return {
+        ok: true,
+        achieved: true,
+        monthly: 0,
+        exactMonthly: 0,
+        projected: round2(Math.max(current, fvCurrent)),
+        totalDeposits: 0,
+        interest: round2(Math.max(current, fvCurrent) - current)
+      };
+    }
+
+    var exact = i === 0 ? (target - current) / months
+      : (target - fvCurrent) * i / (growth - 1);
+    var monthly = ceil2(exact);
+    var annuity = i === 0 ? months : (growth - 1) / i;
+    var projectedRaw = fvCurrent + monthly * annuity;
+    return {
+      ok: true,
+      achieved: false,
+      monthly: monthly,
+      exactMonthly: exact,
+      projected: round2(projectedRaw),
+      totalDeposits: round2(monthly * months),
+      interest: round2(projectedRaw - current - monthly * months)
+    };
+  }
+
+  /*
+   * monthsToGoal(target, current, annualRatePct, monthly)
+   * Returns the first whole month at which the balance reaches the target.
+   */
+  function monthsToGoal(target, current, annualRatePct, monthly) {
+    var bad = validCommon(target, current, annualRatePct);
+    if (bad) return { ok: false, error: bad };
+    if (!isNum(monthly) || monthly <= 0) return { ok: false, error: 'bad_monthly' };
+    if (current >= target) {
+      return {
+        ok: true, achieved: true, months: 0, exactMonths: 0,
+        projected: round2(current), totalDeposits: 0, interest: 0
+      };
+    }
+
+    var i = monthlyRate(annualRatePct);
+    var exact;
+    if (i === 0) {
+      exact = (target - current) / monthly;
+    } else {
+      exact = Math.log((monthly + target * i) / (monthly + current * i)) / Math.log(1 + i);
+    }
+    if (!isFinite(exact) || exact < 0) return { ok: false, error: 'overflow' };
+    var n = Math.ceil(exact - 1e-9);
+    if (n > MAX_MONTHS) return { ok: false, error: 'range' };
+    var growth = Math.pow(1 + i, n);
+    var annuity = i === 0 ? n : (growth - 1) / i;
+    var projectedRaw = current * growth + monthly * annuity;
+    return {
+      ok: true,
+      achieved: false,
+      months: n,
+      exactMonths: exact,
+      projected: round2(projectedRaw),
+      totalDeposits: round2(monthly * n),
+      interest: round2(projectedRaw - current - monthly * n)
+    };
+  }
+  // TOOL_ENGINE_END
+
+  return {
+    monthlyNeeded: monthlyNeeded,
+    monthsToGoal: monthsToGoal,
+    round2: round2,
+    ceil2: ceil2,
+    isNum: isNum,
+    MAX_MONTHS: MAX_MONTHS
+  };
+})();
+</script>
+
+<!-- ==========================================================================
+     DICTIONARIES — zh / en / id must always expose exactly the same keys.
+     Generic keys live above the TOOL_DICT_* marker.
+     Tool-specific keys (including faqQ1..faqA3) live below the marker and are
+     replaced by the builder. No hard-coded visible copy anywhere in the page.
+     ========================================================================== -->
+<script id="i18n">
+var TOOL_I18N = {
+  zh: {
+    /* ---- generic keys: do not remove ---- */
+    docTitle: '储蓄目标计算器：每月该存多少',
+    docDesc: '设定目标金额、现有储蓄、年利率和目标期限，反推每月需存金额；也能从每月储蓄推算达成时间。全部在本地计算，无需注册；仅为估算，不构成财务建议。',
+    appTitle: '储蓄目标计算器',
+    tagline: '把大目标拆成每月的一小步。',
+    eyebrow: '免费工具 · 本地运行',
+    privacy: '所有计算都在你的浏览器里完成，输入不会上传。',
+    skip: '跳到工具',
+    navAria: '站点导航',
+    navHall: '工具大厅',
+    navGames: '在线桌游',
+    langLabel: '语言',
+    langZh: '中文',
+    langEn: 'EN',
+    langId: 'ID',
+    brandName: 'Devin',
+    brandHome: 'Devin 首页',
+    navHome: '首页',
+    footerAria: '页脚导航',
+    footerNote: '所有处理都在本地完成，不上传任何数据。',
+    copyright: '© 2026 Devin',
+    copy: '复制结果',
+    copied: '已复制。',
+    copyFail: '无法自动复制，请手动选中后复制。',
+    copyHint: '复制的是未加千分位的原始数值。',
+    reset: '重置',
+    result: '结果',
+    explainTitle: '公式与假设',
+    faqTitle: '常见问题',
+    formulaTitle: '公式',
+    assumptionsTitle: '假设与规则',
+    backTools: '工具大厅',
+    moreTools: '更多工具',
+    notMedical: '仅供估算，不构成医疗建议。',
+    notFinancial: '仅供估算，不构成财务建议。',
+    unitNote: '换算结果按四舍五入显示。',
+    download: '下载',
+    downloadFail: '下载失败，请重试。',
+    clear: '清除',
+    swap: '交换',
+    add: '添加',
+    remove: '删除',
+    close: '关闭',
+    yes: '是',
+    no: '否',
+    errorInvalid: '请输入有效的数字。',
+    errorRequired: '请填写这一项。',
+    errorGeneric: '无法计算，请检查输入。',
+    storageFail: '无法写入本地存储，本次设置不会被保存。',
+    noscript: '这个工具需要 JavaScript 才能运行。所有计算都在你的设备上完成，不会上传任何数据。',
+
+    /* ---- tool-specific keys: replace below this line ---- */
+    // TOOL_DICT_ZH
+    toolAria: '储蓄目标计算表单',
+    kicker: '输入',
+    formTitle: '目标与现状',
+    tabsAria: '计算方向',
+    tabNeed: '每月需存多少',
+    tabTime: '多久能达成',
+    targetLabel: '目标金额',
+    targetPh: '例如 100000',
+    currentLabel: '现有储蓄',
+    currentPh: '例如 10000',
+    rateLabel: '年利率（%）',
+    ratePh: '例如 5',
+    monthsLabel: '目标月数',
+    monthsPh: '例如 60',
+    monthlyLabel: '每月可存',
+    monthlyPh: '例如 1000',
+    formHint: '按月复利，存款在每月月末计入；金额按分四舍五入。',
+    calc: '计算',
+    resultKicker: '结果',
+    monthlyTitle: '每月需存',
+    monthsTitle: '预计需要',
+    projectedLabel: '预计到期余额',
+    depositsLabel: '累计存入',
+    interestLabel: '利息收益',
+    statusLabel: '状态',
+    statusAchieved: '已达成',
+    statusOnTrack: '按计划可达',
+    monthUnit: '个月',
+    noteNeedTemplate: '目标期限 {months} 个月，年利率 {rate}%。预计到期余额 {projected}。',
+    noteTimeTemplate: '每月存入 {monthly}，年利率 {rate}%。预计 {months} 个月后达成。',
+    noteYearsTemplate: '约 {years} 年 {months} 个月。',
+    noteAchieved: '当前储蓄已经覆盖目标，无需继续追加。',
+    explainIntro: '先算出目标金额在期末的缺口，再用普通年金公式反推每月存款；反过来也能根据每月存款推算需要多少个月。两种方向都按月复利、月末存入。',
+    formulaNeedLabel: '每月需存',
+    formulaTimeLabel: '达成月数',
+    formulaVars: 'F = 目标金额，P = 现有储蓄，A = 每月存款，i = 年利率 ÷ 12 ÷ 100，n = 月数。i = 0 时退化为 A = (F − P) ÷ n，n = (F − P) ÷ A。',
+    assumption1: '目标金额必须大于 0；现有储蓄不能为负；年利率不能为负。',
+    assumption2: '目标月数取 1–1200 的整数；每月存款必须大于 0。',
+    assumption3: '按月末存入、月末计息，每月复利一次；不使用实际天数。',
+    assumption4: '每月需存向上取整到分，保证按计划能达到目标；预计余额略高于目标属于正常现象。',
+    assumption5: '不含税费、账户管理费和浮动利率，仅供参考，不构成财务建议。',
+    errBadTarget: '目标金额必须大于 0。',
+    errBadCurrent: '现有储蓄不能为负。',
+    errBadRate: '年利率必须在 0% 到 100% 之间。',
+    errBadMonths: '目标月数必须是大于 0 的整数。',
+    errBadMonthly: '每月存款必须大于 0。',
+    errRange: '需要的月数超出 1200 个月，请提高每月存款。',
+    errOverflow: '数值过大，无法可靠计算。',
+    faqQ1: '利息是月初还是月末计入？',
+    faqA1: '模型按每月月末计息，先计息再加入当月存款；若你的账户按日计息，实际结果会有少量差异，目标期限越长差异越明显。',
+    faqQ2: '已有目标存款超过目标金额怎么办？',
+    faqA2: '工具会直接提示已达成，并把每月所需设为 0。剩余资金可继续按利率增值，页面仍会显示按当前储蓄增长后的预计余额。',
+    faqQ3: '可以处理负利率或通胀吗？',
+    faqA3: '不接受负利率。若想考虑通胀，可把年利率减去预期通胀率作为“实际利率”再计算，这样得到的是按今天购买力衡量的结果。'
+  },
+  en: {
+    /* ---- generic keys: do not remove ---- */
+    docTitle: 'Savings Goal Calculator',
+    docDesc: 'Find the monthly amount needed to reach a savings target from your current balance, rate and timeframe, or estimate how long a deposit will take. Local, no sign-up. Estimates only, not financial advice.',
+    appTitle: 'Savings Goal Calculator',
+    tagline: 'Turn a big goal into a monthly step.',
+    eyebrow: 'Free tool · runs locally',
+    privacy: 'Everything runs in your browser. Nothing you type is uploaded.',
+    skip: 'Skip to the tool',
+    navAria: 'Site navigation',
+    navHall: 'Tools',
+    navGames: 'Games',
+    langLabel: 'Language',
+    langZh: '中文',
+    langEn: 'EN',
+    langId: 'ID',
+    brandName: 'Devin',
+    brandHome: 'Devin home',
+    navHome: 'Home',
+    footerAria: 'Footer navigation',
+    footerNote: 'Everything runs locally. No data is uploaded.',
+    copyright: '© 2026 Devin',
+    copy: 'Copy result',
+    copied: 'Copied.',
+    copyFail: 'Could not copy automatically. Select the text and copy it manually.',
+    copyHint: 'Copies the plain number without thousands separators.',
+    reset: 'Reset',
+    result: 'Result',
+    explainTitle: 'Formulas and assumptions',
+    faqTitle: 'Frequently asked questions',
+    formulaTitle: 'Formula',
+    assumptionsTitle: 'Assumptions and rules',
+    backTools: 'Tools',
+    moreTools: 'More tools',
+    notMedical: 'Estimates only, not medical advice.',
+    notFinancial: 'Estimates only, not financial advice.',
+    unitNote: 'Converted values are rounded for display.',
+    download: 'Download',
+    downloadFail: 'Download failed. Try again.',
+    clear: 'Clear',
+    swap: 'Swap',
+    add: 'Add',
+    remove: 'Remove',
+    close: 'Close',
+    yes: 'Yes',
+    no: 'No',
+    errorInvalid: 'Enter a valid number.',
+    errorRequired: 'Fill in this field.',
+    errorGeneric: 'Could not calculate. Check the inputs.',
+    storageFail: 'Could not write to local storage, so this setting will not be saved.',
+    noscript: 'This tool needs JavaScript to run. All calculations happen on your device; nothing is uploaded.',
+
+    /* ---- tool-specific keys: replace below this line ---- */
+    // TOOL_DICT_EN
+    toolAria: 'Savings goal form',
+    kicker: 'Inputs',
+    formTitle: 'Goal and current savings',
+    tabsAria: 'Calculation direction',
+    tabNeed: 'Monthly amount needed',
+    tabTime: 'Time to reach goal',
+    targetLabel: 'Target amount',
+    targetPh: 'e.g. 100000',
+    currentLabel: 'Current savings',
+    currentPh: 'e.g. 10000',
+    rateLabel: 'Annual rate (%)',
+    ratePh: 'e.g. 5',
+    monthsLabel: 'Months to goal',
+    monthsPh: 'e.g. 60',
+    monthlyLabel: 'Monthly deposit',
+    monthlyPh: 'e.g. 1000',
+    formHint: 'Monthly compounding with deposits at month end. Money rounds to cents.',
+    calc: 'Calculate',
+    resultKicker: 'Result',
+    monthlyTitle: 'Monthly deposit needed',
+    monthsTitle: 'Time needed',
+    projectedLabel: 'Projected balance',
+    depositsLabel: 'Total deposits',
+    interestLabel: 'Interest earned',
+    statusLabel: 'Status',
+    statusAchieved: 'Goal reached',
+    statusOnTrack: 'On track',
+    monthUnit: 'months',
+    noteNeedTemplate: 'Over {months} months at {rate}% a year. Projected balance {projected}.',
+    noteTimeTemplate: 'Depositing {monthly} monthly at {rate}% a year. Goal reached in {months} months.',
+    noteYearsTemplate: 'About {years} years and {months} months.',
+    noteAchieved: 'Current savings already cover the goal, so no further deposit is needed.',
+    explainIntro: 'The tool measures the gap to the goal at the end of the term, then solves the ordinary-annuity formula for the monthly deposit. It can also work backwards from a monthly deposit to the number of months. Both directions compound monthly and deposit at month end.',
+    formulaNeedLabel: 'Monthly deposit',
+    formulaTimeLabel: 'Months to goal',
+    formulaVars: 'F = target, P = current savings, A = monthly deposit, i = annual rate ÷ 12 ÷ 100, n = months. When i = 0: A = (F − P) ÷ n and n = (F − P) ÷ A.',
+    assumption1: 'The target must be above 0; current savings cannot be negative; the annual rate cannot be negative.',
+    assumption2: 'Months must be a whole number from 1 to 1200; the monthly deposit must be above 0.',
+    assumption3: 'Deposits and interest are applied at month end, compounded monthly. Actual day counts are ignored.',
+    assumption4: 'The required deposit rounds up to cents so the plan always reaches the target; a projection slightly above the goal is expected.',
+    assumption5: 'Taxes, account fees and floating rates are excluded. Estimates only, not financial advice.',
+    errBadTarget: 'The target amount must be above 0.',
+    errBadCurrent: 'Current savings cannot be negative.',
+    errBadRate: 'The annual rate must be between 0% and 100%.',
+    errBadMonths: 'Months to goal must be a whole number above 0.',
+    errBadMonthly: 'The monthly deposit must be above 0.',
+    errRange: 'The goal needs more than 1200 months. Increase the monthly deposit.',
+    errOverflow: 'The numbers are too large to calculate reliably.',
+    faqQ1: 'Is interest credited at the start or end of the month?',
+    faqA1: 'The model credits interest at month end, then adds that month’s deposit. If your account compounds daily, results will differ slightly, and the gap grows with a longer horizon.',
+    faqQ2: 'What if my current savings already exceed the goal?',
+    faqA2: 'The tool reports that the goal is reached and sets the required monthly amount to 0. It still shows the projected balance if the current savings keep growing at the given rate.',
+    faqQ3: 'Can it handle negative rates or inflation?',
+    faqA3: 'Negative rates are not accepted. To account for inflation, subtract expected inflation from the annual rate and use the result as a real rate; the output is then measured in today’s purchasing power.'
+  },
+  id: {
+    /* ---- generic keys: do not remove ---- */
+    docTitle: 'Kalkulator Target Tabungan',
+    docDesc: 'Hitung setoran bulanan untuk mencapai target tabungan dari saldo, bunga, dan jangka waktu, atau perkirakan waktu yang dibutuhkan. Diproses lokal, tanpa daftar. Hanya perkiraan, bukan saran keuangan.',
+    appTitle: 'Kalkulator Target Tabungan',
+    tagline: 'Ubah target besar jadi langkah bulanan.',
+    eyebrow: 'Alat gratis · berjalan lokal',
+    privacy: 'Semua perhitungan berjalan di browser Anda. Tidak ada yang diunggah.',
+    skip: 'Lompat ke alat',
+    navAria: 'Navigasi situs',
+    navHall: 'Alat',
+    navGames: 'Permainan',
+    langLabel: 'Bahasa',
+    langZh: '中文',
+    langEn: 'EN',
+    langId: 'ID',
+    brandName: 'Devin',
+    brandHome: 'Beranda Devin',
+    navHome: 'Beranda',
+    footerAria: 'Navigasi footer',
+    footerNote: 'Semua diproses secara lokal. Tidak ada data yang diunggah.',
+    copyright: '© 2026 Devin',
+    copy: 'Salin hasil',
+    copied: 'Tersalin.',
+    copyFail: 'Tidak bisa menyalin otomatis. Pilih teksnya lalu salin manual.',
+    copyHint: 'Menyalin angka polos tanpa pemisah ribuan.',
+    reset: 'Atur ulang',
+    result: 'Hasil',
+    explainTitle: 'Rumus dan asumsi',
+    faqTitle: 'Pertanyaan yang sering diajukan',
+    formulaTitle: 'Rumus',
+    assumptionsTitle: 'Asumsi dan aturan',
+    backTools: 'Alat',
+    moreTools: 'Alat lainnya',
+    notMedical: 'Hanya perkiraan, bukan saran medis.',
+    notFinancial: 'Hanya perkiraan, bukan saran keuangan.',
+    unitNote: 'Nilai hasil konversi dibulatkan untuk tampilan.',
+    download: 'Unduh',
+    downloadFail: 'Unduh gagal. Coba lagi.',
+    clear: 'Bersihkan',
+    swap: 'Tukar',
+    add: 'Tambah',
+    remove: 'Hapus',
+    close: 'Tutup',
+    yes: 'Ya',
+    no: 'Tidak',
+    errorInvalid: 'Masukkan angka yang valid.',
+    errorRequired: 'Isi kolom ini.',
+    errorGeneric: 'Tidak dapat menghitung. Periksa input.',
+    storageFail: 'Tidak bisa menulis ke penyimpanan lokal, jadi pengaturan ini tidak akan disimpan.',
+    noscript: 'Alat ini memerlukan JavaScript. Semua perhitungan terjadi di perangkat Anda; tidak ada yang diunggah.',
+
+    /* ---- tool-specific keys: replace below this line ---- */
+    // TOOL_DICT_ID
+    toolAria: 'Formulir target tabungan',
+    kicker: 'Input',
+    formTitle: 'Target dan tabungan saat ini',
+    tabsAria: 'Arah perhitungan',
+    tabNeed: 'Setoran bulanan yang dibutuhkan',
+    tabTime: 'Waktu mencapai target',
+    targetLabel: 'Jumlah target',
+    targetPh: 'mis. 100000',
+    currentLabel: 'Tabungan saat ini',
+    currentPh: 'mis. 10000',
+    rateLabel: 'Suku bunga tahunan (%)',
+    ratePh: 'mis. 5',
+    monthsLabel: 'Jumlah bulan',
+    monthsPh: 'mis. 60',
+    monthlyLabel: 'Setoran bulanan',
+    monthlyPh: 'mis. 1000',
+    formHint: 'Bunga majemuk bulanan, setoran di akhir bulan. Uang dibulatkan ke sen.',
+    calc: 'Hitung',
+    resultKicker: 'Hasil',
+    monthlyTitle: 'Setoran bulanan yang dibutuhkan',
+    monthsTitle: 'Waktu yang dibutuhkan',
+    projectedLabel: 'Perkiraan saldo',
+    depositsLabel: 'Total setoran',
+    interestLabel: 'Bunga diperoleh',
+    statusLabel: 'Status',
+    statusAchieved: 'Target tercapai',
+    statusOnTrack: 'Sesuai rencana',
+    monthUnit: 'bulan',
+    noteNeedTemplate: 'Dalam {months} bulan pada {rate}% per tahun. Perkiraan saldo {projected}.',
+    noteTimeTemplate: 'Menyetor {monthly} per bulan pada {rate}% per tahun. Target tercapai dalam {months} bulan.',
+    noteYearsTemplate: 'Sekitar {years} tahun {months} bulan.',
+    noteAchieved: 'Tabungan saat ini sudah menutup target, jadi tidak perlu setoran tambahan.',
+    explainIntro: 'Alat ini menghitung selisih menuju target di akhir periode, lalu menyelesaikan rumus anuitas biasa untuk setoran bulanan. Alat juga bisa menghitung mundur dari setoran bulanan ke jumlah bulan. Kedua arah memakai bunga majemuk bulanan dan setoran di akhir bulan.',
+    formulaNeedLabel: 'Setoran bulanan',
+    formulaTimeLabel: 'Bulan menuju target',
+    formulaVars: 'F = target, P = tabungan saat ini, A = setoran bulanan, i = suku bunga tahunan ÷ 12 ÷ 100, n = bulan. Jika i = 0: A = (F − P) ÷ n dan n = (F − P) ÷ A.',
+    assumption1: 'Target harus di atas 0; tabungan saat ini tidak boleh negatif; suku bunga tahunan tidak boleh negatif.',
+    assumption2: 'Bulan harus bilangan bulat 1–1200; setoran bulanan harus di atas 0.',
+    assumption3: 'Setoran dan bunga diterapkan di akhir bulan, dimajemukkan bulanan. Jumlah hari aktual diabaikan.',
+    assumption4: 'Setoran bulanan yang dibutuhkan dibulatkan ke atas ke sen agar rencana selalu mencapai target; perkiraan sedikit di atas target adalah hal normal.',
+    assumption5: 'Pajak, biaya rekening, dan suku bunga mengambang tidak dihitung. Hanya perkiraan, bukan saran keuangan.',
+    errBadTarget: 'Jumlah target harus di atas 0.',
+    errBadCurrent: 'Tabungan saat ini tidak boleh negatif.',
+    errBadRate: 'Suku bunga tahunan harus antara 0% dan 100%.',
+    errBadMonths: 'Jumlah bulan harus bilangan bulat di atas 0.',
+    errBadMonthly: 'Setoran bulanan harus di atas 0.',
+    errRange: 'Target membutuhkan lebih dari 1200 bulan. Naikkan setoran bulanan.',
+    errOverflow: 'Angka terlalu besar untuk dihitung dengan andal.',
+    faqQ1: 'Apakah bunga dihitung di awal atau akhir bulan?',
+    faqA1: 'Model menghitung bunga di akhir bulan, lalu menambahkan setoran bulan itu. Jika rekening Anda memakai bunga harian, hasilnya akan sedikit berbeda, dan selisihnya membesar untuk jangka waktu panjang.',
+    faqQ2: 'Bagaimana jika tabungan saat ini sudah melebihi target?',
+    faqA2: 'Alat akan menyatakan target tercapai dan menetapkan setoran bulanan menjadi 0. Alat tetap menampilkan perkiraan saldo jika tabungan saat ini terus tumbuh pada suku bunga tersebut.',
+    faqQ3: 'Apakah bisa menangani suku bunga negatif atau inflasi?',
+    faqA3: 'Suku bunga negatif tidak diterima. Untuk memperhitungkan inflasi, kurangi perkiraan inflasi dari suku bunga tahunan dan pakai hasilnya sebagai suku bunga riil; hasilnya diukur dalam daya beli hari ini.'
+  }
+};
+</script>
+
+<!-- ==========================================================================
+     UI RUNTIME — language switching plus the global ToolUI helpers.
+     Builder replaces only the TOOL_UI_START / TOOL_UI_END block.
+     ========================================================================== -->
+<script>
+(function () {
+  'use strict';
+
+  var I18N = (typeof TOOL_I18N !== 'undefined') ? TOOL_I18N : { zh: {}, en: {}, id: {} };
+  var TOOL_SLUG = 'savings-goal-calculator';
+  var LANG_KEY = 'hhfa.tool.' + TOOL_SLUG + '.lang';
+  var LANGS = ['zh', 'en', 'id'];
+  var LOCALES = { zh: 'zh-CN', en: 'en-US', id: 'id-ID' };
+  var OG_LOCALES = { zh: 'zh_CN', en: 'en_US', id: 'id_ID' };
+  var state = { lang: 'zh' };
+  var toastTimer = null;
+  var started = false;
+  var langHooks = [];
+
+  function $(sel) {
+    return typeof sel === 'string' ? document.querySelector(sel) : sel;
+  }
+
+  function $$(sel) {
+    return Array.prototype.slice.call(document.querySelectorAll(sel));
+  }
+
+  function T(key, vars) {
+    var dict = I18N[state.lang] || {};
+    var value = Object.prototype.hasOwnProperty.call(dict, key) ? dict[key] : null;
+    if (typeof value !== 'string' && I18N.zh && typeof I18N.zh[key] === 'string') {
+      value = I18N.zh[key];
+    }
+    if (typeof value !== 'string') return key;
+    if (vars) {
+      value = value.replace(/\{(\w+)\}/g, function (match, name) {
+        return vars[name] != null ? String(vars[name]) : '';
+      });
+    }
+    return value;
+  }
+
+  function locale() {
+    return LOCALES[state.lang] || 'en-US';
+  }
+
+  function fmt(n, opts) {
+    if (typeof n !== 'number' || !isFinite(n)) return '—';
+    try {
+      return new Intl.NumberFormat(locale(), opts || {}).format(n);
+    } catch (e) {
+      return String(n);
+    }
+  }
+
+  function toast(message) {
+    var el = $('#toast');
+    if (!el) return;
+    el.textContent = message == null ? '' : String(message);
+    el.classList.add('on');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove('on'); }, 2600);
+  }
+
+  function legacyCopy(text) {
+    try {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.top = '-1000px';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { ta.setSelectionRange(0, ta.value.length); } catch (e) { /* ignore */ }
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      document.body.removeChild(ta);
+      return ok;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function copy(text) {
+    var value = text == null ? '' : String(text);
+    return new Promise(function (resolve) {
+      function done() { toast(T('copied')); resolve(true); }
+      function fail() { toast(T('copyFail')); resolve(false); }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(value).then(done, function () {
+          if (legacyCopy(value)) done(); else fail();
+        });
+      } else if (legacyCopy(value)) {
+        done();
+      } else {
+        fail();
+      }
+    });
+  }
+
+  function download(name, content, mime) {
+    try {
+      var blob = new Blob([content], { type: mime || 'text/plain;charset=utf-8' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = name || 'download.txt';
+      a.rel = 'noopener';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function () {
+        try {
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        } catch (e) { /* ignore */ }
+      }, 0);
+      return true;
+    } catch (e) {
+      toast(T('downloadFail'));
+      return false;
+    }
+  }
+
+  function readStore(key, fallback) {
+    try {
+      var raw = localStorage.getItem(key);
+      if (raw == null) return fallback;
+      var value = JSON.parse(raw);
+      return value == null ? fallback : value;
+    } catch (e) {
+      return fallback;
+    }
+  }
+
+  function writeStore(key, value) {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+      return true;
+    } catch (e) {
+      toast(T('storageFail'));
+      return false;
+    }
+  }
+
+  function debounce(fn, ms) {
+    var timer = null;
+    var wait = isFinite(ms) ? ms : 150;
+    return function () {
+      var ctx = this;
+      var args = arguments;
+      clearTimeout(timer);
+      timer = setTimeout(function () { fn.apply(ctx, args); }, wait);
+    };
+  }
+
+  function on(target, event, handler) {
+    var el = typeof target === 'string' ? $(target) : target;
+    if (!el || !el.addEventListener) return function () {};
+    el.addEventListener(event, handler);
+    return function () { el.removeEventListener(event, handler); };
+  }
+
+  function setError(el, message) {
+    if (!el) return;
+    if (!message) { clearError(el); return; }
+    el.textContent = String(message);
+    el.hidden = false;
+    el.classList.add('on');
+  }
+
+  function clearError(el) {
+    if (!el) return;
+    el.textContent = '';
+    el.hidden = true;
+    el.classList.remove('on');
+  }
+
+  function onLangChange(fn) {
+    if (typeof fn !== 'function') return function () {};
+    langHooks.push(fn);
+    if (started) {
+      try { fn(state.lang); } catch (e) { /* a broken hook must not break switching */ }
+    }
+    return function () {
+      var i = langHooks.indexOf(fn);
+      if (i !== -1) langHooks.splice(i, 1);
+    };
+  }
+
+  function setMeta(attr, name, content) {
+    var nodes = document.querySelectorAll('meta');
+    for (var i = 0; i < nodes.length; i++) {
+      if (nodes[i].getAttribute(attr) === name) {
+        nodes[i].setAttribute('content', content);
+        return;
+      }
+    }
+  }
+
+  function renderLanguage() {
+    var lang = state.lang;
+    document.documentElement.lang = lang === 'zh' ? 'zh-CN' : lang;
+
+    var nodes = $$('[data-i]');
+    for (var i = 0; i < nodes.length; i++) {
+      nodes[i].textContent = T(nodes[i].getAttribute('data-i'));
+    }
+    var placeholders = $$('[data-i-ph]');
+    for (var j = 0; j < placeholders.length; j++) {
+      placeholders[j].setAttribute('placeholder', T(placeholders[j].getAttribute('data-i-ph')));
+    }
+    var labelled = $$('[data-i-aria]');
+    for (var k = 0; k < labelled.length; k++) {
+      labelled[k].setAttribute('aria-label', T(labelled[k].getAttribute('data-i-aria')));
+    }
+    var buttons = $$('[data-lang]');
+    for (var b = 0; b < buttons.length; b++) {
+      buttons[b].setAttribute('aria-pressed', buttons[b].getAttribute('data-lang') === lang ? 'true' : 'false');
+    }
+
+    document.title = T('docTitle');
+    setMeta('name', 'description', T('docDesc'));
+    setMeta('property', 'og:title', T('docTitle'));
+    setMeta('property', 'og:description', T('docDesc'));
+    setMeta('property', 'og:locale', OG_LOCALES[lang] || 'en_US');
+    setMeta('name', 'twitter:title', T('docTitle'));
+    setMeta('name', 'twitter:description', T('docDesc'));
+
+    var toolsHref = lang === 'zh' ? '/tools/' : '/tools/' + lang + '/';
+    var links = $$('[data-tools-link]');
+    for (var l = 0; l < links.length; l++) links[l].setAttribute('href', toolsHref);
+  }
+
+  function applyLang() {
+    renderLanguage();
+    for (var i = 0; i < langHooks.length; i++) {
+      try { langHooks[i](state.lang); } catch (e) { /* keep the page usable */ }
+    }
+    started = true;
+  }
+
+  function detectLang() {
+    try {
+      var q = new URLSearchParams(window.location.search).get('lang');
+      if (LANGS.indexOf(q) !== -1) return q;
+    } catch (e) { /* ignore */ }
+    try {
+      var saved = localStorage.getItem(LANG_KEY);
+      if (LANGS.indexOf(saved) !== -1) return saved;
+    } catch (e) { /* ignore */ }
+    var nav = String(navigator.language || '').toLowerCase();
+    if (nav.indexOf('zh') === 0) return 'zh';
+    if (nav.indexOf('id') === 0 || nav.indexOf('in') === 0) return 'id';
+    return 'en';
+  }
+
+  function saveLang() {
+    try { localStorage.setItem(LANG_KEY, state.lang); } catch (e) { /* ignore */ }
+  }
+
+  function bindLanguages() {
+    var buttons = $$('[data-lang]');
+    for (var i = 0; i < buttons.length; i++) {
+      (function (button) {
+        button.addEventListener('click', function () {
+          var next = button.getAttribute('data-lang');
+          if (LANGS.indexOf(next) === -1 || next === state.lang) return;
+          state.lang = next;
+          saveLang();
+          applyLang();
+        });
+      })(buttons[i]);
+    }
+  }
+
+  function init() {
+    state.lang = detectLang();
+    bindLanguages();
+    applyLang();
+  }
+
+  var ToolUI = {
+    T: T,
+    fmt: fmt,
+    copy: copy,
+    toast: toast,
+    download: download,
+    readStore: readStore,
+    writeStore: writeStore,
+    debounce: debounce,
+    on: on,
+    setError: setError,
+    clearError: clearError,
+    onLangChange: onLangChange,
+    lang: function () { return state.lang; },
+    locale: locale,
+    $: $,
+    $$: $$
+  };
+
+  window.ToolUI = ToolUI;
+  window.T = T;
+
+  // TOOL_UI_START
+  var sgMode = 0;
+  var sgLastError = '';
+  var sgEls = {
+    target: document.getElementById('sg-target'),
+    current: document.getElementById('sg-current'),
+    rate: document.getElementById('sg-rate'),
+    months: document.getElementById('sg-months'),
+    monthly: document.getElementById('sg-monthly'),
+    needField: document.getElementById('sg-panel-need'),
+    timeField: document.getElementById('sg-panel-time'),
+    tabNeed: document.getElementById('sg-tab-need'),
+    tabTime: document.getElementById('sg-tab-time'),
+    panelNeed: document.getElementById('sg-panel-need'),
+    panelTime: document.getElementById('sg-panel-time'),
+    error: document.getElementById('sg-error'),
+    title: document.getElementById('sg-result-title'),
+    big: document.getElementById('sg-big'),
+    note: document.getElementById('sg-note'),
+    projected: document.getElementById('sg-projected'),
+    deposits: document.getElementById('sg-deposits'),
+    interest: document.getElementById('sg-interest'),
+    status: document.getElementById('sg-status')
+  };
+
+  function sgRead(el) {
+    var raw = el && el.value != null ? String(el.value).trim() : '';
+    return raw === '' ? NaN : Number(raw);
+  }
+
+  function sgMoney(n) {
+    return ToolUI.fmt(n, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function sgSetError(key) {
+    sgLastError = key || '';
+    if (key) ToolUI.setError(sgEls.error, T(key));
+    else ToolUI.clearError(sgEls.error);
+  }
+
+  function sgSetMode(mode) {
+    sgMode = mode;
+    var need = mode === 0;
+    sgEls.tabNeed.setAttribute('aria-selected', need ? 'true' : 'false');
+    sgEls.tabTime.setAttribute('aria-selected', need ? 'false' : 'true');
+    sgEls.needField.hidden = !need;
+    sgEls.timeField.hidden = need;
+    sgEls.title.textContent = T(need ? 'monthlyTitle' : 'monthsTitle');
+    sgCalc();
+  }
+
+  function sgCalc() {
+    var target = sgRead(sgEls.target);
+    var current = sgRead(sgEls.current);
+    var rate = sgRead(sgEls.rate);
+    var res;
+    if (!isFinite(target) || !isFinite(current) || !isFinite(rate)) {
+      sgSetError('errorRequired');
+      sgEls.big.textContent = '—';
+      sgEls.note.textContent = '';
+      return;
+    }
+    if (sgMode === 0) {
+      var months = sgRead(sgEls.months);
+      if (!isFinite(months)) {
+        sgSetError('errorRequired');
+        sgEls.big.textContent = '—';
+        sgEls.note.textContent = '';
+        return;
+      }
+      res = ToolEngine.monthlyNeeded(target, current, rate, months);
+    } else {
+      var monthly = sgRead(sgEls.monthly);
+      if (!isFinite(monthly)) {
+        sgSetError('errorRequired');
+        sgEls.big.textContent = '—';
+        sgEls.note.textContent = '';
+        return;
+      }
+      res = ToolEngine.monthsToGoal(target, current, rate, monthly);
+    }
+
+    if (!res.ok) {
+      var map = {
+        bad_target: 'errBadTarget',
+        bad_current: 'errBadCurrent',
+        bad_rate: 'errBadRate',
+        bad_months: 'errBadMonths',
+        bad_monthly: 'errBadMonthly',
+        range: 'errRange',
+        overflow: 'errOverflow'
+      };
+      sgSetError(map[res.error] || 'errorGeneric');
+      sgEls.big.textContent = '—';
+      sgEls.note.textContent = '';
+      sgEls.projected.textContent = '—';
+      sgEls.deposits.textContent = '—';
+      sgEls.interest.textContent = '—';
+      sgEls.status.textContent = '—';
+      return;
+    }
+
+    sgSetError('');
+    if (sgMode === 0) {
+      sgEls.big.textContent = sgMoney(res.monthly);
+      sgEls.note.textContent = res.achieved
+        ? T('noteAchieved')
+        : T('noteNeedTemplate', {
+          months: ToolUI.fmt(sgRead(sgEls.months), { maximumFractionDigits: 0 }),
+          rate: ToolUI.fmt(sgRead(sgEls.rate), { maximumFractionDigits: 2 }),
+          projected: sgMoney(res.projected)
+        });
+    } else {
+      sgEls.big.textContent = ToolUI.fmt(res.months, { maximumFractionDigits: 0 }) + ' ' + T('monthUnit');
+      var note = res.achieved
+        ? T('noteAchieved')
+        : T('noteTimeTemplate', {
+          monthly: sgMoney(sgRead(sgEls.monthly)),
+          rate: ToolUI.fmt(sgRead(sgEls.rate), { maximumFractionDigits: 2 }),
+          months: ToolUI.fmt(res.months, { maximumFractionDigits: 0 })
+        });
+      if (!res.achieved && res.months >= 12) {
+        note += ' ' + T('noteYearsTemplate', {
+          years: ToolUI.fmt(Math.floor(res.months / 12), { maximumFractionDigits: 0 }),
+          months: ToolUI.fmt(res.months % 12, { maximumFractionDigits: 0 })
+        });
+      }
+      sgEls.note.textContent = note;
+    }
+    sgEls.projected.textContent = sgMoney(res.projected);
+    sgEls.deposits.textContent = sgMoney(res.totalDeposits);
+    sgEls.interest.textContent = sgMoney(res.interest);
+    sgEls.status.textContent = T(res.achieved ? 'statusAchieved' : 'statusOnTrack');
+  }
+
+  on(sgEls.tabNeed, 'click', function () { sgSetMode(0); });
+  on(sgEls.tabTime, 'click', function () { sgSetMode(1); });
+  on(sgEls.tabNeed, 'keydown', function (ev) {
+    if (ev.key === 'ArrowRight') { ev.preventDefault(); sgSetMode(1); sgEls.tabTime.focus(); }
+  });
+  on(sgEls.tabTime, 'keydown', function (ev) {
+    if (ev.key === 'ArrowLeft') { ev.preventDefault(); sgSetMode(0); sgEls.tabNeed.focus(); }
+  });
+
+  on('#sg-calc', 'click', sgCalc);
+  on('#sg-reset', 'click', function () {
+    sgEls.target.value = '100000';
+    sgEls.current.value = '10000';
+    sgEls.rate.value = '5';
+    sgEls.months.value = '60';
+    sgEls.monthly.value = '1000';
+    sgSetMode(0);
+  });
+  var sgLive = ToolUI.debounce(sgCalc, 140);
+  on(sgEls.target, 'input', sgLive);
+  on(sgEls.current, 'input', sgLive);
+  on(sgEls.rate, 'input', sgLive);
+  on(sgEls.months, 'input', sgLive);
+  on(sgEls.monthly, 'input', sgLive);
+
+  on('#sg-copy', 'click', function () {
+    var lines = [
+      T(sgMode === 0 ? 'monthlyTitle' : 'monthsTitle') + ': ' + sgEls.big.textContent,
+      T('projectedLabel') + ': ' + sgEls.projected.textContent,
+      T('depositsLabel') + ': ' + sgEls.deposits.textContent,
+      T('interestLabel') + ': ' + sgEls.interest.textContent,
+      T('statusLabel') + ': ' + sgEls.status.textContent
+    ];
+    ToolUI.copy(lines.join('\n'));
+  });
+
+  ToolUI.onLangChange(function () {
+    if (sgLastError) ToolUI.setError(sgEls.error, T(sgLastError));
+    sgEls.title.textContent = T(sgMode === 0 ? 'monthlyTitle' : 'monthsTitle');
+    sgCalc();
+  });
+  sgCalc();
+  // TOOL_UI_END
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>
