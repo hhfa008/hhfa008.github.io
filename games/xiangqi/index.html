@@ -145,6 +145,7 @@ canvas{display:block;width:100%;max-width:540px;height:auto;background:#e9d3ab;b
       <div class="tools">
         <button type="button" id="undo">悔棋</button>
         <button type="button" id="new">重开</button>
+        <button type="button" class="sfx-toggle" aria-label="静音"></button>
       </div>
     </div>
     <div class="boardwrap">
@@ -586,6 +587,7 @@ canvas{display:block;width:100%;max-width:540px;height:auto;background:#e9d3ab;b
 });
 </script>
 
+<script src="/games/shared/sfx.js"></script>
 <script>
 (function () {
   'use strict';
@@ -663,6 +665,7 @@ canvas{display:block;width:100%;max-width:540px;height:auto;background:#e9d3ab;b
   }
 
   function commitMove(from, to) {
+    var captured = !!board[to];
     history.push({
       board: board.slice(),
       turn: turn,
@@ -671,6 +674,7 @@ canvas{display:block;width:100%;max-width:540px;height:auto;background:#e9d3ab;b
     });
     board[to] = board[from];
     board[from] = null;
+    if (window.Sfx) window.Sfx.play(captured ? 'capture' : 'move');
     lastMove = { from: from, to: to };
     selected = -1;
     targetCache = [];
@@ -687,6 +691,9 @@ canvas{display:block;width:100%;max-width:540px;height:auto;background:#e9d3ab;b
         text: (check ? '将死' : '困毙') + ' · ' + sideName(-turn) + '胜'
       };
       check = false;
+      if (window.Sfx) {
+        window.Sfx.play(mode === 'local' || gameOver.winner === RED ? 'win' : 'lose');
+      }
     } else {
       gameOver = null;
     }

@@ -1,0 +1,1433 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>心率区间计算器</title>
+<meta name="description" content="按年龄或最大心率估算五个训练区间，可选 Karvonen 法结合静息心率；仅供参考，不构成医疗建议。全部在本地计算，无需注册。">
+<meta name="author" content="Devin">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="theme-color" content="#f2efe7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#101316" media="(prefers-color-scheme: dark)">
+<link rel="canonical" href="https://hhfa008.github.io/tools/heart-rate-zones/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23b93d12'/%3E%3Cpath d='M9 23 23 9' stroke='%23fbf9f4' stroke-width='2.4' stroke-linecap='round'/%3E%3Ccircle cx='11' cy='11' r='3' fill='%23fbf9f4'/%3E%3Ccircle cx='21' cy='21' r='3' fill='%23fbf9f4'/%3E%3C/svg%3E">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Devin">
+<meta property="og:title" content="心率区间计算器">
+<meta property="og:description" content="按年龄或最大心率估算五个训练区间，可选 Karvonen 法结合静息心率；仅供参考，不构成医疗建议。全部在本地计算，无需注册。">
+<meta property="og:url" content="https://hhfa008.github.io/tools/heart-rate-zones/">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:locale:alternate" content="en_US">
+<meta property="og:locale:alternate" content="id_ID">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="心率区间计算器">
+<meta name="twitter:description" content="按年龄或最大心率估算五个训练区间，可选 Karvonen 法结合静息心率；仅供参考，不构成医疗建议。全部在本地计算，无需注册。">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "心率区间计算器",
+  "url": "https://hhfa008.github.io/tools/heart-rate-zones/",
+  "applicationCategory": "HealthApplication",
+  "operatingSystem": "Any",
+  "browserRequirements": "Requires JavaScript",
+  "isAccessibleForFree": true,
+  "inLanguage": ["zh-CN", "en", "id"],
+  "description": "按年龄或最大心率估算五个训练区间，可选 Karvonen 法结合静息心率；仅供参考，不构成医疗建议。全部在本地计算，无需注册。",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+  {
+    "@type": "Question",
+    "name": "最大心率怎么估算？",
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "常用 220 减去年龄作为粗略估计。它有个体差异，服药、疲劳和训练水平都会影响，最好通过实测或医生评估校正。"
+    }
+  },
+  {
+    "@type": "Question",
+    "name": "Karvonen 法和百分比法差在哪？",
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "Karvonen 法用（最大心率 − 静息心率）× 强度 + 静息心率，更贴合个人静息水平；普通百分比法直接取最大心率的百分比。"
+    }
+  },
+  {
+    "@type": "Question",
+    "name": "区间边界是绝对的吗？",
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "不是。区间是训练强度的粗略划分，不同机构定义略有差异。出现胸闷、头晕或异常心悸时应立即停止运动并就医。"
+    }
+  }
+]
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "首页", "item": "https://hhfa008.github.io/" },
+    { "@type": "ListItem", "position": 2, "name": "工具大厅", "item": "https://hhfa008.github.io/tools/" },
+    { "@type": "ListItem", "position": 3, "name": "心率区间计算器", "item": "https://hhfa008.github.io/tools/heart-rate-zones/" }
+  ]
+}
+</script>
+
+<style>
+/* ==========================================================================
+   Design tokens — keep in sync with the existing tools pages.
+   ========================================================================== */
+:root{
+  --paper:#f2efe7; --paper-2:#fbf9f4; --panel:#ffffff;
+  --ink:#14171a; --muted:#5b615c; --muted-2:#7b807a;
+  --line:#d5d0c4; --line-strong:#bcb5a7;
+  --accent:#b93d12; --accent-soft:#f2a07a; --accent-wash:#f7e5da;
+  --ok:#2f6b3c; --ok-wash:#e8f2e7; --warn:#8a5a00; --warn-wash:#fbf1db;
+  --bad:#a32216; --bad-wash:#fbe7e3;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --radius:16px; --max:1040px;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --paper:#101316; --paper-2:#171b1f; --panel:#1a1f23;
+    --ink:#f2efe7; --muted:#b7b3a8; --muted-2:#948f85;
+    --line:#333a40; --line-strong:#4a535b;
+    --accent:#f08a5d; --accent-soft:#f2a07a; --accent-wash:#2b211c;
+    --ok:#8fd19e; --ok-wash:#1b2b1e; --warn:#f0c36a; --warn-wash:#2d2618;
+    --bad:#ff8a7a; --bad-wash:#321d1a;
+  }
+}
+
+/* Reset */
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%;color-scheme:light dark;scroll-behavior:smooth;overflow-x:clip}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font:16px/1.6 var(--sans);overflow-x:clip;
+  text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+p,h1,h2,h3,ul,ol,figure{margin:0}
+a{color:inherit}
+button,input,select,textarea{font:inherit;color:inherit}
+code,pre{font-family:var(--mono)}
+
+/* Layout */
+.wrap{width:100%;max-width:var(--max);margin:0 auto;padding-left:18px;padding-right:18px;min-width:0}
+@media (min-width:720px){.wrap{padding-left:32px;padding-right:32px}}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.skip-link{position:absolute;left:12px;top:-80px;z-index:100;padding:12px 16px;background:var(--ink);color:var(--paper);border-radius:8px;text-decoration:none}
+.skip-link:focus{top:12px}
+:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+
+/* Header */
+.site-header{border-bottom:1px solid var(--line);background:var(--paper)}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:10px 16px;min-height:64px;flex-wrap:wrap;padding-top:6px;padding-bottom:6px}
+.brand{display:inline-flex;align-items:center;gap:10px;font-weight:700;letter-spacing:-.02em;text-decoration:none;min-height:44px}
+.brand-mark{width:26px;height:26px;border-radius:7px;background:var(--accent);position:relative;flex:none}
+.brand-mark::before,.brand-mark::after{content:"";position:absolute;left:7px;height:2px;background:var(--paper-2);border-radius:1px}
+.brand-mark::before{right:7px;top:9px}
+.brand-mark::after{right:11px;top:15px}
+.header-tools{display:flex;align-items:center;gap:12px 16px;flex-wrap:wrap;justify-content:flex-end;min-width:0}
+.site-nav{display:flex;align-items:center;gap:14px;font-size:13.5px;flex-wrap:wrap}
+.site-nav a{display:inline-flex;align-items:center;min-height:44px;text-decoration:none;color:var(--muted)}
+.site-nav a:hover{color:var(--accent);text-decoration:underline}
+.lang-switch{display:flex;gap:4px}
+.lang-switch button{
+  min-width:44px;min-height:44px;padding:0 8px;border:1px solid var(--line-strong);
+  border-radius:9px;background:transparent;color:var(--muted);font-size:12.5px;
+  font-weight:650;cursor:pointer;line-height:1
+}
+.lang-switch button:hover{border-color:var(--accent);color:var(--accent)}
+.lang-switch button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+@media (prefers-color-scheme:dark){
+  .lang-switch button[aria-pressed="true"],
+  .btn.primary,.btn.danger{color:#101316}
+}
+
+/* Hero */
+.hero{padding:36px 0 22px}
+@media (min-width:720px){.hero{padding:52px 0 28px}}
+.eyebrow{margin:0 0 10px;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+h1{margin:0 0 12px;max-width:22ch;font-size:clamp(1.85rem,6vw,2.9rem);line-height:1.1;letter-spacing:-.035em;font-weight:700;overflow-wrap:anywhere}
+.lede{max-width:70ch;color:var(--muted);font-size:clamp(1rem,2vw,1.08rem);overflow-wrap:anywhere}
+.privacy{
+  display:flex;gap:9px;align-items:flex-start;max-width:78ch;margin:16px 0 0;padding:11px 14px;
+  background:var(--accent-wash);border:1px solid var(--line);border-left:4px solid var(--accent);
+  border-radius:0 10px 10px 0;font-size:13.5px
+}
+.privacy svg{width:17px;height:17px;flex:none;margin-top:3px}
+
+/* Cards and tool layout */
+.tool-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;align-items:start}
+.tool-layout>*{min-width:0}
+@media (min-width:900px){
+  .tool-layout{grid-template-columns:minmax(0,1.04fr) minmax(0,.96fr)}
+  .result-col{position:sticky;top:18px}
+}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;min-width:0}
+@media (min-width:720px){.card{padding:26px 28px}}
+.card-kicker{margin:0 0 7px;font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.11em;text-transform:uppercase;color:var(--accent)}
+.card h2{margin:0 0 14px;font-size:clamp(1.15rem,2.4vw,1.4rem);line-height:1.2;letter-spacing:-.02em;overflow-wrap:anywhere}
+.panel-desc{margin:0 0 14px;color:var(--muted);font-size:14px;overflow-wrap:anywhere}
+
+/* Fields */
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field>label,.field>span.label{font-size:13px;font-weight:650;color:var(--muted)}
+.field input,.field select,.field textarea,.field .input{
+  width:100%;min-height:46px;padding:10px 12px;border:1px solid var(--line-strong);
+  border-radius:12px;background:var(--paper-2);font-size:16px;line-height:1.4;min-width:0
+}
+.field textarea{min-height:120px;resize:vertical;line-height:1.55}
+.field select{
+  appearance:none;padding-right:34px;
+  background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);
+  background-position:calc(100% - 18px) 50%,calc(100% - 13px) 50%;
+  background-size:5px 5px,5px 5px;background-repeat:no-repeat
+}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);outline:3px solid var(--accent-wash);outline-offset:1px}
+.field input[aria-invalid="true"],.field select[aria-invalid="true"],.field textarea[aria-invalid="true"]{border-color:var(--bad)}
+.field-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+@media (min-width:600px){.field-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Buttons */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  min-height:46px;padding:0 16px;border:1px solid var(--line-strong);border-radius:12px;
+  background:var(--panel);color:var(--ink);font-size:14.5px;font-weight:650;
+  cursor:pointer;text-decoration:none;text-align:center;line-height:1.25
+}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.06);color:#fff}
+.btn.dark{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.btn.ghost{background:transparent}
+.btn.danger{background:var(--bad);border-color:var(--bad);color:#fff}
+.btn.danger:hover{filter:brightness(1.06);color:#fff}
+.btn-row{display:flex;flex-wrap:wrap;gap:8px;min-width:0}
+.btn-row .btn{flex:1 1 140px}
+
+/* Chips / segmented controls */
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px;padding:0;list-style:none}
+.chips button,.chip{
+  display:inline-flex;align-items:center;justify-content:center;min-height:44px;
+  padding:8px 14px;border:1px solid var(--line-strong);border-radius:999px;
+  background:var(--paper-2);color:var(--ink);font-size:13.5px;font-weight:650;
+  cursor:pointer;line-height:1.2;text-decoration:none
+}
+.chips button:hover,.chip:hover{border-color:var(--accent);color:var(--accent)}
+.chips button[aria-pressed="true"],.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+@media (prefers-color-scheme:dark){
+  .chips button[aria-pressed="true"],.chip.on{color:#101316}
+}
+
+/* Tabs */
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
+.tabs [role="tab"]{
+  min-height:44px;padding:9px 14px;border:1px solid var(--line-strong);border-radius:999px;
+  background:var(--paper-2);color:var(--ink);font-size:13.5px;font-weight:650;
+  cursor:pointer;line-height:1.2
+}
+.tabs [role="tab"][aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+@media (prefers-color-scheme:dark){.tabs [role="tab"][aria-selected="true"]{color:#101316}}
+
+/* Result */
+.result{background:var(--paper-2)}
+.result-live{min-height:96px}
+.result-big{
+  margin:2px 0 0;font-family:var(--mono);font-size:clamp(2rem,7.5vw,3rem);
+  font-weight:650;line-height:1.08;letter-spacing:-.04em;color:var(--accent);
+  font-variant-numeric:tabular-nums;overflow-wrap:anywhere
+}
+.result-note{margin-top:7px;color:var(--muted);font-size:14px;overflow-wrap:anywhere}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px;margin-top:14px}
+.stat{min-width:0;padding:10px 11px;border:1px solid var(--line);border-radius:11px;background:var(--paper-2)}
+.stat span{display:block;font-size:11.5px;color:var(--muted);line-height:1.3}
+.stat b{display:block;margin-top:2px;font-family:var(--mono);font-size:1.12rem;font-weight:650;font-variant-numeric:tabular-nums;letter-spacing:-.02em;overflow-wrap:anywhere}
+
+/* Tables must scroll inside their own wrapper, never the page. */
+.table-wrap{width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.table-wrap table{width:100%;border-collapse:collapse;font-size:13.5px}
+.table-wrap caption{padding:10px 12px;text-align:left;color:var(--muted);font-size:12.5px}
+.table-wrap th,.table-wrap td{padding:9px 11px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap;font-variant-numeric:tabular-nums}
+.table-wrap th{font-weight:650;color:var(--muted);font-size:12.5px}
+.table-wrap tr:last-child td{border-bottom:0}
+
+/* Notes and status */
+.hint{margin:10px 0 0;color:var(--muted-2);font-size:12.5px;line-height:1.55;overflow-wrap:anywhere}
+.error{margin:10px 0 0;padding:9px 12px;border-radius:9px;background:var(--bad-wash);border:1px solid var(--bad);color:var(--bad);font-size:13px;font-weight:600;line-height:1.5;overflow-wrap:anywhere}
+.badge{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:2px 9px;border-radius:999px;background:var(--accent-wash);color:var(--accent);font-size:12px;font-weight:650;line-height:1.6;vertical-align:middle}
+.badge.ok{background:var(--ok-wash);color:var(--ok)}
+.badge.warn{background:var(--warn-wash);color:var(--warn)}
+.badge.bad{background:var(--bad-wash);color:var(--bad)}
+
+/* Checkbox rows: browser-check measures the input box itself, so keep it 44x44. */
+.check{display:inline-flex;align-items:center;gap:8px;min-height:44px;font-size:14px;cursor:pointer}
+.check input[type="checkbox"],.check input[type="radio"]{width:44px;height:44px;flex:none;accent-color:var(--accent);cursor:pointer}
+.check-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin-top:10px}
+/* Safety net for builders: any main control must stay touchable. */
+main button{min-height:44px}
+main select{min-height:44px}
+main input[type="checkbox"],main input[type="radio"]{width:44px;height:44px;flex:none;accent-color:var(--accent)}
+
+/* Explain */
+.explain{margin-top:18px}
+.explain h2{margin:0 0 12px;font-size:clamp(1.3rem,3vw,1.7rem);letter-spacing:-.02em}
+.explain-body{padding-bottom:2px}
+.explain-body p{max-width:82ch;color:var(--muted);font-size:14px;margin-bottom:10px;overflow-wrap:anywhere}
+.explain-body p:last-child{margin-bottom:0}
+.explain-body strong{color:var(--ink)}
+.formula-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;margin:14px 0 18px}
+@media (min-width:760px){.formula-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.formula{min-width:0;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--paper-2)}
+.formula h3,.formula-title{margin:0 0 7px;font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.formula code{display:inline-block;max-width:100%;padding:2px 6px;border-radius:5px;background:var(--accent-wash);font-family:var(--mono);font-size:12.5px;line-height:1.6;overflow-wrap:anywhere}
+.assumptions{margin:0;padding-left:20px;color:var(--muted);font-size:13.5px}
+.assumptions li{margin:0 0 8px;overflow-wrap:anywhere}
+
+/* FAQ */
+.faq{margin-top:18px}
+.faq h2{margin:0 0 12px;font-size:clamp(1.3rem,3vw,1.7rem);letter-spacing:-.02em}
+.faq details{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:0 20px}
+.faq details+details{margin-top:10px}
+.faq summary{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:44px;padding:16px 0;cursor:pointer;font-weight:650;list-style:none}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";flex:none;font-family:var(--mono);font-size:19px;line-height:1;color:var(--accent)}
+.faq details[open] summary::after{content:"\2212"}
+.faq details p{margin:0;padding:0 0 18px;color:var(--muted);font-size:14px;max-width:80ch;overflow-wrap:anywhere}
+
+/* Footer */
+.site-footer{margin-top:28px;padding:22px 0 34px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted)}
+.footer-inner{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 18px}
+.footer-links{display:flex;flex-wrap:wrap;gap:4px 14px}
+.site-footer a{color:var(--accent);text-decoration:none;display:inline-flex;align-items:center;min-height:44px}
+.site-footer a:hover{text-decoration:underline}
+.footer-note{margin:8px 0 0;max-width:82ch;color:var(--muted-2);overflow-wrap:anywhere}
+.noscript{margin-top:18px}
+
+/* Toast */
+.toast{
+  position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));
+  transform:translate(-50%,12px);z-index:20;max-width:calc(100vw - 32px);
+  padding:12px 18px;border-radius:12px;background:var(--ink);color:var(--paper);
+  font-size:14px;font-weight:600;text-align:center;box-shadow:0 8px 24px rgb(0 0 0 / .22);
+  opacity:0;pointer-events:none;transition:opacity .16s,transform .16s;overflow-wrap:anywhere
+}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+
+/* Motion and print */
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .btn:active{transform:none}
+}
+@media print{
+  .site-header,.site-footer,.skip-link,.lang-switch,.tabs,.chips,.btn-row,.toast,.no-print{display:none!important}
+  body{background:#fff;color:#000;padding:0}
+  .card,.table-wrap{border-color:#999;background:#fff;break-inside:avoid}
+  .result-col{position:static}
+  .result-big{color:#000}
+  .explain,.faq{display:block}
+  details{break-inside:avoid}
+  .faq details p{display:block!important}
+}
+</style>
+</head>
+<body data-slug="heart-rate-zones" data-category="health">
+<a class="skip-link" href="#tool" data-i="skip">跳到工具</a>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="/" aria-label="Devin" data-i-aria="brandHome">
+      <span class="brand-mark" aria-hidden="true"></span><span data-i="brandName">Devin</span>
+    </a>
+    <div class="header-tools">
+      <nav class="site-nav" aria-label="站点导航" data-i-aria="navAria">
+        <a id="nav-tools" href="/tools/" data-tools-link data-i="navHall">工具大厅</a>
+        <a href="/games/" data-i="navGames">在线桌游</a>
+      </nav>
+      <nav class="lang-switch" aria-label="语言" data-i-aria="langLabel">
+        <button type="button" data-lang="zh" aria-pressed="true" data-i="langZh">中文</button>
+        <button type="button" data-lang="en" aria-pressed="false" data-i="langEn">EN</button>
+        <button type="button" data-lang="id" aria-pressed="false" data-i="langId">ID</button>
+      </nav>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero" aria-labelledby="page-title">
+    <p class="eyebrow" data-i="eyebrow">免费工具 · 本地运行</p>
+    <h1 id="page-title" data-i="appTitle">心率区间计算器</h1>
+    <p class="lede" data-i="tagline">训练强度，用区间说话。</p>
+    <p class="privacy">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+      <span data-i="privacy">所有计算都在你的浏览器里完成，输入不会上传。</span>
+    </p>
+  </section>
+
+  <!-- ======================================================================
+       TOOL BODY — builder replaces this marker with the tool UI.
+       Everything between the marker and the explain section belongs to the tool.
+       Keep labels, data-i hooks, aria-live results and 44px targets.
+       ====================================================================== -->
+  
+<div class="tool-layout">
+  <section class="card" aria-labelledby="hr-title">
+    <p class="card-kicker" data-i="hrKicker">输入</p>
+    <h2 id="hr-title" data-i="hrFormTitle">最大心率与区间</h2>
+    <p class="panel-desc" data-i="hrFormDesc">按年龄或已知最大心率，估算五个训练心率区间；勾选 Karvonen 法可结合静息心率。</p>
+    <div class="field">
+      <label for="hr-source" data-i="sourceLabel">计算依据</label>
+      <select id="hr-source">
+        <option value="age" data-i="sourceAge">按年龄估算</option>
+        <option value="max" data-i="sourceMax">已知最大心率</option>
+      </select>
+    </div>
+    <div class="field" style="margin-top:12px">
+      <label for="hr-value" id="hr-value-label">年龄（岁）</label>
+      <input id="hr-value" type="number" inputmode="numeric" min="5" max="120" step="1" value="30" placeholder="例如 30" data-i-ph="valuePh" aria-describedby="hr-error">
+    </div>
+    <div class="check-row">
+      <label class="check">
+        <input type="checkbox" id="hr-karvonen">
+        <span data-i="karvonenLabel">使用 Karvonen 法（结合静息心率）</span>
+      </label>
+    </div>
+    <div class="field" id="hr-rest-field" hidden>
+      <label for="hr-resting" data-i="restingLabel">静息心率（bpm）</label>
+      <input id="hr-resting" type="number" inputmode="numeric" min="20" max="150" step="1" value="60" placeholder="例如 60" data-i-ph="restingPh">
+    </div>
+    <p class="hint" data-i="hrHint">区间下限含、上限不含；最后一区包含最大心率。起点是粗略估计，实测和医生评估更可靠。</p>
+    <p class="error" id="hr-error" role="alert" hidden></p>
+    <div class="btn-row" style="margin-top:14px">
+      <button class="btn ghost" type="button" id="hr-reset" data-i="reset">重置</button>
+    </div>
+  </section>
+  <div class="result-col">
+    <section class="card result" aria-labelledby="hr-result-title">
+      <p class="card-kicker" data-i="result">结果</p>
+      <h2 id="hr-result-title" data-i="resultTitle">你的最大心率</h2>
+      <div class="result-live" aria-live="polite">
+        <p class="result-big" id="hr-max">—</p>
+        <p class="result-note" id="hr-note"></p>
+      </div>
+      <div class="btn-row" style="margin-top:14px">
+        <button class="btn primary" type="button" id="hr-copy" data-i="copy" disabled>复制结果</button>
+      </div>
+    </section>
+  </div>
+</div>
+<section class="card" style="margin-top:18px" aria-labelledby="hr-table-title">
+  <h2 id="hr-table-title" data-i="tableTitle">五个训练区间</h2>
+  <div class="table-wrap">
+    <table>
+      <caption data-i="zonesCaption">区间按最大心率的百分比划分，边界取整到整拍。</caption>
+      <thead><tr><th data-i="colZone">区间</th><th data-i="colPercent">强度</th><th data-i="colBpm">心率（bpm）</th><th data-i="colPurpose">训练目的</th></tr></thead>
+      <tbody id="hr-zone-body">
+        <tr><td>Z1</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr><td>Z2</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr><td>Z3</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr><td>Z4</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr><td>Z5</td><td>—</td><td>—</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+  <section class="explain" id="explain" aria-labelledby="explain-title">
+    <h2 id="explain-title" data-i="explainTitle">公式与假设</h2>
+    <div class="explain-body">
+      <!-- ==================================================================
+           TOOL EXPLAIN — formula, assumptions, rounding rules, limitations.
+           ================================================================== -->
+      
+<p data-i="hrExplainIntro">先用年龄粗估最大心率，再把它按百分比切成五个训练区间。区间用于描述强度，不是医学诊断，也不保证每个人都落在同一条曲线里。</p>
+<div class="formula-grid">
+  <div class="formula">
+    <h3 data-i="formulaTitle">公式</h3>
+    <code data-i="formulaMax">最大心率 ≈ 220 − 年龄</code>
+  </div>
+  <div class="formula">
+    <h3 data-i="formulaTitle">公式</h3>
+    <code data-i="formulaZone">边界 = 最大心率 × 50/60/70/80/90/100%</code>
+  </div>
+  <div class="formula">
+    <h3 data-i="formulaTitle">公式</h3>
+    <code data-i="formulaKarvonen">目标心率 = 静息心率 + (最大心率 − 静息心率) × 强度%</code>
+  </div>
+</div>
+<h3 class="formula-title" data-i="assumptionsTitle">假设与规则</h3>
+<ul class="assumptions">
+  <li data-i="assumption1">最大心率默认用 220 − 年龄估算，存在个体差异；已知实测值时请切换到“已知最大心率”。</li>
+  <li data-i="assumption2">区间边界按最大心率乘以百分比后四舍五入到整数 bpm，下限含、上限不含，最后一区包含最大心率。</li>
+  <li data-i="assumption3">Karvonen 法需要静息心率，且静息心率必须低于最大心率；它通常比单纯百分比法更贴近个人状态。</li>
+  <li data-i="assumption4">药物、疲劳、气温、咖啡因和训练水平都会影响心率。出现胸闷、头晕或异常心悸时应停止运动并就医。</li>
+  <li data-i="notMedical">仅供估算，不构成医疗建议。</li>
+</ul>
+    </div>
+  </section>
+
+  <section class="faq" id="faq" aria-labelledby="faq-title">
+    <h2 id="faq-title" data-i="faqTitle">常见问题</h2>
+    <!-- ====================================================================
+         TOOL FAQ — generator injects the Chinese FAQ from config.faqs.
+         Keep the faqQ1..faqA3 data-i keys in all three dictionaries.
+         ==================================================================== -->
+    <details>
+          <summary data-i="faqQ1">最大心率怎么估算？</summary>
+          <p data-i="faqA1">常用 220 减去年龄作为粗略估计。它有个体差异，服药、疲劳和训练水平都会影响，最好通过实测或医生评估校正。</p>
+        </details>
+    <details>
+          <summary data-i="faqQ2">Karvonen 法和百分比法差在哪？</summary>
+          <p data-i="faqA2">Karvonen 法用（最大心率 − 静息心率）× 强度 + 静息心率，更贴合个人静息水平；普通百分比法直接取最大心率的百分比。</p>
+        </details>
+    <details>
+          <summary data-i="faqQ3">区间边界是绝对的吗？</summary>
+          <p data-i="faqA3">不是。区间是训练强度的粗略划分，不同机构定义略有差异。出现胸闷、头晕或异常心悸时应立即停止运动并就医。</p>
+        </details>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <p data-i="copyright">© 2026 Devin</p>
+    <nav class="footer-links" aria-label="页脚导航" data-i-aria="footerAria">
+      <a href="/tools/" data-tools-link data-i="backTools">工具大厅</a>
+      <a href="/games/" data-i="navGames">在线桌游</a>
+      <a href="/" data-i="navHome">首页</a>
+    </nav>
+  </div>
+  <div class="wrap"><p class="footer-note" data-i="footerNote">所有处理都在本地完成，不上传任何数据。</p></div>
+</footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<noscript>
+  <div class="wrap"><p class="card noscript" data-i="noscript">这个工具需要 JavaScript 才能运行。所有计算都在你的设备上完成，不会上传任何数据。</p></div>
+</noscript>
+
+<!-- ==========================================================================
+     ENGINE — pure functions only. No DOM, no window, no clock, no storage.
+     Builder replaces everything between TOOL_ENGINE_START and TOOL_ENGINE_END,
+     then updates the return object. Must stay Node-evaluable.
+     ========================================================================== -->
+<script id="engine">
+var ToolEngine = (function () {
+  'use strict';
+
+  var BANDS = Object.freeze([
+    Object.freeze({ low: 50, high: 60 }),
+    Object.freeze({ low: 60, high: 70 }),
+    Object.freeze({ low: 70, high: 80 }),
+    Object.freeze({ low: 80, high: 90 }),
+    Object.freeze({ low: 90, high: 100 })
+  ]);
+
+  function isNum(value) {
+    return typeof value === 'number' && isFinite(value);
+  }
+
+  function fail(code) {
+    return { ok: false, error: code };
+  }
+
+  function maxHr(age) {
+    if (!isNum(age)) return fail('bad_value');
+    if (age < 5 || age > 120) return fail('range');
+    return { ok: true, value: 220 - age };
+  }
+
+  function buildZones(max, resting, method) {
+    var bounds = [];
+    var i;
+    for (i = 0; i < BANDS.length; i++) {
+      var low;
+      var high;
+      if (method === 'karvonen') {
+        low = resting + (max - resting) * BANDS[i].low / 100;
+        high = resting + (max - resting) * BANDS[i].high / 100;
+      } else {
+        low = max * BANDS[i].low / 100;
+        high = max * BANDS[i].high / 100;
+      }
+      bounds.push({ min: Math.round(low), max: Math.round(high) });
+    }
+    var zones = [];
+    for (i = 0; i < BANDS.length; i++) {
+      zones.push({
+        index: i + 1,
+        lowPercent: BANDS[i].low,
+        highPercent: BANDS[i].high,
+        min: bounds[i].min,
+        max: bounds[i].max,
+        method: method
+      });
+    }
+    return zones;
+  }
+
+  function zones(max) {
+    if (!isNum(max)) return fail('bad_value');
+    if (max < 100 || max > 250) return fail('range');
+    return { ok: true, max: max, method: 'percent', zones: buildZones(max, 0, 'percent') };
+  }
+
+  function karvonen(max, resting) {
+    if (!isNum(max)) return fail('bad_value');
+    if (max < 100 || max > 250) return fail('range');
+    if (!isNum(resting)) return fail('bad_value');
+    if (resting < 20 || resting >= max) return fail('range');
+    return {
+      ok: true,
+      max: max,
+      resting: resting,
+      reserve: max - resting,
+      method: 'karvonen',
+      zones: buildZones(max, resting, 'karvonen')
+    };
+  }
+
+  return {
+    BANDS: BANDS,
+    isNum: isNum,
+    maxHr: maxHr,
+    zones: zones,
+    karvonen: karvonen
+  };
+})();
+</script>
+
+<!-- ==========================================================================
+     DICTIONARIES — zh / en / id must always expose exactly the same keys.
+     Generic keys live above the TOOL_DICT_* marker.
+     Tool-specific keys (including faqQ1..faqA3) live below the marker and are
+     replaced by the builder. No hard-coded visible copy anywhere in the page.
+     ========================================================================== -->
+<script id="i18n">
+var TOOL_I18N = {
+  zh: {
+    /* ---- generic keys: do not remove ---- */
+    docTitle: '心率区间计算器',
+    docDesc: '按年龄或最大心率估算五个训练区间，可选 Karvonen 法结合静息心率；仅供参考，不构成医疗建议。全部在本地计算，无需注册。',
+    appTitle: '心率区间计算器',
+    tagline: '训练强度，用区间说话。',
+    eyebrow: '免费工具 · 本地运行',
+    privacy: '所有计算都在你的浏览器里完成，输入不会上传。',
+    skip: '跳到工具',
+    navAria: '站点导航',
+    navHall: '工具大厅',
+    navGames: '在线桌游',
+    langLabel: '语言',
+    langZh: '中文',
+    langEn: 'EN',
+    langId: 'ID',
+    brandName: 'Devin',
+    brandHome: 'Devin 首页',
+    navHome: '首页',
+    footerAria: '页脚导航',
+    footerNote: '所有处理都在本地完成，不上传任何数据。',
+    copyright: '© 2026 Devin',
+    copy: '复制结果',
+    copied: '已复制。',
+    copyFail: '无法自动复制，请手动选中后复制。',
+    copyHint: '复制的是未加千分位的原始数值。',
+    reset: '重置',
+    result: '结果',
+    explainTitle: '公式与假设',
+    faqTitle: '常见问题',
+    formulaTitle: '公式',
+    assumptionsTitle: '假设与规则',
+    backTools: '工具大厅',
+    moreTools: '更多工具',
+    notMedical: '仅供估算，不构成医疗建议。',
+    notFinancial: '仅供估算，不构成财务建议。',
+    unitNote: '换算结果按四舍五入显示。',
+    download: '下载',
+    downloadFail: '下载失败，请重试。',
+    clear: '清除',
+    swap: '交换',
+    add: '添加',
+    remove: '删除',
+    close: '关闭',
+    yes: '是',
+    no: '否',
+    errorInvalid: '请输入有效的数字。',
+    errorRequired: '请填写这一项。',
+    errorGeneric: '无法计算，请检查输入。',
+    storageFail: '无法写入本地存储，本次设置不会被保存。',
+    noscript: '这个工具需要 JavaScript 才能运行。所有计算都在你的设备上完成，不会上传任何数据。',
+
+    /* ---- tool-specific keys: replace below this line ---- */
+    // TOOL_DICT_ZH
+    hrKicker: '输入',
+    hrFormTitle: '最大心率与区间',
+    hrFormDesc: '按年龄或已知最大心率，估算五个训练心率区间；勾选 Karvonen 法可结合静息心率。',
+    sourceLabel: '计算依据',
+    sourceAge: '按年龄估算',
+    sourceMax: '已知最大心率',
+    ageLabel: '年龄（岁）',
+    maxLabel: '最大心率（bpm）',
+    valuePh: '例如 30',
+    karvonenLabel: '使用 Karvonen 法（结合静息心率）',
+    restingLabel: '静息心率（bpm）',
+    restingPh: '例如 60',
+    hrHint: '区间下限含、上限不含；最后一区包含最大心率。起点是粗略估计，实测和医生评估更可靠。',
+    errorAgeRange: '年龄需在 5 到 120 岁之间。',
+    errorMaxRange: '最大心率需在 100 到 250 bpm 之间。',
+    errorRestRange: '静息心率需不低于 20 bpm，且低于最大心率。',
+    errorRestRequired: '请填写静息心率。',
+    resultTitle: '你的最大心率',
+    resultNote: '{method} · 共 5 个区间',
+    methodPercent: '最大心率百分比法',
+    methodKarvonen: 'Karvonen 法（心率储备）',
+    tableTitle: '五个训练区间',
+    zonesCaption: '区间按最大心率的百分比划分，边界取整到整拍。',
+    colZone: '区间',
+    colPercent: '强度',
+    colBpm: '心率（bpm）',
+    colPurpose: '训练目的',
+    zoneName: 'Z{n}',
+    zonePurpose1: '恢复：热身、放松与恢复跑',
+    zonePurpose2: '耐力：轻松有氧，可长时间交谈',
+    zonePurpose3: '有氧：稳态训练，呼吸加深',
+    zonePurpose4: '阈值：节奏跑，接近吃力',
+    zonePurpose5: '极限：短间歇，仅能维持片刻',
+    copyPrefix: '最大心率 {max} bpm · {method}',
+    copyZone: 'Z{n} {min}–{max} bpm（{low}–{high}%）',
+    hrExplainIntro: '先用年龄粗估最大心率，再按百分比切成五个训练区间。区间用于描述强度，不是医学诊断。',
+    formulaMax: '最大心率 ≈ 220 − 年龄',
+    formulaZone: '边界 = 最大心率 × 50/60/70/80/90/100%',
+    formulaKarvonen: '目标心率 = 静息心率 + (最大心率 − 静息心率) × 强度%',
+    assumption1: '最大心率默认用 220 − 年龄估算，存在个体差异；已知实测值时请切换到“已知最大心率”。',
+    assumption2: '区间边界按最大心率乘以百分比后四舍五入到整数 bpm，下限含、上限不含，最后一区包含最大心率。',
+    assumption3: 'Karvonen 法需要静息心率，且静息心率必须低于最大心率；它通常比单纯百分比法更贴近个人状态。',
+    assumption4: '药物、疲劳、气温、咖啡因和训练水平都会影响心率。出现胸闷、头晕或异常心悸时应停止运动并就医。',
+    faqQ1: '最大心率怎么估算？',
+    faqA1: '常用 220 减去年龄作为粗略估计。它有个体差异，服药、疲劳和训练水平都会影响，最好通过实测或医生评估校正。',
+    faqQ2: 'Karvonen 法和百分比法差在哪？',
+    faqA2: 'Karvonen 法用（最大心率 − 静息心率）× 强度 + 静息心率，更贴合个人静息水平；普通百分比法直接取最大心率的百分比。',
+    faqQ3: '区间边界是绝对的吗？',
+    faqA3: '不是。区间是训练强度的粗略划分，不同机构定义略有差异。出现胸闷、头晕或异常心悸时应立即停止运动并就医。'
+  },
+  en: {
+    /* ---- generic keys: do not remove ---- */
+    docTitle: 'Heart Rate Zones',
+    docDesc: 'Estimate five training heart-rate zones from age or max heart rate, with Karvonen method using resting heart rate. For reference only, not medical advice. Local, no sign-up.',
+    appTitle: 'Heart Rate Zones',
+    tagline: 'Train by zones, not guesswork.',
+    eyebrow: 'Free tool · runs locally',
+    privacy: 'Everything runs in your browser. Nothing you type is uploaded.',
+    skip: 'Skip to the tool',
+    navAria: 'Site navigation',
+    navHall: 'Tools',
+    navGames: 'Games',
+    langLabel: 'Language',
+    langZh: '中文',
+    langEn: 'EN',
+    langId: 'ID',
+    brandName: 'Devin',
+    brandHome: 'Devin home',
+    navHome: 'Home',
+    footerAria: 'Footer navigation',
+    footerNote: 'Everything runs locally. No data is uploaded.',
+    copyright: '© 2026 Devin',
+    copy: 'Copy result',
+    copied: 'Copied.',
+    copyFail: 'Could not copy automatically. Select the text and copy it manually.',
+    copyHint: 'Copies the plain number without thousands separators.',
+    reset: 'Reset',
+    result: 'Result',
+    explainTitle: 'Formulas and assumptions',
+    faqTitle: 'Frequently asked questions',
+    formulaTitle: 'Formula',
+    assumptionsTitle: 'Assumptions and rules',
+    backTools: 'Tools',
+    moreTools: 'More tools',
+    notMedical: 'Estimates only, not medical advice.',
+    notFinancial: 'Estimates only, not financial advice.',
+    unitNote: 'Converted values are rounded for display.',
+    download: 'Download',
+    downloadFail: 'Download failed. Try again.',
+    clear: 'Clear',
+    swap: 'Swap',
+    add: 'Add',
+    remove: 'Remove',
+    close: 'Close',
+    yes: 'Yes',
+    no: 'No',
+    errorInvalid: 'Enter a valid number.',
+    errorRequired: 'Fill in this field.',
+    errorGeneric: 'Could not calculate. Check the inputs.',
+    storageFail: 'Could not write to local storage, so this setting will not be saved.',
+    noscript: 'This tool needs JavaScript to run. All calculations happen on your device; nothing is uploaded.',
+
+    /* ---- tool-specific keys: replace below this line ---- */
+    // TOOL_DICT_EN
+    hrKicker: 'Input',
+    hrFormTitle: 'Max heart rate and zones',
+    hrFormDesc: 'Estimate five training zones from age or a known max heart rate; enable Karvonen to include resting heart rate.',
+    sourceLabel: 'Base the estimate on',
+    sourceAge: 'Age',
+    sourceMax: 'Known max heart rate',
+    ageLabel: 'Age (years)',
+    maxLabel: 'Max heart rate (bpm)',
+    valuePh: 'e.g. 30',
+    karvonenLabel: 'Use the Karvonen method (resting heart rate)',
+    restingLabel: 'Resting heart rate (bpm)',
+    restingPh: 'e.g. 60',
+    hrHint: 'Zone boundaries include the lower value and exclude the upper value; the last zone includes max heart rate. This is a rough starting point, not a measurement.',
+    errorAgeRange: 'Age must be between 5 and 120.',
+    errorMaxRange: 'Max heart rate must be between 100 and 250 bpm.',
+    errorRestRange: 'Resting heart rate must be at least 20 bpm and below max heart rate.',
+    errorRestRequired: 'Enter your resting heart rate.',
+    resultTitle: 'Your max heart rate',
+    resultNote: '{method} · 5 zones',
+    methodPercent: 'Percent-of-max method',
+    methodKarvonen: 'Karvonen method (heart-rate reserve)',
+    tableTitle: 'Five training zones',
+    zonesCaption: 'Zones are percentages of max heart rate; boundaries are rounded to whole beats.',
+    colZone: 'Zone',
+    colPercent: 'Intensity',
+    colBpm: 'Heart rate (bpm)',
+    colPurpose: 'Training purpose',
+    zoneName: 'Z{n}',
+    zonePurpose1: 'Recovery: warm-up, cool-down and easy runs',
+    zonePurpose2: 'Endurance: easy aerobic work, conversational',
+    zonePurpose3: 'Aerobic: steady training, deeper breathing',
+    zonePurpose4: 'Threshold: tempo work, comfortably hard',
+    zonePurpose5: 'Maximum: short intervals, only briefly sustainable',
+    copyPrefix: 'Max heart rate {max} bpm · {method}',
+    copyZone: 'Z{n} {min}–{max} bpm ({low}–{high}%)',
+    hrExplainIntro: 'Estimate max heart rate from age, then divide it into five training zones. Zones describe intensity; they are not a medical diagnosis.',
+    formulaMax: 'max heart rate ≈ 220 − age',
+    formulaZone: 'boundary = max heart rate × 50/60/70/80/90/100%',
+    formulaKarvonen: 'target = resting + (max − resting) × intensity%',
+    assumption1: 'Max heart rate defaults to 220 − age and varies between people. Switch to “Known max heart rate” if you have a measured value.',
+    assumption2: 'Boundaries are max heart rate times each percentage, rounded to whole bpm. The lower value is included, the upper value is not, and the last zone includes max heart rate.',
+    assumption3: 'Karvonen needs a resting heart rate below max heart rate. It usually tracks individual condition better than the plain percentage method.',
+    assumption4: 'Medication, fatigue, heat, caffeine and fitness all affect heart rate. Stop exercising and seek care for chest pain, dizziness or unusual palpitations.',
+    faqQ1: 'How is max heart rate estimated?',
+    faqA1: 'A common rough estimate is 220 minus age. It varies between individuals and is affected by medication, fatigue and training, so calibrate with a measured test or a clinician when possible.',
+    faqQ2: 'What is the difference between Karvonen and percent-of-max?',
+    faqA2: 'Karvonen uses (max − resting) × intensity + resting, which reflects your resting level. The percent-of-max method simply takes a percentage of max heart rate.',
+    faqQ3: 'Are the zone boundaries absolute?',
+    faqA3: 'No. Zones are a rough division of training intensity and definitions vary between organizations. Stop and seek medical help for chest pain, dizziness or unusual palpitations.'
+  },
+  id: {
+    /* ---- generic keys: do not remove ---- */
+    docTitle: 'Zona Detak Jantung',
+    docDesc: 'Perkirakan lima zona detak jantung latihan dari usia atau detak maksimum, dengan metode Karvonen memakai detak istirahat. Hanya referensi, bukan saran medis. Lokal, tanpa daftar.',
+    appTitle: 'Zona Detak Jantung',
+    tagline: 'Latihan berdasarkan zona, bukan tebakan.',
+    eyebrow: 'Alat gratis · berjalan lokal',
+    privacy: 'Semua perhitungan berjalan di browser Anda. Tidak ada yang diunggah.',
+    skip: 'Lompat ke alat',
+    navAria: 'Navigasi situs',
+    navHall: 'Alat',
+    navGames: 'Permainan',
+    langLabel: 'Bahasa',
+    langZh: '中文',
+    langEn: 'EN',
+    langId: 'ID',
+    brandName: 'Devin',
+    brandHome: 'Beranda Devin',
+    navHome: 'Beranda',
+    footerAria: 'Navigasi footer',
+    footerNote: 'Semua diproses secara lokal. Tidak ada data yang diunggah.',
+    copyright: '© 2026 Devin',
+    copy: 'Salin hasil',
+    copied: 'Tersalin.',
+    copyFail: 'Tidak bisa menyalin otomatis. Pilih teksnya lalu salin manual.',
+    copyHint: 'Menyalin angka polos tanpa pemisah ribuan.',
+    reset: 'Atur ulang',
+    result: 'Hasil',
+    explainTitle: 'Rumus dan asumsi',
+    faqTitle: 'Pertanyaan yang sering diajukan',
+    formulaTitle: 'Rumus',
+    assumptionsTitle: 'Asumsi dan aturan',
+    backTools: 'Alat',
+    moreTools: 'Alat lainnya',
+    notMedical: 'Hanya perkiraan, bukan saran medis.',
+    notFinancial: 'Hanya perkiraan, bukan saran keuangan.',
+    unitNote: 'Nilai hasil konversi dibulatkan untuk tampilan.',
+    download: 'Unduh',
+    downloadFail: 'Unduh gagal. Coba lagi.',
+    clear: 'Bersihkan',
+    swap: 'Tukar',
+    add: 'Tambah',
+    remove: 'Hapus',
+    close: 'Tutup',
+    yes: 'Ya',
+    no: 'Tidak',
+    errorInvalid: 'Masukkan angka yang valid.',
+    errorRequired: 'Isi kolom ini.',
+    errorGeneric: 'Tidak dapat menghitung. Periksa input.',
+    storageFail: 'Tidak bisa menulis ke penyimpanan lokal, jadi pengaturan ini tidak akan disimpan.',
+    noscript: 'Alat ini memerlukan JavaScript. Semua perhitungan terjadi di perangkat Anda; tidak ada yang diunggah.',
+
+    /* ---- tool-specific keys: replace below this line ---- */
+    // TOOL_DICT_ID
+    hrKicker: 'Input',
+    hrFormTitle: 'Detak maksimum dan zona',
+    hrFormDesc: 'Perkirakan lima zona latihan dari usia atau detak maksimum yang diketahui; aktifkan Karvonen untuk memakai detak istirahat.',
+    sourceLabel: 'Dasar perhitungan',
+    sourceAge: 'Dari usia',
+    sourceMax: 'Detak maksimum diketahui',
+    ageLabel: 'Usia (tahun)',
+    maxLabel: 'Detak maksimum (bpm)',
+    valuePh: 'mis. 30',
+    karvonenLabel: 'Pakai metode Karvonen (detak istirahat)',
+    restingLabel: 'Detak istirahat (bpm)',
+    restingPh: 'mis. 60',
+    hrHint: 'Batas bawah zona termasuk, batas atas tidak; zona terakhir mencakup detak maksimum. Ini titik awal kasar, bukan pengukuran.',
+    errorAgeRange: 'Usia harus antara 5 dan 120 tahun.',
+    errorMaxRange: 'Detak maksimum harus antara 100 dan 250 bpm.',
+    errorRestRange: 'Detak istirahat minimal 20 bpm dan harus di bawah detak maksimum.',
+    errorRestRequired: 'Isi detak istirahat Anda.',
+    resultTitle: 'Detak maksimum Anda',
+    resultNote: '{method} · 5 zona',
+    methodPercent: 'Metode persen detak maksimum',
+    methodKarvonen: 'Metode Karvonen (cadangan detak)',
+    tableTitle: 'Lima zona latihan',
+    zonesCaption: 'Zona memakai persentase detak maksimum; batas dibulatkan ke detak bulat.',
+    colZone: 'Zona',
+    colPercent: 'Intensitas',
+    colBpm: 'Detak (bpm)',
+    colPurpose: 'Tujuan latihan',
+    zoneName: 'Z{n}',
+    zonePurpose1: 'Pemulihan: pemanasan, pendinginan, lari santai',
+    zonePurpose2: 'Daya tahan: aerobik ringan, masih bisa berbicara',
+    zonePurpose3: 'Aerobik: latihan stabil, napas lebih dalam',
+    zonePurpose4: 'Ambang: tempo, terasa cukup berat',
+    zonePurpose5: 'Maksimal: interval pendek, hanya sebentar',
+    copyPrefix: 'Detak maksimum {max} bpm · {method}',
+    copyZone: 'Z{n} {min}–{max} bpm ({low}–{high}%)',
+    hrExplainIntro: 'Perkirakan detak maksimum dari usia, lalu bagi menjadi lima zona latihan. Zona menggambarkan intensitas, bukan diagnosis medis.',
+    formulaMax: 'detak maksimum ≈ 220 − usia',
+    formulaZone: 'batas = detak maksimum × 50/60/70/80/90/100%',
+    formulaKarvonen: 'target = istirahat + (maksimum − istirahat) × intensitas%',
+    assumption1: 'Detak maksimum default memakai 220 − usia dan berbeda antar individu. Ganti ke “Detak maksimum diketahui” bila punya nilai terukur.',
+    assumption2: 'Batas dihitung dari detak maksimum dikali persentase lalu dibulatkan ke bpm bulat. Batas bawah termasuk, batas atas tidak, dan zona terakhir mencakup detak maksimum.',
+    assumption3: 'Karvonen memerlukan detak istirahat di bawah detak maksimum. Metode ini biasanya lebih sesuai kondisi pribadi daripada persentase biasa.',
+    assumption4: 'Obat, kelelahan, panas, kafein, dan kebugaran memengaruhi detak jantung. Hentikan olahraga dan cari bantuan bila nyeri dada, pusing, atau palpitasi tidak biasa.',
+    faqQ1: 'Bagaimana detak maksimum diperkirakan?',
+    faqA1: 'Perkiraan kasar yang umum adalah 220 dikurangi usia. Nilainya berbeda antar individu dan dipengaruhi obat, kelelahan, serta latihan, jadi kalibrasi dengan tes terukur atau dokter bila memungkinkan.',
+    faqQ2: 'Apa beda Karvonen dan persen detak maksimum?',
+    faqA2: 'Karvonen memakai (maksimum − istirahat) × intensitas + istirahat, sehingga mencerminkan detak istirahat Anda. Metode persen langsung mengambil persentase dari detak maksimum.',
+    faqQ3: 'Apakah batas zona bersifat mutlak?',
+    faqA3: 'Tidak. Zona adalah pembagian kasar intensitas latihan dan definisinya berbeda antar lembaga. Hentikan aktivitas dan cari bantuan medis bila nyeri dada, pusing, atau palpitasi tidak biasa.'
+  }
+};
+</script>
+
+<!-- ==========================================================================
+     UI RUNTIME — language switching plus the global ToolUI helpers.
+     Builder replaces only the TOOL_UI_START / TOOL_UI_END block.
+     ========================================================================== -->
+<script>
+(function () {
+  'use strict';
+
+  var I18N = (typeof TOOL_I18N !== 'undefined') ? TOOL_I18N : { zh: {}, en: {}, id: {} };
+  var TOOL_SLUG = 'heart-rate-zones';
+  var LANG_KEY = 'hhfa.tool.' + TOOL_SLUG + '.lang';
+  var LANGS = ['zh', 'en', 'id'];
+  var LOCALES = { zh: 'zh-CN', en: 'en-US', id: 'id-ID' };
+  var OG_LOCALES = { zh: 'zh_CN', en: 'en_US', id: 'id_ID' };
+  var state = { lang: 'zh' };
+  var toastTimer = null;
+  var started = false;
+  var langHooks = [];
+
+  function $(sel) {
+    return typeof sel === 'string' ? document.querySelector(sel) : sel;
+  }
+
+  function $$(sel) {
+    return Array.prototype.slice.call(document.querySelectorAll(sel));
+  }
+
+  function T(key, vars) {
+    var dict = I18N[state.lang] || {};
+    var value = Object.prototype.hasOwnProperty.call(dict, key) ? dict[key] : null;
+    if (typeof value !== 'string' && I18N.zh && typeof I18N.zh[key] === 'string') {
+      value = I18N.zh[key];
+    }
+    if (typeof value !== 'string') return key;
+    if (vars) {
+      value = value.replace(/\{(\w+)\}/g, function (match, name) {
+        return vars[name] != null ? String(vars[name]) : '';
+      });
+    }
+    return value;
+  }
+
+  function locale() {
+    return LOCALES[state.lang] || 'en-US';
+  }
+
+  function fmt(n, opts) {
+    if (typeof n !== 'number' || !isFinite(n)) return '—';
+    try {
+      return new Intl.NumberFormat(locale(), opts || {}).format(n);
+    } catch (e) {
+      return String(n);
+    }
+  }
+
+  function toast(message) {
+    var el = $('#toast');
+    if (!el) return;
+    el.textContent = message == null ? '' : String(message);
+    el.classList.add('on');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove('on'); }, 2600);
+  }
+
+  function legacyCopy(text) {
+    try {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.top = '-1000px';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { ta.setSelectionRange(0, ta.value.length); } catch (e) { /* ignore */ }
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      document.body.removeChild(ta);
+      return ok;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function copy(text) {
+    var value = text == null ? '' : String(text);
+    return new Promise(function (resolve) {
+      function done() { toast(T('copied')); resolve(true); }
+      function fail() { toast(T('copyFail')); resolve(false); }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(value).then(done, function () {
+          if (legacyCopy(value)) done(); else fail();
+        });
+      } else if (legacyCopy(value)) {
+        done();
+      } else {
+        fail();
+      }
+    });
+  }
+
+  function download(name, content, mime) {
+    try {
+      var blob = new Blob([content], { type: mime || 'text/plain;charset=utf-8' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = name || 'download.txt';
+      a.rel = 'noopener';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function () {
+        try {
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        } catch (e) { /* ignore */ }
+      }, 0);
+      return true;
+    } catch (e) {
+      toast(T('downloadFail'));
+      return false;
+    }
+  }
+
+  function readStore(key, fallback) {
+    try {
+      var raw = localStorage.getItem(key);
+      if (raw == null) return fallback;
+      var value = JSON.parse(raw);
+      return value == null ? fallback : value;
+    } catch (e) {
+      return fallback;
+    }
+  }
+
+  function writeStore(key, value) {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+      return true;
+    } catch (e) {
+      toast(T('storageFail'));
+      return false;
+    }
+  }
+
+  function debounce(fn, ms) {
+    var timer = null;
+    var wait = isFinite(ms) ? ms : 150;
+    return function () {
+      var ctx = this;
+      var args = arguments;
+      clearTimeout(timer);
+      timer = setTimeout(function () { fn.apply(ctx, args); }, wait);
+    };
+  }
+
+  function on(target, event, handler) {
+    var el = typeof target === 'string' ? $(target) : target;
+    if (!el || !el.addEventListener) return function () {};
+    el.addEventListener(event, handler);
+    return function () { el.removeEventListener(event, handler); };
+  }
+
+  function setError(el, message) {
+    if (!el) return;
+    if (!message) { clearError(el); return; }
+    el.textContent = String(message);
+    el.hidden = false;
+    el.classList.add('on');
+  }
+
+  function clearError(el) {
+    if (!el) return;
+    el.textContent = '';
+    el.hidden = true;
+    el.classList.remove('on');
+  }
+
+  function onLangChange(fn) {
+    if (typeof fn !== 'function') return function () {};
+    langHooks.push(fn);
+    if (started) {
+      try { fn(state.lang); } catch (e) { /* a broken hook must not break switching */ }
+    }
+    return function () {
+      var i = langHooks.indexOf(fn);
+      if (i !== -1) langHooks.splice(i, 1);
+    };
+  }
+
+  function setMeta(attr, name, content) {
+    var nodes = document.querySelectorAll('meta');
+    for (var i = 0; i < nodes.length; i++) {
+      if (nodes[i].getAttribute(attr) === name) {
+        nodes[i].setAttribute('content', content);
+        return;
+      }
+    }
+  }
+
+  function renderLanguage() {
+    var lang = state.lang;
+    document.documentElement.lang = lang === 'zh' ? 'zh-CN' : lang;
+
+    var nodes = $$('[data-i]');
+    for (var i = 0; i < nodes.length; i++) {
+      nodes[i].textContent = T(nodes[i].getAttribute('data-i'));
+    }
+    var placeholders = $$('[data-i-ph]');
+    for (var j = 0; j < placeholders.length; j++) {
+      placeholders[j].setAttribute('placeholder', T(placeholders[j].getAttribute('data-i-ph')));
+    }
+    var labelled = $$('[data-i-aria]');
+    for (var k = 0; k < labelled.length; k++) {
+      labelled[k].setAttribute('aria-label', T(labelled[k].getAttribute('data-i-aria')));
+    }
+    var buttons = $$('[data-lang]');
+    for (var b = 0; b < buttons.length; b++) {
+      buttons[b].setAttribute('aria-pressed', buttons[b].getAttribute('data-lang') === lang ? 'true' : 'false');
+    }
+
+    document.title = T('docTitle');
+    setMeta('name', 'description', T('docDesc'));
+    setMeta('property', 'og:title', T('docTitle'));
+    setMeta('property', 'og:description', T('docDesc'));
+    setMeta('property', 'og:locale', OG_LOCALES[lang] || 'en_US');
+    setMeta('name', 'twitter:title', T('docTitle'));
+    setMeta('name', 'twitter:description', T('docDesc'));
+
+    var toolsHref = lang === 'zh' ? '/tools/' : '/tools/' + lang + '/';
+    var links = $$('[data-tools-link]');
+    for (var l = 0; l < links.length; l++) links[l].setAttribute('href', toolsHref);
+  }
+
+  function applyLang() {
+    renderLanguage();
+    for (var i = 0; i < langHooks.length; i++) {
+      try { langHooks[i](state.lang); } catch (e) { /* keep the page usable */ }
+    }
+    started = true;
+  }
+
+  function detectLang() {
+    try {
+      var q = new URLSearchParams(window.location.search).get('lang');
+      if (LANGS.indexOf(q) !== -1) return q;
+    } catch (e) { /* ignore */ }
+    try {
+      var saved = localStorage.getItem(LANG_KEY);
+      if (LANGS.indexOf(saved) !== -1) return saved;
+    } catch (e) { /* ignore */ }
+    var nav = String(navigator.language || '').toLowerCase();
+    if (nav.indexOf('zh') === 0) return 'zh';
+    if (nav.indexOf('id') === 0 || nav.indexOf('in') === 0) return 'id';
+    return 'en';
+  }
+
+  function saveLang() {
+    try { localStorage.setItem(LANG_KEY, state.lang); } catch (e) { /* ignore */ }
+  }
+
+  function bindLanguages() {
+    var buttons = $$('[data-lang]');
+    for (var i = 0; i < buttons.length; i++) {
+      (function (button) {
+        button.addEventListener('click', function () {
+          var next = button.getAttribute('data-lang');
+          if (LANGS.indexOf(next) === -1 || next === state.lang) return;
+          state.lang = next;
+          saveLang();
+          applyLang();
+        });
+      })(buttons[i]);
+    }
+  }
+
+  function init() {
+    state.lang = detectLang();
+    bindLanguages();
+    applyLang();
+  }
+
+  var ToolUI = {
+    T: T,
+    fmt: fmt,
+    copy: copy,
+    toast: toast,
+    download: download,
+    readStore: readStore,
+    writeStore: writeStore,
+    debounce: debounce,
+    on: on,
+    setError: setError,
+    clearError: clearError,
+    onLangChange: onLangChange,
+    lang: function () { return state.lang; },
+    locale: locale,
+    $: $,
+    $$: $$
+  };
+
+  window.ToolUI = ToolUI;
+  window.T = T;
+
+  // TOOL_UI_START
+  (function () {
+    var sourceSelect = ToolUI.$('#hr-source');
+    var valueInput = ToolUI.$('#hr-value');
+    var valueLabel = ToolUI.$('#hr-value-label');
+    var karvonenInput = ToolUI.$('#hr-karvonen');
+    var restField = ToolUI.$('#hr-rest-field');
+    var restingInput = ToolUI.$('#hr-resting');
+    var errorEl = ToolUI.$('#hr-error');
+    var maxEl = ToolUI.$('#hr-max');
+    var noteEl = ToolUI.$('#hr-note');
+    var copyButton = ToolUI.$('#hr-copy');
+    var zoneBody = ToolUI.$('#hr-zone-body');
+    if (!sourceSelect || !valueInput || !maxEl || !zoneBody) return;
+
+    var state = { lastCopy: '' };
+
+    function readNumber(value) {
+      var raw = String(value == null ? '' : value).trim().replace(/\s/g, '').replace(',', '.');
+      if (!raw) return null;
+      if (!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(raw)) return NaN;
+      var n = Number(raw);
+      return isFinite(n) ? n : NaN;
+    }
+
+    function fmt(value) {
+      return ToolUI.fmt(value, { maximumFractionDigits: 0 });
+    }
+
+    function showError(message) { ToolUI.setError(errorEl, message); }
+    function clearError() { ToolUI.clearError(errorEl); }
+
+    function clearZones() {
+      state.lastCopy = '';
+      maxEl.textContent = '—';
+      if (noteEl) noteEl.textContent = '';
+      if (copyButton) copyButton.disabled = true;
+      var rows = zoneBody.querySelectorAll('tr');
+      for (var i = 0; i < rows.length; i++) {
+        var cells = rows[i].querySelectorAll('td');
+        for (var j = 0; j < cells.length; j++) {
+          if (j > 0) cells[j].textContent = '—';
+        }
+      }
+    }
+
+    function updateLabel() {
+      if (!valueLabel) return;
+      valueLabel.textContent = ToolUI.T(sourceSelect.value === 'age' ? 'ageLabel' : 'maxLabel');
+    }
+
+    function renderZones(result) {
+      var rows = zoneBody.querySelectorAll('tr');
+      var lines = [];
+      for (var i = 0; i < result.zones.length && i < rows.length; i++) {
+        var zone = result.zones[i];
+        var cells = rows[i].querySelectorAll('td');
+        cells[0].textContent = ToolUI.T('zoneName', { n: zone.index });
+        cells[1].textContent = zone.lowPercent + '–' + zone.highPercent + '%';
+        cells[2].textContent = fmt(zone.min) + '–' + fmt(zone.max);
+        cells[3].textContent = ToolUI.T('zonePurpose' + zone.index);
+        lines.push(ToolUI.T('copyZone', {
+          n: zone.index,
+          min: fmt(zone.min),
+          max: fmt(zone.max),
+          low: zone.lowPercent,
+          high: zone.highPercent
+        }));
+      }
+      if (copyButton) copyButton.disabled = false;
+      return lines;
+    }
+
+    function render() {
+      updateLabel();
+      var raw = readNumber(valueInput.value);
+      if (raw == null) {
+        clearZones();
+        clearError();
+        return;
+      }
+      if (isNaN(raw)) {
+        clearZones();
+        showError(ToolUI.T('errorInvalid'));
+        return;
+      }
+      var source = sourceSelect.value;
+      var max;
+      if (source === 'age') {
+        var byAge = ToolEngine.maxHr(raw);
+        if (!byAge.ok) {
+          clearZones();
+          showError(ToolUI.T(byAge.error === 'range' ? 'errorAgeRange' : 'errorInvalid'));
+          return;
+        }
+        max = byAge.value;
+      } else {
+        var direct = ToolEngine.zones(raw);
+        if (!direct.ok) {
+          clearZones();
+          showError(ToolUI.T(direct.error === 'range' ? 'errorMaxRange' : 'errorInvalid'));
+          return;
+        }
+        max = raw;
+      }
+
+      var useKarvonen = !!(karvonenInput && karvonenInput.checked);
+      var result;
+      if (useKarvonen) {
+        var resting = readNumber(restingInput ? restingInput.value : '');
+        if (resting == null) {
+          clearZones();
+          showError(ToolUI.T('errorRestRequired'));
+          return;
+        }
+        if (isNaN(resting)) {
+          clearZones();
+          showError(ToolUI.T('errorInvalid'));
+          return;
+        }
+        result = ToolEngine.karvonen(max, resting);
+        if (!result.ok) {
+          clearZones();
+          showError(ToolUI.T(result.error === 'range' ? 'errorRestRange' : 'errorInvalid'));
+          return;
+        }
+      } else {
+        result = ToolEngine.zones(max);
+        if (!result.ok) {
+          clearZones();
+          showError(ToolUI.T(result.error === 'range' ? 'errorMaxRange' : 'errorInvalid'));
+          return;
+        }
+      }
+
+      clearError();
+      maxEl.textContent = fmt(max) + ' bpm';
+      var method = ToolUI.T(useKarvonen ? 'methodKarvonen' : 'methodPercent');
+      if (noteEl) noteEl.textContent = ToolUI.T('resultNote', { method: method });
+      var lines = renderZones(result);
+      state.lastCopy = ToolUI.T('copyPrefix', { max: fmt(max), method: method }) + '\n' + lines.join('\n');
+    }
+
+    function syncSource(resetValue) {
+      var isAge = sourceSelect.value === 'age';
+      valueInput.min = isAge ? '5' : '100';
+      valueInput.max = isAge ? '120' : '250';
+      if (resetValue) valueInput.value = isAge ? '30' : '190';
+      updateLabel();
+      render();
+    }
+
+    ToolUI.on(sourceSelect, 'change', function () { syncSource(true); });
+    ToolUI.on(valueInput, 'input', render);
+    ToolUI.on(karvonenInput, 'change', function () {
+      if (restField) restField.hidden = !karvonenInput.checked;
+      render();
+    });
+    if (restingInput) ToolUI.on(restingInput, 'input', render);
+    ToolUI.on('#hr-reset', 'click', function () {
+      sourceSelect.value = 'age';
+      valueInput.value = '30';
+      if (karvonenInput) karvonenInput.checked = false;
+      if (restField) restField.hidden = true;
+      if (restingInput) restingInput.value = '60';
+      syncSource(false);
+      valueInput.focus();
+    });
+    ToolUI.on('#hr-copy', 'click', function () {
+      if (state.lastCopy) ToolUI.copy(state.lastCopy);
+    });
+
+    ToolUI.onLangChange(function () {
+      updateLabel();
+      render();
+    });
+    syncSource(false);
+    render();
+  })();
+  // TOOL_UI_END
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>

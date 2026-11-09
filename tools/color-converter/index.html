@@ -1,0 +1,1569 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>颜色格式转换器（HEX/RGB/HSL/CMYK）</title>
+<meta name="description" content="在 HEX、RGB、HSL、HSV、CMYK 之间互转，显示颜色名与 WCAG 对比度，并带色块预览。全部在本地处理，无需注册。">
+<meta name="author" content="Devin">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="theme-color" content="#f2efe7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#101316" media="(prefers-color-scheme: dark)">
+<link rel="canonical" href="https://hhfa008.github.io/tools/color-converter/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23b93d12'/%3E%3Cpath d='M9 23 23 9' stroke='%23fbf9f4' stroke-width='2.4' stroke-linecap='round'/%3E%3Ccircle cx='11' cy='11' r='3' fill='%23fbf9f4'/%3E%3Ccircle cx='21' cy='21' r='3' fill='%23fbf9f4'/%3E%3C/svg%3E">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Devin">
+<meta property="og:title" content="颜色格式转换器（HEX/RGB/HSL/CMYK）">
+<meta property="og:description" content="在 HEX、RGB、HSL、HSV、CMYK 之间互转，显示颜色名与 WCAG 对比度，并带色块预览。全部在本地处理，无需注册。">
+<meta property="og:url" content="https://hhfa008.github.io/tools/color-converter/">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:locale:alternate" content="en_US">
+<meta property="og:locale:alternate" content="id_ID">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="颜色格式转换器（HEX/RGB/HSL/CMYK）">
+<meta name="twitter:description" content="在 HEX、RGB、HSL、HSV、CMYK 之间互转，显示颜色名与 WCAG 对比度，并带色块预览。全部在本地处理，无需注册。">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "颜色格式转换器",
+  "url": "https://hhfa008.github.io/tools/color-converter/",
+  "applicationCategory": "UtilitiesApplication",
+  "operatingSystem": "Any",
+  "browserRequirements": "Requires JavaScript",
+  "isAccessibleForFree": true,
+  "inLanguage": ["zh-CN", "en", "id"],
+  "description": "在 HEX、RGB、HSL、HSV、CMYK 之间互转，显示颜色名与 WCAG 对比度，并带色块预览。全部在本地处理，无需注册。",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+  {
+    "@type": "Question",
+    "name": "CMYK 转换准确吗？",
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "屏幕上的 RGB 与印刷 CMYK 不是一一对应，缺少 ICC 色彩配置时会因纸张、油墨和印刷机不同而变化。结果适合沟通参考，不等于印厂最终值。"
+    }
+  },
+  {
+    "@type": "Question",
+    "name": "对比度 4.5:1 是什么标准？",
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "WCAG AA 对正文的要求是至少 4.5:1，大号文字可放宽到 3:1；AAA 对正文要求 7:1。工具会按你选择的两个颜色计算并标注等级。"
+    }
+  },
+  {
+    "@type": "Question",
+    "name": "3 位 HEX 怎么展开？",
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "#b93 等价于 #bb9933，每位重复一次。工具会自动展开后再转换，避免把短写法误读成其他颜色。"
+    }
+  }
+]
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "首页", "item": "https://hhfa008.github.io/" },
+    { "@type": "ListItem", "position": 2, "name": "工具大厅", "item": "https://hhfa008.github.io/tools/" },
+    { "@type": "ListItem", "position": 3, "name": "颜色格式转换器", "item": "https://hhfa008.github.io/tools/color-converter/" }
+  ]
+}
+</script>
+
+<style>
+/* ==========================================================================
+   Design tokens — keep in sync with the existing tools pages.
+   ========================================================================== */
+:root{
+  --paper:#f2efe7; --paper-2:#fbf9f4; --panel:#ffffff;
+  --ink:#14171a; --muted:#5b615c; --muted-2:#7b807a;
+  --line:#d5d0c4; --line-strong:#bcb5a7;
+  --accent:#b93d12; --accent-soft:#f2a07a; --accent-wash:#f7e5da;
+  --ok:#2f6b3c; --ok-wash:#e8f2e7; --warn:#8a5a00; --warn-wash:#fbf1db;
+  --bad:#a32216; --bad-wash:#fbe7e3;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --radius:16px; --max:1040px;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --paper:#101316; --paper-2:#171b1f; --panel:#1a1f23;
+    --ink:#f2efe7; --muted:#b7b3a8; --muted-2:#948f85;
+    --line:#333a40; --line-strong:#4a535b;
+    --accent:#f08a5d; --accent-soft:#f2a07a; --accent-wash:#2b211c;
+    --ok:#8fd19e; --ok-wash:#1b2b1e; --warn:#f0c36a; --warn-wash:#2d2618;
+    --bad:#ff8a7a; --bad-wash:#321d1a;
+  }
+}
+
+/* Reset */
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%;color-scheme:light dark;scroll-behavior:smooth;overflow-x:clip}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font:16px/1.6 var(--sans);overflow-x:clip;
+  text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+p,h1,h2,h3,ul,ol,figure{margin:0}
+a{color:inherit}
+button,input,select,textarea{font:inherit;color:inherit}
+code,pre{font-family:var(--mono)}
+
+/* Layout */
+.wrap{width:100%;max-width:var(--max);margin:0 auto;padding-left:18px;padding-right:18px;min-width:0}
+@media (min-width:720px){.wrap{padding-left:32px;padding-right:32px}}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.skip-link{position:absolute;left:12px;top:-80px;z-index:100;padding:12px 16px;background:var(--ink);color:var(--paper);border-radius:8px;text-decoration:none}
+.skip-link:focus{top:12px}
+:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+
+/* Header */
+.site-header{border-bottom:1px solid var(--line);background:var(--paper)}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:10px 16px;min-height:64px;flex-wrap:wrap;padding-top:6px;padding-bottom:6px}
+.brand{display:inline-flex;align-items:center;gap:10px;font-weight:700;letter-spacing:-.02em;text-decoration:none;min-height:44px}
+.brand-mark{width:26px;height:26px;border-radius:7px;background:var(--accent);position:relative;flex:none}
+.brand-mark::before,.brand-mark::after{content:"";position:absolute;left:7px;height:2px;background:var(--paper-2);border-radius:1px}
+.brand-mark::before{right:7px;top:9px}
+.brand-mark::after{right:11px;top:15px}
+.header-tools{display:flex;align-items:center;gap:12px 16px;flex-wrap:wrap;justify-content:flex-end;min-width:0}
+.site-nav{display:flex;align-items:center;gap:14px;font-size:13.5px;flex-wrap:wrap}
+.site-nav a{display:inline-flex;align-items:center;min-height:44px;text-decoration:none;color:var(--muted)}
+.site-nav a:hover{color:var(--accent);text-decoration:underline}
+.lang-switch{display:flex;gap:4px}
+.lang-switch button{
+  min-width:44px;min-height:44px;padding:0 8px;border:1px solid var(--line-strong);
+  border-radius:9px;background:transparent;color:var(--muted);font-size:12.5px;
+  font-weight:650;cursor:pointer;line-height:1
+}
+.lang-switch button:hover{border-color:var(--accent);color:var(--accent)}
+.lang-switch button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+@media (prefers-color-scheme:dark){
+  .lang-switch button[aria-pressed="true"],
+  .btn.primary,.btn.danger{color:#101316}
+}
+
+/* Hero */
+.hero{padding:36px 0 22px}
+@media (min-width:720px){.hero{padding:52px 0 28px}}
+.eyebrow{margin:0 0 10px;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+h1{margin:0 0 12px;max-width:22ch;font-size:clamp(1.85rem,6vw,2.9rem);line-height:1.1;letter-spacing:-.035em;font-weight:700;overflow-wrap:anywhere}
+.lede{max-width:70ch;color:var(--muted);font-size:clamp(1rem,2vw,1.08rem);overflow-wrap:anywhere}
+.privacy{
+  display:flex;gap:9px;align-items:flex-start;max-width:78ch;margin:16px 0 0;padding:11px 14px;
+  background:var(--accent-wash);border:1px solid var(--line);border-left:4px solid var(--accent);
+  border-radius:0 10px 10px 0;font-size:13.5px
+}
+.privacy svg{width:17px;height:17px;flex:none;margin-top:3px}
+
+/* Cards and tool layout */
+.tool-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;align-items:start}
+.tool-layout>*{min-width:0}
+@media (min-width:900px){
+  .tool-layout{grid-template-columns:minmax(0,1.04fr) minmax(0,.96fr)}
+  .result-col{position:sticky;top:18px}
+}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;min-width:0}
+@media (min-width:720px){.card{padding:26px 28px}}
+.card-kicker{margin:0 0 7px;font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.11em;text-transform:uppercase;color:var(--accent)}
+.card h2{margin:0 0 14px;font-size:clamp(1.15rem,2.4vw,1.4rem);line-height:1.2;letter-spacing:-.02em;overflow-wrap:anywhere}
+.panel-desc{margin:0 0 14px;color:var(--muted);font-size:14px;overflow-wrap:anywhere}
+
+/* Fields */
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field>label,.field>span.label{font-size:13px;font-weight:650;color:var(--muted)}
+.field input,.field select,.field textarea,.field .input{
+  width:100%;min-height:46px;padding:10px 12px;border:1px solid var(--line-strong);
+  border-radius:12px;background:var(--paper-2);font-size:16px;line-height:1.4;min-width:0
+}
+.field textarea{min-height:120px;resize:vertical;line-height:1.55}
+.field select{
+  appearance:none;padding-right:34px;
+  background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);
+  background-position:calc(100% - 18px) 50%,calc(100% - 13px) 50%;
+  background-size:5px 5px,5px 5px;background-repeat:no-repeat
+}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);outline:3px solid var(--accent-wash);outline-offset:1px}
+.field input[aria-invalid="true"],.field select[aria-invalid="true"],.field textarea[aria-invalid="true"]{border-color:var(--bad)}
+.field-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+@media (min-width:600px){.field-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Buttons */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  min-height:46px;padding:0 16px;border:1px solid var(--line-strong);border-radius:12px;
+  background:var(--panel);color:var(--ink);font-size:14.5px;font-weight:650;
+  cursor:pointer;text-decoration:none;text-align:center;line-height:1.25
+}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.06);color:#fff}
+.btn.dark{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.btn.ghost{background:transparent}
+.btn.danger{background:var(--bad);border-color:var(--bad);color:#fff}
+.btn.danger:hover{filter:brightness(1.06);color:#fff}
+.btn-row{display:flex;flex-wrap:wrap;gap:8px;min-width:0}
+.btn-row .btn{flex:1 1 140px}
+
+/* Chips / segmented controls */
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px;padding:0;list-style:none}
+.chips button,.chip{
+  display:inline-flex;align-items:center;justify-content:center;min-height:44px;
+  padding:8px 14px;border:1px solid var(--line-strong);border-radius:999px;
+  background:var(--paper-2);color:var(--ink);font-size:13.5px;font-weight:650;
+  cursor:pointer;line-height:1.2;text-decoration:none
+}
+.chips button:hover,.chip:hover{border-color:var(--accent);color:var(--accent)}
+.chips button[aria-pressed="true"],.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+@media (prefers-color-scheme:dark){
+  .chips button[aria-pressed="true"],.chip.on{color:#101316}
+}
+
+/* Tabs */
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
+.tabs [role="tab"]{
+  min-height:44px;padding:9px 14px;border:1px solid var(--line-strong);border-radius:999px;
+  background:var(--paper-2);color:var(--ink);font-size:13.5px;font-weight:650;
+  cursor:pointer;line-height:1.2
+}
+.tabs [role="tab"][aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+@media (prefers-color-scheme:dark){.tabs [role="tab"][aria-selected="true"]{color:#101316}}
+
+/* Result */
+.result{background:var(--paper-2)}
+.result-live{min-height:96px}
+.result-big{
+  margin:2px 0 0;font-family:var(--mono);font-size:clamp(2rem,7.5vw,3rem);
+  font-weight:650;line-height:1.08;letter-spacing:-.04em;color:var(--accent);
+  font-variant-numeric:tabular-nums;overflow-wrap:anywhere
+}
+.result-note{margin-top:7px;color:var(--muted);font-size:14px;overflow-wrap:anywhere}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px;margin-top:14px}
+.stat{min-width:0;padding:10px 11px;border:1px solid var(--line);border-radius:11px;background:var(--paper-2)}
+.stat span{display:block;font-size:11.5px;color:var(--muted);line-height:1.3}
+.stat b{display:block;margin-top:2px;font-family:var(--mono);font-size:1.12rem;font-weight:650;font-variant-numeric:tabular-nums;letter-spacing:-.02em;overflow-wrap:anywhere}
+
+/* Tables must scroll inside their own wrapper, never the page. */
+.table-wrap{width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.table-wrap table{width:100%;border-collapse:collapse;font-size:13.5px}
+.table-wrap caption{padding:10px 12px;text-align:left;color:var(--muted);font-size:12.5px}
+.table-wrap th,.table-wrap td{padding:9px 11px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap;font-variant-numeric:tabular-nums}
+.table-wrap th{font-weight:650;color:var(--muted);font-size:12.5px}
+.table-wrap tr:last-child td{border-bottom:0}
+
+/* Notes and status */
+.hint{margin:10px 0 0;color:var(--muted-2);font-size:12.5px;line-height:1.55;overflow-wrap:anywhere}
+.error{margin:10px 0 0;padding:9px 12px;border-radius:9px;background:var(--bad-wash);border:1px solid var(--bad);color:var(--bad);font-size:13px;font-weight:600;line-height:1.5;overflow-wrap:anywhere}
+.badge{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:2px 9px;border-radius:999px;background:var(--accent-wash);color:var(--accent);font-size:12px;font-weight:650;line-height:1.6;vertical-align:middle}
+.badge.ok{background:var(--ok-wash);color:var(--ok)}
+.badge.warn{background:var(--warn-wash);color:var(--warn)}
+.badge.bad{background:var(--bad-wash);color:var(--bad)}
+
+/* Checkbox rows: browser-check measures the input box itself, so keep it 44x44. */
+.check{display:inline-flex;align-items:center;gap:8px;min-height:44px;font-size:14px;cursor:pointer}
+.check input[type="checkbox"],.check input[type="radio"]{width:44px;height:44px;flex:none;accent-color:var(--accent);cursor:pointer}
+.check-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin-top:10px}
+/* Safety net for builders: any main control must stay touchable. */
+main button{min-height:44px}
+main select{min-height:44px}
+main input[type="checkbox"],main input[type="radio"]{width:44px;height:44px;flex:none;accent-color:var(--accent)}
+
+/* Explain */
+.explain{margin-top:18px}
+.explain h2{margin:0 0 12px;font-size:clamp(1.3rem,3vw,1.7rem);letter-spacing:-.02em}
+.explain-body{padding-bottom:2px}
+.explain-body p{max-width:82ch;color:var(--muted);font-size:14px;margin-bottom:10px;overflow-wrap:anywhere}
+.explain-body p:last-child{margin-bottom:0}
+.explain-body strong{color:var(--ink)}
+.formula-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;margin:14px 0 18px}
+@media (min-width:760px){.formula-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.formula{min-width:0;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--paper-2)}
+.formula h3,.formula-title{margin:0 0 7px;font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.formula code{display:inline-block;max-width:100%;padding:2px 6px;border-radius:5px;background:var(--accent-wash);font-family:var(--mono);font-size:12.5px;line-height:1.6;overflow-wrap:anywhere}
+.assumptions{margin:0;padding-left:20px;color:var(--muted);font-size:13.5px}
+.assumptions li{margin:0 0 8px;overflow-wrap:anywhere}
+
+/* FAQ */
+.faq{margin-top:18px}
+.faq h2{margin:0 0 12px;font-size:clamp(1.3rem,3vw,1.7rem);letter-spacing:-.02em}
+.faq details{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:0 20px}
+.faq details+details{margin-top:10px}
+.faq summary{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:44px;padding:16px 0;cursor:pointer;font-weight:650;list-style:none}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";flex:none;font-family:var(--mono);font-size:19px;line-height:1;color:var(--accent)}
+.faq details[open] summary::after{content:"\2212"}
+.faq details p{margin:0;padding:0 0 18px;color:var(--muted);font-size:14px;max-width:80ch;overflow-wrap:anywhere}
+
+/* Footer */
+.site-footer{margin-top:28px;padding:22px 0 34px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted)}
+.footer-inner{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 18px}
+.footer-links{display:flex;flex-wrap:wrap;gap:4px 14px}
+.site-footer a{color:var(--accent);text-decoration:none;display:inline-flex;align-items:center;min-height:44px}
+.site-footer a:hover{text-decoration:underline}
+.footer-note{margin:8px 0 0;max-width:82ch;color:var(--muted-2);overflow-wrap:anywhere}
+.noscript{margin-top:18px}
+
+/* Toast */
+.toast{
+  position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));
+  transform:translate(-50%,12px);z-index:20;max-width:calc(100vw - 32px);
+  padding:12px 18px;border-radius:12px;background:var(--ink);color:var(--paper);
+  font-size:14px;font-weight:600;text-align:center;box-shadow:0 8px 24px rgb(0 0 0 / .22);
+  opacity:0;pointer-events:none;transition:opacity .16s,transform .16s;overflow-wrap:anywhere
+}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+
+/* Motion and print */
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .btn:active{transform:none}
+}
+@media print{
+  .site-header,.site-footer,.skip-link,.lang-switch,.tabs,.chips,.btn-row,.toast,.no-print{display:none!important}
+  body{background:#fff;color:#000;padding:0}
+  .card,.table-wrap{border-color:#999;background:#fff;break-inside:avoid}
+  .result-col{position:static}
+  .result-big{color:#000}
+  .explain,.faq{display:block}
+  details{break-inside:avoid}
+  .faq details p{display:block!important}
+}
+</style>
+</head>
+<body data-slug="color-converter" data-category="text-dev">
+<a class="skip-link" href="#tool" data-i="skip">跳到工具</a>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="/" aria-label="Devin" data-i-aria="brandHome">
+      <span class="brand-mark" aria-hidden="true"></span><span data-i="brandName">Devin</span>
+    </a>
+    <div class="header-tools">
+      <nav class="site-nav" aria-label="站点导航" data-i-aria="navAria">
+        <a id="nav-tools" href="/tools/" data-tools-link data-i="navHall">工具大厅</a>
+        <a href="/games/" data-i="navGames">在线桌游</a>
+      </nav>
+      <nav class="lang-switch" aria-label="语言" data-i-aria="langLabel">
+        <button type="button" data-lang="zh" aria-pressed="true" data-i="langZh">中文</button>
+        <button type="button" data-lang="en" aria-pressed="false" data-i="langEn">EN</button>
+        <button type="button" data-lang="id" aria-pressed="false" data-i="langId">ID</button>
+      </nav>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero" aria-labelledby="page-title">
+    <p class="eyebrow" data-i="eyebrow">免费工具 · 本地运行</p>
+    <h1 id="page-title" data-i="appTitle">颜色格式转换器</h1>
+    <p class="lede" data-i="tagline">同一个颜色，换种写法。</p>
+    <p class="privacy">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+      <span data-i="privacy">所有计算都在你的浏览器里完成，输入不会上传。</span>
+    </p>
+  </section>
+
+  <!-- ======================================================================
+       TOOL BODY — builder replaces this marker with the tool UI.
+       Everything between the marker and the explain section belongs to the tool.
+       Keep labels, data-i hooks, aria-live results and 44px targets.
+       ====================================================================== -->
+  
+<style>
+.swatch{height:120px;border-radius:14px;border:1px solid var(--line-strong);background:#b93d12;margin:14px 0 4px}
+.swatch-note{margin:0;color:var(--muted);font-size:12.5px;overflow-wrap:anywhere}
+.convert-table td{white-space:normal;word-break:break-all}
+.convert-table td.value{font-family:var(--mono);font-size:13px}
+.convert-table td.actions{width:1%;white-space:nowrap}
+.ratio-line{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 12px;margin-top:6px}
+.ratio-value{font-family:var(--mono);font-size:clamp(1.8rem,6vw,2.5rem);font-weight:650;color:var(--accent);font-variant-numeric:tabular-nums}
+.badge-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+</style>
+<div class="tool-layout">
+  <section class="card" aria-labelledby="color-in-label">
+    <p class="card-kicker" data-i="kickerInput">输入</p>
+    <h2 id="color-in-label" data-i="appTitle">颜色格式转换器</h2>
+    <div class="field">
+      <label for="color-input" data-i="inputLabel">颜色值</label>
+      <input id="color-input" type="text" value="#b93d12" autocomplete="off" spellcheck="false" data-i-ph="inputPh" placeholder="#b93d12 或 rgb(185,61,18)">
+    </div>
+    <div class="btn-row" style="margin-top:12px">
+      <button class="btn" type="button" id="example" data-i="btnExample">加载示例</button>
+      <button class="btn" type="button" id="random" data-i="btnRandom">随机颜色</button>
+    </div>
+    <div class="swatch" id="swatch" role="img" data-i-aria="swatchLabel" aria-label="颜色预览"></div>
+    <p class="swatch-note" id="swatch-note" data-i="swatchNote">色块按当前颜色实时更新。</p>
+    <div class="field" style="margin-top:16px">
+      <label for="contrast-input" data-i="contrastLabel">对比色</label>
+      <input id="contrast-input" type="text" value="#ffffff" autocomplete="off" spellcheck="false" data-i-ph="contrastPh" placeholder="例如 #ffffff">
+    </div>
+    <p class="error" id="color-error" role="alert" hidden></p>
+  </section>
+
+  <section class="card result-col" aria-labelledby="color-out-label">
+    <p class="card-kicker" data-i="kickerOutput">转换结果</p>
+    <h2 id="color-out-label" data-i="formatsTitle">各格式表示</h2>
+    <div class="table-wrap">
+      <table class="convert-table">
+        <caption data-i="tableCaption">点击每行的复制按钮可单独复制。</caption>
+        <thead><tr><th scope="col" data-i="formatCol">格式</th><th scope="col" data-i="valueCol">值</th><th scope="col" data-i="copyCol">复制</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">HEX</th><td class="value" id="val-hex">—</td><td class="actions"><button class="btn ghost" type="button" data-copy="hex" data-i="copy">复制</button></td></tr>
+          <tr><th scope="row">RGB</th><td class="value" id="val-rgb">—</td><td class="actions"><button class="btn ghost" type="button" data-copy="rgb" data-i="copy">复制</button></td></tr>
+          <tr><th scope="row">HSL</th><td class="value" id="val-hsl">—</td><td class="actions"><button class="btn ghost" type="button" data-copy="hsl" data-i="copy">复制</button></td></tr>
+          <tr><th scope="row">HSV</th><td class="value" id="val-hsv">—</td><td class="actions"><button class="btn ghost" type="button" data-copy="hsv" data-i="copy">复制</button></td></tr>
+          <tr><th scope="row">CMYK</th><td class="value" id="val-cmyk">—</td><td class="actions"><button class="btn ghost" type="button" data-copy="cmyk" data-i="copy">复制</button></td></tr>
+          <tr><th scope="row" data-i="nameLabel">颜色名</th><td class="value" id="val-name">—</td><td class="actions"><button class="btn ghost" type="button" data-copy="name" data-i="copy">复制</button></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="result" style="margin-top:18px" aria-live="polite">
+      <p class="card-kicker" data-i="contrastTitle">WCAG 对比度</p>
+      <div class="ratio-line">
+        <span class="ratio-value" id="ratio-value">—</span>
+        <span class="result-note" id="ratio-note" data-i="contrastNote">按相对亮度计算，正文 AA 需 ≥ 4.5:1。</span>
+      </div>
+      <div class="badge-row" id="badges" hidden>
+        <span class="badge ok" id="badge-aa">AA</span>
+        <span class="badge ok" id="badge-aaa">AAA</span>
+        <span class="badge warn" id="badge-large">AA Large</span>
+      </div>
+      <div class="swatch" id="contrast-swatch" style="height:64px;display:flex;align-items:center;justify-content:center">
+        <span id="contrast-sample" data-i="contrastSample">示例文字 Sample</span>
+      </div>
+    </div>
+  </section>
+</div>
+
+
+  <section class="explain" id="explain" aria-labelledby="explain-title">
+    <h2 id="explain-title" data-i="explainTitle">公式与假设</h2>
+    <div class="explain-body">
+      <!-- ==================================================================
+           TOOL EXPLAIN — formula, assumptions, rounding rules, limitations.
+           ================================================================== -->
+      
+<div class="formula-grid">
+  <div class="formula"><h3 data-i="eTitle1">HEX 与 RGB</h3><p data-i="eText1">3 位 HEX 每位重复一次展开为 6 位（#b93 → #bb9933）。RGB 每个通道 0–255，与 HEX 一一对应。</p></div>
+  <div class="formula"><h3 data-i="eTitle2">HSL 与 HSV</h3><p data-i="eText2">色相 H 取 0–360°（超出后环绕），饱和度 S 取 0–100%。HSL 的 L 是亮度，HSV 的 V 是明度，两者公式不同但可互相换算。</p></div>
+  <div class="formula"><h3 data-i="eTitle3">CMYK</h3><p data-i="eText3">CMYK 由 RGB 近似换算：K = 1 − max(R,G,B)。屏幕 RGB 与印刷 CMYK 缺少 ICC 配置时并非一一对应，结果仅供沟通参考。</p></div>
+  <div class="formula"><h3 data-i="eTitle4">WCAG 对比度</h3><p data-i="eText4">先对每个通道做 sRGB 线性化，再按 0.2126R + 0.7152G + 0.0722B 求相对亮度。对比度 = (L1 + 0.05) / (L2 + 0.05)，保留两位小数。</p></div>
+</div>
+
+    </div>
+  </section>
+
+  <section class="faq" id="faq" aria-labelledby="faq-title">
+    <h2 id="faq-title" data-i="faqTitle">常见问题</h2>
+    <!-- ====================================================================
+         TOOL FAQ — generator injects the Chinese FAQ from config.faqs.
+         Keep the faqQ1..faqA3 data-i keys in all three dictionaries.
+         ==================================================================== -->
+    <details>
+          <summary data-i="faqQ1">CMYK 转换准确吗？</summary>
+          <p data-i="faqA1">屏幕上的 RGB 与印刷 CMYK 不是一一对应，缺少 ICC 色彩配置时会因纸张、油墨和印刷机不同而变化。结果适合沟通参考，不等于印厂最终值。</p>
+        </details>
+    <details>
+          <summary data-i="faqQ2">对比度 4.5:1 是什么标准？</summary>
+          <p data-i="faqA2">WCAG AA 对正文的要求是至少 4.5:1，大号文字可放宽到 3:1；AAA 对正文要求 7:1。工具会按你选择的两个颜色计算并标注等级。</p>
+        </details>
+    <details>
+          <summary data-i="faqQ3">3 位 HEX 怎么展开？</summary>
+          <p data-i="faqA3">#b93 等价于 #bb9933，每位重复一次。工具会自动展开后再转换，避免把短写法误读成其他颜色。</p>
+        </details>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <p data-i="copyright">© 2026 Devin</p>
+    <nav class="footer-links" aria-label="页脚导航" data-i-aria="footerAria">
+      <a href="/tools/" data-tools-link data-i="backTools">工具大厅</a>
+      <a href="/games/" data-i="navGames">在线桌游</a>
+      <a href="/" data-i="navHome">首页</a>
+    </nav>
+  </div>
+  <div class="wrap"><p class="footer-note" data-i="footerNote">所有处理都在本地完成，不上传任何数据。</p></div>
+</footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<noscript>
+  <div class="wrap"><p class="card noscript" data-i="noscript">这个工具需要 JavaScript 才能运行。所有计算都在你的设备上完成，不会上传任何数据。</p></div>
+</noscript>
+
+<!-- ==========================================================================
+     ENGINE — pure functions only. No DOM, no window, no clock, no storage.
+     Builder replaces everything between TOOL_ENGINE_START and TOOL_ENGINE_END,
+     then updates the return object. Must stay Node-evaluable.
+     ========================================================================== -->
+<script id="engine">
+var ToolEngine = (function () {
+  'use strict';
+
+  function fail(code) { return { ok: false, error: code }; }
+
+  function isNum(value) {
+    return typeof value === 'number' && isFinite(value);
+  }
+
+  function clampByte(value) {
+    var rounded = Math.round(value);
+    if (rounded < 0) return 0;
+    if (rounded > 255) return 255;
+    return rounded;
+  }
+
+  function validByte(value) {
+    return isNum(value) && value >= 0 && value <= 255;
+  }
+
+  function validPercent(value) {
+    return isNum(value) && value >= 0 && value <= 100;
+  }
+
+  function normalizeHue(value) {
+    if (!isNum(value)) return null;
+    return ((value % 360) + 360) % 360;
+  }
+
+  var NAMED = {
+    black: '#000000', white: '#ffffff', red: '#ff0000', lime: '#00ff00',
+    blue: '#0000ff', yellow: '#ffff00', aqua: '#00ffff', cyan: '#00ffff',
+    fuchsia: '#ff00ff', magenta: '#ff00ff', silver: '#c0c0c0', gray: '#808080',
+    grey: '#808080', maroon: '#800000', olive: '#808000', green: '#008000',
+    purple: '#800080', teal: '#008080', navy: '#000080', orange: '#ffa500',
+    pink: '#ffc0cb', brown: '#a52a2a', gold: '#ffd700'
+  };
+
+  function hexToRgb(hex) {
+    if (typeof hex !== 'string') return fail('invalid_color');
+    var text = hex.trim().replace(/^#/, '');
+    if (!/^[0-9a-f]{3}$|^[0-9a-f]{6}$/i.test(text)) return fail('invalid_color');
+    if (text.length === 3) {
+      text = text[0] + text[0] + text[1] + text[1] + text[2] + text[2];
+    }
+    return {
+      ok: true,
+      r: parseInt(text.slice(0, 2), 16),
+      g: parseInt(text.slice(2, 4), 16),
+      b: parseInt(text.slice(4, 6), 16)
+    };
+  }
+
+  function rgbToHex(r, g, b) {
+    if (!validByte(r) || !validByte(g) || !validByte(b)) return fail('bad_value');
+    function pair(value) {
+      var text = Math.round(value).toString(16);
+      return text.length === 1 ? '0' + text : text;
+    }
+    return { ok: true, value: '#' + pair(r) + pair(g) + pair(b) };
+  }
+
+  function rgbToHsl(r, g, b) {
+    if (!validByte(r) || !validByte(g) || !validByte(b)) return fail('bad_value');
+    var red = r / 255;
+    var green = g / 255;
+    var blue = b / 255;
+    var max = Math.max(red, green, blue);
+    var min = Math.min(red, green, blue);
+    var delta = max - min;
+    var lightness = (max + min) / 2;
+    var hue = 0;
+    var saturation = 0;
+    if (delta !== 0) {
+      saturation = delta / (1 - Math.abs(2 * lightness - 1));
+      if (max === red) {
+        hue = 60 * (((green - blue) / delta) % 6);
+      } else if (max === green) {
+        hue = 60 * ((blue - red) / delta + 2);
+      } else {
+        hue = 60 * ((red - green) / delta + 4);
+      }
+    }
+    hue = normalizeHue(hue);
+    if (saturation < 0) saturation = 0;
+    if (saturation > 1) saturation = 1;
+    return { ok: true, h: hue, s: saturation * 100, l: lightness * 100 };
+  }
+
+  function hueToChannels(hue, chroma) {
+    var x = chroma * (1 - Math.abs((hue / 60) % 2 - 1));
+    if (hue < 60) return [chroma, x, 0];
+    if (hue < 120) return [x, chroma, 0];
+    if (hue < 180) return [0, chroma, x];
+    if (hue < 240) return [0, x, chroma];
+    if (hue < 300) return [x, 0, chroma];
+    return [chroma, 0, x];
+  }
+
+  function hslToRgb(h, s, l) {
+    var hue = normalizeHue(h);
+    if (hue === null || !validPercent(s) || !validPercent(l)) return fail('bad_value');
+    var saturation = s / 100;
+    var lightness = l / 100;
+    var chroma = (1 - Math.abs(2 * lightness - 1)) * saturation;
+    var channels = hueToChannels(hue, chroma);
+    var match = lightness - chroma / 2;
+    return {
+      ok: true,
+      r: clampByte((channels[0] + match) * 255),
+      g: clampByte((channels[1] + match) * 255),
+      b: clampByte((channels[2] + match) * 255)
+    };
+  }
+
+  function rgbToHsv(r, g, b) {
+    if (!validByte(r) || !validByte(g) || !validByte(b)) return fail('bad_value');
+    var red = r / 255;
+    var green = g / 255;
+    var blue = b / 255;
+    var max = Math.max(red, green, blue);
+    var min = Math.min(red, green, blue);
+    var delta = max - min;
+    var hue = 0;
+    if (delta !== 0) {
+      if (max === red) {
+        hue = 60 * (((green - blue) / delta) % 6);
+      } else if (max === green) {
+        hue = 60 * ((blue - red) / delta + 2);
+      } else {
+        hue = 60 * ((red - green) / delta + 4);
+      }
+    }
+    return {
+      ok: true,
+      h: normalizeHue(hue),
+      s: max === 0 ? 0 : (delta / max) * 100,
+      v: max * 100
+    };
+  }
+
+  function hsvToRgb(h, s, v) {
+    var hue = normalizeHue(h);
+    if (hue === null || !validPercent(s) || !validPercent(v)) return fail('bad_value');
+    var saturation = s / 100;
+    var value = v / 100;
+    var chroma = value * saturation;
+    var channels = hueToChannels(hue, chroma);
+    var match = value - chroma;
+    return {
+      ok: true,
+      r: clampByte((channels[0] + match) * 255),
+      g: clampByte((channels[1] + match) * 255),
+      b: clampByte((channels[2] + match) * 255)
+    };
+  }
+
+  function rgbToCmyk(r, g, b) {
+    if (!validByte(r) || !validByte(g) || !validByte(b)) return fail('bad_value');
+    var red = r / 255;
+    var green = g / 255;
+    var blue = b / 255;
+    var max = Math.max(red, green, blue);
+    var key = 1 - max;
+    if (key >= 1) return { ok: true, c: 0, m: 0, y: 0, k: 100 };
+    return {
+      ok: true,
+      c: ((1 - red - key) / (1 - key)) * 100,
+      m: ((1 - green - key) / (1 - key)) * 100,
+      y: ((1 - blue - key) / (1 - key)) * 100,
+      k: key * 100
+    };
+  }
+
+  function cmykToRgb(c, m, y, k) {
+    if (!validPercent(c) || !validPercent(m) || !validPercent(y) || !validPercent(k)) return fail('bad_value');
+    var cc = c / 100;
+    var mm = m / 100;
+    var yy = y / 100;
+    var kk = k / 100;
+    return {
+      ok: true,
+      r: clampByte(255 * (1 - cc) * (1 - kk)),
+      g: clampByte(255 * (1 - mm) * (1 - kk)),
+      b: clampByte(255 * (1 - yy) * (1 - kk))
+    };
+  }
+
+  function relativeLuminance(rgb) {
+    function channel(value) {
+      var normalized = value / 255;
+      return normalized <= 0.03928 ? normalized / 12.92 : Math.pow((normalized + 0.055) / 1.055, 2.4);
+    }
+    return 0.2126 * channel(rgb.r) + 0.7152 * channel(rgb.g) + 0.0722 * channel(rgb.b);
+  }
+
+  function contrastRatio(first, second) {
+    if (!first || !second) return fail('bad_value');
+    if (!validByte(first.r) || !validByte(first.g) || !validByte(first.b)) return fail('bad_value');
+    if (!validByte(second.r) || !validByte(second.g) || !validByte(second.b)) return fail('bad_value');
+    var l1 = relativeLuminance(first);
+    var l2 = relativeLuminance(second);
+    var ratio = (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+    ratio = Math.round(ratio * 100) / 100;
+    return {
+      ok: true,
+      ratio: ratio,
+      aa: ratio >= 4.5,
+      aaa: ratio >= 7,
+      aaLarge: ratio >= 3
+    };
+  }
+
+  function colorName(r, g, b) {
+    if (!validByte(r) || !validByte(g) || !validByte(b)) return fail('bad_value');
+    var hex = rgbToHex(r, g, b).value;
+    var names = Object.keys(NAMED);
+    var best = null;
+    var bestDistance = Infinity;
+    var canonical = Object.create(null);
+    for (var i = 0; i < names.length; i++) {
+      var name = names[i];
+      var value = NAMED[name];
+      if (!canonical[value]) {
+        canonical[value] = name;
+        var target = hexToRgb(value);
+        var distance = Math.pow(target.r - r, 2) + Math.pow(target.g - g, 2) + Math.pow(target.b - b, 2);
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          best = { name: name, hex: value };
+        }
+      }
+    }
+    var exact = !!best && best.hex === hex;
+    return { ok: true, name: best.name, hex: best.hex, exact: exact };
+  }
+
+  function parseColor(text) {
+    if (typeof text !== 'string') return fail('invalid_color');
+    var value = text.trim().toLowerCase();
+    if (!value) return fail('empty_input');
+    if (NAMED[value]) {
+      var named = hexToRgb(NAMED[value]);
+      named.format = 'name';
+      return named;
+    }
+    if (value.charAt(0) === '#') {
+      var hex = hexToRgb(value);
+      if (hex.ok) hex.format = 'hex';
+      return hex;
+    }
+    var match = /^rgba?\(([^)]+)\)$/.exec(value);
+    if (match) {
+      var parts = match[1].split(/\s*,\s*/);
+      if (parts.length < 3 || parts.length > 4) return fail('invalid_color');
+      var channels = [];
+      for (var i = 0; i < 3; i++) {
+        var part = parts[i];
+        var number = part.indexOf('%') !== -1 ? (parseFloat(part) / 100) * 255 : parseFloat(part);
+        if (!isNum(number)) return fail('invalid_color');
+        channels.push(clampByte(number));
+      }
+      return { ok: true, r: channels[0], g: channels[1], b: channels[2], format: 'rgb' };
+    }
+    match = /^hsla?\(([^)]+)\)$/.exec(value);
+    if (match) {
+      var hslParts = match[1].split(/\s*,\s*/);
+      if (hslParts.length < 3 || hslParts.length > 4) return fail('invalid_color');
+      var rgb = hslToRgb(parseFloat(hslParts[0]), parseFloat(hslParts[1]), parseFloat(hslParts[2]));
+      if (rgb.ok) rgb.format = 'hsl';
+      return rgb;
+    }
+    match = /^hs[vb]a?\(([^)]+)\)$/.exec(value);
+    if (match) {
+      var hsvParts = match[1].split(/\s*,\s*/);
+      if (hsvParts.length < 3 || hsvParts.length > 4) return fail('invalid_color');
+      var hsvRgb = hsvToRgb(parseFloat(hsvParts[0]), parseFloat(hsvParts[1]), parseFloat(hsvParts[2]));
+      if (hsvRgb.ok) hsvRgb.format = 'hsv';
+      return hsvRgb;
+    }
+    match = /^cmyk\(([^)]+)\)$/.exec(value);
+    if (match) {
+      var cmykParts = match[1].split(/\s*,\s*/);
+      if (cmykParts.length !== 4) return fail('invalid_color');
+      var cmykRgb = cmykToRgb(
+        parseFloat(cmykParts[0]), parseFloat(cmykParts[1]),
+        parseFloat(cmykParts[2]), parseFloat(cmykParts[3])
+      );
+      if (cmykRgb.ok) cmykRgb.format = 'cmyk';
+      return cmykRgb;
+    }
+    return fail('invalid_color');
+  }
+
+  return {
+    hexToRgb: hexToRgb,
+    rgbToHex: rgbToHex,
+    rgbToHsl: rgbToHsl,
+    hslToRgb: hslToRgb,
+    rgbToHsv: rgbToHsv,
+    hsvToRgb: hsvToRgb,
+    rgbToCmyk: rgbToCmyk,
+    cmykToRgb: cmykToRgb,
+    relativeLuminance: relativeLuminance,
+    contrastRatio: contrastRatio,
+    colorName: colorName,
+    parseColor: parseColor
+  };
+})();
+</script>
+
+<!-- ==========================================================================
+     DICTIONARIES — zh / en / id must always expose exactly the same keys.
+     Generic keys live above the TOOL_DICT_* marker.
+     Tool-specific keys (including faqQ1..faqA3) live below the marker and are
+     replaced by the builder. No hard-coded visible copy anywhere in the page.
+     ========================================================================== -->
+<script id="i18n">
+var TOOL_I18N = {
+  zh: {
+    /* ---- generic keys: do not remove ---- */
+    docTitle: '颜色格式转换器（HEX/RGB/HSL/CMYK）',
+    docDesc: '在 HEX、RGB、HSL、HSV、CMYK 之间互转，显示颜色名与 WCAG 对比度，并带色块预览。全部在本地处理，无需注册。',
+    appTitle: '颜色格式转换器',
+    tagline: '同一个颜色，换种写法。',
+    eyebrow: '免费工具 · 本地运行',
+    privacy: '所有计算都在你的浏览器里完成，输入不会上传。',
+    skip: '跳到工具',
+    navAria: '站点导航',
+    navHall: '工具大厅',
+    navGames: '在线桌游',
+    langLabel: '语言',
+    langZh: '中文',
+    langEn: 'EN',
+    langId: 'ID',
+    brandName: 'Devin',
+    brandHome: 'Devin 首页',
+    navHome: '首页',
+    footerAria: '页脚导航',
+    footerNote: '所有处理都在本地完成，不上传任何数据。',
+    copyright: '© 2026 Devin',
+    copy: '复制结果',
+    copied: '已复制。',
+    copyFail: '无法自动复制，请手动选中后复制。',
+    copyHint: '复制的是未加千分位的原始数值。',
+    reset: '重置',
+    result: '结果',
+    explainTitle: '公式与假设',
+    faqTitle: '常见问题',
+    formulaTitle: '公式',
+    assumptionsTitle: '假设与规则',
+    backTools: '工具大厅',
+    moreTools: '更多工具',
+    notMedical: '仅供估算，不构成医疗建议。',
+    notFinancial: '仅供估算，不构成财务建议。',
+    unitNote: '换算结果按四舍五入显示。',
+    download: '下载',
+    downloadFail: '下载失败，请重试。',
+    clear: '清除',
+    swap: '交换',
+    add: '添加',
+    remove: '删除',
+    close: '关闭',
+    yes: '是',
+    no: '否',
+    errorInvalid: '请输入有效的数字。',
+    errorRequired: '请填写这一项。',
+    errorGeneric: '无法计算，请检查输入。',
+    storageFail: '无法写入本地存储，本次设置不会被保存。',
+    noscript: '这个工具需要 JavaScript 才能运行。所有计算都在你的设备上完成，不会上传任何数据。',
+
+    /* ---- tool-specific keys: replace below this line ---- */
+    // TOOL_DICT_ZH
+    kickerInput: '输入',
+    kickerOutput: '转换结果',
+    inputLabel: '颜色值',
+    inputPh: '#b93d12 或 rgb(185,61,18)',
+    btnExample: '加载示例',
+    btnRandom: '随机颜色',
+    swatchLabel: '颜色预览',
+    swatchNote: '色块按当前颜色实时更新。',
+    contrastLabel: '对比色',
+    contrastPh: '例如 #ffffff',
+    formatsTitle: '各格式表示',
+    tableCaption: '点击每行的复制按钮可单独复制。',
+    formatCol: '格式',
+    valueCol: '值',
+    copyCol: '复制',
+    nameLabel: '颜色名',
+    nameApprox: '≈ {name}',
+    swatchValue: '当前颜色 {value}',
+    contrastTitle: 'WCAG 对比度',
+    contrastNote: '按相对亮度计算，正文 AA 需 ≥ 4.5:1。',
+    contrastSample: '示例文字 Sample',
+    errInvalid: '无法识别这个颜色值，请检查格式。',
+    errEmpty: '请输入一个颜色值。',
+    eTitle1: 'HEX 与 RGB',
+    eText1: '3 位 HEX 每位重复一次展开为 6 位（#b93 → #bb9933）。RGB 每个通道 0–255，与 HEX 一一对应。',
+    eTitle2: 'HSL 与 HSV',
+    eText2: '色相 H 取 0–360°（超出后环绕），饱和度 S 取 0–100%。HSL 的 L 是亮度，HSV 的 V 是明度，两者公式不同但可互相换算。',
+    eTitle3: 'CMYK',
+    eText3: 'CMYK 由 RGB 近似换算：K = 1 − max(R,G,B)。屏幕 RGB 与印刷 CMYK 缺少 ICC 配置时并非一一对应，结果仅供沟通参考。',
+    eTitle4: 'WCAG 对比度',
+    eText4: '先对每个通道做 sRGB 线性化，再按 0.2126R + 0.7152G + 0.0722B 求相对亮度。对比度 = (L1 + 0.05) / (L2 + 0.05)，保留两位小数。',
+    faqQ1: 'CMYK 转换准确吗？',
+    faqA1: '屏幕上的 RGB 与印刷 CMYK 不是一一对应，缺少 ICC 色彩配置时会因纸张、油墨和印刷机不同而变化。结果适合沟通参考，不等于印厂最终值。',
+    faqQ2: '对比度 4.5:1 是什么标准？',
+    faqA2: 'WCAG AA 对正文的要求是至少 4.5:1，大号文字可放宽到 3:1；AAA 对正文要求 7:1。工具会按你选择的两个颜色计算并标注等级。',
+    faqQ3: '3 位 HEX 怎么展开？',
+    faqA3: '#b93 等价于 #bb9933，每位重复一次。工具会自动展开后再转换，避免把短写法误读成其他颜色。'
+  },
+  en: {
+    /* ---- generic keys: do not remove ---- */
+    docTitle: 'Color Converter',
+    docDesc: 'Convert colors between HEX, RGB, HSL, HSV and CMYK, see the nearest color name and WCAG contrast ratio, with a live swatch. Local, no sign-up.',
+    appTitle: 'Color Converter',
+    tagline: 'One color, many formats.',
+    eyebrow: 'Free tool · runs locally',
+    privacy: 'Everything runs in your browser. Nothing you type is uploaded.',
+    skip: 'Skip to the tool',
+    navAria: 'Site navigation',
+    navHall: 'Tools',
+    navGames: 'Games',
+    langLabel: 'Language',
+    langZh: '中文',
+    langEn: 'EN',
+    langId: 'ID',
+    brandName: 'Devin',
+    brandHome: 'Devin home',
+    navHome: 'Home',
+    footerAria: 'Footer navigation',
+    footerNote: 'Everything runs locally. No data is uploaded.',
+    copyright: '© 2026 Devin',
+    copy: 'Copy result',
+    copied: 'Copied.',
+    copyFail: 'Could not copy automatically. Select the text and copy it manually.',
+    copyHint: 'Copies the plain number without thousands separators.',
+    reset: 'Reset',
+    result: 'Result',
+    explainTitle: 'Formulas and assumptions',
+    faqTitle: 'Frequently asked questions',
+    formulaTitle: 'Formula',
+    assumptionsTitle: 'Assumptions and rules',
+    backTools: 'Tools',
+    moreTools: 'More tools',
+    notMedical: 'Estimates only, not medical advice.',
+    notFinancial: 'Estimates only, not financial advice.',
+    unitNote: 'Converted values are rounded for display.',
+    download: 'Download',
+    downloadFail: 'Download failed. Try again.',
+    clear: 'Clear',
+    swap: 'Swap',
+    add: 'Add',
+    remove: 'Remove',
+    close: 'Close',
+    yes: 'Yes',
+    no: 'No',
+    errorInvalid: 'Enter a valid number.',
+    errorRequired: 'Fill in this field.',
+    errorGeneric: 'Could not calculate. Check the inputs.',
+    storageFail: 'Could not write to local storage, so this setting will not be saved.',
+    noscript: 'This tool needs JavaScript to run. All calculations happen on your device; nothing is uploaded.',
+
+    /* ---- tool-specific keys: replace below this line ---- */
+    // TOOL_DICT_EN
+    kickerInput: 'Input',
+    kickerOutput: 'Conversions',
+    inputLabel: 'Color value',
+    inputPh: '#b93d12 or rgb(185,61,18)',
+    btnExample: 'Load example',
+    btnRandom: 'Random color',
+    swatchLabel: 'Color preview',
+    swatchNote: 'The swatch updates with the current color.',
+    contrastLabel: 'Contrast color',
+    contrastPh: 'e.g. #ffffff',
+    formatsTitle: 'Format values',
+    tableCaption: 'Use the copy button on each row to copy a single value.',
+    formatCol: 'Format',
+    valueCol: 'Value',
+    copyCol: 'Copy',
+    nameLabel: 'Color name',
+    nameApprox: '≈ {name}',
+    swatchValue: 'Current color {value}',
+    contrastTitle: 'WCAG contrast',
+    contrastNote: 'Computed from relative luminance; body text needs AA ≥ 4.5:1.',
+    contrastSample: 'Sample text',
+    errInvalid: 'This color value is not recognized. Check the format.',
+    errEmpty: 'Enter a color value.',
+    eTitle1: 'HEX and RGB',
+    eText1: 'A 3-digit HEX repeats each digit to six digits (#b93 becomes #bb9933). RGB channels run from 0 to 255 and map one to one with HEX.',
+    eTitle2: 'HSL and HSV',
+    eText2: 'Hue H is 0–360° and wraps around; saturation S is 0–100%. HSL uses lightness L while HSV uses value V; the formulas differ but convert between each other.',
+    eTitle3: 'CMYK',
+    eText3: 'CMYK is approximated from RGB with K = 1 − max(R,G,B). Screen RGB and print CMYK are not one-to-one without ICC profiles, so results are for communication only.',
+    eTitle4: 'WCAG contrast',
+    eText4: 'Each channel is sRGB-linearized, then relative luminance is 0.2126R + 0.7152G + 0.0722B. Contrast is (L1 + 0.05) / (L2 + 0.05), rounded to two decimals.',
+    faqQ1: 'Is the CMYK conversion accurate?',
+    faqA1: 'Screen RGB and print CMYK are not one-to-one. Without ICC profiles, results vary by paper, ink and press. Use them for discussion, not as the printer final value.',
+    faqQ2: 'What is the 4.5:1 contrast standard?',
+    faqA2: 'WCAG AA requires at least 4.5:1 for body text, with 3:1 allowed for large text. AAA requires 7:1 for body text. The tool computes the ratio for the two colors you choose and labels the levels.',
+    faqQ3: 'How is a 3-digit HEX expanded?',
+    faqA3: '#b93 is equivalent to #bb9933, repeating each digit once. The tool expands it before converting so the short form is not misread as another color.'
+  },
+  id: {
+    /* ---- generic keys: do not remove ---- */
+    docTitle: 'Konverter Warna',
+    docDesc: 'Konversi warna antara HEX, RGB, HSL, HSV, dan CMYK, lihat nama warna terdekat dan rasio kontras WCAG, dengan pratinjau warna. Diproses lokal, tanpa daftar.',
+    appTitle: 'Konverter Warna',
+    tagline: 'Satu warna, banyak format.',
+    eyebrow: 'Alat gratis · berjalan lokal',
+    privacy: 'Semua perhitungan berjalan di browser Anda. Tidak ada yang diunggah.',
+    skip: 'Lompat ke alat',
+    navAria: 'Navigasi situs',
+    navHall: 'Alat',
+    navGames: 'Permainan',
+    langLabel: 'Bahasa',
+    langZh: '中文',
+    langEn: 'EN',
+    langId: 'ID',
+    brandName: 'Devin',
+    brandHome: 'Beranda Devin',
+    navHome: 'Beranda',
+    footerAria: 'Navigasi footer',
+    footerNote: 'Semua diproses secara lokal. Tidak ada data yang diunggah.',
+    copyright: '© 2026 Devin',
+    copy: 'Salin hasil',
+    copied: 'Tersalin.',
+    copyFail: 'Tidak bisa menyalin otomatis. Pilih teksnya lalu salin manual.',
+    copyHint: 'Menyalin angka polos tanpa pemisah ribuan.',
+    reset: 'Atur ulang',
+    result: 'Hasil',
+    explainTitle: 'Rumus dan asumsi',
+    faqTitle: 'Pertanyaan yang sering diajukan',
+    formulaTitle: 'Rumus',
+    assumptionsTitle: 'Asumsi dan aturan',
+    backTools: 'Alat',
+    moreTools: 'Alat lainnya',
+    notMedical: 'Hanya perkiraan, bukan saran medis.',
+    notFinancial: 'Hanya perkiraan, bukan saran keuangan.',
+    unitNote: 'Nilai hasil konversi dibulatkan untuk tampilan.',
+    download: 'Unduh',
+    downloadFail: 'Unduh gagal. Coba lagi.',
+    clear: 'Bersihkan',
+    swap: 'Tukar',
+    add: 'Tambah',
+    remove: 'Hapus',
+    close: 'Tutup',
+    yes: 'Ya',
+    no: 'Tidak',
+    errorInvalid: 'Masukkan angka yang valid.',
+    errorRequired: 'Isi kolom ini.',
+    errorGeneric: 'Tidak dapat menghitung. Periksa input.',
+    storageFail: 'Tidak bisa menulis ke penyimpanan lokal, jadi pengaturan ini tidak akan disimpan.',
+    noscript: 'Alat ini memerlukan JavaScript. Semua perhitungan terjadi di perangkat Anda; tidak ada yang diunggah.',
+
+    /* ---- tool-specific keys: replace below this line ---- */
+    // TOOL_DICT_ID
+    kickerInput: 'Masukan',
+    kickerOutput: 'Hasil konversi',
+    inputLabel: 'Nilai warna',
+    inputPh: '#b93d12 atau rgb(185,61,18)',
+    btnExample: 'Muat contoh',
+    btnRandom: 'Warna acak',
+    swatchLabel: 'Pratinjau warna',
+    swatchNote: 'Kotak warna diperbarui mengikuti warna saat ini.',
+    contrastLabel: 'Warna kontras',
+    contrastPh: 'mis. #ffffff',
+    formatsTitle: 'Nilai per format',
+    tableCaption: 'Gunakan tombol salin di setiap baris untuk menyalin satu nilai.',
+    formatCol: 'Format',
+    valueCol: 'Nilai',
+    copyCol: 'Salin',
+    nameLabel: 'Nama warna',
+    nameApprox: '≈ {name}',
+    swatchValue: 'Warna saat ini {value}',
+    contrastTitle: 'Kontras WCAG',
+    contrastNote: 'Dihitung dari luminans relatif; teks isi memerlukan AA ≥ 4,5:1.',
+    contrastSample: 'Teks contoh',
+    errInvalid: 'Nilai warna tidak dikenali. Periksa formatnya.',
+    errEmpty: 'Masukkan nilai warna.',
+    eTitle1: 'HEX dan RGB',
+    eText1: 'HEX 3 digit mengulang tiap digit menjadi enam digit (#b93 menjadi #bb9933). Kanal RGB berkisar 0–255 dan berkorespondensi satu-satu dengan HEX.',
+    eTitle2: 'HSL dan HSV',
+    eText2: 'Hue H bernilai 0–360° dan berputar; saturasi S 0–100%. HSL memakai lightness L, HSV memakai value V; rumusnya berbeda tetapi dapat saling dikonversi.',
+    eTitle3: 'CMYK',
+    eText3: 'CMYK didekati dari RGB dengan K = 1 − max(R,G,B). RGB layar dan CMYK cetak tidak satu-satu tanpa profil ICC, jadi hasilnya hanya untuk komunikasi.',
+    eTitle4: 'Kontras WCAG',
+    eText4: 'Setiap kanal dilinearkan sRGB, lalu luminans relatif adalah 0,2126R + 0,7152G + 0,0722B. Kontras = (L1 + 0,05) / (L2 + 0,05), dibulatkan dua desimal.',
+    faqQ1: 'Apakah konversi CMYK akurat?',
+    faqA1: 'RGB layar dan CMYK cetak tidak satu-satu. Tanpa profil ICC, hasilnya bergantung pada kertas, tinta, dan mesin cetak. Gunakan untuk diskusi, bukan sebagai nilai akhir percetakan.',
+    faqQ2: 'Apa arti standar kontras 4,5:1?',
+    faqA2: 'WCAG AA memerlukan minimal 4,5:1 untuk teks isi, dan 3:1 untuk teks besar. AAA memerlukan 7:1 untuk teks isi. Alat menghitung rasio untuk dua warna pilihan Anda dan menandai levelnya.',
+    faqQ3: 'Bagaimana HEX 3 digit diperluas?',
+    faqA3: '#b93 setara dengan #bb9933, setiap digit diulang sekali. Alat memperluasnya sebelum konversi agar bentuk pendek tidak salah dibaca sebagai warna lain.'
+  }
+};
+</script>
+
+<!-- ==========================================================================
+     UI RUNTIME — language switching plus the global ToolUI helpers.
+     Builder replaces only the TOOL_UI_START / TOOL_UI_END block.
+     ========================================================================== -->
+<script>
+(function () {
+  'use strict';
+
+  var I18N = (typeof TOOL_I18N !== 'undefined') ? TOOL_I18N : { zh: {}, en: {}, id: {} };
+  var TOOL_SLUG = 'color-converter';
+  var LANG_KEY = 'hhfa.tool.' + TOOL_SLUG + '.lang';
+  var LANGS = ['zh', 'en', 'id'];
+  var LOCALES = { zh: 'zh-CN', en: 'en-US', id: 'id-ID' };
+  var OG_LOCALES = { zh: 'zh_CN', en: 'en_US', id: 'id_ID' };
+  var state = { lang: 'zh' };
+  var toastTimer = null;
+  var started = false;
+  var langHooks = [];
+
+  function $(sel) {
+    return typeof sel === 'string' ? document.querySelector(sel) : sel;
+  }
+
+  function $$(sel) {
+    return Array.prototype.slice.call(document.querySelectorAll(sel));
+  }
+
+  function T(key, vars) {
+    var dict = I18N[state.lang] || {};
+    var value = Object.prototype.hasOwnProperty.call(dict, key) ? dict[key] : null;
+    if (typeof value !== 'string' && I18N.zh && typeof I18N.zh[key] === 'string') {
+      value = I18N.zh[key];
+    }
+    if (typeof value !== 'string') return key;
+    if (vars) {
+      value = value.replace(/\{(\w+)\}/g, function (match, name) {
+        return vars[name] != null ? String(vars[name]) : '';
+      });
+    }
+    return value;
+  }
+
+  function locale() {
+    return LOCALES[state.lang] || 'en-US';
+  }
+
+  function fmt(n, opts) {
+    if (typeof n !== 'number' || !isFinite(n)) return '—';
+    try {
+      return new Intl.NumberFormat(locale(), opts || {}).format(n);
+    } catch (e) {
+      return String(n);
+    }
+  }
+
+  function toast(message) {
+    var el = $('#toast');
+    if (!el) return;
+    el.textContent = message == null ? '' : String(message);
+    el.classList.add('on');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove('on'); }, 2600);
+  }
+
+  function legacyCopy(text) {
+    try {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.top = '-1000px';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { ta.setSelectionRange(0, ta.value.length); } catch (e) { /* ignore */ }
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      document.body.removeChild(ta);
+      return ok;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function copy(text) {
+    var value = text == null ? '' : String(text);
+    return new Promise(function (resolve) {
+      function done() { toast(T('copied')); resolve(true); }
+      function fail() { toast(T('copyFail')); resolve(false); }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(value).then(done, function () {
+          if (legacyCopy(value)) done(); else fail();
+        });
+      } else if (legacyCopy(value)) {
+        done();
+      } else {
+        fail();
+      }
+    });
+  }
+
+  function download(name, content, mime) {
+    try {
+      var blob = new Blob([content], { type: mime || 'text/plain;charset=utf-8' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = name || 'download.txt';
+      a.rel = 'noopener';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function () {
+        try {
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        } catch (e) { /* ignore */ }
+      }, 0);
+      return true;
+    } catch (e) {
+      toast(T('downloadFail'));
+      return false;
+    }
+  }
+
+  function readStore(key, fallback) {
+    try {
+      var raw = localStorage.getItem(key);
+      if (raw == null) return fallback;
+      var value = JSON.parse(raw);
+      return value == null ? fallback : value;
+    } catch (e) {
+      return fallback;
+    }
+  }
+
+  function writeStore(key, value) {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+      return true;
+    } catch (e) {
+      toast(T('storageFail'));
+      return false;
+    }
+  }
+
+  function debounce(fn, ms) {
+    var timer = null;
+    var wait = isFinite(ms) ? ms : 150;
+    return function () {
+      var ctx = this;
+      var args = arguments;
+      clearTimeout(timer);
+      timer = setTimeout(function () { fn.apply(ctx, args); }, wait);
+    };
+  }
+
+  function on(target, event, handler) {
+    var el = typeof target === 'string' ? $(target) : target;
+    if (!el || !el.addEventListener) return function () {};
+    el.addEventListener(event, handler);
+    return function () { el.removeEventListener(event, handler); };
+  }
+
+  function setError(el, message) {
+    if (!el) return;
+    if (!message) { clearError(el); return; }
+    el.textContent = String(message);
+    el.hidden = false;
+    el.classList.add('on');
+  }
+
+  function clearError(el) {
+    if (!el) return;
+    el.textContent = '';
+    el.hidden = true;
+    el.classList.remove('on');
+  }
+
+  function onLangChange(fn) {
+    if (typeof fn !== 'function') return function () {};
+    langHooks.push(fn);
+    if (started) {
+      try { fn(state.lang); } catch (e) { /* a broken hook must not break switching */ }
+    }
+    return function () {
+      var i = langHooks.indexOf(fn);
+      if (i !== -1) langHooks.splice(i, 1);
+    };
+  }
+
+  function setMeta(attr, name, content) {
+    var nodes = document.querySelectorAll('meta');
+    for (var i = 0; i < nodes.length; i++) {
+      if (nodes[i].getAttribute(attr) === name) {
+        nodes[i].setAttribute('content', content);
+        return;
+      }
+    }
+  }
+
+  function renderLanguage() {
+    var lang = state.lang;
+    document.documentElement.lang = lang === 'zh' ? 'zh-CN' : lang;
+
+    var nodes = $$('[data-i]');
+    for (var i = 0; i < nodes.length; i++) {
+      nodes[i].textContent = T(nodes[i].getAttribute('data-i'));
+    }
+    var placeholders = $$('[data-i-ph]');
+    for (var j = 0; j < placeholders.length; j++) {
+      placeholders[j].setAttribute('placeholder', T(placeholders[j].getAttribute('data-i-ph')));
+    }
+    var labelled = $$('[data-i-aria]');
+    for (var k = 0; k < labelled.length; k++) {
+      labelled[k].setAttribute('aria-label', T(labelled[k].getAttribute('data-i-aria')));
+    }
+    var buttons = $$('[data-lang]');
+    for (var b = 0; b < buttons.length; b++) {
+      buttons[b].setAttribute('aria-pressed', buttons[b].getAttribute('data-lang') === lang ? 'true' : 'false');
+    }
+
+    document.title = T('docTitle');
+    setMeta('name', 'description', T('docDesc'));
+    setMeta('property', 'og:title', T('docTitle'));
+    setMeta('property', 'og:description', T('docDesc'));
+    setMeta('property', 'og:locale', OG_LOCALES[lang] || 'en_US');
+    setMeta('name', 'twitter:title', T('docTitle'));
+    setMeta('name', 'twitter:description', T('docDesc'));
+
+    var toolsHref = lang === 'zh' ? '/tools/' : '/tools/' + lang + '/';
+    var links = $$('[data-tools-link]');
+    for (var l = 0; l < links.length; l++) links[l].setAttribute('href', toolsHref);
+  }
+
+  function applyLang() {
+    renderLanguage();
+    for (var i = 0; i < langHooks.length; i++) {
+      try { langHooks[i](state.lang); } catch (e) { /* keep the page usable */ }
+    }
+    started = true;
+  }
+
+  function detectLang() {
+    try {
+      var q = new URLSearchParams(window.location.search).get('lang');
+      if (LANGS.indexOf(q) !== -1) return q;
+    } catch (e) { /* ignore */ }
+    try {
+      var saved = localStorage.getItem(LANG_KEY);
+      if (LANGS.indexOf(saved) !== -1) return saved;
+    } catch (e) { /* ignore */ }
+    var nav = String(navigator.language || '').toLowerCase();
+    if (nav.indexOf('zh') === 0) return 'zh';
+    if (nav.indexOf('id') === 0 || nav.indexOf('in') === 0) return 'id';
+    return 'en';
+  }
+
+  function saveLang() {
+    try { localStorage.setItem(LANG_KEY, state.lang); } catch (e) { /* ignore */ }
+  }
+
+  function bindLanguages() {
+    var buttons = $$('[data-lang]');
+    for (var i = 0; i < buttons.length; i++) {
+      (function (button) {
+        button.addEventListener('click', function () {
+          var next = button.getAttribute('data-lang');
+          if (LANGS.indexOf(next) === -1 || next === state.lang) return;
+          state.lang = next;
+          saveLang();
+          applyLang();
+        });
+      })(buttons[i]);
+    }
+  }
+
+  function init() {
+    state.lang = detectLang();
+    bindLanguages();
+    applyLang();
+  }
+
+  var ToolUI = {
+    T: T,
+    fmt: fmt,
+    copy: copy,
+    toast: toast,
+    download: download,
+    readStore: readStore,
+    writeStore: writeStore,
+    debounce: debounce,
+    on: on,
+    setError: setError,
+    clearError: clearError,
+    onLangChange: onLangChange,
+    lang: function () { return state.lang; },
+    locale: locale,
+    $: $,
+    $$: $$
+  };
+
+  window.ToolUI = ToolUI;
+  window.T = T;
+
+  // TOOL_UI_START
+  (function () {
+    var input = ToolUI.$('#color-input');
+    var contrastInput = ToolUI.$('#contrast-input');
+    var swatch = ToolUI.$('#swatch');
+    var contrastSwatch = ToolUI.$('#contrast-swatch');
+    var contrastSample = ToolUI.$('#contrast-sample');
+    var swatchNote = ToolUI.$('#swatch-note');
+    var errorBox = ToolUI.$('#color-error');
+    var ratioValue = ToolUI.$('#ratio-value');
+    var ratioNote = ToolUI.$('#ratio-note');
+    var badges = ToolUI.$('#badges');
+    var badgeAA = ToolUI.$('#badge-aa');
+    var badgeAAA = ToolUI.$('#badge-aaa');
+    var badgeLarge = ToolUI.$('#badge-large');
+    var values = {};
+    if (!input || !swatch) return;
+
+    var fields = { hex: '#val-hex', rgb: '#val-rgb', hsl: '#val-hsl', hsv: '#val-hsv', cmyk: '#val-cmyk', name: '#val-name' };
+    var copyMap = {};
+
+    function round1(value) {
+      return Math.round(value * 10) / 10;
+    }
+
+    function setBadge(element, state, label) {
+      if (!element) return;
+      element.className = 'badge ' + (state ? 'ok' : 'bad');
+      element.textContent = label + (state ? ' ✓' : ' ✕');
+      element.removeAttribute('data-i');
+    }
+
+    function clearView() {
+      for (var key in fields) {
+        var node = ToolUI.$(fields[key]);
+        if (node) node.textContent = '—';
+      }
+      copyMap = {};
+      if (ratioValue) ratioValue.textContent = '—';
+      if (badges) badges.hidden = true;
+      if (swatch) swatch.style.background = 'transparent';
+      if (contrastSwatch) contrastSwatch.style.background = 'transparent';
+      if (contrastSample) contrastSample.style.color = '';
+      ToolUI.clearError(errorBox);
+      input.removeAttribute('aria-invalid');
+    }
+
+    function formatColor(rgb) {
+      var hex = ToolEngine.rgbToHex(rgb.r, rgb.g, rgb.b);
+      var hsl = ToolEngine.rgbToHsl(rgb.r, rgb.g, rgb.b);
+      var hsv = ToolEngine.rgbToHsv(rgb.r, rgb.g, rgb.b);
+      var cmyk = ToolEngine.rgbToCmyk(rgb.r, rgb.g, rgb.b);
+      var name = ToolEngine.colorName(rgb.r, rgb.g, rgb.b);
+      var out = {
+        hex: hex.value,
+        rgb: 'rgb(' + rgb.r + ', ' + rgb.g + ', ' + rgb.b + ')',
+        hsl: 'hsl(' + round1(hsl.h) + ', ' + round1(hsl.s) + '%, ' + round1(hsl.l) + '%)',
+        hsv: 'hsv(' + round1(hsv.h) + ', ' + round1(hsv.s) + '%, ' + round1(hsv.v) + '%)',
+        cmyk: 'cmyk(' + round1(cmyk.c) + '%, ' + round1(cmyk.m) + '%, ' + round1(cmyk.y) + '%, ' + round1(cmyk.k) + '%)',
+        name: name.exact ? name.name : ToolUI.T('nameApprox', { name: name.name })
+      };
+      return out;
+    }
+
+    function render() {
+      var parsed = ToolEngine.parseColor(input.value);
+      if (!parsed.ok) {
+        clearView();
+        input.setAttribute('aria-invalid', 'true');
+        ToolUI.setError(errorBox, parsed.error === 'empty_input' ? ToolUI.T('errEmpty') : ToolUI.T('errInvalid'));
+        return;
+      }
+      input.removeAttribute('aria-invalid');
+      ToolUI.clearError(errorBox);
+      values = formatColor(parsed);
+      copyMap = {};
+      for (var key in fields) {
+        var node = ToolUI.$(fields[key]);
+        if (node) node.textContent = values[key];
+        copyMap[key] = values[key];
+      }
+      var hex = values.hex;
+      if (swatch) {
+        swatch.style.background = hex;
+        swatch.setAttribute('aria-label', ToolUI.T('swatchValue', { value: hex }));
+      }
+      if (swatchNote) swatchNote.textContent = ToolUI.T('swatchValue', { value: hex });
+
+      var contrast = ToolEngine.parseColor(contrastInput.value);
+      if (!contrast.ok) {
+        if (ratioValue) ratioValue.textContent = '—';
+        if (badges) badges.hidden = true;
+        if (contrastSwatch) contrastSwatch.style.background = 'transparent';
+        return;
+      }
+      var ratio = ToolEngine.contrastRatio(parsed, contrast);
+      if (!ratio.ok) return;
+      if (ratioValue) ratioValue.textContent = ratio.ratio.toFixed(2) + ':1';
+      setBadge(badgeAA, ratio.aa, 'AA');
+      setBadge(badgeAAA, ratio.aaa, 'AAA');
+      setBadge(badgeLarge, ratio.aaLarge, 'AA Large');
+      if (badges) badges.hidden = false;
+      if (contrastSwatch) contrastSwatch.style.background = ToolEngine.rgbToHex(contrast.r, contrast.g, contrast.b).value;
+      if (contrastSample) contrastSample.style.color = values.hex;
+    }
+
+    var debounced = ToolUI.debounce(render, 150);
+    ToolUI.on(input, 'input', debounced);
+    ToolUI.on(contrastInput, 'input', debounced);
+    ToolUI.on('#example', 'click', function () {
+      input.value = '#b93d12';
+      contrastInput.value = '#ffffff';
+      render();
+      input.focus();
+    });
+    ToolUI.on('#random', 'click', function () {
+      var bytes = new Uint8Array(3);
+      if (window.crypto && window.crypto.getRandomValues) {
+        window.crypto.getRandomValues(bytes);
+      } else {
+        bytes[0] = Math.floor(Math.random() * 256);
+        bytes[1] = Math.floor(Math.random() * 256);
+        bytes[2] = Math.floor(Math.random() * 256);
+      }
+      input.value = '#' + bytes[0].toString(16).padStart(2, '0') + bytes[1].toString(16).padStart(2, '0') + bytes[2].toString(16).padStart(2, '0');
+      render();
+    });
+    var copyButtons = ToolUI.$$('[data-copy]');
+    copyButtons.forEach(function (button) {
+      ToolUI.on(button, 'click', function () {
+        var key = button.getAttribute('data-copy');
+        if (copyMap[key]) ToolUI.copy(copyMap[key]);
+      });
+    });
+    ToolUI.onLangChange(function () { render(); });
+    render();
+  })();
+  // TOOL_UI_END
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>

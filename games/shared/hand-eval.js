@@ -81,6 +81,8 @@
   // A2345 is the wheel: high card 5 (A plays low).
   function straightHigh(ranksDesc) {
     if (ranksDesc.length !== 5) return 0;
+    // Five distinct ranks are required (77,44,3 spans 4 ranks but is two pair).
+    for (var i = 1; i < 5; i++) if (ranksDesc[i] === ranksDesc[i - 1]) return 0;
     if (ranksDesc[0] - ranksDesc[4] === 4) return ranksDesc[0];
     if (ranksDesc[0] === 14 && ranksDesc[1] === 5 && ranksDesc[2] === 4 &&
       ranksDesc[3] === 3 && ranksDesc[4] === 2) return 5;

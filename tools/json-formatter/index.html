@@ -1,0 +1,1380 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>JSON 格式化与校验 — 缩进、压缩、按键名排序</title>
+<meta name="description" content="免费离线的 JSON 格式化与校验工具：缩进 2/4/Tab、压缩单行、递归按键名排序，非法 JSON 精确定位到行列并显示出错片段。支持复制、下载和本地文件读取，数据不上传。">
+<meta name="author" content="Devin">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="theme-color" content="#f2efe7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#101316" media="(prefers-color-scheme: dark)">
+<link rel="canonical" href="https://hhfa008.github.io/tools/json-formatter/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23b93d12'/%3E%3Cpath d='M11 6c-3 0-4 2-4 5v2c0 2-1 3-2 3 1 0 2 1 2 3v2c0 3 1 5 4 5M21 6c3 0 4 2 4 5v2c0 2 1 3 2 3-1 0-2 1-2 3v2c0 3-1 5-4 5' fill='none' stroke='%23fbf9f4' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Devin">
+<meta property="og:title" content="JSON 格式化与校验 — 缩进、压缩、按键名排序">
+<meta property="og:description" content="格式化、压缩、递归排序 JSON；非法输入显示行列、原因和出错片段。支持复制、下载和本地文件读取，所有处理都在浏览器内完成。">
+<meta property="og:url" content="https://hhfa008.github.io/tools/json-formatter/">
+<meta property="og:locale" content="zh_CN">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="JSON 格式化与校验">
+<meta name="twitter:description" content="缩进、压缩、递归排序和精确错误定位。严格 JSON，本地处理，不上传数据。">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "JSON 格式化与校验",
+  "url": "https://hhfa008.github.io/tools/json-formatter/",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "Any",
+  "browserRequirements": "Requires JavaScript",
+  "isAccessibleForFree": true,
+  "inLanguage": ["zh-CN", "en", "id"],
+  "description": "一个离线 JSON 格式化与校验工具：按 2 个空格、4 个空格或 Tab 缩进，压缩为单行，递归按键名排序，并对非法 JSON 给出精确的行列位置、错误原因和带 ^ 标记的出错片段。支持复制结果、下载 .json 文件和读取本地文件。",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "featureList": [
+    "格式化 JSON，缩进可选 2 空格、4 空格或 Tab",
+    "压缩为单行",
+    "递归按键名排序，数组顺序保持不变",
+    "校验 JSON 并统计节点数、键数与最大深度",
+    "非法 JSON 定位到行、列并显示出错片段",
+    "复制结果、下载 .json、读取本地文件"
+  ]
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "支持注释或尾随逗号吗？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "不支持。这里使用浏览器原生的严格 JSON 解析，注释、单引号、尾随逗号和未加引号的键都会被判定为无效。JSON5 或 JSONC 需要先自行转换。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "重复键会怎么处理？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "解析器遵循 JSON.parse 的行为：同一个对象里出现重复键时，后出现的值覆盖先出现的值，结果只保留一个键。校验摘要也按覆盖后的对象计数。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "摘要里的节点数和键数是怎么数的？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "节点数包含根值、每个对象成员的值和每个数组元素；对象和数组本身也算一个节点。键数是所有对象成员键名的总数，最大深度从根节点 0 开始计算。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "文件会被上传吗？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "不会。文件读取使用浏览器 FileReader，下载使用本地 Blob 和对象 URL，页面不发送任何网络请求。超过 5 MB 的内容会被拒绝处理。"
+      }
+    }
+  ]
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "首页", "item": "https://hhfa008.github.io/" },
+    { "@type": "ListItem", "position": 2, "name": "工具大厅", "item": "https://hhfa008.github.io/tools/" },
+    { "@type": "ListItem", "position": 3, "name": "JSON 格式化与校验", "item": "https://hhfa008.github.io/tools/json-formatter/" }
+  ]
+}
+</script>
+
+<style>
+:root{
+  --paper:#f2efe7; --paper-2:#fbf9f4; --panel:#ffffff;
+  --ink:#14171a; --muted:#5b615c; --muted-2:#7b807a;
+  --line:#d5d0c4; --line-strong:#bcb5a7;
+  --accent:#b93d12; --accent-soft:#f2a07a; --accent-wash:#f7e5da;
+  --ok:#2f6b3c; --ok-wash:#e8f2e7; --warn:#8a5a00; --warn-wash:#fbf1db;
+  --bad:#a32216; --bad-wash:#fbe7e3;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --radius:16px; --max:1040px;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --paper:#101316; --paper-2:#171b1f; --panel:#1a1f23;
+    --ink:#f2efe7; --muted:#b7b3a8; --muted-2:#948f85;
+    --line:#333a40; --line-strong:#4a535b;
+    --accent:#f08a5d; --accent-wash:#2b211c;
+    --ok:#8fd19e; --ok-wash:#1b2b1e; --warn:#f0c36a; --warn-wash:#2d2618;
+    --bad:#ff8a7a; --bad-wash:#321d1a;
+  }
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%;color-scheme:light dark;scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.6 var(--sans);
+  overflow-x:clip;-webkit-font-smoothing:antialiased}
+h1,h2,h3,p,ul{margin:0}
+button,input,textarea,select{font:inherit;color:inherit}
+a{color:inherit}
+code,pre{font-family:var(--mono)}
+.wrap{width:100%;max-width:var(--max);margin:0 auto;padding:0 18px}
+@media(min-width:720px){.wrap{padding:0 32px}}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.skip-link{position:absolute;left:12px;top:-60px;z-index:100;padding:12px 16px;
+  background:var(--ink);color:var(--paper);border-radius:8px;text-decoration:none}
+.skip-link:focus{top:12px}
+:focus-visible{outline:3px solid var(--accent-soft);outline-offset:2px}
+
+.site-header{border-bottom:1px solid var(--line);background:var(--paper)}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:12px 18px;
+  min-height:64px;flex-wrap:wrap;padding-top:8px;padding-bottom:8px}
+.brand{display:inline-flex;align-items:center;gap:10px;min-height:44px;font-weight:700;letter-spacing:-.02em;text-decoration:none}
+.brand-mark{width:26px;height:26px;border-radius:7px;background:var(--accent);flex:none}
+.site-nav{display:flex;align-items:center;gap:16px;font-size:14px;flex-wrap:wrap}
+.site-nav a{color:var(--muted);text-decoration:none;min-height:44px;display:inline-flex;align-items:center}
+.site-nav a:hover{color:var(--accent)}
+.langs{display:flex;gap:4px}
+.langs button{min-width:44px;min-height:44px;padding:0 9px;border:1px solid var(--line);
+  border-radius:9px;background:transparent;color:var(--muted);font-size:13px;font-weight:650;cursor:pointer}
+.langs button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.langs button:hover{border-color:var(--line-strong)}
+
+.hero{padding:34px 0 20px}
+.eyebrow{font-family:var(--mono);font-size:11px;font-weight:650;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--accent);margin-bottom:10px}
+.hero h1{font-size:clamp(1.9rem,6vw,3rem);line-height:1.1;letter-spacing:-.035em;margin-bottom:12px;max-width:24ch}
+.lede{color:var(--muted);font-size:clamp(1rem,2vw,1.1rem);max-width:72ch}
+.notice{display:flex;gap:10px;align-items:flex-start;max-width:78ch;margin-top:16px;padding:12px 15px;
+  border-left:4px solid var(--accent);background:var(--accent-wash);border-radius:0 10px 10px 0;font-size:14px}
+.notice svg{width:18px;height:18px;flex:none;margin-top:3px}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px}
+@media(min-width:720px){.card{padding:24px 26px}}
+.tool-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;align-items:start}
+@media(min-width:880px){.tool-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+.tool-grid > .card + .card{margin-top:0}
+
+.fld{display:block;font-family:var(--mono);font-size:10.5px;font-weight:650;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--muted);margin:0 0 7px}
+textarea{display:block;width:100%;min-height:290px;padding:13px 14px;border:1px solid var(--line-strong);
+  border-radius:12px;background:var(--paper-2);color:var(--ink);font-family:var(--mono);
+  font-size:13.5px;line-height:1.55;resize:vertical;overflow-wrap:anywhere}
+textarea:focus,input:focus,select:focus{border-color:var(--accent);outline:3px solid var(--accent-wash);outline-offset:1px}
+select{min-height:44px;padding:8px 32px 8px 11px;border:1px solid var(--line-strong);
+  border-radius:9px;background:var(--paper-2);font-size:14px}
+.hint{color:var(--muted-2);font-size:12.5px;margin-top:8px;font-variant-numeric:tabular-nums}
+.hint.over{color:var(--bad);font-weight:650}
+
+.btn-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:9px 14px;
+  border:1px solid var(--line-strong);border-radius:10px;background:var(--paper-2);color:var(--ink);
+  font-size:14.5px;font-weight:600;cursor:pointer;text-align:center;text-decoration:none}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.07);color:#fff}
+.btn.ghost{background:transparent}
+.btn-row .btn{flex:1 1 132px}
+
+.toolbar{display:flex;align-items:flex-end;flex-wrap:wrap;gap:10px 14px;margin-bottom:12px}
+.toolbar .field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.toolbar .field label{font-size:12px;font-weight:600;color:var(--muted)}
+.toolbar .btn-row{margin-top:0;flex:1 1 260px}
+
+.status{margin-top:14px;min-width:0}
+.ok-box,.bad-box,.muted-box{padding:11px 13px;border-radius:10px;font-size:13.5px;overflow-wrap:anywhere}
+.ok-box{border:1px solid var(--ok);background:var(--ok-wash);color:var(--ok)}
+.bad-box{margin-top:10px;border:1px solid var(--bad);background:var(--bad-wash);color:var(--bad)}
+.muted-box{border:1px solid var(--line);background:var(--paper-2);color:var(--muted)}
+.ok-box strong,.bad-box strong{font-weight:700}
+.status-detail{display:block;margin-top:3px;font-size:13px;color:var(--muted)}
+.snippet-label{font-family:var(--mono);font-size:10.5px;font-weight:650;letter-spacing:.07em;
+  text-transform:uppercase;margin:10px 0 5px;color:var(--muted)}
+#error-snippet{margin:0;padding:10px 12px;border:1px solid var(--line);border-radius:9px;
+  background:var(--paper-2);color:var(--ink);font-size:12.5px;line-height:1.5;
+  overflow-x:auto;white-space:pre;max-width:100%}
+
+.output-box{margin-top:2px;min-height:260px;border:1px solid var(--line-strong);border-radius:12px;
+  background:var(--paper-2);overflow:auto}
+.output-empty{margin:0;padding:16px 15px;color:var(--muted-2);font-size:13px}
+#output{margin:0;padding:14px 15px;font-size:12.8px;line-height:1.55;white-space:pre;
+  overflow:auto;max-width:100%;min-height:258px;color:var(--ink)}
+
+#toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));
+  transform:translate(-50%,12px);z-index:20;max-width:calc(100vw - 32px);padding:11px 17px;
+  border-radius:11px;background:var(--ink);color:var(--paper);font-size:14px;font-weight:550;
+  text-align:center;box-shadow:0 8px 24px rgb(0 0 0 / .22);opacity:0;pointer-events:none;
+  transition:opacity .16s,transform .16s}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+
+.explain,.faq{margin-top:22px}
+.explain h2,.faq h2{font-size:clamp(1.25rem,3vw,1.6rem);letter-spacing:-.02em;margin-bottom:12px}
+.explain-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
+@media(min-width:760px){.explain-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.note{padding:13px 15px;border:1px solid var(--line);border-radius:12px;background:var(--paper-2);min-width:0}
+.note h3{font-family:var(--mono);font-size:10.5px;font-weight:650;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--accent);margin:0 0 6px}
+.note p{color:var(--muted);font-size:13.5px;margin:0}
+
+.faq details{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:0 18px}
+.faq details + details{margin-top:9px}
+.faq summary{display:flex;align-items:center;justify-content:space-between;gap:14px;
+  min-height:52px;padding:12px 0;cursor:pointer;font-weight:600;list-style:none}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";font-family:var(--mono);font-size:19px;color:var(--accent);line-height:1}
+.faq details[open] summary::after{content:"\2212"}
+.faq details p{padding:0 0 16px;color:var(--muted);font-size:14px;max-width:82ch}
+
+.site-footer{margin-top:30px;padding:22px 0 34px;border-top:1px solid var(--line);
+  font-size:12.5px;color:var(--muted-2)}
+.footer-inner{display:flex;flex-wrap:wrap;gap:8px 18px;justify-content:space-between}
+.footer-links{display:flex;flex-wrap:wrap;gap:6px 14px}
+.site-footer a{color:var(--accent);text-decoration:none}
+.site-footer a:hover{text-decoration:underline}
+.footer-privacy{margin-top:9px;max-width:80ch}
+
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .btn:active{transform:none}
+}
+@media (max-width:560px){
+  input,textarea,select{font-size:16px}
+}
+@media print{
+  .site-header,.site-footer,.langs,.btn-row,.toolbar,.hint,#toast,.faq,.explain{display:none!important}
+  body{background:#fff;color:#000}
+  .card{border:1px solid #999;break-inside:avoid}
+  textarea,.output-box,#output{background:#fff;color:#000;border:1px solid #999}
+  #output{min-height:120px}
+}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#tool" data-i="skipLink">跳到 JSON 工具</a>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="/" data-i-aria="brandHome"><span class="brand-mark" aria-hidden="true"></span>Devin</a>
+    <nav class="site-nav" data-i-aria="siteNav">
+      <a id="nav-tools" href="/tools/" data-i="navTools">工具大厅</a>
+      <a id="nav-games" href="/games/" data-i="navGames">在线桌游</a>
+    </nav>
+    <nav class="langs" data-i-aria="langLabel">
+      <button type="button" data-lang="zh" data-i="langZh">中文</button>
+      <button type="button" data-lang="en" data-i="langEn">EN</button>
+      <button type="button" data-lang="id" data-i="langId">ID</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap" id="tool">
+  <section class="hero">
+    <p class="eyebrow" data-i="eyebrow">免费工具 · 严格 JSON · 本地运行</p>
+    <h1 data-i="appTitle">JSON 格式化与校验</h1>
+    <p class="lede" data-i="tagline">粘贴 JSON，选择缩进后格式化、压缩或递归按键名排序。非法内容会指出第几行第几列、错误原因和出错位置。</p>
+    <p class="notice">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+      <span data-i="privacy">JSON 只在你自己的浏览器里解析，不会上传，也不会写入存储。</span>
+    </p>
+  </section>
+
+  <div class="tool-grid">
+    <section class="card" aria-labelledby="input-label">
+      <label class="fld" id="input-label" for="input" data-i="inputLabel">JSON 输入</label>
+      <textarea id="input" rows="14" spellcheck="false" autocomplete="off" autocapitalize="off"
+        data-i-ph="inputPh" placeholder="在这里粘贴 JSON…"></textarea>
+      <p class="hint" id="size-counter" aria-live="polite"></p>
+      <div class="btn-row">
+        <button class="btn" type="button" id="load-file" data-i="btnOpenFile">打开本地文件</button>
+        <button class="btn" type="button" id="load-example" data-i="btnExample">加载示例</button>
+        <button class="btn ghost" type="button" id="clear" data-i="btnClear">清空</button>
+      </div>
+      <input type="file" id="file" accept=".json,application/json,text/plain" hidden>
+      <p class="hint" data-i="fileHint">文件读取使用浏览器 FileReader；不会上传，也不会自动保存到任何地方。</p>
+    </section>
+
+    <section class="card" aria-labelledby="output-label">
+      <div class="toolbar">
+        <div class="field">
+          <label for="indent" data-i="indentLabel">缩进</label>
+          <select id="indent">
+            <option value="2" data-i="indent2">2 个空格</option>
+            <option value="4" data-i="indent4">4 个空格</option>
+            <option value="tab" data-i="indentTab">Tab</option>
+          </select>
+        </div>
+        <div class="btn-row">
+          <button class="btn primary" type="button" id="format" data-i="btnFormat">格式化</button>
+          <button class="btn" type="button" id="minify" data-i="btnMinify">压缩为单行</button>
+          <button class="btn" type="button" id="sort" data-i="btnSort">按键名排序</button>
+        </div>
+      </div>
+
+      <div class="status" id="status" aria-live="polite">
+        <p class="muted-box" id="empty-box" hidden><strong data-i="emptyTitle">等待输入</strong><span class="status-detail" data-i="emptyHint">粘贴 JSON 后会立即校验并显示摘要。</span></p>
+        <p class="ok-box" id="valid-box" hidden><strong data-i="validTitle">JSON 有效</strong><span class="status-detail" id="valid-summary"></span><span class="status-detail" id="root-type"></span></p>
+        <div class="bad-box" id="invalid-box" role="alert" hidden>
+          <p><strong data-i="invalidTitle">JSON 无效</strong> <span id="error-at"></span></p>
+          <p id="error-reason"></p>
+          <p class="snippet-label" data-i="errorLineLabel">出错行</p>
+          <pre id="error-snippet"></pre>
+        </div>
+        <p class="bad-box" id="too-large-box" role="alert" hidden data-i="tooLarge">内容超过 5 MB，已停止处理。请使用更小的内容或文件。</p>
+      </div>
+
+      <p class="fld" id="output-label" style="margin-top:16px" data-i="outputLabel">格式化输出</p>
+      <div class="output-box" id="output-box">
+        <p class="output-empty" id="output-empty" data-i="outputPh">格式化后的 JSON 会显示在这里…</p>
+        <pre id="output" hidden tabindex="0" data-i-aria="outputAria"></pre>
+      </div>
+      <div class="btn-row">
+        <button class="btn" type="button" id="copy" data-i="btnCopy">复制结果</button>
+        <button class="btn" type="button" id="download" data-i="btnDownload">下载 .json</button>
+      </div>
+    </section>
+  </div>
+
+  <section class="explain" aria-labelledby="explain-title">
+    <h2 id="explain-title" data-i="explainTitle">规则与说明</h2>
+    <div class="explain-grid">
+      <div class="note">
+        <h3 data-i="strictTitle">严格 JSON</h3>
+        <p data-i="strictText">只接受标准 JSON。注释、单引号、尾随逗号、未加引号的键和 NaN 都会被判定为无效；JSON5、JSONC 需要先自行转换。</p>
+      </div>
+      <div class="note">
+        <h3 data-i="dupTitle">重复键</h3>
+        <p data-i="dupText">同一个对象里出现重复键时，后出现的值覆盖先出现的值，最终只保留一个键。摘要按覆盖后的结果计数。</p>
+      </div>
+      <div class="note">
+        <h3 data-i="summaryTitle">节点与键</h3>
+        <p data-i="summaryText">节点数包含根值、每个对象成员的值和每个数组元素；对象和数组本身也算一个节点。键数是所有对象成员键名的总数，最大深度从根节点 0 开始。</p>
+      </div>
+      <div class="note">
+        <h3 data-i="sizeTitle">5 MB 上限</h3>
+        <p data-i="sizeText">按 UTF-8 字节计算，超过 5 MB（5,242,880 字节）的内容会被拒绝处理。读取文件时会在读取前检查大小，避免把超大内容塞进页面。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="faq" aria-labelledby="faq-title">
+    <h2 id="faq-title" data-i="faqTitle">常见问题</h2>
+    <details>
+      <summary data-i="faqQ1">支持注释或尾随逗号吗？</summary>
+      <p data-i="faqA1">不支持。这里使用浏览器原生的严格 JSON 解析，注释、单引号、尾随逗号和未加引号的键都会被判定为无效。JSON5 或 JSONC 需要先自行转换。</p>
+    </details>
+    <details>
+      <summary data-i="faqQ2">重复键会怎么处理？</summary>
+      <p data-i="faqA2">解析器遵循 JSON.parse 的行为：同一个对象里出现重复键时，后出现的值覆盖先出现的值，结果只保留一个键。校验摘要也按覆盖后的对象计数。</p>
+    </details>
+    <details>
+      <summary data-i="faqQ3">摘要里的节点数和键数是怎么数的？</summary>
+      <p data-i="faqA3">节点数包含根值、每个对象成员的值和每个数组元素；对象和数组本身也算一个节点。键数是所有对象成员键名的总数，最大深度从根节点 0 开始计算。</p>
+    </details>
+    <details>
+      <summary data-i="faqQ4">文件会被上传吗？</summary>
+      <p data-i="faqA4">不会。文件读取使用浏览器 FileReader，下载使用本地 Blob 和对象 URL，页面不发送任何网络请求。超过 5 MB 的内容会被拒绝处理。</p>
+    </details>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-inner">
+      <span>© 2026 Devin</span>
+      <nav class="footer-links">
+        <a id="foot-tools" href="/tools/" data-i="navTools">工具大厅</a>
+        <a id="foot-games" href="/games/" data-i="navGames">在线桌游</a>
+        <a id="foot-home" href="/" data-i="navHome">首页</a>
+      </nav>
+    </div>
+    <p class="footer-privacy" data-i="footerPrivacy">所有解析、格式化与下载都在本地完成，不上传 JSON，不使用追踪脚本。语言偏好只保存在本机。</p>
+  </div>
+</footer>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<noscript>
+  <div class="wrap"><p class="card" style="margin-top:18px" data-i="noscript">JSON 工具需要 JavaScript 才能校验和格式化。所有处理都在你的设备上完成，不会上传任何内容。</p></div>
+</noscript>
+
+<script id="engine">
+var ToolEngine = (function () {
+  'use strict';
+
+  var MAX_BYTES = 5 * 1024 * 1024;
+
+  function byteLength(value) {
+    var str = typeof value === 'string' ? value : (value == null ? '' : String(value));
+    var bytes = 0;
+    for (var i = 0; i < str.length; i++) {
+      var code = str.charCodeAt(i);
+      if (code < 0x80) {
+        bytes += 1;
+      } else if (code < 0x800) {
+        bytes += 2;
+      } else if (code >= 0xD800 && code <= 0xDBFF && i + 1 < str.length) {
+        var next = str.charCodeAt(i + 1);
+        if (next >= 0xDC00 && next <= 0xDFFF) {
+          bytes += 4;
+          i++;
+        } else {
+          bytes += 3;
+        }
+      } else {
+        bytes += 3;
+      }
+    }
+    return bytes;
+  }
+
+  function isTooLarge(value) {
+    return byteLength(value) > MAX_BYTES;
+  }
+
+  function errorResult(code, message, text, position) {
+    var line = 1;
+    var column = 1;
+    var lineText = '';
+    var caret = '^';
+    if (text && typeof text === 'string' && typeof position === 'number') {
+      var start = 0;
+      for (var i = 0; i < position && i < text.length; i++) {
+        if (text.charCodeAt(i) === 10) {
+          line++;
+          start = i + 1;
+        }
+      }
+      column = position - start + 1;
+      if (column < 1) column = 1;
+      var end = text.indexOf('\n', start);
+      if (end < 0) end = text.length;
+      lineText = text.slice(start, end);
+      if (lineText.charAt(lineText.length - 1) === '\r') lineText = lineText.slice(0, -1);
+      caret = caretFor(lineText, column);
+    }
+    return {
+      ok: false,
+      error: code,
+      message: message,
+      line: line,
+      column: column,
+      position: typeof position === 'number' ? position : 0,
+      lineText: lineText,
+      caret: caret
+    };
+  }
+
+  function caretFor(lineText, column) {
+    var out = '';
+    var limit = Math.max(0, column - 1);
+    for (var i = 0; i < limit; i++) {
+      out += lineText.charAt(i) === '\t' ? '\t' : ' ';
+    }
+    return out + '^';
+  }
+
+  function codePoints(str) {
+    return Array.from ? Array.from(str) : str.split('');
+  }
+
+  function compareCodePoints(a, b) {
+    var ai = codePoints(String(a));
+    var bi = codePoints(String(b));
+    var n = Math.min(ai.length, bi.length);
+    for (var i = 0; i < n; i++) {
+      var ac = ai[i].codePointAt(0);
+      var bc = bi[i].codePointAt(0);
+      if (ac !== bc) return ac < bc ? -1 : 1;
+    }
+    return ai.length - bi.length;
+  }
+
+  function positionFromLineColumn(text, line, column) {
+    var current = 1;
+    var start = 0;
+    for (var i = 0; i < text.length && current < line; i++) {
+      if (text.charCodeAt(i) === 10) {
+        current++;
+        start = i + 1;
+      }
+    }
+    return Math.min(text.length, start + Math.max(0, column - 1));
+  }
+
+  function lineStartAt(text, line) {
+    var current = 1;
+    var start = 0;
+    for (var i = 0; i < text.length && current < line; i++) {
+      if (text.charCodeAt(i) === 10) {
+        current++;
+        start = i + 1;
+      }
+    }
+    return start;
+  }
+
+  function locateError(text, error) {
+    var source = typeof text === 'string' ? text : '';
+    var message = error && error.message ? String(error.message) : String(error == null ? '' : error);
+    var position = -1;
+    var line = -1;
+    var column = -1;
+
+    var positionMatch = message.match(/position\s+(\d+)/i);
+    if (positionMatch) position = parseInt(positionMatch[1], 10);
+
+    var lineColumnMatch = message.match(/line\s+(\d+)\s+column\s+(\d+)/i);
+    if (lineColumnMatch) {
+      line = parseInt(lineColumnMatch[1], 10);
+      column = parseInt(lineColumnMatch[2], 10);
+    }
+
+    if (position < 0 && line > 0 && column > 0) {
+      position = positionFromLineColumn(source, line, column);
+    }
+    if (position < 0) {
+      position = /unexpected end|end of json/i.test(message) ? source.length : 0;
+    }
+    if (position > source.length) position = source.length;
+    if (position < 0) position = 0;
+
+    var computedLine = 1;
+    var computedStart = 0;
+    for (var i = 0; i < position; i++) {
+      if (source.charCodeAt(i) === 10) {
+        computedLine++;
+        computedStart = i + 1;
+      }
+    }
+    if (line < 1) line = computedLine;
+    if (column < 1) column = position - computedStart + 1;
+    if (column < 1) column = 1;
+
+    var start = lineStartAt(source, line);
+    var end = source.indexOf('\n', start);
+    if (end < 0) end = source.length;
+    var lineText = source.slice(start, end);
+    if (lineText.charAt(lineText.length - 1) === '\r') lineText = lineText.slice(0, -1);
+
+    return {
+      message: message,
+      position: position,
+      line: line,
+      column: column,
+      lineText: lineText,
+      caret: caretFor(lineText, column)
+    };
+  }
+
+  function validate(text) {
+    if (typeof text !== 'string') {
+      return errorResult('type', 'Input must be a string', '', 0);
+    }
+    if (text.replace(/\s/g, '') === '') {
+      return errorResult('empty', 'Empty input', text, 0);
+    }
+    if (isTooLarge(text)) {
+      return errorResult('too_large', 'Input exceeds 5 MB', '', 0);
+    }
+    try {
+      return { ok: true, value: JSON.parse(text) };
+    } catch (error) {
+      var location = locateError(text, error);
+      return {
+        ok: false,
+        error: 'invalid',
+        message: location.message,
+        position: location.position,
+        line: location.line,
+        column: location.column,
+        lineText: location.lineText,
+        caret: location.caret
+      };
+    }
+  }
+
+  function sortDeep(value) {
+    if (Array.isArray(value)) {
+      var array = [];
+      for (var i = 0; i < value.length; i++) array.push(sortDeep(value[i]));
+      return array;
+    }
+    if (value && typeof value === 'object') {
+      var object = Object.create(null);
+      var keys = Object.keys(value).sort(compareCodePoints);
+      for (var j = 0; j < keys.length; j++) {
+        object[keys[j]] = sortDeep(value[keys[j]]);
+      }
+      return object;
+    }
+    return value;
+  }
+
+  function indentUnit(indent) {
+    if (indent === 'tab' || indent === '\t' || indent === 'tabs') return '\t';
+    var count = Number(indent);
+    if (!isFinite(count)) count = 2;
+    count = Math.floor(count);
+    if (count < 0) count = 0;
+    if (count > 10) count = 10;
+    var unit = '';
+    for (var i = 0; i < count; i++) unit += ' ';
+    return unit;
+  }
+
+  function stringifySorted(value, unit) {
+    function render(item, depth) {
+      if (item === null) return 'null';
+      if (typeof item === 'string') return JSON.stringify(item);
+      if (typeof item === 'boolean') return item ? 'true' : 'false';
+      if (typeof item === 'number') return isFinite(item) ? String(item) : 'null';
+      if (Array.isArray(item)) {
+        if (!item.length) return '[]';
+        var arrayPad = repeat(unit, depth + 1);
+        var arrayClose = repeat(unit, depth);
+        var parts = [];
+        for (var i = 0; i < item.length; i++) {
+          parts.push(arrayPad + render(item[i], depth + 1));
+        }
+        return '[\n' + parts.join(',\n') + '\n' + arrayClose + ']';
+      }
+      if (item && typeof item === 'object') {
+        var keys = Object.keys(item).sort(compareCodePoints);
+        if (!keys.length) return '{}';
+        var objectPad = repeat(unit, depth + 1);
+        var objectClose = repeat(unit, depth);
+        var members = [];
+        for (var j = 0; j < keys.length; j++) {
+          members.push(objectPad + JSON.stringify(keys[j]) + ': ' + render(item[keys[j]], depth + 1));
+        }
+        return '{\n' + members.join(',\n') + '\n' + objectClose + '}';
+      }
+      return 'null';
+    }
+    return render(value, 0);
+  }
+
+  function repeat(unit, count) {
+    var out = '';
+    for (var i = 0; i < count; i++) out += unit;
+    return out;
+  }
+
+  function formatJson(text, options) {
+    var result = validate(text);
+    if (!result.ok) return result;
+    var opts = options || {};
+    var unit = indentUnit(opts.indent);
+    var value = opts.sortKeys ? sortDeep(result.value) : result.value;
+    try {
+      var output = opts.sortKeys
+        ? stringifySorted(result.value, unit)
+        : JSON.stringify(result.value, null, unit);
+      return { ok: true, text: output, value: value };
+    } catch (error) {
+      return {
+        ok: false,
+        error: 'stringify',
+        message: String(error && error.message ? error.message : error),
+        line: 1,
+        column: 1,
+        position: 0,
+        lineText: '',
+        caret: '^'
+      };
+    }
+  }
+
+  function minify(text) {
+    var result = validate(text);
+    if (!result.ok) return result;
+    try {
+      return { ok: true, text: JSON.stringify(result.value), value: result.value };
+    } catch (error) {
+      return {
+        ok: false,
+        error: 'stringify',
+        message: String(error && error.message ? error.message : error),
+        line: 1,
+        column: 1,
+        position: 0,
+        lineText: '',
+        caret: '^'
+      };
+    }
+  }
+
+  function summarize(value) {
+    var summary = {
+      type: value === null ? 'null' : (Array.isArray(value) ? 'array' : typeof value),
+      nodes: 0,
+      keys: 0,
+      objects: 0,
+      arrays: 0,
+      depth: 0
+    };
+    function walk(item, depth) {
+      summary.nodes++;
+      if (depth > summary.depth) summary.depth = depth;
+      if (Array.isArray(item)) {
+        summary.arrays++;
+        for (var i = 0; i < item.length; i++) walk(item[i], depth + 1);
+      } else if (item && typeof item === 'object') {
+        summary.objects++;
+        var keys = Object.keys(item);
+        summary.keys += keys.length;
+        for (var j = 0; j < keys.length; j++) walk(item[keys[j]], depth + 1);
+      }
+    }
+    walk(value, 0);
+    return summary;
+  }
+
+  return {
+    MAX_BYTES: MAX_BYTES,
+    byteLength: byteLength,
+    isTooLarge: isTooLarge,
+    validate: validate,
+    formatJson: formatJson,
+    minify: minify,
+    sortDeep: sortDeep,
+    locateError: locateError,
+    summarize: summarize
+  };
+})();
+</script>
+
+<script id="i18n">
+var TOOL_I18N = {
+  zh: {
+    docTitle: "JSON 格式化与校验 — 缩进、压缩、按键名排序",
+    docDesc: "免费离线的 JSON 格式化与校验工具：缩进 2/4/Tab、压缩单行、递归按键名排序，非法 JSON 精确定位到行列并显示出错片段。支持复制、下载和本地文件读取，数据不上传。",
+    appTitle: "JSON 格式化与校验",
+    tagline: "粘贴 JSON，选择缩进后格式化、压缩或递归按键名排序。非法内容会指出第几行第几列、错误原因和出错位置。",
+    privacy: "JSON 只在你自己的浏览器里解析，不会上传，也不会写入存储。",
+    eyebrow: "免费工具 · 严格 JSON · 本地运行",
+    skipLink: "跳到 JSON 工具",
+    brandHome: "Devin，返回首页",
+    siteNav: "站点导航",
+    navTools: "工具大厅",
+    navGames: "在线桌游",
+    navHome: "首页",
+    langLabel: "语言",
+    langZh: "中文",
+    langEn: "EN",
+    langId: "ID",
+    inputLabel: "JSON 输入",
+    inputPh: "在这里粘贴 JSON…",
+    sizeCounter: "{size} / {max} 字节",
+    fileHint: "文件读取使用浏览器 FileReader；不会上传，也不会自动保存到任何地方。",
+    btnOpenFile: "打开本地文件",
+    btnExample: "加载示例",
+    btnClear: "清空",
+    outputLabel: "格式化输出",
+    outputPh: "格式化后的 JSON 会显示在这里…",
+    outputAria: "格式化后的 JSON 输出",
+    indentLabel: "缩进",
+    indent2: "2 个空格",
+    indent4: "4 个空格",
+    indentTab: "Tab",
+    btnFormat: "格式化",
+    btnMinify: "压缩为单行",
+    btnSort: "按键名排序",
+    btnCopy: "复制结果",
+    btnDownload: "下载 .json",
+    validTitle: "JSON 有效",
+    validSummary: "{nodes} 个节点 · {keys} 个键 · 最大深度 {depth}",
+    rootTypeValue: "根类型：{type}",
+    typeObject: "对象",
+    typeArray: "数组",
+    typeString: "字符串",
+    typeNumber: "数字",
+    typeBoolean: "布尔值",
+    typeNull: "null",
+    invalidTitle: "JSON 无效",
+    errorAt: "第 {line} 行第 {column} 列",
+    errorReasonLabel: "错误原因",
+    errorLineLabel: "出错行",
+    emptyTitle: "等待输入",
+    emptyHint: "粘贴 JSON 后会立即校验并显示摘要。",
+    tooLarge: "内容超过 5 MB，已停止处理。请使用更小的内容或文件。",
+    copied: "结果已复制。",
+    copyFail: "无法自动复制，请手动选择输出文本。",
+    noOutput: "还没有可复制或下载的结果。",
+    downloadOk: "已生成 .json 文件。",
+    sampleLoaded: "示例已载入并格式化。",
+    cleared: "已清空。",
+    fileReadError: "无法读取这个文件。",
+    explainTitle: "规则与说明",
+    strictTitle: "严格 JSON",
+    strictText: "只接受标准 JSON。注释、单引号、尾随逗号、未加引号的键和 NaN 都会被判定为无效；JSON5、JSONC 需要先自行转换。",
+    dupTitle: "重复键",
+    dupText: "同一个对象里出现重复键时，后出现的值覆盖先出现的值，最终只保留一个键。摘要按覆盖后的结果计数。",
+    summaryTitle: "节点与键",
+    summaryText: "节点数包含根值、每个对象成员的值和每个数组元素；对象和数组本身也算一个节点。键数是所有对象成员键名的总数，最大深度从根节点 0 开始。",
+    sizeTitle: "5 MB 上限",
+    sizeText: "按 UTF-8 字节计算，超过 5 MB（5,242,880 字节）的内容会被拒绝处理。读取文件时会在读取前检查大小，避免把超大内容塞进页面。",
+    faqTitle: "常见问题",
+    faqQ1: "支持注释或尾随逗号吗？",
+    faqA1: "不支持。这里使用浏览器原生的严格 JSON 解析，注释、单引号、尾随逗号和未加引号的键都会被判定为无效。JSON5 或 JSONC 需要先自行转换。",
+    faqQ2: "重复键会怎么处理？",
+    faqA2: "解析器遵循 JSON.parse 的行为：同一个对象里出现重复键时，后出现的值覆盖先出现的值，结果只保留一个键。校验摘要也按覆盖后的对象计数。",
+    faqQ3: "摘要里的节点数和键数是怎么数的？",
+    faqA3: "节点数包含根值、每个对象成员的值和每个数组元素；对象和数组本身也算一个节点。键数是所有对象成员键名的总数，最大深度从根节点 0 开始计算。",
+    faqQ4: "文件会被上传吗？",
+    faqA4: "不会。文件读取使用浏览器 FileReader，下载使用本地 Blob 和对象 URL，页面不发送任何网络请求。超过 5 MB 的内容会被拒绝处理。",
+    footerPrivacy: "所有解析、格式化与下载都在本地完成，不上传 JSON，不使用追踪脚本。语言偏好只保存在本机。",
+    noscript: "JSON 工具需要 JavaScript 才能校验和格式化。所有处理都在你的设备上完成，不会上传任何内容。"
+  },
+  en: {
+    docTitle: "JSON formatter and validator — indent, minify, sort keys",
+    docDesc: "A free offline JSON formatter and validator: 2/4-space or tab indentation, single-line minify, recursive key sorting, and precise line/column errors with the failing snippet. Copy, download and read local files without uploading data.",
+    appTitle: "JSON formatter and validator",
+    tagline: "Paste JSON, pick an indent, then format, minify or sort keys recursively. Invalid input reports the line, column, reason and exact position.",
+    privacy: "Your JSON is parsed in your browser only. It is never uploaded or stored.",
+    eyebrow: "Free tool · strict JSON · runs locally",
+    skipLink: "Skip to the JSON tool",
+    brandHome: "Devin, back to the home page",
+    siteNav: "Site navigation",
+    navTools: "Tools",
+    navGames: "Online games",
+    navHome: "Home",
+    langLabel: "Language",
+    langZh: "中文",
+    langEn: "EN",
+    langId: "ID",
+    inputLabel: "JSON input",
+    inputPh: "Paste JSON here…",
+    sizeCounter: "{size} / {max} bytes",
+    fileHint: "Files are read with the browser FileReader. Nothing is uploaded, and nothing is saved automatically.",
+    btnOpenFile: "Open local file",
+    btnExample: "Load example",
+    btnClear: "Clear",
+    outputLabel: "Formatted output",
+    outputPh: "The formatted JSON will appear here…",
+    outputAria: "Formatted JSON output",
+    indentLabel: "Indent",
+    indent2: "2 spaces",
+    indent4: "4 spaces",
+    indentTab: "Tab",
+    btnFormat: "Format",
+    btnMinify: "Minify",
+    btnSort: "Sort keys",
+    btnCopy: "Copy result",
+    btnDownload: "Download .json",
+    validTitle: "Valid JSON",
+    validSummary: "{nodes} nodes · {keys} keys · max depth {depth}",
+    rootTypeValue: "Root type: {type}",
+    typeObject: "object",
+    typeArray: "array",
+    typeString: "string",
+    typeNumber: "number",
+    typeBoolean: "boolean",
+    typeNull: "null",
+    invalidTitle: "Invalid JSON",
+    errorAt: "line {line}, column {column}",
+    errorReasonLabel: "Reason",
+    errorLineLabel: "Failing line",
+    emptyTitle: "Waiting for input",
+    emptyHint: "Paste JSON to validate it and see a summary instantly.",
+    tooLarge: "The content is over 5 MB, so processing stopped. Use a smaller input or file.",
+    copied: "Result copied.",
+    copyFail: "Could not copy automatically. Select the output text and copy it manually.",
+    noOutput: "There is no result to copy or download yet.",
+    downloadOk: "The .json file has been created.",
+    sampleLoaded: "Example loaded and formatted.",
+    cleared: "Cleared.",
+    fileReadError: "Could not read this file.",
+    explainTitle: "Rules and notes",
+    strictTitle: "Strict JSON",
+    strictText: "Only standard JSON is accepted. Comments, single quotes, trailing commas, unquoted keys and NaN are all invalid; convert JSON5 or JSONC first.",
+    dupTitle: "Duplicate keys",
+    dupText: "When an object repeats a key, the later value replaces the earlier one and only one key remains. The summary counts the resulting object.",
+    summaryTitle: "Nodes and keys",
+    summaryText: "Nodes include the root value, every object member value and every array element; objects and arrays themselves count as one node. Keys are the total number of object member names, and depth starts at 0 for the root.",
+    sizeTitle: "5 MB limit",
+    sizeText: "Size is measured in UTF-8 bytes. Anything over 5 MB (5,242,880 bytes) is refused. Local files are checked before reading so oversized content never enters the page.",
+    faqTitle: "Frequently asked questions",
+    faqQ1: "Are comments or trailing commas supported?",
+    faqA1: "No. This page uses the browser's strict JSON parser, so comments, single quotes, trailing commas and unquoted keys are invalid. Convert JSON5 or JSONC first.",
+    faqQ2: "What happens with duplicate keys?",
+    faqA2: "The parser follows JSON.parse: when an object repeats a key, the later value replaces the earlier one and only one key remains. The validation summary counts the resulting object.",
+    faqQ3: "How are the node and key counts calculated?",
+    faqA3: "Nodes include the root value, every object member value and every array element; objects and arrays themselves count as one node. Keys are the total number of object member names, and maximum depth starts at 0 for the root.",
+    faqQ4: "Are files uploaded?",
+    faqA4: "No. Files are read with the browser FileReader and downloads use a local Blob and object URL. The page makes no network requests. Content over 5 MB is refused.",
+    footerPrivacy: "All parsing, formatting and downloads happen locally. Your JSON is not uploaded and no tracking script is used. Only the language preference is stored on this device.",
+    noscript: "The JSON tool needs JavaScript to validate and format. Everything runs on your device; nothing is uploaded."
+  },
+  id: {
+    docTitle: "Formatter dan validator JSON — indentasi, ringkas, urutkan kunci",
+    docDesc: "Alat formatter dan validator JSON gratis serta offline: indentasi 2/4 spasi atau Tab, ringkas ke satu baris, urutkan kunci secara rekursif, dan kesalahan baris/kolom yang tepat dengan potongan baris bermasalah. Salin, unduh, dan baca file lokal tanpa mengunggah data.",
+    appTitle: "Formatter dan validator JSON",
+    tagline: "Tempel JSON, pilih indentasi, lalu format, ringkas, atau urutkan kunci secara rekursif. Masukan tidak valid menunjukkan baris, kolom, alasan dan posisi kesalahan.",
+    privacy: "JSON hanya diurai di browser Anda. Tidak diunggah dan tidak disimpan.",
+    eyebrow: "Alat gratis · JSON ketat · berjalan lokal",
+    skipLink: "Lompat ke alat JSON",
+    brandHome: "Devin, kembali ke beranda",
+    siteNav: "Navigasi situs",
+    navTools: "Galeri alat",
+    navGames: "Permainan online",
+    navHome: "Beranda",
+    langLabel: "Bahasa",
+    langZh: "中文",
+    langEn: "EN",
+    langId: "ID",
+    inputLabel: "Masukan JSON",
+    inputPh: "Tempel JSON di sini…",
+    sizeCounter: "{size} / {max} byte",
+    fileHint: "File dibaca dengan FileReader browser. Tidak ada yang diunggah, dan tidak ada yang disimpan otomatis.",
+    btnOpenFile: "Buka file lokal",
+    btnExample: "Muat contoh",
+    btnClear: "Kosongkan",
+    outputLabel: "Keluaran terformat",
+    outputPh: "JSON terformat akan muncul di sini…",
+    outputAria: "Keluaran JSON terformat",
+    indentLabel: "Indentasi",
+    indent2: "2 spasi",
+    indent4: "4 spasi",
+    indentTab: "Tab",
+    btnFormat: "Format",
+    btnMinify: "Ringkas satu baris",
+    btnSort: "Urutkan kunci",
+    btnCopy: "Salin hasil",
+    btnDownload: "Unduh .json",
+    validTitle: "JSON valid",
+    validSummary: "{nodes} node · {keys} kunci · kedalaman maks {depth}",
+    rootTypeValue: "Jenis akar: {type}",
+    typeObject: "objek",
+    typeArray: "array",
+    typeString: "string",
+    typeNumber: "angka",
+    typeBoolean: "boolean",
+    typeNull: "null",
+    invalidTitle: "JSON tidak valid",
+    errorAt: "baris {line}, kolom {column}",
+    errorReasonLabel: "Alasan",
+    errorLineLabel: "Baris bermasalah",
+    emptyTitle: "Menunggu masukan",
+    emptyHint: "Tempel JSON untuk langsung memvalidasi dan melihat ringkasan.",
+    tooLarge: "Konten melebihi 5 MB, pemrosesan dihentikan. Gunakan masukan atau file yang lebih kecil.",
+    copied: "Hasil disalin.",
+    copyFail: "Tidak bisa menyalin otomatis. Pilih teks keluaran dan salin secara manual.",
+    noOutput: "Belum ada hasil untuk disalin atau diunduh.",
+    downloadOk: "File .json sudah dibuat.",
+    sampleLoaded: "Contoh dimuat dan diformat.",
+    cleared: "Sudah dikosongkan.",
+    fileReadError: "File ini tidak bisa dibaca.",
+    explainTitle: "Aturan dan catatan",
+    strictTitle: "JSON ketat",
+    strictText: "Hanya JSON standar yang diterima. Komentar, tanda kutip tunggal, koma di akhir, kunci tanpa tanda kutip dan NaN semuanya tidak valid; konversi JSON5 atau JSONC terlebih dahulu.",
+    dupTitle: "Kunci duplikat",
+    dupText: "Jika sebuah objek mengulang kunci, nilai yang muncul belakangan menggantikan nilai sebelumnya dan hanya satu kunci yang tersisa. Ringkasan menghitung objek hasil akhir.",
+    summaryTitle: "Node dan kunci",
+    summaryText: "Node mencakup nilai akar, setiap nilai anggota objek dan setiap elemen array; objek dan array sendiri dihitung satu node. Kunci adalah jumlah total nama anggota objek, dan kedalaman dimulai dari 0 untuk akar.",
+    sizeTitle: "Batas 5 MB",
+    sizeText: "Ukuran dihitung dalam byte UTF-8. Konten di atas 5 MB (5.242.880 byte) ditolak. File lokal diperiksa sebelum dibaca agar konten besar tidak masuk ke halaman.",
+    faqTitle: "Pertanyaan umum",
+    faqQ1: "Apakah komentar atau koma di akhir didukung?",
+    faqA1: "Tidak. Halaman ini memakai parser JSON ketat dari browser, jadi komentar, tanda kutip tunggal, koma di akhir dan kunci tanpa tanda kutip tidak valid. Konversi JSON5 atau JSONC terlebih dahulu.",
+    faqQ2: "Apa yang terjadi pada kunci duplikat?",
+    faqA2: "Parser mengikuti perilaku JSON.parse: jika sebuah objek mengulang kunci, nilai yang muncul belakangan menggantikan nilai sebelumnya dan hanya satu kunci yang tersisa. Ringkasan validasi menghitung objek hasil akhir.",
+    faqQ3: "Bagaimana jumlah node dan kunci dihitung?",
+    faqA3: "Node mencakup nilai akar, setiap nilai anggota objek dan setiap elemen array; objek dan array sendiri dihitung satu node. Kunci adalah jumlah total nama anggota objek, dan kedalaman maksimum dimulai dari 0 untuk akar.",
+    faqQ4: "Apakah file diunggah?",
+    faqA4: "Tidak. File dibaca dengan FileReader browser dan unduhan memakai Blob serta object URL lokal. Halaman tidak membuat permintaan jaringan. Konten di atas 5 MB ditolak.",
+    footerPrivacy: "Semua penguraian, pemformatan dan unduhan berjalan lokal. JSON tidak diunggah dan tidak ada skrip pelacak. Hanya preferensi bahasa yang disimpan di perangkat ini.",
+    noscript: "Alat JSON memerlukan JavaScript untuk memvalidasi dan memformat. Semua berjalan di perangkat Anda; tidak ada yang diunggah."
+  }
+};
+</script>
+
+<script>
+(function () {
+  'use strict';
+
+  var LS_KEY = 'hhfa.tool.json-formatter.lang';
+  var SAMPLE = '{\n  "name": "Devin Tools",\n  "version": 1,\n  "features": ["format", "validate", "sort"],\n  "offline": true,\n  "limits": { "maxBytes": 5242880 }\n}';
+  var NAV = {
+    zh: { tools: '/tools/', games: '/games/', home: '/' },
+    en: { tools: '/tools/en/', games: '/games/en/', home: '/' },
+    id: { tools: '/tools/id/', games: '/games/id/', home: '/' }
+  };
+  var LOCALE = { zh: 'zh-CN', en: 'en-US', id: 'id-ID' };
+
+  var lang = 'zh';
+  var validateTimer = 0;
+
+  function $(id) { return document.getElementById(id); }
+  function T(key, vars) {
+    var dict = TOOL_I18N[lang] || TOOL_I18N.zh;
+    var value = dict[key];
+    if (value == null) value = TOOL_I18N.en[key];
+    if (value == null) value = key;
+    if (vars) {
+      Object.keys(vars).forEach(function (name) {
+        value = value.split('{' + name + '}').join(String(vars[name]));
+      });
+    }
+    return value;
+  }
+  function locale() { return LOCALE[lang] || LOCALE.en; }
+  function fmtNum(n) {
+    try {
+      return new Intl.NumberFormat(locale()).format(n);
+    } catch (e) {
+      return String(n);
+    }
+  }
+  function detectLang() {
+    var query = '';
+    try { query = new URLSearchParams(location.search).get('lang') || ''; } catch (e) {}
+    if (TOOL_I18N[query]) return query;
+    try {
+      var saved = localStorage.getItem(LS_KEY);
+      if (TOOL_I18N[saved]) return saved;
+    } catch (e) {}
+    var nav = (navigator.language || 'en').toLowerCase();
+    if (nav.indexOf('zh') === 0) return 'zh';
+    if (nav.indexOf('id') === 0) return 'id';
+    return 'en';
+  }
+  function saveLang() {
+    try { localStorage.setItem(LS_KEY, lang); } catch (e) {}
+  }
+
+  function typeKey(type) {
+    return 'type' + type.charAt(0).toUpperCase() + type.slice(1);
+  }
+
+  function updateSizeCounter() {
+    var input = $('input');
+    var bytes = ToolEngine.byteLength(input.value);
+    var over = bytes > ToolEngine.MAX_BYTES;
+    var counter = $('size-counter');
+    counter.textContent = T('sizeCounter', {
+      size: fmtNum(bytes),
+      max: fmtNum(ToolEngine.MAX_BYTES)
+    });
+    counter.classList.toggle('over', over);
+    return over;
+  }
+
+  function hideStatus() {
+    $('empty-box').hidden = true;
+    $('valid-box').hidden = true;
+    $('invalid-box').hidden = true;
+    $('too-large-box').hidden = true;
+  }
+
+  function clipSnippet(line, column) {
+    var max = 160;
+    if (line.length <= max) return { text: line, column: column };
+    var start = Math.max(0, column - 70);
+    var end = Math.min(line.length, start + max);
+    if (end - start < max) start = Math.max(0, end - max);
+    var prefix = start > 0 ? '…' : '';
+    var suffix = end < line.length ? '…' : '';
+    return {
+      text: prefix + line.slice(start, end) + suffix,
+      column: prefix.length + (column - start)
+    };
+  }
+
+  function renderValidation() {
+    var input = $('input');
+    var value = input.value;
+    hideStatus();
+    var over = updateSizeCounter();
+
+    if (over) {
+      $('too-large-box').hidden = false;
+      return;
+    }
+    if (value.replace(/\s/g, '') === '') {
+      $('empty-box').hidden = false;
+      return;
+    }
+
+    var result = ToolEngine.validate(value);
+    if (!result.ok) {
+      $('invalid-box').hidden = false;
+      $('error-at').textContent = T('errorAt', {
+        line: fmtNum(result.line),
+        column: fmtNum(result.column)
+      });
+      $('error-reason').textContent = T('errorReasonLabel') + ': ' + result.message;
+      var snippet = clipSnippet(result.lineText, result.column);
+      $('error-snippet').textContent = snippet.text + '\n' + caretFor(snippet.text, snippet.column);
+      return;
+    }
+
+    var summary = ToolEngine.summarize(result.value);
+    $('valid-box').hidden = false;
+    $('valid-summary').textContent = T('validSummary', {
+      nodes: fmtNum(summary.nodes),
+      keys: fmtNum(summary.keys),
+      depth: fmtNum(summary.depth)
+    });
+    $('root-type').textContent = T('rootTypeValue', { type: T(typeKey(summary.type)) });
+  }
+
+  function caretFor(lineText, column) {
+    var out = '';
+    var limit = Math.max(0, column - 1);
+    for (var i = 0; i < limit; i++) {
+      out += lineText.charAt(i) === '\t' ? '\t' : ' ';
+    }
+    return out + '^';
+  }
+
+  function scheduleValidation() {
+    clearTimeout(validateTimer);
+    validateTimer = setTimeout(renderValidation, 180);
+  }
+
+  function indentValue() {
+    var value = $('indent').value;
+    return value === 'tab' ? 'tab' : parseInt(value, 10);
+  }
+
+  function showOutput(text) {
+    $('output').textContent = text;
+    $('output').hidden = false;
+    $('output-empty').hidden = true;
+  }
+
+  function clearOutput() {
+    $('output').textContent = '';
+    $('output').hidden = true;
+    $('output-empty').hidden = false;
+  }
+
+  function run(kind) {
+    var value = $('input').value;
+    if (ToolEngine.isTooLarge(value)) {
+      renderValidation();
+      toast(T('tooLarge'));
+      return;
+    }
+    var result;
+    if (kind === 'minify') {
+      result = ToolEngine.minify(value);
+    } else {
+      result = ToolEngine.formatJson(value, {
+        indent: indentValue(),
+        sortKeys: kind === 'sort'
+      });
+    }
+    if (!result.ok) {
+      renderValidation();
+      if (result.error === 'too_large') toast(T('tooLarge'));
+      return;
+    }
+    showOutput(result.text);
+    renderValidation();
+  }
+
+  var toastTimer = null;
+  function toast(message) {
+    var el = $('toast');
+    el.textContent = message;
+    el.classList.add('on');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove('on'); }, 2400);
+  }
+
+  function fallbackCopy(text) {
+    var area = document.createElement('textarea');
+    area.value = text;
+    area.setAttribute('readonly', '');
+    area.style.position = 'fixed';
+    area.style.top = '-1000px';
+    document.body.appendChild(area);
+    area.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(area);
+    return ok;
+  }
+
+  function currentOutput() {
+    return $('output').hidden ? '' : $('output').textContent;
+  }
+
+  function copyResult() {
+    var text = currentOutput();
+    if (!text) { toast(T('noOutput')); return; }
+    var done = function () { toast(T('copied')); };
+    var fail = function () { toast(T('copyFail')); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(function () {
+        if (fallbackCopy(text)) done(); else fail();
+      });
+    } else if (fallbackCopy(text)) {
+      done();
+    } else {
+      fail();
+    }
+  }
+
+  function downloadResult() {
+    var text = currentOutput();
+    if (!text) { toast(T('noOutput')); return; }
+    var blob = new Blob([text], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement('a');
+    link.href = url;
+    link.download = 'data.json';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    toast(T('downloadOk'));
+  }
+
+  function loadFile(file) {
+    if (!file) return;
+    if (file.size > ToolEngine.MAX_BYTES) {
+      hideStatus();
+      $('too-large-box').hidden = false;
+      updateSizeCounter();
+      toast(T('tooLarge'));
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function () {
+      $('input').value = String(reader.result == null ? '' : reader.result);
+      clearOutput();
+      renderValidation();
+    };
+    reader.onerror = function () { toast(T('fileReadError')); };
+    reader.readAsText(file);
+  }
+
+  function loadExample() {
+    $('input').value = SAMPLE;
+    clearOutput();
+    run('format');
+    toast(T('sampleLoaded'));
+  }
+
+  function clearAll() {
+    $('input').value = '';
+    clearOutput();
+    hideStatus();
+    $('empty-box').hidden = false;
+    updateSizeCounter();
+    toast(T('cleared'));
+    $('input').focus();
+  }
+
+  function applyStaticText() {
+    document.documentElement.lang = lang === 'zh' ? 'zh-CN' : lang;
+    document.title = T('docTitle');
+
+    var desc = document.querySelector('meta[name="description"]');
+    if (desc) desc.setAttribute('content', T('docDesc'));
+    var ogTitle = document.querySelector('meta[property="og:title"]');
+    if (ogTitle) ogTitle.setAttribute('content', T('docTitle'));
+    var ogDesc = document.querySelector('meta[property="og:description"]');
+    if (ogDesc) ogDesc.setAttribute('content', T('docDesc'));
+    var twTitle = document.querySelector('meta[name="twitter:title"]');
+    if (twTitle) twTitle.setAttribute('content', T('appTitle'));
+    var twDesc = document.querySelector('meta[name="twitter:description"]');
+    if (twDesc) twDesc.setAttribute('content', T('docDesc'));
+
+    var nodes = document.querySelectorAll('[data-i]');
+    for (var i = 0; i < nodes.length; i++) {
+      var key = nodes[i].getAttribute('data-i');
+      var text = T(key);
+      if (text) nodes[i].textContent = text;
+    }
+    var placeholders = document.querySelectorAll('[data-i-ph]');
+    for (var j = 0; j < placeholders.length; j++) {
+      placeholders[j].setAttribute('placeholder', T(placeholders[j].getAttribute('data-i-ph')));
+    }
+    var labels = document.querySelectorAll('[data-i-aria]');
+    for (var k = 0; k < labels.length; k++) {
+      labels[k].setAttribute('aria-label', T(labels[k].getAttribute('data-i-aria')));
+    }
+
+    var nav = NAV[lang] || NAV.en;
+    $('nav-tools').setAttribute('href', nav.tools);
+    $('nav-games').setAttribute('href', nav.games);
+    $('foot-tools').setAttribute('href', nav.tools);
+    $('foot-games').setAttribute('href', nav.games);
+    $('foot-home').setAttribute('href', nav.home);
+
+    var buttons = document.querySelectorAll('.langs button');
+    for (var n = 0; n < buttons.length; n++) {
+      buttons[n].setAttribute('aria-pressed', buttons[n].getAttribute('data-lang') === lang ? 'true' : 'false');
+    }
+  }
+
+  function setLang(next) {
+    lang = TOOL_I18N[next] ? next : 'en';
+    applyStaticText();
+    updateSizeCounter();
+    renderValidation();
+  }
+
+  function bind() {
+    $('input').addEventListener('input', function () {
+      updateSizeCounter();
+      scheduleValidation();
+    });
+    $('format').addEventListener('click', function () { run('format'); });
+    $('minify').addEventListener('click', function () { run('minify'); });
+    $('sort').addEventListener('click', function () { run('sort'); });
+    $('copy').addEventListener('click', copyResult);
+    $('download').addEventListener('click', downloadResult);
+    $('load-example').addEventListener('click', loadExample);
+    $('clear').addEventListener('click', clearAll);
+    $('load-file').addEventListener('click', function () { $('file').click(); });
+    $('file').addEventListener('change', function () {
+      var file = this.files && this.files[0];
+      loadFile(file);
+      this.value = '';
+    });
+    var buttons = document.querySelectorAll('.langs button');
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].addEventListener('click', function () {
+        setLang(this.getAttribute('data-lang'));
+        saveLang();
+      });
+    }
+  }
+
+  function init() {
+    lang = detectLang();
+    applyStaticText();
+    bind();
+    updateSizeCounter();
+    $('empty-box').hidden = false;
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>
