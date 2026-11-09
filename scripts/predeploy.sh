@@ -13,6 +13,12 @@ WARN_COUNT=0
 SKIP_COUNT=0
 TOTAL=7
 
+# 已确认「暂时可以没有自动化测试」的游戏：只计数，不告警。
+# 新增游戏若没有测试，不在这里登记就会在汇总里 WARN。
+ALLOW_NO_TEST="tcg-deck voice-room"
+NO_TEST_COUNT="0"
+NO_TEST_SLUGS="无"
+
 section() {
   printf '\n== 检查 %s/%s: %s ==\n' "$1" "$TOTAL" "$2"
 }
@@ -47,6 +53,75 @@ if [ "$TEST_RC" -eq 0 ] && [ "${TEST_FAILED:-0}" = "0" ]; then
   rm -f "$TEST_LOG"
 else
   mark_fail 1 "测试未通过（exit=${TEST_RC}，失败文件=${TEST_FAILED:-未知}）；完整日志：$TEST_LOG"
+fi
+
+# 无自动化测试的游戏：按 run-all.js 同样的口径独立统计（games/<slug>/index.html
+# 算游戏，递归查找 test*.js）。白名单内只计数；白名单外且已登记为 live 的才 WARN。
+UNTESTED_RAW="$(ROOT="$ROOT" node <<'NODE'
+'use strict';
+const fs = require('fs');
+const path = require('path');
+const GAMES = path.join(process.env.ROOT, 'games');
+const NON_GAME = new Set(['assets', 'shared', 'tests', 'en', 'id']);
+
+function hasTest(dir) {
+  let entries;
+  try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch (e) { return false; }
+  return entries.some(ent => {
+    if (ent.isDirectory()) {
+      if (ent.name === 'node_modules' || ent.name === '.git') return false;
+      return hasTest(path.join(dir, ent.name));
+    }
+    return ent.isFile() && /^test.*\.js$/.test(ent.name);
+  });
+}
+
+const games = fs.readdirSync(GAMES, { withFileTypes: true })
+  .filter(ent => ent.isDirectory() && !NON_GAME.has(ent.name))
+  .map(ent => ent.name)
+  .filter(name => fs.existsSync(path.join(GAMES, name, 'index.html')))
+  .sort();
+
+const statuses = new Map();
+try {
+  const reg = JSON.parse(fs.readFileSync(path.join(GAMES, 'registry.json'), 'utf8'));
+  for (const g of reg.games || []) statuses.set(g.slug, g.status);
+} catch (e) { /* registry 缺失由检查 6 报失败；这里状态记为 unknown */ }
+
+for (const name of games) {
+  if (hasTest(path.join(GAMES, name))) continue;
+  console.log(name + '\t' + (statuses.get(name) || 'unknown'));
+}
+NODE
+)"
+UNTESTED_RC=$?
+if [ "$UNTESTED_RC" -ne 0 ]; then
+  printf '  WARN 无法统计「无自动化测试的游戏」（统计脚本 exit=%s）\n' "$UNTESTED_RC"
+  WARN_COUNT=$((WARN_COUNT + 1))
+  NO_TEST_COUNT="未知"
+  NO_TEST_SLUGS="统计失败"
+else
+  if [ -n "$UNTESTED_RAW" ]; then
+    NO_TEST_COUNT="$(printf '%s\n' "$UNTESTED_RAW" | wc -l | tr -d ' ')"
+    NO_TEST_SLUGS="$(printf '%s\n' "$UNTESTED_RAW" | cut -f1 | awk 'BEGIN{ORS=""} NR>1{print ", "} {print}')"
+  fi
+  printf '  无自动化测试的游戏: %s 个（%s）\n' "$NO_TEST_COUNT" "$NO_TEST_SLUGS"
+  while IFS=$'\t' read -r slug status; do
+    [ -z "$slug" ] && continue
+    case " $ALLOW_NO_TEST " in
+      *" $slug "*)
+        printf '  INFO %s（status=%s）无自动化测试，在 ALLOW_NO_TEST 白名单内：只计数，不告警\n' "$slug" "$status"
+        ;;
+      *)
+        if [ "$status" = "live" ]; then
+          printf '  WARN %s（status=live）已上线但没有自动化测试，且不在 ALLOW_NO_TEST 白名单内\n' "$slug"
+          WARN_COUNT=$((WARN_COUNT + 1))
+        else
+          printf '  INFO %s（status=%s）无自动化测试，未上线，不在 ALLOW_NO_TEST 白名单内（不计警告）\n' "$slug" "$status"
+        fi
+        ;;
+    esac
+  done <<< "$UNTESTED_RAW"
 fi
 
 # ------------------------------------------------- 2. HTML 外部资源（src/href）
@@ -374,7 +449,7 @@ else
 fi
 
 # ------------------------------------------------ 5. sitemap 覆盖（games/tools）
-section 5 "sitemap 覆盖检查（games/、tools/ 页面均已收录）"
+section 5 "sitemap 双向覆盖检查（无缺漏、无多余）"
 if ROOT="$ROOT" node <<'NODE'
 'use strict';
 const fs = require('fs');
@@ -430,22 +505,24 @@ const missing = [...actual].filter(p => !sitemap.has(p)).sort();
 const extra = [...sitemap].filter(p => !actual.has(p)).sort();
 
 console.log(`  实际可收录页面: ${actual.size}；sitemap 中 games/tools URL: ${sitemap.size}`);
-if (extra.length) {
-  console.log(`  WARN sitemap 中有 ${extra.length} 个 URL 没有对应本地页面：`);
-  for (const p of extra.slice(0, 5)) console.log(`    ${p}`);
-}
-if (missing.length || sitemap.size < actual.size) {
+if (missing.length) {
   console.log(`  FAIL 有 ${missing.length} 个页面未收录进 sitemap：`);
   for (const p of missing) console.log(`    ${p}`);
-  process.exit(1);
 }
-console.log('  PASS sitemap URL 数 ≥ 实际页面数，且所有实际页面均已收录');
+if (extra.length) {
+  console.log(`  FAIL sitemap 中有 ${extra.length} 个 URL 没有对应本地页面（搜索引擎会抓到 404）：`);
+  for (const p of extra.slice(0, 10)) console.log(`    ${p}`);
+  if (extra.length > 10) console.log(`    …另有 ${extra.length - 10} 个未列出`);
+  console.log('  删除 sitemap 中的条目，或补上对应页面。');
+}
+if (missing.length || extra.length) process.exit(1);
+console.log('  PASS sitemap 与实际页面双向一致（既无缺漏，也无多余）');
 process.exit(0);
 NODE
 then
   mark_pass 5 "sitemap 覆盖完整"
 else
-  mark_fail 5 "sitemap 漏收录页面（见上方 FAIL 行）"
+  mark_fail 5 "sitemap 漏收录或多收了页面（见上方 FAIL 行）"
 fi
 
 # ------------------------------------------ 6. registry 与实际文件一致
@@ -466,12 +543,13 @@ fi
 
 # ------------------------------------------------------------------ 汇总
 printf '\n----------------------------------------\n'
+printf '无自动化测试的游戏: %s 个（%s）\n' "$NO_TEST_COUNT" "$NO_TEST_SLUGS"
+if [ "$WARN_COUNT" -gt 0 ]; then
+  printf 'WARN 共 %d 项警告（不阻止发布，见上方 WARN 行）\n' "$WARN_COUNT"
+fi
 if [ "${#FAILED_ITEMS[@]}" -eq 0 ]; then
-  if [ "$SKIP_COUNT" -gt 0 ]; then
-    printf 'PREDEPLOY OK（%d/%s 项通过，%d 项跳过）\n' "$PASS_COUNT" "$TOTAL" "$SKIP_COUNT"
-  else
-    printf 'PREDEPLOY OK（%d/%s 项通过）\n' "$PASS_COUNT" "$TOTAL"
-  fi
+  printf 'PREDEPLOY OK（%d/%s 项通过，%d 项跳过，%d 项警告）\n' \
+    "$PASS_COUNT" "$TOTAL" "$SKIP_COUNT" "$WARN_COUNT"
   exit 0
 fi
 printf 'PREDEPLOY FAILED：%d 项失败\n' "${#FAILED_ITEMS[@]}"
