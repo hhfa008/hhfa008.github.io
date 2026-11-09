@@ -38,7 +38,7 @@
 - `RoomDO` 使用 `state.acceptWebSocket()` / `webSocketMessage()` / `webSocketClose()`，成员与棋局均在 DO storage。
 - 每条客户端消息都带 `type` 与 `room`；服务端校验 `room === 本房间`，跨房间消息直接拒绝。
 - 成员上限 4；第 5 个连接收到 `room_full` 并关闭。
-- 房主 = 最早进房者；房主离开后自动移交给下一位。
+- 房主 = 最早进房者；房主断线后保留房主身份 60 秒，超时才移交给下一位在线成员（`hostOffline` 会在 `room_state` 里下发）。
 - 断线重连：客户端在 sessionStorage 里保存 `pid`，重连时带回；服务端在 60 秒宽限期内保留该成员的座位和棋局，重连后接回原 id、原座位与原棋盘。宽限期结束后才清理座位并重置。
 - 游戏由房主选择（`game_select`）：`ttt` 井字棋 / `gomoku` 五子棋 / `connect4` 四子棋；换游戏会重置棋盘与比分。
 - **服务端权威**：客户端只发 `game_move` 的 `(x, y)`（四子棋 x 为列）；DO 校验轮次、边界、占位、满列、是否终局，再广播 `game_state`。五连/四连与胜负判定也在 DO 侧完成。
@@ -60,6 +60,31 @@
 - `iceServers` 由 Worker 调 Cloudflare TURN API 生成，TTL 3600 秒；客户端在到期前约 10 分钟刷新并 `setConfiguration` / `restartIce`。
 - host / srflx 可用时优先直连；失败时浏览器自动选择 TURN relay。TURN 接口不可用时降级为纯直连，不再阻塞建连。
 - 音量点由 `AnalyserNode` 的 RMS 驱动；不录音、不上传音频到服务器。
+
+### 连接质量面板
+
+- 房间内的可折叠面板，数据全部来自 `RTCPeerConnection.getStats()`，每 2 秒刷新。
+- 连接状态：初始 / 连接中 / 已连接 / 重连中（第 N 次）/ 连接失败。
+- ICE 路径从 selected candidate pair 的 `candidateType` 读取，显示 `host` / `srflx` / `relay`（两端不同时显示 `host→srflx`）。
+- 实时指标：RTT（`currentRoundTripTime`）、丢包率（`packetsLost / (packetsLost + packetsReceived)`）、抖动（`jitter`）、收/发码率（字节增量 / 时间）、本端音频电平（Analyser RMS）。
+- RTT > 300 ms 或丢包 > 5% 时数值标红；不采集画面、不录音。
+
+### 自动重连
+
+- WebSocket 断开或 `connectionState` 变成 `disconnected` / `failed` 时触发。
+- 指数退避 1s / 2s / 4s / 8s，最多 4 次；期间显示「重连中（第 N 次）」。
+- 重连成功后服务端 `welcome` / `game_state` 恢复成员、棋局与座位；本端 `micTrack` 直接复用，重新建立 peer 后音轨自动接回。
+- 4 次仍失败显示「连接失败」与「重新加入」按钮。
+- peer 层失败同样按 1/2/4/8 秒做 `restartIce()`，4 次后在该成员行标注失败。
+
+### 网络诊断工具
+
+`tools/rtc-diag/` 是独立的三项连通性测试（STUN / TURN / 信令），不需要进房：
+
+- STUN：拿到 srflx 候选则 PASS，公网 IP 只显示前两段。
+- TURN：向 `/api/ice` 取短期凭据，用 `iceTransportPolicy:'relay'` 尝试分配中继（只建 DataChannel，不传媒体）。
+- 信令：申请临时 token、连 `/ws`、发一次 ping 测 RTT 后断开。
+- 每项独立 PASS/FAIL，并给出「可能被防火墙拦截 UDP / TURN 未配置 / Worker 不可达」等人话建议；离线时三项直接 FAIL。
 
 ## 部署
 
@@ -141,7 +166,7 @@ cd games/voice-room && python3 -m http.server 8788
 - 没有账号体系；4 位房号就是房间凭证，可被枚举/碰撞。密码是可选的第一道门，不是身份认证；连续错 5 次限流 60 秒只针对同一 IP + 房间。
 - 房间状态在单个 DO；多区域容灾、跨房间大规模调度未做。
 - 固定两位玩家对局（X/O），第三人起为观战；换人或座位宽限期结束会重置棋盘与比分。
-- 优雅关闭 WebSocket 时浏览器可能先停在 CLOSING 数秒；网络掉线靠心跳在 ~45 秒内发现并重连。
+- 优雅关闭 WebSocket 时浏览器可能先停在 CLOSING 数秒；`onclose` 后按 1/2/4/8 秒退避重连，4 次失败停止并显示「重新加入」。心跳 20 秒一次，用于让服务端识别半开连接。
 - 未做录音、服务端音频处理、音频存储；没有文字聊天、屏幕共享、战绩持久化。
 - iOS Safari 首次播放远端音频需要一次页面点击解锁；麦克风要求 HTTPS。
 - TURN 凭据刷新时会触发一次 ICE restart，长通话在该时刻可能有短暂抖动。
@@ -160,5 +185,8 @@ games/
         ├── wrangler.toml
         └── src/
             ├── index.js  # 路由 / ICE / WebSocket 转发 / CORS
-            └── room.js   # RoomDO：成员、信令、三款棋局、房主移交、重连
+            └── room.js   # RoomDO：成员、信令、三款棋局、房主 60s 宽限与移交
+tools/
+└── rtc-diag/
+    └── index.html      # STUN / TURN / 信令三项连通性诊断（中英印尼）
 ```

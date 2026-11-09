@@ -99,8 +99,12 @@ export default {
       });
     }
 
+    if (url.pathname === '/rev') {
+      return json({ rev: 'quality-reconnect-1', ts: Date.now() });
+    }
+
     if (url.pathname === '/health') {
-      return json({ ok: true, service: 'voice-room', ts: Date.now() });
+      return json({ ok: true, service: 'voice-room', rev: 'quality-reconnect-1', ts: Date.now() });
     }
 
     if (url.pathname === '/api/ice') {
