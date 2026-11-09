@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f3ead9">
+<title>Minesweeper 14×14 — free online game</title>
+<meta name="description" content="[object Object]">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="author" content="Devin">
+<link rel="canonical" href="https://hhfa008.github.io/games/mines-14x14/">
+<link rel="alternate" hreflang="en" href="https://hhfa008.github.io/games/mines-14x14/">
+<link rel="alternate" hreflang="zh-CN" href="https://hhfa008.github.io/games/mines-14x14/">
+<link rel="alternate" hreflang="id" href="https://hhfa008.github.io/games/mines-14x14/">
+<link rel="alternate" hreflang="x-default" href="https://hhfa008.github.io/games/mines-14x14/">
+<link rel="icon" href="/games/assets/icons/mines-14x14.svg" type="image/svg+xml">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Devin">
+<meta property="og:title" content="Minesweeper 14×14 — free online game">
+<meta property="og:description" content="[object Object]">
+<meta property="og:url" content="https://hhfa008.github.io/games/mines-14x14/">
+<meta property="og:locale" content="en_US">
+<meta property="og:locale:alternate" content="zh_CN">
+<meta property="og:locale:alternate" content="id_ID">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Minesweeper 14×14 — free online game">
+<meta name="twitter:description" content="[object Object]">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Minesweeper 14×14",
+  "alternateName": [
+    "扫雷 14×14",
+    "Sapu Ranjau 14×14"
+  ],
+  "url": "https://hhfa008.github.io/games/mines-14x14/",
+  "applicationCategory": "Game",
+  "genre": "Browser game",
+  "gamePlatform": "Web browser",
+  "operatingSystem": "Any",
+  "inLanguage": [
+    "en",
+    "zh-CN",
+    "id"
+  ],
+  "isAccessibleForFree": true,
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  },
+  "publisher": {
+    "@type": "Person",
+    "name": "Devin"
+  }
+}
+</script>
+
+<link rel="stylesheet" href="/games/shared/arcade/arcade.css">
+<style>
+#board {
+  display: grid;
+  grid-template-columns: repeat(14, 1fr);
+  gap: 1px;
+  background-color: #888;
+  width: 390px;
+  aspect-ratio: 1 / 1;
+  margin: 0 auto;
+  border: 1px solid #666;
+}
+
+#board > div {
+  background-color: #ccc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  cursor: pointer;
+  user-select: none;
+  min-width: 24px;
+  min-height: 24px;
+  font-size: 14px;
+  aspect-ratio: 1 / 1;
+}
+
+#board > div:hover {
+  background-color: #ddd;
+}
+
+#board > div.revealed {
+  background-color: #eee;
+}
+
+#board > div.mine {
+  background-color: #f00;
+}
+
+#board > div.flagged::after {
+  content: '🚩';
+}
+
+@media (prefers-color-scheme: dark) {
+  #board {
+    background-color: #444;
+    border: 1px solid #666;
+  }
+
+  #board > div {
+    background-color: #666;
+  }
+
+  #board > div:hover {
+    background-color: #555;
+  }
+
+  #board > div.revealed {
+    background-color: #333;
+  }
+
+  #board > div.mine {
+    background-color: #800;
+  }
+}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true"></span>Devin</a>
+    <nav class="langs" aria-label="Language">
+      <button type="button" data-lang="en">EN</button>
+      <button type="button" data-lang="zh">中文</button>
+      <button type="button" data-lang="id">ID</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero" aria-labelledby="page-title">
+    <p class="eyebrow" data-i="eyebrow"></p>
+    <h1 id="page-title" data-i="title"></h1>
+    <p class="lede" data-i="tagline"></p>
+  </section>
+
+  <section class="game" aria-label="mines-14x14">
+    <div class="game-top">
+      <div class="stats">
+        <div class="stat"><span class="stat-label" data-i="score">Score</span><strong id="stat-score">0</strong></div>
+        <div class="stat"><span class="stat-label" data-i="best">Best</span><strong id="stat-best">0</strong></div>
+        <div class="stat"><span class="stat-label" data-i="extraLabel"></span><strong id="stat-extra">0</strong></div>
+      </div>
+    </div>
+
+    <div class="board-wrap">
+      <div id="board" class="board" role="group" data-aria="boardAria"></div>
+      <div id="overlay" class="overlay" hidden>
+        <strong id="overlay-title"></strong>
+        <p id="overlay-text"></p>
+        <div class="actions"><button type="button" id="btn-overlay" class="primary" data-i="playAgain"></button></div>
+      </div>
+    </div>
+
+    <p class="feedback" id="feedback" role="status" aria-live="polite"></p>
+
+    <div class="actions">
+      <button type="button" id="btn-new" class="primary" data-i="newGame"></button>
+      <button type="button" id="btn-hint" data-i="hint"></button>
+    </div>
+
+    <p class="note" data-i="note"></p>
+  </section>
+
+  <p class="more">
+    <a href="rules.html" data-i="rules"></a>
+    &nbsp;·&nbsp;
+    <a href="/games/" data-i="hall"></a>
+  </p>
+</main>
+
+<footer class="site-footer">
+<div class="share-row">
+  <button type="button" class="share-btn" data-share-btn aria-label="Share this page">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.4 10.7 15.6 6.3"/><path d="M8.4 13.3 15.6 17.7"/></svg>
+    <span data-share-label>Share</span>
+  </button>
+</div>
+  <a href="https://hhfa008.github.io/" data-i="moreLink"></a>
+</footer>
+
+<script src="/games/shared/arcade/arcade.js"></script>
+<script src="/games/shared/arcade/kits/minesweeper.js"></script>
+<script>
+var CORE = ArcadeKit.create({"rows":14,"cols":14,"mines":28});
+var I18N = {
+  en: { eyebrow:'Classic puzzle game', title:'Minesweeper 14×14', tagline:'Clear the board without detonating any mines', score:'Score', best:'Best', extraLabel:'Flags',
+        boardAria:'Game board', playAgain:'Play again', newGame:'New game', hint:'Hint',
+        note:'Tip: Click to reveal, right-click to flag', rules:'Rules (Chinese)', hall:'All games', moreLink:'Built by an indie developer',
+        overlayWin:'You win!', overlayLose:'Game over', overlayDraw:'Draw', hintText:'No more hints available' },
+  zh: { eyebrow:'经典益智游戏', title:'扫雷 14×14', tagline:'在不引爆任何地雷的情况下清除棋盘', score:'得分', best:'最高分', extraLabel:'标记',
+        boardAria:'游戏棋盘', playAgain:'重新开始', newGame:'新游戏', hint:'提示',
+        note:'提示：点击翻开，右键标记', rules:'规则（中文）', hall:'所有游戏', moreLink:'由独立开发者制作',
+        overlayWin:'你赢了！', overlayLose:'游戏结束', overlayDraw:'平局', hintText:'没有更多提示了' },
+  id: { eyebrow:'Permainan teka-teki klasik', title:'Sapu Ranjau 14×14', tagline:'Bersihkan papan tanpa meledakkan bom apa pun', score:'Skor', best:'Tertinggi', extraLabel:'Bendera',
+        boardAria:'Papan permainan', playAgain:'Main lagi', newGame:'Permainan baru', hint:'Petunjuk',
+        note:'Tip: Klik untuk mengungkap, klik kanan untuk menandai', rules:'Aturan (Tiongkok)', hall:'Semua permainan', moreLink:'Dibuat oleh pengembang independen',
+        overlayWin:'Kamu menang!', overlayLose:'Permainan berakhir', overlayDraw:'Seri', hintText:'Tidak ada petunjuk lagi' }
+};
+
+(function () {
+  'use strict';
+  var BEST_KEY = 'arcade.mines-14x14.best';
+  var E = {
+    board: document.getElementById('board'),
+    score: document.getElementById('stat-score'),
+    best: document.getElementById('stat-best'),
+    extra: document.getElementById('stat-extra'),
+    overlay: document.getElementById('overlay'),
+    overlayTitle: document.getElementById('overlay-title'),
+    overlayText: document.getElementById('overlay-text'),
+    feedback: document.getElementById('feedback'),
+    btnNew: document.getElementById('btn-new'),
+    btnHint: document.getElementById('btn-hint'),
+    btnOverlay: document.getElementById('btn-overlay')
+  };
+  var S = CORE.newGame(Math.random);
+  var best = Arcade.best(BEST_KEY, 0);
+
+  function render() {
+    var size = S.rows * S.cols;
+    E.board.innerHTML = '';
+    E.board.setAttribute('style', `--rows:${S.rows}; --cols:${S.cols};`);
+    for (var i = 0; i < size; i++) {
+      var cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.dataset.index = i;
+      if (S.revealed[i]) {
+        cell.classList.add('revealed');
+        if (S.mines.includes(i)) {
+          cell.classList.add('mine');
+        } else {
+          var adjacent = CORE.adjacent(S, i);
+          if (adjacent > 0) {
+            cell.textContent = adjacent;
+            cell.classList.add(`adjacent-${adjacent}`);
+          }
+        }
+      } else {
+        if (S.flags[i]) {
+          cell.classList.add('flag');
+        }
+      }
+      E.board.appendChild(cell);
+    }
+    E.score.textContent = 0;
+    E.best.textContent = best;
+    E.extra.textContent = S.flags.filter(Boolean).length;
+    if (S.status !== 'playing') {
+      E.overlay.hidden = false;
+      E.overlayTitle.textContent = I18N[Arcade.lang()][`overlay${S.status.charAt(0).toUpperCase() + S.status.slice(1)}`];
+      E.overlayText.textContent = '';
+      E.btnOverlay.textContent = I18N[Arcade.lang()].playAgain;
+    } else {
+      E.overlay.hidden = true;
+    }
+  }
+
+  function input(action) {
+    var result = CORE.act(S, action, Math.random);
+    if (result.changed) {
+      S = result.state;
+      if (S.status !== 'playing') {
+        if (S.status === 'won' || S.status === 'lost') {
+          best = Arcade.setBest(BEST_KEY, best, S.revealed.filter(Boolean).length);
+        }
+      }
+      render();
+    }
+  }
+
+  function newGame() {
+    S = CORE.newGame(Math.random);
+    best = Arcade.best(BEST_KEY, 0);
+    render();
+  }
+
+  E.btnNew.addEventListener('click', newGame);
+  E.btnOverlay.addEventListener('click', newGame);
+  E.btnHint.addEventListener('click', function () {
+    E.feedback.textContent = I18N[Arcade.lang()].hintText;
+    setTimeout(function () { E.feedback.textContent = ''; }, 2000);
+  });
+  E.board.addEventListener('click', function (e) {
+    var cell = e.target.closest('.cell');
+    if (cell) {
+      var index = parseInt(cell.dataset.index);
+      input({ type: 'reveal', index: index });
+    }
+  });
+  E.board.addEventListener('contextmenu', function (e) {
+    e.preventDefault();
+    var cell = e.target.closest('.cell');
+    if (cell) {
+      var index = parseInt(cell.dataset.index);
+      input({ type: 'flag', index: index });
+    }
+  });
+  Arcade.onKeys(Arcade.KEYMAP, input);
+  Arcade.onSwipe(E.board, input);
+  Arcade.onLang(render);
+  Arcade.init({ strings: I18N, onLang: render });
+  render();
+})();
+</script>
+<script src="/games/shared/share.js" data-name-zh="扫雷 14×14" data-name-en="Minesweeper 14×14" data-name-id="Sapu Ranjau 14×14"></script>
+</body>
+</html>

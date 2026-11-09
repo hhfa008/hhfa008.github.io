@@ -463,6 +463,72 @@ a{color:inherit}
     return { correct: false, source: 'rules' };
   }
 
+  // Keyword rules decide whether the final answer passes. The local AI is only
+  // advisory: when the rules miss it can flag a "near miss", but it can never
+  // turn a miss into a pass; when the rules hit, an AI "no" never overrides it.
+  function resolveGuess(rules, aiVerdict) {
+    var ruleCorrect = !!(rules && rules.correct === true);
+    var aiKnown = aiVerdict === true || aiVerdict === false;
+    var aiCorrect = aiKnown ? aiVerdict : null;
+    if (ruleCorrect) {
+      return {
+        correct: true,
+        source: 'rules',
+        ruleCorrect: true,
+        aiCorrect: aiCorrect,
+        aiDissent: aiCorrect === false,
+        nearMiss: false
+      };
+    }
+    return {
+      correct: false,
+      source: 'rules',
+      ruleCorrect: false,
+      aiCorrect: aiCorrect,
+      aiDissent: false,
+      nearMiss: aiCorrect === true
+    };
+  }
+
+  function extractJSON(text) {
+    if (!text) return null;
+    var source = String(text);
+    var start = source.indexOf('{');
+    while (start >= 0) {
+      var depth = 0;
+      var inString = false;
+      var escaped = false;
+      for (var i = start; i < source.length; i++) {
+        var ch = source.charAt(i);
+        if (inString) {
+          if (escaped) escaped = false;
+          else if (ch === '\\') escaped = true;
+          else if (ch === '"') inString = false;
+        } else if (ch === '"') {
+          inString = true;
+        } else if (ch === '{') {
+          depth++;
+        } else if (ch === '}') {
+          depth--;
+          if (depth === 0) {
+            try {
+              return JSON.parse(source.slice(start, i + 1));
+            } catch (e) {
+              break;
+            }
+          }
+        }
+      }
+      start = source.indexOf('{', start + 1);
+    }
+    return null;
+  }
+
+  function parseAIVerdict(text) {
+    var object = extractJSON(text);
+    return object && typeof object.correct === 'boolean' ? object.correct : null;
+  }
+
   function soupsForLang(bank, lang) {
     var list = bank && Array.isArray(bank.soups) ? bank.soups : [];
     var wanted = lang === 'zh' ? 'zh' : 'en';
@@ -615,6 +681,9 @@ a{color:inherit}
     isNegated: isNegated,
     judgeByRules: judgeByRules,
     judgeAnswer: judgeAnswer,
+    resolveGuess: resolveGuess,
+    extractJSON: extractJSON,
+    parseAIVerdict: parseAIVerdict,
     soupsForLang: soupsForLang,
     filterByDifficulty: filterByDifficulty,
     pickSoups: pickSoups,
@@ -704,6 +773,7 @@ var I18N = {
     guessCancel: '取消',
     guessBubble: '你的答案',
     wrongGuess: '还没对，再想想。',
+    nearMissGuess: '接近了，但还差关键信息，再想想。',
     answerYes: '是',
     answerNo: '否',
     answerIrrelevant: '无关',
@@ -792,6 +862,7 @@ var I18N = {
     guessCancel: 'Cancel',
     guessBubble: 'Your answer',
     wrongGuess: 'Not yet — keep thinking.',
+    nearMissGuess: 'Close — but a key detail is still missing. Keep thinking.',
     answerYes: 'Yes',
     answerNo: 'No',
     answerIrrelevant: 'Irrelevant',
@@ -880,6 +951,7 @@ var I18N = {
     guessCancel: 'Batal',
     guessBubble: 'Jawabanmu',
     wrongGuess: 'Belum tepat — coba lagi.',
+    nearMissGuess: 'Hampir — tetapi masih ada detail penting yang kurang. Coba lagi.',
     answerYes: 'Ya',
     answerNo: 'Tidak',
     answerIrrelevant: 'Tidak relevan',
@@ -1370,10 +1442,11 @@ function submitGuess() {
       finishSolved();
       return;
     }
-    S.history.push({ type: 'system', text: t('wrongGuess') });
+    var message = res.nearMiss ? t('nearMissGuess') : t('wrongGuess');
+    S.history.push({ type: 'system', text: message });
     renderHistory();
     updateGameActions();
-    announce(t('wrongGuess'));
+    announce(message);
   });
 }
 
@@ -1692,40 +1765,6 @@ function withTimeout(promise, ms, engine) {
   });
 }
 
-function extractJSON(text) {
-  if (!text) return null;
-  var source = String(text);
-  var start = source.indexOf('{');
-  while (start >= 0) {
-    var depth = 0;
-    var inString = false;
-    var escaped = false;
-    for (var i = start; i < source.length; i++) {
-      var ch = source.charAt(i);
-      if (inString) {
-        if (escaped) escaped = false;
-        else if (ch === '\\') escaped = true;
-        else if (ch === '"') inString = false;
-      } else if (ch === '"') {
-        inString = true;
-      } else if (ch === '{') {
-        depth++;
-      } else if (ch === '}') {
-        depth--;
-        if (depth === 0) {
-          try {
-            return JSON.parse(source.slice(start, i + 1));
-          } catch (e) {
-            break;
-          }
-        }
-      }
-    }
-    start = source.indexOf('{', start + 1);
-  }
-  return null;
-}
-
 function aiJudgeQuestion(soup, question, engine) {
   var messages = [
     {
@@ -1751,7 +1790,7 @@ function aiJudgeQuestion(soup, question, engine) {
   }).then(function (out) {
     var text = out && out.choices && out.choices[0] && out.choices[0].message
       ? out.choices[0].message.content : '';
-    var object = extractJSON(text);
+    var object = E.extractJSON(text);
     var answer = object && object.answer;
     if (answer !== 'yes' && answer !== 'no' && answer !== 'irrelevant') {
       throw new Error('unparseable');
@@ -1782,9 +1821,9 @@ function aiJudgeAnswer(soup, guess, engine) {
   }).then(function (out) {
     var text = out && out.choices && out.choices[0] && out.choices[0].message
       ? out.choices[0].message.content : '';
-    var object = extractJSON(text);
-    if (!object || typeof object.correct !== 'boolean') throw new Error('unparseable');
-    return object.correct;
+    var verdict = E.parseAIVerdict(text);
+    if (verdict === null) throw new Error('unparseable');
+    return verdict;
   });
 }
 
@@ -1805,19 +1844,24 @@ function askHost(soup, question) {
 }
 
 function checkGuess(soup, guess) {
-  if (ai.status === 'ready' && ai.engine) {
-    var engine = ai.engine;
-    return withTimeout(aiJudgeAnswer(soup, guess, engine), AI_TIMEOUT_MS, engine)
-      .then(function (correct) {
-        return { correct: correct === true, judge: 'ai' };
-      })
-      .catch(function () {
-        var fallback = E.judgeAnswer(soup, guess);
-        return { correct: fallback.correct, judge: 'rules', fallback: true };
-      });
-  }
   var rules = E.judgeAnswer(soup, guess);
-  return Promise.resolve({ correct: rules.correct, judge: 'rules' });
+  // Keyword rules are authoritative: a rule hit passes immediately, so a small
+  // local model can never overturn a correct answer. When the rules miss, the
+  // AI may only flag a near miss; its "correct" can never pass the answer.
+  if (rules.correct) return Promise.resolve(E.resolveGuess(rules, null));
+  if (ai.status !== 'ready' || !ai.engine) {
+    return Promise.resolve(E.resolveGuess(rules, null));
+  }
+  var engine = ai.engine;
+  return withTimeout(aiJudgeAnswer(soup, guess, engine), AI_TIMEOUT_MS, engine)
+    .then(function (aiCorrect) {
+      return E.resolveGuess(rules, aiCorrect);
+    })
+    .catch(function () {
+      var fallback = E.resolveGuess(rules, null);
+      fallback.fallback = true;
+      return fallback;
+    });
 }
 
 function bind() {
