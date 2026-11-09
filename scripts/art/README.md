@@ -56,9 +56,10 @@ node scripts/art/compose.js --list         # 列出场景、元素齐缺
 {
   "chess": {
     "background": "charcoal-warm",
+    "board": "chess8",
     "items": [
-      { "el": "chess-queen-light", "x": 0.557, "y": 0.485, "scale": 0.42, "rot": -3, "shadow": true, "shape": "standing" },
-      { "el": "chess-knight-dark", "x": 0.383, "y": 0.591, "scale": 0.30, "rot": 6,  "shadow": true, "shape": "standing" }
+      { "el": "chess-queen-light", "x": 0.558, "y": 0.443, "scale": 0.34, "rot": -3, "shadow": true, "shape": "standing" },
+      { "el": "chess-knight-dark", "x": 0.328, "y": 0.673, "scale": 0.26, "rot": -6, "shadow": true, "shape": "standing" }
     ]
   }
 }
@@ -68,10 +69,26 @@ node scripts/art/compose.js --list         # 列出场景、元素齐缺
 |---|---|
 | `el` | 元素名，对应 `elements/<el>@2x.png` |
 | `shape` | `flat`（默认）或 `standing`，见下 |
-| `x`,`y` | 元素在**桌面平面**上的中心点，平面归一化坐标 0–1；不是画布坐标 |
+| `board` | 棋盘/桌面几何，见下表；缺省 `none` |
+| `x`,`y` | 物件位置。有网格棋盘（`chess8`/`go19`/`xiangqi9x10`/`reversi8`/`connect4frame`/`backgammon`）时是**棋盘盒子内的归一化坐标** 0–1；`cardtable`/`none` 时仍是桌面平面归一化坐标 |
 | `scale` | 平面里的边长占**画布短边**的比例。1200×630 的短边是 630，480×320 的短边是 320 |
 | `rot` | `flat`：桌面上的旋转角（绕法线）；`standing`：屏幕平面内旋转角，限制在 ±8° |
 | `shadow` | 是否画接触阴影，缺省 `true` |
+
+棋盘类型：
+
+| board | 画法 | 当前场景 |
+|---|---|---|
+| `chess8` | 8×8 深浅交替方格（0.35 透明度）+ 细边框 | chess、checkers-jump |
+| `go19` | 19×19 线格 + 4 个角星位 | go9 |
+| `xiangqi9x10` | 9 列 10 行 + 河界 + 两端九宫 X | xiangqi |
+| `reversi8` | 8×8 线格，浅线，无交替色块 | reversi |
+| `connect4frame` | 7×6 圆孔阵列 + 细边框 | connect4 |
+| `backgammon` | 24 个三角点 + 中线/中线框 | backgammon |
+| `cardtable` | 一圈柔和边缘暗角 + 极细压线 | mahjong、texas-holdem、doudizhu |
+| `none` | 不画棋盘 | aeroplane、tcg-sample |
+
+棋盘是桌面平面的子元素，跟着 `rotateX(52deg) rotateZ(-14deg)` 一起透视；宽度按桌面平面宽度的比例取，屏幕上占画面 ≥85% 宽度，边缘允许被裁切。网格棋盘上的物件坐标用棋盘盒子坐标，因此同一套 `x,y` 在 1200×630 OG 和 480×320 card 上都对得上格线/孔位（两档的桌面平面长宽比不同，直接用平面坐标会错位）。
 
 两种物件：
 
@@ -94,10 +111,20 @@ node scripts/art/compose.js --list         # 列出场景、元素齐缺
 
 OG 与 card 共用同一套平面坐标和相机。card 画布更小，但桌面平面同比例缩放（1.6× 画布），所以透视角度一致；元素相对画面会更大一些，两档都要跑一遍看。
 
+## 重叠检查
+
+每次渲染都会对所有 `flat` 物件的**可见 alpha 包围盒**（按元素实测比例，不是方形画布）做投影后的 AABB 检查：
+
+- 普通场景：任意两件重叠面积不得超过较小者的 **12%**
+- `texas-holdem` / `doudizhu` 的 `card-*` 对：允许到 **45%**（扇形叠压是有意的）
+
+超限时在 stdout 打印 `OVERLAP WARNINGS`，列出场景、元素对、重叠百分比、上限和超限尺寸（og/card），**不阻断渲染**、退出码仍为 0。摆位时优先调小 `scale` 或拉开两个棋盘坐标；不要让告警长期挂着。
+
 ## 相机与光影
 
 - **唯一相机**：`perspective: 1600px`、桌面 `rotateX(52deg) rotateZ(-14deg)`。`template.html` 里的 CSS 与 `compose.js` 的 `CAMERA` 常量必须一起改；只改一边会让 standing 物件的底座离开桌面。
 - **桌面**：平面尺寸 = 画布 × 1.6，居中；上面有一层很淡的点阵织纹（54px 网格，径向遮罩），让 12 张图的桌面透视角度都能被看出来。绿毡上会自动降低点阵不透明度。
+- **棋盘**：`BOARD_SPECS` 决定每种棋盘的板宽（占平面宽度的比例）和长宽比；`boardSvg` 画线格/孔/三角点。线的颜色 `rgba(245,238,220,0.20)`、线宽 1.5（viewBox 单位）、带 `drop-shadow` 微光。棋盘宽度按屏幕投影占画面 ≥85%，超出画框的部分裁掉。改棋盘尺寸时同时检查物件是否还在格线/孔位上。
 - **接触阴影**：所有物件共用模板里的 `.shadow` 一个类——椭圆径向渐变，中心在物件底部，平面内偏移 `(6, 18)`px，投影到屏幕约为右下 `10–12px`；`filter: blur(6px)` 固定，透明度固定。阴影是桌面的子元素，跟着桌面透视，不会出现「屏幕空间的圆阴影贴在斜面上」的违和。
 - **平放物件**的阴影 footprint 按元素家族取：卡牌 0.76×1.00、麻将 0.72×0.96、圆片/筹码 0.82×0.82、骰子 0.80×0.80；**直立物件**取底座 0.40×0.15。只调 `compose.js` 里的 `shadowFootprint`，不要在场景里各写阴影。
 - **光源**：屏幕左上暖光晕 + 桌面平面里的柔光池；所有阴影落右下，与光向一致。不要给单个元素加 `box-shadow` 或反方向投影。
@@ -165,8 +192,8 @@ md5 games/assets/art/composed/*.png
 
 | 文件 | 作用 |
 |---|---|
-| `scripts/art/compose.js` | 读场景、拼 HTML、调 Chrome、校验 PNG、打印缺失清单 |
-| `scripts/art/scenes.json` | 每款游戏的版面：背景 + 元素 + 位置 + 缩放 + 旋转 + 阴影 |
+| `scripts/art/compose.js` | 读场景、拼 HTML（含棋盘 SVG/投影/重叠检查）、调 Chrome、校验 PNG、打印缺失与重叠清单 |
+| `scripts/art/scenes.json` | 每款游戏的版面：背景 + 棋盘 + 元素 + 位置 + 缩放 + 旋转 + 阴影 |
 | `scripts/art/template.html` | 渲染模板：相机（perspective + 桌面倾斜）、3 种背景、桌面点阵、平面/广告牌布局、统一阴影、暗角、占位块，全部内联 CSS |
 | `games/assets/art/composed/` | 生成物，可随时整目录重生成 |
 | `games/assets/art/elements/` | 输入元素图（由另一条生成/抠图流程维护） |

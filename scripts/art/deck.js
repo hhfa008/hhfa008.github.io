@@ -94,7 +94,7 @@ const HONORS = [
   { name: 'west', char: '西' },
   { name: 'north', char: '北' },
   { name: 'red', char: '中', tone: 'red' },
-  { name: 'green', char: '發' },
+  { name: 'green', char: '發', tone: 'green' },
   { name: 'white', char: null },
 ];
 
@@ -154,12 +154,12 @@ const BIRD_SVG = `
   <path d="M18 210C62 198 138 202 184 192" fill="none" stroke="var(--gold)" stroke-width="6" stroke-linecap="round"/>
   <path d="M62 152C36 130 20 96 16 60c18 24 42 50 62 68z" fill="var(--black)"/>
   <path d="M58 148C34 122 22 86 26 52c14 26 34 52 54 72z" fill="var(--red)"/>
-  <path d="M68 154c-10-32 10-62 42-66 28-3 46 18 46 46 0 32-24 54-54 54-18 0-30-12-34-34z" fill="var(--red)"/>
+  <path d="M68 154c-10-32 10-62 42-66 28-3 46 18 46 46 0 32-24 54-54 54-18 0-30-12-34-34z" fill="var(--mj-green)"/>
   <path d="M96 184c22 0 44-14 52-34-6 26-26 42-48 42-10 0-18-4-24-10z" fill="var(--ivory)"/>
-  <path d="M104 108c24-2 44 10 48 32-12 12-32 16-46 10-12-6-14-30-2-42z" fill="var(--black)"/>
+  <path d="M104 108c24-2 44 10 48 32-12 12-32 16-46 10-12-6-14-30-2-42z" fill="var(--red)"/>
   <path d="M112 116c14 2 26 10 30 22M104 126c12 2 22 8 28 18" stroke="var(--gold)" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-  <circle cx="148" cy="84" r="29" fill="var(--red)"/>
-  <path d="M148 52c-8-20 2-30 14-32-4 14-2 24 4 32z" fill="var(--black)"/>
+  <circle cx="148" cy="84" r="29" fill="var(--mj-green)"/>
+  <path d="M148 52c-8-20 2-30 14-32-4 14-2 24 4 32z" fill="var(--red)"/>
   <path d="M174 82l28 8-28 8z" fill="var(--gold)"/>
   <circle cx="156" cy="78" r="5" fill="var(--black)"/>
   <circle cx="157.5" cy="76.5" r="1.6" fill="var(--ivory)"/>
@@ -180,13 +180,18 @@ function usage() {
     '  node scripts/art/deck.js --all                 render all 102 cards + previews',
     '  node scripts/art/deck.js --set poker           render one set',
     '  node scripts/art/deck.js --all --preview       render cards then contact sheets',
-    '  node scripts/art/deck.js --preview             rebuild previews from existing PNGs',
+    '  node scripts/art/deck.js --preview             rebuild previews from existing WebPs',
     '  node scripts/art/deck.js --list                list cards + element presence',
+    '',
+    'Output:',
+    '  decks/<set>/webp/<name>.webp   site asset (q0.9)',
+    '  decks/<set>/png/<name>.png     lossless master, kept in the repo',
     '',
     'Options:',
     '  --set <poker|mahjong|xiangqi>  one set (repeatable)',
     '  --elements <dir>               element PNG dir (default games/assets/art/elements)',
     '  --out <dir>                    output dir (default games/assets/art/decks)',
+    '  --quality <0-100>              WebP quality (default 90)',
     '  --preview                      write _preview/{poker-fan,mahjong-row,xiangqi-row}.png',
     '  --no-preview                   suppress previews after --all',
     '',
@@ -198,7 +203,7 @@ function usage() {
 function parseArgs(argv) {
   const opts = {
     sets: [], all: false, preview: false, noPreview: false,
-    list: false, help: false,
+    list: false, help: false, quality: 90,
     elements: DEFAULT_ELEMENTS, out: DEFAULT_OUT,
   };
   for (let i = 0; i < argv.length; i++) {
@@ -223,6 +228,11 @@ function parseArgs(argv) {
       const v = a === '--out' ? argv[++i] : a.slice(6);
       if (!v) throw new Error('--out needs a directory');
       opts.out = path.resolve(v);
+    } else if (a === '--quality' || a.startsWith('--quality=')) {
+      const v = a === '--quality' ? argv[++i] : a.slice(10);
+      const q = Number(v);
+      if (!Number.isFinite(q) || q < 0 || q > 100) throw new Error('--quality must be 0..100');
+      opts.quality = Math.round(q);
     } else {
       throw new Error(`unknown argument: ${a}`);
     }
@@ -484,8 +494,8 @@ function pokerCard(card, elems) {
     return `<div class="card poker joker joker--${card.joker}${fallback ? ' fallback' : ''}">` +
       paper + frameDiv + (frame ? '<div class="poker-rule"></div>' : '') +
       '<div class="joker">' +
-      '<div class="joker-corner joker-corner--tl">JOKER</div>' +
-      '<div class="joker-corner joker-corner--br">JOKER</div>' +
+      '<div class="joker-mark joker-mark--tl"></div>' +
+      '<div class="joker-mark joker-mark--br"></div>' +
       '<div class="joker-emblem"><div class="joker-emblem-inner">' +
       '<span class="joker-word">JOKER</span>' +
       '</div></div>' +
@@ -517,12 +527,36 @@ function pokerCard(card, elems) {
     '</div>';
 }
 
-function dotMarkup(x, y, size) {
-  return `<span class="mj-dot" style="left:${x * 100}%;top:${y * 100}%;width:${size}px;height:${size}px"></span>`;
+/* Traditional mahjong ring rotation: red / green / black, 2px each.
+   i is the dot index inside the tile, so 2-9 dot tiles do not all look
+   like the same red bullseye. 1t is the explicit red-outside/green-inside
+   exception the traditional sets use. */
+const MJ_RINGS = ['var(--red)', 'var(--mj-green)', 'var(--black)'];
+
+function ringVarsFor(i) {
+  const a = MJ_RINGS[i % 3];
+  const b = MJ_RINGS[(i + 1) % 3];
+  const c = MJ_RINGS[(i + 2) % 3];
+  return `--ring1:${a};--ring2:${b};--ring3:${c};--core:${a}`;
 }
 
-function bambooMarkup(x, y, height) {
-  return `<span class="bam" style="left:${x * 100}%;top:${y * 100}%;height:${height}px"></span>`;
+const ONE_TONG_RINGS =
+  '--ring1:var(--red);--ring2:var(--mj-green);--ring3:var(--mj-green);--core:var(--mj-green)';
+
+function dotMarkup(x, y, size, vars) {
+  const style = `left:${x * 100}%;top:${y * 100}%;width:${size}px;height:${size}px` +
+    (vars ? `;${vars}` : '');
+  return `<span class="mj-dot" ${styleAttr(style)}></span>`;
+}
+
+function bambooMarkup(x, y, height, i) {
+  const stick = i % 2 === 0 ? 'var(--mj-green)' : 'var(--red)';
+  const dark = i % 2 === 0
+    ? 'color-mix(in srgb, var(--mj-green) 55%, var(--black))'
+    : 'color-mix(in srgb, var(--red) 55%, var(--black))';
+  const style = `left:${x * 100}%;top:${y * 100}%;height:${height}px;` +
+    `--stick:${stick};--stick-dark:${dark}`;
+  return `<span class="bam" ${styleAttr(style)}></span>`;
 }
 
 function mahjongContent(card) {
@@ -533,17 +567,19 @@ function mahjongContent(card) {
       '</div></div>';
   }
   if (card.kind === 'tong') {
-    return `<div class="mj-dots">${DOT_LAYOUT[card.num]
-      .map(([x, y, size]) => dotMarkup(x, y, size)).join('')}</div>`;
+    const dots = DOT_LAYOUT[card.num];
+    return `<div class="mj-dots">${dots
+      .map(([x, y, size], i) => dotMarkup(x, y, size, card.num === 1 ? ONE_TONG_RINGS : ringVarsFor(i)))
+      .join('')}</div>`;
   }
   if (card.kind === 'tiao') {
     if (card.num === 1) return `<div class="mj-bird-wrap">${BIRD_SVG}</div>`;
     return `<div class="mj-bamboo">${BAM_LAYOUT[card.num]
-      .map(([x, y, h]) => bambooMarkup(x, y, h)).join('')}</div>`;
+      .map(([x, y, h], i) => bambooMarkup(x, y, h, i)).join('')}</div>`;
   }
   const h = card.honor;
   if (!h.char) return '<div class="mj-white"><div class="mj-white-inner"></div></div>';
-  const cls = h.tone === 'red' ? ' mj-honor--red' : '';
+  const cls = h.tone === 'red' ? ' mj-honor--red' : h.tone === 'green' ? ' mj-honor--green' : '';
   return `<div class="mj-content"><span class="mj-honor${cls}">${h.char}</span></div>`;
 }
 
@@ -782,13 +818,15 @@ class CdpBrowser {
     }));
   }
 
-  async screenshot() {
-    const { data } = await this.sendSession('Page.captureScreenshot', {
-      format: 'png',
+  async screenshot(format = 'png', quality) {
+    const params = {
+      format,
       fromSurface: true,
       captureBeyondViewport: false,
       optimizeForSpeed: false,
-    });
+    };
+    if (format === 'webp' || format === 'jpeg') params.quality = quality;
+    const { data } = await this.sendSession('Page.captureScreenshot', params);
     return Buffer.from(data, 'base64');
   }
 
@@ -806,6 +844,33 @@ function pngSize(buffer) {
     throw new Error('not a PNG');
   }
   return { width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20) };
+}
+
+/* Dimensions from the WebP container. Chrome writes lossy+alpha as VP8X. */
+function webpSize(buffer) {
+  if (buffer.length < 30 ||
+      buffer.toString('ascii', 0, 4) !== 'RIFF' ||
+      buffer.toString('ascii', 8, 12) !== 'WEBP') {
+    throw new Error('not a WebP');
+  }
+  const chunk = buffer.toString('ascii', 12, 16);
+  if (chunk === 'VP8X') {
+    const width = 1 + (buffer[24] | (buffer[25] << 8) | (buffer[26] << 16));
+    const height = 1 + (buffer[27] | (buffer[28] << 8) | (buffer[29] << 16));
+    return { width, height, alpha: Boolean(buffer[20] & 0x10) };
+  }
+  if (chunk === 'VP8L') {
+    const bits = buffer.readUInt32LE(21);
+    return { width: 1 + (bits & 0x3fff), height: 1 + ((bits >> 14) & 0x3fff), alpha: true };
+  }
+  if (chunk === 'VP8 ') {
+    return {
+      width: buffer.readUInt16LE(26) & 0x3fff,
+      height: buffer.readUInt16LE(28) & 0x3fff,
+      alpha: false,
+    };
+  }
+  throw new Error(`unknown WebP chunk ${chunk}`);
 }
 
 /* --------------------------------------------------------------- rendering */
@@ -830,10 +895,14 @@ const FALLBACK_NOTES = {
 
 async function renderSet(browser, set, cards, elems, opts, css, tmpDir, fontState) {
   const outDir = path.join(opts.out, set);
-  fs.mkdirSync(outDir, { recursive: true });
+  const pngDir = path.join(outDir, 'png');
+  const webpDir = path.join(outDir, 'webp');
+  fs.mkdirSync(pngDir, { recursive: true });
+  fs.mkdirSync(webpDir, { recursive: true });
 
   const usedElements = new Set(SET_ELEMENTS[set]);
-  let bytes = 0;
+  let webpBytes = 0;
+  let pngBytes = 0;
   for (let i = 0; i < cards.length; i++) {
     const card = cards[i];
     let body;
@@ -872,20 +941,53 @@ async function renderSet(browser, set, cards, elems, opts, css, tmpDir, fontStat
       await probeFont(browser, '.xq-char', 'red-shuai .xq-char', fontState);
     }
 
-    const png = await browser.screenshot();
-    const size = pngSize(png);
-    if (size.width !== card.width || size.height !== card.height) {
+    const png = await browser.screenshot('png');
+    const pngInfo = pngSize(png);
+    if (pngInfo.width !== card.width || pngInfo.height !== card.height) {
       throw new Error(
-        `${set}/${card.name}.png is ${size.width}x${size.height}, expected ${card.width}x${card.height}`
+        `${set}/png/${card.name}.png is ${pngInfo.width}x${pngInfo.height}, ` +
+        `expected ${card.width}x${card.height}`
       );
     }
-    if (png.length === 0) throw new Error(`${set}/${card.name}.png is empty`);
-    const outFile = path.join(outDir, `${card.name}.png`);
-    fs.writeFileSync(outFile, png);
-    bytes += png.length;
-    console.log(`[deck] ${set.padEnd(7)} ${card.name.padEnd(13)} ${size.width}x${size.height}  ${png.length} B`);
+    if (png.length === 0) throw new Error(`${set}/png/${card.name}.png is empty`);
+    fs.writeFileSync(path.join(pngDir, `${card.name}.png`), png);
+    pngBytes += png.length;
+
+    const webp = await browser.screenshot('webp', opts.quality);
+    const webpInfo = webpSize(webp);
+    if (webpInfo.width !== card.width || webpInfo.height !== card.height) {
+      throw new Error(
+        `${set}/webp/${card.name}.webp is ${webpInfo.width}x${webpInfo.height}, ` +
+        `expected ${card.width}x${card.height}`
+      );
+    }
+    if (webp.length === 0) throw new Error(`${set}/webp/${card.name}.webp is empty`);
+    if (!webpInfo.alpha) {
+      throw new Error(`${set}/webp/${card.name}.webp has no alpha channel`);
+    }
+    fs.writeFileSync(path.join(webpDir, `${card.name}.webp`), webp);
+    webpBytes += webp.length;
+
+    console.log(
+      `[deck] ${set.padEnd(7)} ${card.name.padEnd(13)} ` +
+      `${webpInfo.width}x${webpInfo.height}  webp ${webp.length} B  png ${png.length} B`
+    );
   }
-  return { count: cards.length, bytes, usedElements: [...usedElements] };
+
+  // Cards used to live directly under decks/<set>/. The committed layout is
+  // now png/ (master) + webp/ (product); remove only root-level card files.
+  for (const entry of fs.readdirSync(outDir, { withFileTypes: true })) {
+    if (entry.isFile() && /\.(png|webp)$/i.test(entry.name)) {
+      fs.rmSync(path.join(outDir, entry.name), { force: true });
+    }
+  }
+
+  return {
+    count: cards.length,
+    bytes: webpBytes,
+    masterBytes: pngBytes,
+    usedElements: [...usedElements],
+  };
 }
 
 async function probeFont(browser, selector, label, fontState) {
@@ -939,7 +1041,7 @@ function previewCss() {
 }
 
 function previewHtml(set, outDir, css) {
-  const fileUrl = (name) => pathToFileURL(path.join(outDir, set, `${name}.png`)).href;
+  const fileUrl = (name) => pathToFileURL(path.join(outDir, set, 'webp', `${name}.webp`)).href;
   const parts = [];
   let width;
   let height;
@@ -1032,7 +1134,7 @@ async function renderPreviews(browser, outDir, sets, tmpDir) {
       : set === 'mahjong'
         ? ['1w', '9w', '1t', '5t', '1s', 'east', 'red']
         : XIANGQI.map((x) => x.name);
-    const missing = names.filter((n) => !fs.existsSync(path.join(outDir, set, `${n}.png`)));
+    const missing = names.filter((n) => !fs.existsSync(path.join(outDir, set, 'webp', `${n}.webp`)));
     if (missing.length) {
       console.log(`[deck] preview ${set}: skipped, missing ${missing.slice(0, 4).join(', ')}${missing.length > 4 ? '…' : ''}`);
       continue;
@@ -1087,6 +1189,7 @@ async function main() {
     }
     console.log('');
     console.log(`elements dir: ${path.relative(ROOT, opts.elements) || opts.elements}`);
+    console.log('output: <set>/webp/<name>.webp (site q0.9)  +  <set>/png/<name>.png (masters)');
     const missing = missingElements(elems, ELEMENT_NAMES);
     for (const name of ELEMENT_NAMES) {
       const el = elems.get(name);
@@ -1138,13 +1241,21 @@ async function main() {
   if (Object.keys(totals).length) {
     let count = 0;
     let bytes = 0;
+    let masterBytes = 0;
     for (const set of Object.keys(totals)) {
       count += totals[set].count;
       bytes += totals[set].bytes;
+      masterBytes += totals[set].masterBytes;
       const avg = Math.round(totals[set].bytes / totals[set].count);
-      console.log(`[deck] ${set.padEnd(8)} ${totals[set].count} cards  ${totals[set].bytes} B  avg ${avg} B`);
+      console.log(
+        `[deck] ${set.padEnd(8)} ${totals[set].count} cards  webp ${totals[set].bytes} B  ` +
+        `avg ${avg} B  |  png masters ${totals[set].masterBytes} B`
+      );
     }
-    console.log(`[deck] TOTAL    ${count} cards  ${bytes} B  avg ${Math.round(bytes / count)} B`);
+    console.log(
+      `[deck] TOTAL    ${count} cards  webp ${bytes} B  avg ${Math.round(bytes / count)} B  ` +
+      `|  png masters ${masterBytes} B`
+    );
 
     const expected = [];
     for (const set of Object.keys(totals)) expected.push(...SET_ELEMENTS[set]);

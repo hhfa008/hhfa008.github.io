@@ -228,7 +228,7 @@ const BOARD_SPECS = {
   go19: { width: 0.50, aspect: 1 },
   reversi8: { width: 0.50, aspect: 1 },
   xiangqi9x10: { width: 0.46, aspect: 1.125 },
-  connect4frame: { width: 0.50, aspect: 6 / 7 },
+  connect4frame: { width: 0.48, aspect: 6 / 7 },
   backgammon: { width: 0.55, aspect: 0.5 },
 };
 
@@ -425,6 +425,30 @@ function buildBoard(type, width, height) {
   );
 }
 
+/**
+ * Grid boards use board-local item coordinates (0..1 across the board box),
+ * so the same scene stays aligned on both the 1200x630 OG and 480x320 card,
+ * whose plane aspect ratios differ. Cardtable/none keep plane coordinates.
+ */
+function boardRect(scene, width, height) {
+  const type = scene.board || 'none';
+  const spec = BOARD_SPECS[type];
+  if (!spec) return null;
+  const { PW, PH } = planeSize(width, height);
+  const w = spec.width * PW;
+  const h = w * spec.aspect;
+  return { left: (PW - w) / 2, top: (PH - h) / 2, w, h, PW, PH };
+}
+
+function itemPlanePos(item, scene, width, height) {
+  const rect = boardRect(scene, width, height);
+  if (rect) {
+    return { x: rect.left + item.x * rect.w, y: rect.top + item.y * rect.h };
+  }
+  const { PW, PH } = planeSize(width, height);
+  return { x: item.x * PW, y: item.y * PH };
+}
+
 /** Approximate visible footprint of an element, in plane-local px. */
 function shadowFootprint(el, shape, size) {
   if (shape === 'standing') return [size * 0.40, size * 0.15];
@@ -449,9 +473,97 @@ function shadowHtml(el, shape, size, cx, cy, rot) {
   );
 }
 
+/* ------------------------------------------------------------------ */
+/* Overlap guard                                                       */
+/* ------------------------------------------------------------------ */
+
+// Visible alpha footprint as a fraction of the square element canvas.
+// Measured from the current @2x exports; the fallback is a full square.
+const VISIBLE_RATIOS = [
+  [/^card-/, 0.59, 0.84],
+  [/^mahjong-/, 0.60, 0.84],
+  [/^go-stone-black$/, 0.84, 0.604],
+  [/^go-stone-white$/, 0.84, 0.708],
+  [/^connect4-/, 0.84, 0.84],
+  [/^chip-/, 0.82, 0.84],
+  [/^reversi-black$/, 0.84, 0.78],
+  [/^reversi-white$/, 0.84, 0.836],
+  [/^checker-/, 0.82, 0.84],
+  [/^airplane-token$/, 0.84, 0.694],
+  [/^xiangqi-/, 0.82, 0.84],
+  [/^die$/, 0.723, 0.84],
+];
+
+function visibleRatios(el) {
+  for (const [re, rw, rh] of VISIBLE_RATIOS) {
+    if (re.test(el)) return [rw, rh];
+  }
+  return [0.84, 0.84];
+}
+
+function projectedVisibleBox(item, scene, width, height) {
+  const size = item.scale * Math.min(width, height);
+  const [rw, rh] = visibleRatios(item.el);
+  const w = size * rw;
+  const h = size * rh;
+  const pos = itemPlanePos(item, scene, width, height);
+  const rad = ((item.rot || 0) * Math.PI) / 180;
+  const cos = Math.cos(rad);
+  const sin = Math.sin(rad);
+  const corners = [
+    [-w / 2, -h / 2],
+    [w / 2, -h / 2],
+    [w / 2, h / 2],
+    [-w / 2, h / 2],
+  ].map(([dx, dy]) => [pos.x + dx * cos - dy * sin, pos.y + dx * sin + dy * cos]);
+  const pts = corners.map(([px, py]) => projectPlanePoint(px, py, width, height));
+  const xs = pts.map((p) => p.x);
+  const ys = pts.map((p) => p.y);
+  return {
+    minX: Math.min(...xs),
+    maxX: Math.max(...xs),
+    minY: Math.min(...ys),
+    maxY: Math.max(...ys),
+  };
+}
+
+function overlapWarnings(slug, scene, width, height) {
+  const flats = [];
+  scene.items.forEach((item, index) => {
+    if ((item.shape || 'flat') === 'flat') {
+      flats.push({ item, index, box: projectedVisibleBox(item, scene, width, height) });
+    }
+  });
+
+  const out = [];
+  for (let i = 0; i < flats.length; i++) {
+    for (let j = i + 1; j < flats.length; j++) {
+      const a = flats[i];
+      const b = flats[j];
+      const ow = Math.min(a.box.maxX, b.box.maxX) - Math.max(a.box.minX, b.box.minX);
+      const oh = Math.min(a.box.maxY, b.box.maxY) - Math.max(a.box.minY, b.box.minY);
+      if (ow <= 0 || oh <= 0) continue;
+      const areaA = (a.box.maxX - a.box.minX) * (a.box.maxY - a.box.minY);
+      const areaB = (b.box.maxX - b.box.minX) * (b.box.maxY - b.box.minY);
+      const ratio = (ow * oh) / Math.min(areaA, areaB);
+      const cardScene = slug === 'texas-holdem' || slug === 'doudizhu';
+      const bothCards = a.item.el.startsWith('card-') && b.item.el.startsWith('card-');
+      const limit = cardScene && bothCards ? 0.45 : 0.12;
+      if (ratio > limit + 1e-9) {
+        out.push({
+          a: `${a.item.el}[${a.index}]`,
+          b: `${b.item.el}[${b.index}]`,
+          ratio,
+          limit,
+        });
+      }
+    }
+  }
+  return out;
+}
+
 function buildItems(scene, width, height, elementsDir, missing) {
   const unit = Math.min(width, height);
-  const { PW, PH } = planeSize(width, height);
   const shadows = [];
   const flats = [];
   const billboards = [];
@@ -461,6 +573,7 @@ function buildItems(scene, width, height, elementsDir, missing) {
     const shape = item.shape === 'standing' ? 'standing' : 'flat';
     const rot = item.rot || 0;
     const wantShadow = item.shadow !== false;
+    const pos = itemPlanePos(item, scene, width, height);
 
     const file = path.join(elementsDir, `${item.el}@2x.png`);
     const present = fs.existsSync(file);
@@ -469,10 +582,10 @@ function buildItems(scene, width, height, elementsDir, missing) {
       const src = pathToFileURL(file).href;
 
       if (shape === 'standing') {
-        const p = projectToScreen(item.x, item.y, width, height);
+        const p = projectPlanePoint(pos.x, pos.y, width, height);
         const box = size * p.k;
         if (wantShadow) {
-          shadows.push(shadowHtml(item.el, shape, size, item.x * PW, item.y * PH, rot));
+          shadows.push(shadowHtml(item.el, shape, size, pos.x, pos.y, rot));
         }
         billboards.push(
           `<div class="billboard" style="left:${round(p.x)}px;top:${round(p.y)}px;` +
@@ -481,11 +594,9 @@ function buildItems(scene, width, height, elementsDir, missing) {
             `<img src="${escapeHtml(src)}" alt=""></div>`
         );
       } else {
-        const cx = item.x * PW;
-        const cy = item.y * PH;
-        if (wantShadow) shadows.push(shadowHtml(item.el, shape, size, cx, cy, rot));
+        if (wantShadow) shadows.push(shadowHtml(item.el, shape, size, pos.x, pos.y, rot));
         flats.push(
-          `<div class="flat" style="left:${round(cx - size / 2)}px;top:${round(cy - size / 2)}px;` +
+          `<div class="flat" style="left:${round(pos.x - size / 2)}px;top:${round(pos.y - size / 2)}px;` +
             `width:${round(size)}px;height:${round(size)}px;` +
             `transform:rotate(${round(rot)}deg)">` +
             `<img src="${escapeHtml(src)}" alt=""></div>`
@@ -494,7 +605,7 @@ function buildItems(scene, width, height, elementsDir, missing) {
     } else {
       missing.add(item.el);
       if (shape === 'standing') {
-        const p = projectToScreen(item.x, item.y, width, height);
+        const p = projectPlanePoint(pos.x, pos.y, width, height);
         const box = size * p.k;
         const fontSize = round(Math.max(9, Math.min(18, box * 0.07)));
         billboards.push(
@@ -505,11 +616,9 @@ function buildItems(scene, width, height, elementsDir, missing) {
             `<span>${escapeHtml(item.el)}</span></div></div>`
         );
       } else {
-        const cx = item.x * PW;
-        const cy = item.y * PH;
         const fontSize = round(Math.max(9, Math.min(18, size * 0.07)));
         flats.push(
-          `<div class="flat" style="left:${round(cx - size / 2)}px;top:${round(cy - size / 2)}px;` +
+          `<div class="flat" style="left:${round(pos.x - size / 2)}px;top:${round(pos.y - size / 2)}px;` +
             `width:${round(size)}px;height:${round(size)}px;` +
             `transform:rotate(${round(rot)}deg)">` +
             `<div class="ph" style="font-size:${fontSize}px">` +
@@ -594,6 +703,7 @@ function screenshot(chrome, htmlPath, outPath, width, height, profileDir) {
 
 function renderScene(slug, scene, opts, chrome) {
   const missing = new Set();
+  const overlaps = [];
   fs.mkdirSync(opts.out, { recursive: true });
 
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'art-compose-'));
@@ -607,6 +717,10 @@ function renderScene(slug, scene, opts, chrome) {
       const htmlPath = path.join(tmpDir, `${slug}-${suffix}.html`);
       fs.writeFileSync(htmlPath, html);
 
+      for (const warning of overlapWarnings(slug, scene, width, height)) {
+        overlaps.push({ ...warning, size: suffix });
+      }
+
       const outPath = path.join(opts.out, `${slug}-${suffix}.png`);
       const bytes = screenshot(chrome, htmlPath, outPath, width, height, profileDir);
       results.push({ file: outPath, width, height, bytes });
@@ -615,7 +729,7 @@ function renderScene(slug, scene, opts, chrome) {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 
-  return { results, missing: [...missing] };
+  return { results, missing: [...missing], overlaps };
 }
 
 function rel(file) {
@@ -777,12 +891,20 @@ function main() {
 
   const chrome = findChrome();
   const allMissing = new Map();
+  const allOverlaps = new Map();
 
   for (const slug of targets) {
-    const { results, missing } = renderScene(slug, scenes[slug], opts, chrome);
+    const { results, missing, overlaps } = renderScene(slug, scenes[slug], opts, chrome);
     for (const file of missing) {
       if (!allMissing.has(file)) allMissing.set(file, new Set());
       allMissing.get(file).add(slug);
+    }
+    for (const warning of overlaps) {
+      const key = `${slug}|${warning.a}|${warning.b}`;
+      const previous = allOverlaps.get(key);
+      if (!previous || warning.ratio > previous.ratio) {
+        allOverlaps.set(key, { slug, ...warning });
+      }
     }
     for (const r of results) {
       console.log(`[compose] ${slug.padEnd(14)} ${rel(r.file)}  ${r.width}x${r.height}  ${r.bytes} B`);
@@ -793,6 +915,20 @@ function main() {
     const sheetPath = path.join(opts.out, '_sheet.png');
     const info = renderSheet(chrome, slugs, opts.out, sheetPath);
     console.log(`[compose] ${'sheet'.padEnd(14)} ${rel(sheetPath)}  ${info.width}x${info.height}  ${info.bytes} B`);
+  }
+
+  if (allOverlaps.size) {
+    console.log('');
+    console.log(`[compose] OVERLAP WARNINGS (${allOverlaps.size}) — flat bounding boxes over the limit:`);
+    const rows = [...allOverlaps.values()].sort((x, y) =>
+      x.slug === y.slug ? x.a.localeCompare(y.a) || x.b.localeCompare(y.b) : x.slug.localeCompare(y.slug)
+    );
+    for (const w of rows) {
+      console.log(
+        `  - ${w.slug}: ${w.a} x ${w.b} = ${(w.ratio * 100).toFixed(1)}% ` +
+          `of smaller (limit ${(w.limit * 100).toFixed(0)}%) [${w.size}]`
+      );
+    }
   }
 
   if (allMissing.size) {
