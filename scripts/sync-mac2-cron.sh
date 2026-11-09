@@ -32,6 +32,7 @@ START_EPOCH="$(date +%s)"
 LOCK_HELD=0
 
 # 无人值守：绝不允许 ssh 因口令/交互卡住；网络中途黑洞也能自己断开
+export GIT_LFS_SKIP_PUSH=1
 export GIT_SSH_COMMAND="${GIT_SSH_COMMAND:-ssh -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=2}"
 
 # ------------------------------------------------------------------ 基础设施
@@ -238,6 +239,23 @@ M_RA="${R_MASTER:-}"; N_RA="${R_MAC2MERGE:-}"
 
 SEG_MASTER="(local:${M_LB:-none}->${M_LA:-none} remote:${M_RB:-none}->${M_RA:-none})"
 SEG_MAC2MERGE="(local:${N_LB:-none}->${N_LA:-none} remote:${N_RB:-none}->${N_RA:-none})"
+
+# 配图资源单独同步：LFS 对象不走 SSH（远端无 git-lfs-authenticate），
+# 所以 git 里只有指针，真实图片用 rsync 增量复制
+ART_TMP="${TMPDIR:-/tmp}/sync-art-$$"; ART_LOG="$HOME/.local/share/pa/logs/sync-art.log"
+if [ "${MAC2_SKIP_ART_RSYNC:-0}" != "1" ] && [ -d "$ROOT/games/assets/art" ]; then
+  ART_SIG="$(find "$ROOT/games/assets/art" -type f -newer "$HOME/.local/share/pa/run/art-synced.stamp" 2>/dev/null | wc -l | tr -d ' ')"
+  if [ "${ART_SIG:-0}" = "0" ]; then
+    echo "art unchanged, skip rsync"
+  elif rsync -a --timeout=300 "$ROOT/games/assets/art/" "fa@192.168.18.127:hhfa008-art/" >>"$ART_LOG" 2>&1; then
+    touch "$HOME/.local/share/pa/run/art-synced.stamp"
+    echo "art rsync ok ($ART_SIG changed files)"
+  else
+    echo "art rsync failed (see $ART_LOG)" >&2
+    [ "$OVERALL" = "OK" ] && OVERALL="FAIL"
+    REASON="${REASON}art-rsync;"
+  fi
+fi
 
 case "$OVERALL" in
   OK)       finish "OK" "" 0 ;;
