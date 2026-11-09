@@ -4,7 +4,7 @@
    Static assets: cache-first with background refresh (stale-while-revalidate). */
 'use strict';
 
-var CACHE_VERSION = 'v6';
+var CACHE_VERSION = 'v7';
 var CACHE_PREFIX = 'hhfa-games-';
 var CACHE_NAME = CACHE_PREFIX + CACHE_VERSION;
 var OFFLINE_URL = '/games/offline.html';
@@ -41,6 +41,7 @@ var PRECACHE_URLS = [
   '/games/solitaire/',
   '/games/spider/',
   '/games/tap-match/',
+  '/games/texas-holdem/',
   '/games/undercover/',
   '/games/voice-room/',
   '/games/xiangqi/',
@@ -66,6 +67,7 @@ var PRECACHE_URLS = [
   '/games/solitaire/rules-en.html',
   '/games/spider/rules.html',
   '/games/tap-match/rules.html',
+  '/games/texas-holdem/rules.html',
   '/games/undercover/rules.html',
   '/games/xiangqi/rules.html',
 
@@ -90,6 +92,7 @@ var PRECACHE_URLS = [
   '/games/assets/icons/solitaire.svg',
   '/games/assets/icons/spider.svg',
   '/games/assets/icons/tap-match.svg',
+  '/games/assets/icons/texas-holdem.svg',
   '/games/assets/icons/undercover.svg',
   '/games/assets/icons/voice-room.svg',
   '/games/assets/icons/xiangqi.svg'
