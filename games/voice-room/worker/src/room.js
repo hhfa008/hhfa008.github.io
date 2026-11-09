@@ -7,6 +7,56 @@ const connect4 = RULES.connect4;
 const MAX_MEMBERS = 4;
 const RECONNECT_GRACE_MS = 60 * 1000;
 
+const PASSWORD_MIN = 4;
+const PASSWORD_MAX = 32;
+const MAX_PASSWORD_FAILS = 5;
+const PASSWORD_LOCK_MS = 60 * 1000;
+const JOIN_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
+
+function bytesToBase64Url(bytes) {
+  const arr = new Uint8Array(bytes);
+  let bin = '';
+  for (let i = 0; i < arr.length; i++) bin += String.fromCharCode(arr[i]);
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function base64UrlToBytes(str) {
+  const b64 = String(str == null ? '' : str).replace(/-/g, '+').replace(/_/g, '/');
+  const pad = b64.length % 4 ? '='.repeat(4 - (b64.length % 4)) : '';
+  const bin = atob(b64 + pad);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+// SHA-256(salt || password). The salt is 16 random bytes stored with the hash.
+async function passwordDigest(saltBytes, password) {
+  const pw = new TextEncoder().encode(String(password));
+  const buf = new Uint8Array(saltBytes.length + pw.length);
+  buf.set(saltBytes, 0);
+  buf.set(pw, saltBytes.length);
+  return new Uint8Array(await crypto.subtle.digest('SHA-256', buf));
+}
+
+// Compare byte arrays without early exit so a wrong guess cannot be timed.
+function constantTimeEqual(a, b) {
+  if (!a || !b) return false;
+  const len = Math.max(a.length, b.length);
+  let diff = a.length === b.length ? 0 : 1;
+  for (let i = 0; i < len; i++) diff |= (a[i] || 0) ^ (b[i] || 0);
+  return diff === 0;
+}
+
+function jsonResponse(body, status) {
+  return new Response(JSON.stringify(body), {
+    status: status || 200,
+    headers: {
+      'content-type': 'application/json; charset=utf-8',
+      'cache-control': 'no-store',
+    },
+  });
+}
+
 const KINDS = {
   ttt: { label: '井字棋', size: 9, cols: 3, rows: 3 },
   gomoku: { label: '五子棋', size: 225, cols: 15, rows: 15 },
@@ -211,6 +261,149 @@ export class RoomDO {
     await this.state.storage.put('game', game);
   }
 
+  // HMAC secret lives in DO storage. Kept in memory per instance so concurrent
+  // requests cannot mint two different secrets.
+  tokenSecret() {
+    if (!this._tokenSecret) {
+      this._tokenSecret = (async () => {
+        let sec = await this.state.storage.get('tokenSecret');
+        if (!sec) {
+          sec = bytesToBase64Url(crypto.getRandomValues(new Uint8Array(32)));
+          await this.state.storage.put('tokenSecret', sec);
+        }
+        return base64UrlToBytes(sec);
+      })();
+    }
+    return this._tokenSecret;
+  }
+
+  async signPayload(payload) {
+    const secret = await this.tokenSecret();
+    const key = await crypto.subtle.importKey(
+      'raw', secret, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'],
+    );
+    return new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload)));
+  }
+
+  async makeJoinToken(room, pid) {
+    const exp = Date.now() + JOIN_TOKEN_TTL_MS;
+    const sig = await this.signPayload(room + '|' + pid + '|' + exp);
+    return exp + '.' + bytesToBase64Url(sig);
+  }
+
+  async verifyJoinToken(room, pid, token) {
+    const text = String(token || '');
+    const dot = text.indexOf('.');
+    if (dot <= 0 || dot === text.length - 1) return false;
+    const exp = Number(text.slice(0, dot));
+    if (!Number.isFinite(exp) || exp < Date.now()) return false;
+    let got;
+    try {
+      got = base64UrlToBytes(text.slice(dot + 1));
+    } catch (e) {
+      return false;
+    }
+    const want = await this.signPayload(room + '|' + pid + '|' + exp);
+    return constantTimeEqual(got, want);
+  }
+
+  async verifyPassword(password, auth) {
+    try {
+      const salt = base64UrlToBytes(auth.salt);
+      const want = base64UrlToBytes(auth.hash);
+      const got = await passwordDigest(salt, password);
+      return constantTimeEqual(got, want);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Password check happens over plain HTTP *before* any WebSocket is opened.
+  // Never log or echo the password.
+  async handleJoin(request, room) {
+    let body = {};
+    try {
+      body = await request.json();
+    } catch (e) {
+      return jsonResponse({ ok: false, code: 'bad_request' });
+    }
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return jsonResponse({ ok: false, code: 'bad_request' });
+    }
+
+    const pid = cleanPid(body.pid);
+    const create = body.create === true;
+    const password = typeof body.password === 'string' ? body.password : '';
+    const now = Date.now();
+    const ip = request.headers.get('CF-Connecting-IP') ||
+      request.headers.get('x-client-ip') || 'unknown';
+
+    let meta = await this.state.storage.get('meta');
+    if (!meta) meta = { room, createdAt: now };
+    if (!meta.room) meta.room = room;
+
+    const auth = meta.auth && meta.auth.hash ? meta.auth : null;
+
+    if (create && password && (password.length < PASSWORD_MIN || password.length > PASSWORD_MAX)) {
+      return jsonResponse({ ok: false, code: 'bad_password_format' });
+    }
+
+    // A connection that already burnt five guesses waits out the lock.
+    const rateKey = 'rate:' + ip;
+    const rate = await this.state.storage.get(rateKey);
+    if (rate && rate.until && rate.until > now) {
+      return jsonResponse({
+        ok: false,
+        code: 'rate_limited',
+        retryAfter: Math.ceil((rate.until - now) / 1000),
+      });
+    }
+
+    if (create && password && !auth) {
+      // Only an empty room can be claimed with a password; never overwrite an
+      // existing room's lock or let a late joiner change it.
+      const roster = await this.normalizeRoster();
+      if (roster.length > 0) {
+        return jsonResponse({ ok: false, code: 'room_exists' });
+      }
+      const salt = crypto.getRandomValues(new Uint8Array(16));
+      const hash = await passwordDigest(salt, password);
+      meta.auth = {
+        algo: 'sha256',
+        salt: bytesToBase64Url(salt),
+        hash: bytesToBase64Url(hash),
+        length: password.length,
+      };
+      await this.state.storage.put('meta', meta);
+    } else if (auth) {
+      if (create) return jsonResponse({ ok: false, code: 'room_exists' });
+      if (!password) return jsonResponse({ ok: false, code: 'need_password' });
+      if (!(await this.verifyPassword(password, auth))) {
+        const fails = ((rate && rate.fails) || 0) + 1;
+        const next = { fails, until: 0 };
+        if (fails >= MAX_PASSWORD_FAILS) {
+          next.fails = 0;
+          next.until = now + PASSWORD_LOCK_MS;
+        }
+        await this.state.storage.put(rateKey, next);
+        return jsonResponse({ ok: false, code: 'bad_password' });
+      }
+      await this.state.storage.delete(rateKey);
+    } else {
+      // Passwordless room: nothing to verify. A supplied password is ignored
+      // so it never becomes part of the room's state.
+      if (create) await this.state.storage.put('meta', meta);
+    }
+
+    if (!meta.createdAt) {
+      meta.createdAt = now;
+      await this.state.storage.put('meta', meta);
+    }
+
+    const token = await this.makeJoinToken(room, pid);
+    return jsonResponse({ ok: true, token, hasPassword: !!meta.auth });
+  }
+
   // Every live socket, skipping sockets that were replaced by a reconnect.
   activeSockets() {
     const out = [];
@@ -332,18 +525,30 @@ export class RoomDO {
     }
     this.roomCode = room;
 
-    const meta = await this.state.storage.get('meta');
-    if (!meta) {
-      await this.state.storage.put('meta', { room, createdAt: Date.now() });
+    if (url.pathname === '/join') {
+      return this.handleJoin(request, room);
     }
 
     if (request.headers.get('Upgrade') !== 'websocket') {
       return new Response('expected websocket', { status: 426 });
     }
 
+    const pid = cleanPid(url.searchParams.get('pid'));
+    // The password is never put in a URL. /join checks it and hands back a
+    // short-lived HMAC token bound to this room + pid, which the socket must
+    // present. A wrong password therefore never reaches the upgrade path.
+    const token = url.searchParams.get('token') || '';
+    if (!(await this.verifyJoinToken(room, pid, token))) {
+      return new Response('password required', { status: 403 });
+    }
+
+    const meta = await this.state.storage.get('meta');
+    if (!meta) {
+      await this.state.storage.put('meta', { room, createdAt: Date.now() });
+    }
+
     const rosterBefore = await this.normalizeRoster();
     const activeBefore = this.activeMembers(rosterBefore);
-    const pid = cleanPid(url.searchParams.get('pid'));
     const name = cleanName(url.searchParams.get('name'));
     const existing = pid ? rosterBefore.find((m) => m.pid === pid) : null;
     const existingActive = existing ? this.activeIds().has(existing.id) : false;

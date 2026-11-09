@@ -8,7 +8,7 @@ let iceCache = { at: 0, body: null };
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
   'Access-Control-Max-Age': '86400',
 };
@@ -16,7 +16,7 @@ const CORS_HEADERS = {
 function originHeaders(origin) {
   return {
     'Access-Control-Allow-Origin': origin,
-    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Max-Age': '86400',
     Vary: 'Origin',
@@ -114,6 +114,56 @@ export default {
         // Never leak the TURN token or upstream response body.
         return json({ error: 'turn_unavailable' }, 502, {}, origin || null);
       }
+    }
+
+    if (url.pathname === '/api/join') {
+      if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
+      const origin = request.headers.get('Origin');
+      if (!allowedOrigin(origin)) {
+        return json({ error: 'origin_not_allowed' }, 403, {}, origin || null);
+      }
+      let body;
+      try {
+        body = await request.json();
+      } catch (e) {
+        return json({ ok: false, code: 'bad_request' }, 400, {}, origin || null);
+      }
+      if (!body || typeof body !== 'object' || Array.isArray(body)) {
+        return json({ ok: false, code: 'bad_request' }, 400, {}, origin || null);
+      }
+      const room = String(body.room == null ? '' : body.room);
+      if (!/^\d{4}$/.test(room)) {
+        return json({ ok: false, code: 'bad_room' }, 400, {}, origin || null);
+      }
+      // Bound the body before it reaches the DO; the real 4–32 check is there.
+      if (typeof body.password === 'string' && body.password.length > 64) {
+        return json({ ok: false, code: 'bad_password_format' }, 400, {}, origin || null);
+      }
+      const doUrl = new URL(request.url);
+      doUrl.pathname = '/join';
+      doUrl.search = '?room=' + encodeURIComponent(room);
+      const headers = new Headers(request.headers);
+      headers.set('content-type', 'application/json');
+      const doReq = new Request(doUrl.toString(), {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          pid: body.pid,
+          password: body.password,
+          create: body.create === true,
+        }),
+      });
+      const id = env.ROOMS.idFromName(`room:${room}`);
+      const res = await env.ROOMS.get(id).fetch(doReq);
+      const text = await res.text();
+      return new Response(text, {
+        status: res.status,
+        headers: {
+          'content-type': 'application/json; charset=utf-8',
+          'cache-control': 'no-store',
+          ...(origin ? originHeaders(origin) : CORS_HEADERS),
+        },
+      });
     }
 
     if (url.pathname === '/ws') {

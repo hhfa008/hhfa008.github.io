@@ -49,6 +49,11 @@ label{display:block;font-size:13px;color:var(--muted);margin:14px 0 6px}
 .or{text-align:center;color:var(--muted);font-size:13px;margin:14px 0}
 .join{display:flex;gap:10px}
 .join .input{flex:1;text-align:center;letter-spacing:.3em;font-size:22px;font-weight:700}
+.pw{display:flex;gap:10px;align-items:stretch}
+.pw .input{flex:1;letter-spacing:normal;font-size:16px;font-weight:500}
+.pw-toggle{min-height:52px;padding:0 16px;border:1px solid var(--line);border-radius:12px;
+  background:var(--card2);color:var(--muted);font-size:14px;font-weight:600;white-space:nowrap}
+.pw-toggle:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .privacy{margin:22px 0 0;padding:14px 16px;border-radius:12px;background:rgba(90,210,165,.07);
   border:1px solid rgba(90,210,165,.22);color:#a9dcc7;font-size:13px;line-height:1.6}
 .guide-link{margin:12px 0 0;font-size:14px}
@@ -121,22 +126,36 @@ summary{cursor:pointer;color:var(--muted);font-size:13px;padding:4px 0}
 <body>
 <div class="wrap">
   <section id="lobby" class="card">
-    <h1>语音房 <span>·</span> 在线棋局</h1>
-    <p class="sub">4 位房号进房，最多 4 人。开麦就能互相听见，房主可选井字棋、五子棋或四子棋，轮流落子。</p>
-    <label for="name">你的昵称</label>
-    <input id="name" class="input" maxlength="12" autocomplete="nickname" placeholder="怎么称呼你">
-    <div class="row" style="margin-top:16px">
-      <button id="createBtn" class="btn primary">创建房间</button>
+    <h1><span data-i="titleMain">语音房</span> <span>·</span> <span data-i="titleSub">在线棋局</span></h1>
+    <p class="sub" data-i="tagline">4 位房号进房，最多 4 人。开麦就能互相听见，房主可选井字棋、五子棋或四子棋，轮流落子。</p>
+    <label for="name" data-i="nameLabel">你的昵称</label>
+    <input id="name" class="input" maxlength="12" autocomplete="nickname" placeholder="怎么称呼你" data-ip="namePlaceholder">
+    <label for="createPw" data-i="createPwLabel">设置密码（可选）</label>
+    <div class="pw">
+      <input id="createPw" class="input" type="password" maxlength="32" autocomplete="new-password"
+        placeholder="4–32 位，留空则不设密码" data-ip="createPwPlaceholder">
+      <button id="createPwToggle" class="pw-toggle" type="button" aria-pressed="false" aria-controls="createPw" data-i="show">显示</button>
     </div>
-    <div class="or">或输入朋友发来的房号</div>
+    <div class="row" style="margin-top:16px">
+      <button id="createBtn" class="btn primary" data-i="createBtn">创建房间</button>
+    </div>
+    <div class="or" data-i="orJoin">或输入朋友发来的房号</div>
     <div class="join">
       <input id="code" class="input" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="0000" aria-label="4 位房号">
-      <button id="joinBtn" class="btn">加入</button>
+      <button id="joinBtn" class="btn" data-i="joinBtn">加入</button>
+    </div>
+    <div id="joinPwWrap" class="hidden" style="margin-top:14px">
+      <label for="joinPw" data-i="joinPwLabel">房间密码</label>
+      <div class="pw">
+        <input id="joinPw" class="input" type="password" maxlength="32" autocomplete="current-password"
+          placeholder="输入房间密码" data-ip="joinPwPlaceholder">
+        <button id="joinPwToggle" class="pw-toggle" type="button" aria-pressed="false" aria-controls="joinPw" data-i="show">显示</button>
+      </div>
     </div>
     <p id="inviteHint" class="invite-hint hidden" role="status"></p>
     <p id="lobbyErr" class="err" role="alert"></p>
-    <p class="privacy">隐私说明：语音点对点传输，不经过服务器录制；本站不录音、不存储任何音频。麦克风默认关闭，只有你点「开麦」才会请求权限。</p>
-    <p class="guide-link"><a href="guide.html">开房教程：怎么和朋友一起玩 →</a></p>
+    <p class="privacy" data-i="privacy">隐私说明：语音点对点传输，不经过服务器录制；本站不录音、不存储任何音频。麦克风默认关闭，只有你点「开麦」才会请求权限。</p>
+    <p class="guide-link"><a href="guide.html" data-i="guideLink">开房教程：怎么和朋友一起玩 →</a></p>
 <div class="share-row">
   <button type="button" class="share-btn" data-share-btn aria-label="分享本页"
     style="display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;min-width:44px;padding:0 16px;border:1px solid currentColor;border-radius:999px;background:transparent;color:inherit;font:inherit;font-size:14px;font-weight:600;cursor:pointer">
@@ -154,16 +173,16 @@ summary{cursor:pointer;color:var(--muted);font-size:13px;padding:4px 0}
           <div class="room-tag" id="connTag">连接中…</div>
         </div>
         <div class="spacer"></div>
-        <button id="copyBtn" class="btn ghost" style="min-height:44px;font-size:14px">复制邀请链接</button>
-        <button id="copyTextBtn" class="btn ghost" style="min-height:44px;font-size:14px">复制邀请文案</button>
-        <button id="leaveBtn" class="btn danger" style="min-height:44px;font-size:14px">离开</button>
+        <button id="copyBtn" class="btn ghost" style="min-height:44px;font-size:14px" data-i="copyLink">复制邀请链接</button>
+        <button id="copyTextBtn" class="btn ghost" style="min-height:44px;font-size:14px" data-i="copyText">复制邀请文案</button>
+        <button id="leaveBtn" class="btn danger" style="min-height:44px;font-size:14px" data-i="leave">离开</button>
       </div>
       <div id="banner" class="banner hidden" role="status"></div>
-      <div class="section-title">房间成员 <span id="memberCount"></span></div>
+      <div class="section-title"><span data-i="members">房间成员</span> <span id="memberCount"></span></div>
       <div class="members" id="members"></div>
       <div class="controls">
-        <button id="micBtn" class="btn primary">开麦</button>
-        <button id="resetBtn" class="btn">新一局</button>
+        <button id="micBtn" class="btn primary" data-i="micOff">开麦</button>
+        <button id="resetBtn" class="btn" data-i="newRound">新一局</button>
       </div>
       <div class="game-pick" id="gamePicker" role="group" aria-label="选择要对战的游戏">
         <button class="pick-btn" type="button" data-kind="ttt">井字棋</button>
@@ -208,6 +227,129 @@ const INVITE_BASE = 'https://hhfa008.github.io/games/voice-room/';
 const NAME_KEY = 'vr_name';
 const PID_KEY = 'vr_pid';
 
+// Password-room copy. The page defaults to Chinese; the EN/ID halls pass
+// ?lang=en / ?lang=id so the same page can render the new strings in all three.
+const I18N = {
+  zh: {
+    titleMain: '语音房', titleSub: '在线棋局',
+    tagline: '4 位房号进房，最多 4 人。开麦就能互相听见，房主可选井字棋、五子棋或四子棋，轮流落子。',
+    nameLabel: '你的昵称', namePlaceholder: '怎么称呼你',
+    createPwLabel: '设置密码（可选）', createPwPlaceholder: '4–32 位，留空则不设密码',
+    show: '显示', hide: '隐藏',
+    createBtn: '创建房间', orJoin: '或输入朋友发来的房号', joinBtn: '加入',
+    joinPwLabel: '房间密码', joinPwPlaceholder: '输入房间密码',
+    privacy: '隐私说明：语音点对点传输，不经过服务器录制；本站不录音、不存储任何音频。麦克风默认关闭，只有你点「开麦」才会请求权限。',
+    guideLink: '开房教程：怎么和朋友一起玩 →',
+    copyLink: '复制邀请链接', copyText: '复制邀请文案', leave: '离开',
+    members: '房间成员', micOff: '开麦', mute: '静音', newRound: '新一局',
+    inviteText: '来一局？房号 {room}，点开就能语音下棋 → {link}',
+    invitePwNote: '房间有密码，密码我另发你。',
+    inviteHint: '已填入邀请房号 {room}，点「加入」即可进房。',
+    inviteBadRoom: '邀请链接里的房号无效：房号必须是 4 位数字。',
+    inviteLinkCopied: '邀请链接已复制', inviteTextCopied: '邀请文案已复制',
+    copyFailed: '复制失败，请手动复制地址栏链接',
+    pwLength: '密码需为 4–32 个字符。',
+    needPassword: '这个房间有密码，请输入后加入。',
+    badPassword: '密码不对，再试一次',
+    rateLimited: '尝试太频繁，请稍后再试',
+    netErr: '网络异常，请稍后再试。',
+    createFailed: '创建房间失败，请稍后再试。',
+    joinFailed: '加入失败，请稍后再试。',
+    badRoom: '房号是 4 位数字。',
+    nameNeededCreate: '先填一个昵称再创建房间。',
+    nameNeededJoin: '先填一个昵称再加入。',
+  },
+  en: {
+    titleMain: 'Voice Room', titleSub: 'Board games, live',
+    tagline: 'Join with a 4-digit code, up to 4 people. Turn on your mic to hear each other, and the host picks tic-tac-toe, gomoku or Connect Four.',
+    nameLabel: 'Your name', namePlaceholder: 'What should we call you?',
+    createPwLabel: 'Room password (optional)', createPwPlaceholder: '4–32 characters; leave empty for no password',
+    show: 'Show', hide: 'Hide',
+    createBtn: 'Create room', orJoin: 'Or enter a room code from a friend', joinBtn: 'Join',
+    joinPwLabel: 'Room password', joinPwPlaceholder: 'Enter the room password',
+    privacy: 'Privacy: voice is peer-to-peer and never recorded. This site does not record or store audio. Your mic stays off until you tap "Unmute".',
+    guideLink: 'How to host a room →',
+    copyLink: 'Copy invite link', copyText: 'Copy invite message', leave: 'Leave',
+    members: 'Room members', micOff: 'Unmute', mute: 'Mute', newRound: 'New round',
+    inviteText: "Let's play! Room {room} — tap to join the voice room → {link}",
+    invitePwNote: 'This room has a password — I will send it to you separately.',
+    inviteHint: 'Invite code {room} is filled in. Tap "Join" to enter.',
+    inviteBadRoom: 'The room code in this invite link is invalid: it must be 4 digits.',
+    inviteLinkCopied: 'Invite link copied', inviteTextCopied: 'Invite message copied',
+    copyFailed: 'Could not copy — please copy the address bar link',
+    pwLength: 'Password must be 4–32 characters.',
+    needPassword: 'This room has a password. Enter it to join.',
+    badPassword: 'Password is incorrect — please try again',
+    rateLimited: 'Too many attempts. Please try again later.',
+    netErr: 'Network error — please try again.',
+    createFailed: 'Could not create the room — please try again.',
+    joinFailed: 'Could not join the room — please try again.',
+    badRoom: 'Room codes are 4 digits.',
+    nameNeededCreate: 'Enter a name before creating a room.',
+    nameNeededJoin: 'Enter a name before joining.',
+  },
+  id: {
+    titleMain: 'Ruang Suara', titleSub: 'Main sambil ngobrol',
+    tagline: 'Masuk dengan kode 4 digit, maksimal 4 orang. Nyalakan mikrofon untuk saling mendengar, tuan rumah memilih tic-tac-toe, gomoku, atau Connect Four.',
+    nameLabel: 'Nama kamu', namePlaceholder: 'Mau dipanggil apa?',
+    createPwLabel: 'Kata sandi ruang (opsional)', createPwPlaceholder: '4–32 karakter; kosongkan tanpa kata sandi',
+    show: 'Tampilkan', hide: 'Sembunyikan',
+    createBtn: 'Buat ruang', orJoin: 'Atau masukkan kode ruang dari teman', joinBtn: 'Gabung',
+    joinPwLabel: 'Kata sandi ruang', joinPwPlaceholder: 'Masukkan kata sandi ruang',
+    privacy: 'Privasi: suara dikirim peer-to-peer dan tidak direkam. Situs ini tidak merekam atau menyimpan audio. Mikrofon mati sampai kamu menekan "Bunyikan".',
+    guideLink: 'Cara membuat ruang →',
+    copyLink: 'Salin tautan undangan', copyText: 'Salin pesan undangan', leave: 'Keluar',
+    members: 'Anggota ruang', micOff: 'Bunyikan', mute: 'Bisukan', newRound: 'Ronde baru',
+    inviteText: 'Main yuk! Ruang {room} — ketuk untuk gabung ruang suara → {link}',
+    invitePwNote: 'Ruang ini memakai kata sandi — nanti kukirim terpisah.',
+    inviteHint: 'Kode undangan {room} sudah diisi. Ketuk "Gabung" untuk masuk.',
+    inviteBadRoom: 'Kode ruang di tautan undangan tidak valid: harus 4 digit.',
+    inviteLinkCopied: 'Tautan undangan disalin', inviteTextCopied: 'Pesan undangan disalin',
+    copyFailed: 'Gagal menyalin — salin tautan dari bilah alamat',
+    pwLength: 'Kata sandi harus 4–32 karakter.',
+    needPassword: 'Ruang ini memakai kata sandi. Masukkan untuk bergabung.',
+    badPassword: 'Kata sandi salah — coba lagi',
+    rateLimited: 'Terlalu banyak percobaan. Coba lagi nanti.',
+    netErr: 'Kesalahan jaringan — coba lagi.',
+    createFailed: 'Gagal membuat ruang — coba lagi.',
+    joinFailed: 'Gagal bergabung — coba lagi.',
+    badRoom: 'Kode ruang harus 4 digit.',
+    nameNeededCreate: 'Isi nama dulu untuk membuat ruang.',
+    nameNeededJoin: 'Isi nama dulu untuk bergabung.',
+  },
+};
+
+const LANG = (function(){
+  const q = (params.get('lang') || '').toLowerCase();
+  if (q.indexOf('id') === 0 || q === 'in') return 'id';
+  if (q.indexOf('en') === 0) return 'en';
+  return 'zh';
+})();
+
+function T(key, vars){
+  const dict = I18N[LANG] || I18N.zh;
+  let s = dict[key] != null ? dict[key] : I18N.zh[key];
+  if (s == null) return key;
+  if (vars) s = String(s).replace(/\{(\w+)\}/g, (m, k) => vars[k] != null ? vars[k] : '');
+  return s;
+}
+
+function applyLang(){
+  const htmlLang = LANG === 'zh' ? 'zh-CN' : LANG;
+  document.documentElement.lang = htmlLang;
+  const nodes = document.querySelectorAll('[data-i]');
+  for (const el of nodes){
+    const k = el.getAttribute('data-i');
+    if (I18N[LANG][k] != null) el.textContent = I18N[LANG][k];
+  }
+  const inputs = document.querySelectorAll('[data-ip]');
+  for (const el of inputs){
+    const k = el.getAttribute('data-ip');
+    if (I18N[LANG][k] != null) el.setAttribute('placeholder', I18N[LANG][k]);
+  }
+}
+
+
 const KIND_META = {
   ttt: { label: '井字棋', cols: 3, rows: 3, size: 9 },
   gomoku: { label: '五子棋', cols: 15, rows: 15, size: 225 },
@@ -230,6 +372,8 @@ const PID = getPid();
 const S = {
   name: '',
   room: '',
+  joinToken: '',
+  roomHasPassword: false,
   selfId: null,
   hostId: null,
   members: [],
@@ -501,7 +645,7 @@ function renderMembers(){
 
 function updateMicUI(){
   const btn = $('micBtn');
-  btn.textContent = S.micOn ? '静音' : '开麦';
+  btn.textContent = S.micOn ? T('mute') : T('micOff');
   btn.classList.toggle('primary', !S.micOn);
   btn.classList.toggle('danger', S.micOn);
 }
@@ -665,7 +809,8 @@ function connectWS(){
   S.wsState = 'connecting';
   renderAll();
   const url = WS_BASE + '/ws?room=' + encodeURIComponent(S.room) +
-    '&name=' + encodeURIComponent(S.name) + '&pid=' + encodeURIComponent(PID);
+    '&name=' + encodeURIComponent(S.name) + '&pid=' + encodeURIComponent(PID) +
+    '&token=' + encodeURIComponent(S.joinToken);
   let ws;
   try{ ws = new WebSocket(url); }catch(e){ S.wsState='closed'; scheduleReconnect(); return; }
   S.ws = ws;
@@ -1084,9 +1229,10 @@ function startDebugTimer(){
   }, 2500);
 }
 
-function enterRoom(room){
+function enterRoom(room, token){
   S.leaving = false;
   S.room = room;
+  S.joinToken = token || '';
   S.selfId = null; S.hostId = null; S.members = []; S.game = null;
   S.reconnectAttempt = 0;
   clearTimeout(S.reconnectTimer);
@@ -1116,6 +1262,7 @@ function leaveToLobby(message){
   S.micStream = null; S.micTrack = null; S.micOn = false;
   detachLocalMeter();
   S.room = ''; S.selfId = null; S.hostId = null; S.members = []; S.game = null;
+  S.joinToken = ''; S.roomHasPassword = false;
   S.wsState = 'idle';
   updateUrl('');
   showLobby();
@@ -1124,27 +1271,93 @@ function leaveToLobby(message){
   if (message) toast(message, 4000);
 }
 
-function createRoom(){
-  const n = saveName();
-  if (!n){ setLobbyErr('先填一个昵称再创建房间。'); $('name').focus(); return; }
-  setLobbyErr('');
-  enterRoom(randomRoom());
+async function requestJoin(payload){
+  const res = await fetch(API_BASE + '/api/join', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    cache: 'no-store',
+    body: JSON.stringify({
+      room: payload.room,
+      create: !!payload.create,
+      password: payload.password || '',
+      pid: PID,
+    }),
+  });
+  let data = null;
+  try{ data = await res.json(); }catch(e){}
+  if (data && typeof data === 'object') return data;
+  return { ok: false, code: res.ok ? 'bad_response' : 'http_' + res.status };
 }
 
-function joinRoom(){
+function showJoinPassword(show){
+  $('joinPwWrap').classList.toggle('hidden', !show);
+  if (!show){
+    $('joinPw').value = '';
+    $('joinPw').type = 'password';
+    $('joinPwToggle').textContent = T('show');
+    $('joinPwToggle').setAttribute('aria-pressed', 'false');
+  }
+}
+
+function bindPasswordToggle(inputId, btnId){
+  const input = $(inputId);
+  const btn = $(btnId);
+  btn.addEventListener('click', () => {
+    const show = input.type === 'password';
+    input.type = show ? 'text' : 'password';
+    btn.textContent = show ? T('hide') : T('show');
+    btn.setAttribute('aria-pressed', show ? 'true' : 'false');
+  });
+}
+
+async function createRoom(){
   const n = saveName();
-  if (!n){ setLobbyErr('先填一个昵称再加入。'); $('name').focus(); return; }
-  const code = ($('code').value || '').replace(/\D/g,'').slice(0,4);
-  if (!/^\d{4}$/.test(code)){ setLobbyErr('房号是 4 位数字。'); $('code').focus(); return; }
+  if (!n){ setLobbyErr(T('nameNeededCreate')); $('name').focus(); return; }
+  const pw = $('createPw').value || '';
+  if (pw && (pw.length < 4 || pw.length > 32)){ setLobbyErr(T('pwLength')); $('createPw').focus(); return; }
   setLobbyErr('');
-  enterRoom(code);
+  for (let attempt = 0; attempt < 3; attempt++){
+    const code = randomRoom();
+    let r;
+    try{ r = await requestJoin({ room: code, create: true, password: pw }); }
+    catch(e){ setLobbyErr(T('netErr')); return; }
+    if (r.ok){ S.roomHasPassword = !!pw; enterRoom(code, r.token); return; }
+    if (r.code === 'room_exists') continue;
+    if (r.code === 'bad_password_format'){ setLobbyErr(T('pwLength')); return; }
+    if (r.code === 'rate_limited'){ setLobbyErr(T('rateLimited')); return; }
+    setLobbyErr(T('createFailed'));
+    return;
+  }
+  setLobbyErr(T('createFailed'));
+}
+
+async function joinRoom(){
+  const n = saveName();
+  if (!n){ setLobbyErr(T('nameNeededJoin')); $('name').focus(); return; }
+  const code = ($('code').value || '').replace(/\D/g,'').slice(0,4);
+  if (!/^\d{4}$/.test(code)){ setLobbyErr(T('badRoom')); $('code').focus(); return; }
+  const asking = !$('joinPwWrap').classList.contains('hidden');
+  const pw = asking ? ($('joinPw').value || '') : '';
+  if (asking && !pw){ setLobbyErr(T('needPassword')); $('joinPw').focus(); return; }
+  setLobbyErr('');
+  let r;
+  try{ r = await requestJoin({ room: code, create: false, password: pw }); }
+  catch(e){ setLobbyErr(T('netErr')); return; }
+  if (r.ok){ S.roomHasPassword = asking || !!r.hasPassword; enterRoom(code, r.token); return; }
+  if (r.code === 'need_password'){ showJoinPassword(true); setLobbyErr(T('needPassword')); $('joinPw').focus(); return; }
+  if (r.code === 'bad_password'){ setLobbyErr(T('badPassword')); $('joinPw').select(); $('joinPw').focus(); return; }
+  if (r.code === 'rate_limited'){ setLobbyErr(T('rateLimited')); return; }
+  if (r.code === 'bad_room'){ setLobbyErr(T('badRoom')); return; }
+  setLobbyErr(T('joinFailed'));
 }
 
 function inviteLink(room){
   return INVITE_BASE + '?room=' + encodeURIComponent(room);
 }
 function inviteText(room){
-  return '来一局？房号 ' + room + '，点开就能语音下棋 → ' + inviteLink(room);
+  let s = T('inviteText', { room: room, link: inviteLink(room) });
+  if (S.roomHasPassword) s += '\n' + T('invitePwNote');
+  return s;
 }
 function copyText(text, done){
   if (navigator.clipboard && navigator.clipboard.writeText){
@@ -1153,11 +1366,11 @@ function copyText(text, done){
 }
 function copyInvite(){
   if (!S.room) return;
-  copyText(inviteLink(S.room), () => toast('邀请链接已复制'));
+  copyText(inviteLink(S.room), () => toast(T('inviteLinkCopied')));
 }
 function copyInviteMessage(){
   if (!S.room) return;
-  copyText(inviteText(S.room), () => toast('邀请文案已复制'));
+  copyText(inviteText(S.room), () => toast(T('inviteTextCopied')));
 }
 function fallbackCopy(text, done){
   try{
@@ -1177,6 +1390,7 @@ function unlockAudio(){
 }
 
 function init(){
+  applyLang();
   let saved = '';
   try{ saved = localStorage.getItem(NAME_KEY) || ''; }catch(e){}
   if (!saved){
@@ -1188,12 +1402,15 @@ function init(){
     if (/^\d{4}$/.test(roomParam)){
       $('code').value = roomParam;
       $('joinBtn').classList.add('invite-ready');
-      $('inviteHint').textContent = '已填入邀请房号 ' + roomParam + '，点「加入」即可进房。';
+      $('inviteHint').textContent = T('inviteHint', { room: roomParam });
       $('inviteHint').classList.remove('hidden');
     }else{
-      setLobbyErr('邀请链接里的房号无效：房号必须是 4 位数字。');
+      setLobbyErr(T('inviteBadRoom'));
     }
   }
+
+  bindPasswordToggle('createPw', 'createPwToggle');
+  bindPasswordToggle('joinPw', 'joinPwToggle');
 
   $('createBtn').addEventListener('click', createRoom);
   $('joinBtn').addEventListener('click', joinRoom);
@@ -1201,9 +1418,13 @@ function init(){
     e.target.value = e.target.value.replace(/\D/g,'').slice(0,4);
     $('joinBtn').classList.remove('invite-ready');
     $('inviteHint').classList.add('hidden');
+    showJoinPassword(false);
     setLobbyErr('');
   });
+  $('createPw').addEventListener('input', () => setLobbyErr(''));
+  $('joinPw').addEventListener('input', () => setLobbyErr(''));
   $('code').addEventListener('keydown', (e) => { if (e.key === 'Enter') joinRoom(); });
+  $('joinPw').addEventListener('keydown', (e) => { if (e.key === 'Enter') joinRoom(); });
   $('name').addEventListener('keydown', (e) => { if (e.key === 'Enter'){ if ($('code').value) joinRoom(); else createRoom(); } });
   $('micBtn').addEventListener('click', () => setMic(!S.micOn));
   $('resetBtn').addEventListener('click', () => { send({ type:'game_reset', room:S.room }); });
@@ -1242,6 +1463,9 @@ function init(){
     },
     get wsState(){ return S.wsState; },
     get wsReadyState(){ return S.ws ? S.ws.readyState : 3; },
+    get hasPassword(){ return S.roomHasPassword; },
+    get inviteLink(){ return S.room ? inviteLink(S.room) : ''; },
+    get inviteText(){ return S.room ? inviteText(S.room) : ''; },
     get peerCount(){ return S.pcs.size; },
     get relayMode(){ return FORCE_RELAY; },
     disconnect(){
