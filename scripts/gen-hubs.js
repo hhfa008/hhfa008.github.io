@@ -158,6 +158,12 @@ function iconSrcFor(game, lang) {
   return lang === 'zh' ? game.icon : `../${game.icon}`;
 }
 
+function cardArtFor(game, lang) {
+  const rel = `assets/art/composed/${game.slug}-card.png`;
+  if (!fs.existsSync(path.join(GAMES_DIR, rel))) return null;
+  return lang === 'zh' ? rel : `../${rel}`;
+}
+
 function findOgImage(slug) {
   const exts = ['png', 'jpg', 'jpeg', 'webp', 'svg'];
   for (const ext of exts) {
@@ -239,6 +245,10 @@ function renderHalls(registry, lang) {
       const name = game.names[lang];
       lines.push(`      <article class="game-card" data-slug="${escAttr(game.slug)}" data-search="${searchTextFor(game, lang, meta.label)}">`);
       lines.push(`        <a href="${escAttr(hrefFor(game, lang))}">`);
+      const art = cardArtFor(game, lang);
+      if (art) {
+        lines.push(`          <img class="card-art" src="${escAttr(art)}" alt="" width="480" height="320" loading="lazy" decoding="async" style="display:block;width:100%;height:auto;border-radius:8px">`);
+      }
       lines.push(`          <div class="card-head"><img src="${escAttr(iconSrcFor(game, lang))}" alt="" width="44" height="44" loading="lazy" decoding="async"><div><h3>${escHtml(name)}</h3><span class="latin">${escHtml(latinFor(game, lang))}</span></div></div>`);
       lines.push(`          <p class="desc">${escHtml(game.blurb[lang])}</p>`);
       lines.push(`          <p class="tags">${tagsFor(game, lang)}</p>`);
