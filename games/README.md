@@ -31,7 +31,8 @@
 
 ## 技术约定
 
-- 单文件：CSS/JS 内联在 `index.html`；唯一例外是 `pioneers/engine.js` 与 `shared/rules.js`（五子棋/四子棋单机版与语音房服务端共用规则），同目录同源加载，仍无外部依赖。
+- 单文件：CSS/JS 内联在 `index.html`；例外是 `pioneers/engine.js`、`shared/rules.js`（五子棋/四子棋单机版与语音房服务端共用规则）和 `shared/share.js`（全站分享按钮：原生分享优先，不支持时复制链接），均同目录同源加载，仍无外部依赖。
+- 分享：每个游戏页与三个大厅底部都有分享按钮，链接不带用户标识、不带追踪参数；语音房另提供「复制邀请链接」「复制邀请文案」，邀请链接形如 `/games/voice-room/?room=1234`。
 - 无外部依赖：不引 CDN、字体、图标库；棋盘与棋子用内联 SVG/CSS 自绘。
 - 无追踪：不接 analytics、不上报；最高分与战绩只写 `localStorage`。
 - 三语：15 款走 EN／简中／ID 字典与切换；Tap Match 为 EN／ID／FIL；中国象棋、语音房暂为中文单语，改版时应优先补齐。

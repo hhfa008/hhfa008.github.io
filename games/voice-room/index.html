@@ -39,6 +39,10 @@ label{display:block;font-size:13px;color:var(--muted);margin:14px 0 6px}
 .btn.primary{background:linear-gradient(180deg,#ffc46d,#f0a33c);color:#241605;border-color:#f0a33c}
 .btn.ghost{background:transparent}
 .btn.danger{background:#3a1d22;border-color:#5c2a33;color:#ffb3b3}
+.btn.invite-ready{border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(255,180,84,.22),0 0 20px rgba(255,180,84,.3)}
+.btn.invite-ready:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.invite-hint{color:var(--accent);font-size:13px;line-height:1.5;margin:8px 0 0}
 .btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
 .row{display:flex;gap:10px;flex-wrap:wrap}
 .row>.btn{flex:1}
@@ -129,9 +133,17 @@ summary{cursor:pointer;color:var(--muted);font-size:13px;padding:4px 0}
       <input id="code" class="input" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="0000" aria-label="4 位房号">
       <button id="joinBtn" class="btn">加入</button>
     </div>
+    <p id="inviteHint" class="invite-hint hidden" role="status"></p>
     <p id="lobbyErr" class="err" role="alert"></p>
     <p class="privacy">隐私说明：语音点对点传输，不经过服务器录制；本站不录音、不存储任何音频。麦克风默认关闭，只有你点「开麦」才会请求权限。</p>
     <p class="guide-link"><a href="guide.html">开房教程：怎么和朋友一起玩 →</a></p>
+<div class="share-row">
+  <button type="button" class="share-btn" data-share-btn aria-label="分享本页"
+    style="display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;min-width:44px;padding:0 16px;border:1px solid currentColor;border-radius:999px;background:transparent;color:inherit;font:inherit;font-size:14px;font-weight:600;cursor:pointer">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.4 10.7 15.6 6.3"/><path d="M8.4 13.3 15.6 17.7"/></svg>
+    <span data-share-label>分享</span>
+  </button>
+</div>
   </section>
 
   <section id="roomView" class="hidden">
@@ -143,6 +155,7 @@ summary{cursor:pointer;color:var(--muted);font-size:13px;padding:4px 0}
         </div>
         <div class="spacer"></div>
         <button id="copyBtn" class="btn ghost" style="min-height:44px;font-size:14px">复制邀请链接</button>
+        <button id="copyTextBtn" class="btn ghost" style="min-height:44px;font-size:14px">复制邀请文案</button>
         <button id="leaveBtn" class="btn danger" style="min-height:44px;font-size:14px">离开</button>
       </div>
       <div id="banner" class="banner hidden" role="status"></div>
@@ -191,6 +204,7 @@ const API_BASE = (params.get('api') || 'https://voice-room.superapp-devin.worker
 const WS_BASE = API_BASE.replace(/^http/i, 'ws');
 const FORCE_RELAY = params.get('relay') === '1';
 const MAX_MEMBERS = 4;
+const INVITE_BASE = 'https://hhfa008.github.io/games/voice-room/';
 const NAME_KEY = 'vr_name';
 const PID_KEY = 'vr_pid';
 
@@ -1126,15 +1140,24 @@ function joinRoom(){
   enterRoom(code);
 }
 
-function copyInvite(){
-  if (!S.room) return;
-  const u = new URL(location.href);
-  u.searchParams.set('room', S.room);
-  const text = u.toString();
-  const done = () => toast('邀请链接已复制');
+function inviteLink(room){
+  return INVITE_BASE + '?room=' + encodeURIComponent(room);
+}
+function inviteText(room){
+  return '来一局？房号 ' + room + '，点开就能语音下棋 → ' + inviteLink(room);
+}
+function copyText(text, done){
   if (navigator.clipboard && navigator.clipboard.writeText){
     navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
   }else fallbackCopy(text, done);
+}
+function copyInvite(){
+  if (!S.room) return;
+  copyText(inviteLink(S.room), () => toast('邀请链接已复制'));
+}
+function copyInviteMessage(){
+  if (!S.room) return;
+  copyText(inviteText(S.room), () => toast('邀请文案已复制'));
 }
 function fallbackCopy(text, done){
   try{
@@ -1160,13 +1183,25 @@ function init(){
     saved = '玩家' + Math.floor(10 + Math.random() * 90);
   }
   $('name').value = saved;
-  const roomParam = params.get('room') || '';
-  if (/^\d{4}$/.test(roomParam)) $('code').value = roomParam;
+  const roomParam = (params.get('room') || '').trim();
+  if (roomParam){
+    if (/^\d{4}$/.test(roomParam)){
+      $('code').value = roomParam;
+      $('joinBtn').classList.add('invite-ready');
+      $('inviteHint').textContent = '已填入邀请房号 ' + roomParam + '，点「加入」即可进房。';
+      $('inviteHint').classList.remove('hidden');
+    }else{
+      setLobbyErr('邀请链接里的房号无效：房号必须是 4 位数字。');
+    }
+  }
 
   $('createBtn').addEventListener('click', createRoom);
   $('joinBtn').addEventListener('click', joinRoom);
   $('code').addEventListener('input', (e) => {
     e.target.value = e.target.value.replace(/\D/g,'').slice(0,4);
+    $('joinBtn').classList.remove('invite-ready');
+    $('inviteHint').classList.add('hidden');
+    setLobbyErr('');
   });
   $('code').addEventListener('keydown', (e) => { if (e.key === 'Enter') joinRoom(); });
   $('name').addEventListener('keydown', (e) => { if (e.key === 'Enter'){ if ($('code').value) joinRoom(); else createRoom(); } });
@@ -1182,6 +1217,7 @@ function init(){
   });
   $('leaveBtn').addEventListener('click', () => leaveToLobby(''));
   $('copyBtn').addEventListener('click', copyInvite);
+  $('copyTextBtn').addEventListener('click', copyInviteMessage);
   document.addEventListener('pointerdown', unlockAudio, { passive:true });
 
   renderAll();
@@ -1262,5 +1298,7 @@ function init(){
 init();
 })();
 </script>
+
+<script src="/games/shared/share.js" data-name-zh="语音房" data-name-en="Voice Room" data-name-id="Voice Room"></script>
 </body>
 </html>
