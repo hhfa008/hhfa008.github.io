@@ -10,6 +10,7 @@ cd "$ROOT"
 FAILED_ITEMS=()
 PASS_COUNT=0
 WARN_COUNT=0
+SKIP_COUNT=0
 TOTAL=7
 
 section() {
@@ -24,6 +25,11 @@ mark_pass() {
 mark_fail() {
   printf '[%s/%s] FAIL: %s\n' "$1" "$TOTAL" "$2"
   FAILED_ITEMS+=("$1"": $2")
+}
+
+mark_skip() {
+  printf '[%s/%s] SKIP: %s\n' "$1" "$TOTAL" "$2"
+  SKIP_COUNT=$((SKIP_COUNT + 1))
 }
 
 # ---------------------------------------------------------------- 1. 单元测试
@@ -303,7 +309,7 @@ try {
 } catch (e) {
   console.log('  无法判断，已跳过：拿不到上一次提交（HEAD~1），可能是浅克隆或首个提交。');
   console.log('  这不是通过，只是本次无法验证 CACHE_VERSION 是否随页面改动升级。');
-  process.exit(0);
+  process.exit(3);
 }
 
 const changed = changedRaw.split('\n').map(s => s.trim()).filter(Boolean);
@@ -327,7 +333,7 @@ try {
 if (previousVersion === null) {
   console.log('  无法判断，已跳过：上一次提交里没有可解析的 games/sw.js CACHE_VERSION。');
   console.log('  这不是通过，只是本次无法验证 CACHE_VERSION 是否随页面改动升级。');
-  process.exit(0);
+  process.exit(3);
 }
 
 console.log(`  上一次提交（HEAD~1）CACHE_VERSION=${previousVersion}`);
@@ -351,7 +357,18 @@ console.log('  （升 games/sw.js 里的 CACHE_VERSION；确认无需升级时�
 process.exit(1);
 NODE
 then
-  mark_pass 4 "CACHE_VERSION 已升级，或本次无页面内容变更"
+  CHECK4_RC=0
+else
+  CHECK4_RC=$?
+fi
+if [ "$CHECK4_RC" -eq 0 ]; then
+  if [ "${PREDEPLOY_SKIP_CACHE_BUMP:-}" = "1" ]; then
+    mark_skip 4 "已显式豁免 CACHE_VERSION 检查（PREDEPLOY_SKIP_CACHE_BUMP=1）"
+  else
+    mark_pass 4 "CACHE_VERSION 已升级，或本次无页面内容变更"
+  fi
+elif [ "$CHECK4_RC" -eq 3 ]; then
+  mark_skip 4 "无法判断，已跳过（未验证 CACHE_VERSION）"
 else
   mark_fail 4 "CACHE_VERSION 未变但 games/ 下有内容变更，请升版本后重跑"
 fi
@@ -450,7 +467,11 @@ fi
 # ------------------------------------------------------------------ 汇总
 printf '\n----------------------------------------\n'
 if [ "${#FAILED_ITEMS[@]}" -eq 0 ]; then
-  printf 'PREDEPLOY OK（%d/%s 项通过）\n' "$PASS_COUNT" "$TOTAL"
+  if [ "$SKIP_COUNT" -gt 0 ]; then
+    printf 'PREDEPLOY OK（%d/%s 项通过，%d 项跳过）\n' "$PASS_COUNT" "$TOTAL" "$SKIP_COUNT"
+  else
+    printf 'PREDEPLOY OK（%d/%s 项通过）\n' "$PASS_COUNT" "$TOTAL"
+  fi
   exit 0
 fi
 printf 'PREDEPLOY FAILED：%d 项失败\n' "${#FAILED_ITEMS[@]}"
