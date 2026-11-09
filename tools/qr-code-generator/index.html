@@ -1,0 +1,2173 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>二维码生成器（离线可用）</title>
+<meta name="description" content="为文本、网址、WiFi、电话和短信生成二维码，可选纠错等级、尺寸和颜色，下载 PNG 或 SVG。全部在本地编码，不上传，无需注册。">
+<meta name="author" content="Devin">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="theme-color" content="#f2efe7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#101316" media="(prefers-color-scheme: dark)">
+<link rel="canonical" href="https://hhfa008.github.io/tools/qr-code-generator/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23b93d12'/%3E%3Cpath d='M9 23 23 9' stroke='%23fbf9f4' stroke-width='2.4' stroke-linecap='round'/%3E%3Ccircle cx='11' cy='11' r='3' fill='%23fbf9f4'/%3E%3Ccircle cx='21' cy='21' r='3' fill='%23fbf9f4'/%3E%3C/svg%3E">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Devin">
+<meta property="og:title" content="二维码生成器（离线可用）">
+<meta property="og:description" content="为文本、网址、WiFi、电话和短信生成二维码，可选纠错等级、尺寸和颜色，下载 PNG 或 SVG。全部在本地编码，不上传，无需注册。">
+<meta property="og:url" content="https://hhfa008.github.io/tools/qr-code-generator/">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:locale:alternate" content="en_US">
+<meta property="og:locale:alternate" content="id_ID">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="二维码生成器（离线可用）">
+<meta name="twitter:description" content="为文本、网址、WiFi、电话和短信生成二维码，可选纠错等级、尺寸和颜色，下载 PNG 或 SVG。全部在本地编码，不上传，无需注册。">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "二维码生成器",
+  "url": "https://hhfa008.github.io/tools/qr-code-generator/",
+  "applicationCategory": "DesignApplication",
+  "operatingSystem": "Any",
+  "browserRequirements": "Requires JavaScript",
+  "isAccessibleForFree": true,
+  "inLanguage": ["zh-CN", "en", "id"],
+  "description": "为文本、网址、WiFi、电话和短信生成二维码，可选纠错等级、尺寸和颜色，下载 PNG 或 SVG。全部在本地编码，不上传，无需注册。",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+  {
+    "@type": "Question",
+    "name": "纠错等级越高越好吗？",
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "纠错越高，二维码在污损时越容易识别，但同样内容需要更多模块，图案更密、尺寸更大。普通打印用 M 级通常够用，小尺寸或易磨损场景可用 Q 或 H。"
+    }
+  },
+  {
+    "@type": "Question",
+    "name": "彩色二维码会影响扫描吗？",
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "关键是对比度。前景色要明显深于背景色，避免浅色前景配深色背景，也不要让颜色过饱和。建议打印后实际扫一次。"
+    }
+  },
+  {
+    "@type": "Question",
+    "name": "内容太长为什么生成失败？",
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "二维码容量有限，字节模式随版本提升有上限，纠错等级越高容量越小。请缩短文本或改用短链接，工具会提示超出容量。以上处理全部在本地完成，不上传。"
+    }
+  }
+]
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "首页", "item": "https://hhfa008.github.io/" },
+    { "@type": "ListItem", "position": 2, "name": "工具大厅", "item": "https://hhfa008.github.io/tools/" },
+    { "@type": "ListItem", "position": 3, "name": "二维码生成器", "item": "https://hhfa008.github.io/tools/qr-code-generator/" }
+  ]
+}
+</script>
+
+<style>
+/* ==========================================================================
+   Design tokens — keep in sync with the existing tools pages.
+   ========================================================================== */
+:root{
+  --paper:#f2efe7; --paper-2:#fbf9f4; --panel:#ffffff;
+  --ink:#14171a; --muted:#5b615c; --muted-2:#7b807a;
+  --line:#d5d0c4; --line-strong:#bcb5a7;
+  --accent:#b93d12; --accent-soft:#f2a07a; --accent-wash:#f7e5da;
+  --ok:#2f6b3c; --ok-wash:#e8f2e7; --warn:#8a5a00; --warn-wash:#fbf1db;
+  --bad:#a32216; --bad-wash:#fbe7e3;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --radius:16px; --max:1040px;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --paper:#101316; --paper-2:#171b1f; --panel:#1a1f23;
+    --ink:#f2efe7; --muted:#b7b3a8; --muted-2:#948f85;
+    --line:#333a40; --line-strong:#4a535b;
+    --accent:#f08a5d; --accent-soft:#f2a07a; --accent-wash:#2b211c;
+    --ok:#8fd19e; --ok-wash:#1b2b1e; --warn:#f0c36a; --warn-wash:#2d2618;
+    --bad:#ff8a7a; --bad-wash:#321d1a;
+  }
+}
+
+/* Reset */
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%;color-scheme:light dark;scroll-behavior:smooth;overflow-x:clip}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font:16px/1.6 var(--sans);overflow-x:clip;
+  text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+p,h1,h2,h3,ul,ol,figure{margin:0}
+a{color:inherit}
+button,input,select,textarea{font:inherit;color:inherit}
+code,pre{font-family:var(--mono)}
+
+/* Layout */
+.wrap{width:100%;max-width:var(--max);margin:0 auto;padding-left:18px;padding-right:18px;min-width:0}
+@media (min-width:720px){.wrap{padding-left:32px;padding-right:32px}}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.skip-link{position:absolute;left:12px;top:-80px;z-index:100;padding:12px 16px;background:var(--ink);color:var(--paper);border-radius:8px;text-decoration:none}
+.skip-link:focus{top:12px}
+:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+
+/* Header */
+.site-header{border-bottom:1px solid var(--line);background:var(--paper)}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:10px 16px;min-height:64px;flex-wrap:wrap;padding-top:6px;padding-bottom:6px}
+.brand{display:inline-flex;align-items:center;gap:10px;font-weight:700;letter-spacing:-.02em;text-decoration:none;min-height:44px}
+.brand-mark{width:26px;height:26px;border-radius:7px;background:var(--accent);position:relative;flex:none}
+.brand-mark::before,.brand-mark::after{content:"";position:absolute;left:7px;height:2px;background:var(--paper-2);border-radius:1px}
+.brand-mark::before{right:7px;top:9px}
+.brand-mark::after{right:11px;top:15px}
+.header-tools{display:flex;align-items:center;gap:12px 16px;flex-wrap:wrap;justify-content:flex-end;min-width:0}
+.site-nav{display:flex;align-items:center;gap:14px;font-size:13.5px;flex-wrap:wrap}
+.site-nav a{display:inline-flex;align-items:center;min-height:44px;text-decoration:none;color:var(--muted)}
+.site-nav a:hover{color:var(--accent);text-decoration:underline}
+.lang-switch{display:flex;gap:4px}
+.lang-switch button{
+  min-width:44px;min-height:44px;padding:0 8px;border:1px solid var(--line-strong);
+  border-radius:9px;background:transparent;color:var(--muted);font-size:12.5px;
+  font-weight:650;cursor:pointer;line-height:1
+}
+.lang-switch button:hover{border-color:var(--accent);color:var(--accent)}
+.lang-switch button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+@media (prefers-color-scheme:dark){
+  .lang-switch button[aria-pressed="true"],
+  .btn.primary,.btn.danger{color:#101316}
+}
+
+/* Hero */
+.hero{padding:36px 0 22px}
+@media (min-width:720px){.hero{padding:52px 0 28px}}
+.eyebrow{margin:0 0 10px;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+h1{margin:0 0 12px;max-width:22ch;font-size:clamp(1.85rem,6vw,2.9rem);line-height:1.1;letter-spacing:-.035em;font-weight:700;overflow-wrap:anywhere}
+.lede{max-width:70ch;color:var(--muted);font-size:clamp(1rem,2vw,1.08rem);overflow-wrap:anywhere}
+.privacy{
+  display:flex;gap:9px;align-items:flex-start;max-width:78ch;margin:16px 0 0;padding:11px 14px;
+  background:var(--accent-wash);border:1px solid var(--line);border-left:4px solid var(--accent);
+  border-radius:0 10px 10px 0;font-size:13.5px
+}
+.privacy svg{width:17px;height:17px;flex:none;margin-top:3px}
+
+/* Cards and tool layout */
+.tool-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;align-items:start}
+.tool-layout>*{min-width:0}
+@media (min-width:900px){
+  .tool-layout{grid-template-columns:minmax(0,1.04fr) minmax(0,.96fr)}
+  .result-col{position:sticky;top:18px}
+}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;min-width:0}
+@media (min-width:720px){.card{padding:26px 28px}}
+.card-kicker{margin:0 0 7px;font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.11em;text-transform:uppercase;color:var(--accent)}
+.card h2{margin:0 0 14px;font-size:clamp(1.15rem,2.4vw,1.4rem);line-height:1.2;letter-spacing:-.02em;overflow-wrap:anywhere}
+.panel-desc{margin:0 0 14px;color:var(--muted);font-size:14px;overflow-wrap:anywhere}
+
+/* Fields */
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field>label,.field>span.label{font-size:13px;font-weight:650;color:var(--muted)}
+.field input,.field select,.field textarea,.field .input{
+  width:100%;min-height:46px;padding:10px 12px;border:1px solid var(--line-strong);
+  border-radius:12px;background:var(--paper-2);font-size:16px;line-height:1.4;min-width:0
+}
+.field textarea{min-height:120px;resize:vertical;line-height:1.55}
+.field select{
+  appearance:none;padding-right:34px;
+  background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);
+  background-position:calc(100% - 18px) 50%,calc(100% - 13px) 50%;
+  background-size:5px 5px,5px 5px;background-repeat:no-repeat
+}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);outline:3px solid var(--accent-wash);outline-offset:1px}
+.field input[aria-invalid="true"],.field select[aria-invalid="true"],.field textarea[aria-invalid="true"]{border-color:var(--bad)}
+.field-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+@media (min-width:600px){.field-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Buttons */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  min-height:46px;padding:0 16px;border:1px solid var(--line-strong);border-radius:12px;
+  background:var(--panel);color:var(--ink);font-size:14.5px;font-weight:650;
+  cursor:pointer;text-decoration:none;text-align:center;line-height:1.25
+}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.06);color:#fff}
+.btn.dark{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.btn.ghost{background:transparent}
+.btn.danger{background:var(--bad);border-color:var(--bad);color:#fff}
+.btn.danger:hover{filter:brightness(1.06);color:#fff}
+.btn-row{display:flex;flex-wrap:wrap;gap:8px;min-width:0}
+.btn-row .btn{flex:1 1 140px}
+
+/* Chips / segmented controls */
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px;padding:0;list-style:none}
+.chips button,.chip{
+  display:inline-flex;align-items:center;justify-content:center;min-height:44px;
+  padding:8px 14px;border:1px solid var(--line-strong);border-radius:999px;
+  background:var(--paper-2);color:var(--ink);font-size:13.5px;font-weight:650;
+  cursor:pointer;line-height:1.2;text-decoration:none
+}
+.chips button:hover,.chip:hover{border-color:var(--accent);color:var(--accent)}
+.chips button[aria-pressed="true"],.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+@media (prefers-color-scheme:dark){
+  .chips button[aria-pressed="true"],.chip.on{color:#101316}
+}
+
+/* Tabs */
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
+.tabs [role="tab"]{
+  min-height:44px;padding:9px 14px;border:1px solid var(--line-strong);border-radius:999px;
+  background:var(--paper-2);color:var(--ink);font-size:13.5px;font-weight:650;
+  cursor:pointer;line-height:1.2
+}
+.tabs [role="tab"][aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+@media (prefers-color-scheme:dark){.tabs [role="tab"][aria-selected="true"]{color:#101316}}
+
+/* Result */
+.result{background:var(--paper-2)}
+.result-live{min-height:96px}
+.result-big{
+  margin:2px 0 0;font-family:var(--mono);font-size:clamp(2rem,7.5vw,3rem);
+  font-weight:650;line-height:1.08;letter-spacing:-.04em;color:var(--accent);
+  font-variant-numeric:tabular-nums;overflow-wrap:anywhere
+}
+.result-note{margin-top:7px;color:var(--muted);font-size:14px;overflow-wrap:anywhere}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px;margin-top:14px}
+.stat{min-width:0;padding:10px 11px;border:1px solid var(--line);border-radius:11px;background:var(--paper-2)}
+.stat span{display:block;font-size:11.5px;color:var(--muted);line-height:1.3}
+.stat b{display:block;margin-top:2px;font-family:var(--mono);font-size:1.12rem;font-weight:650;font-variant-numeric:tabular-nums;letter-spacing:-.02em;overflow-wrap:anywhere}
+
+/* Tables must scroll inside their own wrapper, never the page. */
+.table-wrap{width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.table-wrap table{width:100%;border-collapse:collapse;font-size:13.5px}
+.table-wrap caption{padding:10px 12px;text-align:left;color:var(--muted);font-size:12.5px}
+.table-wrap th,.table-wrap td{padding:9px 11px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap;font-variant-numeric:tabular-nums}
+.table-wrap th{font-weight:650;color:var(--muted);font-size:12.5px}
+.table-wrap tr:last-child td{border-bottom:0}
+
+/* Notes and status */
+.hint{margin:10px 0 0;color:var(--muted-2);font-size:12.5px;line-height:1.55;overflow-wrap:anywhere}
+.error{margin:10px 0 0;padding:9px 12px;border-radius:9px;background:var(--bad-wash);border:1px solid var(--bad);color:var(--bad);font-size:13px;font-weight:600;line-height:1.5;overflow-wrap:anywhere}
+.badge{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:2px 9px;border-radius:999px;background:var(--accent-wash);color:var(--accent);font-size:12px;font-weight:650;line-height:1.6;vertical-align:middle}
+.badge.ok{background:var(--ok-wash);color:var(--ok)}
+.badge.warn{background:var(--warn-wash);color:var(--warn)}
+.badge.bad{background:var(--bad-wash);color:var(--bad)}
+
+/* Checkbox rows: browser-check measures the input box itself, so keep it 44x44. */
+.check{display:inline-flex;align-items:center;gap:8px;min-height:44px;font-size:14px;cursor:pointer}
+.check input[type="checkbox"],.check input[type="radio"]{width:44px;height:44px;flex:none;accent-color:var(--accent);cursor:pointer}
+.check-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin-top:10px}
+/* Safety net for builders: any main control must stay touchable. */
+main button{min-height:44px}
+main select{min-height:44px}
+main input[type="checkbox"],main input[type="radio"]{width:44px;height:44px;flex:none;accent-color:var(--accent)}
+
+/* Explain */
+.explain{margin-top:18px}
+.explain h2{margin:0 0 12px;font-size:clamp(1.3rem,3vw,1.7rem);letter-spacing:-.02em}
+.explain-body{padding-bottom:2px}
+.explain-body p{max-width:82ch;color:var(--muted);font-size:14px;margin-bottom:10px;overflow-wrap:anywhere}
+.explain-body p:last-child{margin-bottom:0}
+.explain-body strong{color:var(--ink)}
+.formula-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;margin:14px 0 18px}
+@media (min-width:760px){.formula-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.formula{min-width:0;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--paper-2)}
+.formula h3,.formula-title{margin:0 0 7px;font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.formula code{display:inline-block;max-width:100%;padding:2px 6px;border-radius:5px;background:var(--accent-wash);font-family:var(--mono);font-size:12.5px;line-height:1.6;overflow-wrap:anywhere}
+.assumptions{margin:0;padding-left:20px;color:var(--muted);font-size:13.5px}
+.assumptions li{margin:0 0 8px;overflow-wrap:anywhere}
+
+/* FAQ */
+.faq{margin-top:18px}
+.faq h2{margin:0 0 12px;font-size:clamp(1.3rem,3vw,1.7rem);letter-spacing:-.02em}
+.faq details{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:0 20px}
+.faq details+details{margin-top:10px}
+.faq summary{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:44px;padding:16px 0;cursor:pointer;font-weight:650;list-style:none}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";flex:none;font-family:var(--mono);font-size:19px;line-height:1;color:var(--accent)}
+.faq details[open] summary::after{content:"\2212"}
+.faq details p{margin:0;padding:0 0 18px;color:var(--muted);font-size:14px;max-width:80ch;overflow-wrap:anywhere}
+
+/* Footer */
+.site-footer{margin-top:28px;padding:22px 0 34px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted)}
+.footer-inner{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 18px}
+.footer-links{display:flex;flex-wrap:wrap;gap:4px 14px}
+.site-footer a{color:var(--accent);text-decoration:none;display:inline-flex;align-items:center;min-height:44px}
+.site-footer a:hover{text-decoration:underline}
+.footer-note{margin:8px 0 0;max-width:82ch;color:var(--muted-2);overflow-wrap:anywhere}
+.noscript{margin-top:18px}
+
+/* Toast */
+.toast{
+  position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));
+  transform:translate(-50%,12px);z-index:20;max-width:calc(100vw - 32px);
+  padding:12px 18px;border-radius:12px;background:var(--ink);color:var(--paper);
+  font-size:14px;font-weight:600;text-align:center;box-shadow:0 8px 24px rgb(0 0 0 / .22);
+  opacity:0;pointer-events:none;transition:opacity .16s,transform .16s;overflow-wrap:anywhere
+}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+
+/* Motion and print */
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .btn:active{transform:none}
+}
+@media print{
+  .site-header,.site-footer,.skip-link,.lang-switch,.tabs,.chips,.btn-row,.toast,.no-print{display:none!important}
+  body{background:#fff;color:#000;padding:0}
+  .card,.table-wrap{border-color:#999;background:#fff;break-inside:avoid}
+  .result-col{position:static}
+  .result-big{color:#000}
+  .explain,.faq{display:block}
+  details{break-inside:avoid}
+  .faq details p{display:block!important}
+}
+</style>
+</head>
+<body data-slug="qr-code-generator" data-category="design-image">
+<a class="skip-link" href="#tool" data-i="skip">跳到工具</a>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="/" aria-label="Devin" data-i-aria="brandHome">
+      <span class="brand-mark" aria-hidden="true"></span><span data-i="brandName">Devin</span>
+    </a>
+    <div class="header-tools">
+      <nav class="site-nav" aria-label="站点导航" data-i-aria="navAria">
+        <a id="nav-tools" href="/tools/" data-tools-link data-i="navHall">工具大厅</a>
+        <a href="/games/" data-i="navGames">在线桌游</a>
+      </nav>
+      <nav class="lang-switch" aria-label="语言" data-i-aria="langLabel">
+        <button type="button" data-lang="zh" aria-pressed="true" data-i="langZh">中文</button>
+        <button type="button" data-lang="en" aria-pressed="false" data-i="langEn">EN</button>
+        <button type="button" data-lang="id" aria-pressed="false" data-i="langId">ID</button>
+      </nav>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero" aria-labelledby="page-title">
+    <p class="eyebrow" data-i="eyebrow">免费工具 · 本地运行</p>
+    <h1 id="page-title" data-i="appTitle">二维码生成器</h1>
+    <p class="lede" data-i="tagline">不联网，也能生成二维码。</p>
+    <p class="privacy">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+      <span data-i="privacy">所有计算都在你的浏览器里完成，输入不会上传。</span>
+    </p>
+  </section>
+
+  <!-- ======================================================================
+       TOOL BODY — builder replaces this marker with the tool UI.
+       Everything between the marker and the explain section belongs to the tool.
+       Keep labels, data-i hooks, aria-live results and 44px targets.
+       ====================================================================== -->
+  <style>
+    .tabs{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px;padding:0;border:0}
+    .tabs [role="tab"]{min-height:44px;padding:9px 14px;border:1px solid var(--line-strong);border-radius:999px;background:var(--paper-2);color:var(--ink);font-size:13.5px;font-weight:650;cursor:pointer;line-height:1.2}
+    .tabs [role="tab"][aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+    @media (prefers-color-scheme:dark){.tabs [role="tab"][aria-selected="true"]{color:#101316}}
+    .tabpanel{display:flex;flex-direction:column;gap:12px;min-width:0}
+    .field input[type="color"]{min-height:46px;height:46px;padding:4px;cursor:pointer}
+    .color-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    .qr-preview-wrap{display:flex;justify-content:center;align-items:center;padding:10px;margin:0 0 12px;border:1px solid var(--line);border-radius:12px;background:var(--paper-2)}
+    #qr-preview{display:block;width:100%;max-width:320px;height:auto;image-rendering:pixelated;border-radius:4px}
+    .contrast-warn{margin-top:10px;padding:9px 12px;border-radius:9px;background:var(--warn-wash);border:1px solid var(--warn);color:var(--warn);font-size:13px;font-weight:600;line-height:1.5}
+  </style>
+  <section class="tool-layout" id="tool">
+    <div class="card">
+      <p class="card-kicker" data-i="kicker">内容与样式</p>
+      <h2 data-i="inputTitle">输入内容并设置二维码</h2>
+      <div class="tabs" role="tablist" aria-label="内容类型" data-i-aria="tabsAria">
+        <button type="button" role="tab" id="tab-text" data-tab="text" aria-selected="true" data-i="tabText">文本 / 网址</button>
+        <button type="button" role="tab" id="tab-wifi" data-tab="wifi" aria-selected="false" data-i="tabWifi">WiFi</button>
+        <button type="button" role="tab" id="tab-phone" data-tab="phone" aria-selected="false" data-i="tabPhone">电话</button>
+        <button type="button" role="tab" id="tab-sms" data-tab="sms" aria-selected="false" data-i="tabSms">短信</button>
+      </div>
+
+      <div class="tabpanel" id="panel-text" role="tabpanel" aria-labelledby="tab-text">
+        <div class="field">
+          <label for="qr-text" data-i="textLabel">内容</label>
+          <textarea id="qr-text" rows="4" spellcheck="false" data-i-ph="textPh" placeholder="输入网址、文本或其他要编码的内容"></textarea>
+        </div>
+      </div>
+
+      <div class="tabpanel" id="panel-wifi" role="tabpanel" aria-labelledby="tab-wifi" hidden>
+        <div class="field">
+          <label for="wifi-ssid" data-i="wifiSsidLabel">WiFi 名称（SSID）</label>
+          <input id="wifi-ssid" type="text" autocomplete="off" data-i-ph="wifiSsidPh" placeholder="例如 MyHomeWiFi">
+        </div>
+        <div class="field">
+          <label for="wifi-pass" data-i="wifiPassLabel">密码</label>
+          <input id="wifi-pass" type="text" autocomplete="off" data-i-ph="wifiPassPh" placeholder="无密码可留空">
+        </div>
+        <div class="field">
+          <label for="wifi-security" data-i="wifiSecurityLabel">加密方式</label>
+          <select id="wifi-security">
+            <option value="WPA" data-i="wifiWpa">WPA / WPA2</option>
+            <option value="WEP" data-i="wifiWep">WEP</option>
+            <option value="nopass" data-i="wifiNone">无密码</option>
+          </select>
+        </div>
+        <div class="check-row">
+          <label class="check"><input type="checkbox" id="wifi-hidden"><span data-i="wifiHidden">隐藏网络</span></label>
+        </div>
+      </div>
+
+      <div class="tabpanel" id="panel-phone" role="tabpanel" aria-labelledby="tab-phone" hidden>
+        <div class="field">
+          <label for="qr-phone" data-i="phoneLabel">电话号码</label>
+          <input id="qr-phone" type="tel" inputmode="tel" autocomplete="off" data-i-ph="phonePh" placeholder="+8613800138000">
+        </div>
+      </div>
+
+      <div class="tabpanel" id="panel-sms" role="tabpanel" aria-labelledby="tab-sms" hidden>
+        <div class="field">
+          <label for="sms-phone" data-i="smsPhoneLabel">电话号码</label>
+          <input id="sms-phone" type="tel" inputmode="tel" autocomplete="off" data-i-ph="phonePh" placeholder="+8613800138000">
+        </div>
+        <div class="field">
+          <label for="sms-body" data-i="smsBodyLabel">短信内容</label>
+          <textarea id="sms-body" rows="3" spellcheck="false" data-i-ph="smsBodyPh" placeholder="要预填的短信内容"></textarea>
+        </div>
+      </div>
+
+      <div class="field-grid two" style="margin-top:16px">
+        <div class="field">
+          <label for="qr-ec" data-i="eccLabel">纠错等级</label>
+          <select id="qr-ec">
+            <option value="L" data-i="eccL">L · 约 7%</option>
+            <option value="M" selected data-i="eccM">M · 约 15%</option>
+            <option value="Q" data-i="eccQ">Q · 约 25%</option>
+            <option value="H" data-i="eccH">H · 约 30%</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="qr-size" data-i="sizeLabel">PNG 尺寸</label>
+          <select id="qr-size">
+            <option value="256">256 px</option>
+            <option value="512" selected>512 px</option>
+            <option value="1024">1024 px</option>
+          </select>
+        </div>
+      </div>
+      <div class="color-grid" style="margin-top:12px">
+        <div class="field">
+          <label for="qr-dark" data-i="darkLabel">前景色</label>
+          <input id="qr-dark" type="color" value="#14171a">
+        </div>
+        <div class="field">
+          <label for="qr-light" data-i="lightLabel">背景色</label>
+          <input id="qr-light" type="color" value="#ffffff">
+        </div>
+      </div>
+      <p class="hint" data-i="eccNote">等级越高越抗污损，但同样内容需要更多模块、图案更密。</p>
+      <p class="hint" data-i="quietNote">静区固定为 4 个模块；PNG 尺寸会自动取整到模块整数倍。</p>
+      <p class="contrast-warn" id="contrast-warn" hidden data-i="contrastWarn">前景与背景对比度偏低，扫码可能失败。建议使用深色前景配浅色背景。</p>
+      <p id="qr-error" class="error" role="alert" hidden></p>
+    </div>
+    <div class="card result result-col" aria-live="polite" aria-labelledby="res-title">
+      <p class="card-kicker" data-i="resultKicker">本地编码</p>
+      <h2 id="res-title" data-i="resultTitle">预览与下载</h2>
+      <p class="panel-desc" id="qr-empty" data-i="noQr">输入内容后会自动生成二维码，结果显示在这里。</p>
+      <div id="qr-output" hidden>
+        <div class="qr-preview-wrap"><canvas id="qr-preview" aria-label="二维码预览" data-i-aria="previewAria"></canvas></div>
+        <div class="stat-grid">
+          <div class="stat"><span data-i="statVersion">版本</span><b id="v-version">—</b></div>
+          <div class="stat"><span data-i="statModules">模块</span><b id="v-modules">—</b></div>
+          <div class="stat"><span data-i="statEc">纠错</span><b id="v-ec">—</b></div>
+          <div class="stat"><span data-i="statMask">掩码</span><b id="v-mask">—</b></div>
+          <div class="stat"><span data-i="statBytes">字节</span><b id="v-bytes">—</b></div>
+          <div class="stat"><span data-i="statCapacity">容量</span><b id="v-capacity">—</b></div>
+        </div>
+        <div class="btn-row" style="margin-top:14px">
+          <button type="button" class="btn primary" id="download-png" data-i="downloadPng" disabled>下载 PNG</button>
+          <button type="button" class="btn" id="download-svg" data-i="downloadSvg" disabled>下载 SVG</button>
+          <button type="button" class="btn ghost" id="copy-content" data-i="copyContent" disabled>复制内容</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="explain" id="explain" aria-labelledby="explain-title">
+    <h2 id="explain-title" data-i="explainTitle">公式与假设</h2>
+    <div class="explain-body">
+      <!-- ==================================================================
+           TOOL EXPLAIN — formula, assumptions, rounding rules, limitations.
+           ================================================================== -->
+      <p data-i="explainIntro">工具内置完整的 QR 编码器：内容按 UTF-8 转成字节，使用 byte 模式，自动选择能容纳内容的最小版本（1–40），按所选纠错等级生成纠错码，再应用 8 种掩码中罚分最低的一种。SVG 与 PNG 都在本地生成，页面没有任何网络请求。</p>
+      <div class="formula-grid">
+        <div class="formula">
+          <h3 data-i="formulaVersionTitle">版本选择</h3>
+          <code data-i="formulaVersion">4 + 计数位 + 8 × 字节数 ≤ 数据码字数 × 8</code>
+          <p class="hint" data-i="formulaVersionNote">计数位在版本 1–9 为 8 位，版本 10–40 为 16 位；版本越高模块越多。</p>
+        </div>
+        <div class="formula">
+          <h3 data-i="formulaCapacityTitle">字节容量</h3>
+          <code data-i="formulaCapacity">capacity = floor((数据码字数 × 8 − 4 − 计数位) / 8)</code>
+          <p class="hint" data-i="formulaCapacityNote">纠错越高，纠错码字越多，可用的数据码字越少。版本 40 时 L 约 2953 字节，H 约 1273 字节。</p>
+        </div>
+        <div class="formula">
+          <h3 data-i="formulaContrastTitle">颜色对比度</h3>
+          <code data-i="formulaContrast">contrast = (L1 + 0.05) / (L2 + 0.05)</code>
+          <p class="hint" data-i="formulaContrastNote">L 为相对亮度；低于 4.5 时页面会提示，可能影响扫码。</p>
+        </div>
+      </div>
+      <ul class="assumptions">
+        <li data-i="assume1">使用 byte 模式，任何 UTF-8 文本都可编码；同样内容的纯数字或大写字母仍按字节计算，不会自动切换到更紧凑的模式。</li>
+        <li data-i="assume2">掩码按 4 条标准罚分规则自动选择，无法手动指定；编码结果是标准 QR，可被常见扫码器读取。</li>
+        <li data-i="assume3">前景色应明显深于背景色。浅色前景配深色背景、低对比度或过度饱和的颜色都可能扫不出来。</li>
+        <li data-i="assume4">PNG 的实际像素是模块数的整数倍，可能略小于所选尺寸；SVG 为矢量，适合印刷。</li>
+        <li data-i="assume5">内容超出所选纠错等级的容量时会就地报错，不会生成不完整二维码；所有结果只存在于当前页面。</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="faq" id="faq" aria-labelledby="faq-title">
+    <h2 id="faq-title" data-i="faqTitle">常见问题</h2>
+    <!-- ====================================================================
+         TOOL FAQ — generator injects the Chinese FAQ from config.faqs.
+         Keep the faqQ1..faqA3 data-i keys in all three dictionaries.
+         ==================================================================== -->
+    <details>
+          <summary data-i="faqQ1">纠错等级越高越好吗？</summary>
+          <p data-i="faqA1">纠错越高，二维码在污损时越容易识别，但同样内容需要更多模块，图案更密、尺寸更大。普通打印用 M 级通常够用，小尺寸或易磨损场景可用 Q 或 H。</p>
+        </details>
+    <details>
+          <summary data-i="faqQ2">彩色二维码会影响扫描吗？</summary>
+          <p data-i="faqA2">关键是对比度。前景色要明显深于背景色，避免浅色前景配深色背景，也不要让颜色过饱和。建议打印后实际扫一次。</p>
+        </details>
+    <details>
+          <summary data-i="faqQ3">内容太长为什么生成失败？</summary>
+          <p data-i="faqA3">二维码容量有限，字节模式随版本提升有上限，纠错等级越高容量越小。请缩短文本或改用短链接，工具会提示超出容量。以上处理全部在本地完成，不上传。</p>
+        </details>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <p data-i="copyright">© 2026 Devin</p>
+    <nav class="footer-links" aria-label="页脚导航" data-i-aria="footerAria">
+      <a href="/tools/" data-tools-link data-i="backTools">工具大厅</a>
+      <a href="/games/" data-i="navGames">在线桌游</a>
+      <a href="/" data-i="navHome">首页</a>
+    </nav>
+  </div>
+  <div class="wrap"><p class="footer-note" data-i="footerNote">所有处理都在本地完成，不上传任何数据。</p></div>
+</footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<noscript>
+  <div class="wrap"><p class="card noscript" data-i="noscript">这个工具需要 JavaScript 才能运行。所有计算都在你的设备上完成，不会上传任何数据。</p></div>
+</noscript>
+
+<!-- ==========================================================================
+     ENGINE — pure functions only. No DOM, no window, no clock, no storage.
+     Builder replaces everything between TOOL_ENGINE_START and TOOL_ENGINE_END,
+     then updates the return object. Must stay Node-evaluable.
+     ========================================================================== -->
+<script id="engine">
+var ToolEngine = (function () {
+  'use strict';
+
+  // TOOL_ENGINE_START
+  /*
+   * Self-contained QR Code encoder — byte mode, versions 1-40, ECC L/M/Q/H,
+   * UTF-8 input, 4-module quiet zone in the SVG/PNG renderers.
+   *
+   * Adapted from Nayuki's QR Code generator library (MIT License):
+   * https://www.nayuki.io/page/qr-code-generator-library
+   * Reed-Solomon coding, block tables, masking and matrix layout follow
+   * ISO/IEC 18004. No runtime dependency and no network access.
+   */
+  var ECC_CODEWORDS_PER_BLOCK = [
+    [7, 10, 15, 20, 26, 18, 20, 24, 30, 18, 20, 24, 26, 30, 22, 24, 28, 30, 28, 28, 28, 28, 30, 30, 26, 28, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30],
+    [10, 16, 26, 18, 24, 16, 18, 22, 22, 26, 30, 22, 22, 24, 24, 28, 28, 26, 26, 26, 26, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28],
+    [13, 22, 18, 26, 18, 24, 18, 22, 20, 24, 28, 26, 24, 20, 30, 24, 28, 28, 26, 30, 28, 30, 30, 30, 30, 28, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30],
+    [17, 28, 22, 16, 22, 28, 26, 26, 24, 28, 24, 28, 22, 24, 24, 30, 28, 28, 26, 28, 30, 24, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30]
+  ];
+  var NUM_ERROR_CORRECTION_BLOCKS = [
+    [1, 1, 1, 1, 1, 2, 2, 2, 2, 4, 4, 4, 4, 4, 6, 6, 6, 6, 7, 8, 8, 9, 9, 10, 12, 12, 12, 13, 14, 15, 16, 17, 18, 19, 19, 20, 21, 22, 24, 25],
+    [1, 1, 1, 2, 2, 4, 4, 4, 5, 5, 5, 8, 9, 9, 10, 10, 11, 13, 14, 16, 17, 17, 18, 20, 21, 23, 25, 26, 28, 29, 31, 33, 35, 37, 38, 40, 43, 45, 47, 49],
+    [1, 1, 2, 2, 4, 4, 6, 6, 8, 8, 8, 10, 12, 16, 12, 17, 16, 18, 21, 20, 23, 23, 25, 27, 29, 34, 34, 35, 38, 40, 43, 45, 48, 51, 53, 56, 59, 62, 65, 68],
+    [1, 1, 2, 4, 4, 4, 5, 6, 8, 8, 11, 11, 16, 16, 18, 16, 19, 21, 25, 25, 25, 34, 30, 32, 35, 37, 40, 42, 45, 48, 51, 54, 57, 60, 63, 66, 70, 74, 77, 81]
+  ];
+  var ECL_INDEX = { L: 0, M: 1, Q: 2, H: 3 };
+  var ECL_FORMAT_BITS = { L: 1, M: 0, Q: 3, H: 2 };
+
+  function isNum(n) { return typeof n === 'number' && isFinite(n); }
+  function fail(code) { return { ok: false, error: code }; }
+
+  function roundTo(x, decimals) {
+    var f = Math.pow(10, decimals);
+    var abs = Math.abs(x);
+    var r = Math.floor(abs * f + 0.5 + 1e-9) / f;
+    return x < 0 ? -r : r;
+  }
+
+  function getBit(x, i) { return ((x >>> i) & 1) !== 0; }
+
+  function utf8Encode(str) {
+    var out = [];
+    for (var i = 0; i < str.length; i++) {
+      var c = str.charCodeAt(i);
+      if (c >= 0xD800 && c <= 0xDBFF && i + 1 < str.length) {
+        var c2 = str.charCodeAt(i + 1);
+        if (c2 >= 0xDC00 && c2 <= 0xDFFF) {
+          c = 0x10000 + ((c - 0xD800) << 10) + (c2 - 0xDC00);
+          i++;
+        }
+      }
+      if (c < 0x80) {
+        out.push(c);
+      } else if (c < 0x800) {
+        out.push(0xC0 | (c >> 6), 0x80 | (c & 63));
+      } else if (c < 0x10000) {
+        out.push(0xE0 | (c >> 12), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63));
+      } else {
+        out.push(0xF0 | (c >> 18), 0x80 | ((c >> 12) & 63), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63));
+      }
+    }
+    return out;
+  }
+
+  function numRawDataModules(ver) {
+    var result = (16 * ver + 128) * ver + 64;
+    if (ver >= 2) {
+      var numAlign = Math.floor(ver / 7) + 2;
+      result -= (25 * numAlign - 10) * numAlign - 55;
+      if (ver >= 7) result -= 36;
+    }
+    return result;
+  }
+
+  function numDataCodewords(ver, eclIndex) {
+    return Math.floor(numRawDataModules(ver) / 8) -
+      ECC_CODEWORDS_PER_BLOCK[eclIndex][ver - 1] * NUM_ERROR_CORRECTION_BLOCKS[eclIndex][ver - 1];
+  }
+
+  function capacityBytes(version, ec) {
+    var e = ECL_INDEX[String(ec || '').toUpperCase()];
+    if (e == null) return fail('bad_ec');
+    if (!isNum(version) || Math.floor(version) !== version || version < 1 || version > 40) {
+      return fail('bad_version');
+    }
+    var countBits = version <= 9 ? 8 : 16;
+    return { ok: true, value: Math.floor((numDataCodewords(version, e) * 8 - 4 - countBits) / 8) };
+  }
+
+  function maxBytes(ec) {
+    var e = ECL_INDEX[String(ec || '').toUpperCase()];
+    if (e == null) return fail('bad_ec');
+    return capacityBytes(40, ec);
+  }
+
+  function chooseVersion(byteLen, eclIndex) {
+    for (var v = 1; v <= 40; v++) {
+      var countBits = v <= 9 ? 8 : 16;
+      if (4 + countBits + 8 * byteLen <= numDataCodewords(v, eclIndex) * 8) return v;
+    }
+    return 0;
+  }
+
+  function pushVal(bits, value, len) {
+    for (var i = len - 1; i >= 0; i--) bits.push((value >>> i) & 1);
+  }
+
+  function buildData(bytes, ver, eclIndex) {
+    var capacity = numDataCodewords(ver, eclIndex);
+    var bits = [];
+    pushVal(bits, 4, 4);
+    pushVal(bits, bytes.length, ver <= 9 ? 8 : 16);
+    for (var i = 0; i < bytes.length; i++) pushVal(bits, bytes[i], 8);
+    for (var t = 0; t < 4 && bits.length < capacity * 8; t++) bits.push(0);
+    while (bits.length % 8 !== 0) bits.push(0);
+    var data = [];
+    for (var b = 0; b < bits.length; b += 8) {
+      var val = 0;
+      for (var k = 0; k < 8; k++) val = (val << 1) | bits[b + k];
+      data.push(val);
+    }
+    var pad = 0xEC;
+    while (data.length < capacity) {
+      data.push(pad);
+      pad = pad === 0xEC ? 0x11 : 0xEC;
+    }
+    return data;
+  }
+
+  function gfMultiply(x, y) {
+    var z = 0;
+    for (var i = 7; i >= 0; i--) {
+      z = (z << 1) ^ ((z >>> 7) * 0x11D);
+      z ^= ((y >>> i) & 1) * x;
+    }
+    return z & 255;
+  }
+
+  function reedSolomonDivisor(degree) {
+    var result = [];
+    for (var i = 0; i < degree - 1; i++) result.push(0);
+    result.push(1);
+    var root = 1;
+    for (var d = 0; d < degree; d++) {
+      for (var j = 0; j < result.length; j++) {
+        result[j] = gfMultiply(result[j], root);
+        if (j + 1 < result.length) result[j] ^= result[j + 1];
+      }
+      root = gfMultiply(root, 2);
+    }
+    return result;
+  }
+
+  function reedSolomonRemainder(data, divisor) {
+    var result = divisor.map(function () { return 0; });
+    for (var d = 0; d < data.length; d++) {
+      var factor = data[d] ^ result.shift();
+      result.push(0);
+      for (var i = 0; i < divisor.length; i++) result[i] ^= gfMultiply(divisor[i], factor);
+    }
+    return result;
+  }
+
+  function addEccAndInterleave(data, ver, eclIndex) {
+    var numBlocks = NUM_ERROR_CORRECTION_BLOCKS[eclIndex][ver - 1];
+    var eccLen = ECC_CODEWORDS_PER_BLOCK[eclIndex][ver - 1];
+    var rawCodewords = Math.floor(numRawDataModules(ver) / 8);
+    var numShortBlocks = numBlocks - rawCodewords % numBlocks;
+    var shortBlockLen = Math.floor(rawCodewords / numBlocks);
+    var divisor = reedSolomonDivisor(eccLen);
+    var blocks = [];
+    var k = 0;
+    for (var i = 0; i < numBlocks; i++) {
+      var dataLen = shortBlockLen - eccLen + (i < numShortBlocks ? 0 : 1);
+      var dat = data.slice(k, k + dataLen);
+      k += dataLen;
+      var ecc = reedSolomonRemainder(dat, divisor);
+      if (i < numShortBlocks) dat.push(0);
+      blocks.push(dat.concat(ecc));
+    }
+    var out = [];
+    for (var col = 0; col < blocks[0].length; col++) {
+      for (var j = 0; j < numBlocks; j++) {
+        if (col !== shortBlockLen - eccLen || j >= numShortBlocks) out.push(blocks[j][col]);
+      }
+    }
+    return out;
+  }
+
+  function makeEmpty(size) {
+    var result = [];
+    for (var y = 0; y < size; y++) {
+      var row = [];
+      for (var x = 0; x < size; x++) row.push(false);
+      result.push(row);
+    }
+    return result;
+  }
+
+  function alignmentPositions(ver) {
+    if (ver === 1) return [];
+    var numAlign = Math.floor(ver / 7) + 2;
+    var step = ver === 32 ? 26 : Math.ceil((ver * 4 + 4) / (numAlign * 2 - 2)) * 2;
+    var result = [6];
+    for (var pos = ver * 4 + 10; result.length < numAlign; pos -= step) result.splice(1, 0, pos);
+    return result;
+  }
+
+  function maskBit(mask, x, y) {
+    switch (mask) {
+      case 0: return (x + y) % 2 === 0;
+      case 1: return y % 2 === 0;
+      case 2: return x % 3 === 0;
+      case 3: return (x + y) % 3 === 0;
+      case 4: return (Math.floor(x / 3) + Math.floor(y / 2)) % 2 === 0;
+      case 5: return x * y % 2 + x * y % 3 === 0;
+      case 6: return (x * y % 2 + x * y % 3) % 2 === 0;
+      case 7: return ((x + y) % 2 + x * y % 3) % 2 === 0;
+      default: return false;
+    }
+  }
+
+  function encodeQR(text, ec, opts) {
+    if (typeof text !== 'string') return fail('bad_text');
+    if (text.length === 0) return fail('empty_input');
+    var ecName = String(ec == null ? 'M' : ec).toUpperCase();
+    var eclIndex = ECL_INDEX[ecName];
+    if (eclIndex == null) return fail('bad_ec');
+    opts = opts || {};
+
+    var bytes = utf8Encode(text);
+    var cap = maxBytes(ecName);
+    if (!cap.ok) return cap;
+    if (bytes.length > cap.value) return fail('too_long');
+
+    var version = 0;
+    if (opts.version != null && opts.version !== 0) {
+      if (!isNum(opts.version) || Math.floor(opts.version) !== opts.version ||
+          opts.version < 1 || opts.version > 40) return fail('bad_version');
+      version = opts.version;
+      var versionCap = capacityBytes(version, ecName);
+      if (!versionCap.ok) return versionCap;
+      if (bytes.length > versionCap.value) return fail('too_long');
+    } else {
+      version = chooseVersion(bytes.length, eclIndex);
+      if (!version) return fail('too_long');
+    }
+
+    var mask = opts.mask == null ? -1 : opts.mask;
+    if (!isNum(mask) || Math.floor(mask) !== mask || mask < -1 || mask > 7) return fail('bad_mask');
+
+    var data = buildData(bytes, version, eclIndex);
+    var codewords = addEccAndInterleave(data, version, eclIndex);
+    var size = version * 4 + 17;
+    var modules = makeEmpty(size);
+    var isFunction = makeEmpty(size);
+
+    function setFunction(x, y, dark) {
+      if (x >= 0 && x < size && y >= 0 && y < size) {
+        modules[y][x] = dark;
+        isFunction[y][x] = true;
+      }
+    }
+    function drawFinder(cx, cy) {
+      for (var dy = -4; dy <= 4; dy++) {
+        for (var dx = -4; dx <= 4; dx++) {
+          var xx = cx + dx;
+          var yy = cy + dy;
+          if (xx < 0 || xx >= size || yy < 0 || yy >= size) continue;
+          var dist = Math.max(Math.abs(dx), Math.abs(dy));
+          setFunction(xx, yy, dist !== 2 && dist !== 4);
+        }
+      }
+    }
+
+    for (var i = 0; i < size; i++) {
+      setFunction(6, i, i % 2 === 0);
+      setFunction(i, 6, i % 2 === 0);
+    }
+    drawFinder(3, 3);
+    drawFinder(size - 4, 3);
+    drawFinder(3, size - 4);
+
+    var align = alignmentPositions(version);
+    var numAlign = align.length;
+    for (var a = 0; a < numAlign; a++) {
+      for (var b = 0; b < numAlign; b++) {
+        if ((a === 0 && b === 0) || (a === 0 && b === numAlign - 1) || (a === numAlign - 1 && b === 0)) continue;
+        for (var ady = -2; ady <= 2; ady++) {
+          for (var adx = -2; adx <= 2; adx++) {
+            setFunction(align[a] + adx, align[b] + ady, Math.max(Math.abs(adx), Math.abs(ady)) !== 1);
+          }
+        }
+      }
+    }
+
+    function formatBits(maskPattern) {
+      var dataBits = (ECL_FORMAT_BITS[ecName] << 3) | maskPattern;
+      var rem = dataBits;
+      for (var q = 0; q < 10; q++) rem = (rem << 1) ^ ((rem >>> 9) * 0x537);
+      return ((dataBits << 10) | rem) ^ 0x5412;
+    }
+    function drawFormat(maskPattern) {
+      var bits = formatBits(maskPattern);
+      for (var q = 0; q <= 5; q++) setFunction(8, q, getBit(bits, q));
+      setFunction(8, 7, getBit(bits, 6));
+      setFunction(8, 8, getBit(bits, 7));
+      setFunction(7, 8, getBit(bits, 8));
+      for (var q2 = 9; q2 < 15; q2++) setFunction(14 - q2, 8, getBit(bits, q2));
+      for (var q3 = 0; q3 < 8; q3++) setFunction(size - 1 - q3, 8, getBit(bits, q3));
+      for (var q4 = 8; q4 < 15; q4++) setFunction(8, size - 15 + q4, getBit(bits, q4));
+      setFunction(8, size - 8, true);
+    }
+    drawFormat(0);
+
+    if (version >= 7) {
+      var rem = version;
+      for (var vi = 0; vi < 12; vi++) rem = (rem << 1) ^ ((rem >>> 11) * 0x1F25);
+      var vbits = (version << 12) | rem;
+      for (var vi2 = 0; vi2 < 18; vi2++) {
+        var bit = getBit(vbits, vi2);
+        var aa = size - 11 + vi2 % 3;
+        var bb = Math.floor(vi2 / 3);
+        setFunction(aa, bb, bit);
+        setFunction(bb, aa, bit);
+      }
+    }
+
+    var bitIndex = 0;
+    for (var right = size - 1; right >= 1; right -= 2) {
+      if (right === 6) right = 5;
+      for (var vert = 0; vert < size; vert++) {
+        for (var j = 0; j < 2; j++) {
+          var x = right - j;
+          var upward = ((right + 1) & 2) === 0;
+          var y = upward ? size - 1 - vert : vert;
+          if (!isFunction[y][x] && bitIndex < codewords.length * 8) {
+            modules[y][x] = getBit(codewords[bitIndex >>> 3], 7 - (bitIndex & 7));
+            bitIndex++;
+          }
+        }
+      }
+    }
+
+    function applyMask(maskPattern) {
+      for (var y2 = 0; y2 < size; y2++) {
+        for (var x2 = 0; x2 < size; x2++) {
+          if (!isFunction[y2][x2] && maskBit(maskPattern, x2, y2)) modules[y2][x2] = !modules[y2][x2];
+        }
+      }
+    }
+
+    function penaltyScore() {
+      var score = 0;
+      var x;
+      var y;
+      for (y = 0; y < size; y++) {
+        var run = 1;
+        for (x = 1; x < size; x++) {
+          if (modules[y][x] === modules[y][x - 1]) {
+            run++;
+            if (run === 5) score += 3;
+            else if (run > 5) score++;
+          } else run = 1;
+        }
+      }
+      for (x = 0; x < size; x++) {
+        var runC = 1;
+        for (y = 1; y < size; y++) {
+          if (modules[y][x] === modules[y - 1][x]) {
+            runC++;
+            if (runC === 5) score += 3;
+            else if (runC > 5) score++;
+          } else runC = 1;
+        }
+      }
+      for (y = 0; y < size - 1; y++) {
+        for (x = 0; x < size - 1; x++) {
+          var c = modules[y][x];
+          if (c === modules[y][x + 1] && c === modules[y + 1][x] && c === modules[y + 1][x + 1]) score += 3;
+        }
+      }
+      var pat1 = [true, false, true, true, true, false, true, false, false, false, false];
+      var pat2 = [false, false, false, false, true, false, true, true, true, false, true];
+      for (y = 0; y < size; y++) {
+        for (x = 0; x <= size - 11; x++) {
+          var m1 = true;
+          var m2 = true;
+          for (var k = 0; k < 11; k++) {
+            if (modules[y][x + k] !== pat1[k]) m1 = false;
+            if (modules[y][x + k] !== pat2[k]) m2 = false;
+          }
+          if (m1) score += 40;
+          if (m2) score += 40;
+        }
+      }
+      for (x = 0; x < size; x++) {
+        for (y = 0; y <= size - 11; y++) {
+          var n1 = true;
+          var n2 = true;
+          for (var k2 = 0; k2 < 11; k2++) {
+            if (modules[y + k2][x] !== pat1[k2]) n1 = false;
+            if (modules[y + k2][x] !== pat2[k2]) n2 = false;
+          }
+          if (n1) score += 40;
+          if (n2) score += 40;
+        }
+      }
+      var dark = 0;
+      for (var yy = 0; yy < size; yy++) {
+        for (var xx = 0; xx < size; xx++) if (modules[yy][xx]) dark++;
+      }
+      var total = size * size;
+      score += Math.floor(Math.abs(dark * 100 / total - 50) / 5) * 10;
+      return score;
+    }
+
+    if (mask >= 0) {
+      applyMask(mask);
+      drawFormat(mask);
+    } else {
+      var best = 0;
+      var bestPenalty = Infinity;
+      for (var mi = 0; mi < 8; mi++) {
+        applyMask(mi);
+        drawFormat(mi);
+        var p = penaltyScore();
+        if (p < bestPenalty) { bestPenalty = p; best = mi; }
+        applyMask(mi);
+      }
+      mask = best;
+      applyMask(mask);
+      drawFormat(mask);
+    }
+
+    return {
+      ok: true,
+      version: version,
+      size: size,
+      ec: ecName,
+      mask: mask,
+      modules: modules
+    };
+  }
+
+  function toText(modules) {
+    if (!Array.isArray(modules)) return '';
+    return modules.map(function (row) {
+      return row.map(function (v) { return v ? '1' : '0'; }).join('');
+    }).join('\n');
+  }
+
+  function parseHex(color) {
+    if (typeof color !== 'string') return fail('bad_color');
+    var m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(color.trim());
+    if (!m) return fail('bad_color');
+    var hex = m[1];
+    if (hex.length === 3) hex = hex.charAt(0) + hex.charAt(0) + hex.charAt(1) + hex.charAt(1) + hex.charAt(2) + hex.charAt(2);
+    return {
+      ok: true,
+      value: [parseInt(hex.slice(0, 2), 16), parseInt(hex.slice(2, 4), 16), parseInt(hex.slice(4, 6), 16)]
+    };
+  }
+
+  function channelLuminance(v) {
+    var c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  }
+
+  function relativeLuminance(rgb) {
+    return 0.2126 * channelLuminance(rgb[0]) +
+      0.7152 * channelLuminance(rgb[1]) +
+      0.0722 * channelLuminance(rgb[2]);
+  }
+
+  function contrastRatio(colorA, colorB) {
+    var a = parseHex(colorA);
+    if (!a.ok) return a;
+    var b = parseHex(colorB);
+    if (!b.ok) return b;
+    var la = relativeLuminance(a.value);
+    var lb = relativeLuminance(b.value);
+    var hi = Math.max(la, lb);
+    var lo = Math.min(la, lb);
+    return { ok: true, value: roundTo((hi + 0.05) / (lo + 0.05), 2) };
+  }
+
+  function escapeAttr(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function buildSvg(modules, opts) {
+    if (!Array.isArray(modules) || modules.length === 0) return fail('bad_matrix');
+    var n = modules.length;
+    for (var y0 = 0; y0 < n; y0++) {
+      if (!Array.isArray(modules[y0]) || modules[y0].length !== n) return fail('bad_matrix');
+      for (var x0 = 0; x0 < n; x0++) {
+        if (typeof modules[y0][x0] !== 'boolean') return fail('bad_matrix');
+      }
+    }
+    opts = opts || {};
+    var quiet = opts.quiet == null ? 4 : opts.quiet;
+    if (!isNum(quiet) || Math.floor(quiet) !== quiet || quiet < 0 || quiet > 16) return fail('bad_quiet');
+    var size = opts.size == null ? 512 : opts.size;
+    if (!isNum(size) || size < 32 || size > 4096) return fail('bad_size');
+    size = Math.round(size);
+    var dark = opts.dark == null ? '#000000' : opts.dark;
+    var light = opts.light == null ? '#ffffff' : opts.light;
+    var darkRgb = parseHex(dark);
+    if (!darkRgb.ok) return darkRgb;
+    var lightRgb = parseHex(light);
+    if (!lightRgb.ok) return lightRgb;
+    var dim = n + quiet * 2;
+    var d = '';
+    for (var y = 0; y < n; y++) {
+      var x = 0;
+      while (x < n) {
+        if (modules[y][x]) {
+          var start = x;
+          while (x < n && modules[y][x]) x++;
+          d += 'M' + (start + quiet) + ' ' + (y + quiet) + 'h' + (x - start) + 'v1h-' + (x - start) + 'z';
+        } else {
+          x++;
+        }
+      }
+    }
+    var background = opts.transparent === true ? '' :
+      '<rect width="' + dim + '" height="' + dim + '" fill="' + light + '"/>';
+    var label = escapeAttr(opts.label || 'QR code');
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + size + '" height="' + size +
+      '" viewBox="0 0 ' + dim + ' ' + dim + '" shape-rendering="crispEdges" role="img" aria-label="' + label + '">' +
+      background + '<path fill="' + dark + '" d="' + d + '"/></svg>';
+    return { ok: true, value: svg };
+  }
+
+  function escapeWifi(value) {
+    if (typeof value !== 'string') return fail('bad_value');
+    return { ok: true, value: value.replace(/([\\;,:"])/g, '\\$1') };
+  }
+
+  function buildWifiPayload(ssid, password, security, hidden) {
+    if (typeof ssid !== 'string' || !ssid) return fail('bad_ssid');
+    var sec = String(security || 'WPA');
+    if (sec.toUpperCase() === 'NOPASS') sec = 'nopass';
+    else sec = sec.toUpperCase();
+    if (sec !== 'WPA' && sec !== 'WEP' && sec !== 'nopass') return fail('bad_security');
+    var s = escapeWifi(ssid);
+    if (!s.ok) return s;
+    var out = 'WIFI:T:' + sec + ';S:' + s.value + ';';
+    if (sec !== 'nopass') {
+      var p = escapeWifi(typeof password === 'string' ? password : '');
+      if (!p.ok) return p;
+      out += 'P:' + p.value + ';';
+    }
+    if (hidden) out += 'H:true;';
+    return { ok: true, value: out + ';' };
+  }
+
+  function buildTelPayload(phone) {
+    if (typeof phone !== 'string') return fail('bad_phone');
+    var cleaned = phone.replace(/[\s().-]/g, '');
+    if (!/^\+?\d{1,20}$/.test(cleaned)) return fail('bad_phone');
+    return { ok: true, value: 'tel:' + cleaned };
+  }
+
+  function buildSmsPayload(phone, body) {
+    var tel = buildTelPayload(phone);
+    if (!tel.ok) return tel;
+    return { ok: true, value: 'SMSTO:' + tel.value.slice(4) + ':' + (typeof body === 'string' ? body : '') };
+  }
+  // TOOL_ENGINE_END
+
+  return {
+    isNum: isNum,
+    utf8Encode: utf8Encode,
+    chooseVersion: chooseVersion,
+    capacityBytes: capacityBytes,
+    maxBytes: maxBytes,
+    encodeQR: encodeQR,
+    toText: toText,
+    parseHex: parseHex,
+    relativeLuminance: relativeLuminance,
+    contrastRatio: contrastRatio,
+    buildSvg: buildSvg,
+    escapeWifi: escapeWifi,
+    buildWifiPayload: buildWifiPayload,
+    buildTelPayload: buildTelPayload,
+    buildSmsPayload: buildSmsPayload
+  };
+})();
+</script>
+
+<!-- ==========================================================================
+     DICTIONARIES — zh / en / id must always expose exactly the same keys.
+     Generic keys live above the TOOL_DICT_* marker.
+     Tool-specific keys (including faqQ1..faqA3) live below the marker and are
+     replaced by the builder. No hard-coded visible copy anywhere in the page.
+     ========================================================================== -->
+<script id="i18n">
+var TOOL_I18N = {
+  zh: {
+    /* ---- generic keys: do not remove ---- */
+    docTitle: '二维码生成器（离线可用）',
+    docDesc: '为文本、网址、WiFi、电话和短信生成二维码，可选纠错等级、尺寸和颜色，下载 PNG 或 SVG。全部在本地编码，不上传，无需注册。',
+    appTitle: '二维码生成器',
+    tagline: '不联网，也能生成二维码。',
+    eyebrow: '免费工具 · 本地运行',
+    privacy: '所有计算都在你的浏览器里完成，输入不会上传。',
+    skip: '跳到工具',
+    navAria: '站点导航',
+    navHall: '工具大厅',
+    navGames: '在线桌游',
+    langLabel: '语言',
+    langZh: '中文',
+    langEn: 'EN',
+    langId: 'ID',
+    brandName: 'Devin',
+    brandHome: 'Devin 首页',
+    navHome: '首页',
+    footerAria: '页脚导航',
+    footerNote: '所有处理都在本地完成，不上传任何数据。',
+    copyright: '© 2026 Devin',
+    copy: '复制结果',
+    copied: '已复制。',
+    copyFail: '无法自动复制，请手动选中后复制。',
+    copyHint: '复制的是未加千分位的原始数值。',
+    reset: '重置',
+    result: '结果',
+    explainTitle: '公式与假设',
+    faqTitle: '常见问题',
+    formulaTitle: '公式',
+    assumptionsTitle: '假设与规则',
+    backTools: '工具大厅',
+    moreTools: '更多工具',
+    notMedical: '仅供估算，不构成医疗建议。',
+    notFinancial: '仅供估算，不构成财务建议。',
+    unitNote: '换算结果按四舍五入显示。',
+    download: '下载',
+    downloadFail: '下载失败，请重试。',
+    clear: '清除',
+    swap: '交换',
+    add: '添加',
+    remove: '删除',
+    close: '关闭',
+    yes: '是',
+    no: '否',
+    errorInvalid: '请输入有效的数字。',
+    errorRequired: '请填写这一项。',
+    errorGeneric: '无法计算，请检查输入。',
+    storageFail: '无法写入本地存储，本次设置不会被保存。',
+    noscript: '这个工具需要 JavaScript 才能运行。所有计算都在你的设备上完成，不会上传任何数据。',
+
+    /* ---- tool-specific keys: replace below this line ---- */
+    // TOOL_DICT_ZH
+    kicker: '内容与样式',
+    inputTitle: '输入内容并设置二维码',
+    tabsAria: '内容类型',
+    tabText: '文本 / 网址',
+    tabWifi: 'WiFi',
+    tabPhone: '电话',
+    tabSms: '短信',
+    textLabel: '内容',
+    textPh: '输入网址、文本或其他要编码的内容',
+    wifiSsidLabel: 'WiFi 名称（SSID）',
+    wifiSsidPh: '例如 MyHomeWiFi',
+    wifiPassLabel: '密码',
+    wifiPassPh: '无密码可留空',
+    wifiSecurityLabel: '加密方式',
+    wifiWpa: 'WPA / WPA2',
+    wifiWep: 'WEP',
+    wifiNone: '无密码',
+    wifiHidden: '隐藏网络',
+    phoneLabel: '电话号码',
+    phonePh: '+8613800138000',
+    smsPhoneLabel: '电话号码',
+    smsBodyLabel: '短信内容',
+    smsBodyPh: '要预填的短信内容',
+    eccLabel: '纠错等级',
+    eccL: 'L · 约 7%',
+    eccM: 'M · 约 15%',
+    eccQ: 'Q · 约 25%',
+    eccH: 'H · 约 30%',
+    sizeLabel: 'PNG 尺寸',
+    darkLabel: '前景色',
+    lightLabel: '背景色',
+    eccNote: '等级越高越抗污损，但同样内容需要更多模块、图案更密。',
+    quietNote: '静区固定为 4 个模块；PNG 尺寸会自动取整到模块整数倍。',
+    contrastWarn: '前景与背景对比度偏低，扫码可能失败。建议使用深色前景配浅色背景。',
+    resultKicker: '本地编码',
+    resultTitle: '预览与下载',
+    noQr: '输入内容后会自动生成二维码，结果显示在这里。',
+    previewAria: '二维码预览',
+    statVersion: '版本',
+    statModules: '模块',
+    statEc: '纠错',
+    statMask: '掩码',
+    statBytes: '字节',
+    statCapacity: '容量',
+    downloadPng: '下载 PNG',
+    downloadSvg: '下载 SVG',
+    copyContent: '复制内容',
+    svgLabel: '二维码',
+    errorEmpty: '请输入要编码的内容。',
+    errorTooLong: '内容超出 {ec} 级容量（最多 {max} 字节），请缩短文本或改用短链接。',
+    errorWifiSsid: '请填写 WiFi 名称。',
+    errorPhone: '请输入有效的电话号码。',
+    errorGenerate: '生成失败，请检查内容。',
+    explainIntro: '工具内置完整的 QR 编码器：内容按 UTF-8 转成字节，使用 byte 模式，自动选择能容纳内容的最小版本（1–40），按所选纠错等级生成纠错码，再应用 8 种掩码中罚分最低的一种。SVG 与 PNG 都在本地生成，页面没有任何网络请求。',
+    formulaVersionTitle: '版本选择',
+    formulaVersion: '4 + 计数位 + 8 × 字节数 ≤ 数据码字数 × 8',
+    formulaVersionNote: '计数位在版本 1–9 为 8 位，版本 10–40 为 16 位；版本越高模块越多。',
+    formulaCapacityTitle: '字节容量',
+    formulaCapacity: 'capacity = floor((数据码字数 × 8 − 4 − 计数位) / 8)',
+    formulaCapacityNote: '纠错越高，纠错码字越多，可用的数据码字越少。版本 40 时 L 约 2953 字节，H 约 1273 字节。',
+    formulaContrastTitle: '颜色对比度',
+    formulaContrast: 'contrast = (L1 + 0.05) / (L2 + 0.05)',
+    formulaContrastNote: 'L 为相对亮度；低于 4.5 时页面会提示，可能影响扫码。',
+    assume1: '使用 byte 模式，任何 UTF-8 文本都可编码；同样内容的纯数字或大写字母仍按字节计算，不会自动切换到更紧凑的模式。',
+    assume2: '掩码按 4 条标准罚分规则自动选择，无法手动指定；编码结果是标准 QR，可被常见扫码器读取。',
+    assume3: '前景色应明显深于背景色。浅色前景配深色背景、低对比度或过度饱和的颜色都可能扫不出来。',
+    assume4: 'PNG 的实际像素是模块数的整数倍，可能略小于所选尺寸；SVG 为矢量，适合印刷。',
+    assume5: '内容超出所选纠错等级的容量时会就地报错，不会生成不完整二维码；所有结果只存在于当前页面。',
+    faqQ1: '纠错等级越高越好吗？',
+    faqA1: '纠错越高，二维码在污损时越容易识别，但同样内容需要更多模块，图案更密、尺寸更大。普通打印用 M 级通常够用，小尺寸或易磨损场景可用 Q 或 H。',
+    faqQ2: '彩色二维码会影响扫描吗？',
+    faqA2: '关键是对比度。前景色要明显深于背景色，避免浅色前景配深色背景，也不要让颜色过饱和。建议打印后实际扫一次。',
+    faqQ3: '内容太长为什么生成失败？',
+    faqA3: '二维码容量有限，字节模式随版本提升有上限，纠错等级越高容量越小。请缩短文本或改用短链接，工具会提示超出容量。以上处理全部在本地完成，不上传。'
+  },
+  en: {
+    /* ---- generic keys: do not remove ---- */
+    docTitle: 'QR Code Generator',
+    docDesc: 'Create QR codes for text, URLs, WiFi, phone and SMS with selectable error correction, size and colors, then download PNG or SVG. Encoded locally, never uploaded, no sign-up.',
+    appTitle: 'QR Code Generator',
+    tagline: 'QR codes, no network needed.',
+    eyebrow: 'Free tool · runs locally',
+    privacy: 'Everything runs in your browser. Nothing you type is uploaded.',
+    skip: 'Skip to the tool',
+    navAria: 'Site navigation',
+    navHall: 'Tools',
+    navGames: 'Games',
+    langLabel: 'Language',
+    langZh: '中文',
+    langEn: 'EN',
+    langId: 'ID',
+    brandName: 'Devin',
+    brandHome: 'Devin home',
+    navHome: 'Home',
+    footerAria: 'Footer navigation',
+    footerNote: 'Everything runs locally. No data is uploaded.',
+    copyright: '© 2026 Devin',
+    copy: 'Copy result',
+    copied: 'Copied.',
+    copyFail: 'Could not copy automatically. Select the text and copy it manually.',
+    copyHint: 'Copies the plain number without thousands separators.',
+    reset: 'Reset',
+    result: 'Result',
+    explainTitle: 'Formulas and assumptions',
+    faqTitle: 'Frequently asked questions',
+    formulaTitle: 'Formula',
+    assumptionsTitle: 'Assumptions and rules',
+    backTools: 'Tools',
+    moreTools: 'More tools',
+    notMedical: 'Estimates only, not medical advice.',
+    notFinancial: 'Estimates only, not financial advice.',
+    unitNote: 'Converted values are rounded for display.',
+    download: 'Download',
+    downloadFail: 'Download failed. Try again.',
+    clear: 'Clear',
+    swap: 'Swap',
+    add: 'Add',
+    remove: 'Remove',
+    close: 'Close',
+    yes: 'Yes',
+    no: 'No',
+    errorInvalid: 'Enter a valid number.',
+    errorRequired: 'Fill in this field.',
+    errorGeneric: 'Could not calculate. Check the inputs.',
+    storageFail: 'Could not write to local storage, so this setting will not be saved.',
+    noscript: 'This tool needs JavaScript to run. All calculations happen on your device; nothing is uploaded.',
+
+    /* ---- tool-specific keys: replace below this line ---- */
+    // TOOL_DICT_EN
+    kicker: 'Content and style',
+    inputTitle: 'Enter content and configure the QR code',
+    tabsAria: 'Content type',
+    tabText: 'Text / URL',
+    tabWifi: 'WiFi',
+    tabPhone: 'Phone',
+    tabSms: 'SMS',
+    textLabel: 'Content',
+    textPh: 'Enter a URL, text or anything else to encode',
+    wifiSsidLabel: 'WiFi name (SSID)',
+    wifiSsidPh: 'e.g. MyHomeWiFi',
+    wifiPassLabel: 'Password',
+    wifiPassPh: 'Leave empty for an open network',
+    wifiSecurityLabel: 'Security',
+    wifiWpa: 'WPA / WPA2',
+    wifiWep: 'WEP',
+    wifiNone: 'No password',
+    wifiHidden: 'Hidden network',
+    phoneLabel: 'Phone number',
+    phonePh: '+14155550100',
+    smsPhoneLabel: 'Phone number',
+    smsBodyLabel: 'Message',
+    smsBodyPh: 'Message to prefill',
+    eccLabel: 'Error correction',
+    eccL: 'L · about 7%',
+    eccM: 'M · about 15%',
+    eccQ: 'Q · about 25%',
+    eccH: 'H · about 30%',
+    sizeLabel: 'PNG size',
+    darkLabel: 'Foreground',
+    lightLabel: 'Background',
+    eccNote: 'Higher levels survive more damage, but the same content needs more modules and a denser pattern.',
+    quietNote: 'The quiet zone is fixed at 4 modules. PNG output is rounded to a whole number of modules.',
+    contrastWarn: 'Foreground and background contrast is low, so scanning may fail. Use a dark foreground on a light background.',
+    resultKicker: 'Encoded locally',
+    resultTitle: 'Preview and download',
+    noQr: 'Enter content and a QR code appears here automatically.',
+    previewAria: 'QR code preview',
+    statVersion: 'Version',
+    statModules: 'Modules',
+    statEc: 'ECC',
+    statMask: 'Mask',
+    statBytes: 'Bytes',
+    statCapacity: 'Capacity',
+    downloadPng: 'Download PNG',
+    downloadSvg: 'Download SVG',
+    copyContent: 'Copy content',
+    svgLabel: 'QR code',
+    errorEmpty: 'Enter content to encode.',
+    errorTooLong: 'The content exceeds the {ec} capacity (up to {max} bytes). Shorten it or use a short link.',
+    errorWifiSsid: 'Enter the WiFi name.',
+    errorPhone: 'Enter a valid phone number.',
+    errorGenerate: 'Could not generate the QR code. Check the content.',
+    explainIntro: 'This page contains a complete QR encoder: content is converted to UTF-8 bytes in byte mode, the smallest version that fits is chosen automatically (1–40), error-correction codewords are generated for the selected level, and the mask with the lowest penalty out of eight is applied. SVG and PNG are produced locally with no network requests.',
+    formulaVersionTitle: 'Version choice',
+    formulaVersion: '4 + count bits + 8 × bytes ≤ data codewords × 8',
+    formulaVersionNote: 'The count field is 8 bits for versions 1–9 and 16 bits for versions 10–40; higher versions use more modules.',
+    formulaCapacityTitle: 'Byte capacity',
+    formulaCapacity: 'capacity = floor((data codewords × 8 − 4 − count bits) / 8)',
+    formulaCapacityNote: 'Higher error correction spends more codewords on ECC and leaves fewer for data. At version 40, L fits about 2953 bytes and H about 1273.',
+    formulaContrastTitle: 'Color contrast',
+    formulaContrast: 'contrast = (L1 + 0.05) / (L2 + 0.05)',
+    formulaContrastNote: 'L is relative luminance; below 4.5 the page shows a warning because scanning may fail.',
+    assume1: 'Byte mode is used, so any UTF-8 text can be encoded. Digits and uppercase letters still count as bytes rather than switching to a denser mode.',
+    assume2: 'The mask is chosen automatically by the four standard penalty rules and cannot be set manually. The result is a standard QR code readable by common scanners.',
+    assume3: 'Keep the foreground clearly darker than the background. Light-on-dark, low contrast or over-saturated colors may not scan.',
+    assume4: 'PNG pixels are a whole multiple of the module count and may be slightly smaller than the chosen size. SVG is vector and suits print.',
+    assume5: 'If the content exceeds the chosen error-correction capacity, the page reports it instead of drawing a broken code. Results exist only on this page.',
+    faqQ1: 'Is a higher error-correction level always better?',
+    faqA1: 'Higher correction makes the code easier to read when damaged, but the same content needs more modules, so the pattern gets denser and larger. M is usually enough for normal printing; use Q or H for small or easily worn labels.',
+    faqQ2: 'Can colors affect scanning?',
+    faqA2: 'Contrast is what matters. The foreground must be clearly darker than the background, so avoid light-on-dark designs and over-saturated colors. Print it and scan once with a real device to be sure.',
+    faqQ3: 'Why does long content fail to generate?',
+    faqA3: 'QR capacity is limited. Byte mode has a maximum per version, and higher error correction reduces it. Shorten the text or use a short link; the tool reports when the capacity is exceeded.'
+  },
+  id: {
+    /* ---- generic keys: do not remove ---- */
+    docTitle: 'Generator Kode QR',
+    docDesc: 'Buat kode QR untuk teks, URL, WiFi, telepon, dan SMS dengan koreksi galat, ukuran, dan warna pilihan, lalu unduh PNG atau SVG. Dikodekan lokal, tidak diunggah, tanpa daftar.',
+    appTitle: 'Generator Kode QR',
+    tagline: 'Buat QR tanpa koneksi internet.',
+    eyebrow: 'Alat gratis · berjalan lokal',
+    privacy: 'Semua perhitungan berjalan di browser Anda. Tidak ada yang diunggah.',
+    skip: 'Lompat ke alat',
+    navAria: 'Navigasi situs',
+    navHall: 'Alat',
+    navGames: 'Permainan',
+    langLabel: 'Bahasa',
+    langZh: '中文',
+    langEn: 'EN',
+    langId: 'ID',
+    brandName: 'Devin',
+    brandHome: 'Beranda Devin',
+    navHome: 'Beranda',
+    footerAria: 'Navigasi footer',
+    footerNote: 'Semua diproses secara lokal. Tidak ada data yang diunggah.',
+    copyright: '© 2026 Devin',
+    copy: 'Salin hasil',
+    copied: 'Tersalin.',
+    copyFail: 'Tidak bisa menyalin otomatis. Pilih teksnya lalu salin manual.',
+    copyHint: 'Menyalin angka polos tanpa pemisah ribuan.',
+    reset: 'Atur ulang',
+    result: 'Hasil',
+    explainTitle: 'Rumus dan asumsi',
+    faqTitle: 'Pertanyaan yang sering diajukan',
+    formulaTitle: 'Rumus',
+    assumptionsTitle: 'Asumsi dan aturan',
+    backTools: 'Alat',
+    moreTools: 'Alat lainnya',
+    notMedical: 'Hanya perkiraan, bukan saran medis.',
+    notFinancial: 'Hanya perkiraan, bukan saran keuangan.',
+    unitNote: 'Nilai hasil konversi dibulatkan untuk tampilan.',
+    download: 'Unduh',
+    downloadFail: 'Unduh gagal. Coba lagi.',
+    clear: 'Bersihkan',
+    swap: 'Tukar',
+    add: 'Tambah',
+    remove: 'Hapus',
+    close: 'Tutup',
+    yes: 'Ya',
+    no: 'Tidak',
+    errorInvalid: 'Masukkan angka yang valid.',
+    errorRequired: 'Isi kolom ini.',
+    errorGeneric: 'Tidak dapat menghitung. Periksa input.',
+    storageFail: 'Tidak bisa menulis ke penyimpanan lokal, jadi pengaturan ini tidak akan disimpan.',
+    noscript: 'Alat ini memerlukan JavaScript. Semua perhitungan terjadi di perangkat Anda; tidak ada yang diunggah.',
+
+    /* ---- tool-specific keys: replace below this line ---- */
+    // TOOL_DICT_ID
+    kicker: 'Isi dan gaya',
+    inputTitle: 'Masukkan isi dan atur kode QR',
+    tabsAria: 'Jenis isi',
+    tabText: 'Teks / URL',
+    tabWifi: 'WiFi',
+    tabPhone: 'Telepon',
+    tabSms: 'SMS',
+    textLabel: 'Isi',
+    textPh: 'Masukkan URL, teks, atau isi lain untuk dikodekan',
+    wifiSsidLabel: 'Nama WiFi (SSID)',
+    wifiSsidPh: 'mis. MyHomeWiFi',
+    wifiPassLabel: 'Kata sandi',
+    wifiPassPh: 'Kosongkan untuk jaringan tanpa sandi',
+    wifiSecurityLabel: 'Keamanan',
+    wifiWpa: 'WPA / WPA2',
+    wifiWep: 'WEP',
+    wifiNone: 'Tanpa sandi',
+    wifiHidden: 'Jaringan tersembunyi',
+    phoneLabel: 'Nomor telepon',
+    phonePh: '+6281234567890',
+    smsPhoneLabel: 'Nomor telepon',
+    smsBodyLabel: 'Isi SMS',
+    smsBodyPh: 'Pesan yang akan diisi otomatis',
+    eccLabel: 'Koreksi galat',
+    eccL: 'L · sekitar 7%',
+    eccM: 'M · sekitar 15%',
+    eccQ: 'Q · sekitar 25%',
+    eccH: 'H · sekitar 30%',
+    sizeLabel: 'Ukuran PNG',
+    darkLabel: 'Warna depan',
+    lightLabel: 'Warna latar',
+    eccNote: 'Tingkat lebih tinggi lebih tahan kerusakan, tetapi isi yang sama membutuhkan lebih banyak modul dan pola lebih rapat.',
+    quietNote: 'Zona hening tetap 4 modul; ukuran PNG dibulatkan ke kelipatan modul.',
+    contrastWarn: 'Kontras warna depan dan latar rendah, pemindaian bisa gagal. Gunakan warna depan gelap di atas latar terang.',
+    resultKicker: 'Dikodekan lokal',
+    resultTitle: 'Pratinjau dan unduh',
+    noQr: 'Masukkan isi dan kode QR muncul otomatis di sini.',
+    previewAria: 'Pratinjau kode QR',
+    statVersion: 'Versi',
+    statModules: 'Modul',
+    statEc: 'Koreksi',
+    statMask: 'Masker',
+    statBytes: 'Byte',
+    statCapacity: 'Kapasitas',
+    downloadPng: 'Unduh PNG',
+    downloadSvg: 'Unduh SVG',
+    copyContent: 'Salin isi',
+    svgLabel: 'Kode QR',
+    errorEmpty: 'Masukkan isi yang akan dikodekan.',
+    errorTooLong: 'Isi melebihi kapasitas level {ec} (maksimal {max} byte). Pendekkan teks atau gunakan tautan pendek.',
+    errorWifiSsid: 'Isi nama WiFi.',
+    errorPhone: 'Masukkan nomor telepon yang valid.',
+    errorGenerate: 'Gagal membuat kode QR. Periksa isinya.',
+    explainIntro: 'Alat ini memuat pengode QR lengkap: isi diubah ke byte UTF-8 dengan mode byte, versi terkecil yang muat dipilih otomatis (1–40), kode koreksi dibuat sesuai level, lalu salah satu dari 8 masker dengan penalti terendah diterapkan. SVG dan PNG dibuat lokal, tanpa permintaan jaringan.',
+    formulaVersionTitle: 'Pemilihan versi',
+    formulaVersion: '4 + bit hitung + 8 × byte ≤ kata kode data × 8',
+    formulaVersionNote: 'Bidang hitung 8 bit untuk versi 1–9 dan 16 bit untuk versi 10–40; versi lebih tinggi memakai lebih banyak modul.',
+    formulaCapacityTitle: 'Kapasitas byte',
+    formulaCapacity: 'capacity = floor((kata kode data × 8 − 4 − bit hitung) / 8)',
+    formulaCapacityNote: 'Koreksi lebih tinggi memakai lebih banyak kata kode untuk ECC dan menyisakan lebih sedikit data. Pada versi 40, L memuat sekitar 2953 byte dan H sekitar 1273 byte.',
+    formulaContrastTitle: 'Kontras warna',
+    formulaContrast: 'contrast = (L1 + 0.05) / (L2 + 0.05)',
+    formulaContrastNote: 'L adalah luminans relatif; di bawah 4.5 halaman menampilkan peringatan karena pemindaian bisa gagal.',
+    assume1: 'Mode byte dipakai, jadi teks UTF-8 apa pun bisa dikodekan. Angka dan huruf besar tetap dihitung per byte, tidak beralih ke mode yang lebih padat.',
+    assume2: 'Masker dipilih otomatis dengan empat aturan penalti standar dan tidak bisa diatur manual. Hasilnya QR standar yang dapat dibaca pemindai umum.',
+    assume3: 'Jaga warna depan jauh lebih gelap dari latar. Terang di atas gelap, kontras rendah, atau warna terlalu jenuh bisa gagal dipindai.',
+    assume4: 'Piksel PNG adalah kelipatan bulat jumlah modul dan bisa sedikit lebih kecil dari ukuran yang dipilih; SVG bersifat vektor dan cocok untuk cetak.',
+    assume5: 'Jika isi melebihi kapasitas level koreksi yang dipilih, halaman menampilkan galat alih-alih menggambar kode rusak. Hasil hanya ada di halaman ini.',
+    faqQ1: 'Apakah tingkat koreksi galat yang lebih tinggi selalu lebih baik?',
+    faqA1: 'Koreksi lebih tinggi membuat kode lebih mudah dibaca saat rusak, tetapi isi yang sama membutuhkan lebih banyak modul sehingga pola lebih rapat dan lebih besar. M biasanya cukup untuk cetak biasa; gunakan Q atau H untuk label kecil atau yang mudah aus.',
+    faqQ2: 'Apakah warna memengaruhi pemindaian?',
+    faqA2: 'Yang penting adalah kontras. Warna depan harus jauh lebih gelap daripada latar, jadi hindari desain terang di atas gelap dan warna yang terlalu jenuh. Cetak lalu pindai sekali dengan perangkat nyata.',
+    faqQ3: 'Mengapa isi yang panjang gagal dibuat?',
+    faqA3: 'Kapasitas QR terbatas. Mode byte punya batas per versi, dan koreksi galat yang lebih tinggi menguranginya. Pendekkan teks atau gunakan tautan pendek; alat akan memberi tahu saat kapasitas terlampaui.'
+  }
+};
+</script>
+
+<!-- ==========================================================================
+     UI RUNTIME — language switching plus the global ToolUI helpers.
+     Builder replaces only the TOOL_UI_START / TOOL_UI_END block.
+     ========================================================================== -->
+<script>
+(function () {
+  'use strict';
+
+  var I18N = (typeof TOOL_I18N !== 'undefined') ? TOOL_I18N : { zh: {}, en: {}, id: {} };
+  var TOOL_SLUG = 'qr-code-generator';
+  var LANG_KEY = 'hhfa.tool.' + TOOL_SLUG + '.lang';
+  var LANGS = ['zh', 'en', 'id'];
+  var LOCALES = { zh: 'zh-CN', en: 'en-US', id: 'id-ID' };
+  var OG_LOCALES = { zh: 'zh_CN', en: 'en_US', id: 'id_ID' };
+  var state = { lang: 'zh' };
+  var toastTimer = null;
+  var started = false;
+  var langHooks = [];
+
+  function $(sel) {
+    return typeof sel === 'string' ? document.querySelector(sel) : sel;
+  }
+
+  function $$(sel) {
+    return Array.prototype.slice.call(document.querySelectorAll(sel));
+  }
+
+  function T(key, vars) {
+    var dict = I18N[state.lang] || {};
+    var value = Object.prototype.hasOwnProperty.call(dict, key) ? dict[key] : null;
+    if (typeof value !== 'string' && I18N.zh && typeof I18N.zh[key] === 'string') {
+      value = I18N.zh[key];
+    }
+    if (typeof value !== 'string') return key;
+    if (vars) {
+      value = value.replace(/\{(\w+)\}/g, function (match, name) {
+        return vars[name] != null ? String(vars[name]) : '';
+      });
+    }
+    return value;
+  }
+
+  function locale() {
+    return LOCALES[state.lang] || 'en-US';
+  }
+
+  function fmt(n, opts) {
+    if (typeof n !== 'number' || !isFinite(n)) return '—';
+    try {
+      return new Intl.NumberFormat(locale(), opts || {}).format(n);
+    } catch (e) {
+      return String(n);
+    }
+  }
+
+  function toast(message) {
+    var el = $('#toast');
+    if (!el) return;
+    el.textContent = message == null ? '' : String(message);
+    el.classList.add('on');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove('on'); }, 2600);
+  }
+
+  function legacyCopy(text) {
+    try {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.top = '-1000px';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { ta.setSelectionRange(0, ta.value.length); } catch (e) { /* ignore */ }
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      document.body.removeChild(ta);
+      return ok;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function copy(text) {
+    var value = text == null ? '' : String(text);
+    return new Promise(function (resolve) {
+      function done() { toast(T('copied')); resolve(true); }
+      function fail() { toast(T('copyFail')); resolve(false); }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(value).then(done, function () {
+          if (legacyCopy(value)) done(); else fail();
+        });
+      } else if (legacyCopy(value)) {
+        done();
+      } else {
+        fail();
+      }
+    });
+  }
+
+  function download(name, content, mime) {
+    try {
+      var blob = new Blob([content], { type: mime || 'text/plain;charset=utf-8' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = name || 'download.txt';
+      a.rel = 'noopener';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function () {
+        try {
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        } catch (e) { /* ignore */ }
+      }, 0);
+      return true;
+    } catch (e) {
+      toast(T('downloadFail'));
+      return false;
+    }
+  }
+
+  function readStore(key, fallback) {
+    try {
+      var raw = localStorage.getItem(key);
+      if (raw == null) return fallback;
+      var value = JSON.parse(raw);
+      return value == null ? fallback : value;
+    } catch (e) {
+      return fallback;
+    }
+  }
+
+  function writeStore(key, value) {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+      return true;
+    } catch (e) {
+      toast(T('storageFail'));
+      return false;
+    }
+  }
+
+  function debounce(fn, ms) {
+    var timer = null;
+    var wait = isFinite(ms) ? ms : 150;
+    return function () {
+      var ctx = this;
+      var args = arguments;
+      clearTimeout(timer);
+      timer = setTimeout(function () { fn.apply(ctx, args); }, wait);
+    };
+  }
+
+  function on(target, event, handler) {
+    var el = typeof target === 'string' ? $(target) : target;
+    if (!el || !el.addEventListener) return function () {};
+    el.addEventListener(event, handler);
+    return function () { el.removeEventListener(event, handler); };
+  }
+
+  function setError(el, message) {
+    if (!el) return;
+    if (!message) { clearError(el); return; }
+    el.textContent = String(message);
+    el.hidden = false;
+    el.classList.add('on');
+  }
+
+  function clearError(el) {
+    if (!el) return;
+    el.textContent = '';
+    el.hidden = true;
+    el.classList.remove('on');
+  }
+
+  function onLangChange(fn) {
+    if (typeof fn !== 'function') return function () {};
+    langHooks.push(fn);
+    if (started) {
+      try { fn(state.lang); } catch (e) { /* a broken hook must not break switching */ }
+    }
+    return function () {
+      var i = langHooks.indexOf(fn);
+      if (i !== -1) langHooks.splice(i, 1);
+    };
+  }
+
+  function setMeta(attr, name, content) {
+    var nodes = document.querySelectorAll('meta');
+    for (var i = 0; i < nodes.length; i++) {
+      if (nodes[i].getAttribute(attr) === name) {
+        nodes[i].setAttribute('content', content);
+        return;
+      }
+    }
+  }
+
+  function renderLanguage() {
+    var lang = state.lang;
+    document.documentElement.lang = lang === 'zh' ? 'zh-CN' : lang;
+
+    var nodes = $$('[data-i]');
+    for (var i = 0; i < nodes.length; i++) {
+      nodes[i].textContent = T(nodes[i].getAttribute('data-i'));
+    }
+    var placeholders = $$('[data-i-ph]');
+    for (var j = 0; j < placeholders.length; j++) {
+      placeholders[j].setAttribute('placeholder', T(placeholders[j].getAttribute('data-i-ph')));
+    }
+    var labelled = $$('[data-i-aria]');
+    for (var k = 0; k < labelled.length; k++) {
+      labelled[k].setAttribute('aria-label', T(labelled[k].getAttribute('data-i-aria')));
+    }
+    var buttons = $$('[data-lang]');
+    for (var b = 0; b < buttons.length; b++) {
+      buttons[b].setAttribute('aria-pressed', buttons[b].getAttribute('data-lang') === lang ? 'true' : 'false');
+    }
+
+    document.title = T('docTitle');
+    setMeta('name', 'description', T('docDesc'));
+    setMeta('property', 'og:title', T('docTitle'));
+    setMeta('property', 'og:description', T('docDesc'));
+    setMeta('property', 'og:locale', OG_LOCALES[lang] || 'en_US');
+    setMeta('name', 'twitter:title', T('docTitle'));
+    setMeta('name', 'twitter:description', T('docDesc'));
+
+    var toolsHref = lang === 'zh' ? '/tools/' : '/tools/' + lang + '/';
+    var links = $$('[data-tools-link]');
+    for (var l = 0; l < links.length; l++) links[l].setAttribute('href', toolsHref);
+  }
+
+  function applyLang() {
+    renderLanguage();
+    for (var i = 0; i < langHooks.length; i++) {
+      try { langHooks[i](state.lang); } catch (e) { /* keep the page usable */ }
+    }
+    started = true;
+  }
+
+  function detectLang() {
+    try {
+      var q = new URLSearchParams(window.location.search).get('lang');
+      if (LANGS.indexOf(q) !== -1) return q;
+    } catch (e) { /* ignore */ }
+    try {
+      var saved = localStorage.getItem(LANG_KEY);
+      if (LANGS.indexOf(saved) !== -1) return saved;
+    } catch (e) { /* ignore */ }
+    var nav = String(navigator.language || '').toLowerCase();
+    if (nav.indexOf('zh') === 0) return 'zh';
+    if (nav.indexOf('id') === 0 || nav.indexOf('in') === 0) return 'id';
+    return 'en';
+  }
+
+  function saveLang() {
+    try { localStorage.setItem(LANG_KEY, state.lang); } catch (e) { /* ignore */ }
+  }
+
+  function bindLanguages() {
+    var buttons = $$('[data-lang]');
+    for (var i = 0; i < buttons.length; i++) {
+      (function (button) {
+        button.addEventListener('click', function () {
+          var next = button.getAttribute('data-lang');
+          if (LANGS.indexOf(next) === -1 || next === state.lang) return;
+          state.lang = next;
+          saveLang();
+          applyLang();
+        });
+      })(buttons[i]);
+    }
+  }
+
+  function init() {
+    state.lang = detectLang();
+    bindLanguages();
+    applyLang();
+  }
+
+  var ToolUI = {
+    T: T,
+    fmt: fmt,
+    copy: copy,
+    toast: toast,
+    download: download,
+    readStore: readStore,
+    writeStore: writeStore,
+    debounce: debounce,
+    on: on,
+    setError: setError,
+    clearError: clearError,
+    onLangChange: onLangChange,
+    lang: function () { return state.lang; },
+    locale: locale,
+    $: $,
+    $$: $$
+  };
+
+  window.ToolUI = ToolUI;
+  window.T = T;
+
+  // TOOL_UI_START
+  (function () {
+    'use strict';
+
+    var QUIET = 4;
+    var state = { tab: 'text', payload: '', result: null, lastError: null };
+
+    var tabButtons = ToolUI.$$('[data-tab]');
+    var panels = { text: ToolUI.$('#panel-text'), wifi: ToolUI.$('#panel-wifi'), phone: ToolUI.$('#panel-phone'), sms: ToolUI.$('#panel-sms') };
+    var textInput = ToolUI.$('#qr-text');
+    var ssidInput = ToolUI.$('#wifi-ssid');
+    var passInput = ToolUI.$('#wifi-pass');
+    var securitySelect = ToolUI.$('#wifi-security');
+    var hiddenInput = ToolUI.$('#wifi-hidden');
+    var phoneInput = ToolUI.$('#qr-phone');
+    var smsPhoneInput = ToolUI.$('#sms-phone');
+    var smsBodyInput = ToolUI.$('#sms-body');
+    var ecSelect = ToolUI.$('#qr-ec');
+    var sizeSelect = ToolUI.$('#qr-size');
+    var darkInput = ToolUI.$('#qr-dark');
+    var lightInput = ToolUI.$('#qr-light');
+    var errorBox = ToolUI.$('#qr-error');
+    var contrastWarn = ToolUI.$('#contrast-warn');
+    var emptyMsg = ToolUI.$('#qr-empty');
+    var output = ToolUI.$('#qr-output');
+    var canvas = ToolUI.$('#qr-preview');
+    var vVersion = ToolUI.$('#v-version');
+    var vModules = ToolUI.$('#v-modules');
+    var vEc = ToolUI.$('#v-ec');
+    var vMask = ToolUI.$('#v-mask');
+    var vBytes = ToolUI.$('#v-bytes');
+    var vCapacity = ToolUI.$('#v-capacity');
+    var downloadPngBtn = ToolUI.$('#download-png');
+    var downloadSvgBtn = ToolUI.$('#download-svg');
+    var copyBtn = ToolUI.$('#copy-content');
+
+    if (!textInput || !canvas) return;
+
+    function t(key, vars) { return ToolUI.T(key, vars); }
+
+    function setTab(name) {
+      if (!panels[name]) return;
+      state.tab = name;
+      tabButtons.forEach(function (btn) {
+        btn.setAttribute('aria-selected', btn.getAttribute('data-tab') === name ? 'true' : 'false');
+      });
+      Object.keys(panels).forEach(function (key) {
+        panels[key].hidden = key !== name;
+      });
+      generate();
+    }
+
+    function showError(key, vars) {
+      state.lastError = key ? { key: key, vars: vars || null } : null;
+      ToolUI.setError(errorBox, key ? t(key, vars) : '');
+    }
+
+    function hideError() {
+      state.lastError = null;
+      ToolUI.clearError(errorBox);
+    }
+
+    function notifyEmpty() {
+      hideError();
+      state.payload = '';
+      state.result = null;
+      emptyMsg.hidden = false;
+      output.hidden = true;
+      downloadPngBtn.disabled = true;
+      downloadSvgBtn.disabled = true;
+      copyBtn.disabled = true;
+    }
+
+    function buildPayload() {
+      if (state.tab === 'text') {
+        var value = String(textInput.value || '');
+        if (!value.length) return { ok: false, error: 'empty_input' };
+        return { ok: true, value: value };
+      }
+      if (state.tab === 'wifi') {
+        var ssid = String(ssidInput.value || '');
+        if (!ssid) return { ok: false, error: 'empty_input' };
+        var wifi = ToolEngine.buildWifiPayload(ssid, passInput.value, securitySelect.value, hiddenInput.checked);
+        if (!wifi.ok) return wifi;
+        return wifi;
+      }
+      if (state.tab === 'phone') {
+        var phone = String(phoneInput.value || '');
+        if (!phone.trim()) return { ok: false, error: 'empty_input' };
+        return ToolEngine.buildTelPayload(phone);
+      }
+      var smsPhone = String(smsPhoneInput.value || '');
+      if (!smsPhone.trim()) return { ok: false, error: 'empty_input' };
+      return ToolEngine.buildSmsPayload(smsPhone, smsBodyInput.value);
+    }
+
+    function drawPreview(result, dark, light) {
+      var modules = result.modules;
+      var n = result.size;
+      var dimUnits = n + QUIET * 2;
+      var scale = Math.max(2, Math.floor(512 / dimUnits));
+      canvas.width = dimUnits * scale;
+      canvas.height = dimUnits * scale;
+      var ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.fillStyle = light;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = dark;
+      for (var y = 0; y < n; y++) {
+        for (var x = 0; x < n; x++) {
+          if (modules[y][x]) {
+            ctx.fillRect((x + QUIET) * scale, (y + QUIET) * scale, scale, scale);
+          }
+        }
+      }
+    }
+
+    function updateContrast() {
+      var ratio = ToolEngine.contrastRatio(darkInput.value, lightInput.value);
+      if (!ratio.ok) { contrastWarn.hidden = true; return; }
+      var darkRgb = ToolEngine.parseHex(darkInput.value);
+      var lightRgb = ToolEngine.parseHex(lightInput.value);
+      var inverted = false;
+      if (darkRgb.ok && lightRgb.ok) {
+        inverted = ToolEngine.relativeLuminance(darkRgb.value) >= ToolEngine.relativeLuminance(lightRgb.value);
+      }
+      contrastWarn.hidden = !(ratio.value < 4.5 || inverted);
+    }
+
+    function generate() {
+      var payload = buildPayload();
+      if (!payload.ok) {
+        if (payload.error === 'empty_input') {
+          notifyEmpty();
+          return;
+        }
+        hideError();
+        state.lastError = null;
+        notifyEmpty();
+        showError(payload.error === 'bad_phone' ? 'errorPhone' : 'errorGenerate');
+        return;
+      }
+      var ec = ecSelect.value;
+      var result = ToolEngine.encodeQR(payload.value, ec);
+      if (!result.ok) {
+        state.payload = '';
+        state.result = null;
+        emptyMsg.hidden = false;
+        output.hidden = true;
+        downloadPngBtn.disabled = true;
+        downloadSvgBtn.disabled = true;
+        copyBtn.disabled = true;
+        var cap = ToolEngine.maxBytes(ec);
+        if (result.error === 'too_long') showError('errorTooLong', { ec: ec, max: cap.ok ? cap.value : '—' });
+        else if (result.error === 'empty_input') notifyEmpty();
+        else showError('errorGenerate');
+        return;
+      }
+      hideError();
+      state.payload = payload.value;
+      state.result = result;
+      emptyMsg.hidden = true;
+      output.hidden = false;
+      vVersion.textContent = String(result.version);
+      vModules.textContent = result.size + ' × ' + result.size;
+      vEc.textContent = result.ec;
+      vMask.textContent = String(result.mask);
+      vBytes.textContent = String(ToolEngine.utf8Encode(payload.value).length);
+      var versionCap = ToolEngine.capacityBytes(result.version, result.ec);
+      vCapacity.textContent = versionCap.ok ? String(versionCap.value) : '—';
+      drawPreview(result, darkInput.value, lightInput.value);
+      updateContrast();
+      downloadPngBtn.disabled = false;
+      downloadSvgBtn.disabled = false;
+      copyBtn.disabled = false;
+    }
+
+    function fileName(ext) {
+      var result = state.result;
+      return 'qr-code-v' + (result ? result.version : 1) + '-' + (result ? result.ec : 'M') + '.' + ext;
+    }
+
+    function downloadPng() {
+      if (!state.result) return;
+      var requested = Number(sizeSelect.value) || 512;
+      var dimUnits = state.result.size + QUIET * 2;
+      var scale = Math.max(1, Math.floor(requested / dimUnits));
+      var side = dimUnits * scale;
+      var target = document.createElement('canvas');
+      target.width = side;
+      target.height = side;
+      var ctx = target.getContext('2d');
+      if (!ctx) { showError('errorGenerate'); return; }
+      ctx.fillStyle = lightInput.value;
+      ctx.fillRect(0, 0, side, side);
+      ctx.fillStyle = darkInput.value;
+      for (var y = 0; y < state.result.size; y++) {
+        for (var x = 0; x < state.result.size; x++) {
+          if (state.result.modules[y][x]) {
+            ctx.fillRect((x + QUIET) * scale, (y + QUIET) * scale, scale, scale);
+          }
+        }
+      }
+      target.toBlob(function (blob) {
+        if (!blob) { showError('errorGenerate'); return; }
+        ToolUI.download(fileName('png'), blob, 'image/png');
+      }, 'image/png');
+    }
+
+    function downloadSvg() {
+      if (!state.result) return;
+      var svg = ToolEngine.buildSvg(state.result.modules, {
+        quiet: QUIET,
+        size: Number(sizeSelect.value) || 512,
+        dark: darkInput.value,
+        light: lightInput.value,
+        label: t('svgLabel')
+      });
+      if (!svg.ok) { showError('errorGenerate'); return; }
+      ToolUI.download(fileName('svg'), svg.value, 'image/svg+xml;charset=utf-8');
+    }
+
+    var debouncedGenerate = ToolUI.debounce(generate, 220);
+
+    tabButtons.forEach(function (btn) {
+      ToolUI.on(btn, 'click', function () { setTab(btn.getAttribute('data-tab')); });
+      ToolUI.on(btn, 'keydown', function (ev) {
+        if (ev.key !== 'ArrowRight' && ev.key !== 'ArrowLeft') return;
+        ev.preventDefault();
+        var index = tabButtons.indexOf(btn);
+        var next = ev.key === 'ArrowRight' ? (index + 1) % tabButtons.length : (index + tabButtons.length - 1) % tabButtons.length;
+        tabButtons[next].focus();
+        setTab(tabButtons[next].getAttribute('data-tab'));
+      });
+    });
+
+    [textInput, ssidInput, passInput, phoneInput, smsPhoneInput, smsBodyInput].forEach(function (input) {
+      ToolUI.on(input, 'input', debouncedGenerate);
+    });
+    ToolUI.on(securitySelect, 'change', generate);
+    ToolUI.on(hiddenInput, 'change', generate);
+    ToolUI.on(ecSelect, 'change', generate);
+    ToolUI.on(sizeSelect, 'change', function () {
+      if (state.result) drawPreview(state.result, darkInput.value, lightInput.value);
+    });
+    ToolUI.on(darkInput, 'input', function () {
+      updateContrast();
+      if (state.result) drawPreview(state.result, darkInput.value, lightInput.value);
+    });
+    ToolUI.on(lightInput, 'input', function () {
+      updateContrast();
+      if (state.result) drawPreview(state.result, darkInput.value, lightInput.value);
+    });
+    ToolUI.on(downloadPngBtn, 'click', downloadPng);
+    ToolUI.on(downloadSvgBtn, 'click', downloadSvg);
+    ToolUI.on(copyBtn, 'click', function () {
+      if (!state.payload) return;
+      ToolUI.copy(state.payload);
+    });
+
+    ToolUI.onLangChange(function () {
+      if (state.lastError) showError(state.lastError.key, state.lastError.vars);
+      if (state.result) generate();
+      else updateContrast();
+    });
+
+    updateContrast();
+    notifyEmpty();
+  })();
+  // TOOL_UI_END
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>

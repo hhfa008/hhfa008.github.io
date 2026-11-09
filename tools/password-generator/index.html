@@ -1,0 +1,1292 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>密码生成器 — 本地生成高强度随机密码，不上传</title>
+<meta id="meta-desc" name="description" content="免费本地密码生成器：8–64 位长度、大小写/数字/符号开关、排除易混淆字符、保证每类至少一个，使用浏览器加密随机数与拒绝采样。显示熵值与强度，支持批量生成和一键复制，密码不会上传或保存。">
+<meta name="author" content="Devin">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="theme-color" content="#f2efe7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#101316" media="(prefers-color-scheme: dark)">
+<link rel="canonical" href="https://hhfa008.github.io/tools/password-generator/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23b93d12'/%3E%3Cpath d='M11 14a5 5 0 0 1 10 0v2h-2v-2a3 3 0 0 0-6 0v2h-2z' fill='%23fbf9f4'/%3E%3Crect x='9' y='15' width='14' height='10' rx='2' fill='%23fbf9f4'/%3E%3Ccircle cx='16' cy='20' r='1.7' fill='%23b93d12'/%3E%3C/svg%3E">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Devin">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:locale:alternate" content="en_US">
+<meta property="og:locale:alternate" content="id_ID">
+<meta id="og-title" property="og:title" content="密码生成器 — 本地生成高强度随机密码">
+<meta id="og-desc" property="og:description" content="本地生成 8–64 位随机密码，排除易混淆字符，显示熵值与强度。不联网、不上传、不保存。">
+<meta property="og:url" content="https://hhfa008.github.io/tools/password-generator/">
+<meta name="twitter:card" content="summary">
+<meta id="tw-title" name="twitter:title" content="密码生成器 — 本地生成高强度随机密码">
+<meta id="tw-desc" name="twitter:description" content="本地生成 8–64 位随机密码，显示熵值与强度。不联网、不上传、不保存。">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "密码生成器",
+  "url": "https://hhfa008.github.io/tools/password-generator/",
+  "applicationCategory": "SecurityApplication",
+  "operatingSystem": "Any",
+  "browserRequirements": "Requires JavaScript and Web Crypto",
+  "isAccessibleForFree": true,
+  "inLanguage": ["zh-CN", "en", "id"],
+  "description": "本地运行的密码生成器：可调长度与字符集，排除易混淆字符，保证每类至少一个，显示熵值与强度，支持批量生成和复制。生成的密码不会离开浏览器。",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "featureList": [
+    "8–64 位长度，滑块与数字框同步",
+    "小写、大写、数字、符号四类字符开关",
+    "排除易混淆字符 0 O o 1 l I | ` ' \"",
+    "每类至少一个，Fisher–Yates 洗牌",
+    "显示熵值与强度等级",
+    "一次生成 1 个或 5 个，逐个复制",
+    "使用 crypto.getRandomValues 与拒绝采样"
+  ]
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "这个密码生成器安全吗？密码会被上传吗？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "页面不发起任何网络请求，密码只在你的浏览器内存中生成和显示，不会上传、不会写入 localStorage，也没有统计脚本。随机数来自浏览器提供的 crypto.getRandomValues，并通过拒绝采样避免取模偏差。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "熵值多少才算强？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "本页按总熵划分：低于 50 bits 为弱，50–79 bits 为一般，80–119 bits 为强，120 bits 及以上为很强。熵值只描述随机性，不代表某个网站本身安全；仍应为每个站点使用独立密码，并配合密码管理器和两步验证。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "为什么要排除 0 O o 1 l I 这类字符？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "这些字符在手写、打印或某些字体下容易互相混淆，手动输入时可能抄错。排除它们会略微降低字符池和熵值，但能减少输错密码导致的登录失败。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "生成后需要保存密码吗？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "本页不会保存任何生成的密码，刷新或关闭页面后即消失。请把它保存到可信的密码管理器，不要发到聊天工具或写在便签上。每个站点使用不同密码。"
+      }
+    }
+  ]
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Devin", "item": "https://hhfa008.github.io/" },
+    { "@type": "ListItem", "position": 2, "name": "工具大厅", "item": "https://hhfa008.github.io/tools/" },
+    { "@type": "ListItem", "position": 3, "name": "密码生成器", "item": "https://hhfa008.github.io/tools/password-generator/" }
+  ]
+}
+</script>
+
+<style>
+:root{
+  --paper:#f2efe7;--paper-2:#fbf9f4;--panel:#ffffff;
+  --ink:#14171a;--muted:#5b615c;--muted-2:#7b807a;
+  --line:#d5d0c4;--line-strong:#bcb5a7;
+  --accent:#b93d12;--accent-soft:#f2a07a;--accent-wash:#f7e5da;
+  --ok:#2f6b3c;--ok-wash:#e8f2e7;--warn:#8a5a00;--warn-wash:#fbf1db;
+  --bad:#a32216;--bad-wash:#fbe7e3;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --radius:16px;--max:1040px;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --paper:#101316;--paper-2:#171b1f;--panel:#1a1f23;
+    --ink:#f2efe7;--muted:#b7b3a8;--muted-2:#948f85;
+    --line:#333a40;--line-strong:#4a535b;
+    --accent:#f08a5d;--accent-wash:#2b211c;
+    --ok:#8fd19e;--ok-wash:#1b2b1e;--warn:#f0c36a;--warn-wash:#2d2618;
+    --bad:#ff8a7a;--bad-wash:#321d1a;
+  }
+}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%;color-scheme:light dark;scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.6 var(--sans);
+  overflow-x:clip;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+p{margin:0 0 1em}p:last-child{margin-bottom:0}
+a{color:inherit}
+button,input,select{font:inherit;color:inherit}
+code{font-family:var(--mono)}
+.wrap{width:100%;max-width:var(--max);margin:0 auto;padding-left:18px;padding-right:18px}
+@media (min-width:720px){.wrap{padding-left:32px;padding-right:32px}}
+.skip-link{position:absolute;left:12px;top:-64px;z-index:50;padding:12px 16px;border-radius:8px;
+  background:var(--ink);color:var(--paper);text-decoration:none}
+.skip-link:focus{top:12px}
+:focus-visible{outline:3px solid rgba(185,61,18,.55);outline-offset:3px}
+@media (prefers-color-scheme:dark){:focus-visible{outline-color:rgba(240,138,93,.65)}}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+.site-header{border-bottom:1px solid var(--line);background:var(--paper)}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  flex-wrap:wrap;min-height:64px;padding-top:8px;padding-bottom:8px}
+.brand{display:inline-flex;align-items:center;gap:10px;font-weight:700;letter-spacing:-.02em;
+  text-decoration:none;min-height:44px}
+.brand-mark{width:26px;height:26px;border-radius:7px;background:var(--accent);
+  display:inline-block;position:relative;flex:none}
+.brand-mark::before,.brand-mark::after{content:"";position:absolute;left:6px;right:6px;height:2px;
+  background:var(--paper-2);border-radius:1px}
+.brand-mark::before{top:9px}
+.brand-mark::after{top:15px;right:10px}
+.site-nav{display:flex;align-items:center;gap:6px;font-size:14px}
+.site-nav a{display:inline-flex;align-items:center;min-height:44px;padding:0 8px;border-radius:8px;
+  color:var(--muted);text-decoration:none}
+.site-nav a:hover{color:var(--accent)}
+.langs{display:flex;gap:4px}
+.langs button{min-width:48px;min-height:44px;padding:0 10px;border:1px solid var(--line-strong);
+  border-radius:10px;background:var(--panel);color:var(--muted);font-size:13px;font-weight:650;cursor:pointer}
+.langs button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+@media (max-width:560px){.site-nav{font-size:13px}.header-inner{gap:8px}}
+
+.hero{padding:40px 0 24px}
+@media (min-width:720px){.hero{padding:56px 0 30px}}
+.eyebrow{margin:0 0 10px;font-family:var(--mono);font-size:11px;font-weight:650;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--accent)}
+h1{margin:0 0 14px;max-width:22ch;font-size:clamp(1.9rem,6vw,3rem);line-height:1.08;
+  letter-spacing:-.035em;font-weight:700}
+.lede{max-width:72ch;margin:0 0 16px;font-size:clamp(1rem,2vw,1.12rem);color:var(--muted)}
+.privacy{display:flex;gap:10px;align-items:flex-start;max-width:78ch;margin:0;padding:12px 15px;
+  border-left:4px solid var(--accent);border-radius:0 10px 10px 0;background:var(--accent-wash);
+  font-size:14px;font-weight:550}
+.privacy svg{width:18px;height:18px;flex:none;margin-top:2px}
+
+.layout{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}
+@media (min-width:900px){.layout{grid-template-columns:minmax(0,1.02fr) minmax(0,1fr)}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px}
+@media (min-width:720px){.card{padding:24px}}
+.card h2{margin:0 0 14px;font-size:1.2rem;line-height:1.25;letter-spacing:-.02em}
+.field{margin-bottom:16px;min-width:0}
+.field > label,.fieldset legend{display:block;font-family:var(--mono);font-size:10.5px;font-weight:650;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+.length-row{display:flex;align-items:center;gap:12px}
+.length-row input[type="range"]{flex:1 1 auto;min-width:0;min-height:44px;accent-color:var(--accent)}
+.length-row input[type="number"]{flex:0 0 88px;width:88px;min-height:48px;padding:8px 10px;font-size:17px;
+  font-variant-numeric:tabular-nums;text-align:center;border:1px solid var(--line-strong);border-radius:10px;
+  background:var(--paper-2)}
+.fieldset{border:0;padding:0;margin:0 0 16px;min-width:0}
+.checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.checks.one{grid-template-columns:minmax(0,1fr)}
+.check{display:flex;align-items:flex-start;gap:9px;min-height:48px;padding:10px 11px;border:1px solid var(--line);
+  border-radius:11px;background:var(--paper-2);cursor:pointer;font-size:14px;line-height:1.35}
+.check:hover{border-color:var(--line-strong)}
+.check input{width:44px;height:44px;padding:12px;margin:0;flex:none;accent-color:var(--accent);cursor:pointer}
+.check-text{min-width:0}
+.check small{display:block;margin-top:2px;color:var(--muted-2);font-size:11.5px;
+  font-family:var(--mono);overflow-wrap:anywhere}
+@media (max-width:400px){.checks{grid-template-columns:minmax(0,1fr)}}
+.seg{display:flex;border:1px solid var(--line-strong);border-radius:11px;overflow:hidden;background:var(--paper-2)}
+.seg-item{position:relative;flex:1 1 0;display:flex;min-width:0}
+.seg-item input{position:absolute;opacity:0;width:1px;height:1px}
+.seg-item span{display:flex;align-items:center;justify-content:center;width:100%;min-height:46px;
+  padding:0 10px;font-weight:650;font-size:14px;cursor:pointer;border-left:1px solid var(--line)}
+.seg-item:first-child span{border-left:0}
+.seg-item input:checked + span{background:var(--accent);color:#fff}
+.seg-item input:focus-visible + span{outline:3px solid rgba(185,61,18,.55);outline-offset:-3px}
+.pool-info{margin:0 0 12px;font-size:12.5px;color:var(--muted-2);font-variant-numeric:tabular-nums}
+.error{margin:0 0 12px;padding:10px 12px;border:1px solid var(--bad);border-radius:10px;
+  background:var(--bad-wash);color:var(--bad);font-size:13.5px;font-weight:600}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 18px;
+  border:1px solid var(--line-strong);border-radius:12px;background:var(--paper-2);font-size:15px;
+  font-weight:650;cursor:pointer;text-decoration:none;transition:transform .15s ease,filter .15s ease}
+.btn:hover{filter:brightness(1.03)}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.06)}
+.btn:disabled{opacity:.5;cursor:not-allowed;filter:none;transform:none}
+.btn.full{width:100%}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.btn-row .btn{flex:1 1 130px}
+.hint{margin:12px 0 0;font-size:12.5px;color:var(--muted-2);line-height:1.55}
+.result-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.result-head h2{margin:0}
+.badge{display:inline-flex;align-items:center;min-height:28px;padding:2px 9px;border:1px solid var(--line);
+  border-radius:999px;background:var(--paper-2);color:var(--muted);font-family:var(--mono);
+  font-size:11px;font-weight:600;white-space:nowrap}
+.pw-box{display:flex;align-items:center;min-height:68px;padding:13px 15px;border:1px solid var(--line-strong);
+  border-radius:12px;background:var(--paper-2);overflow-x:auto}
+.pw{font-family:var(--mono);font-size:clamp(1rem,4.3vw,1.3rem);letter-spacing:.02em;line-height:1.4;
+  overflow-wrap:anywhere;word-break:break-all;user-select:all;-webkit-user-select:all}
+.strength{margin-top:18px}
+.strength-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;font-size:13.5px}
+.strength-head span{color:var(--muted)}
+.strength-head strong{font-size:14.5px}
+.meter{height:10px;margin:9px 0 7px;border-radius:999px;background:var(--line);overflow:hidden}
+.meter-fill{display:block;height:100%;width:0;border-radius:999px;background:var(--bad);
+  transition:width .18s ease,background-color .18s ease}
+.meter-fill.fair{background:var(--warn)}
+.meter-fill.strong{background:var(--ok)}
+.meter-fill.very-strong{background:var(--ok)}
+.entropy-line{margin:0;font-family:var(--mono);font-size:12.5px;color:var(--muted);
+  font-variant-numeric:tabular-nums}
+hr{border:0;border-top:1px solid var(--line);margin:18px 0}
+#batch-title{margin:0 0 10px;font-size:1rem}
+.batch{list-style:none;margin:0;padding:0;display:grid;gap:8px;max-height:360px;overflow-y:auto}
+.batch li{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);
+  border-radius:10px;background:var(--paper-2)}
+.batch code{flex:1 1 auto;min-width:0;font-family:var(--mono);font-size:12.5px;line-height:1.4;
+  overflow-wrap:anywhere;word-break:break-all;user-select:all;-webkit-user-select:all}
+.batch .copy-one{flex:0 0 auto;min-width:64px;min-height:44px;padding:0 10px;border:1px solid var(--line-strong);
+  border-radius:9px;background:var(--panel);font-size:13px;font-weight:650;cursor:pointer}
+.batch .copy-one:hover{border-color:var(--accent);color:var(--accent)}
+
+.explain{margin-top:22px}
+.explain h2{margin-bottom:8px}
+.explain-intro{color:var(--muted);font-size:14.5px;max-width:78ch}
+.formulas{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;margin-top:16px}
+@media (min-width:760px){.formulas{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.formula{min-width:0;padding:13px 14px;border:1px solid var(--line);border-radius:11px;background:var(--paper-2)}
+.formula h3{margin:0 0 7px;font-family:var(--mono);font-size:10.5px;font-weight:650;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.formula code{display:inline-block;max-width:100%;padding:2px 6px;border-radius:5px;background:var(--accent-wash);
+  font-size:12.5px;line-height:1.5;overflow-wrap:anywhere}
+.formula p{margin:7px 0 0;font-size:12.5px;color:var(--muted)}
+.assumptions-title{margin:18px 0 8px;font-family:var(--mono);font-size:10.5px;font-weight:650;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.assumptions{margin:0;padding:0 0 0 20px;font-size:13.5px;color:var(--muted)}
+.assumptions li{margin:0 0 8px}
+.disclaimer{margin:16px 0 0;padding:12px 14px;border:1px solid var(--line);border-left:4px solid var(--bad);
+  border-radius:8px;background:var(--bad-wash);color:var(--bad);font-size:13px;line-height:1.55}
+.faq{margin-top:22px}
+.faq h2{margin:0 0 12px;font-size:clamp(1.35rem,3vw,1.7rem);line-height:1.2;letter-spacing:-.02em}
+.faq details{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:0 18px}
+.faq details + details{margin-top:9px}
+.faq summary{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:52px;
+  padding:12px 0;cursor:pointer;font-weight:650;list-style:none}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";flex:none;font-family:var(--mono);font-size:20px;line-height:1;color:var(--accent)}
+.faq details[open] summary::after{content:"\2212"}
+.faq details p{margin:0;padding:0 0 16px;max-width:80ch;font-size:14px;color:var(--muted)}
+
+.site-footer{margin-top:28px;padding:20px 0 32px;border-top:1px solid var(--line);font-size:12.5px;
+  color:var(--muted-2)}
+.footer-inner{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline;justify-content:space-between}
+.site-footer a{display:inline-flex;align-items:center;min-height:44px;padding:0 2px;color:var(--accent);text-decoration:none}
+.site-footer a:hover{text-decoration:underline}
+.site-footer p{margin:0}
+
+#toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));z-index:60;
+  max-width:calc(100vw - 32px);padding:11px 18px;border-radius:11px;background:var(--ink);color:var(--paper);
+  font-size:14px;font-weight:550;text-align:center;box-shadow:0 8px 24px rgb(0 0 0 / .22);
+  transform:translate(-50%,12px);opacity:0;pointer-events:none;
+  transition:opacity .16s ease,transform .16s ease}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+
+@media (prefers-color-scheme:dark){
+  .btn.primary{color:#14171a}
+  .seg-item input:checked + span{color:#14171a}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .btn:active{transform:none}
+}
+@media print{
+  .site-header,.site-footer,.btn,.seg,.langs,#toast,.skip-link{display:none!important}
+  body{background:#fff;color:#000}
+  .card{border-color:#999;break-inside:avoid}
+  .layout{display:block}
+}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#tool" data-i="skip">跳到生成器</a>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="/" aria-label="Devin"><span class="brand-mark" aria-hidden="true"></span>Devin</a>
+    <nav class="site-nav" aria-label="Site" data-i-aria="siteNavAria">
+      <a id="nav-tools" href="/tools/" data-i="navTools">工具大厅</a>
+      <a href="/games/" data-i="navGames">在线桌游</a>
+    </nav>
+    <div class="langs" role="group" aria-label="Language" data-i-aria="langAria">
+      <button type="button" data-lang="zh" aria-pressed="true">中文</button>
+      <button type="button" data-lang="en" aria-pressed="false">EN</button>
+      <button type="button" data-lang="id" aria-pressed="false">ID</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <section class="hero" aria-labelledby="page-title">
+      <p class="eyebrow" data-i="heroEyebrow">免费工具 · 本地随机</p>
+      <h1 id="page-title" data-i="appTitle">密码生成器</h1>
+      <p class="lede" data-i="tagline">生成 8–64 位高强度随机密码。可调字符集、排除易混淆字符，实时查看熵值与强度。所有计算都在你的浏览器里完成。</p>
+      <p class="privacy">
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+        <span data-i="privacy">密码不会上传、不会保存。本页没有网络请求，刷新或关闭页面后生成的密码即消失。</span>
+      </p>
+    </section>
+
+    <div class="layout" id="tool">
+      <form class="card" id="options" autocomplete="off" novalidate>
+        <h2 data-i="optionsTitle">生成选项</h2>
+
+        <div class="field">
+          <label for="len-num" data-i="lengthLabel">密码长度</label>
+          <div class="length-row">
+            <input id="len-range" type="range" min="8" max="64" step="1" value="16" data-i-aria="lengthLabel">
+            <input id="len-num" type="number" inputmode="numeric" min="8" max="64" step="1" value="16" aria-describedby="len-hint">
+          </div>
+          <p class="hint" id="len-hint" data-i="lengthHint">范围 8–64 位，默认 16 位。滑块与数字框同步。</p>
+        </div>
+
+        <fieldset class="fieldset">
+          <legend data-i="charsetLegend">字符集</legend>
+          <div class="checks">
+            <label class="check" for="set-lower"><input type="checkbox" id="set-lower" checked><span data-i="lowerLabel">小写字母 a–z</span></label>
+            <label class="check" for="set-upper"><input type="checkbox" id="set-upper" checked><span data-i="upperLabel">大写字母 A–Z</span></label>
+            <label class="check" for="set-digits"><input type="checkbox" id="set-digits" checked><span data-i="digitsLabel">数字 0–9</span></label>
+            <label class="check" for="set-symbols"><input type="checkbox" id="set-symbols" checked><span data-i="symbolsLabel">符号 !@#$%…</span></label>
+          </div>
+        </fieldset>
+
+        <div class="checks one" style="margin-bottom:8px">
+          <label class="check" for="exclude-ambiguous">
+            <input type="checkbox" id="exclude-ambiguous">
+            <span class="check-text"><span data-i="excludeLabel">排除易混淆字符</span><small data-i="excludeHint">0 O o 1 l I | ` ' "</small></span>
+          </label>
+        </div>
+        <div class="checks one" style="margin-bottom:16px">
+          <label class="check" for="require-each">
+            <input type="checkbox" id="require-each" checked>
+            <span class="check-text"><span data-i="requireLabel">每类至少一个</span><small data-i="requireHint">保证所选字符集都出现在密码中（长度不足时无法开启）。</small></span>
+          </label>
+        </div>
+
+        <fieldset class="fieldset">
+          <legend data-i="countLabel">一次生成</legend>
+          <div class="seg">
+            <label class="seg-item"><input type="radio" name="count" value="1" checked><span data-i="countOne">1 个</span></label>
+            <label class="seg-item"><input type="radio" name="count" value="5"><span data-i="countFive">5 个</span></label>
+          </div>
+        </fieldset>
+
+        <p class="pool-info" id="pool-info"></p>
+        <p class="error" id="error" role="alert" hidden></p>
+        <button class="btn primary full" id="generate" type="submit" data-i="generate" data-i-aria="generateAria">生成密码</button>
+        <p class="hint" data-i="optionsNote">提示：长度越长、字符集越大，熵值越高。生成后不会自动保存。</p>
+      </form>
+
+      <section class="card" aria-labelledby="result-title" aria-live="polite">
+        <div class="result-head">
+          <h2 id="result-title" data-i="resultTitle">生成结果</h2>
+          <span class="badge" id="pool-badge"></span>
+        </div>
+        <div class="pw-box">
+          <span class="pw" id="pw-out" tabindex="0" data-i="emptyPassword">尚未生成密码</span>
+        </div>
+        <div class="btn-row">
+          <button class="btn primary" id="copy" type="button" disabled data-i="copy" data-i-aria="copyAria">复制密码</button>
+          <button class="btn" id="regenerate" type="button" data-i="regenerate">重新生成</button>
+        </div>
+        <p class="hint" data-i="selectHint">复制失败时，密码文本会自动选中，可手动复制。</p>
+
+        <div class="strength">
+          <div class="strength-head">
+            <span id="strength-heading" data-i="strength">强度</span>
+            <strong id="strength-label">—</strong>
+          </div>
+          <div class="meter" id="meter" role="progressbar" aria-labelledby="strength-heading" aria-valuemin="0" aria-valuemax="150" aria-valuenow="0">
+            <span class="meter-fill" id="meter-fill"></span>
+          </div>
+          <p class="entropy-line" id="entropy-line"></p>
+        </div>
+        <p class="hint" data-i="strengthNote">熵值高只说明随机性足够，不代表某个网站本身安全。仍应每个站点使用独立密码，并配合密码管理器和两步验证。</p>
+
+        <div id="batch-wrap" hidden>
+          <hr>
+          <h3 id="batch-title"></h3>
+          <ul class="batch" id="batch-list" aria-labelledby="batch-title"></ul>
+        </div>
+      </section>
+    </div>
+
+    <section class="card explain" aria-labelledby="explain-title">
+      <h2 id="explain-title" data-i="explainTitle">计算方式与假设</h2>
+      <p class="explain-intro" data-i="explainIntro">随机数来自浏览器提供的 crypto.getRandomValues，并用拒绝采样消除取模偏差；不使用 Math.random。下面是页面实际使用的公式与规则。</p>
+      <div class="formulas">
+        <div class="formula">
+          <h3 data-i="formulaLengthTitle">字符池</h3>
+          <code>pool = union(selected sets) − ambiguous</code>
+          <p data-i="formulaLengthNote">只合并已勾选的字符集；开启“排除易混淆字符”后，从池中删除 0 O o 1 l I | ` ' " 这些字符。</p>
+        </div>
+        <div class="formula">
+          <h3 data-i="formulaEntropyTitle">熵值</h3>
+          <code>H = length × log₂(pool size)</code>
+          <p data-i="formulaEntropyNote">单位是 bits。本页按总熵分级：&lt;50 弱，50–79 一般，80–119 强，≥120 很强。分级只反映随机性，不构成安全保证。</p>
+        </div>
+        <div class="formula">
+          <h3 data-i="formulaRejectTitle">拒绝采样</h3>
+          <code>limit = ⌊2³² / n⌋ × n; accept if r &lt; limit</code>
+          <p data-i="formulaRejectNote">把随机数映射到字符下标时，直接取模会让前几个字符出现概率略高。这里先算可接受区间，落在区间外就重新取值。</p>
+        </div>
+        <div class="formula">
+          <h3 data-i="formulaShuffleTitle">洗牌</h3>
+          <code>Fisher–Yates: swap(i, random 0…i)</code>
+          <p data-i="formulaShuffleNote">当“每类至少一个”开启时，先从每个已选字符集各取一个，再用合并后的字符池补足长度，最后整体洗牌，避免固定位置泄露字符类别。</p>
+        </div>
+      </div>
+      <h3 class="assumptions-title" data-i="assumptionsTitle">假设与边界</h3>
+      <ul class="assumptions">
+        <li data-i="assumption1">长度限制为 8–64 位的整数；长度小于已选字符集数量且开启“每类至少一个”时拒绝生成。</li>
+        <li data-i="assumption2">字符池大小按去重后的字符数计算；四类字符互不重叠。</li>
+        <li data-i="assumption3">“每类至少一个”保证每个已选字符集至少出现一次，但不保证每类出现次数相同。</li>
+        <li data-i="assumption4">熵值假设每个字符独立均匀抽取；拒绝采样正是为了让这个假设成立。</li>
+        <li data-i="assumption5">复制使用系统剪贴板；若浏览器拒绝，文本会被选中供手动复制。</li>
+      </ul>
+      <p class="disclaimer" data-i="disclaimer">安全提示：本工具仅供生成随机密码，不构成安全审计或合规建议。请为每个账户使用独立密码，优先启用两步验证，并妥善保管密码管理器的主密码。</p>
+    </section>
+
+    <section class="faq" aria-labelledby="faq-title">
+      <h2 id="faq-title" data-i="faqTitle">常见问题</h2>
+      <details>
+        <summary data-i="faqQ1">这个密码生成器安全吗？密码会被上传吗？</summary>
+        <p data-i="faqA1">页面不发起任何网络请求，密码只在你的浏览器内存中生成和显示，不会上传、不会写入 localStorage，也没有统计脚本。随机数来自浏览器提供的 crypto.getRandomValues，并通过拒绝采样避免取模偏差。</p>
+      </details>
+      <details>
+        <summary data-i="faqQ2">熵值多少才算强？</summary>
+        <p data-i="faqA2">本页按总熵划分：低于 50 bits 为弱，50–79 bits 为一般，80–119 bits 为强，120 bits 及以上为很强。熵值只描述随机性，不代表某个网站本身安全；仍应为每个站点使用独立密码，并配合密码管理器和两步验证。</p>
+      </details>
+      <details>
+        <summary data-i="faqQ3">为什么要排除 0 O o 1 l I 这类字符？</summary>
+        <p data-i="faqA3">这些字符在手写、打印或某些字体下容易互相混淆，手动输入时可能抄错。排除它们会略微降低字符池和熵值，但能减少输错密码导致的登录失败。</p>
+      </details>
+      <details>
+        <summary data-i="faqQ4">生成后需要保存密码吗？</summary>
+        <p data-i="faqA4">本页不会保存任何生成的密码，刷新或关闭页面后即消失。请把它保存到可信的密码管理器，不要发到聊天工具或写在便签上。每个站点使用不同密码。</p>
+      </details>
+    </section>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <p><span data-i="footerCopy">© 2026 Devin</span> · <a id="foot-tools" href="/tools/" data-i="footerTools">工具大厅</a> · <a href="/games/" data-i="footerGames">在线桌游</a> · <a href="/" data-i="footerHome">首页</a></p>
+    <p data-i="footerPrivacy">纯前端工具，不收集数据；密码只在本地内存中生成。</p>
+  </div>
+</footer>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<noscript>
+  <div class="wrap"><p class="card" style="margin-top:16px" data-i="noscript">本工具需要 JavaScript 才能使用加密随机数生成密码。页面不会上传任何数据。</p></div>
+</noscript>
+
+<script id="engine">
+var ToolEngine = (function () {
+  'use strict';
+
+  /*
+   * Pure engine. No globals, no clock, no weak PRNG. buildPool /
+   * generatePassword / generateBatch return {ok:false,error:'code'} for
+   * invalid options. entropyBits / strengthFor / shuffle throw TypeError on
+   * invalid arguments, as noted in the file header and covered by tests.
+   */
+
+  var SETS = {
+    lower: 'abcdefghijklmnopqrstuvwxyz',
+    upper: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+    digits: '0123456789',
+    symbols: "!@#$%^&*()-_=+[]{};:,.?/|`'\""
+  };
+  var ORDER = ['lower', 'upper', 'digits', 'symbols'];
+  var AMBIGUOUS = "0Oo1lI|`'\"";
+
+  function isNum(n) { return typeof n === 'number' && isFinite(n); }
+  function isInt(n) { return isNum(n) && Math.floor(n) === n; }
+
+  function stripAmbiguous(s) {
+    var out = '';
+    for (var i = 0; i < s.length; i++) {
+      if (AMBIGUOUS.indexOf(s.charAt(i)) === -1) out += s.charAt(i);
+    }
+    return out;
+  }
+
+  function buildPool(opts) {
+    if (!opts || typeof opts !== 'object') return { ok: false, error: 'bad-options' };
+    var categories = [];
+    var sets = {};
+    var pool = '';
+    for (var i = 0; i < ORDER.length; i++) {
+      var key = ORDER[i];
+      if (!opts[key]) continue;
+      var chars = SETS[key];
+      if (opts.excludeAmbiguous) chars = stripAmbiguous(chars);
+      if (!chars.length) return { ok: false, error: 'empty-set' };
+      categories.push(key);
+      sets[key] = chars;
+      pool += chars;
+    }
+    if (!categories.length) return { ok: false, error: 'no-sets' };
+    return { ok: true, pool: pool, poolSize: pool.length, categories: categories, sets: sets };
+  }
+
+  function pickIndex(rng, size) {
+    var limit = Math.floor(4294967296 / size) * size;
+    var v;
+    for (;;) {
+      var r = rng();
+      if (!isNum(r) || r < 0 || r >= 1) throw new TypeError('rng must return a number in [0,1)');
+      v = Math.floor(r * 4294967296);
+      if (v < limit) return v % size;
+    }
+  }
+
+  function shuffle(arr, rng) {
+    if (!Array.isArray(arr)) throw new TypeError('shuffle: array required');
+    if (typeof rng !== 'function') throw new TypeError('shuffle: rng function required');
+    var out = arr.slice();
+    for (var i = out.length - 1; i > 0; i--) {
+      var j = pickIndex(rng, i + 1);
+      var tmp = out[i];
+      out[i] = out[j];
+      out[j] = tmp;
+    }
+    return out;
+  }
+
+  function entropyBits(len, poolSize) {
+    if (!isNum(len) || len < 0) throw new TypeError('entropyBits: bad length');
+    if (!isNum(poolSize) || poolSize < 1) throw new TypeError('entropyBits: bad pool size');
+    return len * Math.log2(poolSize);
+  }
+
+  function strengthFor(bits) {
+    if (!isNum(bits) || bits < 0) throw new TypeError('strengthFor: bad bits');
+    if (bits < 50) return 'weak';
+    if (bits < 80) return 'fair';
+    if (bits < 120) return 'strong';
+    return 'very-strong';
+  }
+
+  function generatePassword(opts, rng) {
+    if (typeof rng !== 'function') return { ok: false, error: 'bad-rng' };
+    var built = buildPool(opts);
+    if (!built.ok) return built;
+    var len = opts.length;
+    if (!isInt(len) || len < 1 || len > 64) return { ok: false, error: 'bad-length' };
+    var requireEach = opts.requireEach !== false;
+    if (requireEach && len < built.categories.length) return { ok: false, error: 'too-short' };
+
+    var chars = [];
+    if (requireEach) {
+      for (var c = 0; c < built.categories.length; c++) {
+        var set = built.sets[built.categories[c]];
+        chars.push(set.charAt(pickIndex(rng, set.length)));
+      }
+    }
+    while (chars.length < len) {
+      chars.push(built.pool.charAt(pickIndex(rng, built.poolSize)));
+    }
+    var shuffled = shuffle(chars, rng);
+    var password = shuffled.join('');
+    return {
+      ok: true,
+      password: password,
+      poolSize: built.poolSize,
+      categories: built.categories.slice(),
+      entropy: entropyBits(len, built.poolSize)
+    };
+  }
+
+  function generateBatch(n, opts, rng) {
+    if (!isInt(n) || n < 1 || n > 50) return { ok: false, error: 'bad-count' };
+    var passwords = [];
+    for (var i = 0; i < n; i++) {
+      var one = generatePassword(opts, rng);
+      if (!one.ok) return one;
+      passwords.push(one.password);
+    }
+    return { ok: true, passwords: passwords, poolSize: buildPool(opts).poolSize };
+  }
+
+  return {
+    buildPool: buildPool,
+    generatePassword: generatePassword,
+    generateBatch: generateBatch,
+    entropyBits: entropyBits,
+    strengthFor: strengthFor,
+    shuffle: shuffle
+  };
+})();
+</script>
+
+<script id="i18n">
+var TOOL_I18N = {
+  zh: {
+    docTitle: '密码生成器 — 本地生成高强度随机密码，不上传',
+    docDesc: '免费本地密码生成器：8–64 位长度、大小写/数字/符号开关、排除易混淆字符、保证每类至少一个，使用浏览器加密随机数与拒绝采样。显示熵值与强度，支持批量生成和一键复制，密码不会上传或保存。',
+    skip: '跳到生成器',
+    heroEyebrow: '免费工具 · 本地随机',
+    appTitle: '密码生成器',
+    tagline: '生成 8–64 位高强度随机密码。可调字符集、排除易混淆字符，实时查看熵值与强度。所有计算都在你的浏览器里完成。',
+    privacy: '密码不会上传、不会保存。本页没有网络请求，刷新或关闭页面后生成的密码即消失。',
+    navTools: '工具大厅',
+    navGames: '在线桌游',
+    siteNavAria: '站点导航',
+    langAria: '语言切换',
+    optionsTitle: '生成选项',
+    lengthLabel: '密码长度',
+    lengthHint: '范围 8–64 位，默认 16 位。滑块与数字框同步。',
+    charsetLegend: '字符集',
+    lowerLabel: '小写字母 a–z',
+    upperLabel: '大写字母 A–Z',
+    digitsLabel: '数字 0–9',
+    symbolsLabel: '符号 !@#$%…',
+    excludeLabel: '排除易混淆字符',
+    excludeHint: '0 O o 1 l I | ` \' "',
+    requireLabel: '每类至少一个',
+    requireHint: '保证所选字符集都出现在密码中（长度不足时无法开启）。',
+    countLabel: '一次生成',
+    countOne: '1 个',
+    countFive: '5 个',
+    poolInfo: '字符池：{n} 个字符',
+    poolBadge: '{n} 字符',
+    generate: '生成密码',
+    generateAria: '根据当前选项生成密码',
+    optionsNote: '提示：长度越长、字符集越大，熵值越高。生成后不会自动保存。',
+    resultTitle: '生成结果',
+    emptyPassword: '尚未生成密码',
+    copy: '复制密码',
+    copyAria: '复制当前密码到剪贴板',
+    regenerate: '重新生成',
+    copied: '已复制到剪贴板。',
+    copyFail: '无法自动复制，文本已选中，请手动复制。',
+    selectHint: '复制失败时，密码文本会自动选中，可手动复制。',
+    strength: '强度',
+    entropyLine: '熵值：{bits} bits',
+    bitsUnit: 'bits',
+    weak: '弱',
+    fair: '一般',
+    strong: '强',
+    veryStrong: '很强',
+    strengthNote: '熵值高只说明随机性足够，不代表某个网站本身安全。仍应每个站点使用独立密码，并配合密码管理器和两步验证。',
+    batchTitle: '已生成 {n} 个密码',
+    batchItemAria: '复制第 {n} 个密码',
+    errorNoSets: '请至少选择一种字符集。',
+    errorTooShort: '密码长度小于已选字符集数量，请增加长度或关闭“每类至少一个”。',
+    errorBadLength: '密码长度必须是 8–64 之间的整数。',
+    errorBadRng: '当前浏览器不支持安全随机数（crypto.getRandomValues），无法生成密码。',
+    errorGeneric: '生成失败，请调整选项后重试。',
+    explainTitle: '计算方式与假设',
+    explainIntro: '随机数来自浏览器提供的 crypto.getRandomValues，并用拒绝采样消除取模偏差；不使用 Math.random。下面是页面实际使用的公式与规则。',
+    formulaLengthTitle: '字符池',
+    formulaLength: 'pool = union(selected sets) − ambiguous',
+    formulaLengthNote: '只合并已勾选的字符集；开启“排除易混淆字符”后，从池中删除 0 O o 1 l I | ` \' " 这些字符。',
+    formulaEntropyTitle: '熵值',
+    formulaEntropy: 'H = length × log₂(pool size)',
+    formulaEntropyNote: '单位是 bits。本页按总熵分级：<50 弱，50–79 一般，80–119 强，≥120 很强。分级只反映随机性，不构成安全保证。',
+    formulaRejectTitle: '拒绝采样',
+    formulaReject: 'limit = ⌊2³² / n⌋ × n; accept if r < limit',
+    formulaRejectNote: '把随机数映射到字符下标时，直接取模会让前几个字符出现概率略高。这里先算可接受区间，落在区间外就重新取值。',
+    formulaShuffleTitle: '洗牌',
+    formulaShuffle: 'Fisher–Yates: swap(i, random 0…i)',
+    formulaShuffleNote: '当“每类至少一个”开启时，先从每个已选字符集各取一个，再用合并后的字符池补足长度，最后整体洗牌，避免固定位置泄露字符类别。',
+    assumptionsTitle: '假设与边界',
+    assumption1: '长度限制为 8–64 位的整数；长度小于已选字符集数量且开启“每类至少一个”时拒绝生成。',
+    assumption2: '字符池大小按去重后的字符数计算；四类字符互不重叠。',
+    assumption3: '“每类至少一个”保证每个已选字符集至少出现一次，但不保证每类出现次数相同。',
+    assumption4: '熵值假设每个字符独立均匀抽取；拒绝采样正是为了让这个假设成立。',
+    assumption5: '复制使用系统剪贴板；若浏览器拒绝，文本会被选中供手动复制。',
+    disclaimer: '安全提示：本工具仅供生成随机密码，不构成安全审计或合规建议。请为每个账户使用独立密码，优先启用两步验证，并妥善保管密码管理器的主密码。',
+    faqTitle: '常见问题',
+    faqQ1: '这个密码生成器安全吗？密码会被上传吗？',
+    faqA1: '页面不发起任何网络请求，密码只在你的浏览器内存中生成和显示，不会上传、不会写入 localStorage，也没有统计脚本。随机数来自浏览器提供的 crypto.getRandomValues，并通过拒绝采样避免取模偏差。',
+    faqQ2: '熵值多少才算强？',
+    faqA2: '本页按总熵划分：低于 50 bits 为弱，50–79 bits 为一般，80–119 bits 为强，120 bits 及以上为很强。熵值只描述随机性，不代表某个网站本身安全；仍应为每个站点使用独立密码，并配合密码管理器和两步验证。',
+    faqQ3: '为什么要排除 0 O o 1 l I 这类字符？',
+    faqA3: '这些字符在手写、打印或某些字体下容易互相混淆，手动输入时可能抄错。排除它们会略微降低字符池和熵值，但能减少输错密码导致的登录失败。',
+    faqQ4: '生成后需要保存密码吗？',
+    faqA4: '本页不会保存任何生成的密码，刷新或关闭页面后即消失。请把它保存到可信的密码管理器，不要发到聊天工具或写在便签上。每个站点使用不同密码。',
+    footerCopy: '© 2026 Devin',
+    footerTools: '工具大厅',
+    footerGames: '在线桌游',
+    footerHome: '首页',
+    footerPrivacy: '纯前端工具，不收集数据；密码只在本地内存中生成。',
+    noscript: '本工具需要 JavaScript 才能使用加密随机数生成密码。页面不会上传任何数据。'
+  },
+  en: {
+    docTitle: 'Password Generator — strong random passwords, generated locally',
+    docDesc: 'A free local password generator: 8–64 characters, lowercase/uppercase/digits/symbols toggles, remove look-alike characters, guarantee at least one of each selected set, and use the browser crypto RNG with rejection sampling. Shows entropy and strength, supports batches and one-click copy. Passwords are never uploaded or stored.',
+    skip: 'Skip to the generator',
+    heroEyebrow: 'Free tool · local randomness',
+    appTitle: 'Password generator',
+    tagline: 'Create strong 8–64 character random passwords. Tune the character sets, remove look-alike characters, and see entropy and strength update as you go. Everything runs in your browser.',
+    privacy: 'Passwords are never uploaded or stored. This page makes no network requests, and generated passwords disappear when you refresh or close it.',
+    navTools: 'Tools',
+    navGames: 'Board games',
+    siteNavAria: 'Site navigation',
+    langAria: 'Language',
+    optionsTitle: 'Generator options',
+    lengthLabel: 'Password length',
+    lengthHint: 'From 8 to 64 characters, default 16. The slider and number box stay in sync.',
+    charsetLegend: 'Character sets',
+    lowerLabel: 'Lowercase a–z',
+    upperLabel: 'Uppercase A–Z',
+    digitsLabel: 'Digits 0–9',
+    symbolsLabel: 'Symbols !@#$%…',
+    excludeLabel: 'Remove look-alike characters',
+    excludeHint: '0 O o 1 l I | ` \' "',
+    requireLabel: 'At least one from each set',
+    requireHint: 'Guarantees every selected set appears in the password (not possible when the length is too short).',
+    countLabel: 'Generate at once',
+    countOne: '1 password',
+    countFive: '5 passwords',
+    poolInfo: '{n} characters in the pool',
+    poolBadge: '{n} chars',
+    generate: 'Generate password',
+    generateAria: 'Generate a password with the current options',
+    optionsNote: 'Longer passwords and larger pools mean more entropy. Nothing is saved automatically.',
+    resultTitle: 'Result',
+    emptyPassword: 'No password yet',
+    copy: 'Copy password',
+    copyAria: 'Copy the current password to the clipboard',
+    regenerate: 'Generate again',
+    copied: 'Copied to the clipboard.',
+    copyFail: 'Could not copy automatically. The text is selected; copy it manually.',
+    selectHint: 'If copying fails, the password is selected so you can copy it manually.',
+    strength: 'Strength',
+    entropyLine: 'Entropy: {bits} bits',
+    bitsUnit: 'bits',
+    weak: 'Weak',
+    fair: 'Fair',
+    strong: 'Strong',
+    veryStrong: 'Very strong',
+    strengthNote: 'High entropy means the password is hard to guess; it does not make a website secure. Use a unique password for every site, with a password manager and two-factor authentication.',
+    batchTitle: '{n} passwords generated',
+    batchItemAria: 'Copy password {n}',
+    errorNoSets: 'Select at least one character set.',
+    errorTooShort: 'The password is shorter than the number of selected sets. Increase the length or turn off “at least one from each set”.',
+    errorBadLength: 'The password length must be a whole number from 8 to 64.',
+    errorBadRng: 'This browser does not provide a secure random source (crypto.getRandomValues), so passwords cannot be generated.',
+    errorGeneric: 'Generation failed. Adjust the options and try again.',
+    explainTitle: 'How it is calculated',
+    explainIntro: 'Randomness comes from the browser’s crypto.getRandomValues, with rejection sampling to remove modulo bias. Math.random is never used. These are the exact formulas and rules the page applies.',
+    formulaLengthTitle: 'Character pool',
+    formulaLength: 'pool = union(selected sets) − ambiguous',
+    formulaLengthNote: 'Only checked sets are merged. With “remove look-alike characters” on, these are dropped from the pool: 0 O o 1 l I | ` \' "',
+    formulaEntropyTitle: 'Entropy',
+    formulaEntropy: 'H = length × log₂(pool size)',
+    formulaEntropyNote: 'Measured in bits. Boundaries: below 50 weak, 50–79 fair, 80–119 strong, 120 and above very strong. The rating describes randomness only, not website security.',
+    formulaRejectTitle: 'Rejection sampling',
+    formulaReject: 'limit = ⌊2³² / n⌋ × n; accept if r < limit',
+    formulaRejectNote: 'Taking a random number modulo n makes the first few characters slightly more likely. This page rejects values outside an evenly divisible range and draws again.',
+    formulaShuffleTitle: 'Shuffle',
+    formulaShuffle: 'Fisher–Yates: swap(i, random 0…i)',
+    formulaShuffleNote: 'When “at least one from each set” is on, one character is drawn from each selected set first, the rest are filled from the merged pool, and the whole result is shuffled so positions do not reveal character classes.',
+    assumptionsTitle: 'Assumptions and limits',
+    assumption1: 'Length is a whole number from 8 to 64. If it is shorter than the number of selected sets while “at least one from each set” is on, generation is refused.',
+    assumption2: 'Pool size counts distinct characters; the four sets do not overlap.',
+    assumption3: '“At least one from each set” guarantees one occurrence per selected set, not an equal count per set.',
+    assumption4: 'Entropy assumes each character is drawn independently and uniformly; rejection sampling is what makes that assumption hold.',
+    assumption5: 'Copying uses the system clipboard. If the browser refuses, the text is selected for manual copying.',
+    disclaimer: 'Security note: this tool only generates random passwords and is not a security audit or compliance recommendation. Use a unique password per account, enable two-factor authentication where possible, and keep your password manager’s master password safe.',
+    faqTitle: 'Frequently asked questions',
+    faqQ1: 'Is this password generator safe? Are passwords uploaded?',
+    faqA1: 'The page makes no network requests. Passwords are generated and displayed only in your browser’s memory; they are not uploaded, not written to localStorage, and there is no analytics script. Randomness comes from crypto.getRandomValues with rejection sampling to avoid modulo bias.',
+    faqQ2: 'How much entropy counts as strong?',
+    faqA2: 'This page rates total entropy: below 50 bits weak, 50–79 fair, 80–119 strong, and 120 bits or more very strong. Entropy describes randomness, not whether a website is secure. Use a unique password for each site, with a password manager and two-factor authentication.',
+    faqQ3: 'Why remove characters like 0 O o 1 l I?',
+    faqA3: 'Those characters can look alike in handwriting, print, or some fonts, which makes manual typing error-prone. Removing them slightly lowers the pool size and entropy, but reduces failed logins caused by mistyped passwords.',
+    faqQ4: 'Should I save the generated password?',
+    faqA4: 'This page does not save generated passwords; they disappear when you refresh or close it. Store the password in a trusted password manager, not in a chat app or on a sticky note, and use a different password for every site.',
+    footerCopy: '© 2026 Devin',
+    footerTools: 'Tools',
+    footerGames: 'Board games',
+    footerHome: 'Home',
+    footerPrivacy: 'Static front-end tool. No data collection; passwords exist only in local memory.',
+    noscript: 'This tool needs JavaScript to use the secure random number generator. Nothing is ever uploaded.'
+  },
+  id: {
+    docTitle: 'Pembuat Kata Sandi — kata sandi acak kuat, dibuat lokal',
+    docDesc: 'Pembuat kata sandi lokal gratis: panjang 8–64 karakter, sakelar huruf kecil/huruf besar/angka/simbol, hapus karakter mirip, jamin setidaknya satu dari setiap set, dan gunakan RNG kripto peramban dengan rejection sampling. Menampilkan entropi dan kekuatan, mendukung batch dan salin sekali klik. Kata sandi tidak pernah diunggah atau disimpan.',
+    skip: 'Lompat ke pembuat',
+    heroEyebrow: 'Alat gratis · acak lokal',
+    appTitle: 'Pembuat kata sandi',
+    tagline: 'Buat kata sandi acak kuat 8–64 karakter. Atur set karakter, hapus karakter yang mudah tertukar, dan lihat entropi serta kekuatan secara langsung. Semua berjalan di peramban Anda.',
+    privacy: 'Kata sandi tidak pernah diunggah atau disimpan. Halaman ini tidak membuat permintaan jaringan, dan kata sandi yang dibuat hilang saat halaman dimuat ulang atau ditutup.',
+    navTools: 'Alat',
+    navGames: 'Permainan papan',
+    siteNavAria: 'Navigasi situs',
+    langAria: 'Bahasa',
+    optionsTitle: 'Opsi pembuatan',
+    lengthLabel: 'Panjang kata sandi',
+    lengthHint: 'Antara 8 dan 64 karakter, bawaannya 16. Penggeser dan kotak angka selalu sinkron.',
+    charsetLegend: 'Set karakter',
+    lowerLabel: 'Huruf kecil a–z',
+    upperLabel: 'Huruf besar A–Z',
+    digitsLabel: 'Angka 0–9',
+    symbolsLabel: 'Simbol !@#$%…',
+    excludeLabel: 'Hapus karakter yang mudah tertukar',
+    excludeHint: '0 O o 1 l I | ` \' "',
+    requireLabel: 'Minimal satu dari setiap set',
+    requireHint: 'Menjamin setiap set yang dipilih muncul di kata sandi (tidak bisa jika panjang terlalu pendek).',
+    countLabel: 'Buat sekaligus',
+    countOne: '1 kata sandi',
+    countFive: '5 kata sandi',
+    poolInfo: '{n} karakter dalam kumpulan',
+    poolBadge: '{n} karakter',
+    generate: 'Buat kata sandi',
+    generateAria: 'Buat kata sandi dengan opsi saat ini',
+    optionsNote: 'Kata sandi lebih panjang dan kumpulan lebih besar berarti entropi lebih tinggi. Tidak ada yang disimpan otomatis.',
+    resultTitle: 'Hasil',
+    emptyPassword: 'Belum ada kata sandi',
+    copy: 'Salin kata sandi',
+    copyAria: 'Salin kata sandi saat ini ke papan klip',
+    regenerate: 'Buat lagi',
+    copied: 'Disalin ke papan klip.',
+    copyFail: 'Tidak bisa menyalin otomatis. Teks sudah dipilih; salin secara manual.',
+    selectHint: 'Jika penyalinan gagal, kata sandi akan dipilih agar bisa disalin manual.',
+    strength: 'Kekuatan',
+    entropyLine: 'Entropi: {bits} bits',
+    bitsUnit: 'bits',
+    weak: 'Lemah',
+    fair: 'Cukup',
+    strong: 'Kuat',
+    veryStrong: 'Sangat kuat',
+    strengthNote: 'Entropi tinggi berarti kata sandi sulit ditebak, bukan berarti situsnya aman. Gunakan kata sandi unik untuk setiap situs, bersama pengelola kata sandi dan autentikasi dua faktor.',
+    batchTitle: '{n} kata sandi dibuat',
+    batchItemAria: 'Salin kata sandi ke-{n}',
+    errorNoSets: 'Pilih setidaknya satu set karakter.',
+    errorTooShort: 'Panjang kata sandi lebih pendek daripada jumlah set yang dipilih. Tambah panjang atau matikan “minimal satu dari setiap set”.',
+    errorBadLength: 'Panjang kata sandi harus bilangan bulat 8 sampai 64.',
+    errorBadRng: 'Peramban ini tidak menyediakan sumber acak aman (crypto.getRandomValues), jadi kata sandi tidak dapat dibuat.',
+    errorGeneric: 'Pembuatan gagal. Ubah opsi lalu coba lagi.',
+    explainTitle: 'Cara perhitungannya',
+    explainIntro: 'Keacakan berasal dari crypto.getRandomValues milik peramban, dengan rejection sampling untuk menghapus bias modulo. Math.random tidak pernah dipakai. Berikut rumus dan aturan yang benar-benar diterapkan halaman ini.',
+    formulaLengthTitle: 'Kumpulan karakter',
+    formulaLength: 'pool = union(selected sets) − ambiguous',
+    formulaLengthNote: 'Hanya set yang dicentang yang digabung. Saat “hapus karakter yang mudah tertukar” aktif, karakter berikut dibuang dari kumpulan: 0 O o 1 l I | ` \' "',
+    formulaEntropyTitle: 'Entropi',
+    formulaEntropy: 'H = length × log₂(pool size)',
+    formulaEntropyNote: 'Dalam bits. Batasnya: di bawah 50 lemah, 50–79 cukup, 80–119 kuat, 120 ke atas sangat kuat. Penilaian ini hanya menggambarkan keacakan, bukan keamanan situs.',
+    formulaRejectTitle: 'Rejection sampling',
+    formulaReject: 'limit = ⌊2³² / n⌋ × n; accept if r < limit',
+    formulaRejectNote: 'Mengambil angka acak modulo n membuat beberapa karakter pertama sedikit lebih mungkin muncul. Halaman ini menolak nilai di luar rentang yang habis dibagi lalu mengambil ulang.',
+    formulaShuffleTitle: 'Pengacakan',
+    formulaShuffle: 'Fisher–Yates: swap(i, random 0…i)',
+    formulaShuffleNote: 'Saat “minimal satu dari setiap set” aktif, satu karakter diambil dari setiap set terpilih, sisanya diisi dari kumpulan gabungan, lalu seluruh hasil diacak agar posisi tidak membocorkan jenis karakter.',
+    assumptionsTitle: 'Asumsi dan batasan',
+    assumption1: 'Panjang adalah bilangan bulat 8 sampai 64. Jika lebih pendek daripada jumlah set terpilih sementara “minimal satu dari setiap set” aktif, pembuatan ditolak.',
+    assumption2: 'Ukuran kumpulan menghitung karakter unik; keempat set tidak saling tumpang tindih.',
+    assumption3: '“Minimal satu dari setiap set” menjamin satu kemunculan per set terpilih, bukan jumlah yang sama untuk setiap set.',
+    assumption4: 'Entropi mengasumsikan setiap karakter diambil secara independen dan seragam; rejection sampling membuat asumsi itu berlaku.',
+    assumption5: 'Penyalinan memakai papan klip sistem. Jika peramban menolak, teks dipilih untuk disalin manual.',
+    disclaimer: 'Catatan keamanan: alat ini hanya membuat kata sandi acak dan bukan audit keamanan atau saran kepatuhan. Gunakan kata sandi unik untuk setiap akun, aktifkan autentikasi dua faktor bila tersedia, dan jaga kata sandi utama pengelola kata sandi Anda.',
+    faqTitle: 'Pertanyaan umum',
+    faqQ1: 'Apakah pembuat kata sandi ini aman? Apakah kata sandi diunggah?',
+    faqA1: 'Halaman ini tidak membuat permintaan jaringan. Kata sandi dibuat dan ditampilkan hanya di memori peramban Anda; tidak diunggah, tidak ditulis ke localStorage, dan tidak ada skrip analitik. Keacakan berasal dari crypto.getRandomValues dengan rejection sampling untuk menghindari bias modulo.',
+    faqQ2: 'Berapa entropi yang dianggap kuat?',
+    faqA2: 'Halaman ini menilai entropi total: di bawah 50 bits lemah, 50–79 cukup, 80–119 kuat, dan 120 bits atau lebih sangat kuat. Entropi menggambarkan keacakan, bukan keamanan situs. Gunakan kata sandi unik untuk setiap situs, bersama pengelola kata sandi dan autentikasi dua faktor.',
+    faqQ3: 'Mengapa menghapus karakter seperti 0 O o 1 l I?',
+    faqA3: 'Karakter tersebut bisa terlihat mirip saat ditulis tangan, dicetak, atau pada beberapa font, sehingga rawan salah ketik. Menghapusnya sedikit menurunkan ukuran kumpulan dan entropi, tetapi mengurangi gagal masuk karena kata sandi salah ketik.',
+    faqQ4: 'Apakah kata sandi yang dibuat perlu disimpan?',
+    faqA4: 'Halaman ini tidak menyimpan kata sandi yang dibuat; kata sandi hilang saat halaman dimuat ulang atau ditutup. Simpan di pengelola kata sandi tepercaya, bukan di aplikasi obrolan atau catatan tempel, dan gunakan kata sandi berbeda untuk setiap situs.',
+    footerCopy: '© 2026 Devin',
+    footerTools: 'Alat',
+    footerGames: 'Permainan papan',
+    footerHome: 'Beranda',
+    footerPrivacy: 'Alat front-end statis. Tidak mengumpulkan data; kata sandi hanya ada di memori lokal.',
+    noscript: 'Alat ini memerlukan JavaScript untuk memakai pembangkit angka acak aman. Tidak ada yang pernah diunggah.'
+  }
+};
+</script>
+
+<script>
+(function () {
+  'use strict';
+
+  var STORE_KEY = 'hhfa.tool.password-generator.lang';
+  var rngOk = !!(window.crypto && typeof window.crypto.getRandomValues === 'function');
+  var ui = { lang: 'zh' };
+  var state = { passwords: [], poolSize: 0, bits: 0, strength: '' };
+
+  function $(id) { return document.getElementById(id); }
+  function isNum(n) { return typeof n === 'number' && isFinite(n); }
+  function isInt(n) { return isNum(n) && Math.floor(n) === n; }
+
+  function detectLang() {
+    var q = /[?&]lang=(zh|en|id)(?:&|$)/.exec(location.search);
+    if (q) return q[1];
+    try {
+      var saved = localStorage.getItem(STORE_KEY);
+      if (saved === 'zh' || saved === 'en' || saved === 'id') return saved;
+    } catch (e) {}
+    var nav = (navigator.language || '').toLowerCase();
+    if (nav.indexOf('zh') === 0) return 'zh';
+    if (nav.indexOf('id') === 0 || nav.indexOf('in') === 0) return 'id';
+    return 'en';
+  }
+
+  function t(key, vars) {
+    var dict = TOOL_I18N[ui.lang] || TOOL_I18N.zh;
+    var s = dict[key] != null ? dict[key] : (TOOL_I18N.zh[key] != null ? TOOL_I18N.zh[key] : key);
+    if (vars) {
+      Object.keys(vars).forEach(function (k) { s = s.split('{' + k + '}').join(String(vars[k])); });
+    }
+    return s;
+  }
+
+  function locale() {
+    return ui.lang === 'id' ? 'id-ID' : (ui.lang === 'zh' ? 'zh-CN' : 'en-US');
+  }
+
+  function fmtBits(n) {
+    return new Intl.NumberFormat(locale(), {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1
+    }).format(n);
+  }
+
+  function saveLang() {
+    try { localStorage.setItem(STORE_KEY, ui.lang); } catch (e) {}
+  }
+
+  function cryptoRng() {
+    var buf = new Uint32Array(1);
+    return function () {
+      window.crypto.getRandomValues(buf);
+      return buf[0] / 4294967296;
+    };
+  }
+
+  var toastTimer = null;
+  function toast(msg) {
+    var el = $('toast');
+    el.textContent = msg;
+    el.classList.add('on');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove('on'); }, 2600);
+  }
+
+  function selectNode(node) {
+    if (!node) return;
+    try {
+      var range = document.createRange();
+      range.selectNodeContents(node);
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    } catch (e) {}
+  }
+
+  function copyText(text, node) {
+    function done() { toast(t('copied')); }
+    function fallback() {
+      selectNode(node);
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) {}
+      if (ok) done(); else toast(t('copyFail'));
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(fallback);
+    } else {
+      fallback();
+    }
+  }
+
+  function currentOptions() {
+    var length = parseInt($('len-num').value, 10);
+    var countEl = document.querySelector('input[name="count"]:checked');
+    return {
+      length: length,
+      lower: $('set-lower').checked,
+      upper: $('set-upper').checked,
+      digits: $('set-digits').checked,
+      symbols: $('set-symbols').checked,
+      excludeAmbiguous: $('exclude-ambiguous').checked,
+      requireEach: $('require-each').checked,
+      count: countEl ? parseInt(countEl.value, 10) : 1
+    };
+  }
+
+  function showError(key) {
+    var el = $('error');
+    if (!key) {
+      el.hidden = true;
+      el.textContent = '';
+      return;
+    }
+    el.textContent = t(key);
+    el.hidden = false;
+  }
+
+  function available() {
+    var opts = currentOptions();
+    var pool = ToolEngine.buildPool(opts);
+    var catCount = pool.ok ? pool.categories.length : 0;
+    var tooShort = pool.ok && opts.requireEach && isInt(opts.length) && opts.length < catCount;
+    var badLen = !isInt(opts.length) || opts.length < 8 || opts.length > 64;
+    var can = rngOk && pool.ok && !tooShort && !badLen;
+    $('generate').disabled = !can;
+    $('regenerate').disabled = !rngOk;
+    if (!rngOk) {
+      showError('errorBadRng');
+    } else if (!pool.ok) {
+      showError('errorNoSets');
+    } else if (badLen) {
+      showError('errorBadLength');
+    } else if (tooShort) {
+      showError('errorTooShort');
+    } else {
+      showError(null);
+    }
+    if (pool.ok) {
+      $('pool-info').textContent = t('poolInfo', { n: pool.poolSize });
+    } else {
+      $('pool-info').textContent = '';
+    }
+    return can;
+  }
+
+  function strengthKey(strength) {
+    if (strength === 'weak') return 'weak';
+    if (strength === 'fair') return 'fair';
+    if (strength === 'strong') return 'strong';
+    return 'veryStrong';
+  }
+
+  function renderStrength() {
+    var label = $('strength-label');
+    var fill = $('meter-fill');
+    var meter = $('meter');
+    if (!state.passwords.length) {
+      label.textContent = '—';
+      $('entropy-line').textContent = '';
+      fill.style.width = '0%';
+      fill.className = 'meter-fill';
+      meter.setAttribute('aria-valuenow', '0');
+      meter.removeAttribute('aria-valuetext');
+      return;
+    }
+    var bits = state.bits;
+    var pct = Math.min(100, (bits / 150) * 100);
+    label.textContent = t(strengthKey(state.strength));
+    fill.style.width = pct.toFixed(1) + '%';
+    fill.className = 'meter-fill ' + state.strength;
+    meter.setAttribute('aria-valuenow', String(Math.min(150, Math.round(bits))));
+    meter.setAttribute('aria-valuetext', t(strengthKey(state.strength)) + ' ' + fmtBits(bits) + ' ' + t('bitsUnit'));
+    $('entropy-line').textContent = t('entropyLine', { bits: fmtBits(bits) });
+  }
+
+  function clearNode(node) {
+    while (node.firstChild) node.removeChild(node.firstChild);
+  }
+
+  function renderBatch() {
+    var wrap = $('batch-wrap');
+    var list = $('batch-list');
+    clearNode(list);
+    if (state.passwords.length < 2) {
+      wrap.hidden = true;
+      return;
+    }
+    wrap.hidden = false;
+    $('batch-title').textContent = t('batchTitle', { n: state.passwords.length });
+    state.passwords.forEach(function (pw, i) {
+      var li = document.createElement('li');
+      var code = document.createElement('code');
+      code.textContent = pw;
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'copy-one';
+      btn.textContent = t('copy');
+      btn.setAttribute('aria-label', t('batchItemAria', { n: i + 1 }));
+      btn.addEventListener('click', function () { copyText(pw, code); });
+      li.appendChild(code);
+      li.appendChild(btn);
+      list.appendChild(li);
+    });
+  }
+
+  function renderResult() {
+    var out = $('pw-out');
+    if (!state.passwords.length) {
+      out.textContent = t('emptyPassword');
+      $('copy').disabled = true;
+      renderStrength();
+      renderBatch();
+      return;
+    }
+    out.textContent = state.passwords[0];
+    $('copy').disabled = false;
+    $('pool-badge').textContent = t('poolBadge', { n: state.poolSize });
+    renderStrength();
+    renderBatch();
+  }
+
+  function errorKeyFor(code) {
+    return {
+      'no-sets': 'errorNoSets',
+      'too-short': 'errorTooShort',
+      'bad-length': 'errorBadLength',
+      'bad-rng': 'errorBadRng'
+    }[code] || 'errorGeneric';
+  }
+
+  function generate() {
+    if (!available()) return;
+    var opts = currentOptions();
+    var result = ToolEngine.generateBatch(opts.count, opts, cryptoRng());
+    if (!result.ok) {
+      showError(errorKeyFor(result.error));
+      return;
+    }
+    state.passwords = result.passwords;
+    state.poolSize = result.poolSize;
+    state.bits = ToolEngine.entropyBits(opts.length, result.poolSize);
+    state.strength = ToolEngine.strengthFor(state.bits);
+    showError(null);
+    renderResult();
+  }
+
+  function applyLang() {
+    document.documentElement.lang = ui.lang === 'zh' ? 'zh-CN' : ui.lang;
+    var dict = TOOL_I18N[ui.lang] || TOOL_I18N.zh;
+
+    document.title = t('docTitle');
+    var desc = $('meta-desc');
+    if (desc) desc.setAttribute('content', t('docDesc'));
+    var ogTitle = $('og-title');
+    if (ogTitle) ogTitle.setAttribute('content', t('docTitle'));
+    var ogDesc = $('og-desc');
+    if (ogDesc) ogDesc.setAttribute('content', t('docDesc'));
+    var twTitle = $('tw-title');
+    if (twTitle) twTitle.setAttribute('content', t('docTitle'));
+    var twDesc = $('tw-desc');
+    if (twDesc) twDesc.setAttribute('content', t('docDesc'));
+    var ogLocale = document.querySelector('meta[property="og:locale"]');
+    if (ogLocale) ogLocale.setAttribute('content', ui.lang === 'zh' ? 'zh_CN' : (ui.lang === 'id' ? 'id_ID' : 'en_US'));
+
+    var nodes = document.querySelectorAll('[data-i]');
+    for (var i = 0; i < nodes.length; i++) {
+      var k = nodes[i].getAttribute('data-i');
+      if (dict[k] != null) nodes[i].textContent = dict[k];
+    }
+    var phs = document.querySelectorAll('[data-i-ph]');
+    for (var j = 0; j < phs.length; j++) {
+      var pk = phs[j].getAttribute('data-i-ph');
+      if (dict[pk] != null) phs[j].setAttribute('placeholder', dict[pk]);
+    }
+    var arias = document.querySelectorAll('[data-i-aria]');
+    for (var a = 0; a < arias.length; a++) {
+      var ak = arias[a].getAttribute('data-i-aria');
+      if (dict[ak] != null) arias[a].setAttribute('aria-label', dict[ak]);
+    }
+
+    var langBtns = document.querySelectorAll('.langs button');
+    for (var n = 0; n < langBtns.length; n++) {
+      langBtns[n].setAttribute('aria-pressed', langBtns[n].getAttribute('data-lang') === ui.lang ? 'true' : 'false');
+    }
+
+    var toolsPath = ui.lang === 'zh' ? '/tools/' : '/tools/' + ui.lang + '/';
+    $('nav-tools').setAttribute('href', toolsPath);
+    $('foot-tools').setAttribute('href', toolsPath);
+
+    available();
+    renderResult();
+  }
+
+  function bind() {
+    var langBtns = document.querySelectorAll('.langs button');
+    for (var i = 0; i < langBtns.length; i++) {
+      langBtns[i].addEventListener('click', function () {
+        ui.lang = this.getAttribute('data-lang');
+        saveLang();
+        applyLang();
+      });
+    }
+
+    $('len-range').addEventListener('input', function () {
+      $('len-num').value = this.value;
+      available();
+    });
+    $('len-num').addEventListener('input', function () {
+      var v = parseInt(this.value, 10);
+      if (isInt(v) && v >= 8 && v <= 64) $('len-range').value = String(v);
+      available();
+    });
+    $('len-num').addEventListener('blur', function () {
+      var v = parseInt(this.value, 10);
+      if (!isInt(v)) v = 16;
+      v = Math.min(64, Math.max(8, v));
+      this.value = String(v);
+      $('len-range').value = String(v);
+      available();
+    });
+
+    ['set-lower', 'set-upper', 'set-digits', 'set-symbols', 'exclude-ambiguous', 'require-each'].forEach(function (id) {
+      $(id).addEventListener('change', function () {
+        if (id === 'require-each' && this.checked) {
+          var low = parseInt($('len-num').value, 10);
+          var cats = ToolEngine.buildPool(currentOptions());
+          if (cats.ok && isInt(low) && low < cats.categories.length) {
+            $('len-num').value = String(Math.max(8, cats.categories.length));
+            $('len-range').value = String(Math.max(8, cats.categories.length));
+          }
+        }
+        available();
+      });
+    });
+
+    var countEls = document.querySelectorAll('input[name="count"]');
+    for (var c = 0; c < countEls.length; c++) countEls[c].addEventListener('change', available);
+
+    $('options').addEventListener('submit', function (e) {
+      e.preventDefault();
+      generate();
+    });
+    $('regenerate').addEventListener('click', generate);
+    $('copy').addEventListener('click', function () {
+      if (state.passwords.length) copyText(state.passwords[0], $('pw-out'));
+    });
+  }
+
+  function init() {
+    ui.lang = detectLang();
+    bind();
+    if (!rngOk) {
+      showError('errorBadRng');
+      $('generate').disabled = true;
+      $('regenerate').disabled = true;
+    }
+    applyLang();
+    if (rngOk) generate();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>

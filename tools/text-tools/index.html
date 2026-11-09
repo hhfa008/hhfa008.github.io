@@ -1,0 +1,1215 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>文本工具箱 — 字数统计、大小写转换与去重排序</title>
+<meta name="description" content="免费离线的文本工具箱：实时统计字符、词数、行数、句子与阅读时间，支持大小写、标题格式、去空行、去重、排序、正则查找替换。数据只留在本机。">
+<meta name="author" content="Devin">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="theme-color" content="#f2efe7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#101316" media="(prefers-color-scheme: dark)">
+<link rel="canonical" href="https://hhfa008.github.io/tools/text-tools/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23b93d12'/%3E%3Cpath d='M8 9h16v3H8zm0 6h16v3H8zm0 6h10v3H8z' fill='%23fbf9f4'/%3E%3C/svg%3E">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Devin">
+<meta property="og:title" content="文本工具箱 — 字数统计、大小写转换与去重排序">
+<meta property="og:description" content="实时统计字符、词数、行数与阅读时间，支持大小写、标题格式、去空行、去重、按码点排序和正则查找替换。完全本地运行。">
+<meta property="og:url" content="https://hhfa008.github.io/tools/text-tools/">
+<meta property="og:locale" content="zh_CN">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="文本工具箱 — 字数统计与文本转换">
+<meta name="twitter:description" content="统计字符、词数和阅读时间；大小写、去重、排序、正则替换一次完成。数据不上传。">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "文本工具箱 — 字数统计与文本转换",
+  "url": "https://hhfa008.github.io/tools/text-tools/",
+  "applicationCategory": "UtilitiesApplication",
+  "operatingSystem": "Any",
+  "browserRequirements": "Requires JavaScript",
+  "isAccessibleForFree": true,
+  "inLanguage": ["zh-CN", "en", "id"],
+  "description": "一个离线文本工具箱：实时统计字符、去空白字符、词数、行数、句子数、段落数与阅读时间，并支持大小写转换、标题格式、去空行、去重、按 Unicode 码点排序和正则查找替换。所有处理都在浏览器本地完成。",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "featureList": [
+    "实时统计字符、词数、行数、句子、段落与阅读时间",
+    "转大写、转小写、标题格式、句首大写",
+    "去除行首尾空白、删除空行、合并多余空格、去重行",
+    "按 Unicode 码点升序或降序排序、反转行序",
+    "查找替换，支持区分大小写与正则表达式",
+    "删除行号前缀，结果一键复制"
+  ]
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "词数和阅读时间是怎么计算的？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "拉丁字母和数字按词边界计为一个词；汉字、假名和谚文按字符逐个计。阅读时间按拉丁文每分钟 200 词、CJK 每分钟 300 字分别计算后相加，再向上取整到分钟。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "按行排序用的是拼音还是字母顺序？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "都不是。排序直接比较 Unicode 码点，不使用系统语言环境，因此同一份文本在不同设备上的顺序一致。排序是稳定的，完全相同的行保持原来的先后顺序。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "查找替换支持正则表达式吗？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "支持。勾选“正则”后，查找串会作为 JavaScript 正则表达式编译，替换串可以使用 $1、$& 等捕获引用。正则语法错误会在原位置提示，不会执行替换。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "文本会被上传或保存吗？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "不会。所有统计与转换都在浏览器里完成，页面不发送网络请求，也不读取或写入文本内容。只有语言选择会保存在本机 localStorage。"
+      }
+    }
+  ]
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "首页", "item": "https://hhfa008.github.io/" },
+    { "@type": "ListItem", "position": 2, "name": "工具大厅", "item": "https://hhfa008.github.io/tools/" },
+    { "@type": "ListItem", "position": 3, "name": "文本工具箱", "item": "https://hhfa008.github.io/tools/text-tools/" }
+  ]
+}
+</script>
+
+<style>
+:root{
+  --paper:#f2efe7; --paper-2:#fbf9f4; --panel:#ffffff;
+  --ink:#14171a; --muted:#5b615c; --muted-2:#7b807a;
+  --line:#d5d0c4; --line-strong:#bcb5a7;
+  --accent:#b93d12; --accent-soft:#f2a07a; --accent-wash:#f7e5da;
+  --ok:#2f6b3c; --ok-wash:#e8f2e7; --warn:#8a5a00; --warn-wash:#fbf1db;
+  --bad:#a32216; --bad-wash:#fbe7e3;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --radius:16px; --max:1040px;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --paper:#101316; --paper-2:#171b1f; --panel:#1a1f23;
+    --ink:#f2efe7; --muted:#b7b3a8; --muted-2:#948f85;
+    --line:#333a40; --line-strong:#4a535b;
+    --accent:#f08a5d; --accent-wash:#2b211c;
+    --ok:#8fd19e; --ok-wash:#1b2b1e; --warn:#f0c36a; --warn-wash:#2d2618;
+    --bad:#ff8a7a; --bad-wash:#321d1a;
+  }
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%;color-scheme:light dark;scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.6 var(--sans);
+  overflow-x:clip;-webkit-font-smoothing:antialiased}
+h1,h2,h3,p,ul{margin:0}
+button,input,textarea,select{font:inherit;color:inherit}
+a{color:inherit}
+code,pre{font-family:var(--mono)}
+.wrap{width:100%;max-width:var(--max);margin:0 auto;padding:0 18px}
+@media(min-width:720px){.wrap{padding:0 32px}}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.skip-link{position:absolute;left:12px;top:-60px;z-index:100;padding:12px 16px;
+  background:var(--ink);color:var(--paper);border-radius:8px;text-decoration:none}
+.skip-link:focus{top:12px}
+:focus-visible{outline:3px solid var(--accent-soft);outline-offset:2px}
+
+.site-header{border-bottom:1px solid var(--line);background:var(--paper)}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:12px 18px;
+  min-height:64px;flex-wrap:wrap;padding-top:8px;padding-bottom:8px}
+.brand{display:inline-flex;align-items:center;gap:10px;min-height:44px;font-weight:700;letter-spacing:-.02em;text-decoration:none}
+.brand-mark{width:26px;height:26px;border-radius:7px;background:var(--accent);flex:none}
+.site-nav{display:flex;align-items:center;gap:16px;font-size:14px;flex-wrap:wrap}
+.site-nav a{color:var(--muted);text-decoration:none;min-height:44px;display:inline-flex;align-items:center}
+.site-nav a:hover{color:var(--accent)}
+.langs{display:flex;gap:4px}
+.langs button{min-width:44px;min-height:44px;padding:0 9px;border:1px solid var(--line);
+  border-radius:9px;background:transparent;color:var(--muted);font-size:13px;font-weight:650;cursor:pointer}
+.langs button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.langs button:hover{border-color:var(--line-strong)}
+
+.hero{padding:34px 0 20px}
+.eyebrow{font-family:var(--mono);font-size:11px;font-weight:650;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--accent);margin-bottom:10px}
+.hero h1{font-size:clamp(1.9rem,6vw,3rem);line-height:1.1;letter-spacing:-.035em;margin-bottom:12px;max-width:22ch}
+.lede{color:var(--muted);font-size:clamp(1rem,2vw,1.1rem);max-width:72ch}
+.notice{display:flex;gap:10px;align-items:flex-start;max-width:78ch;margin-top:16px;padding:12px 15px;
+  border-left:4px solid var(--accent);background:var(--accent-wash);border-radius:0 10px 10px 0;font-size:14px}
+.notice svg{width:18px;height:18px;flex:none;margin-top:3px}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px}
+@media(min-width:720px){.card{padding:24px 26px}}
+.tool-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;align-items:start}
+@media(min-width:880px){.tool-grid{grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr)}}
+.card + .card{margin-top:18px}
+.tool-grid > .card + .card{margin-top:0}
+
+.fld{display:block;font-family:var(--mono);font-size:10.5px;font-weight:650;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+textarea{display:block;width:100%;min-height:220px;padding:13px 14px;border:1px solid var(--line-strong);
+  border-radius:12px;background:var(--paper-2);color:var(--ink);font-size:16px;line-height:1.55;
+  resize:vertical;overflow-wrap:anywhere}
+textarea:focus,input:focus{border-color:var(--accent);outline:3px solid var(--accent-wash);outline-offset:1px}
+#output{min-height:260px;font-family:var(--mono);font-size:13.5px}
+.hint{color:var(--muted-2);font-size:12.5px;margin-top:8px}
+.hint.warn{color:var(--warn);background:var(--warn-wash);border-radius:9px;padding:9px 11px;font-size:13px}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:8px;margin-top:16px}
+.stat{min-width:0;padding:10px 11px;border:1px solid var(--line);border-radius:11px;background:var(--paper-2)}
+.stat span{display:block;font-size:11.5px;color:var(--muted);line-height:1.3}
+.stat b{display:block;margin-top:2px;font-family:var(--mono);font-size:1.15rem;font-weight:650;
+  font-variant-numeric:tabular-nums;letter-spacing:-.02em;overflow-wrap:anywhere}
+
+.actions{margin-top:18px}
+.actions h2{font-size:1rem;letter-spacing:-.01em;margin:0 0 10px}
+.group{margin-top:14px;min-width:0}
+.group h3{font-family:var(--mono);font-size:10.5px;font-weight:650;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--muted);margin:0 0 7px}
+.btn-row{display:flex;flex-wrap:wrap;gap:8px}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:9px 14px;
+  border:1px solid var(--line-strong);border-radius:10px;background:var(--paper-2);color:var(--ink);
+  font-size:14.5px;font-weight:600;cursor:pointer;text-align:center;text-decoration:none}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.07);color:#fff}
+.btn.ghost{background:transparent}
+.btn-row .btn{flex:1 1 128px}
+
+.replace-box{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--paper-2)}
+.field-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+@media(max-width:480px){.field-grid{grid-template-columns:minmax(0,1fr)}}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field label{font-size:12px;font-weight:600;color:var(--muted)}
+.field input{width:100%;min-height:44px;padding:9px 11px;border:1px solid var(--line-strong);
+  border-radius:9px;background:var(--panel);font-size:15px}
+.checks{display:flex;align-items:center;flex-wrap:wrap;gap:10px 16px;margin-top:10px}
+.check{display:inline-flex;align-items:center;gap:7px;min-height:44px;font-size:14px;cursor:pointer}
+.check input{width:44px;height:44px;padding:12px;accent-color:var(--accent)}
+.checks .btn{margin-left:auto;flex:1 1 140px}
+.err{margin-top:10px;padding:10px 12px;border-radius:9px;background:var(--bad-wash);
+  border:1px solid var(--bad);color:var(--bad);font-size:13px;overflow-wrap:anywhere}
+
+#toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));
+  transform:translate(-50%,12px);z-index:20;max-width:calc(100vw - 32px);padding:11px 17px;
+  border-radius:11px;background:var(--ink);color:var(--paper);font-size:14px;font-weight:550;
+  text-align:center;box-shadow:0 8px 24px rgb(0 0 0 / .22);opacity:0;pointer-events:none;
+  transition:opacity .16s,transform .16s}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+
+.explain,.faq{margin-top:22px}
+.explain h2,.faq h2{font-size:clamp(1.25rem,3vw,1.6rem);letter-spacing:-.02em;margin-bottom:12px}
+.explain p{max-width:82ch;color:var(--muted);font-size:14px;margin-bottom:9px}
+.explain p:last-child{margin-bottom:0}
+.explain strong{color:var(--ink)}
+
+.faq details{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:0 18px}
+.faq details + details{margin-top:9px}
+.faq summary{display:flex;align-items:center;justify-content:space-between;gap:14px;
+  min-height:52px;padding:12px 0;cursor:pointer;font-weight:600;list-style:none}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";font-family:var(--mono);font-size:19px;color:var(--accent);line-height:1}
+.faq details[open] summary::after{content:"\2212"}
+.faq details p{padding:0 0 16px;color:var(--muted);font-size:14px;max-width:82ch}
+
+.site-footer{margin-top:30px;padding:22px 0 34px;border-top:1px solid var(--line);
+  font-size:12.5px;color:var(--muted-2)}
+.footer-inner{display:flex;flex-wrap:wrap;gap:8px 18px;justify-content:space-between}
+.footer-links{display:flex;flex-wrap:wrap;gap:6px 14px}
+.site-footer a{color:var(--accent);text-decoration:none}
+.site-footer a:hover{text-decoration:underline}
+.footer-privacy{margin-top:9px;max-width:80ch}
+
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .btn:active{transform:none}
+}
+@media (max-width:560px){
+  input,textarea,select{font-size:16px}
+}
+@media print{
+  .site-header,.site-footer,.langs,.actions,.btn-row,.hint,#toast,.faq,.explain{display:none!important}
+  body{background:#fff;color:#000}
+  .card{border:1px solid #999;break-inside:avoid}
+  textarea{min-height:auto;height:auto;overflow:visible;border:1px solid #999;background:#fff;color:#000}
+  #output{min-height:120px}
+}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#tool" data-i="skipLink">跳到工具箱</a>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="/" data-i-aria="brandHome"><span class="brand-mark" aria-hidden="true"></span>Devin</a>
+    <nav class="site-nav" data-i-aria="siteNav">
+      <a id="nav-tools" href="/tools/" data-i="navTools">工具大厅</a>
+      <a id="nav-games" href="/games/" data-i="navGames">在线桌游</a>
+    </nav>
+    <nav class="langs" data-i-aria="langLabel">
+      <button type="button" data-lang="zh" data-i="langZh">中文</button>
+      <button type="button" data-lang="en" data-i="langEn">EN</button>
+      <button type="button" data-lang="id" data-i="langId">ID</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap" id="tool">
+  <section class="hero">
+    <p class="eyebrow" data-i="eyebrow">免费工具 · 本地运行</p>
+    <h1 data-i="appTitle">文本工具箱</h1>
+    <p class="lede" data-i="tagline">粘贴文本，立即看到字符、词数、行数和阅读时间；大小写、去空行、去重、排序和正则替换都在同一页完成。</p>
+    <p class="notice">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+      <span data-i="privacy">文本只在你自己的浏览器里处理，不会上传，也不会写入存储。</span>
+    </p>
+  </section>
+
+  <div class="tool-grid">
+    <section class="card" aria-labelledby="input-label">
+      <label class="fld" id="input-label" for="input" data-i="inputLabel">输入文本</label>
+      <textarea id="input" rows="12" spellcheck="false" autocomplete="off" data-i-ph="inputPh" placeholder="在这里粘贴或输入文本…"></textarea>
+      <p class="hint warn" id="large-warn" hidden data-i="largeWarn">文本超过 {n} 字符，统计仍会继续，但转换可能需要一点时间。</p>
+
+      <div class="stats" id="stats" data-i-aria="statsAria" aria-label="文本统计" aria-live="polite">
+        <div class="stat"><span data-i="statChars">总字符</span><b id="st-chars">0</b></div>
+        <div class="stat"><span data-i="statNoSpace">去空白字符</span><b id="st-nospace">0</b></div>
+        <div class="stat"><span data-i="statWords">词数</span><b id="st-words">0</b></div>
+        <div class="stat"><span data-i="statLines">行数</span><b id="st-lines">0</b></div>
+        <div class="stat"><span data-i="statSentences">句子数</span><b id="st-sentences">0</b></div>
+        <div class="stat"><span data-i="statParagraphs">段落数</span><b id="st-paragraphs">0</b></div>
+        <div class="stat"><span data-i="statReading">阅读时间</span><b id="st-reading">0</b></div>
+      </div>
+
+      <div class="actions">
+        <h2 data-i="actionsTitle">转换与整理</h2>
+
+        <div class="group">
+          <h3 data-i="groupCase">大小写</h3>
+          <div class="btn-row">
+            <button class="btn" type="button" data-action="upper" data-i="btnUpper">转大写</button>
+            <button class="btn" type="button" data-action="lower" data-i="btnLower">转小写</button>
+            <button class="btn" type="button" data-action="title" data-i="btnTitle">标题格式</button>
+            <button class="btn" type="button" data-action="sentence" data-i="btnSentence">句首大写</button>
+          </div>
+        </div>
+
+        <div class="group">
+          <h3 data-i="groupSpace">空白与行</h3>
+          <div class="btn-row">
+            <button class="btn" type="button" data-action="trimLines" data-i="btnTrim">去除行首尾空白</button>
+            <button class="btn" type="button" data-action="removeEmptyLines" data-i="btnRemoveEmpty">删除空行</button>
+            <button class="btn" type="button" data-action="collapseSpaces" data-i="btnCollapse">合并多余空格</button>
+            <button class="btn" type="button" data-action="stripLineNumbers" data-i="btnStripNumbers">删除行号前缀</button>
+          </div>
+        </div>
+
+        <div class="group">
+          <h3 data-i="groupLines">排序与去重</h3>
+          <div class="btn-row">
+            <button class="btn" type="button" data-action="dedupeLines" data-i="btnDedupe">去重行</button>
+            <button class="btn" type="button" data-action="sortAsc" data-i="btnSortAsc">按行升序</button>
+            <button class="btn" type="button" data-action="sortDesc" data-i="btnSortDesc">按行降序</button>
+            <button class="btn" type="button" data-action="reverseLines" data-i="btnReverse">反转行序</button>
+          </div>
+        </div>
+
+        <div class="group">
+          <h3 data-i="groupReplace">查找替换</h3>
+          <form class="replace-box" id="replace-form" autocomplete="off">
+            <div class="field-grid">
+              <div class="field">
+                <label for="find" data-i="findLabel">查找</label>
+                <input id="find" type="text" data-i-ph="findPh" placeholder="要查找的文字">
+              </div>
+              <div class="field">
+                <label for="replace" data-i="replaceLabel">替换为</label>
+                <input id="replace" type="text" data-i-ph="replacePh" placeholder="替换后的文字，留空即删除">
+              </div>
+            </div>
+            <div class="checks">
+              <label class="check"><input id="opt-case" type="checkbox"><span data-i="optCase">区分大小写</span></label>
+              <label class="check"><input id="opt-regex" type="checkbox"><span data-i="optRegex">正则表达式</span></label>
+              <button class="btn" type="submit" data-i="btnReplace">查找替换</button>
+            </div>
+            <p class="err" id="replace-err" role="alert" hidden></p>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="output-label">
+      <label class="fld" id="output-label" for="output" data-i="resultTitle">结果</label>
+      <textarea id="output" rows="16" readonly spellcheck="false" data-i-ph="outputPh" placeholder="转换结果会显示在这里…"></textarea>
+      <p class="sr-only" id="result-status" role="status" aria-live="polite"></p>
+      <div class="btn-row" style="margin-top:12px">
+        <button class="btn primary" type="button" id="apply" data-i="btnApply">将结果作为输入</button>
+        <button class="btn" type="button" id="copy" data-i="btnCopy">复制结果</button>
+        <button class="btn ghost" type="button" id="undo" data-i="btnUndo">撤销</button>
+      </div>
+      <p class="hint" data-i="resultHint">可以连续转换：先“将结果作为输入”，再执行下一步；撤销会回到操作前的输入。</p>
+    </section>
+  </div>
+
+  <section class="card explain" aria-labelledby="explain-title">
+    <h2 id="explain-title" data-i="explainTitle">统计规则与说明</h2>
+    <p data-i="explainStatsText">总字符按 Unicode 码点计，一个 emoji 算一个字符；去空白字符会移除空格、制表符和换行。行按 CRLF、LF 或 CR 拆分，末尾换行会产生一个空行。</p>
+    <p data-i="explainWordsText">拉丁字母和数字按词边界计为一个词；汉字、假名和谚文按字符逐个计。句子按 . ! ? 。 ！ ？ … 切分，段落以空行分隔。</p>
+    <p data-i="explainReadingText">阅读时间把拉丁文按每分钟 200 词、CJK 按每分钟 300 字分别计算后相加，再向上取整到整分钟。这个数字只是估算，实际速度因内容和读者而异。</p>
+    <p data-i="explainSortText">排序直接比较 Unicode 码点，不使用拼音或系统语言环境，因此在任何设备上结果一致。排序是稳定的：完全相同的行保持原来的先后顺序。</p>
+    <p data-i="explainRegexText">勾选“正则表达式”后，查找串按 JavaScript 正则编译，替换串可以使用 $1、$&amp; 等引用。语法错误会就地显示，不会改动文本。未勾选时查找串按字面量处理。</p>
+  </section>
+
+  <section class="faq" aria-labelledby="faq-title">
+    <h2 id="faq-title" data-i="faqTitle">常见问题</h2>
+    <details>
+      <summary data-i="faqQ1">词数和阅读时间是怎么计算的？</summary>
+      <p data-i="faqA1">拉丁字母和数字按词边界计为一个词；汉字、假名和谚文按字符逐个计。阅读时间按拉丁文每分钟 200 词、CJK 每分钟 300 字分别计算后相加，再向上取整到分钟。</p>
+    </details>
+    <details>
+      <summary data-i="faqQ2">按行排序用的是拼音还是字母顺序？</summary>
+      <p data-i="faqA2">都不是。排序直接比较 Unicode 码点，不使用系统语言环境，因此同一份文本在不同设备上的顺序一致。排序是稳定的，完全相同的行保持原来的先后顺序。</p>
+    </details>
+    <details>
+      <summary data-i="faqQ3">查找替换支持正则表达式吗？</summary>
+      <p data-i="faqA3">支持。勾选“正则”后，查找串会作为 JavaScript 正则表达式编译，替换串可以使用 $1、$&amp; 等捕获引用。正则语法错误会在原位置提示，不会执行替换。</p>
+    </details>
+    <details>
+      <summary data-i="faqQ4">文本会被上传或保存吗？</summary>
+      <p data-i="faqA4">不会。所有统计与转换都在浏览器里完成，页面不发送网络请求，也不读取或写入文本内容。只有语言选择会保存在本机 localStorage。</p>
+    </details>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-inner">
+      <span>© 2026 Devin</span>
+      <nav class="footer-links">
+        <a id="foot-tools" href="/tools/" data-i="navTools">工具大厅</a>
+        <a id="foot-games" href="/games/" data-i="navGames">在线桌游</a>
+        <a id="foot-home" href="/" data-i="navHome">首页</a>
+      </nav>
+    </div>
+    <p class="footer-privacy" data-i="footerPrivacy">所有处理都在本地完成，不上传文本，不使用追踪脚本。语言偏好只保存在本机。</p>
+  </div>
+</footer>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<noscript>
+  <div class="wrap"><p class="card" style="margin-top:18px" data-i="noscript">文本工具箱需要 JavaScript 才能统计和转换。所有计算都在你的设备上完成，不会上传任何内容。</p></div>
+</noscript>
+
+<script id="engine">
+var ToolEngine = (function () {
+  'use strict';
+
+  var CJK_RE = /[㐀-䶿一-鿿豈-﫿぀-ヿㇰ-ㇿ가-힯]/g;
+  var LATIN_RE;
+  try {
+    LATIN_RE = new RegExp("[\\p{Script=Latin}\\p{N}]+(?:['’\\-][\\p{Script=Latin}\\p{N}]+)*", "gu");
+  } catch (e) {
+    LATIN_RE = /[A-Za-z0-9]+(?:['’-][A-Za-z0-9]+)*/g;
+  }
+
+  function asText(value) {
+    return typeof value === "string" ? value : (value == null ? "" : String(value));
+  }
+
+  function codePoints(str) {
+    return Array.from ? Array.from(str) : str.split("");
+  }
+
+  function countCodePoints(str) {
+    return codePoints(str).length;
+  }
+
+  function splitLines(str) {
+    return asText(str).split(/\r\n|\r|\n/);
+  }
+
+  function cjkCount(str) {
+    var m = str.match(CJK_RE);
+    return m ? m.length : 0;
+  }
+
+  function latinWordCount(str) {
+    var rest = str.replace(CJK_RE, " ");
+    var m = rest.match(LATIN_RE);
+    return m ? m.length : 0;
+  }
+
+  function countSentences(str) {
+    var trimmed = str.replace(/^\s+|\s+$/g, "");
+    if (!trimmed) return 0;
+    var parts = trimmed.split(/[.!?。！？…]+/);
+    var n = 0;
+    for (var i = 0; i < parts.length; i++) {
+      if (parts[i].replace(/\s/g, "").length) n++;
+    }
+    return n;
+  }
+
+  function countParagraphs(str) {
+    var norm = str.replace(/\r\n?/g, "\n");
+    var blocks = norm.split(/\n[ \t]*\n+/);
+    var n = 0;
+    for (var i = 0; i < blocks.length; i++) {
+      if (blocks[i].replace(/\s/g, "").length) n++;
+    }
+    return n;
+  }
+
+  function readingInfo(latin, cjk) {
+    var exact = latin / 200 + cjk / 300;
+    return {
+      minutes: exact > 0 ? Math.ceil(exact) : 0,
+      seconds: exact > 0 ? Math.ceil(exact * 60) : 0,
+      exactMinutes: exact,
+      latinWords: latin,
+      cjkChars: cjk
+    };
+  }
+
+  function stats(text) {
+    var str = asText(text);
+    var latin = latinWordCount(str);
+    var cjk = cjkCount(str);
+    return {
+      chars: countCodePoints(str),
+      charsNoWhitespace: countCodePoints(str.replace(/\s/g, "")),
+      words: latin + cjk,
+      latinWords: latin,
+      cjkChars: cjk,
+      lines: str === "" ? 0 : splitLines(str).length,
+      sentences: countSentences(str),
+      paragraphs: countParagraphs(str),
+      reading: readingInfo(latin, cjk)
+    };
+  }
+
+  function readingTime(text) {
+    var str = asText(text);
+    return readingInfo(latinWordCount(str), cjkCount(str));
+  }
+
+  function titleCase(str) {
+    return str.replace(/[\p{L}\p{M}]+(?:['’][\p{L}\p{M}]+)*/gu, function (word) {
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    });
+  }
+
+  function sentenceCase(str) {
+    var lower = str.toLowerCase();
+    return lower.replace(/(^|[.!?。！？…]\s*|\n\s*)([a-z])/g, function (match, pre, ch) {
+      return pre + ch.toUpperCase();
+    });
+  }
+
+  function trimLines(text) {
+    return splitLines(text).map(function (line) {
+      return line.replace(/^\s+|\s+$/g, "");
+    }).join("\n");
+  }
+
+  function removeEmptyLines(text) {
+    return splitLines(text).filter(function (line) {
+      return line.replace(/\s/g, "").length > 0;
+    }).join("\n");
+  }
+
+  function collapseSpaces(text) {
+    return asText(text).replace(/[^\S\r\n]+/g, " ");
+  }
+
+  function dedupeLines(text) {
+    var seen = Object.create(null);
+    return splitLines(text).filter(function (line) {
+      if (seen[line]) return false;
+      seen[line] = true;
+      return true;
+    }).join("\n");
+  }
+
+  function compareCodePoints(a, b) {
+    var ai = codePoints(String(a));
+    var bi = codePoints(String(b));
+    var n = Math.min(ai.length, bi.length);
+    for (var i = 0; i < n; i++) {
+      var ac = ai[i].codePointAt(0);
+      var bc = bi[i].codePointAt(0);
+      if (ac !== bc) return ac < bc ? -1 : 1;
+    }
+    return ai.length - bi.length;
+  }
+
+  function sortLines(text, direction) {
+    var lines = splitLines(text);
+    var decorated = lines.map(function (line, index) {
+      return { line: line, index: index };
+    });
+    var desc = direction === "desc";
+    decorated.sort(function (a, b) {
+      var cmp = compareCodePoints(a.line, b.line);
+      if (desc) cmp = -cmp;
+      if (cmp !== 0) return cmp;
+      return a.index - b.index;
+    });
+    return decorated.map(function (item) { return item.line; }).join("\n");
+  }
+
+  function reverseLines(text) {
+    return splitLines(text).reverse().join("\n");
+  }
+
+  function stripLineNumbers(text) {
+    return splitLines(text).map(function (line) {
+      return line
+        .replace(/^(\s*)\d+[.)][ \t]+/, "$1")
+        .replace(/^(\s*)\d+\t/, "$1");
+    }).join("\n");
+  }
+
+  function escapeRegExp(str) {
+    return String(str).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+
+  function findReplace(text, find, replace, opts) {
+    var str = asText(text);
+    var needle = find == null ? "" : String(find);
+    var replacement = replace == null ? "" : String(replace);
+    if (!needle) return str;
+    var options = opts || {};
+    var flags = options.caseSensitive ? "g" : "gi";
+    if (options.regex) {
+      var re = new RegExp(needle, flags);
+      return str.replace(re, replacement);
+    }
+    var literal = new RegExp(escapeRegExp(needle), flags);
+    return str.replace(literal, function () { return replacement; });
+  }
+
+  function transform(text, action) {
+    var str = asText(text);
+    switch (action) {
+      case "upper": return str.toUpperCase();
+      case "lower": return str.toLowerCase();
+      case "title": return titleCase(str);
+      case "sentence": return sentenceCase(str);
+      case "trimLines": return trimLines(str);
+      case "removeEmptyLines": return removeEmptyLines(str);
+      case "collapseSpaces": return collapseSpaces(str);
+      case "dedupeLines": return dedupeLines(str);
+      case "sortAsc": return sortLines(str, "asc");
+      case "sortDesc": return sortLines(str, "desc");
+      case "reverseLines": return reverseLines(str);
+      case "stripLineNumbers": return stripLineNumbers(str);
+      default: throw new TypeError("unknown action: " + action);
+    }
+  }
+
+  return {
+    stats: stats,
+    transform: transform,
+    findReplace: findReplace,
+    sortLines: sortLines,
+    dedupeLines: dedupeLines,
+    stripLineNumbers: stripLineNumbers,
+    readingTime: readingTime
+  };
+})();
+</script>
+
+<script id="i18n">
+var TOOL_I18N = {
+  zh: {
+    docTitle: "文本工具箱 — 字数统计、大小写转换与去重排序",
+    docDesc: "免费离线的文本工具箱：实时统计字符、词数、行数、句子与阅读时间，支持大小写、标题格式、去空行、去重、排序、正则查找替换。数据只留在本机。",
+    appTitle: "文本工具箱",
+    tagline: "粘贴文本，立即看到字符、词数、行数和阅读时间；大小写、去空行、去重、排序和正则替换都在同一页完成。",
+    privacy: "文本只在你自己的浏览器里处理，不会上传，也不会写入存储。",
+    eyebrow: "免费工具 · 本地运行",
+    skipLink: "跳到工具箱",
+    brandHome: "Devin，返回首页",
+    siteNav: "站点导航",
+    navTools: "工具大厅",
+    navGames: "在线桌游",
+    navHome: "首页",
+    langLabel: "语言",
+    langZh: "中文",
+    langEn: "EN",
+    langId: "ID",
+    inputLabel: "输入文本",
+    inputPh: "在这里粘贴或输入文本…",
+    largeWarn: "文本超过 {n} 字符，统计仍会继续，但转换可能需要一点时间。",
+    statsAria: "文本统计",
+    statChars: "总字符",
+    statNoSpace: "去空白字符",
+    statWords: "词数",
+    statLines: "行数",
+    statSentences: "句子数",
+    statParagraphs: "段落数",
+    statReading: "阅读时间",
+    readingValue: "{n} 分钟",
+    readingZero: "0 分钟",
+    actionsTitle: "转换与整理",
+    groupCase: "大小写",
+    btnUpper: "转大写",
+    btnLower: "转小写",
+    btnTitle: "标题格式",
+    btnSentence: "句首大写",
+    groupSpace: "空白与行",
+    btnTrim: "去除行首尾空白",
+    btnRemoveEmpty: "删除空行",
+    btnCollapse: "合并多余空格",
+    btnStripNumbers: "删除行号前缀",
+    groupLines: "排序与去重",
+    btnDedupe: "去重行",
+    btnSortAsc: "按行升序",
+    btnSortDesc: "按行降序",
+    btnReverse: "反转行序",
+    groupReplace: "查找替换",
+    findLabel: "查找",
+    findPh: "要查找的文字",
+    replaceLabel: "替换为",
+    replacePh: "替换后的文字，留空即删除",
+    optCase: "区分大小写",
+    optRegex: "正则表达式",
+    btnReplace: "查找替换",
+    findEmpty: "请先填写要查找的内容。",
+    regexError: "正则表达式无效：{msg}",
+    resultTitle: "结果",
+    outputPh: "转换结果会显示在这里…",
+    resultHint: "可以连续转换：先“将结果作为输入”，再执行下一步；撤销会回到操作前的输入。",
+    resultUpdated: "结果已更新。",
+    btnApply: "将结果作为输入",
+    btnCopy: "复制结果",
+    btnUndo: "撤销",
+    undoEmpty: "没有可以撤销的操作。",
+    copyOk: "结果已复制。",
+    copyFail: "无法自动复制，请手动选择结果文本。",
+    noOutput: "还没有结果可复制。",
+    explainTitle: "统计规则与说明",
+    explainStatsText: "总字符按 Unicode 码点计，一个 emoji 算一个字符；去空白字符会移除空格、制表符和换行。行按 CRLF、LF 或 CR 拆分，末尾换行会产生一个空行。",
+    explainWordsText: "拉丁字母和数字按词边界计为一个词；汉字、假名和谚文按字符逐个计。句子按 . ! ? 。 ！ ？ … 切分，段落以空行分隔。",
+    explainReadingText: "阅读时间把拉丁文按每分钟 200 词、CJK 按每分钟 300 字分别计算后相加，再向上取整到整分钟。这个数字只是估算，实际速度因内容和读者而异。",
+    explainSortText: "排序直接比较 Unicode 码点，不使用拼音或系统语言环境，因此在任何设备上结果一致。排序是稳定的：完全相同的行保持原来的先后顺序。",
+    explainRegexText: "勾选“正则表达式”后，查找串按 JavaScript 正则编译，替换串可以使用 $1、$& 等引用。语法错误会就地显示，不会改动文本。未勾选时查找串按字面量处理。",
+    faqTitle: "常见问题",
+    faqQ1: "词数和阅读时间是怎么计算的？",
+    faqA1: "拉丁字母和数字按词边界计为一个词；汉字、假名和谚文按字符逐个计。阅读时间按拉丁文每分钟 200 词、CJK 每分钟 300 字分别计算后相加，再向上取整到分钟。",
+    faqQ2: "按行排序用的是拼音还是字母顺序？",
+    faqA2: "都不是。排序直接比较 Unicode 码点，不使用系统语言环境，因此同一份文本在不同设备上的顺序一致。排序是稳定的，完全相同的行保持原来的先后顺序。",
+    faqQ3: "查找替换支持正则表达式吗？",
+    faqA3: "支持。勾选“正则”后，查找串会作为 JavaScript 正则表达式编译，替换串可以使用 $1、$& 等捕获引用。正则语法错误会在原位置提示，不会执行替换。",
+    faqQ4: "文本会被上传或保存吗？",
+    faqA4: "不会。所有统计与转换都在浏览器里完成，页面不发送网络请求，也不读取或写入文本内容。只有语言选择会保存在本机 localStorage。",
+    footerPrivacy: "所有处理都在本地完成，不上传文本，不使用追踪脚本。语言偏好只保存在本机。",
+    noscript: "文本工具箱需要 JavaScript 才能统计和转换。所有计算都在你的设备上完成，不会上传任何内容。"
+  },
+  en: {
+    docTitle: "Text toolbox — word count, case conversion, dedupe and sort",
+    docDesc: "A free offline text toolbox: live character, word, line, sentence and reading-time counts, plus case conversion, title case, blank-line removal, dedupe, code-point sorting and regex find-and-replace. Nothing leaves your browser.",
+    appTitle: "Text toolbox",
+    tagline: "Paste text and see characters, words, lines and reading time instantly. Fix case, drop blank lines, dedupe, sort and run regex replacements on one page.",
+    privacy: "Your text is processed in your browser only. It is never uploaded or stored.",
+    eyebrow: "Free tool · runs locally",
+    skipLink: "Skip to the toolbox",
+    brandHome: "Devin, back to the home page",
+    siteNav: "Site navigation",
+    navTools: "Tools",
+    navGames: "Online games",
+    navHome: "Home",
+    langLabel: "Language",
+    langZh: "中文",
+    langEn: "EN",
+    langId: "ID",
+    inputLabel: "Input text",
+    inputPh: "Paste or type your text here…",
+    largeWarn: "The text is over {n} characters. Counting continues, but conversions may take a moment.",
+    statsAria: "Text statistics",
+    statChars: "Characters",
+    statNoSpace: "No whitespace",
+    statWords: "Words",
+    statLines: "Lines",
+    statSentences: "Sentences",
+    statParagraphs: "Paragraphs",
+    statReading: "Reading time",
+    readingValue: "{n} min",
+    readingZero: "0 min",
+    actionsTitle: "Convert and clean up",
+    groupCase: "Case",
+    btnUpper: "UPPERCASE",
+    btnLower: "lowercase",
+    btnTitle: "Title Case",
+    btnSentence: "Sentence case",
+    groupSpace: "Whitespace and lines",
+    btnTrim: "Trim line edges",
+    btnRemoveEmpty: "Remove blank lines",
+    btnCollapse: "Collapse extra spaces",
+    btnStripNumbers: "Strip line numbers",
+    groupLines: "Sort and dedupe",
+    btnDedupe: "Dedupe lines",
+    btnSortAsc: "Sort lines A–Z",
+    btnSortDesc: "Sort lines Z–A",
+    btnReverse: "Reverse line order",
+    groupReplace: "Find and replace",
+    findLabel: "Find",
+    findPh: "Text to find",
+    replaceLabel: "Replace with",
+    replacePh: "Replacement text; leave empty to delete",
+    optCase: "Match case",
+    optRegex: "Regular expression",
+    btnReplace: "Replace",
+    findEmpty: "Enter something to find first.",
+    regexError: "Invalid regular expression: {msg}",
+    resultTitle: "Result",
+    outputPh: "The converted text will appear here…",
+    resultHint: "Chain conversions: use “Use result as input”, then run the next step. Undo returns to the input before the last operation.",
+    resultUpdated: "Result updated.",
+    btnApply: "Use result as input",
+    btnCopy: "Copy result",
+    btnUndo: "Undo",
+    undoEmpty: "There is nothing to undo.",
+    copyOk: "Result copied.",
+    copyFail: "Could not copy automatically. Select the result text and copy it manually.",
+    noOutput: "There is no result to copy yet.",
+    explainTitle: "Counting rules and notes",
+    explainStatsText: "Characters are counted as Unicode code points, so one emoji counts as one character. Whitespace removal drops spaces, tabs and line breaks. Lines split on CRLF, LF or CR; a trailing newline creates an empty final line.",
+    explainWordsText: "Latin letters and digits count as words by word boundaries; Han, kana and Hangul count one character each. Sentences split on . ! ? 。 ！ ？ … and paragraphs are separated by blank lines.",
+    explainReadingText: "Reading time adds Latin text at 200 words per minute and CJK text at 300 characters per minute, then rounds up to the next whole minute. It is an estimate; real speed depends on the content and the reader.",
+    explainSortText: "Sorting compares Unicode code points directly, not pinyin or the system locale, so the order is the same on every device. The sort is stable: identical lines keep their original order.",
+    explainRegexText: "With “Regular expression” checked, the find string is compiled as a JavaScript regex and the replacement can use $1, $& and similar references. Syntax errors are shown inline and nothing is changed. Unchecked, the find string is treated literally.",
+    faqTitle: "Frequently asked questions",
+    faqQ1: "How are the word count and reading time calculated?",
+    faqA1: "Latin letters and digits count as words by word boundaries; Han, kana and Hangul count one character each. Reading time adds Latin text at 200 words per minute and CJK text at 300 characters per minute, then rounds up to the next minute.",
+    faqQ2: "Does line sorting use pinyin or alphabetical order?",
+    faqA2: "Neither. Sorting compares Unicode code points directly and ignores the system locale, so the same text produces the same order on every device. The sort is stable, so identical lines keep their original order.",
+    faqQ3: "Does find and replace support regular expressions?",
+    faqA3: "Yes. With “Regular expression” checked, the find string is compiled as a JavaScript regex and the replacement can use $1, $& and other capture references. A syntax error is shown inline and no replacement runs.",
+    faqQ4: "Is my text uploaded or saved?",
+    faqA4: "No. All counting and conversion happens in your browser. The page makes no network requests and does not read or write your text anywhere. Only the language choice is saved in local storage.",
+    footerPrivacy: "Everything runs locally. Your text is not uploaded and no tracking script is used. Only the language preference is stored on this device.",
+    noscript: "The text toolbox needs JavaScript to count and convert. Everything runs on your device; nothing is uploaded."
+  },
+  id: {
+    docTitle: "Kotak alat teks — hitung kata, ubah huruf, hapus duplikat dan urutkan",
+    docDesc: "Kotak alat teks gratis dan offline: hitung karakter, kata, baris, kalimat dan waktu baca secara langsung, plus ubah huruf besar/kecil, judul, hapus baris kosong, hapus duplikat, urutkan berdasarkan titik kode dan cari-ganti regex. Tidak ada data yang diunggah.",
+    appTitle: "Kotak alat teks",
+    tagline: "Tempel teks dan lihat jumlah karakter, kata, baris serta waktu baca saat itu juga. Ubah huruf, hapus baris kosong, hapus duplikat, urutkan dan jalankan ganti regex di satu halaman.",
+    privacy: "Teks hanya diproses di browser Anda. Tidak diunggah dan tidak disimpan.",
+    eyebrow: "Alat gratis · berjalan lokal",
+    skipLink: "Lompat ke alat",
+    brandHome: "Devin, kembali ke beranda",
+    siteNav: "Navigasi situs",
+    navTools: "Galeri alat",
+    navGames: "Permainan online",
+    navHome: "Beranda",
+    langLabel: "Bahasa",
+    langZh: "中文",
+    langEn: "EN",
+    langId: "ID",
+    inputLabel: "Teks masukan",
+    inputPh: "Tempel atau ketik teks di sini…",
+    largeWarn: "Teks melebihi {n} karakter. Penghitungan tetap berjalan, tetapi konversi mungkin butuh waktu.",
+    statsAria: "Statistik teks",
+    statChars: "Karakter",
+    statNoSpace: "Tanpa spasi",
+    statWords: "Kata",
+    statLines: "Baris",
+    statSentences: "Kalimat",
+    statParagraphs: "Paragraf",
+    statReading: "Waktu baca",
+    readingValue: "{n} menit",
+    readingZero: "0 menit",
+    actionsTitle: "Ubah dan rapikan",
+    groupCase: "Huruf",
+    btnUpper: "HURUF BESAR",
+    btnLower: "huruf kecil",
+    btnTitle: "Huruf Judul",
+    btnSentence: "Huruf awal kalimat",
+    groupSpace: "Spasi dan baris",
+    btnTrim: "Pangkas tepi baris",
+    btnRemoveEmpty: "Hapus baris kosong",
+    btnCollapse: "Rapatkan spasi ganda",
+    btnStripNumbers: "Hapus nomor baris",
+    groupLines: "Urutkan dan hapus duplikat",
+    btnDedupe: "Hapus baris duplikat",
+    btnSortAsc: "Urutkan naik",
+    btnSortDesc: "Urutkan turun",
+    btnReverse: "Balik urutan baris",
+    groupReplace: "Cari dan ganti",
+    findLabel: "Cari",
+    findPh: "Teks yang dicari",
+    replaceLabel: "Ganti dengan",
+    replacePh: "Teks pengganti; kosongkan untuk menghapus",
+    optCase: "Bedakan huruf besar-kecil",
+    optRegex: "Ekspresi reguler",
+    btnReplace: "Ganti",
+    findEmpty: "Isi teks yang ingin dicari terlebih dahulu.",
+    regexError: "Ekspresi reguler tidak valid: {msg}",
+    resultTitle: "Hasil",
+    outputPh: "Hasil konversi akan muncul di sini…",
+    resultHint: "Bisa berantai: gunakan “Pakai hasil sebagai masukan”, lalu jalankan langkah berikutnya. Urungkan kembali ke masukan sebelum operasi terakhir.",
+    resultUpdated: "Hasil diperbarui.",
+    btnApply: "Pakai hasil sebagai masukan",
+    btnCopy: "Salin hasil",
+    btnUndo: "Urungkan",
+    undoEmpty: "Tidak ada operasi yang bisa diurungkan.",
+    copyOk: "Hasil disalin.",
+    copyFail: "Tidak bisa menyalin otomatis. Pilih teks hasil dan salin secara manual.",
+    noOutput: "Belum ada hasil untuk disalin.",
+    explainTitle: "Aturan penghitungan dan catatan",
+    explainStatsText: "Karakter dihitung sebagai titik kode Unicode, jadi satu emoji dihitung satu karakter. Penghapusan spasi membuang spasi, tab dan pemisah baris. Baris dipisah pada CRLF, LF atau CR; baris baru di akhir menghasilkan baris kosong terakhir.",
+    explainWordsText: "Huruf Latin dan angka dihitung sebagai kata berdasarkan batas kata; Han, kana dan Hangul dihitung satu karakter masing-masing. Kalimat dipisah pada . ! ? 。 ！ ？ … dan paragraf dipisahkan oleh baris kosong.",
+    explainReadingText: "Waktu baca menjumlahkan teks Latin 200 kata per menit dan teks CJK 300 karakter per menit, lalu dibulatkan ke atas ke menit penuh. Angka ini hanya perkiraan; kecepatan nyata bergantung pada isi dan pembaca.",
+    explainSortText: "Pengurutan membandingkan titik kode Unicode secara langsung, bukan pinyin atau locale sistem, sehingga urutannya sama di semua perangkat. Pengurutan stabil: baris yang identik mempertahankan urutan aslinya.",
+    explainRegexText: "Dengan “Ekspresi reguler” dicentang, teks pencarian dikompilasi sebagai regex JavaScript dan penggantian dapat memakai $1, $& dan referensi serupa. Kesalahan sintaks ditampilkan di tempat dan teks tidak diubah. Tanpa centang, teks dicari secara literal.",
+    faqTitle: "Pertanyaan umum",
+    faqQ1: "Bagaimana jumlah kata dan waktu baca dihitung?",
+    faqA1: "Huruf Latin dan angka dihitung sebagai kata berdasarkan batas kata; Han, kana dan Hangul dihitung satu karakter masing-masing. Waktu baca menjumlahkan teks Latin 200 kata per menit dan teks CJK 300 karakter per menit, lalu dibulatkan ke atas ke menit penuh.",
+    faqQ2: "Apakah pengurutan memakai pinyin atau urutan abjad?",
+    faqA2: "Bukan keduanya. Pengurutan membandingkan titik kode Unicode secara langsung dan mengabaikan locale sistem, sehingga teks yang sama menghasilkan urutan yang sama di setiap perangkat. Pengurutannya stabil, jadi baris identik mempertahankan urutan aslinya.",
+    faqQ3: "Apakah cari-ganti mendukung ekspresi reguler?",
+    faqA3: "Ya. Dengan “Ekspresi reguler” dicentang, teks pencarian dikompilasi sebagai regex JavaScript dan penggantian dapat memakai $1, $& dan referensi tangkapan lain. Kesalahan sintaks ditampilkan di tempat dan tidak ada penggantian yang dijalankan.",
+    faqQ4: "Apakah teks saya diunggah atau disimpan?",
+    faqA4: "Tidak. Semua penghitungan dan konversi terjadi di browser Anda. Halaman tidak membuat permintaan jaringan dan tidak membaca atau menulis teks Anda di mana pun. Hanya pilihan bahasa yang disimpan di penyimpanan lokal.",
+    footerPrivacy: "Semua berjalan lokal. Teks tidak diunggah dan tidak ada skrip pelacak. Hanya preferensi bahasa yang disimpan di perangkat ini.",
+    noscript: "Kotak alat teks memerlukan JavaScript untuk menghitung dan mengonversi. Semua berjalan di perangkat Anda; tidak ada yang diunggah."
+  }
+};
+</script>
+
+<script>
+(function () {
+  'use strict';
+
+  var LS_KEY = 'hhfa.tool.text-tools.lang';
+  var MAX_WARN = 200000;
+  var NAV = {
+    zh: { tools: '/tools/', games: '/games/', home: '/' },
+    en: { tools: '/tools/en/', games: '/games/en/', home: '/' },
+    id: { tools: '/tools/id/', games: '/games/id/', home: '/' }
+  };
+  var LOCALE = { zh: 'zh-CN', en: 'en-US', id: 'id-ID' };
+
+  var lang = 'zh';
+  var history = [];
+  var rafId = 0;
+
+  function $(id) { return document.getElementById(id); }
+  function T(key, vars) {
+    var dict = TOOL_I18N[lang] || TOOL_I18N.zh;
+    var value = dict[key];
+    if (value == null) value = TOOL_I18N.en[key];
+    if (value == null) value = key;
+    if (vars) {
+      Object.keys(vars).forEach(function (name) {
+        value = value.split('{' + name + '}').join(String(vars[name]));
+      });
+    }
+    return value;
+  }
+  function locale() { return LOCALE[lang] || LOCALE.en; }
+  function fmtNum(n) {
+    try {
+      return new Intl.NumberFormat(locale()).format(n);
+    } catch (e) {
+      return String(n);
+    }
+  }
+  function detectLang() {
+    var query = '';
+    try { query = new URLSearchParams(location.search).get('lang') || ''; } catch (e) {}
+    if (TOOL_I18N[query]) return query;
+    try {
+      var saved = localStorage.getItem(LS_KEY);
+      if (TOOL_I18N[saved]) return saved;
+    } catch (e) {}
+    var nav = (navigator.language || 'en').toLowerCase();
+    if (nav.indexOf('zh') === 0) return 'zh';
+    if (nav.indexOf('id') === 0) return 'id';
+    return 'en';
+  }
+  function saveLang() {
+    try { localStorage.setItem(LS_KEY, lang); } catch (e) {}
+  }
+
+  function setText(id, value) {
+    var el = $(id);
+    if (el) el.textContent = value;
+  }
+
+  function announceResult() {
+    setText('result-status', T('resultUpdated'));
+  }
+
+  function renderStats() {
+    var value = $('input').value;
+    var st = ToolEngine.stats(value);
+    setText('st-chars', fmtNum(st.chars));
+    setText('st-nospace', fmtNum(st.charsNoWhitespace));
+    setText('st-words', fmtNum(st.words));
+    setText('st-lines', fmtNum(st.lines));
+    setText('st-sentences', fmtNum(st.sentences));
+    setText('st-paragraphs', fmtNum(st.paragraphs));
+    setText('st-reading', st.reading.minutes === 0
+      ? T('readingZero')
+      : T('readingValue', { n: fmtNum(st.reading.minutes) }));
+    $('large-warn').hidden = st.chars <= MAX_WARN;
+    if (st.chars > MAX_WARN) {
+      $('large-warn').textContent = T('largeWarn', { n: fmtNum(MAX_WARN) });
+    }
+  }
+
+  function scheduleStats() {
+    if (rafId) return;
+    var raf = window.requestAnimationFrame || function (cb) { return setTimeout(cb, 60); };
+    rafId = raf(function () {
+      rafId = 0;
+      renderStats();
+    });
+  }
+
+  function updateUndo() {
+    $('undo').disabled = history.length === 0;
+  }
+
+  function showReplaceError(message) {
+    var box = $('replace-err');
+    if (!message) {
+      box.hidden = true;
+      box.textContent = '';
+      return;
+    }
+    box.hidden = false;
+    box.textContent = message;
+  }
+
+  function remember(value) {
+    history.push(value);
+    if (history.length > 60) history.shift();
+    updateUndo();
+  }
+
+  function runTransform(action) {
+    try {
+      var before = $('input').value;
+      var result = ToolEngine.transform(before, action);
+      showReplaceError('');
+      remember(before);
+      $('output').value = result;
+      announceResult();
+    } catch (e) {
+      showReplaceError(String(e && e.message ? e.message : e));
+    }
+  }
+
+  function runReplace(event) {
+    if (event) event.preventDefault();
+    var find = $('find').value;
+    if (!find) {
+      showReplaceError(T('findEmpty'));
+      $('find').focus();
+      return;
+    }
+    try {
+      var before = $('input').value;
+      var result = ToolEngine.findReplace(before, find, $('replace').value, {
+        caseSensitive: $('opt-case').checked,
+        regex: $('opt-regex').checked
+      });
+      showReplaceError('');
+      remember(before);
+      $('output').value = result;
+      announceResult();
+    } catch (e) {
+      showReplaceError(T('regexError', { msg: String(e && e.message ? e.message : e) }));
+    }
+  }
+
+  function applyResult() {
+    var result = $('output').value;
+    if (!result) { toast(T('noOutput')); return; }
+    remember($('input').value);
+    $('input').value = result;
+    $('output').value = '';
+    showReplaceError('');
+    renderStats();
+    announceResult();
+    $('input').focus();
+  }
+
+  function undo() {
+    if (!history.length) { toast(T('undoEmpty')); return; }
+    $('input').value = history.pop();
+    $('output').value = '';
+    showReplaceError('');
+    updateUndo();
+    renderStats();
+    announceResult();
+    $('input').focus();
+  }
+
+  var toastTimer = null;
+  function toast(message) {
+    var el = $('toast');
+    el.textContent = message;
+    el.classList.add('on');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove('on'); }, 2400);
+  }
+
+  function fallbackCopy(text) {
+    var area = document.createElement('textarea');
+    area.value = text;
+    area.setAttribute('readonly', '');
+    area.style.position = 'fixed';
+    area.style.top = '-1000px';
+    document.body.appendChild(area);
+    area.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(area);
+    return ok;
+  }
+
+  function copyResult() {
+    var text = $('output').value;
+    if (!text) { toast(T('noOutput')); return; }
+    var done = function () { toast(T('copyOk')); };
+    var fail = function () { toast(T('copyFail')); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(function () {
+        if (fallbackCopy(text)) done(); else fail();
+      });
+    } else if (fallbackCopy(text)) {
+      done();
+    } else {
+      fail();
+    }
+  }
+
+  function applyStaticText() {
+    document.documentElement.lang = lang === 'zh' ? 'zh-CN' : lang;
+    document.title = T('docTitle');
+
+    var desc = document.querySelector('meta[name="description"]');
+    if (desc) desc.setAttribute('content', T('docDesc'));
+    var ogTitle = document.querySelector('meta[property="og:title"]');
+    if (ogTitle) ogTitle.setAttribute('content', T('docTitle'));
+    var ogDesc = document.querySelector('meta[property="og:description"]');
+    if (ogDesc) ogDesc.setAttribute('content', T('docDesc'));
+    var twTitle = document.querySelector('meta[name="twitter:title"]');
+    if (twTitle) twTitle.setAttribute('content', T('appTitle'));
+    var twDesc = document.querySelector('meta[name="twitter:description"]');
+    if (twDesc) twDesc.setAttribute('content', T('docDesc'));
+
+    var nodes = document.querySelectorAll('[data-i]');
+    for (var i = 0; i < nodes.length; i++) {
+      var key = nodes[i].getAttribute('data-i');
+      var text = T(key);
+      if (text) nodes[i].textContent = text;
+    }
+    var placeholders = document.querySelectorAll('[data-i-ph]');
+    for (var j = 0; j < placeholders.length; j++) {
+      placeholders[j].setAttribute('placeholder', T(placeholders[j].getAttribute('data-i-ph')));
+    }
+    var labels = document.querySelectorAll('[data-i-aria]');
+    for (var k = 0; k < labels.length; k++) {
+      labels[k].setAttribute('aria-label', T(labels[k].getAttribute('data-i-aria')));
+    }
+
+    var nav = NAV[lang] || NAV.en;
+    $('nav-tools').setAttribute('href', nav.tools);
+    $('nav-games').setAttribute('href', nav.games);
+    $('foot-tools').setAttribute('href', nav.tools);
+    $('foot-games').setAttribute('href', nav.games);
+    $('foot-home').setAttribute('href', nav.home);
+
+    var buttons = document.querySelectorAll('.langs button');
+    for (var n = 0; n < buttons.length; n++) {
+      buttons[n].setAttribute('aria-pressed', buttons[n].getAttribute('data-lang') === lang ? 'true' : 'false');
+    }
+  }
+
+  function setLang(next) {
+    lang = TOOL_I18N[next] ? next : 'en';
+    applyStaticText();
+    renderStats();
+  }
+
+  function init() {
+    lang = detectLang();
+    applyStaticText();
+    renderStats();
+    updateUndo();
+
+    $('input').addEventListener('input', scheduleStats);
+
+    var actions = document.querySelectorAll('[data-action]');
+    for (var i = 0; i < actions.length; i++) {
+      actions[i].addEventListener('click', function () {
+        runTransform(this.getAttribute('data-action'));
+      });
+    }
+
+    $('replace-form').addEventListener('submit', runReplace);
+    $('apply').addEventListener('click', applyResult);
+    $('copy').addEventListener('click', copyResult);
+    $('undo').addEventListener('click', undo);
+
+    var langButtons = document.querySelectorAll('.langs button');
+    for (var j = 0; j < langButtons.length; j++) {
+      langButtons[j].addEventListener('click', function () {
+        setLang(this.getAttribute('data-lang'));
+        saveLang();
+      });
+    }
+
+    document.addEventListener('keydown', function (event) {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z' && !event.shiftKey) {
+        var target = event.target;
+        if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
+        event.preventDefault();
+        undo();
+      }
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>
