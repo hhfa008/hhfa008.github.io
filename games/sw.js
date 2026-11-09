@@ -4,7 +4,7 @@
    Static assets: cache-first with background refresh (stale-while-revalidate). */
 'use strict';
 
-var CACHE_VERSION = 'v8';
+var CACHE_VERSION = 'v15';
 var CACHE_PREFIX = 'hhfa-games-';
 var CACHE_NAME = CACHE_PREFIX + CACHE_VERSION;
 var OFFLINE_URL = '/games/offline.html';
@@ -22,6 +22,12 @@ var PRECACHE_URLS = [
   '/games/shared/rules.js',
   '/games/shared/share.js',
   '/games/shared/shuffle.js',
+  '/games/shared/sfx.js',
+  '/games/shared/hand-eval.js',
+  '/games/shared/physics.js',
+  '/games/shared/tcg.js',
+  '/games/shared/rewards.js',
+  '/games/shared/leaderboard.js',
   '/games/pioneers/engine.js',
 
   // Every game entry page.
@@ -31,6 +37,7 @@ var PRECACHE_URLS = [
   '/games/chess/',
   '/games/connect4/',
   '/games/doudizhu/',
+  '/games/mahjong/',
   '/games/draughts/',
   '/games/backgammon/',
   '/games/banqi/',
@@ -43,9 +50,24 @@ var PRECACHE_URLS = [
   '/games/spider/',
   '/games/tap-match/',
   '/games/texas-holdem/',
+  '/games/tcg-deck/',
+  '/games/tcg-sample/',
   '/games/undercover/',
   '/games/voice-room/',
   '/games/xiangqi/',
+
+  // Utility pages (registered as draft: not in the hall, still reachable).
+  '/games/profile/',
+  '/games/profile/rules.html',
+  '/games/leaderboard/',
+  '/games/ai-eval/',
+  '/games/agents/',
+
+  // Data files fetched by pages at runtime.
+  '/games/registry.json',
+  '/games/TASKS.json',
+  '/games/ai-eval/board.json',
+  '/games/tcg-sample/cards.json',
 
   // Rules pages.
   '/games/24game/rules.html',
@@ -55,6 +77,7 @@ var PRECACHE_URLS = [
   '/games/chess/rules-en.html',
   '/games/connect4/rules.html',
   '/games/doudizhu/rules.html',
+  '/games/mahjong/rules.html',
   '/games/draughts/rules.html',
   '/games/backgammon/rules.html',
   '/games/banqi/rules.html',
@@ -69,6 +92,8 @@ var PRECACHE_URLS = [
   '/games/spider/rules.html',
   '/games/tap-match/rules.html',
   '/games/texas-holdem/rules.html',
+  '/games/tcg-deck/rules.html',
+  '/games/tcg-sample/rules.html',
   '/games/undercover/rules.html',
   '/games/xiangqi/rules.html',
 
@@ -84,6 +109,7 @@ var PRECACHE_URLS = [
   '/games/assets/icons/chess.svg',
   '/games/assets/icons/connect4.svg',
   '/games/assets/icons/doudizhu.svg',
+  '/games/assets/icons/mahjong.svg',
   '/games/assets/icons/draughts.svg',
   '/games/assets/icons/freecell.svg',
   '/games/assets/icons/go9.svg',
@@ -94,6 +120,8 @@ var PRECACHE_URLS = [
   '/games/assets/icons/spider.svg',
   '/games/assets/icons/tap-match.svg',
   '/games/assets/icons/texas-holdem.svg',
+  '/games/assets/icons/tcg-deck.svg',
+  '/games/assets/icons/tcg-sample.svg',
   '/games/assets/icons/undercover.svg',
   '/games/assets/icons/voice-room.svg',
   '/games/assets/icons/xiangqi.svg'
