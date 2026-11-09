@@ -219,11 +219,39 @@ function validateRealism(slug, scene) {
   };
 
   if (slug === 'chess') {
-    const knights = scene.items.filter((i) => i.el === 'chess-knight-dark');
-    if (knights.length > 1) errors.push(`same-colour knights: ${knights.length}`);
-    const queens = scene.items.filter((i) => i.el === 'chess-queen-light');
-    if (queens.length > 1) errors.push(`same-colour queens: ${queens.length}`);
-    if (count !== 2) errors.push(`endgame close-up needs 2 pieces, found ${count}`);
+    if (count !== 32) errors.push(`standard opening: expected 32 pieces, found ${count}`);
+    const light = scene.items.filter((i) => i.el && i.el.startsWith('chess-') && i.el.endsWith('-light'));
+    const dark = scene.items.filter((i) => i.el && i.el.startsWith('chess-') && i.el.endsWith('-dark'));
+    if (light.length !== 16) errors.push(`light pieces: expected 16, found ${light.length}`);
+    if (dark.length !== 16) errors.push(`dark pieces: expected 16, found ${dark.length}`);
+    const role = (el) => el.replace(/^chess-/, '').replace(/-(light|dark)$/, '');
+    const backOrder = ['rook', 'knight', 'bishop', 'queen', 'king', 'bishop', 'knight', 'rook'];
+    const checkRank = (side, row, expected, label) => {
+      const pieces = scene.items.filter((i) => i.el && i.el.startsWith('chess-') && i.el.endsWith(`-${side}`) && i.cell && i.cell.row === row);
+      if (pieces.length !== 8) {
+        errors.push(`${label}: expected 8 pieces, found ${pieces.length}`);
+        return;
+      }
+      for (let c = 0; c < 8; c++) {
+        const piece = pieces.find((i) => i.cell.col === c);
+        if (!piece) errors.push(`${label}: missing column ${c}`);
+        else if (role(piece.el) !== expected[c]) errors.push(`${label}: column ${c} is ${role(piece.el)}, expected ${expected[c]}`);
+      }
+    };
+    checkRank('light', 7, backOrder, 'light back rank');
+    checkRank('light', 6, new Array(8).fill('pawn'), 'light pawn rank');
+    checkRank('dark', 0, backOrder, 'dark back rank');
+    checkRank('dark', 1, new Array(8).fill('pawn'), 'dark pawn rank');
+    const seen = new Set();
+    for (const item of scene.items) {
+      if (!item.cell) errors.push(`${itemName(item)} has no square`);
+      else {
+        const key = `${item.cell.col},${item.cell.row}`;
+        if (seen.has(key)) errors.push(`two pieces share square ${key}`);
+        seen.add(key);
+      }
+      if (item.shape !== 'standing') errors.push(`${itemName(item)} must be standing`);
+    }
     requireCells(0, 7, 0, 7);
   }
 
@@ -461,7 +489,7 @@ const BOARD_PHYS = {
   reversi8: { w: 260, h: 260, kind: 'reversi' },
   connect4frame: { w: 280, h: 240, kind: 'connect4' },
   backgammon: { w: 600, h: 300, kind: 'backgammon' },
-  cardtable: { w: 900, h: 900, kind: 'cardtable' },
+  cardtable: { w: 600, h: 600, kind: 'cardtable' },
   aeroplaneCross: { w: 500, h: 500, kind: 'aeroplane' },
   none: null,
 };
@@ -473,7 +501,7 @@ const BOARD_LABEL = {
   reversi8: 'grid 240x240mm, pitch 30mm',
   connect4frame: '7x6 holes, pitch 40mm',
   backgammon: '24 points, pitch 50mm',
-  cardtable: '900x900mm table',
+  cardtable: '600x600mm close-up table',
   aeroplaneCross: '500x500mm cross track',
   none: '400x400mm reference',
 };
@@ -491,8 +519,18 @@ const DECK_PHYS = {
 // Real object sizes. `main` is the visible dimension in mm; rw/rh are the
 // alpha-bbox fractions measured from the element canvases.
 const ELEMENT_PHYS = {
-  'chess-queen-light': { main: 100, mode: 'height' },
-  'chess-knight-dark': { main: 80, mode: 'height' },
+  'chess-king-light': { usePixels: true },
+  'chess-queen-light': { usePixels: true },
+  'chess-bishop-light': { usePixels: true },
+  'chess-knight-light': { usePixels: true },
+  'chess-rook-light': { usePixels: true },
+  'chess-pawn-light': { usePixels: true },
+  'chess-king-dark': { usePixels: true },
+  'chess-queen-dark': { usePixels: true },
+  'chess-bishop-dark': { usePixels: true },
+  'chess-knight-dark': { usePixels: true },
+  'chess-rook-dark': { usePixels: true },
+  'chess-pawn-dark': { usePixels: true },
   'go-stone-black': { main: 20, mode: 'width' },
   'go-stone-white': { main: 20, mode: 'width' },
   'reversi-black': { main: 28, mode: 'width' },
@@ -651,12 +689,19 @@ function itemPhysMm(item, elementsDir) {
   const bbox = pngAlphaBBox(file);
   const rw = bbox ? bbox.w / bbox.width : 0.84;
   const rh = bbox ? bbox.h / bbox.height : 0.84;
+  const bottom = bbox ? (bbox.y + bbox.h) / bbox.height : 0.92;
+  if (spec.usePixels) {
+    // These exports are physically scaled at 1 mm = 8 px; the 1024 canvas is
+    // 128 mm and the alpha bbox is the real silhouette.
+    const box = 128;
+    return { w: box, h: box, rw, rh, bottom };
+  }
   if (spec.mode === 'height') {
     const box = spec.main / rh;
-    return { w: box, h: box, rw, rh };
+    return { w: box, h: box, rw, rh, bottom };
   }
   const box = spec.main / rw;
-  return { w: box, h: box, rw, rh };
+  return { w: box, h: box, rw, rh, bottom };
 }
 
 /** Global px-per-mm for a scene: board/table projects to ~90% frame width. */
@@ -691,7 +736,7 @@ function sceneScale(scene, width, height) {
     if (fits) lo = k;
     else hi = k;
   }
-  return lo;
+  return lo * (scene.zoom || 1);
 }
 
 function boardRect(scene, width, height, k) {
@@ -719,6 +764,7 @@ function itemDimsPx(item, k, elementsDir) {
     h: mm.h * rs * k,
     visW: mm.w * mm.rw * rs * k,
     visH: mm.h * mm.rh * rs * k,
+    bottom: mm.bottom === undefined ? 0.92 : mm.bottom,
     mm,
   };
 }
@@ -1077,10 +1123,11 @@ function buildItems(scene, width, height, elementsDir, missing, k) {
         const p = projectPlanePoint(pos.x, pos.y, width, height);
         const box = dims.w * p.k;
         if (wantShadow) shadows.push(shadowHtml(item, shape, dims, pos.x, pos.y, rot));
+        const bf = round(dims.bottom * 100);
         billboards.push(
           `<div class="billboard" style="left:${round(p.x)}px;top:${round(p.y)}px;` +
-            `width:${round(box)}px;height:${round(box)}px;` +
-            `transform:translate(-50%, -92%) rotate(${round(rot)}deg)">` +
+            `width:${round(box)}px;height:${round(box)}px;transform-origin:50% ${bf}%;` +
+            `transform:translate(-50%, -${bf}%) rotate(${round(rot)}deg)">` +
             `<img src="${escapeHtml(src)}" alt=""${item.filter ? ` style="filter:${item.filter}"` : ''}></div>`
         );
       } else {
@@ -1093,10 +1140,11 @@ function buildItems(scene, width, height, elementsDir, missing, k) {
         const p = projectPlanePoint(pos.x, pos.y, width, height);
         const box = dims.w * p.k;
         const fontSize = round(Math.max(9, Math.min(18, box * 0.07)));
+        const bf = round(dims.bottom * 100);
         billboards.push(
           `<div class="billboard" style="left:${round(p.x)}px;top:${round(p.y)}px;` +
-            `width:${round(box)}px;height:${round(box)}px;` +
-            `transform:translate(-50%, -92%) rotate(${round(rot)}deg)">` +
+            `width:${round(box)}px;height:${round(box)}px;transform-origin:50% ${bf}%;` +
+            `transform:translate(-50%, -${bf}%) rotate(${round(rot)}deg)">` +
             `<div class="ph" style="font-size:${fontSize}px">` +
             `<span>${escapeHtml(label)}</span></div></div>`
         );
@@ -1393,6 +1441,9 @@ function main() {
 
   for (const slug of validationTargets) {
     const scene = scenes[slug];
+    if (scene.realism) {
+      console.log(`[realism] ${slug.padEnd(14)} OK (${itemCount(scene)} pieces)`);
+    }
     const phys = BOARD_PHYS[scene.board || 'none'] || { w: 400, h: 400 };
     const parts = SIZES.map(({ suffix, width, height }) =>
       `${suffix} k=${sceneScale(scene, width, height).toFixed(3)}px/mm`

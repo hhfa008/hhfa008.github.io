@@ -89,7 +89,7 @@ node scripts/art/compose.js --list         # 列出场景、元素齐缺
 | `reversi8` | 260×260mm | 8×8 格，格距 30mm | reversi |
 | `connect4frame` | 280×240mm | 7×6 孔，孔距 40mm，孔半径 18mm | connect4 |
 | `backgammon` | 600×300mm | 24 个三角点，点宽 50mm，中线 20mm | backgammon |
-| `cardtable` | 900×900mm | 软边 + 极细压线，无网格 | mahjong、texas-holdem、doudizhu |
+| `cardtable` | 600×600mm 特写桌面 | 软边 + 极细压线，无网格；可叠加 `zoom` 拉近 | mahjong、texas-holdem、doudizhu |
 | `aeroplaneCross` | 500×500mm | 十字轨道 + 4 个停机坪 | aeroplane |
 | `none` | 400×400mm 参考框 | 不画棋盘，只用于确定全局缩放 | tcg-sample |
 
@@ -97,7 +97,7 @@ node scripts/art/compose.js --list         # 列出场景、元素齐缺
 
 - **1 unit = 1mm**。每个场景有一个全局缩放系数 `k`（平面 px / mm），在 `sceneScale()` 里二分求出：让整个棋盘/桌面带 4% 边距完整落在画框内。`[scale]` 行会打印 `board=...mm  og k=...  card k=...`。
 - 同一场景内**所有物件共用同一个 `k`**。物件的实际毫米尺寸来自：
-  - 元素：`ELEMENT_PHYS` 里的真实目标尺寸（象棋王/后 100mm、马 80mm；围棋 20mm；黑白棋 28mm；四子棋 33mm；跳棋 30mm；筹码 39mm；骰子 16mm；扑克 63×88mm；麻将 30×40mm；灯灵 80mm），再用 PNG 的实际 alpha bbox 换算成方图盒子。
+  - 元素：新导出的 chess 12 件按 `1mm=8px` 直接取 alpha bbox（王 94.4mm、后 81.3mm、象 69.5mm、马 61.4mm、车 54.5mm、兵 44.5mm；王/兵实际 2.12×，不是 1.7×）；其余元素用 `ELEMENT_PHYS` 的真实目标尺寸（围棋 20mm、黑白棋 28mm、四子棋 33mm、跳棋 30mm、筹码 39mm、骰子 16mm、扑克 63×88mm、麻将 30×40mm、灯灵 80mm），再用 PNG 的实际 alpha bbox 换算成方图盒子。
   - deck 牌面：扑克 63×88mm、麻将 30×40mm、象棋 28mm 直径。
 - `realScale` 默认 `1.0`。除远景压缩外，不要逐件改；否则会破坏真实比例。棋盘相对物件的比例由毫米规格保证。
 
@@ -144,9 +144,13 @@ node scripts/art/compose.js --scenes /tmp/bad.json --game connect4 --out /tmp/no
 - **接触阴影**：所有物件共用 `.shadow`——椭圆径向渐变，中心在物件底部，平面偏移 `(6,18)`px（屏幕约右下 10–12px），`blur(6px)` 固定。
 - **光源**：屏幕左上暖光晕 + 桌面平面柔光池；所有阴影落右下。
 
-### 当前素材限制：国际象棋没有王/兵
+### 牌类特写
 
-`elements/` 只有 `chess-queen-light` 和 `chess-knight-dark`，没有 king/pawn，也没有 chess deck。chess 场景因此是**合法残局特写**（白后 vs 黑马，2 件），不是 32 枚开局；「王高 ≈ 1.7× 兵高」的比例对比无法用现有素材做出来。要补这一项，需要先生成 1024 透明底的 chess king/pawn 元素。
+mahjong / texas-holdem / doudizhu 用 600×600mm 特写桌面，并分别加 `zoom`（1.55 / 1.45 / 1.2）把相机拉近。桌子会被裁切，但 480×320 card 里麻将「一萬」和扑克左上角点数/花色都可辨认。`zoom` 与全局 k 相乘，仍然只有一个缩放系数；所有物件同倍放大。
+
+### chess 标准开局
+
+chess 现在是 32 枚标准开局：浅色方在近侧，底线车马象后王象马车、次底线 8 兵；深色方在远侧同样 16 枚。`realism` 校验 32 子、16+16、两侧底线顺序、兵线、方格唯一性和 standing 形态。新 chess 12 件按 `1mm=8px` 取元素自身像素尺寸；王/兵实际比例 2.12×（不是 1.7×，以素材为准）。
 
 ## 缺图降级
 
