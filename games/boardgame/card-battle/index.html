@@ -1,0 +1,808 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2b2f36">
+<title>卡牌对战 · 宝可梦式 3 分制 (Card Battle)</title>
+<meta name="description" content="宝可梦式卡牌对战最小闭环：20 张牌库、能量附着、弱点双倍伤害、击倒得分，先得 3 分获胜。单文件离线可玩，内置简单 AI 对手。">
+<meta name="robots" content="index,follow">
+<style>
+:root{
+  --paper:#f3ead9;--paper-2:#fbf5e9;--card:#efe2c8;--ink:#23262b;--muted:#6b6257;--muted-2:#70685c;
+  --dark:#2b2f36;--dark-2:#23272d;--dark-3:#1b1e23;--on-dark:#f3ead9;--on-dark-muted:#b9b2a4;
+  --brass:#b98a5a;--brass-2:#d3ae82;--red:#c0392b;--red-2:#9c2c21;--green:#3f7d5b;
+  --line:#d8cbb2;--line-strong:#c3b18f;--input:#fffdf8;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --serif:"Songti SC","Noto Serif SC",Georgia,"Times New Roman",serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.5 var(--sans);
+  padding-bottom:calc(24px + env(safe-area-inset-bottom));-webkit-font-smoothing:antialiased;overflow-x:hidden}
+h1,h2,h3,p,ol{margin:0}
+a{color:inherit}
+button{font:inherit;color:inherit}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.wrap{max-width:680px;margin:0 auto;padding:0 16px}
+
+.site-header{background:var(--dark);color:var(--on-dark);padding:10px 0}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{min-height:44px;display:flex;align-items:center;gap:9px;font-weight:650;text-decoration:none;font-size:15px}
+.brand-mark{width:22px;height:22px;border-radius:6px;background:var(--brass);flex:none;box-shadow:inset 0 0 0 2px var(--dark-3)}
+.header-note{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--on-dark-muted)}
+
+.hero{padding:20px 0 2px}
+.eyebrow{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--red);margin-bottom:8px}
+.hero h1{font-size:clamp(1.8rem,7vw,2.35rem);line-height:1.12;letter-spacing:-.02em;margin-bottom:6px}
+.lede{color:var(--muted);font-size:15px;line-height:1.55}
+
+.scorebar{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;
+  background:var(--dark);color:var(--on-dark);border-radius:16px;padding:10px 14px;margin-top:14px}
+.score-side{display:flex;align-items:center;gap:8px;min-width:0}
+.score-side:last-child{justify-content:flex-end}
+.score-side span{font-size:13px;color:var(--on-dark-muted);white-space:nowrap}
+.score-side strong{font-family:var(--mono);font-size:26px;line-height:1;color:var(--brass-2);font-variant-numeric:tabular-nums}
+.turn-chip{font-size:12.5px;font-weight:650;padding:7px 12px;border-radius:999px;background:var(--brass);color:#241a10;white-space:nowrap}
+.turn-chip.ai{background:#4a525c;color:var(--on-dark)}
+.turn-chip.over{background:var(--red);color:#fff}
+
+.board{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.zone{background:var(--dark-2);border:1px solid #3a414a;border-radius:16px;padding:10px 12px 12px;color:var(--on-dark);min-width:0}
+.self-zone{background:var(--dark)}
+.zone-head{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:28px;
+  font-size:12.5px;font-weight:650;color:var(--on-dark-muted);letter-spacing:.03em}
+.zone-meta{font-family:var(--mono);font-size:11px;color:var(--on-dark-muted);white-space:nowrap}
+.field{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:8px}
+.field-empty{grid-column:1/-1;min-height:78px;display:grid;place-items:center;border:1px dashed #4a525c;
+  border-radius:12px;color:#8d97a2;font-size:12.5px;text-align:center;padding:8px}
+
+.fcard{position:relative;display:flex;flex-direction:column;gap:3px;min-width:0;min-height:118px;
+  padding:8px;border:1px solid #4f5863;border-top:4px solid var(--c,#b98a5a);border-radius:12px;
+  background:#2f353d;color:var(--on-dark);text-align:left;cursor:pointer;
+  touch-action:manipulation;-webkit-tap-highlight-color:transparent;overflow:hidden}
+.fcard:hover{border-color:var(--brass-2)}
+.fcard:focus-visible{outline:2px solid var(--brass-2);outline-offset:2px}
+.fcard.selected{outline:2px solid var(--brass-2);outline-offset:1px;background:#3a414a}
+.fcard.energy-target{border-color:var(--brass-2);box-shadow:0 0 0 2px rgb(211 174 130 / .45)}
+.fcard .fc-name{font-size:13.5px;font-weight:700;line-height:1.2;overflow-wrap:anywhere}
+.fcard .fc-kind{font-size:10.5px;color:var(--on-dark-muted)}
+.fcard .fc-hp{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--on-dark-muted);font-variant-numeric:tabular-nums}
+.hp-track{flex:1;min-width:24px;height:5px;border-radius:999px;background:#1b1e23;overflow:hidden}
+.hp-fill{display:block;height:100%;background:var(--green);border-radius:999px}
+.fcard .fc-energy{font-size:11px;color:var(--brass-2);font-variant-numeric:tabular-nums}
+.fcard .fc-atk{font-size:10.5px;line-height:1.35;color:var(--on-dark-muted);overflow-wrap:anywhere}
+.fcard .fc-weak{font-size:10.5px;color:#e0a79f}
+.fcard.dead{opacity:.5}
+.fcard:disabled{cursor:default}
+.fcard:disabled:hover{border-color:#4f5863}
+
+.hand-zone{margin-top:12px}
+.hand-zone .zone-head{color:var(--muted);min-height:24px}
+.hint{font-size:12px;font-weight:600;color:var(--muted);text-align:right;line-height:1.35;max-width:70%}
+.hand{display:flex;gap:9px;overflow-x:auto;padding:6px 2px 10px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}
+.hcard{flex:none;width:142px;min-height:132px;display:flex;flex-direction:column;gap:4px;padding:9px;
+  border:1px solid var(--line-strong);border-top:4px solid var(--c,#b98a5a);border-radius:13px;
+  background:var(--input);text-align:left;cursor:pointer;scroll-snap-align:start;
+  touch-action:manipulation;-webkit-tap-highlight-color:transparent;box-shadow:0 4px 12px rgb(35 38 43 / .07)}
+.hcard:hover{background:var(--card)}
+.hcard:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+.hcard.selected{outline:2px solid var(--red);outline-offset:1px;background:var(--card)}
+.hcard .hc-top{display:flex;align-items:baseline;justify-content:space-between;gap:6px}
+.hcard .hc-name{font-size:14px;font-weight:700;line-height:1.2;overflow-wrap:anywhere}
+.hcard .hc-kind{font-size:10px;font-family:var(--mono);color:var(--muted-2);flex:none}
+.hcard .hc-sub{font-size:11px;color:var(--muted)}
+.hcard .hc-main{font-family:var(--serif);font-size:21px;line-height:1;color:var(--c,#6b6257);margin:2px 0}
+.hcard .hc-atk{font-size:10.5px;line-height:1.35;color:var(--muted);overflow-wrap:anywhere}
+.hand-empty{flex:none;width:100%;min-height:86px;display:grid;place-items:center;border:1px dashed var(--line-strong);
+  border-radius:12px;color:var(--muted);font-size:13px}
+
+.controls{margin-top:4px}
+.btn{display:flex;align-items:center;justify-content:center;width:100%;min-height:52px;padding:0 18px;
+  border:1px solid var(--line-strong);border-radius:14px;background:var(--input);color:var(--ink);
+  font-size:16px;font-weight:650;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.btn.primary{background:var(--red);border-color:var(--red);color:#fff}
+.btn.primary:active{background:var(--red-2)}
+.btn:disabled{background:var(--card);border-color:var(--line);color:var(--muted-2);cursor:not-allowed}
+
+.log-zone{background:var(--paper-2);border:1px solid var(--line);border-radius:16px;padding:12px;margin-top:12px}
+.log-zone .zone-head{color:var(--muted)}
+.log{list-style:none;max-height:190px;overflow:auto;display:flex;flex-direction:column;gap:4px;margin-top:8px;padding:0;font-size:12.5px}
+.log li{padding:5px 8px;border-radius:8px;background:var(--card);color:var(--muted);line-height:1.4;overflow-wrap:anywhere}
+.log li.player{background:#e7f0e9;color:#2c5f43}
+.log li.ai{background:#f5e6e2;color:#8a3a2d}
+.log li.sys{background:transparent;color:var(--muted-2);font-size:11.5px;padding:2px 4px}
+.log .log-turn{font-family:var(--mono);font-size:10.5px;opacity:.75;margin-right:6px}
+
+.rules{margin-top:12px;background:var(--paper-2);border:1px solid var(--line);border-radius:14px;padding:0 12px}
+.rules summary{min-height:48px;display:flex;align-items:center;cursor:pointer;font-weight:650;font-size:14px;color:var(--ink)}
+.rules ul{margin:0;padding:0 0 12px 18px;color:var(--muted);font-size:13px;line-height:1.65}
+
+.overlay{position:fixed;inset:0;z-index:20;display:grid;place-items:center;padding:20px;
+  background:rgb(27 30 35 / .72);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+.overlay-card{width:100%;max-width:360px;background:var(--paper-2);border:1px solid var(--line-strong);
+  border-radius:20px;padding:22px 18px;text-align:center;box-shadow:0 22px 60px rgb(0 0 0 / .35)}
+.over-intro{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.overlay-card h2{font-size:clamp(1.5rem,6vw,1.9rem);margin-bottom:6px}
+.overlay-card p.sub{color:var(--muted);font-size:14px;margin-bottom:16px}
+
+@media (prefers-color-scheme:dark){
+  :root{--paper:#1b1e23;--paper-2:#23272d;--card:#2b3138;--ink:#f3ead9;--muted:#b9b2a4;--muted-2:#a59e91;
+    --line:#3a414a;--line-strong:#4a525c;--input:#1b1e23}
+  .hcard{background:var(--paper-2)}
+  .hcard:hover,.hcard.selected{background:var(--card)}
+  .log li.player{background:#22352b;color:#9fd8b5}
+  .log li.ai{background:#3a2825;color:#efaea2}
+}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+</style>
+<script type="application/ld+json">{"@context":"https:\u002f\u002fschema.org","@type":"Article","headline":"卡牌对战 · 宝可梦式 3 分制","description":"宝可梦式卡牌对战最小闭环：20 张牌库、起手 5 张、能量附着、弱点双倍伤害，击倒对手得 1 分，先得 3 分获胜。单文件离线可玩，内置简单 AI 对手。","url":"https:\u002f\u002fhhfa008.github.io/games/boardgame/card-battle/","inLanguage":"zh-CN","mainEntity":{"@type":"VideoGame","name":"卡牌对战","alternateName":"Card Battle","genre":"卡牌对战","gamePlatform":"Web browser","numberOfPlayers":"2"}}</script>
+<script type="application/ld+json">{"@context":"https:\u002f\u002fschema.org","@type":["SoftwareApplication","WebApplication"],"name":"卡牌对战","alternateName":"Card Battle","url":"https:\u002f\u002fhhfa008.github.io/games/boardgame/card-battle/","description":"宝可梦式卡牌对战最小闭环：20 张牌库、起手 5 张、能量附着、弱点双倍伤害，击倒对手得 1 分，先得 3 分获胜。单文件离线可玩，内置简单 AI 对手。","applicationCategory":"GameApplication","applicationSubCategory":"Card game","operatingSystem":"Any","browserRequirements":"Requires JavaScript","isAccessibleForFree":true,"inLanguage":"zh-CN","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}</script>
+</head>
+<body>
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span><span>桌游目录</span></a>
+    <span class="header-note">Card Battle</span>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <p class="eyebrow">BOARDGAME · 卡牌对战</p>
+    <h1>卡牌对战</h1>
+    <p class="lede">20 张牌库、能量附着、弱点双倍伤害。击倒对手宝可梦得 1 分，先得 3 分获胜。</p>
+  </section>
+
+  <section class="scorebar" aria-label="比分与回合">
+    <div class="score-side"><span>你</span><strong id="score-player">0</strong></div>
+    <div class="turn-chip" id="turn-chip">你的回合</div>
+    <div class="score-side"><span>对手</span><strong id="score-ai">0</strong></div>
+  </section>
+
+  <section class="board" aria-label="对战区域">
+    <div class="zone">
+      <div class="zone-head"><span>对手场上</span><span class="zone-meta" id="ai-deck-info"></span></div>
+      <div class="field" id="ai-field"></div>
+    </div>
+    <div class="zone self-zone">
+      <div class="zone-head"><span>你的场上</span><span class="zone-meta" id="player-deck-info"></span></div>
+      <div class="field" id="player-field"></div>
+    </div>
+  </section>
+
+  <section class="hand-zone" aria-label="手牌">
+    <div class="zone-head">
+      <span>手牌 <span id="hand-count">0</span></span>
+      <span class="hint" id="hint" role="status">点击手牌行动；点自己的宝可梦，再点对手宝可梦攻击。</span>
+    </div>
+    <div class="hand" id="hand"></div>
+  </section>
+
+  <section class="controls">
+    <button class="btn primary" id="end-turn" type="button">结束回合</button>
+  </section>
+
+  <section class="log-zone" aria-label="战斗日志">
+    <div class="zone-head"><span>战斗日志</span><span class="zone-meta" id="turn-number"></span></div>
+    <ol class="log" id="log"></ol>
+  </section>
+
+  <details class="rules">
+    <summary>规则速览</summary>
+    <ul>
+      <li>双方各有 20 张牌库：12 张宝可梦、6 张能量、2 张道具。开局各抽 5 张，随机先手。</li>
+      <li>每回合开始抽 1 张；牌库抽空时跳过抽牌，不判负。</li>
+      <li>每回合可：附着 1 张能量、放置 1 张宝可梦（场上最多 3 只）、使用 1 张道具（抽 2 张）、攻击 1 次、结束回合。</li>
+      <li>攻击只要求能量数量达标，能量不会消耗；目标弱点与攻击方属性相同时伤害 ×2。</li>
+      <li>宝可梦 HP 归零即被击倒并进入弃牌堆，攻击方得 1 分；先得 3 分获胜。</li>
+      <li>被击倒后不强制补位；场上没有宝可梦时可以继续放置新的。</li>
+    </ul>
+  </details>
+</main>
+
+<div class="overlay" id="overlay" hidden>
+  <div class="overlay-card" role="dialog" aria-modal="true" aria-labelledby="over-title">
+    <p class="over-intro">对局结束</p>
+    <h2 id="over-title">你赢了！</h2>
+    <p class="sub" id="over-sub"></p>
+    <button class="btn primary" id="restart" type="button">再来一局</button>
+  </div>
+</div>
+
+<script type="application/json" id="cards-data">[
+  {
+    "id": "mon-vinebud",
+    "name": { "zh": "藤芽兽", "en": "Vinebud Beast" },
+    "type": "pokemon",
+    "subtype": "grass",
+    "hp": 70,
+    "attacks": [
+      { "name": "藤鞭", "cost": 1, "damage": 20 },
+      { "name": "飞叶风暴", "cost": 2, "damage": 40 }
+    ],
+    "weakness": "fire",
+    "rarity": "common",
+    "color": "#4f8f5b"
+  },
+  {
+    "id": "mon-bloomfawn",
+    "name": { "zh": "花冠鹿", "en": "Bloomfawn" },
+    "type": "pokemon",
+    "subtype": "grass",
+    "hp": 100,
+    "attacks": [
+      { "name": "角撞", "cost": 2, "damage": 50 }
+    ],
+    "weakness": "fire",
+    "rarity": "uncommon",
+    "color": "#2f6b46"
+  },
+  {
+    "id": "mon-emberfox",
+    "name": { "zh": "焰尾狐", "en": "Emberfox" },
+    "type": "pokemon",
+    "subtype": "fire",
+    "hp": 80,
+    "attacks": [
+      { "name": "火花", "cost": 1, "damage": 20 },
+      { "name": "烈焰冲撞", "cost": 2, "damage": 50 }
+    ],
+    "weakness": "water",
+    "rarity": "common",
+    "color": "#c0552f"
+  },
+  {
+    "id": "mon-magmaw-hound",
+    "name": { "zh": "熔岩犬", "en": "Magmaw Hound" },
+    "type": "pokemon",
+    "subtype": "fire",
+    "hp": 110,
+    "attacks": [
+      { "name": "熔岩咬", "cost": 2, "damage": 60 }
+    ],
+    "weakness": "water",
+    "rarity": "rare",
+    "color": "#9c2c21"
+  },
+  {
+    "id": "mon-bubble-otter",
+    "name": { "zh": "泡泡獭", "en": "Bubble Otter" },
+    "type": "pokemon",
+    "subtype": "water",
+    "hp": 70,
+    "attacks": [
+      { "name": "水枪", "cost": 1, "damage": 20 },
+      { "name": "泡沫波", "cost": 2, "damage": 40 }
+    ],
+    "weakness": "electric",
+    "rarity": "common",
+    "color": "#3b6f9e"
+  },
+  {
+    "id": "mon-tidewhale",
+    "name": { "zh": "潮汐鲸", "en": "Tidewhale" },
+    "type": "pokemon",
+    "subtype": "water",
+    "hp": 120,
+    "attacks": [
+      { "name": "潮涌", "cost": 3, "damage": 80 }
+    ],
+    "weakness": "electric",
+    "rarity": "rare",
+    "color": "#2f5d80"
+  },
+  {
+    "id": "mon-sparkmouse",
+    "name": { "zh": "闪电鼠", "en": "Sparkmouse" },
+    "type": "pokemon",
+    "subtype": "electric",
+    "hp": 60,
+    "attacks": [
+      { "name": "电击", "cost": 1, "damage": 20 }
+    ],
+    "weakness": "fighting",
+    "rarity": "common",
+    "color": "#c9a227"
+  },
+  {
+    "id": "mon-thunderwing",
+    "name": { "zh": "雷鸣雀", "en": "Thunderwing" },
+    "type": "pokemon",
+    "subtype": "electric",
+    "hp": 90,
+    "attacks": [
+      { "name": "雷羽", "cost": 2, "damage": 50 }
+    ],
+    "weakness": "fighting",
+    "rarity": "uncommon",
+    "color": "#8a6d1f"
+  },
+  {
+    "id": "mon-starmew",
+    "name": { "zh": "星念猫", "en": "Starmew" },
+    "type": "pokemon",
+    "subtype": "psychic",
+    "hp": 80,
+    "attacks": [
+      { "name": "念力", "cost": 1, "damage": 20 },
+      { "name": "星光冲击", "cost": 2, "damage": 40 }
+    ],
+    "weakness": "psychic",
+    "rarity": "common",
+    "color": "#6b4f9e"
+  },
+  {
+    "id": "mon-dreamwisp",
+    "name": { "zh": "幻梦灵", "en": "Dreamwisp" },
+    "type": "pokemon",
+    "subtype": "psychic",
+    "hp": 100,
+    "attacks": [
+      { "name": "梦魇", "cost": 2, "damage": 50 }
+    ],
+    "weakness": "psychic",
+    "rarity": "rare",
+    "color": "#4a3470"
+  },
+  {
+    "id": "mon-rockfist-ape",
+    "name": { "zh": "岩拳猴", "en": "Rockfist Ape" },
+    "type": "pokemon",
+    "subtype": "fighting",
+    "hp": 90,
+    "attacks": [
+      { "name": "碎岩拳", "cost": 2, "damage": 50 }
+    ],
+    "weakness": "psychic",
+    "rarity": "uncommon",
+    "color": "#8a5a3b"
+  },
+  {
+    "id": "mon-ironhide-rhino",
+    "name": { "zh": "铁甲犀", "en": "Ironhide Rhino" },
+    "type": "pokemon",
+    "subtype": "fighting",
+    "hp": 120,
+    "attacks": [
+      { "name": "角钻", "cost": 3, "damage": 80 }
+    ],
+    "weakness": "grass",
+    "rarity": "rare",
+    "color": "#6f6252"
+  },
+  {
+    "id": "energy-grass",
+    "name": { "zh": "草能量", "en": "Grass Energy" },
+    "type": "energy",
+    "subtype": "grass",
+    "rarity": "common",
+    "color": "#4f8f5b"
+  },
+  {
+    "id": "energy-fire",
+    "name": { "zh": "火能量", "en": "Fire Energy" },
+    "type": "energy",
+    "subtype": "fire",
+    "rarity": "common",
+    "color": "#c0552f"
+  },
+  {
+    "id": "energy-water",
+    "name": { "zh": "水能量", "en": "Water Energy" },
+    "type": "energy",
+    "subtype": "water",
+    "rarity": "common",
+    "color": "#3b6f9e"
+  },
+  {
+    "id": "energy-electric",
+    "name": { "zh": "电能量", "en": "Electric Energy" },
+    "type": "energy",
+    "subtype": "electric",
+    "rarity": "common",
+    "color": "#c9a227"
+  },
+  {
+    "id": "energy-psychic",
+    "name": { "zh": "超能量", "en": "Psychic Energy" },
+    "type": "energy",
+    "subtype": "psychic",
+    "rarity": "common",
+    "color": "#6b4f9e"
+  },
+  {
+    "id": "energy-fighting",
+    "name": { "zh": "斗能量", "en": "Fighting Energy" },
+    "type": "energy",
+    "subtype": "fighting",
+    "rarity": "common",
+    "color": "#8a5a3b"
+  },
+  {
+    "id": "item-research-notes",
+    "name": { "zh": "研究手册", "en": "Research Notes" },
+    "type": "item",
+    "effect": "draw2",
+    "rarity": "common",
+    "color": "#b98a5a"
+  },
+  {
+    "id": "item-supply-crate",
+    "name": { "zh": "补给箱", "en": "Supply Crate" },
+    "type": "item",
+    "effect": "draw2",
+    "rarity": "uncommon",
+    "color": "#7a5c3e"
+  }
+]</script>
+<script src="../engine/card-battle.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var CB = window.CardBattle;
+  var CARDS = JSON.parse(document.getElementById('cards-data').textContent);
+  var CARD_MAP = {};
+  CARDS.forEach(function (card) { CARD_MAP[card.id] = card; });
+
+  var TYPE_LABEL = { pokemon: '宝可梦', energy: '能量', item: '道具' };
+  var SUB_LABEL = {
+    grass: '草', fire: '火', water: '水', electric: '电', psychic: '超', fighting: '斗'
+  };
+  var RARITY_LABEL = { common: '普通', uncommon: '稀有', rare: '传说' };
+
+  var state = null;
+  var selectedEnergy = null;
+  var selectedAttacker = null;
+  var hintText = '';
+  var aiTimer = null;
+
+  var playerField = document.getElementById('player-field');
+  var aiField = document.getElementById('ai-field');
+  var handEl = document.getElementById('hand');
+  var hintEl = document.getElementById('hint');
+  var logEl = document.getElementById('log');
+  var endTurnBtn = document.getElementById('end-turn');
+  var overlay = document.getElementById('overlay');
+  var overTitle = document.getElementById('over-title');
+  var overSub = document.getElementById('over-sub');
+
+  function esc(value) {
+    return String(value).replace(/[&<>"']/g, function (ch) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+    });
+  }
+
+  function card(id) { return CARD_MAP[id]; }
+
+  function subLabel(cardDef) {
+    return cardDef.subtype ? (SUB_LABEL[cardDef.subtype] || cardDef.subtype) : '';
+  }
+
+  function setHint(text) {
+    hintText = text || '';
+    hintEl.textContent = hintText;
+  }
+
+  function isMyTurn() {
+    return !!state && state.turn === 'player' && !state.winner;
+  }
+
+  function clearSelection() {
+    selectedEnergy = null;
+    selectedAttacker = null;
+  }
+
+  function hpPercent(mon) {
+    var max = mon.maxHp || 1;
+    return Math.max(0, Math.min(100, Math.round((mon.hp / max) * 100)));
+  }
+
+  function fieldCardHtml(mon, index, side) {
+    var def = card(mon.id);
+    var selected = side === 'player' && selectedAttacker === index;
+    var energyTarget = side === 'player' && selectedEnergy !== null;
+    var classes = 'fcard';
+    if (selected) classes += ' selected';
+    if (energyTarget) classes += ' energy-target';
+    var attacks = (def.attacks || []).map(function (move) {
+      return esc(move.name) + ' · ' + move.cost + '能 · ' + move.damage;
+    }).join(' / ');
+    return '<button class="' + classes + '" type="button" data-side="' + side + '" data-index="' + index +
+      '" style="--c:' + esc(def.color) + '" aria-label="' + esc(def.name.zh) + '，HP ' + mon.hp + '/' + mon.maxHp +
+      '，能量 ' + mon.energy + '">' +
+      '<span class="fc-name">' + esc(def.name.zh) + '</span>' +
+      '<span class="fc-kind">' + esc(subLabel(def)) + ' · ' + (RARITY_LABEL[def.rarity] || def.rarity) + '</span>' +
+      '<span class="fc-hp">HP ' + mon.hp + '/' + mon.maxHp +
+        '<span class="hp-track"><span class="hp-fill" style="width:' + hpPercent(mon) + '%"></span></span></span>' +
+      '<span class="fc-energy">能量 ' + mon.energy + '</span>' +
+      '<span class="fc-atk">' + (attacks || '无招式') + '</span>' +
+      '<span class="fc-weak">弱点 ' + esc(SUB_LABEL[def.weakness] || def.weakness) + '</span>' +
+      '</button>';
+  }
+
+  function fieldHtml(side) {
+    var field = state.sides[side].field;
+    if (!field.length) {
+      return '<div class="field-empty">' + (side === 'player' ? '场上暂无宝可梦，先放置一只' : '对手场上暂无宝可梦') + '</div>';
+    }
+    return field.map(function (mon, index) { return fieldCardHtml(mon, index, side); }).join('');
+  }
+
+  function handCardHtml(cardId, index) {
+    var def = card(cardId);
+    var main = '';
+    var sub = '';
+    var detail = '';
+    if (def.type === 'pokemon') {
+      main = 'HP ' + def.hp;
+      sub = subLabel(def) + ' · 弱点 ' + (SUB_LABEL[def.weakness] || def.weakness);
+      detail = def.attacks.map(function (move) {
+        return esc(move.name) + ' ' + move.cost + '能/' + move.damage;
+      }).join(' · ');
+    } else if (def.type === 'energy') {
+      main = '+1 能量';
+      sub = subLabel(def) + '属性';
+      detail = '附着到己方场上一只宝可梦';
+    } else {
+      main = '抽 2 张';
+      sub = '道具';
+      detail = '使用后进入弃牌堆';
+    }
+    var selected = def.type === 'energy' && selectedEnergy === cardId ? ' selected' : '';
+    return '<button class="hcard' + selected + '" type="button" data-hand-index="' + index +
+      '" style="--c:' + esc(def.color) + '" aria-label="' + esc(def.name.zh) + '，' + TYPE_LABEL[def.type] + '">' +
+      '<span class="hc-top"><span class="hc-name">' + esc(def.name.zh) + '</span>' +
+      '<span class="hc-kind">' + TYPE_LABEL[def.type] + '</span></span>' +
+      '<span class="hc-sub">' + esc(sub) + '</span>' +
+      '<span class="hc-main">' + esc(main) + '</span>' +
+      '<span class="hc-atk">' + detail + '</span>' +
+      '</button>';
+  }
+
+  function renderLog() {
+    var rows = state.log.slice(-40).map(function (entry) {
+      var cls = entry.side === 'player' ? 'player' : entry.side === 'ai' ? 'ai' : 'sys';
+      return '<li class="' + cls + '"><span class="log-turn">#' + entry.turn + '</span>' + esc(entry.text) + '</li>';
+    });
+    logEl.innerHTML = rows.join('');
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function render() {
+    if (!state) return;
+    document.getElementById('score-player').textContent = state.sides.player.score;
+    document.getElementById('score-ai').textContent = state.sides.ai.score;
+    var chip = document.getElementById('turn-chip');
+    chip.className = 'turn-chip';
+    if (state.winner) {
+      chip.textContent = '对局结束';
+      chip.classList.add('over');
+    } else if (state.turn === 'ai') {
+      chip.textContent = '对手回合';
+      chip.classList.add('ai');
+    } else {
+      chip.textContent = '你的回合';
+    }
+
+    playerField.innerHTML = fieldHtml('player');
+    aiField.innerHTML = fieldHtml('ai');
+    handEl.innerHTML = state.sides.player.hand.length
+      ? state.sides.player.hand.map(handCardHtml).join('')
+      : '<div class="hand-empty">手牌已空</div>';
+
+    document.getElementById('hand-count').textContent = state.sides.player.hand.length;
+    document.getElementById('player-deck-info').textContent =
+      '牌库 ' + state.sides.player.deck.length + ' · 弃牌 ' + state.sides.player.discard.length;
+    document.getElementById('ai-deck-info').textContent =
+      '牌库 ' + state.sides.ai.deck.length + ' · 弃牌 ' + state.sides.ai.discard.length;
+    document.getElementById('turn-number').textContent = '第 ' + state.turnNumber + ' 回合';
+    hintEl.textContent = hintText;
+    endTurnBtn.disabled = !isMyTurn();
+    renderLog();
+  }
+
+  function showOverlay() {
+    var win = state.winner === 'player';
+    overTitle.textContent = win ? '你赢了！' : '你输了';
+    overSub.textContent = '最终比分 ' + state.sides.player.score + ' : ' + state.sides.ai.score +
+      ' · 共 ' + state.turnNumber + ' 回合';
+    overlay.hidden = false;
+    document.getElementById('restart').focus();
+  }
+
+  function afterPlayerAction(next) {
+    state = next;
+    clearSelection();
+    setHint('');
+    render();
+    if (state.winner) showOverlay();
+  }
+
+  function act(fn, errorPrefix) {
+    if (!isMyTurn()) {
+      setHint(state && state.winner ? '对局已经结束' : '现在是对手回合');
+      return;
+    }
+    try {
+      afterPlayerAction(fn(state));
+    } catch (err) {
+      setHint((errorPrefix || '') + (err && err.message ? err.message : String(err)));
+      render();
+    }
+  }
+
+  function bestAttack(attackerIndex, targetIndex) {
+    var mon = state.sides.player.field[attackerIndex];
+    var def = card(mon.id);
+    var target = state.sides.ai.field[targetIndex];
+    var targetDef = card(target.id);
+    var best = null;
+    (def.attacks || []).forEach(function (move, index) {
+      if (mon.energy < move.cost) return;
+      var damage = move.damage * (targetDef.weakness === def.subtype ? 2 : 1);
+      if (!best || damage > best.damage) best = { index: index, damage: damage, cost: move.cost };
+    });
+    return best;
+  }
+
+  function canAffordAny(attackerIndex) {
+    var mon = state.sides.player.field[attackerIndex];
+    var def = card(mon.id);
+    return (def.attacks || []).some(function (move) { return mon.energy >= move.cost; });
+  }
+
+  function handleHand(index) {
+    if (!isMyTurn()) { setHint('现在是对手回合'); return; }
+    var cardId = state.sides.player.hand[index];
+    if (!cardId) return;
+    var def = card(cardId);
+    if (def.type === 'pokemon') {
+      act(function (s) { return CB.playCard(s, 'player', cardId); });
+      return;
+    }
+    if (def.type === 'item') {
+      act(function (s) { return CB.useItem(s, 'player', cardId); });
+      return;
+    }
+    if (def.type === 'energy') {
+      if (!state.sides.player.field.length) {
+        setHint('场上还没有宝可梦，先放置一只再附着能量');
+        return;
+      }
+      selectedEnergy = selectedEnergy === cardId ? null : cardId;
+      selectedAttacker = null;
+      setHint(selectedEnergy ? '已选择「' + def.name.zh + '」，点击己方场上的宝可梦附着' : '');
+      render();
+    }
+  }
+
+  function handlePlayerField(index) {
+    if (!isMyTurn()) { setHint('现在是对手回合'); return; }
+    if (selectedEnergy) {
+      var energyId = selectedEnergy;
+      act(function (s) { return CB.attachEnergy(s, 'player', energyId, index); }, '无法附着能量：');
+      return;
+    }
+    if (selectedAttacker === index) {
+      selectedAttacker = null;
+      setHint('');
+      render();
+      return;
+    }
+    if (state.sides.player.attacked) {
+      setHint('本回合已经攻击过了');
+      return;
+    }
+    if (!canAffordAny(index)) {
+      setHint('这只能量不足，无法攻击');
+      return;
+    }
+    if (!state.sides.ai.field.length) {
+      setHint('对手场上没有宝可梦，无法攻击');
+      return;
+    }
+    selectedAttacker = index;
+    setHint('已选择「' + card(state.sides.player.field[index].id).name.zh + '」，点击对手宝可梦发起攻击');
+    render();
+  }
+
+  function handleAiField(index) {
+    if (!isMyTurn()) { setHint('现在是对手回合'); return; }
+    if (selectedAttacker === null) {
+      setHint('先点击己方场上的宝可梦选择攻击者');
+      return;
+    }
+    var best = bestAttack(selectedAttacker, index);
+    if (!best) {
+      setHint('攻击者能量不足');
+      return;
+    }
+    var attackerIndex = selectedAttacker;
+    act(function (s) {
+      return CB.attack(s, 'player', attackerIndex, best.index, index);
+    }, '无法攻击：');
+  }
+
+  function startAiTurn() {
+    if (!state || state.winner || state.turn !== 'ai') return;
+    if (aiTimer) clearTimeout(aiTimer);
+    aiTimer = setTimeout(aiStep, 430);
+  }
+
+  function aiStep() {
+    aiTimer = null;
+    if (!state || state.winner || state.turn !== 'ai') { render(); return; }
+    var action = CB.aiAction(state, 'ai');
+    if (!action) { render(); return; }
+    try {
+      state = CB.applyAction(state, action);
+    } catch (err) {
+      setHint('AI 动作异常：' + (err && err.message ? err.message : String(err)));
+      render();
+      return;
+    }
+    render();
+    if (state.winner) { showOverlay(); return; }
+    if (state.turn === 'ai') aiTimer = setTimeout(aiStep, 430);
+  }
+
+  function newGame() {
+    if (aiTimer) { clearTimeout(aiTimer); aiTimer = null; }
+    clearSelection();
+    overlay.hidden = true;
+    setHint('点击手牌行动；点自己的宝可梦，再点对手宝可梦攻击。');
+    var seed = (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
+    state = CB.createGame({ cards: CARDS, seed: seed });
+    render();
+    if (state.turn === 'ai') startAiTurn();
+  }
+
+  handEl.addEventListener('click', function (event) {
+    var btn = event.target.closest('[data-hand-index]');
+    if (btn) handleHand(Number(btn.getAttribute('data-hand-index')));
+  });
+
+  playerField.addEventListener('click', function (event) {
+    var btn = event.target.closest('[data-index]');
+    if (btn) handlePlayerField(Number(btn.getAttribute('data-index')));
+  });
+
+  aiField.addEventListener('click', function (event) {
+    var btn = event.target.closest('[data-index]');
+    if (btn) handleAiField(Number(btn.getAttribute('data-index')));
+  });
+
+  endTurnBtn.addEventListener('click', function () {
+    if (!isMyTurn()) return;
+    try {
+      state = CB.endTurn(state, 'player');
+    } catch (err) {
+      setHint('无法结束回合：' + (err && err.message ? err.message : String(err)));
+      render();
+      return;
+    }
+    clearSelection();
+    setHint('');
+    render();
+    startAiTurn();
+  });
+
+  document.getElementById('restart').addEventListener('click', newGame);
+  overlay.addEventListener('click', function (event) {
+    if (event.target === overlay) newGame();
+  });
+
+  window.__cardBattle = {
+    getState: function () { return state; },
+    newGame: newGame
+  };
+
+  newGame();
+})();
+</script>
+</body>
+</html>

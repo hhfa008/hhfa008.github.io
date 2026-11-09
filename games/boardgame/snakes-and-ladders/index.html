@@ -1,0 +1,803 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>蛇梯棋 100 格 — 你和电脑掷骰爬梯</title>
+<meta name="description" content="在线玩蛇梯棋：10×10 共 100 格，你和电脑轮流掷骰。踩到梯子向上爬，遇到蛇头滑下来，必须恰好到达第 100 格才能获胜。免费、无需登录、手机即开即玩。">
+<meta name="theme-color" content="#173b2f">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23173b2f'/%3E%3Cpath d='M7 25 L25 7' stroke='%23e8cf8f' stroke-width='3'/%3E%3Ccircle cx='7' cy='25' r='3' fill='%23b94e38'/%3E%3Ccircle cx='25' cy='7' r='3' fill='%232e7a5d'/%3E%3C/svg%3E">
+<style>
+:root{
+  --paper:#f4ecdc;--paper-2:#fbf7ee;--paper-3:#efe5d2;
+  --ink:#20322b;--muted:#637068;--muted-2:#7a857d;
+  --line:#d8cbb2;--line-strong:#b9a987;
+  --green:#1d5a45;--green-2:#2e7a5d;--green-soft:#dce9df;
+  --red:#b94e38;--red-2:#993b29;--red-soft:#f1ddd4;
+  --gold:#bd8a39;--gold-soft:#f1e3bd;
+  --board:#e8dcc4;--cell-line:#cbbc9f;--shadow:rgb(38 48 41 / .14);
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue","PingFang SC","Hiragino Sans GB","Microsoft YaHei",Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --paper:#111b16;--paper-2:#18251f;--paper-3:#1e2d26;
+    --ink:#f1ead9;--muted:#b0bcb3;--muted-2:#8f9d93;
+    --line:#334139;--line-strong:#52645a;
+    --green:#69b893;--green-2:#85cbaa;--green-soft:#203c30;
+    --red:#e28269;--red-2:#f0a18a;--red-soft:#41261f;
+    --gold:#d7ac5d;--gold-soft:#3c3220;
+    --board:#20352b;--cell-line:#3b5145;--shadow:rgb(0 0 0 / .35);
+  }
+}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%;background:var(--paper)}
+body{margin:0;color:var(--ink);background:
+  radial-gradient(circle at 8% 0%,rgb(189 138 57 / .12),transparent 32rem),
+  radial-gradient(circle at 100% 22%,rgb(29 90 69 / .08),transparent 28rem),
+  var(--paper);
+  font:16px/1.55 var(--sans);-webkit-font-smoothing:antialiased;overflow-x:hidden;
+  padding-bottom:calc(22px + env(safe-area-inset-bottom))}
+h1,h2,p,ol,ul{margin:0}
+button{font:inherit;color:inherit}
+a{color:inherit}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.wrap{width:100%;max-width:520px;margin:0 auto;padding:0 12px}
+
+.topbar{background:var(--green);color:#f8f1e2;padding:6px 0;box-shadow:0 2px 14px rgb(20 35 28 / .18)}
+.topbar-inner{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px}
+.brand{display:flex;align-items:center;gap:9px;min-width:0;font-weight:700;letter-spacing:.01em}
+.brand-mark{width:27px;height:27px;flex:none;border-radius:8px;background:#f8f1e2;color:var(--green);
+  display:inline-flex;align-items:center;justify-content:center;font-size:16px;line-height:1}
+.brand-name{font-size:16px;white-space:nowrap}
+.brand-badge{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.06em;
+  border:1px solid rgb(248 241 226 / .4);border-radius:999px;padding:2px 7px;color:rgb(248 241 226 / .82);white-space:nowrap}
+.rules-link{display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:44px;
+  padding:0 4px;color:#f8f1e2;font-size:13px;font-weight:600;text-decoration:none;border-bottom:1px solid rgb(248 241 226 / .35)}
+.rules-link:hover{border-bottom-color:#f8f1e2}
+.rules-link:focus-visible,.btn:focus-visible,.foot-link:focus-visible,summary:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+
+.hero{padding:20px 0 10px}
+.eyebrow{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:10.5px;font-weight:600;
+  letter-spacing:.13em;text-transform:uppercase;color:var(--red);margin-bottom:7px}
+.eyebrow::before{content:"";width:17px;height:2px;border-radius:2px;background:var(--red);flex:none}
+.hero h1{font-size:clamp(1.75rem,7.4vw,2.35rem);line-height:1.08;letter-spacing:-.035em;font-weight:750}
+.hero h1 span{color:var(--green);white-space:nowrap}
+.lede{margin-top:9px;color:var(--muted);font-size:14px;line-height:1.65;max-width:32rem}
+.lede strong{color:var(--ink);font-weight:650}
+
+.players{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 12px}
+.player-card{display:flex;align-items:center;gap:9px;min-width:0;padding:9px 10px;border:1px solid var(--line);
+  border-radius:14px;background:var(--paper-2);transition:border-color .18s,box-shadow .18s,transform .18s}
+.player-card.active{border-color:var(--green-2);box-shadow:0 0 0 3px rgb(46 122 93 / .14)}
+.player-card.winner{border-color:var(--gold);background:var(--gold-soft)}
+.p-avatar{width:32px;height:32px;border-radius:50%;flex:none;display:inline-flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:750;color:#fff}
+.p-avatar.you{background:var(--green-2);box-shadow:inset 0 -2px 0 rgb(0 0 0 / .18)}
+.p-avatar.ai{background:var(--red);box-shadow:inset 0 -2px 0 rgb(0 0 0 / .18)}
+.p-meta{min-width:0;flex:1}
+.p-name{font-size:12px;font-weight:650;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.p-pos{display:flex;align-items:baseline;gap:3px;margin-top:1px;white-space:nowrap}
+.p-pos strong{font-family:var(--mono);font-size:17px;line-height:1.1;color:var(--ink)}
+.p-pos span{font-size:10.5px;color:var(--muted-2)}
+.p-bar{grid-column:1/-1;height:3px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:1px}
+.p-bar i{display:block;height:100%;width:0;border-radius:99px;transition:width .35s ease}
+.player-card .p-bar{margin:5px 0 0}
+.p-bar.you i{background:var(--green-2)}
+.p-bar.ai i{background:var(--red)}
+
+.game-card{padding:11px 10px 12px;border:1px solid var(--line);border-radius:20px;background:var(--paper-2);
+  box-shadow:0 12px 32px var(--shadow)}
+.turnbar{display:flex;align-items:center;gap:9px;min-height:39px;padding:0 2px 8px}
+.turn-dot{width:11px;height:11px;border-radius:50%;flex:none;background:var(--green-2);
+  box-shadow:0 0 0 4px rgb(46 122 93 / .14)}
+.turn-dot.ai{background:var(--red);box-shadow:0 0 0 4px rgb(185 78 56 / .14)}
+.turn-dot.over{background:var(--gold);box-shadow:0 0 0 4px rgb(189 138 57 / .16)}
+.turn-copy{min-width:0;flex:1}
+.turn-title{font-size:14.5px;font-weight:750;line-height:1.22;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.turn-hint{font-size:11.5px;color:var(--muted-2);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.goal{flex:none;font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--muted);
+  border:1px solid var(--line);border-radius:999px;padding:4px 8px;background:var(--paper)}
+.goal strong{color:var(--green);font-size:12px}
+
+.board-shell{position:relative;padding:5px;border-radius:17px;background:var(--green);
+  box-shadow:inset 0 0 0 1px rgb(255 255 255 / .08),0 8px 18px rgb(20 35 28 / .16)}
+.board{position:relative;display:grid;grid-template-columns:repeat(10,1fr);grid-template-rows:repeat(10,1fr);
+  width:100%;aspect-ratio:1/1;border-radius:13px;overflow:hidden;background:
+  linear-gradient(145deg,var(--board),color-mix(in srgb,var(--board) 82%,var(--green) 18%));isolation:isolate}
+.links{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;overflow:visible}
+.links .link-halo{fill:none;stroke:var(--paper-2);stroke-width:25;stroke-linecap:round;stroke-linejoin:round;opacity:.58}
+.links .ladder-rail{fill:none;stroke:var(--green-2);stroke-width:10;stroke-linecap:round;opacity:.9}
+.links .ladder-rung{fill:none;stroke:var(--green-2);stroke-width:8;stroke-linecap:round;opacity:.9}
+.links .snake-body{fill:none;stroke:var(--red);stroke-width:15;stroke-linecap:round;stroke-linejoin:round;opacity:.9}
+.links .snake-head{fill:var(--red);stroke:var(--paper-2);stroke-width:4}
+.links .snake-eye{fill:var(--paper-2)}
+.links .snake-tail{fill:var(--red);opacity:.9}
+.cell{position:relative;z-index:1;min-width:0;min-height:0;border-right:1px solid var(--cell-line);
+  border-bottom:1px solid var(--cell-line);overflow:hidden}
+.cell:nth-of-type(10n+1){border-left:0}
+.cell:nth-of-type(-n+10){border-top:0}
+.cell:nth-of-type(10n){border-right:0}
+.cell:nth-of-type(n+91){border-bottom:0}
+.cell.start{background:rgb(46 122 93 / .10)}
+.cell.finish{background:rgb(189 138 57 / .20)}
+.cell.ladder-start{background:rgb(46 122 93 / .16)}
+.cell.ladder-end{background:rgb(46 122 93 / .08)}
+.cell.snake-head{background:rgb(185 78 56 / .16)}
+.cell.snake-tail{background:rgb(185 78 56 / .07)}
+.cell .num{position:absolute;top:2px;left:3px;z-index:2;min-width:13px;padding:0 1px;border-radius:3px;
+  font-family:var(--mono);font-size:9.5px;line-height:1.25;font-weight:600;color:var(--ink);
+  background:rgb(251 247 238 / .76);text-align:center}
+@media (prefers-color-scheme:dark){.cell .num{background:rgb(17 27 22 / .68)}}
+.cell .mark{position:absolute;top:2px;right:2px;z-index:2;display:inline-flex;align-items:center;justify-content:center;
+  width:13px;height:13px;border-radius:4px;font:700 9px/1 var(--sans);color:#fff;letter-spacing:-.02em}
+.cell .mark.ladder{background:var(--green-2)}
+.cell .mark.snake{background:var(--red)}
+.cell .mark.finish{background:var(--gold);color:#2f2310;font-size:8px}
+.tokens{position:absolute;left:50%;bottom:1px;transform:translateX(-50%);z-index:3;display:flex;gap:1px;pointer-events:none}
+.token{width:13px;height:13px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;
+  font:700 7px/1 var(--sans);color:#fff;border:1.5px solid rgb(255 255 255 / .78);box-shadow:0 1px 2px rgb(0 0 0 / .28)}
+.token.you{background:var(--green-2)}
+.token.ai{background:var(--red)}
+@media (max-width:350px){.token{width:11px;height:11px;font-size:0;border-width:1px}.cell .mark{width:11px;height:11px;font-size:8px}}
+
+.legend{display:flex;align-items:center;flex-wrap:wrap;gap:5px 11px;padding:8px 2px 5px;font-size:10.5px;color:var(--muted);line-height:1.3}
+.legend span{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.legend i{width:13px;height:13px;flex:none;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;
+  font:700 9px/1 var(--sans);color:#fff;font-style:normal}
+.legend .lg-ladder{background:var(--green-2)}
+.legend .lg-snake{background:var(--red)}
+.legend .lg-finish{background:var(--gold);color:#2f2310;font-size:8px}
+.legend .lg-token{border-radius:50%;background:var(--green-2);width:11px;height:11px;border:1.5px solid var(--paper-2)}
+.legend .lg-token.ai{background:var(--red)}
+
+.dice-panel{display:flex;align-items:center;gap:11px;margin:5px 0 9px;padding:9px 10px;border:1px solid var(--line);
+  border-radius:13px;background:var(--paper)}
+.die{width:46px;height:46px;flex:none;display:flex;align-items:center;justify-content:center;
+  border-radius:12px;background:var(--paper-2);border:2px solid var(--line-strong);
+  font-family:var(--mono);font-size:24px;font-weight:750;line-height:1;color:var(--green);
+  box-shadow:inset 0 -4px 0 rgb(0 0 0 / .07),0 3px 0 rgb(0 0 0 / .06)}
+.die.is-rolling{animation:die-pop .42s cubic-bezier(.2,.9,.3,1.3)}
+@keyframes die-pop{
+  0%{transform:rotate(-15deg) scale(.68);opacity:.35}
+  55%{transform:rotate(7deg) scale(1.14)}
+  100%{transform:none;opacity:1}
+}
+.dice-copy{min-width:0;flex:1}
+.dice-copy .caption{display:block;font-size:10px;letter-spacing:.06em;color:var(--muted-2);font-weight:600;text-transform:uppercase}
+.dice-copy strong{display:block;font-size:13.5px;line-height:1.35;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dice-copy small{display:block;font-size:10.5px;line-height:1.3;color:var(--muted-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.actions{display:grid;grid-template-columns:1.65fr 1fr;gap:8px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:50px;padding:9px 12px;
+  border-radius:13px;border:1px solid transparent;font-size:14.5px;font-weight:650;cursor:pointer;
+  touch-action:manipulation;transition:transform .12s,background .18s,opacity .18s;text-decoration:none}
+.btn:active:not(:disabled){transform:translateY(1px)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-primary{background:var(--green);color:#f8f1e2;border-color:var(--green);box-shadow:0 4px 0 rgb(13 45 34 / .28)}
+.btn-primary:not(:disabled):hover{background:#184c3a}
+.btn-secondary{background:var(--paper);color:var(--ink);border-color:var(--line-strong)}
+.btn-secondary:not(:disabled):hover{background:var(--paper-3)}
+.btn .arrow{font-size:16px;line-height:1;transform:translateY(-1px)}
+
+.win-banner{margin-top:10px;padding:12px 13px;border-radius:13px;border:1px solid var(--gold);
+  background:var(--gold-soft);display:grid;gap:2px;animation:banner-in .28s ease-out}
+.win-banner[data-winner="2"]{border-color:var(--red);background:var(--red-soft)}
+.win-kicker{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.win-banner strong{font-size:17px;line-height:1.25}
+.win-banner p{font-size:12px;line-height:1.45;color:var(--muted)}
+@keyframes banner-in{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+
+.logcard{margin-top:14px;border-top:1px solid var(--line);padding-top:10px}
+.log-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 2px 6px}
+.log-head h2{font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--muted-2);text-transform:uppercase}
+.log-head span{font-family:var(--mono);font-size:10px;color:var(--muted-2)}
+.roll-log{list-style:none;padding:0;margin:0;max-height:188px;overflow:auto;-webkit-overflow-scrolling:touch}
+.roll-log li{display:flex;gap:8px;align-items:flex-start;padding:6px 2px;border-top:1px dashed var(--line);font-size:11.5px;line-height:1.45;color:var(--muted)}
+.roll-log li:first-child{border-top:0}
+.roll-log .n{font-family:var(--mono);font-size:9.5px;color:var(--muted-2);min-width:18px;text-align:right;flex:none;padding-top:1px}
+.roll-log .txt{min-width:0}
+.roll-log .txt b{color:var(--ink);font-weight:650}
+.roll-log .tag{display:inline-block;margin-left:4px;padding:0 4px;border-radius:3px;font-size:9px;font-weight:700;line-height:1.45;vertical-align:1px}
+.roll-log .tag.ladder{background:var(--green-soft);color:var(--green)}
+.roll-log .tag.snake{background:var(--red-soft);color:var(--red)}
+.roll-log .tag.win{background:var(--gold-soft);color:var(--gold)}
+.roll-log .empty{color:var(--muted-2);justify-content:center;padding:13px 0;border-top:0}
+.roll-log li.latest .txt{color:var(--ink)}
+
+.footnote{margin:14px 1px 0;font-size:11px;line-height:1.6;color:var(--muted-2)}
+.footnote strong{color:var(--muted)}
+.foot-links{display:flex;flex-wrap:wrap;gap:2px 16px;margin:7px 0 0}
+.foot-link{display:inline-flex;align-items:center;min-height:44px;color:var(--muted);font-size:12px;font-weight:600;
+  text-decoration:none;border-bottom:1px solid transparent}
+.foot-link:hover{color:var(--green);border-bottom-color:var(--green)}
+.site-footer{padding:10px 0 4px;font-size:10.5px;line-height:1.6;color:var(--muted-2)}
+@media (max-width:360px){
+  .wrap{padding:0 10px}
+  .hero{padding-top:16px}
+  .lede{font-size:13.5px}
+  .player-card{padding:8px}
+  .p-avatar{width:29px;height:29px;font-size:11px}
+  .p-pos strong{font-size:15px}
+  .game-card{padding:9px 8px 10px}
+  .dice-copy strong{font-size:12.5px}
+  .legend{gap:4px 8px;font-size:10px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <div class="brand" aria-label="蛇梯棋，100 格">
+      <span class="brand-mark" aria-hidden="true">↗</span>
+      <span class="brand-name">蛇梯棋</span>
+      <span class="brand-badge">100 格</span>
+    </div>
+    <a class="rules-link" href="rules.html" aria-label="查看蛇梯棋完整规则">规则</a>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero" aria-labelledby="page-title">
+    <p class="eyebrow">经典棋盘 · 人机对战</p>
+    <h1 id="page-title">蛇梯棋：<span>你 vs 电脑</span></h1>
+    <p class="lede">轮流掷骰前进，踩到梯子向上爬，遇到蛇头滑下来。必须<strong>恰好到达第 100 格</strong>，多一步都不行。</p>
+  </section>
+
+  <section class="players" aria-label="双方当前位置">
+    <article class="player-card" id="player1Card">
+      <span class="p-avatar you" aria-hidden="true">你</span>
+      <div class="p-meta">
+        <div class="p-name">你</div>
+        <div class="p-pos"><strong id="player1Pos">1</strong><span>格</span></div>
+      </div>
+      <div class="p-bar you" aria-hidden="true"><i id="player1Bar"></i></div>
+    </article>
+    <article class="player-card" id="player2Card">
+      <span class="p-avatar ai" aria-hidden="true">机</span>
+      <div class="p-meta">
+        <div class="p-name">电脑</div>
+        <div class="p-pos"><strong id="player2Pos">1</strong><span>格</span></div>
+      </div>
+      <div class="p-bar ai" aria-hidden="true"><i id="player2Bar"></i></div>
+    </article>
+  </section>
+
+  <section class="game-card" aria-label="游戏区">
+    <div class="turnbar">
+      <span class="turn-dot" id="turnDot" aria-hidden="true"></span>
+      <div class="turn-copy">
+        <div class="turn-title" id="turnTitle">轮到你</div>
+        <div class="turn-hint" id="turnHint">点击掷骰子，试试运气。</div>
+      </div>
+      <div class="goal">先到 <strong>100</strong></div>
+    </div>
+
+    <div class="board-shell">
+      <div class="board" id="board" role="img" aria-label="蛇梯棋棋盘，10 乘 10，共 100 格。绿色箭头表示梯子起点，红色向下箭头表示蛇头。"></div>
+    </div>
+
+    <div class="legend" aria-label="棋盘图例">
+      <span><i class="lg-ladder" aria-hidden="true">↑</i>梯子：踩到上升</span>
+      <span><i class="lg-snake" aria-hidden="true">↓</i>蛇：踩到下滑</span>
+      <span><i class="lg-finish" aria-hidden="true">100</i>终点</span>
+      <span><i class="lg-token" aria-hidden="true"></i>你</span>
+      <span><i class="lg-token ai" aria-hidden="true"></i>电脑</span>
+    </div>
+
+    <div class="dice-panel">
+      <div class="die" id="die" role="img" aria-label="尚未掷骰">—</div>
+      <div class="dice-copy">
+        <span class="caption">骰子</span>
+        <strong id="diceResult">等待掷骰</strong>
+        <small id="diceHint">每次前进 1 到 6 格</small>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-primary" id="rollBtn" type="button" aria-label="掷骰子，轮到你行动">掷骰子 <span class="arrow" aria-hidden="true">→</span></button>
+      <button class="btn btn-secondary" id="restartBtn" type="button" aria-label="重新开始整局游戏">重新开始</button>
+    </div>
+
+    <div class="win-banner" id="winBanner" role="status" aria-live="assertive" hidden>
+      <span class="win-kicker">本局结束</span>
+      <strong id="winTitle">你赢了</strong>
+      <p id="winText">恰好到达第 100 格。</p>
+    </div>
+
+    <section class="logcard" aria-labelledby="log-title">
+      <div class="log-head">
+        <h2 id="log-title">掷骰记录</h2>
+        <span id="rollCount">0 手</span>
+      </div>
+      <ul class="roll-log" id="rollLog">
+        <li class="empty">还没有掷骰记录。</li>
+      </ul>
+    </section>
+  </section>
+
+  <p class="footnote"><strong>小提示：</strong>落在第 97 格以后时，掷出会超过 100 的点数只能留在原地，等下一手掷出刚好补足的点数。梯子和蛇只结算一次，不会连续触发。</p>
+  <nav class="foot-links" aria-label="页面导航">
+    <a class="foot-link" href="rules.html" aria-label="阅读蛇梯棋规则与常见问题">规则与常见问题</a>
+    <a class="foot-link" href="../" aria-label="返回桌游目录">返回桌游目录</a>
+  </nav>
+  <footer class="site-footer">
+    <p>免费在线小游戏 · 无需登录 · 所有进度只留在本页</p>
+  </footer>
+
+  <p class="sr-only" id="live" aria-live="polite"></p>
+</main>
+
+<script src="engine.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var E = window.SnakesEngine;
+  var boardEl = document.getElementById('board');
+  var rollBtn = document.getElementById('rollBtn');
+  var restartBtn = document.getElementById('restartBtn');
+  var dieEl = document.getElementById('die');
+  var diceResult = document.getElementById('diceResult');
+  var diceHint = document.getElementById('diceHint');
+  var turnTitle = document.getElementById('turnTitle');
+  var turnHint = document.getElementById('turnHint');
+  var turnDot = document.getElementById('turnDot');
+  var player1Card = document.getElementById('player1Card');
+  var player2Card = document.getElementById('player2Card');
+  var player1Pos = document.getElementById('player1Pos');
+  var player2Pos = document.getElementById('player2Pos');
+  var player1Bar = document.getElementById('player1Bar');
+  var player2Bar = document.getElementById('player2Bar');
+  var winBanner = document.getElementById('winBanner');
+  var winTitle = document.getElementById('winTitle');
+  var winText = document.getElementById('winText');
+  var rollLog = document.getElementById('rollLog');
+  var rollCount = document.getElementById('rollCount');
+  var live = document.getElementById('live');
+
+  if (!E) {
+    turnTitle.textContent = '引擎加载失败';
+    turnHint.textContent = '请刷新页面重试。';
+    rollBtn.disabled = true;
+    return;
+  }
+
+  var state = null;
+  var rng = null;
+  var busy = false;
+  var aiTimer = null;
+  var unlockTimer = null;
+  var gameNumber = 0;
+  var cells = {};
+
+  function cellCenter(position) {
+    var n = position - 1;
+    var rowFromBottom = Math.floor(n / 10);
+    var offset = n % 10;
+    var col = rowFromBottom % 2 === 0 ? offset : 9 - offset;
+    var row = 9 - rowFromBottom;
+    return { x: (col + 0.5) * 100, y: (row + 0.5) * 100 };
+  }
+
+  function svgElement(name, attrs) {
+    var el = document.createElementNS('http://www.w3.org/2000/svg', name);
+    Object.keys(attrs || {}).forEach(function (key) { el.setAttribute(key, attrs[key]); });
+    return el;
+  }
+
+  function addHalo(svg, d, extraClass) {
+    svg.appendChild(svgElement('path', {
+      d: d,
+      'class': 'link-halo' + (extraClass ? ' ' + extraClass : '')
+    }));
+  }
+
+  function drawLadder(svg, from, to) {
+    var a = cellCenter(from);
+    var b = cellCenter(to);
+    var dx = b.x - a.x;
+    var dy = b.y - a.y;
+    var len = Math.sqrt(dx * dx + dy * dy) || 1;
+    var px = -dy / len;
+    var py = dx / len;
+    var spread = 19;
+    var rails = [];
+
+    [-1, 1].forEach(function (side) {
+      var ax = a.x + px * spread * side;
+      var ay = a.y + py * spread * side;
+      var bx = b.x + px * spread * side;
+      var by = b.y + py * spread * side;
+      var d = 'M ' + ax.toFixed(2) + ' ' + ay.toFixed(2) + ' L ' + bx.toFixed(2) + ' ' + by.toFixed(2);
+      addHalo(svg, d);
+      rails.push(d);
+    });
+    rails.forEach(function (d) {
+      svg.appendChild(svgElement('path', { d: d, 'class': 'ladder-rail' }));
+    });
+
+    var rungCount = Math.max(3, Math.min(13, Math.round(len / 62)));
+    for (var i = 1; i < rungCount; i += 1) {
+      var t = i / rungCount;
+      var cx = a.x + dx * t;
+      var cy = a.y + dy * t;
+      var x1 = cx + px * spread;
+      var y1 = cy + py * spread;
+      var x2 = cx - px * spread;
+      var y2 = cy - py * spread;
+      svg.appendChild(svgElement('path', {
+        d: 'M ' + x1.toFixed(2) + ' ' + y1.toFixed(2) + ' L ' + x2.toFixed(2) + ' ' + y2.toFixed(2),
+        'class': 'ladder-rung'
+      }));
+    }
+  }
+
+  function drawSnake(svg, from, to) {
+    var a = cellCenter(from);
+    var b = cellCenter(to);
+    var dx = b.x - a.x;
+    var dy = b.y - a.y;
+    var len = Math.sqrt(dx * dx + dy * dy) || 1;
+    var px = -dy / len;
+    var py = dx / len;
+    var amp = Math.min(32, Math.max(15, len * 0.1));
+    var points = [];
+    var steps = 30;
+    for (var i = 0; i <= steps; i += 1) {
+      var t = i / steps;
+      var envelope = Math.sin(t * Math.PI);
+      var wave = Math.sin(t * Math.PI * 4.2) * amp * envelope;
+      points.push({
+        x: a.x + dx * t + px * wave,
+        y: a.y + dy * t + py * wave
+      });
+    }
+    var d = 'M ' + points[0].x.toFixed(2) + ' ' + points[0].y.toFixed(2);
+    for (var j = 1; j < points.length; j += 1) {
+      d += ' L ' + points[j].x.toFixed(2) + ' ' + points[j].y.toFixed(2);
+    }
+    addHalo(svg, d);
+    svg.appendChild(svgElement('path', { d: d, 'class': 'snake-body' }));
+
+    var head = a;
+    var dirX = dx / len;
+    var dirY = dy / len;
+    svg.appendChild(svgElement('circle', {
+      cx: head.x.toFixed(2), cy: head.y.toFixed(2), r: 25, 'class': 'snake-head'
+    }));
+    var eyeForward = 7;
+    var eyeSide = 10;
+    [1, -1].forEach(function (side) {
+      svg.appendChild(svgElement('circle', {
+        cx: (head.x + dirX * eyeForward + px * eyeSide * side).toFixed(2),
+        cy: (head.y + dirY * eyeForward + py * eyeSide * side).toFixed(2),
+        r: 5.2,
+        'class': 'snake-eye'
+      }));
+    });
+    svg.appendChild(svgElement('circle', {
+      cx: b.x.toFixed(2), cy: b.y.toFixed(2), r: 8, 'class': 'snake-tail'
+    }));
+  }
+
+  function drawLinks(svg) {
+    Object.keys(E.LADDERS).forEach(function (from) {
+      drawLadder(svg, Number(from), E.LADDERS[from]);
+    });
+    Object.keys(E.SNAKES).forEach(function (from) {
+      drawSnake(svg, Number(from), E.SNAKES[from]);
+    });
+  }
+
+  function targetMarks() {
+    var ladderTargets = {};
+    var snakeTargets = {};
+    Object.keys(E.LADDERS).forEach(function (from) { ladderTargets[E.LADDERS[from]] = true; });
+    Object.keys(E.SNAKES).forEach(function (from) { snakeTargets[E.SNAKES[from]] = true; });
+    return { ladder: ladderTargets, snake: snakeTargets };
+  }
+
+  function buildBoard() {
+    var svg = svgElement('svg', {
+      viewBox: '0 0 1000 1000',
+      preserveAspectRatio: 'none',
+      'class': 'links',
+      'aria-hidden': 'true',
+      focusable: 'false'
+    });
+    boardEl.appendChild(svg);
+    drawLinks(svg);
+
+    var marks = targetMarks();
+    for (var row = 0; row < 10; row += 1) {
+      for (var col = 0; col < 10; col += 1) {
+        var rowFromBottom = 9 - row;
+        var base = rowFromBottom * 10;
+        var position = rowFromBottom % 2 === 0 ? base + col + 1 : base + (10 - col);
+        var cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.dataset.pos = String(position);
+        cell.setAttribute('aria-hidden', 'true');
+
+        var classes = [];
+        var mark = '';
+        var link = E.linkAt(position);
+        if (position === 1) classes.push('start');
+        if (position === 100) classes.push('finish');
+        if (link && link.type === 'ladder') {
+          classes.push('ladder-start');
+          mark = '<span class="mark ladder">↑</span>';
+        } else if (link && link.type === 'snake') {
+          classes.push('snake-head');
+          mark = '<span class="mark snake">↓</span>';
+        } else if (marks.ladder[position]) {
+          classes.push('ladder-end');
+          mark = '<span class="mark ladder">梯</span>';
+        } else if (marks.snake[position]) {
+          classes.push('snake-tail');
+          mark = '<span class="mark snake">尾</span>';
+        }
+        if (position === 100) {
+          mark = '<span class="mark finish">100</span>';
+        }
+        if (classes.length) cell.className += ' ' + classes.join(' ');
+        cell.innerHTML = '<span class="num">' + position + '</span>' + mark + '<span class="tokens"></span>';
+        boardEl.appendChild(cell);
+        cells[position] = cell;
+      }
+    }
+  }
+
+  function renderTokens(positions) {
+    var all = boardEl.querySelectorAll('.tokens');
+    for (var i = 0; i < all.length; i += 1) all[i].textContent = '';
+    [1, 2].forEach(function (player) {
+      var cell = cells[positions[player - 1]];
+      if (!cell) return;
+      var token = document.createElement('span');
+      token.className = 'token ' + (player === 1 ? 'you' : 'ai');
+      token.textContent = player === 1 ? '你' : '机';
+      cell.querySelector('.tokens').appendChild(token);
+    });
+  }
+
+  function rollDescription(record) {
+    var who = record.player === 1 ? '你' : '电脑';
+    var html = '<b>' + who + '</b> 掷出 <b>' + record.dice + '</b> 点 · ' + record.from + ' → ';
+    if (record.overshoot) {
+      html += record.from + '<span class="tag snake">超过 100，原地</span>';
+    } else {
+      html += record.landed;
+      if (record.transit === 'ladder') {
+        html += ' → ' + record.to + '<span class="tag ladder">梯子</span>';
+      } else if (record.transit === 'snake') {
+        html += ' → ' + record.to + '<span class="tag snake">蛇</span>';
+      }
+      if (record.win) html += '<span class="tag win">到达 100</span>';
+    }
+    return html;
+  }
+
+  function renderLog() {
+    rollLog.textContent = '';
+    rollCount.textContent = state.rolls + ' 手';
+    if (!state.history.length) {
+      var empty = document.createElement('li');
+      empty.className = 'empty';
+      empty.textContent = '还没有掷骰记录。';
+      rollLog.appendChild(empty);
+      return;
+    }
+    var entries = state.history.slice(-30).reverse();
+    entries.forEach(function (record, index) {
+      var li = document.createElement('li');
+      if (index === 0) li.className = 'latest';
+      var n = document.createElement('span');
+      n.className = 'n';
+      n.textContent = String(record.n);
+      var text = document.createElement('span');
+      text.className = 'txt';
+      text.innerHTML = rollDescription(record);
+      li.appendChild(n);
+      li.appendChild(text);
+      rollLog.appendChild(li);
+    });
+  }
+
+  function renderDice() {
+    if (!state.last) {
+      dieEl.textContent = '—';
+      dieEl.setAttribute('aria-label', '尚未掷骰');
+      diceResult.textContent = '等待掷骰';
+      diceHint.textContent = '每次前进 1 到 6 格';
+      return;
+    }
+    var record = state.last;
+    dieEl.textContent = String(record.dice);
+    dieEl.setAttribute('aria-label', '骰子结果 ' + record.dice + ' 点');
+    diceResult.textContent = (record.player === 1 ? '你' : '电脑') + '掷出 ' + record.dice + ' 点';
+    if (record.overshoot) {
+      diceHint.textContent = '超过 100，留在第 ' + record.from + ' 格';
+    } else if (record.transit === 'ladder') {
+      diceHint.textContent = '梯子：' + record.landed + ' → ' + record.to;
+    } else if (record.transit === 'snake') {
+      diceHint.textContent = '蛇：' + record.landed + ' → ' + record.to;
+    } else if (record.win) {
+      diceHint.textContent = '恰好到达第 100 格';
+    } else {
+      diceHint.textContent = record.from + ' → ' + record.to + ' 格';
+    }
+  }
+
+  function render() {
+    var status = E.status(state);
+    var p1 = status.positions[0];
+    var p2 = status.positions[1];
+    player1Pos.textContent = String(p1);
+    player2Pos.textContent = String(p2);
+    player1Bar.style.width = p1 + '%';
+    player2Bar.style.width = p2 + '%';
+
+    var playerTurn = !status.over && status.turn === 1;
+    var aiTurn = !status.over && status.turn === 2;
+    player1Card.classList.toggle('active', playerTurn);
+    player2Card.classList.toggle('active', aiTurn);
+    player1Card.classList.toggle('winner', status.winner === 1);
+    player2Card.classList.toggle('winner', status.winner === 2);
+
+    turnDot.className = 'turn-dot' + (status.over ? ' over' : status.turn === 2 ? ' ai' : '');
+    if (status.over) {
+      turnTitle.textContent = status.winner === 1 ? '你赢了！' : '电脑赢了';
+      turnHint.textContent = status.winner === 1 ? '恰好到达第 100 格，漂亮。' : '电脑先到第 100 格，再来一局？';
+    } else if (aiTurn) {
+      turnTitle.textContent = '电脑回合';
+      turnHint.textContent = busy ? '电脑正在掷骰…' : '电脑准备掷骰…';
+    } else if (busy) {
+      turnTitle.textContent = '轮到你';
+      turnHint.textContent = '电脑走完了，马上轮到你。';
+    } else {
+      turnTitle.textContent = '轮到你';
+      turnHint.textContent = '点击掷骰子，试试运气。';
+    }
+
+    winBanner.hidden = !status.over;
+    winBanner.dataset.winner = status.over ? String(status.winner) : '';
+    if (status.over) {
+      winTitle.textContent = status.winner === 1 ? '你赢了！' : '电脑赢了';
+      winText.textContent = status.winner === 1
+        ? '你恰好落在第 100 格，先到终点。'
+        : '电脑恰好落在第 100 格。重新开始再来一局吧。';
+    }
+
+    rollBtn.disabled = busy || status.over || status.turn !== 1;
+    if (status.over) {
+      rollBtn.textContent = '本局结束';
+      rollBtn.setAttribute('aria-label', '本局已结束，掷骰按钮不可用');
+    } else if (status.turn === 2) {
+      rollBtn.textContent = '电脑掷骰中…';
+      rollBtn.setAttribute('aria-label', '电脑回合，掷骰按钮暂不可用');
+    } else if (busy) {
+      rollBtn.textContent = '请稍候…';
+      rollBtn.setAttribute('aria-label', '请稍候，正在结算上一手');
+    } else {
+      rollBtn.innerHTML = '掷骰子 <span class="arrow" aria-hidden="true">→</span>';
+      rollBtn.setAttribute('aria-label', '掷骰子，轮到你行动');
+    }
+
+    boardEl.setAttribute('aria-label',
+      '蛇梯棋棋盘，10 乘 10，共 100 格。你在第 ' + p1 + ' 格，电脑在第 ' + p2 +
+      ' 格。绿色箭头表示梯子起点，红色向下箭头表示蛇头，金色 100 表示终点。');
+    renderTokens(status.positions);
+    renderLog();
+    renderDice();
+  }
+
+  function announce(record) {
+    var who = record.player === 1 ? '你' : '电脑';
+    var message = who + '掷出 ' + record.dice + ' 点，';
+    if (record.overshoot) {
+      message += '超过一百，停在第 ' + record.from + ' 格。';
+    } else if (record.transit === 'ladder') {
+      message += '落在第 ' + record.landed + ' 格，沿梯子升到第 ' + record.to + ' 格。';
+    } else if (record.transit === 'snake') {
+      message += '落在第 ' + record.landed + ' 格，被蛇带到第 ' + record.to + ' 格。';
+    } else {
+      message += '走到第 ' + record.to + ' 格。';
+    }
+    if (record.win) message += who === '你' ? '你赢了。' : '电脑赢了。';
+    live.textContent = message;
+  }
+
+  function animateDie(dice) {
+    dieEl.textContent = String(dice);
+    dieEl.setAttribute('aria-label', '骰子结果 ' + dice + ' 点');
+    dieEl.classList.remove('is-rolling');
+    void dieEl.offsetWidth;
+    dieEl.classList.add('is-rolling');
+  }
+
+  function clearTimers() {
+    if (aiTimer !== null) { window.clearTimeout(aiTimer); aiTimer = null; }
+    if (unlockTimer !== null) { window.clearTimeout(unlockTimer); unlockTimer = null; }
+  }
+
+  function afterRoll(previous, next) {
+    state = next;
+    animateDie(state.last.dice);
+    announce(state.last);
+    render();
+    if (state.winner) {
+      busy = false;
+      render();
+      return;
+    }
+    if (state.turn === 2) {
+      busy = true;
+      render();
+      aiTimer = window.setTimeout(aiTurn, 760);
+    } else {
+      busy = true;
+      render();
+      unlockTimer = window.setTimeout(function () {
+        unlockTimer = null;
+        busy = false;
+        render();
+      }, 460);
+    }
+  }
+
+  function takeRoll() {
+    var previous = state;
+    var dice = E.rollDice(rng);
+    if (dice === false) return false;
+    var next = E.applyRoll(previous, dice);
+    if (!next) return false;
+    afterRoll(previous, next);
+    return true;
+  }
+
+  function humanTurn() {
+    if (!state || busy || state.winner || state.turn !== 1) return;
+    busy = true;
+    render();
+    if (!takeRoll()) {
+      busy = false;
+      render();
+    }
+  }
+
+  function aiTurn() {
+    aiTimer = null;
+    if (!state || state.winner || state.turn !== 2) return;
+    if (!takeRoll()) {
+      busy = false;
+      render();
+    }
+  }
+
+  function startGame() {
+    clearTimers();
+    gameNumber += 1;
+    var seed = (Date.now() ^ Math.imul(gameNumber, 0x9e3779b9)) >>> 0;
+    state = E.setup(seed);
+    rng = E.mulberry32(seed);
+    busy = false;
+    live.textContent = '';
+    winBanner.hidden = true;
+    render();
+  }
+
+  buildBoard();
+  rollBtn.addEventListener('click', humanTurn);
+  restartBtn.addEventListener('click', startGame);
+  startGame();
+})();
+</script>
+</body>
+</html>

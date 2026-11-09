@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>钓鱼 · Go Fish</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: radial-gradient(circle at 50% 0%, #17614a, #0a3a2b 72%);
+    color: #f4f7f2;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  .wrap {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 16px 16px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    width: 100%;
+  }
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  h1 { font-size: 22px; margin: 0; letter-spacing: 1px; }
+  h1 span { font-size: 12px; font-weight: 500; opacity: .7; margin-left: 6px; letter-spacing: 0; }
+  .btn {
+    font: inherit; border: 0; border-radius: 12px; padding: 12px 16px;
+    min-height: 44px; min-width: 44px; cursor: pointer; font-weight: 700;
+    color: #0b2b21; background: #f6c453; transition: transform .08s ease;
+  }
+  .btn:active:not(:disabled) { transform: scale(.98); }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+  .btn.ghost { background: rgba(255,255,255,.14); color: #f4f7f2; border: 1px solid rgba(255,255,255,.28); }
+  .btn.ask { width: 100%; font-size: 16px; }
+  .board { display: flex; align-items: stretch; gap: 10px; }
+  .side {
+    flex: 1; min-width: 0; background: rgba(0,0,0,.22);
+    border: 1px solid rgba(255,255,255,.1); border-radius: 14px;
+    padding: 10px; display: flex; flex-direction: column; gap: 6px; justify-content: center;
+  }
+  .side .who { font-size: 13px; opacity: .8; }
+  .side .nums { display: flex; flex-direction: column; gap: 2px; }
+  .side .big { font-size: 20px; font-weight: 800; color: #fff; }
+  .side .books { font-size: 14px; font-weight: 700; color: #f6c453; }
+  .pond {
+    flex: 0 0 92px; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; background: rgba(255,255,255,.07); border-radius: 14px;
+    border: 1px dashed rgba(255,255,255,.28); padding: 8px;
+  }
+  .pondNum { font-size: 26px; font-weight: 800; color: #f6c453; line-height: 1.1; }
+  .pondLabel { font-size: 11px; opacity: .8; margin-top: 2px; text-align: center; }
+  .status {
+    min-height: 44px; display: flex; align-items: center; padding: 10px 14px;
+    border-radius: 12px; background: rgba(246,196,83,.12);
+    border: 1px solid rgba(246,196,83,.3); font-size: 14px; line-height: 1.45;
+  }
+  .status.over { background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.3); }
+  .handBox {
+    background: rgba(0,0,0,.22); border: 1px solid rgba(255,255,255,.1);
+    border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 10px;
+  }
+  .handHead { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; font-size: 14px; font-weight: 700; }
+  #hint { font-weight: 400; font-size: 12px; opacity: .72; }
+  .hand { display: flex; flex-wrap: wrap; gap: 8px; }
+  .group {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    min-height: 64px; min-width: 56px; padding: 8px 10px; border-radius: 12px;
+    border: 2px solid transparent; background: rgba(255,255,255,.1);
+    color: inherit; cursor: pointer; font: inherit;
+  }
+  .group[aria-pressed="true"] {
+    border-color: #f6c453; background: rgba(246,196,83,.18);
+    box-shadow: 0 0 0 2px rgba(246,196,83,.25);
+  }
+  .groupTitle { font-size: 18px; font-weight: 800; line-height: 1; }
+  .cardRow { display: flex; gap: 3px; flex-wrap: wrap; justify-content: center; max-width: 100%; }
+  .mini {
+    display: inline-block; background: #fffdf5; color: #1f2937; border-radius: 6px;
+    padding: 2px 5px; font-size: 12px; font-weight: 700; line-height: 1.25; white-space: nowrap;
+  }
+  .mini.red { color: #c02d2d; }
+  .empty { margin: 0; font-size: 13px; opacity: .8; }
+  .logBox {
+    background: rgba(0,0,0,.22); border-radius: 14px; padding: 10px 14px;
+    border: 1px solid rgba(255,255,255,.1);
+  }
+  .logBox h2 { font-size: 14px; margin: 4px 0 8px; opacity: .85; }
+  .log {
+    list-style: none; margin: 0; padding: 0; max-height: 170px; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 6px; font-size: 13px; line-height: 1.45;
+  }
+  .log li { opacity: .92; border-left: 2px solid rgba(246,196,83,.5); padding-left: 8px; word-break: break-word; }
+  @media (max-width: 380px) {
+    .pond { flex-basis: 80px; }
+    .side .big { font-size: 18px; }
+  }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header class="top">
+    <h1>钓鱼<span>Go Fish</span></h1>
+    <button id="newGame" class="btn ghost" type="button" aria-label="开始新的一局">新一局</button>
+  </header>
+
+  <section class="board" aria-label="对局信息">
+    <div class="side">
+      <span class="who">AI</span>
+      <span class="nums">
+        <span class="big" id="aiCount">7 张</span>
+        <span class="books" id="aiBooks">0 本</span>
+      </span>
+    </div>
+    <div class="pond">
+      <span class="pondNum" id="pondCount">38</span>
+      <span class="pondLabel">牌堆剩余</span>
+    </div>
+    <div class="side">
+      <span class="who">你</span>
+      <span class="nums">
+        <span class="big" id="myCount">7 张</span>
+        <span class="books" id="myBooks">0 本</span>
+      </span>
+    </div>
+  </section>
+
+  <div id="status" class="status" role="status" aria-live="polite">正在发牌…</div>
+
+  <section class="handBox" aria-label="你的手牌">
+    <div class="handHead">
+      <span>你的手牌</span>
+      <span id="hint">点一张牌选中点数</span>
+    </div>
+    <div id="hand" class="hand"></div>
+    <button id="askBtn" class="btn ask" type="button" aria-label="向 AI 要所选点数的牌" disabled>要牌</button>
+  </section>
+
+  <section class="logBox" aria-label="对局记录">
+    <h2>对局记录</h2>
+    <ol id="log" class="log"></ol>
+  </section>
+</main>
+
+<script src="./engine.js"></script>
+<script>
+(function () {
+  'use strict';
+  var E = window.GoFishEngine;
+  var statusEl = document.getElementById('status');
+  var handEl = document.getElementById('hand');
+  var askBtn = document.getElementById('askBtn');
+  var logEl = document.getElementById('log');
+  var newBtn = document.getElementById('newGame');
+  var myCount = document.getElementById('myCount');
+  var aiCount = document.getElementById('aiCount');
+  var myBooks = document.getElementById('myBooks');
+  var aiBooks = document.getElementById('aiBooks');
+  var pondCount = document.getElementById('pondCount');
+
+  var game = null;
+  var selected = null;
+  var aiTimer = null;
+
+  function start() {
+    clearTimeout(aiTimer);
+    if (!E) {
+      statusEl.textContent = '引擎加载失败，请刷新页面。';
+      return;
+    }
+    var seed = (Date.now() ^ Math.floor(Math.random() * 1e9)) >>> 0;
+    game = E.createGame({ seed: seed });
+    selected = null;
+    refresh();
+    if (game.turn === 1) scheduleAI();
+  }
+
+  function groups() {
+    var counts = E.rankCounts(game, 0);
+    return E.RANKS.filter(function (r) { return counts[r] > 0; }).map(function (r) {
+      return {
+        rank: r,
+        cards: game.hands[0].filter(function (c) { return c.rank === r; })
+      };
+    });
+  }
+
+  function renderHand() {
+    handEl.textContent = '';
+    var list = groups();
+    if (!list.length) {
+      var p = document.createElement('p');
+      p.className = 'empty';
+      p.textContent = '手牌已空，下一次要牌时会自动从牌堆摸牌。';
+      handEl.appendChild(p);
+      return;
+    }
+    list.forEach(function (gr) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'group';
+      btn.dataset.rank = gr.rank;
+      btn.setAttribute('aria-pressed', selected === gr.rank ? 'true' : 'false');
+      btn.setAttribute('aria-label', '选择点数 ' + gr.rank + '，手上有 ' + gr.cards.length + ' 张');
+
+      var title = document.createElement('span');
+      title.className = 'groupTitle';
+      title.textContent = gr.rank;
+
+      var row = document.createElement('span');
+      row.className = 'cardRow';
+      gr.cards.forEach(function (card) {
+        var mini = document.createElement('span');
+        mini.className = 'mini' + (E.isRed(card) ? ' red' : '');
+        mini.textContent = E.cardId(card);
+        row.appendChild(mini);
+      });
+
+      btn.appendChild(title);
+      btn.appendChild(row);
+      btn.addEventListener('click', function () {
+        if (game.phase !== 'playing' || game.turn !== 0) return;
+        selected = selected === gr.rank ? null : gr.rank;
+        renderHand();
+        updateAsk();
+        updateStatus();
+      });
+      handEl.appendChild(btn);
+    });
+  }
+
+  function updateAsk() {
+    var legal = game.phase === 'playing' && game.turn === 0 &&
+      !!selected && (E.rankCounts(game, 0)[selected] || 0) > 0;
+    askBtn.disabled = !legal;
+    askBtn.textContent = selected ? ('要 ' + selected) : '要牌';
+    askBtn.setAttribute('aria-label', selected ? ('向 AI 要 ' + selected + ' 点数的牌') : '向 AI 要所选点数的牌');
+  }
+
+  function updateStatus() {
+    if (game.phase === 'over') {
+      var name = game.winner === 'tie' ? '平局' : (game.winner === 0 ? '你赢了！' : 'AI 赢了');
+      statusEl.textContent = name + '　你 ' + game.books[0] + ' 本 · AI ' + game.books[1] + ' 本';
+      statusEl.classList.add('over');
+      return;
+    }
+    statusEl.classList.remove('over');
+    if (game.turn === 0) {
+      statusEl.textContent = selected
+        ? ('准备向 AI 要「' + selected + '」——点下方「要 ' + selected + '」确认。')
+        : '轮到你出牌：点手牌选中点数，再点「要牌」向 AI 索要。';
+    } else {
+      statusEl.textContent = 'AI 正在思考…';
+    }
+  }
+
+  function renderLog() {
+    logEl.textContent = '';
+    game.log.slice(-40).reverse().forEach(function (line) {
+      var li = document.createElement('li');
+      li.textContent = line;
+      logEl.appendChild(li);
+    });
+  }
+
+  function refresh() {
+    if (selected && !((E.rankCounts(game, 0)[selected] || 0) > 0)) selected = null;
+    myCount.textContent = E.handCount(game, 0) + ' 张';
+    aiCount.textContent = E.handCount(game, 1) + ' 张';
+    myBooks.textContent = game.books[0] + ' 本';
+    aiBooks.textContent = game.books[1] + ' 本';
+    pondCount.textContent = game.deck.length;
+    renderHand();
+    updateAsk();
+    updateStatus();
+    renderLog();
+  }
+
+  function playerAsk() {
+    if (!game || game.phase !== 'playing' || game.turn !== 0 || !selected) return;
+    if (!((E.rankCounts(game, 0)[selected] || 0) > 0)) {
+      selected = null;
+      refresh();
+      return;
+    }
+    E.ask(game, selected);
+    selected = null;
+    refresh();
+    if (game.phase === 'playing' && game.turn === 1) scheduleAI();
+  }
+
+  function scheduleAI() {
+    clearTimeout(aiTimer);
+    if (!game || game.phase !== 'playing' || game.turn !== 1) return;
+    statusEl.textContent = 'AI 正在思考…';
+    aiTimer = setTimeout(function () {
+      if (!game || game.phase !== 'playing' || game.turn !== 1) return;
+      var rank = E.aiChooseRank(game);
+      if (!rank) { refresh(); return; }
+      E.ask(game, rank);
+      refresh();
+      if (game.phase === 'playing' && game.turn === 1) scheduleAI();
+    }, 800);
+  }
+
+  askBtn.addEventListener('click', playerAsk);
+  newBtn.addEventListener('click', start);
+  start();
+})();
+</script>
+</body>
+</html>

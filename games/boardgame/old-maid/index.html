@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>抽乌龟 · Old Maid</title>
+<style>
+  :root {
+    --bg: #123c2d;
+    --bg2: #0c2b20;
+    --felt: #174a37;
+    --card: #fffdf5;
+    --ink: #22312b;
+    --red: #c62828;
+    --gold: #f2c14e;
+    --line: rgba(255, 255, 255, 0.16);
+    --muted: #b9d6c8;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    background: radial-gradient(120% 90% at 50% 0%, var(--felt) 0%, var(--bg) 45%, var(--bg2) 100%);
+    color: #f3f8f5;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    -webkit-text-size-adjust: 100%;
+    overflow-x: hidden;
+  }
+  .wrap {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 12px 16px 28px;
+  }
+  .top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 4px 0 10px;
+  }
+  h1 {
+    margin: 0;
+    font-size: 1.45rem;
+    letter-spacing: 0.08em;
+    color: var(--gold);
+  }
+  .rules-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0 14px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    color: #eaf5ef;
+    text-decoration: none;
+    font-size: 0.95rem;
+  }
+  .rules-link:focus-visible,
+  button:focus-visible {
+    outline: 3px solid var(--gold);
+    outline-offset: 2px;
+  }
+  .panel {
+    background: rgba(0, 0, 0, 0.18);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    min-width: 0;
+  }
+  .row-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+    color: var(--muted);
+    font-size: 0.88rem;
+  }
+  .row-head strong { color: #fff; font-size: 0.95rem; }
+  .count { white-space: nowrap; }
+  .hand {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    align-items: center;
+    min-height: 60px;
+  }
+  .back-btn {
+    width: 44px;
+    height: 60px;
+    min-width: 44px;
+    min-height: 60px;
+    padding: 0;
+    border: 0;
+    border-radius: 7px;
+    cursor: pointer;
+    background: linear-gradient(145deg, #2c6ea8 0%, #1d4f7c 55%, #153b5e 100%);
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.22), 0 2px 4px rgba(0, 0, 0, 0.28);
+    position: relative;
+  }
+  .back-btn::after {
+    content: "";
+    position: absolute;
+    inset: 5px;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.34);
+    background:
+      repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.09) 0 3px, transparent 3px 7px);
+  }
+  .back-btn:not(:disabled):active { transform: translateY(1px) scale(0.98); }
+  .back-btn:disabled { cursor: default; opacity: 0.62; }
+  .card-face {
+    width: 40px;
+    height: 58px;
+    border-radius: 6px;
+    background: var(--card);
+    color: var(--ink);
+    border: 1px solid #d8d2bd;
+    box-shadow: 0 2px 3px rgba(0, 0, 0, 0.25);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    padding: 2px 2px 4px;
+    font-weight: 700;
+    line-height: 1;
+    flex: 0 0 auto;
+  }
+  .card-face.red { color: var(--red); }
+  .card-face .r { font-size: 0.82rem; align-self: flex-start; padding-left: 2px; }
+  .card-face .s { font-size: 1.05rem; }
+  .card-face .big { font-size: 1.15rem; margin-bottom: 1px; }
+  .card-face.maid {
+    outline: 3px solid var(--gold);
+    outline-offset: 1px;
+  }
+  .empty-hint {
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  .status {
+    margin-bottom: 10px;
+    padding: 11px 13px;
+    border-radius: 12px;
+    background: rgba(242, 193, 78, 0.13);
+    border: 1px solid rgba(242, 193, 78, 0.45);
+    font-size: 0.98rem;
+    line-height: 1.45;
+    min-height: 48px;
+    overflow-wrap: anywhere;
+  }
+  .status.win { background: rgba(89, 214, 141, 0.16); border-color: rgba(89, 214, 141, 0.55); }
+  .status.lose { background: rgba(229, 115, 115, 0.16); border-color: rgba(229, 115, 115, 0.55); }
+  .actions {
+    display: flex;
+    justify-content: center;
+    padding: 4px 0 2px;
+  }
+  #restart {
+    min-height: 44px;
+    min-width: 132px;
+    padding: 0 22px;
+    border-radius: 999px;
+    border: 1px solid rgba(242, 193, 78, 0.7);
+    background: linear-gradient(180deg, #f6d477 0%, #e8b53c 100%);
+    color: #3a2a07;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+  }
+  #restart:active { transform: translateY(1px); }
+  .log-box { margin-top: 12px; }
+  .log {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 148px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    font-size: 0.84rem;
+    line-height: 1.4;
+    color: #d7e8df;
+    overflow-wrap: anywhere;
+  }
+  .log li {
+    padding: 5px 8px;
+    border-radius: 7px;
+    background: rgba(255, 255, 255, 0.05);
+  }
+  .log li:last-child { background: rgba(255, 255, 255, 0.1); color: #fff; }
+  .log .who { color: var(--gold); font-weight: 700; }
+  @media (max-width: 360px) {
+    .card-face { width: 36px; height: 53px; }
+    .back-btn { width: 44px; height: 56px; }
+  }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header class="top">
+    <h1>抽乌龟</h1>
+    <a class="rules-link" href="./rules.html" aria-label="查看游戏规则">规则</a>
+  </header>
+
+  <section class="panel" aria-labelledby="oppLabel">
+    <div class="row-head">
+      <strong id="oppLabel">电脑手牌</strong>
+      <span class="count" id="oppCount">剩余 0 张</span>
+    </div>
+    <div class="hand" id="oppHand" role="group" aria-label="电脑的手牌，牌面朝下"></div>
+  </section>
+
+  <section class="status" id="status" role="status" aria-live="polite">
+    正在发牌…
+  </section>
+
+  <section class="panel" aria-labelledby="youLabel">
+    <div class="row-head">
+      <strong id="youLabel">你的手牌</strong>
+      <span class="count" id="youCount">剩余 0 张</span>
+    </div>
+    <div class="hand" id="youHand" role="group" aria-label="你的手牌，牌面朝上"></div>
+  </section>
+
+  <section class="panel log-box" aria-labelledby="logLabel">
+    <div class="row-head">
+      <strong id="logLabel">对局记录</strong>
+      <span class="count" id="discardCount">弃牌 0 对</span>
+    </div>
+    <ol class="log" id="log" aria-live="polite"></ol>
+  </section>
+
+  <div class="actions">
+    <button id="restart" type="button" aria-label="重新开始游戏">重新开始</button>
+  </div>
+</main>
+
+<script src="./engine.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var E = window.OldMaidEngine;
+  var game = null;
+  var aiTimer = null;
+  var generation = 0;
+  var AI_DELAY = 850;
+
+  var els = {
+    oppHand: document.getElementById('oppHand'),
+    oppCount: document.getElementById('oppCount'),
+    youHand: document.getElementById('youHand'),
+    youCount: document.getElementById('youCount'),
+    status: document.getElementById('status'),
+    log: document.getElementById('log'),
+    discardCount: document.getElementById('discardCount'),
+    restart: document.getElementById('restart')
+  };
+
+  function cardName(c) {
+    return E.rankLabel(c.rank) + E.suitSymbol(c.suit);
+  }
+
+  function cardEl(c, isMaid) {
+    var el = document.createElement('div');
+    el.className = 'card-face' + (E.isRed(c) ? ' red' : '') + (isMaid ? ' maid' : '');
+    el.setAttribute('aria-label', cardName(c));
+
+    var r = document.createElement('span');
+    r.className = 'r';
+    r.textContent = E.rankLabel(c.rank);
+
+    var s = document.createElement('span');
+    s.className = 's';
+    s.textContent = E.suitSymbol(c.suit);
+
+    var big = document.createElement('span');
+    big.className = 'big';
+    big.textContent = E.suitSymbol(c.suit);
+
+    el.appendChild(r);
+    el.appendChild(big);
+    el.appendChild(s);
+    return el;
+  }
+
+  function sortForDisplay(hand) {
+    var rankOrder = E.RANKS.indexOf.bind(E.RANKS);
+    var suitOrder = { S: 0, H: 1, D: 2, C: 3 };
+    return hand.slice().sort(function (a, b) {
+      var dr = rankOrder(a.rank) - rankOrder(b.rank);
+      if (dr !== 0) return dr;
+      return (suitOrder[a.suit] || 0) - (suitOrder[b.suit] || 0);
+    });
+  }
+
+  function setStatus(text, cls) {
+    els.status.textContent = text;
+    els.status.className = 'status' + (cls ? ' ' + cls : '');
+  }
+
+  function render() {
+    if (!game) return;
+
+    var counts = E.handCounts(game);
+    els.oppCount.textContent = '剩余 ' + counts[1] + ' 张';
+    els.youCount.textContent = '剩余 ' + counts[0] + ' 张';
+    els.discardCount.textContent = '弃牌 ' + (game.discarded.length / 2) + ' 对';
+
+    // Opponent hand: face-down buttons while playing; reveal the loser's
+    // final queen when the game is over.
+    els.oppHand.textContent = '';
+    if (game.hands[1].length === 0) {
+      var empty = document.createElement('span');
+      empty.className = 'empty-hint';
+      empty.textContent = '电脑已出完手牌';
+      els.oppHand.appendChild(empty);
+    } else if (game.phase === 'over' && game.loser === 1) {
+      els.oppHand.appendChild(cardEl(game.hands[1][0], true));
+      var maidHint = document.createElement('span');
+      maidHint.className = 'empty-hint';
+      maidHint.textContent = '乌龟皇后';
+      els.oppHand.appendChild(maidHint);
+    } else {
+      var canDraw = game.phase === 'playing' && game.turn === 0;
+      game.hands[1].forEach(function (c, i) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'back-btn';
+        b.disabled = !canDraw;
+        b.setAttribute('aria-label', '抽取电脑第 ' + (i + 1) + ' 张手牌');
+        b.addEventListener('click', function () { playerDraw(i); });
+        els.oppHand.appendChild(b);
+      });
+    }
+
+    // Player's visible hand, auto-paired cards already removed by engine.
+    els.youHand.textContent = '';
+    if (game.hands[0].length === 0) {
+      var mine = document.createElement('span');
+      mine.className = 'empty-hint';
+      mine.textContent = '你的手牌已出完';
+      els.youHand.appendChild(mine);
+    } else {
+      sortForDisplay(game.hands[0]).forEach(function (c) {
+        els.youHand.appendChild(cardEl(c, game.phase === 'over' && game.loser === 0 && c.rank === 'Q'));
+      });
+    }
+
+    // Log.
+    els.log.textContent = '';
+    game.log.forEach(function (line, i) {
+      var li = document.createElement('li');
+      li.textContent = line;
+      els.log.appendChild(li);
+    });
+    els.log.scrollTop = els.log.scrollHeight;
+
+    // Status / turn indicator.
+    if (game.phase === 'over') {
+      if (game.winner === 0) {
+        var loseCard = game.hands[1][0];
+        setStatus('你赢了！电脑手里剩下了乌龟皇后 ' + (loseCard ? cardName(loseCard) : 'Q') + '。', 'win');
+      } else {
+        var myCard = game.hands[0][0];
+        setStatus('你输了，手里剩下乌龟皇后 ' + (myCard ? cardName(myCard) : 'Q') + '。点击「重新开始」再来一局。', 'lose');
+      }
+    } else if (game.turn === 0) {
+      setStatus('轮到你：点击一张电脑的牌背抽牌（共 ' + counts[1] + ' 张）。');
+    } else {
+      setStatus('电脑正在思考…');
+    }
+  }
+
+  function scheduleAI() {
+    if (!game || game.phase !== 'playing' || game.turn !== 1) return;
+    var gen = generation;
+    if (aiTimer) clearTimeout(aiTimer);
+    aiTimer = setTimeout(function () {
+      aiTimer = null;
+      if (gen !== generation || !game || game.phase !== 'playing' || game.turn !== 1) return;
+      var idx = E.aiChooseIndex(game);
+      if (idx < 0) return;
+      try {
+        E.drawCard(game, 1, idx);
+      } catch (err) {
+        setStatus('电脑抽牌出错：' + err.message);
+        return;
+      }
+      render();
+      scheduleAI();
+    }, AI_DELAY);
+  }
+
+  function playerDraw(index) {
+    if (!game || game.phase !== 'playing' || game.turn !== 0) return;
+    try {
+      E.drawCard(game, 0, index);
+    } catch (err) {
+      setStatus('无法抽这张牌：' + err.message);
+      return;
+    }
+    render();
+    scheduleAI();
+  }
+
+  function newGame() {
+    generation++;
+    if (aiTimer) {
+      clearTimeout(aiTimer);
+      aiTimer = null;
+    }
+    var seed = (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
+    game = E.createGame({ seed: seed });
+    render();
+    scheduleAI();
+  }
+
+  els.restart.addEventListener('click', newGame);
+
+  newGame();
+})();
+</script>
+</body>
+</html>

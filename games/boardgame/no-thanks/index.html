@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>No Thanks 不谢 · 毛线派对桌游</title>
+<style>
+  :root{--bg:#141a1f;--panel:#1e2a32;--panel2:#294050;--ink:#f2fbf7;--muted:#9fb8c4;--mint:#4fd1a1;--coral:#ff7a6b;--gold:#ffd166;--line:#35505f}
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(900px 520px at 50% -12%,#204a4a,#11181d 62%) fixed;color:var(--ink);font:16px/1.5 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;min-height:100vh}
+  a{color:var(--gold)}
+  .wrap{max-width:760px;margin:0 auto;padding:10px 12px 40px}
+  .top{display:flex;align-items:center;gap:8px;justify-content:space-between;padding:6px 0 10px}
+  .top h1{font-size:19px;margin:0;text-align:center;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .navlink{display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:52px;padding:0 12px;border-radius:12px;background:var(--panel);border:1px solid var(--line);text-decoration:none;font-size:14px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px}
+  .players{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:10px}
+  .player{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:9px 10px;min-width:0}
+  .player.turn{border-color:var(--mint);box-shadow:0 0 0 1px var(--mint) inset}
+  .player .nm{font-size:14px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .player .st{font-size:12px;color:var(--muted);margin-top:2px}
+  .player .tot{font-size:16px;font-weight:800;color:var(--mint);margin-top:2px}
+  .cards{display:flex;flex-wrap:wrap;gap:3px;margin-top:6px;min-height:20px}
+  .mini{font-size:11px;line-height:18px;min-width:20px;text-align:center;border-radius:5px;background:var(--panel2);border:1px solid #41616f;padding:0 3px}
+  .stage{text-align:center;padding:18px 10px 14px}
+  .eyebrow{font-size:12px;letter-spacing:2px;color:var(--muted)}
+  .cardwrap{display:inline-flex;flex-direction:column;align-items:center;margin:8px 0}
+  .cardbig{display:flex;align-items:center;justify-content:center;width:112px;height:150px;border-radius:14px;background:linear-gradient(155deg,#ff9d8e,#ff6b57 55%,#d94b3c);color:#26100c;font-size:56px;font-weight:900;box-shadow:0 10px 26px rgba(0,0,0,.4),0 2px 0 #ffd3cc inset;transform:rotate(1.5deg)}
+  .chips{display:flex;flex-wrap:wrap;justify-content:center;gap:4px;margin-top:-10px;z-index:2}
+  .chip{width:26px;height:26px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff1b8,#ffc857 60%,#b07d12);border:2px solid #ffe6a0;box-shadow:0 2px 4px rgba(0,0,0,.35)}
+  .chipstack{display:inline-flex;align-items:center;gap:6px;margin-top:8px;color:var(--gold);font-weight:800}
+  .bid{font-size:15px;color:var(--muted);margin-top:8px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:12px}
+  button{font:inherit;color:var(--ink);background:var(--panel2);border:1px solid var(--line);border-radius:12px;min-height:52px;padding:10px 18px;cursor:pointer;touch-action:manipulation}
+  button:active{transform:translateY(1px)}
+  button:disabled{opacity:.4;cursor:default}
+  button.primary{background:linear-gradient(160deg,#67e0b6,#35b98a);color:#082019;font-weight:800;border:none}
+  button.warn{background:linear-gradient(160deg,#ff9d8e,#ff6b57);color:#2a0c08;font-weight:800;border:none}
+  button.ghost{background:transparent}
+  .msg{text-align:center;color:var(--gold);font-weight:700;margin:10px 0 0}
+  .log{margin-top:12px;font-size:12.5px;color:var(--muted);min-height:46px}
+  .log div{padding:2px 0;border-bottom:1px dashed rgba(255,255,255,.06)}
+  .final{text-align:center;padding:18px 8px}
+  .final h2{margin:4px 0 6px;font-size:22px}
+  .final p{color:var(--muted);margin:4px 0 14px}
+  .foot{text-align:center;margin-top:18px;font-size:13px;color:var(--muted)}
+  .foot a{display:inline-flex;align-items:center;min-height:44px}
+  @media (max-width:420px){.wrap{padding:8px 10px 32px}.top h1{font-size:17px}.players{gap:6px}.player{padding:8px}.cardbig{width:100px;height:134px;font-size:48px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="navlink" href="../index.html" aria-label="返回桌游目录">← 桌游</a>
+    <h1>No Thanks 不谢</h1>
+    <a class="navlink" href="rules.html" aria-label="查看规则">规则</a>
+  </header>
+  <main>
+    <section class="players" id="players" aria-label="玩家状态"></section>
+    <section class="panel stage" id="stage" aria-live="polite" aria-label="牌桌"></section>
+    <section id="actionPanel" aria-label="操作区" style="margin-top:10px"></section>
+    <section class="log" id="log" aria-label="对局记录"></section>
+  </main>
+  <div class="foot"><a href="../index.html">← 更多毛线桌游</a></div>
+</div>
+<script src="engine.js"></script>
+<script>
+(function () {
+  'use strict';
+  var E = window.NoThanksEngine;
+  var game = null;
+  var busy = false;
+
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+
+  function start() {
+    game = E.createGame({ seed: (Date.now() % 100000) + 11 });
+    busy = false;
+    render();
+    pump(450);
+  }
+
+  function render() {
+    var view = E.publicView(game, 0);
+    var pbox = document.getElementById('players');
+    pbox.innerHTML = '';
+    view.players.forEach(function (p, i) {
+      var d = el('div', 'player' + (view.turn === i && view.phase === 'playing' ? ' turn' : ''));
+      d.appendChild(el('div', 'nm', p.name + (i === 0 ? '（你）' : '')));
+      d.appendChild(el('div', 'st', '筹码 ' + p.chips + ' · ' + p.count + ' 张牌'));
+      d.appendChild(el('div', 'tot', p.score + ' 分'));
+      var cards = el('div', 'cards');
+      p.cards.forEach(function (c) { cards.appendChild(el('span', 'mini', String(c))); });
+      d.appendChild(cards);
+      pbox.appendChild(d);
+    });
+
+    var stage = document.getElementById('stage');
+    stage.innerHTML = '';
+    if (view.phase === 'playing') {
+      stage.appendChild(el('div', 'eyebrow', '当前牌 · 牌堆剩余 ' + view.deckCount + ' 张'));
+      var cw = el('div', 'cardwrap');
+      cw.appendChild(el('div', 'cardbig', String(view.current)));
+      if (view.chipsOnCard > 0) {
+        var cs = el('div', 'chips');
+        for (var k = 0; k < Math.min(view.chipsOnCard, 12); k++) cs.appendChild(el('span', 'chip'));
+        cw.appendChild(cs);
+      }
+      stage.appendChild(cw);
+      stage.appendChild(el('div', 'bid', '牌上筹码：' + view.chipsOnCard + ' 个 · 轮到你：' + (view.turn === 0 ? '是' : '否（' + view.players[view.turn].name + '）')));
+      stage.appendChild(el('div', 'msg', view.turn === 0 ? '拿牌或放 1 个筹码跳过' : '等待 ' + view.players[view.turn].name + ' 行动…'));
+    } else {
+      var f = el('div', 'final');
+      f.appendChild(el('h2', null, view.winner === 0 ? '你赢了！' : view.players[view.winner].name + ' 获胜'));
+      f.appendChild(el('p', null, '低分者胜：' + view.players.map(function (p) { return p.name + ' ' + p.score + ' 分'; }).join(' · ')));
+      stage.appendChild(f);
+    }
+
+    renderActions(view);
+    renderLog(view);
+  }
+
+  function renderActions(view) {
+    var box = document.getElementById('actionPanel');
+    box.innerHTML = '';
+    if (view.phase === 'over') {
+      var again = el('button', 'primary', '再来一局');
+      again.setAttribute('aria-label', '重新开始一局 No Thanks');
+      again.onclick = start;
+      box.appendChild(again);
+      return;
+    }
+    if (view.turn !== 0) return;
+    var row = el('div', 'row');
+    var take = el('button', 'warn', '收下 ' + view.current + '（+' + view.chipsOnCard + ' 筹码）');
+    take.setAttribute('aria-label', '收下 ' + view.current + ' 号牌并拿走 ' + view.chipsOnCard + ' 个筹码');
+    take.onclick = function () { act(function () { E.take(game, 0); }); };
+    row.appendChild(take);
+    var pass = el('button', 'primary', '跳过（-1 筹码）');
+    pass.setAttribute('aria-label', '支付 1 个筹码跳过');
+    pass.disabled = game.players[0].chips <= 0;
+    pass.onclick = function () { act(function () { E.pass(game, 0); }); };
+    row.appendChild(pass);
+    box.appendChild(row);
+    box.appendChild(el('div', 'msg', '你还有 ' + game.players[0].chips + ' 个筹码 · 当前分数 ' + E.score(game, 0)));
+  }
+
+  function renderLog(view) {
+    var box = document.getElementById('log');
+    box.innerHTML = '';
+    view.log.slice(-6).forEach(function (line) { box.appendChild(el('div', null, line)); });
+  }
+
+  function act(fn) {
+    if (busy || !game || game.phase === 'over') return;
+    busy = true;
+    try { fn(); } catch (e) { busy = false; return; }
+    render();
+    busy = false;
+    pump(500);
+  }
+
+  function pump(delay) {
+    if (!game || game.phase === 'over') { render(); return; }
+    setTimeout(function () {
+      var res;
+      try { res = E.step(game); } catch (e) { return; }
+      render();
+      if (res && res.needsHuman) return;
+      if (game.phase === 'over') return;
+      pump(500);
+    }, delay || 500);
+  }
+
+  start();
+})();
+</script>
+</body>
+</html>

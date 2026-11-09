@@ -1,0 +1,98 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "card.schema.json",
+  "title": "Card Battle Card List",
+  "description": "宝可梦式卡牌对战的数据契约：20–30 张卡，覆盖宝可梦、能量与道具三类。",
+  "type": "array",
+  "minItems": 20,
+  "maxItems": 30,
+  "definitions": {
+    "name": {
+      "type": "object",
+      "required": ["zh", "en"],
+      "additionalProperties": false,
+      "properties": {
+        "zh": { "type": "string", "minLength": 1, "maxLength": 16 },
+        "en": { "type": "string", "minLength": 1, "maxLength": 40 }
+      }
+    },
+    "subtype": {
+      "type": "string",
+      "enum": ["grass", "fire", "water", "electric", "psychic", "fighting"]
+    },
+    "rarity": {
+      "type": "string",
+      "enum": ["common", "uncommon", "rare"]
+    },
+    "color": {
+      "type": "string",
+      "pattern": "^#[0-9a-fA-F]{6}$"
+    },
+    "attack": {
+      "type": "object",
+      "required": ["name", "cost", "damage"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 16 },
+        "cost": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "damage": { "type": "integer", "minimum": 10, "maximum": 150 }
+      }
+    }
+  },
+  "items": {
+    "type": "object",
+    "required": ["id", "name", "type", "rarity", "color"],
+    "additionalProperties": false,
+    "properties": {
+      "id": {
+        "type": "string",
+        "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+        "minLength": 3,
+        "maxLength": 40
+      },
+      "name": { "$ref": "#/definitions/name" },
+      "type": { "type": "string", "enum": ["pokemon", "energy", "item"] },
+      "subtype": { "$ref": "#/definitions/subtype" },
+      "hp": { "type": "integer", "minimum": 30, "maximum": 150 },
+      "attacks": {
+        "type": "array",
+        "minItems": 1,
+        "maxItems": 2,
+        "items": { "$ref": "#/definitions/attack" }
+      },
+      "weakness": { "$ref": "#/definitions/subtype" },
+      "effect": { "type": "string", "enum": ["draw2"] },
+      "rarity": { "$ref": "#/definitions/rarity" },
+      "color": { "$ref": "#/definitions/color" }
+    },
+    "allOf": [
+      {
+        "if": {
+          "properties": { "type": { "const": "pokemon" } },
+          "required": ["type"]
+        },
+        "then": {
+          "required": ["subtype", "hp", "attacks", "weakness"]
+        }
+      },
+      {
+        "if": {
+          "properties": { "type": { "const": "energy" } },
+          "required": ["type"]
+        },
+        "then": {
+          "required": ["subtype"]
+        }
+      },
+      {
+        "if": {
+          "properties": { "type": { "const": "item" } },
+          "required": ["type"]
+        },
+        "then": {
+          "required": ["effect"]
+        }
+      }
+    ]
+  }
+}

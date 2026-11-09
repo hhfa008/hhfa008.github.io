@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>6 Nimmt 谁是牛头王 · 毛线派对桌游</title>
+<style>
+  :root{--bg:#1b1410;--panel:#2a1f19;--panel2:#3a2b21;--ink:#fff6ea;--muted:#c7ad97;--orange:#ff9f43;--red:#ff6b57;--green:#68d391;--line:#57402f}
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(900px 500px at 50% -12%,#59351d,#1b1410 62%) fixed;color:var(--ink);font:16px/1.5 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;min-height:100vh}
+  a{color:var(--orange)}
+  .wrap{max-width:760px;margin:0 auto;padding:10px 12px 40px}
+  .top{display:flex;align-items:center;gap:8px;justify-content:space-between;padding:6px 0 10px}
+  .top h1{font-size:19px;margin:0;text-align:center;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .navlink{display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:52px;padding:0 12px;border-radius:12px;background:var(--panel);border:1px solid var(--line);text-decoration:none;font-size:14px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px}
+  .players{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:10px}
+  .player{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:9px 10px;min-width:0}
+  .player .nm{font-size:14px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .player .st{font-size:12px;color:var(--muted);margin-top:2px}
+  .player .tot{font-size:16px;font-weight:800;color:var(--orange);margin-top:2px}
+  .picked{display:inline-block;font-size:11px;padding:1px 6px;border-radius:99px;background:var(--green);color:#12301e;font-weight:800;margin-left:4px}
+  .roundhead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 2px 8px;font-size:13px;color:var(--muted)}
+  .rows{display:grid;gap:8px}
+  .grow{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:8px 10px;min-width:0}
+  .grow .idx{font-size:12px;color:var(--muted);min-width:30px}
+  .grow .line{display:flex;gap:4px;flex-wrap:wrap;flex:1;min-width:0;align-items:center}
+  .gcard{font-size:14px;font-weight:800;min-width:34px;text-align:center;padding:4px 5px;border-radius:7px;background:linear-gradient(160deg,#fff1d6,#f3c98a);color:#3a240c;border:1px solid #ffe6b8}
+  .gcard.last{background:linear-gradient(160deg,#ffbd7a,#ff8f3f);color:#2c1504}
+  .bull{font-size:12px;color:var(--red);font-weight:800;white-space:nowrap}
+  .hand{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:7px;margin-top:10px}
+  .hcard{min-height:58px;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:900;border-radius:11px;background:linear-gradient(160deg,#5d7dc4,#3c5a9c);color:#f4f8ff;border:1px solid #7d9be0}
+  .hcard:disabled{opacity:.4}
+  button{font:inherit;color:var(--ink);background:var(--panel2);border:1px solid var(--line);border-radius:12px;min-height:46px;padding:8px 14px;cursor:pointer;touch-action:manipulation}
+  button:active{transform:translateY(1px)}
+  button:disabled{opacity:.4;cursor:default}
+  button.primary{background:linear-gradient(160deg,#ffb36b,#ff8f3f);color:#2c1504;font-weight:800;border:none}
+  button.ghost{background:transparent}
+  .rowchoices{display:grid;gap:8px;margin-top:10px}
+  .rowchoices button{width:100%;text-align:left;padding:12px 14px}
+  .msg{text-align:center;color:var(--orange);font-weight:700;margin:10px 0 0}
+  .log{margin-top:12px;font-size:12.5px;color:var(--muted);min-height:46px}
+  .log div{padding:2px 0;border-bottom:1px dashed rgba(255,255,255,.06)}
+  .final{text-align:center;padding:14px 8px}
+  .final h2{margin:4px 0 6px;font-size:22px}
+  .final p{color:var(--muted);margin:4px 0 14px}
+  .foot{text-align:center;margin-top:18px;font-size:13px;color:var(--muted)}
+  .foot a{display:inline-flex;align-items:center;min-height:44px}
+  @media (max-width:420px){.wrap{padding:8px 10px 32px}.top h1{font-size:17px}.players{gap:6px}.player{padding:8px}.gcard{min-width:30px;font-size:13px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="navlink" href="../index.html" aria-label="返回桌游目录">← 桌游</a>
+    <h1>6 Nimmt 谁是牛头王</h1>
+    <a class="navlink" href="rules.html" aria-label="查看规则">规则</a>
+  </header>
+  <main>
+    <section class="players" id="players" aria-label="玩家状态"></section>
+    <section id="table" aria-live="polite" aria-label="四行牌桌"></section>
+    <section class="panel" id="actionPanel" aria-label="操作区" style="margin-top:10px"></section>
+    <section class="log" id="log" aria-label="对局记录"></section>
+  </main>
+  <div class="foot"><a href="../index.html">← 更多毛线桌游</a></div>
+</div>
+<script src="engine.js"></script>
+<script>
+(function () {
+  'use strict';
+  var E = window.SixNimmtEngine;
+  var game = null;
+  var busy = false;
+
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+
+  function start() {
+    game = E.createGame({ seed: (Date.now() % 100000) + 7 });
+    busy = false;
+    render();
+  }
+
+  function render() {
+    var view = E.publicView(game, 0);
+    var pbox = document.getElementById('players');
+    pbox.innerHTML = '';
+    view.players.forEach(function (p, i) {
+      var d = el('div', 'player');
+      var nm = el('div', 'nm', p.name + (i === 0 ? '（你）' : ''));
+      if (p.picked) nm.appendChild(el('span', 'picked', '已出'));
+      d.appendChild(nm);
+      d.appendChild(el('div', 'st', '手牌 ' + p.handCount + ' 张 · 已吃 ' + p.taken.length + ' 张'));
+      d.appendChild(el('div', 'tot', p.score + ' 牛头'));
+      pbox.appendChild(d);
+    });
+
+    var table = document.getElementById('table');
+    table.innerHTML = '';
+    var head = el('div', 'roundhead');
+    head.appendChild(el('span', null, '第 ' + view.round + ' / 10 轮'));
+    head.appendChild(el('span', null, view.phase === 'chooseRow' ? '请选择要吃的一行' : '同时出牌，按点数从小到大结算'));
+    table.appendChild(head);
+    var rows = el('div', 'rows');
+    view.rows.forEach(function (row, ri) {
+      var g = el('div', 'grow');
+      g.appendChild(el('div', 'idx', '第 ' + (ri + 1) + ' 行'));
+      var line = el('div', 'line');
+      row.forEach(function (c, ci) {
+        line.appendChild(el('span', 'gcard' + (ci === row.length - 1 ? ' last' : ''), String(c)));
+      });
+      g.appendChild(line);
+      g.appendChild(el('span', 'bull', E.rowPoints(row) + ' 牛'));
+      rows.appendChild(g);
+    });
+    table.appendChild(rows);
+
+    var box = document.getElementById('actionPanel');
+    box.innerHTML = '';
+    if (view.phase === 'over') {
+      var f = el('div', 'final');
+      f.appendChild(el('h2', null, view.winner === 0 ? '你赢了！' : view.players[view.winner].name + ' 获胜'));
+      f.appendChild(el('p', null, '牛头分最低者胜：' + view.players.map(function (p) { return p.name + ' ' + p.score; }).join(' · ')));
+      var again = el('button', 'primary', '再来一局');
+      again.setAttribute('aria-label', '重新开始一局 6 Nimmt');
+      again.onclick = start;
+      f.appendChild(again);
+      box.appendChild(f);
+      renderLog(view);
+      return;
+    }
+    if (view.phase === 'chooseRow') {
+      box.appendChild(el('div', 'msg', '你的 ' + view.pending.card + ' 小于所有行尾，选择吃哪一行'));
+      var choices = el('div', 'rowchoices');
+      view.rows.forEach(function (row, ri) {
+        var pts = E.rowPoints(row);
+        var b = el('button', null, '吃第 ' + (ri + 1) + ' 行（' + pts + ' 牛头）：' + row.join(' / '));
+        b.setAttribute('aria-label', '吃第 ' + (ri + 1) + ' 行，获得 ' + pts + ' 牛头分');
+        b.onclick = function () {
+          if (busy) return;
+          busy = true;
+          try { E.chooseRow(game, ri); } catch (e) { busy = false; return; }
+          busy = false;
+          render();
+        };
+        choices.appendChild(b);
+      });
+      box.appendChild(choices);
+      renderLog(view);
+      return;
+    }
+    if (game.picks[0] != null) {
+      box.appendChild(el('div', 'msg', '已出牌，等待结算…'));
+      renderLog(view);
+      return;
+    }
+    box.appendChild(el('div', 'msg', '从手牌中选择一张暗出'));
+    var hand = el('div', 'hand');
+    view.players[0].hand.slice().sort(function (a, b) { return a - b; }).forEach(function (card) {
+      var b = el('button', 'hcard', String(card));
+      b.setAttribute('aria-label', '出牌 ' + card);
+      b.onclick = function () {
+        if (busy) return;
+        busy = true;
+        try {
+          E.chooseCard(game, 0, card);
+          E.aiFill(game);
+        } catch (e) { busy = false; return; }
+        busy = false;
+        render();
+      };
+      hand.appendChild(b);
+    });
+    box.appendChild(hand);
+    renderLog(view);
+  }
+
+  function renderLog(view) {
+    var box = document.getElementById('log');
+    box.innerHTML = '';
+    view.log.slice(-6).forEach(function (line) { box.appendChild(el('div', null, line)); });
+  }
+
+  start();
+})();
+</script>
+</body>
+</html>

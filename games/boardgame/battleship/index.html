@@ -1,0 +1,1232 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#04111c">
+<meta name="description" content="海战棋：8×8 棋盘，布阵五艘战舰，与 AI 轮流炮击，先击沉对方全部战舰者获胜。">
+<title>海战棋 · 战舰对弈</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #04111c;
+    --panel: rgba(8, 34, 53, 0.92);
+    --panel-strong: #0a2a40;
+    --line: rgba(126, 214, 255, 0.19);
+    --line-strong: rgba(94, 234, 212, 0.46);
+    --text: #e9f7ff;
+    --muted: #91adc0;
+    --cyan: #5eead4;
+    --blue: #38bdf8;
+    --red: #fb7185;
+    --amber: #fbbf24;
+    --cell: #0b3149;
+    --cell-deep: #08253a;
+    --shadow: 0 18px 42px rgba(0, 0, 0, 0.34);
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    background:
+      radial-gradient(circle at 18% -8%, rgba(56, 189, 248, 0.20), transparent 30rem),
+      radial-gradient(circle at 108% 22%, rgba(94, 234, 212, 0.10), transparent 26rem),
+      linear-gradient(180deg, #04111c 0%, #020a12 72%);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  [hidden] { display: none !important; }
+
+  button, a { -webkit-tap-highlight-color: transparent; }
+
+  button {
+    font: inherit;
+    color: inherit;
+  }
+
+  .wrap {
+    width: 100%;
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 12px 7px 32px;
+  }
+
+  .top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 2px 1px 12px;
+  }
+
+  .brand h1 {
+    margin: 0;
+    font-size: clamp(25px, 7vw, 33px);
+    line-height: 1;
+    letter-spacing: 0.06em;
+    text-shadow: 0 0 26px rgba(56, 189, 248, 0.34);
+  }
+
+  .brand p {
+    margin: 6px 0 0;
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: 0.02em;
+  }
+
+  .top-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn, .rules-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0 13px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: rgba(12, 46, 69, 0.72);
+    color: var(--text);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 650;
+    line-height: 1.15;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+  }
+
+  .btn:hover, .rules-link:hover {
+    background: rgba(18, 62, 91, 0.92);
+    border-color: rgba(126, 214, 255, 0.38);
+  }
+
+  .btn:focus-visible, .rules-link:focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: 2px;
+  }
+
+  .btn:active, .rules-link:active { transform: translateY(1px); }
+
+  .btn:disabled {
+    opacity: 0.48;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .status-panel {
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 10px;
+    padding: 14px;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    background:
+      linear-gradient(140deg, rgba(13, 58, 86, 0.96), rgba(5, 24, 38, 0.96));
+    box-shadow: var(--shadow);
+  }
+
+  .status-panel::before {
+    content: "";
+    position: absolute;
+    width: 180px;
+    height: 180px;
+    right: -76px;
+    top: -112px;
+    border: 1px solid rgba(94, 234, 212, 0.18);
+    border-radius: 50%;
+    box-shadow:
+      0 0 0 18px rgba(94, 234, 212, 0.035),
+      0 0 0 44px rgba(94, 234, 212, 0.025);
+    pointer-events: none;
+  }
+
+  .status-panel.is-thinking {
+    border-color: rgba(251, 191, 36, 0.36);
+  }
+
+  .status-panel.is-win { border-color: rgba(94, 234, 212, 0.62); }
+  .status-panel.is-loss { border-color: rgba(251, 113, 133, 0.55); }
+
+  .eyebrow {
+    position: relative;
+    color: var(--cyan);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+  }
+
+  .status-main {
+    position: relative;
+    margin: 7px 0 5px;
+    font-size: 20px;
+    line-height: 1.3;
+    letter-spacing: 0.01em;
+  }
+
+  .status-sub {
+    position: relative;
+    margin: 0;
+    min-height: 38px;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  .status-meta {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+  }
+
+  .meta-pill, .turn-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 4px 9px;
+    border: 1px solid rgba(126, 214, 255, 0.14);
+    border-radius: 999px;
+    background: rgba(2, 15, 25, 0.32);
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.2;
+  }
+
+  .meta-pill b { color: var(--text); font-variant-numeric: tabular-nums; }
+
+  .turn-badge {
+    border-color: rgba(56, 189, 248, 0.34);
+    color: #bae6fd;
+    font-weight: 700;
+  }
+
+  .status-panel.is-thinking .turn-badge {
+    border-color: rgba(251, 191, 36, 0.45);
+    color: #fde68a;
+    animation: thinking 1200ms ease-in-out infinite;
+  }
+
+  .status-panel.is-win .turn-badge {
+    border-color: rgba(94, 234, 212, 0.48);
+    color: var(--cyan);
+  }
+
+  .status-panel.is-loss .turn-badge {
+    border-color: rgba(251, 113, 133, 0.5);
+    color: #fecdd3;
+  }
+
+  @keyframes thinking {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.58; }
+  }
+
+  .result-panel {
+    margin-bottom: 10px;
+    padding: 14px;
+    border: 1px solid rgba(94, 234, 212, 0.42);
+    border-radius: 16px;
+    background: linear-gradient(140deg, rgba(13, 78, 83, 0.74), rgba(5, 30, 45, 0.94));
+  }
+
+  .result-panel.loss {
+    border-color: rgba(251, 113, 133, 0.44);
+    background: linear-gradient(140deg, rgba(78, 20, 36, 0.72), rgba(5, 30, 45, 0.94));
+  }
+
+  .result-panel strong {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--cyan);
+    font-size: 20px;
+    letter-spacing: 0.04em;
+  }
+
+  .result-panel.loss strong { color: #fecdd3; }
+
+  .result-panel p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  .setup-panel, .sea-panel, .hint-card {
+    margin-bottom: 10px;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    background: var(--panel);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.19);
+  }
+
+  .setup-panel { padding: 12px 10px; }
+
+  .section-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 0 2px;
+  }
+
+  .section-top h2, .sea-head h2, .hint-card h2 {
+    margin: 0;
+    font-size: 15px;
+    letter-spacing: 0.03em;
+  }
+
+  .section-top p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 11px;
+  }
+
+  .fleet-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    margin: 10px 0;
+  }
+
+  .fleet-chip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 7px;
+    min-height: 38px;
+    padding: 6px 8px;
+    border: 1px solid rgba(126, 214, 255, 0.15);
+    border-radius: 10px;
+    background: rgba(4, 24, 38, 0.48);
+    font-size: 12px;
+  }
+
+  .fleet-chip.is-empty {
+    border-style: dashed;
+    opacity: 0.56;
+  }
+
+  .fleet-chip.is-sunk {
+    border-color: rgba(251, 113, 133, 0.46);
+    background: rgba(74, 15, 28, 0.34);
+  }
+
+  .chip-name {
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
+    gap: 5px;
+    white-space: nowrap;
+  }
+
+  .chip-name small {
+    color: var(--muted);
+    font-size: 10px;
+  }
+
+  .chip-state {
+    flex: none;
+    color: var(--muted);
+    font-size: 10px;
+    white-space: nowrap;
+  }
+
+  .fleet-chip.is-sunk .chip-state { color: #fecdd3; }
+  .fleet-chip.is-ready .chip-state { color: var(--cyan); }
+
+  .pips {
+    display: inline-flex;
+    gap: 2px;
+    flex: none;
+  }
+
+  .pips i {
+    display: block;
+    width: 4px;
+    height: 10px;
+    border-radius: 2px;
+    background: rgba(148, 197, 222, 0.34);
+  }
+
+  .fleet-chip.is-ready .pips i { background: rgba(94, 234, 212, 0.72); }
+  .fleet-chip.is-sunk .pips i { background: rgba(251, 113, 133, 0.6); }
+
+  .controls {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+  }
+
+  .controls .btn {
+    width: 100%;
+    padding: 0 7px;
+    font-size: 12px;
+  }
+
+  .controls .btn.primary {
+    grid-column: 1 / -1;
+    min-height: 48px;
+    border-color: rgba(94, 234, 212, 0.48);
+    background: linear-gradient(135deg, #2dd4bf, #0ea5e9);
+    color: #02232c;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+  }
+
+  .controls .btn.primary:hover {
+    background: linear-gradient(135deg, #5eead4, #38bdf8);
+  }
+
+  .sea-panel {
+    overflow: hidden;
+    background: linear-gradient(180deg, rgba(8, 37, 58, 0.96), rgba(4, 19, 31, 0.96));
+  }
+
+  .sea-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 11px 12px 9px;
+  }
+
+  .sea-head p {
+    margin: 3px 0 0;
+    color: var(--muted);
+    font-size: 11px;
+  }
+
+  .sea-badge {
+    flex: none;
+    min-height: 28px;
+    padding: 5px 9px;
+    border: 1px solid rgba(126, 214, 255, 0.15);
+    border-radius: 999px;
+    background: rgba(2, 15, 25, 0.35);
+    color: #b7d6e8;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .board-scroll {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+  }
+
+  .board {
+    display: grid;
+    grid-template-columns: repeat(8, minmax(44px, 1fr));
+    gap: 3px;
+    width: 100%;
+    min-width: 373px;
+    touch-action: manipulation;
+  }
+
+  .cell {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    aspect-ratio: 1 / 1;
+    padding: 0;
+    border: 1px solid rgba(93, 167, 204, 0.20);
+    border-radius: 8px;
+    background:
+      linear-gradient(150deg, rgba(17, 66, 94, 0.92), rgba(7, 37, 57, 0.98));
+    color: var(--text);
+    font-size: 16px;
+    line-height: 1;
+    cursor: default;
+    touch-action: manipulation;
+    transition: background 130ms ease, border-color 130ms ease, box-shadow 130ms ease;
+  }
+
+  .cell:disabled { opacity: 1; }
+
+  .cell:not(:disabled) { cursor: crosshair; }
+
+  .cell:not(:disabled):hover {
+    border-color: rgba(94, 234, 212, 0.68);
+    background: linear-gradient(150deg, rgba(23, 91, 124, 0.98), rgba(8, 49, 74, 1));
+  }
+
+  .cell:focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: 1px;
+    z-index: 1;
+  }
+
+  .cell.own-ship {
+    border-color: rgba(94, 234, 212, 0.54);
+    background: linear-gradient(150deg, #0f7490, #155e75);
+    box-shadow: inset 0 0 0 1px rgba(207, 250, 254, 0.12);
+  }
+
+  .cell.own-ship::before {
+    content: "";
+    width: 48%;
+    height: 4px;
+    border-radius: 999px;
+    background: rgba(207, 250, 254, 0.82);
+  }
+
+  .cell.miss::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #57788c;
+    box-shadow: 0 0 0 3px rgba(87, 120, 140, 0.12);
+  }
+
+  .cell.hit,
+  .cell.hit:hover {
+    border-color: rgba(251, 113, 133, 0.7);
+    background: linear-gradient(150deg, #9f1239, #67152e);
+  }
+
+  .cell.hit::before { display: none; }
+
+  .cell.hit::after {
+    content: "✕";
+    color: #ffe4e6;
+    font-size: 17px;
+    font-weight: 800;
+    text-shadow: 0 0 12px rgba(251, 113, 133, 0.72);
+  }
+
+  .cell.sunk,
+  .cell.sunk:hover {
+    border-color: rgba(251, 113, 133, 0.84);
+    background: linear-gradient(150deg, #6b0f24, #370b17);
+  }
+
+  .cell.sunk::before { display: none; }
+
+  .cell.sunk::after {
+    content: "✸";
+    color: #fda4af;
+    font-size: 17px;
+    text-shadow: 0 0 14px rgba(251, 113, 133, 0.8);
+  }
+
+  .cell.preview-ok {
+    border-color: rgba(94, 234, 212, 0.92);
+    box-shadow: inset 0 0 0 2px rgba(94, 234, 212, 0.42);
+  }
+
+  .cell.preview-bad {
+    border-color: rgba(251, 113, 133, 0.82);
+    box-shadow: inset 0 0 0 2px rgba(251, 113, 133, 0.34);
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px 12px;
+    padding: 8px 12px 11px;
+    color: var(--muted);
+    font-size: 10px;
+  }
+
+  .legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-height: 20px;
+  }
+
+  .swatch {
+    width: 11px;
+    height: 11px;
+    border: 1px solid rgba(126, 214, 255, 0.22);
+    border-radius: 3px;
+    background: var(--cell);
+  }
+
+  .swatch.ship { background: #0f7490; border-color: rgba(94, 234, 212, 0.5); }
+  .swatch.miss { background: #57788c; }
+  .swatch.hit { background: #9f1239; border-color: rgba(251, 113, 133, 0.6); }
+  .swatch.sunk { background: #6b0f24; border-color: rgba(251, 113, 133, 0.76); }
+
+  .hint-card {
+    padding: 12px 14px;
+    background: rgba(7, 28, 45, 0.68);
+  }
+
+  .hint-card h2 { color: #bae6fd; }
+
+  .hint-card p {
+    margin: 7px 0 0;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.62;
+  }
+
+  footer {
+    padding: 4px 4px 0;
+    color: rgba(145, 173, 192, 0.7);
+    font-size: 10px;
+    text-align: center;
+    letter-spacing: 0.04em;
+  }
+
+  .skip-link {
+    position: absolute;
+    left: 8px;
+    top: -80px;
+    z-index: 20;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 14px;
+    border-radius: 10px;
+    background: #e0f2fe;
+    color: #082f49;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .skip-link:focus { top: 8px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  @media (max-width: 360px) {
+    .fleet-list { grid-template-columns: 1fr; }
+    .brand h1 { font-size: 24px; }
+  }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main" aria-label="跳到游戏主要内容">跳到游戏</a>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>海战棋</h1>
+      <p>8×8 棋盘 · 先击沉对方 5 艘战舰</p>
+    </div>
+    <nav class="top-actions" aria-label="页面操作">
+      <a class="rules-link" href="rules.html" aria-label="查看海战棋规则">规则</a>
+      <button class="btn" id="restartBtn" type="button" aria-label="重新开始整局游戏">重新开始</button>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="status-panel" id="statusPanel" aria-live="polite" aria-atomic="true">
+      <div class="eyebrow">战斗状态</div>
+      <h2 class="status-main" id="statusMain">布置你的舰队</h2>
+      <p class="status-sub" id="statusSub">选择方向后点击你的海域格子，放下五艘战舰。</p>
+      <div class="status-meta">
+        <span class="meta-pill">你损失 <b id="mySunk">0</b>/5</span>
+        <span class="meta-pill">击沉敌方 <b id="enemySunk">0</b>/5</span>
+        <span class="turn-badge" id="turnBadge">布阵阶段</span>
+      </div>
+    </section>
+
+    <section class="result-panel" id="resultPanel" role="status" aria-live="polite" hidden>
+      <strong id="resultTitle">胜利</strong>
+      <p id="resultText"></p>
+    </section>
+
+    <section class="setup-panel" id="setupPanel" aria-label="布阵操作">
+      <div class="section-top">
+        <h2>布阵</h2>
+        <p id="setupHint">已放置 0/5</p>
+      </div>
+      <div class="fleet-list" id="fleetList" aria-label="你的五艘战舰布阵状态"></div>
+      <div class="controls">
+        <button class="btn" id="rotateBtn" type="button" aria-label="旋转船体方向，当前横向，点击切换为竖向">旋转：横向</button>
+        <button class="btn" id="randomBtn" type="button" aria-label="随机布置你的五艘战舰">随机布阵</button>
+        <button class="btn" id="clearBtn" type="button" aria-label="清空已放置的战舰，重新布阵">清空重摆</button>
+        <button class="btn primary" id="startBtn" type="button" aria-label="开始战斗，需先放好五艘战舰" disabled>开始战斗（0/5）</button>
+      </div>
+    </section>
+
+    <section class="sea-panel" aria-labelledby="ownHeading">
+      <div class="sea-head">
+        <div>
+          <h2 id="ownHeading">你的海域</h2>
+          <p>己方战舰可见，红色为受击位置</p>
+        </div>
+        <span class="sea-badge" id="ownBadge">布阵中</span>
+      </div>
+      <div class="board-scroll">
+        <div class="board" id="playerBoard" role="group" aria-label="你的海域，八行八列棋盘"></div>
+      </div>
+      <div class="legend" aria-hidden="true">
+        <span><i class="swatch ship"></i>己方战舰</span>
+        <span><i class="swatch miss"></i>落空</span>
+        <span><i class="swatch hit"></i>命中</span>
+        <span><i class="swatch sunk"></i>击沉</span>
+      </div>
+    </section>
+
+    <section class="sea-panel" aria-labelledby="enemyHeading">
+      <div class="sea-head">
+        <div>
+          <h2 id="enemyHeading">敌方海域</h2>
+          <p>点击格子炮击，命中后继续交替行动</p>
+        </div>
+        <span class="sea-badge" id="enemyBadge">未开战</span>
+      </div>
+      <div class="board-scroll">
+        <div class="board" id="enemyBoard" role="group" aria-label="敌方海域，八行八列棋盘"></div>
+      </div>
+      <div class="legend" aria-hidden="true">
+        <span><i class="swatch"></i>未炮击</span>
+        <span><i class="swatch miss"></i>落空</span>
+        <span><i class="swatch hit"></i>命中</span>
+        <span><i class="swatch sunk"></i>击沉</span>
+      </div>
+    </section>
+
+    <section class="hint-card" aria-labelledby="aiHintHeading">
+      <h2 id="aiHintHeading">AI 战术提示</h2>
+      <p>AI 未命中时会按 parity 棋盘格随机搜索；一旦命中，就优先攻击相邻的未打格。击沉一艘后，它会回到搜索模式。</p>
+    </section>
+  </main>
+
+  <footer>纯离线静态页 · 无外部请求 · 无追踪</footer>
+</div>
+
+<script src="engine.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var E = window.BattleshipEngine;
+  if (!E) return;
+
+  var state = null;
+  var rng = null;
+  var orientation = 'h';
+  var notice = '';
+  var aiTimer = 0;
+  var generation = 0;
+  var previewCells = [];
+
+  var els = {
+    statusPanel: document.getElementById('statusPanel'),
+    statusMain: document.getElementById('statusMain'),
+    statusSub: document.getElementById('statusSub'),
+    mySunk: document.getElementById('mySunk'),
+    enemySunk: document.getElementById('enemySunk'),
+    turnBadge: document.getElementById('turnBadge'),
+    resultPanel: document.getElementById('resultPanel'),
+    resultTitle: document.getElementById('resultTitle'),
+    resultText: document.getElementById('resultText'),
+    setupPanel: document.getElementById('setupPanel'),
+    setupHint: document.getElementById('setupHint'),
+    fleetList: document.getElementById('fleetList'),
+    rotateBtn: document.getElementById('rotateBtn'),
+    randomBtn: document.getElementById('randomBtn'),
+    clearBtn: document.getElementById('clearBtn'),
+    startBtn: document.getElementById('startBtn'),
+    ownBadge: document.getElementById('ownBadge'),
+    enemyBadge: document.getElementById('enemyBadge'),
+    restartBtn: document.getElementById('restartBtn'),
+    playerBoard: document.getElementById('playerBoard'),
+    enemyBoard: document.getElementById('enemyBoard')
+  };
+
+  var cellButtons = { player: [], ai: [] };
+
+  var errors = {
+    OUT_OF_BOUNDS: '超出棋盘边界，换个位置试试。',
+    OVERLAP: '这里已有战舰，不能重叠。',
+    SHIP_ALREADY_PLACED: '这种长度的战舰已经全部放置。',
+    INVALID_ORIENTATION: '船体方向无效。',
+    NOT_SETUP: '当前不能布阵。',
+    CELL_ALREADY_FIRED: '这个格子已经炮击过了。',
+    NOT_YOUR_TURN: '还没轮到你行动。',
+    NOT_PLAYING: '战斗尚未开始。',
+    INVALID_COORDINATE: '格子坐标无效。'
+  };
+
+  function errorText(code) {
+    if (!code) return '操作无效。';
+    if (code.indexOf('PLAYER_FLEET_') === 0) return '你的五艘战舰还没有全部放好。';
+    if (code.indexOf('AI_FLEET_') === 0) return 'AI 舰队状态异常，请重新开始。';
+    return errors[code] || ('操作无效（' + code + '）。');
+  }
+
+  function buildBoard(side) {
+    var board = side === 'player' ? els.playerBoard : els.enemyBoard;
+    var list = [];
+    for (var r = 0; r < E.BOARD_SIZE; r += 1) {
+      for (var c = 0; c < E.BOARD_SIZE; c += 1) {
+        var button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'cell';
+        button.dataset.r = String(r);
+        button.dataset.c = String(c);
+        button.setAttribute('aria-label', (side === 'player' ? '你的海域' : '敌方海域') +
+          '，第' + (r + 1) + '行第' + (c + 1) + '列');
+        button.addEventListener('click', makeClickHandler(side, r, c));
+        button.addEventListener('pointerenter', makePreviewHandler(side, r, c));
+        button.addEventListener('pointerleave', clearPreview);
+        button.addEventListener('focus', makePreviewHandler(side, r, c));
+        button.addEventListener('blur', clearPreview);
+        board.appendChild(button);
+        list.push(button);
+      }
+    }
+    cellButtons[side] = list;
+  }
+
+  function makeClickHandler(side, r, c) {
+    return function () { onCellClick(side, r, c); };
+  }
+
+  function makePreviewHandler(side, r, c) {
+    return function () { previewPlacement(side, r, c); };
+  }
+
+  function cellAt(side, r, c) {
+    if (r < 0 || r > 7 || c < 0 || c > 7) return null;
+    return cellButtons[side][r * E.BOARD_SIZE + c];
+  }
+
+  function clearPreview() {
+    previewCells.forEach(function (cell) {
+      if (cell) {
+        cell.classList.remove('preview-ok');
+        cell.classList.remove('preview-bad');
+      }
+    });
+    previewCells = [];
+  }
+
+  function previewPlacement(side, r, c) {
+    clearPreview();
+    if (!state || state.phase !== 'setup' || side !== 'player') return;
+    var next = nextShip();
+    if (!next) return;
+    var ok = E.canPlace(state.player.fleet, next.length, r, c, orientation);
+    var cells = [];
+    for (var i = 0; i < next.length; i += 1) {
+      var nr = r + (orientation === 'v' ? i : 0);
+      var nc = c + (orientation === 'h' ? i : 0);
+      var button = cellAt('player', nr, nc);
+      if (button) {
+        button.classList.add(ok ? 'preview-ok' : 'preview-bad');
+        cells.push(button);
+      }
+    }
+    previewCells = cells;
+  }
+
+  function nextShip() {
+    if (!state) return null;
+    for (var i = 0; i < E.SHIP_SPECS.length; i += 1) {
+      var spec = E.SHIP_SPECS[i];
+      var placed = state.player.fleet.some(function (ship) { return ship.name === spec.name; });
+      if (!placed) return spec;
+    }
+    return null;
+  }
+
+  function findShip(fleet, name) {
+    for (var i = 0; i < fleet.length; i += 1) {
+      if (fleet[i].name === name) return fleet[i];
+    }
+    return null;
+  }
+
+  function shipIsSunk(side, ship) {
+    if (!ship) return false;
+    var shots = side === 'player' ? state.ai.shots : state.player.shots;
+    return ship.cells.every(function (cell) {
+      return shots[cell[0]][cell[1]] === E.HIT;
+    });
+  }
+
+  function shipAt(fleet, r, c) {
+    for (var i = 0; i < fleet.length; i += 1) {
+      for (var j = 0; j < fleet[i].cells.length; j += 1) {
+        if (fleet[i].cells[j][0] === r && fleet[i].cells[j][1] === c) return fleet[i];
+      }
+    }
+    return null;
+  }
+
+  function positionText(r, c) {
+    return '第' + (r + 1) + '行第' + (c + 1) + '列';
+  }
+
+  function describeShot(action) {
+    if (!action) return '';
+    var position = positionText(action.r, action.c);
+    if (action.side === 'player') {
+      if (action.sunk) return '你击沉了敌方' + action.sunkShip + '（' + position + '）！';
+      if (action.hit) return '你命中敌方战舰（' + position + '）！';
+      return '你炮击' + position + '，落空。';
+    }
+    if (action.sunk) return 'AI 击沉了你的' + action.sunkShip + '（' + position + '）。';
+    if (action.hit) return 'AI 命中你的战舰（' + position + '）。';
+    return 'AI 炮击' + position + '，落空。';
+  }
+
+  function renderStatus() {
+    var win = E.winner(state);
+    var mySunk = E.sunkCount(state, 'player');
+    var enemySunk = E.sunkCount(state, 'ai');
+    var main = '';
+    var sub = '';
+    var badge = '';
+    var cls = 'status-panel';
+
+    els.mySunk.textContent = String(mySunk);
+    els.enemySunk.textContent = String(enemySunk);
+
+    if (win) {
+      main = win === 'player' ? '胜利！' : '战败。';
+      if (win === 'player') {
+        sub = (state.lastAction ? describeShot(state.lastAction) + ' ' : '') +
+          '敌方五艘战舰全部沉没。点击“重新开始”再战一局。';
+      } else {
+        sub = (state.lastAction ? describeShot(state.lastAction) + ' ' : '') +
+          '你的舰队已被全部击沉。点击“重新开始”调整布阵再战。';
+      }
+      badge = '战斗结束';
+      cls += win === 'player' ? ' is-win' : ' is-loss';
+    } else if (state.phase === 'setup') {
+      var count = state.player.fleet.length;
+      if (notice) {
+        main = notice;
+        sub = '换个位置，或使用“随机布阵”快速完成。';
+      } else if (count === 5) {
+        main = '布阵完成';
+        sub = '五艘战舰已经就位，点击“开始战斗”进入对局。';
+      } else {
+        main = '布置你的舰队';
+        var next = nextShip();
+        sub = next
+          ? '下一艘：' + next.name + ' · ' + next.length + ' 格 · 当前' +
+            (orientation === 'h' ? '横向' : '竖向') + '。也可点击“随机布阵”。'
+          : '全部战舰已经放好。';
+      }
+      badge = '布阵阶段';
+    } else if (state.turn === 'ai') {
+      main = 'AI 正在瞄准…';
+      sub = state.lastAction && state.lastAction.side === 'player'
+        ? describeShot(state.lastAction)
+        : '它正在按搜索策略选择目标。';
+      badge = 'AI 回合';
+      cls += ' is-thinking';
+    } else if (notice) {
+      main = notice;
+      sub = '继续炮击敌方海域，或点击“重新开始”。';
+      badge = '你的回合';
+    } else {
+      main = '轮到你炮击';
+      sub = state.lastAction && state.lastAction.side === 'ai'
+        ? describeShot(state.lastAction) + ' 继续选择目标。'
+        : '点击敌方海域选择一个格子。';
+      badge = '你的回合';
+    }
+
+    els.statusMain.textContent = main;
+    els.statusSub.textContent = sub;
+    els.turnBadge.textContent = badge;
+    els.statusPanel.className = cls;
+
+    var ownLoss = mySunk;
+    var enemyLoss = enemySunk;
+    if (state.phase === 'setup') {
+      els.ownBadge.textContent = '布阵中';
+      els.enemyBadge.textContent = '未开战';
+    } else {
+      els.ownBadge.textContent = '损失 ' + ownLoss + '/5';
+      els.enemyBadge.textContent = '击沉 ' + enemyLoss + '/5';
+    }
+  }
+
+  function renderResult() {
+    var win = E.winner(state);
+    if (!win) {
+      els.resultPanel.hidden = true;
+      return;
+    }
+    els.resultPanel.hidden = false;
+    els.resultPanel.className = 'result-panel' + (win === 'ai' ? ' loss' : '');
+    els.resultTitle.textContent = win === 'player' ? '胜利' : '战败';
+    els.resultText.textContent = win === 'player'
+      ? '你击沉了敌方 5/5 艘战舰，海面归你掌控。'
+      : 'AI 击沉了你 ' + E.sunkCount(state, 'player') + '/5 艘战舰。';
+  }
+
+  function renderFleet() {
+    els.fleetList.textContent = '';
+    E.SHIP_SPECS.forEach(function (spec) {
+      var ship = findShip(state.player.fleet, spec.name);
+      var chip = document.createElement('div');
+      chip.className = 'fleet-chip';
+      if (!ship) chip.classList.add('is-empty');
+      if (ship && shipIsSunk('player', ship)) chip.classList.add('is-sunk');
+      if (ship && !shipIsSunk('player', ship)) chip.classList.add('is-ready');
+
+      var name = document.createElement('span');
+      name.className = 'chip-name';
+      name.appendChild(document.createTextNode(spec.name + ' '));
+      var small = document.createElement('small');
+      small.textContent = spec.length + '格';
+      name.appendChild(small);
+
+      var pips = document.createElement('span');
+      pips.className = 'pips';
+      pips.setAttribute('aria-hidden', 'true');
+      for (var i = 0; i < spec.length; i += 1) pips.appendChild(document.createElement('i'));
+
+      var stateText = document.createElement('span');
+      stateText.className = 'chip-state';
+      if (!ship) {
+        stateText.textContent = '未放置';
+      } else if (shipIsSunk('player', ship)) {
+        stateText.textContent = '已击沉';
+      } else if (state.phase === 'setup') {
+        stateText.textContent = '已就位';
+      } else {
+        var hits = ship.cells.filter(function (cell) {
+          return state.ai.shots[cell[0]][cell[1]] === E.HIT;
+        }).length;
+        stateText.textContent = '受击 ' + hits + '/' + spec.length;
+      }
+
+      chip.appendChild(name);
+      chip.appendChild(pips);
+      chip.appendChild(stateText);
+      els.fleetList.appendChild(chip);
+    });
+  }
+
+  function renderSetup() {
+    var setup = state.phase === 'setup';
+    els.setupPanel.hidden = !setup;
+
+    var count = state.player.fleet.length;
+    els.setupHint.textContent = '已放置 ' + count + '/5';
+    els.rotateBtn.textContent = '旋转：' + (orientation === 'h' ? '横向' : '竖向');
+    els.rotateBtn.setAttribute('aria-label', '旋转船体方向，当前' +
+      (orientation === 'h' ? '横向' : '竖向') + '，点击切换为' +
+      (orientation === 'h' ? '竖向' : '横向'));
+    els.startBtn.disabled = count !== 5;
+    els.startBtn.textContent = count === 5 ? '开始战斗' : '开始战斗（' + count + '/5）';
+    els.startBtn.setAttribute('aria-label', count === 5
+      ? '开始战斗'
+      : '开始战斗，需要先放好五艘战舰，当前已放置' + count + '艘');
+  }
+
+  function cellLabel(side, r, c, ship, shot) {
+    var base = side === 'player' ? '你的海域' : '敌方海域';
+    var position = positionText(r, c);
+    if (shot === E.HIT) {
+      return base + '，' + position + '，命中' + (ship ? '战舰' : '') +
+        (ship && shipIsSunk(side, ship) ? '，已击沉' : '');
+    }
+    if (shot === E.MISS) return base + '，' + position + '，已炮击，落空';
+    if (side === 'player' && ship) return base + '，' + position + '，己方战舰';
+    if (side === 'player' && state.phase === 'setup') {
+      return base + '，' + position + '，空海域，点击布阵';
+    }
+    return base + '，' + position + '，未炮击';
+  }
+
+  function renderBoard(side) {
+    var own = side === 'player';
+    var fleet = own ? state.player.fleet : state.ai.fleet;
+    var shots = own ? state.ai.shots : state.player.shots;
+    var canSetup = own && state.phase === 'setup' && Boolean(nextShip());
+    var canFire = !own && state.phase === 'playing' && state.turn === 'player' && !E.winner(state);
+
+    cellButtons[side].forEach(function (button, index) {
+      var r = Math.floor(index / E.BOARD_SIZE);
+      var c = index % E.BOARD_SIZE;
+      var shot = shots[r][c];
+      var ship = shipAt(fleet, r, c);
+      var sunk = shot === E.HIT && shipIsSunk(side, ship);
+
+      button.className = 'cell';
+      if (own && ship) button.classList.add('own-ship');
+      if (shot === E.HIT) button.classList.add('hit');
+      if (shot === E.MISS) button.classList.add('miss');
+      if (sunk) button.classList.add('sunk');
+      button.disabled = !(canSetup || (canFire && shot === E.EMPTY));
+      button.setAttribute('aria-label', cellLabel(side, r, c, ship, shot));
+    });
+  }
+
+  function render() {
+    renderStatus();
+    renderResult();
+    renderSetup();
+    renderFleet();
+    renderBoard('player');
+    renderBoard('ai');
+  }
+
+  function newGame() {
+    generation += 1;
+    if (aiTimer) {
+      clearTimeout(aiTimer);
+      aiTimer = 0;
+    }
+    clearPreview();
+    var seed = Date.now() >>> 0;
+    state = E.createGame(seed);
+    rng = E.createRng((seed ^ 0x9E3779B9) >>> 0);
+    orientation = 'h';
+    notice = '';
+    render();
+  }
+
+  function onCellClick(side, r, c) {
+    if (!state) return;
+
+    if (state.phase === 'setup') {
+      if (side !== 'player') return;
+      var next = nextShip();
+      if (!next) {
+        notice = '五艘战舰已经全部放好。';
+        render();
+        return;
+      }
+      var placed = E.placeShip(state, 'player', next.length, r, c, orientation);
+      if (!placed.ok) {
+        notice = errorText(placed.error);
+        render();
+        return;
+      }
+      state = placed.state;
+      notice = '';
+      clearPreview();
+      render();
+      return;
+    }
+
+    if (state.phase !== 'playing' || side !== 'ai' || state.turn !== 'player') return;
+    var shot = E.fire(state, r, c, 'player');
+    if (!shot.ok) {
+      notice = errorText(shot.error);
+      render();
+      return;
+    }
+    state = shot.state;
+    notice = '';
+    render();
+    if (state.phase === 'playing' && state.turn === 'ai') scheduleAi();
+  }
+
+  function firstUnshot(shots) {
+    for (var r = 0; r < E.BOARD_SIZE; r += 1) {
+      for (var c = 0; c < E.BOARD_SIZE; c += 1) {
+        if (shots[r][c] === E.EMPTY) return { r: r, c: c };
+      }
+    }
+    return null;
+  }
+
+  function scheduleAi() {
+    if (state.phase !== 'playing' || state.turn !== 'ai') return;
+    if (aiTimer) clearTimeout(aiTimer);
+    var currentGeneration = generation;
+    aiTimer = window.setTimeout(function () {
+      aiTimer = 0;
+      if (currentGeneration !== generation) return;
+      if (!state || state.phase !== 'playing' || state.turn !== 'ai') return;
+
+      var target = E.aiTarget(state, rng);
+      if (!target) target = firstUnshot(state.ai.shots);
+      var shot = target ? E.fire(state, target.r, target.c, 'ai') : null;
+      if (!shot || !shot.ok) {
+        var fallback = firstUnshot(state.ai.shots);
+        shot = fallback ? E.fire(state, fallback.r, fallback.c, 'ai') : null;
+      }
+
+      if (shot && shot.ok) {
+        state = shot.state;
+        notice = '';
+      } else {
+        notice = 'AI 行动异常，请重新开始。';
+      }
+      render();
+    }, 560);
+  }
+
+  els.rotateBtn.addEventListener('click', function () {
+    orientation = orientation === 'h' ? 'v' : 'h';
+    notice = '';
+    render();
+  });
+
+  els.randomBtn.addEventListener('click', function () {
+    var fleet = E.randomFleet(rng);
+    var placed = E.setFleet(state, 'player', fleet);
+    if (!placed.ok) {
+      notice = errorText(placed.error);
+      render();
+      return;
+    }
+    state = placed.state;
+    notice = '';
+    render();
+  });
+
+  els.clearBtn.addEventListener('click', function () {
+    var next = E.cloneState(state);
+    next.player.fleet = [];
+    state = next;
+    notice = '';
+    render();
+  });
+
+  els.startBtn.addEventListener('click', function () {
+    var started = E.startGame(state);
+    if (!started.ok) {
+      notice = errorText(started.error);
+      render();
+      return;
+    }
+    state = started.state;
+    notice = '';
+    render();
+  });
+
+  els.restartBtn.addEventListener('click', newGame);
+
+  buildBoard('player');
+  buildBoard('ai');
+  newGame();
+})();
+</script>
+</body>
+</html>

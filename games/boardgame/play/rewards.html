@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="桌游板块本地留存页：积分、等级、奖杯、连胜、每日任务与匿名排行榜。">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<title>我的牌桌档案 · 桌游板块</title>
+<link rel="icon" href="data:,">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0b0d12;
+    --panel: #151a23;
+    --panel-2: #1c2330;
+    --line: #2a3444;
+    --text: #f2f5fa;
+    --muted: #a7b3c6;
+    --accent: #7cc4ff;
+    --accent-ink: #04121f;
+    --gold: #ffd479;
+    --danger: #ff9a8a;
+    --radius: 14px;
+    --pad: 16px;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    font-size: 16px;
+    line-height: 1.55;
+    overflow-x: hidden;
+  }
+  .skip {
+    position: absolute;
+    left: 8px;
+    top: -100px;
+    background: var(--panel-2);
+    color: var(--text);
+    padding: 10px 14px;
+    border-radius: 10px;
+    z-index: 10;
+  }
+  .skip:focus { top: 8px; }
+  .wrap {
+    width: 100%;
+    max-width: 520px;
+    margin: 0 auto;
+    padding: var(--pad);
+    padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+  }
+  header { padding: 8px 0 12px; }
+  .eyebrow {
+    margin: 0 0 2px;
+    color: var(--accent);
+    font-size: 13px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  h1 { margin: 0 0 6px; font-size: clamp(22px, 7vw, 30px); line-height: 1.2; }
+  .device {
+    margin: 0;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+  }
+  .device code {
+    display: inline-block;
+    max-width: 100%;
+    padding: 2px 8px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--panel);
+    color: var(--text);
+    font-size: 12px;
+    overflow-wrap: anywhere;
+  }
+  main { display: grid; gap: 12px; }
+  section {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 14px;
+  }
+  h2 { margin: 0 0 10px; font-size: 17px; line-height: 1.3; }
+  p { margin: 0 0 10px; }
+  p:last-child { margin-bottom: 0; }
+  .hint { color: var(--muted); font-size: 13px; }
+  .sr-only {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    background: transparent;
+    border: 0;
+    padding: 0;
+  }
+  .stat {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 12px 10px;
+    min-width: 0;
+  }
+  .stat span { display: block; color: var(--muted); font-size: 12px; }
+  .stat strong {
+    display: block;
+    font-size: clamp(20px, 7vw, 28px);
+    line-height: 1.25;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+  }
+  .stat small { display: block; color: var(--muted); font-size: 11px; overflow-wrap: anywhere; }
+  .levelbar { background: transparent; border: 0; padding: 0; }
+  .track {
+    height: 10px;
+    border-radius: 999px;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    overflow: hidden;
+  }
+  .fill {
+    height: 100%;
+    width: 0;
+    background: linear-gradient(90deg, #4f9df7, var(--accent));
+    border-radius: 999px;
+    transition: width 180ms ease;
+  }
+  .levelbar p { margin: 6px 0 0; color: var(--muted); font-size: 12px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; }
+  button {
+    -webkit-appearance: none;
+    appearance: none;
+    min-height: 48px;
+    min-width: 48px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    border: 1px solid transparent;
+    background: var(--accent);
+    color: var(--accent-ink);
+    font: inherit;
+    font-weight: 700;
+    line-height: 1.3;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  button.secondary {
+    background: var(--panel-2);
+    border-color: var(--line);
+    color: var(--text);
+  }
+  button.ghost {
+    background: transparent;
+    border-color: var(--line);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+  button:focus-visible,
+  a:focus-visible {
+    outline: 3px solid var(--gold);
+    outline-offset: 2px;
+  }
+  ul, ol { margin: 0; padding: 0; list-style: none; }
+  .missions { display: grid; gap: 8px; }
+  .mission {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--panel-2);
+  }
+  .mission-body { flex: 1 1 auto; min-width: 0; }
+  .mission-title { display: block; font-size: 14px; font-weight: 600; }
+  .mission-progress { display: block; color: var(--muted); font-size: 12px; }
+  .mission button { flex: 0 0 auto; padding: 10px 12px; font-size: 13px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    display: inline-block;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid #5a4a22;
+    background: #241d0d;
+    color: var(--gold);
+    font-size: 12px;
+  }
+  .board { display: grid; gap: 6px; }
+  .board li {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: var(--panel-2);
+    border: 1px solid transparent;
+    min-width: 0;
+  }
+  .board li.self { border-color: var(--accent); }
+  .rank { flex: 0 0 auto; color: var(--muted); font-variant-numeric: tabular-nums; font-size: 13px; }
+  .who { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .who .tag { color: var(--accent); font-size: 11px; margin-left: 6px; }
+  .score { flex: 0 0 auto; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .comeback {
+    border-color: #5a4a22;
+    background: linear-gradient(180deg, #241d0d, #1b1810);
+  }
+  .comeback h2 { color: var(--gold); }
+  .status {
+    margin: 4px 0 0;
+    min-height: 22px;
+    color: var(--accent);
+    font-size: 13px;
+  }
+  footer {
+    color: var(--muted);
+    font-size: 11px;
+    text-align: center;
+    padding: 18px 4px 0;
+  }
+  [hidden] { display: none !important; }
+  @media (max-width: 340px) {
+    .stats { grid-template-columns: 1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .fill { transition: none; }
+  }
+</style>
+</head>
+<body>
+<a class="skip" href="#main">跳到主要内容</a>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">桌游板块 · 本机进度</p>
+    <h1>我的牌桌档案</h1>
+    <p class="device">匿名设备 id：<code id="device-id" aria-label="匿名设备标识">加载中</code></p>
+  </header>
+
+  <main id="main">
+    <section class="stats" aria-labelledby="stats-title">
+      <h2 id="stats-title" class="sr-only">积分、等级与连胜</h2>
+      <div class="stat">
+        <span>积分</span>
+        <strong id="points">0</strong>
+      </div>
+      <div class="stat">
+        <span>等级</span>
+        <strong id="level">1</strong>
+        <small id="level-title">新手玩家</small>
+      </div>
+      <div class="stat">
+        <span>连胜</span>
+        <strong id="streak">0</strong>
+        <small>天</small>
+      </div>
+    </section>
+
+    <section class="levelbar" aria-labelledby="levelbar-title">
+      <h2 id="levelbar-title" class="sr-only">等级进度</h2>
+      <div class="track" id="level-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="距离下一等级的进度">
+        <div class="fill" id="level-fill"></div>
+      </div>
+      <p id="level-progress-text">再获得 100 分升到下一级</p>
+    </section>
+
+    <section class="comeback" id="comeback" hidden aria-labelledby="comeback-title">
+      <h2 id="comeback-title">欢迎回来</h2>
+      <p id="comeback-text" class="hint"></p>
+      <button type="button" id="comeback-btn" class="ghost">领取回归奖励</button>
+    </section>
+
+    <section aria-labelledby="daily-title">
+      <h2 id="daily-title">每日登录奖励</h2>
+      <p id="daily-text" class="hint">每天第一次进入可领取积分，连续登录有连胜加成。</p>
+      <button type="button" id="daily-btn">领取今日登录奖励</button>
+    </section>
+
+    <section aria-labelledby="missions-title">
+      <h2 id="missions-title">每日任务</h2>
+      <p class="hint">任务每天 00:00（UTC）重置；完成进度后手动领取。</p>
+      <ul class="missions" id="missions"></ul>
+    </section>
+
+    <section aria-labelledby="play-title">
+      <h2 id="play-title">对局与分享</h2>
+      <p class="hint">这里是本地演示：完成一局会累积积分并提交到匿名本地榜单。分数仍受上限和频率校验。</p>
+      <div class="actions">
+        <button type="button" id="play-btn">模拟完成一局</button>
+        <button type="button" id="share-btn" class="secondary">分享成绩</button>
+      </div>
+    </section>
+
+    <section aria-labelledby="trophies-title">
+      <h2 id="trophies-title">奖杯</h2>
+      <ul class="chips" id="trophies"></ul>
+      <p id="trophies-empty" class="hint">还没有奖杯。首次获胜或连续登录 3 天即可解锁。</p>
+    </section>
+
+    <section aria-labelledby="board-title">
+      <h2 id="board-title">匿名排行榜</h2>
+      <p class="hint">本地榜单按最高分降序；可注入远端权威接口，页面本身不发起任何外部请求。</p>
+      <ol class="board" id="leaderboard"></ol>
+    </section>
+  </main>
+
+  <p id="status" class="status" role="status" aria-live="polite"></p>
+  <footer>所有进度只保存在本机浏览器；没有账号、没有个人信息、没有第三方脚本。</footer>
+</div>
+<script type="module" src="./rewards.js"></script>
+</body>
+</html>

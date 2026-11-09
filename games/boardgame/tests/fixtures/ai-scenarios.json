@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "service": {
+    "baseUrlEnv": ["BOARDGAME_AI_BASE_URL", "BOARDGAME_API_BASE_URL", "BOARDGAME_SERVER_URL"],
+    "defaultBaseUrls": ["http://127.0.0.1:8787", "http://127.0.0.1:8788", "http://127.0.0.1:3000"],
+    "healthPaths": ["/health", "/api/health", "/"],
+    "authEnv": "BOARDGAME_API_TOKEN"
+  },
+  "scenarios": [
+    {
+      "name": "create-match",
+      "method": "POST",
+      "path": "/api/matches",
+      "body": {
+        "game": "pokemon",
+        "players": 2,
+        "ai": true,
+        "deck": "pokemon-sample",
+        "seed": 20261110
+      },
+      "expect": {
+        "status": [200, 201],
+        "fields": ["matchId", "status", "turn", "players"],
+        "persist": { "matchId": true }
+      }
+    },
+    {
+      "name": "read-state",
+      "method": "GET",
+      "path": "/api/matches/{matchId}",
+      "expect": {
+        "status": [200],
+        "fields": ["matchId", "status", "turn", "zones"]
+      }
+    },
+    {
+      "name": "legal-actions",
+      "method": "GET",
+      "path": "/api/matches/{matchId}/actions",
+      "expect": {
+        "status": [200],
+        "fields": ["matchId", "turn", "actions"],
+        "arrayFields": ["actions"]
+      }
+    },
+    {
+      "name": "submit-action",
+      "method": "POST",
+      "path": "/api/matches/{matchId}/actions",
+      "body": {
+        "type": "end-turn",
+        "idempotencyKey": "scenario-end-turn-1"
+      },
+      "expect": {
+        "status": [200, 202],
+        "fields": ["matchId", "status", "turn"]
+      }
+    },
+    {
+      "name": "ai-evaluate",
+      "method": "POST",
+      "path": "/api/ai/evaluate",
+      "body": {
+        "game": "pokemon",
+        "state": {
+          "turn": 1,
+          "active": "pk-001",
+          "handSize": 7,
+          "prizesRemaining": 6
+        },
+        "actions": ["attack", "end-turn"]
+      },
+      "expect": {
+        "status": [200],
+        "fields": ["evaluation"]
+      }
+    },
+    {
+      "name": "invalid-action",
+      "method": "POST",
+      "path": "/api/matches/{matchId}/actions",
+      "body": {
+        "type": "definitely-not-legal"
+      },
+      "expect": {
+        "status": [400, 409, 422],
+        "fields": ["error"],
+        "errorCode": true
+      }
+    }
+  ]
+}

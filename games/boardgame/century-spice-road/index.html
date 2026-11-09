@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>香料之路 · Century Spice Road 人机对战</title>
+<meta name="description" content="世纪香料之路中文网页版：采集、转换、升级香料，购买得分卡，与 AI 商队对决。纯前端离线可玩，手机友好。">
+<meta name="theme-color" content="#1f2a24">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231f2a24'/%3E%3Ccircle cx='12' cy='13' r='4' fill='%23d9a21b'/%3E%3Ccircle cx='21' cy='19' r='4' fill='%23d4553f'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #141d19; --panel: #1f2a24; --panel-2: #26352d; --line: #3a4d42;
+    --text: #edf3ee; --muted: #a8b8ae; --gold: #e2b552; --accent: #7fc39a;
+    --y: #d9a21b; --r: #d4553f; --g: #3f8f5b; --b: #8a5a3b;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: radial-gradient(circle at 20% 0%, #24362d 0%, var(--bg) 55%) no-repeat, var(--bg);
+    color: var(--text); font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    min-height: 100vh; padding: 10px 10px 28px;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  header { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 4px 2px 10px; }
+  h1 { font-size: 19px; margin: 0; letter-spacing: .02em; }
+  h1 .en { display: block; font-size: 11px; color: var(--muted); font-weight: 500; letter-spacing: .08em; }
+  .spacer { flex: 1 1 auto; }
+  .controls { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  input[type="number"] {
+    width: 92px; min-height: 44px; border-radius: 10px; border: 1px solid var(--line);
+    background: #101815; color: var(--text); padding: 8px 10px; font-size: 14px;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-height: 44px; padding: 8px 14px; border-radius: 10px; border: 1px solid var(--line);
+    background: var(--panel-2); color: var(--text); font-weight: 600; text-decoration: none;
+  }
+  .btn:hover, .btn:focus-visible { border-color: var(--accent); outline: none; }
+  .btn[disabled] { opacity: .42; cursor: not-allowed; }
+  .btn.gold { background: linear-gradient(180deg, #e6c069, #c89a3a); color: #26200e; border-color: #f0d58d; }
+  .btn.ghost { background: transparent; }
+  .status { padding: 8px 2px; color: var(--muted); font-size: 13px; min-height: 30px; }
+  .status b { color: var(--gold); }
+  .players { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+  .player { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 9px 10px; min-width: 0; }
+  .player.active { border-color: var(--gold); box-shadow: 0 0 0 1px rgba(226,181,82,.35); }
+  .player .top { display: flex; align-items: baseline; gap: 6px; justify-content: space-between; }
+  .player .name { font-weight: 700; font-size: 14px; }
+  .player .score { color: var(--gold); font-weight: 800; font-size: 20px; }
+  .player .meta { color: var(--muted); font-size: 11px; margin: 2px 0 6px; }
+  .spices { display: flex; flex-wrap: wrap; gap: 4px; }
+  .spice {
+    display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 999px;
+    background: #17211c; border: 1px solid var(--line); font-size: 11px; white-space: nowrap;
+  }
+  .spice i { width: 9px; height: 9px; border-radius: 50%; background: var(--c); display: inline-block; }
+  .spice b { font-size: 12px; }
+  section { margin-bottom: 10px; }
+  section h2 { font-size: 13px; margin: 0 0 6px; color: var(--muted); font-weight: 600; letter-spacing: .04em; }
+  .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .card {
+    text-align: left; border: 1px solid var(--line); border-radius: 10px; padding: 8px 9px;
+    background: var(--panel); min-height: 62px; min-width: 0; display: flex; flex-direction: column; gap: 3px;
+  }
+  .card:hover, .card:focus-visible { border-color: var(--accent); outline: none; }
+  .card[disabled] { opacity: .5; cursor: not-allowed; }
+  .card .title { font-size: 12.5px; font-weight: 700; line-height: 1.25; }
+  .card .desc { font-size: 11px; color: var(--muted); line-height: 1.3; }
+  .card .cost { display: flex; flex-wrap: wrap; gap: 4px; margin-top: auto; }
+  .card .pts { color: var(--gold); font-weight: 800; font-size: 17px; }
+  .cost em {
+    font-style: normal; font-size: 11px; padding: 1px 6px; border-radius: 999px;
+    background: #101815; border: 1px solid var(--line); white-space: nowrap;
+  }
+  .cost em i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--c); margin-right: 3px; }
+  .hand { display: flex; flex-wrap: wrap; gap: 6px; }
+  .hand .card { flex: 1 1 150px; max-width: 100%; }
+  .hand .card.upgrade { border-color: #5b7a64; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .log {
+    background: #101815; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px;
+    font-size: 12px; color: var(--muted); max-height: 132px; overflow-y: auto;
+  }
+  .log div { padding: 1px 0; }
+  .log div:first-child { color: var(--text); }
+  .banner {
+    margin: 10px 0; padding: 12px; border-radius: 12px; border: 1px solid var(--gold);
+    background: linear-gradient(180deg, #332c17, #241f12); text-align: center;
+  }
+  .banner b { color: var(--gold); font-size: 17px; }
+  .upgrade-panel { background: var(--panel-2); border: 1px solid var(--accent); border-radius: 12px; padding: 10px; }
+  .upgrade-panel .row { margin-top: 6px; }
+  .upgrade-panel .hint { font-size: 12px; color: var(--muted); }
+  .chipbtn { min-height: 44px; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--line); background: #101815; }
+  .chipbtn[disabled] { opacity: .45; }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+  @media (max-width: 430px) {
+    body { padding: 8px 8px 24px; }
+    h1 { font-size: 17px; }
+    .players { gap: 6px; }
+    .player { padding: 8px; }
+    .player .score { font-size: 18px; }
+    .hand .card { flex: 1 1 46%; }
+    .card { padding: 7px 8px; }
+    .card .desc { font-size: 10.5px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>香料之路<span class="en">CENTURY · SPICE ROAD</span></h1>
+    <div class="spacer"></div>
+    <div class="controls">
+      <label class="sr-only" for="seed">随机种子</label>
+      <input id="seed" type="number" min="0" value="1" inputmode="numeric" aria-label="随机种子">
+      <button id="newGame" class="btn" type="button" aria-label="用当前种子开始新对局">新对局</button>
+      <a class="btn ghost" href="rules.html" aria-label="查看规则">规则</a>
+    </div>
+  </header>
+
+  <div id="status" class="status" role="status" aria-live="polite"></div>
+
+  <section class="players" id="players" aria-label="双方状态"></section>
+
+  <section aria-labelledby="actionMarketTitle">
+    <h2 id="actionMarketTitle">行动卡市场 · 点击拿取</h2>
+    <div id="actionMarket" class="cards" aria-label="行动卡市场"></div>
+  </section>
+
+  <section aria-labelledby="scoreMarketTitle">
+    <h2 id="scoreMarketTitle">得分卡市场 · 点击购买</h2>
+    <div id="scoreMarket" class="cards" aria-label="得分卡市场"></div>
+  </section>
+
+  <section aria-labelledby="handTitle">
+    <h2 id="handTitle">你的手牌 · 点击打出</h2>
+    <div id="hand" class="hand" aria-label="你的手牌"></div>
+    <div class="row" style="margin-top:8px">
+      <button id="restBtn" class="btn" type="button" aria-label="休息取回已打出的行动卡">休息</button>
+      <span id="playedInfo" class="hint" style="font-size:12px;color:var(--muted)"></span>
+    </div>
+  </section>
+
+  <section id="upgradeSection" hidden>
+    <div class="upgrade-panel" role="group" aria-label="选择要升级的香料">
+      <div class="hint" id="upgradeHint"></div>
+      <div class="row" id="upgradeOptions"></div>
+      <div class="row">
+        <button id="upgradeConfirm" class="btn gold" type="button" aria-label="确认升级">确认升级</button>
+        <button id="upgradeCancel" class="btn ghost" type="button" aria-label="取消升级">取消</button>
+      </div>
+    </div>
+  </section>
+
+  <div id="bannerWrap"></div>
+
+  <section aria-labelledby="logTitle">
+    <h2 id="logTitle">对局记录</h2>
+    <div id="log" class="log" role="log" aria-live="polite" aria-label="对局记录"></div>
+  </section>
+</div>
+
+<script src="engine.js"></script>
+<script>
+(function () {
+  'use strict';
+  var E = window.CenturyEngine;
+  var state = null;
+  var aiTimer = null;
+  var pendingUpgrade = null;
+
+  function el(id) { return document.getElementById(id); }
+  function spiceColor(i) { return E.SPICES[i].color; }
+  function spiceName(i) { return E.SPICES[i].name; }
+
+  function newGame() {
+    if (aiTimer) { clearTimeout(aiTimer); aiTimer = null; }
+    var raw = parseInt(el('seed').value, 10);
+    var seed = isFinite(raw) && raw >= 0 ? raw : 1;
+    state = E.createGame(seed);
+    pendingUpgrade = null;
+    render();
+    maybeAI();
+  }
+
+  function toast(text) {
+    el('status').innerHTML = text;
+  }
+
+  function maybeAI() {
+    if (!state || state.over || state.current !== 1) return;
+    if (aiTimer) clearTimeout(aiTimer);
+    toast('AI 商队正在思考…');
+    aiTimer = setTimeout(function () {
+      aiTimer = null;
+      if (!state || state.over || state.current !== 1) return;
+      var move = E.chooseAIMove(state);
+      if (!move) { toast('AI 无合法动作。'); return; }
+      try {
+        state = E.applyMove(state, move);
+      } catch (error) {
+        toast('AI 动作异常：' + error.message);
+        return;
+      }
+      render();
+      maybeAI();
+    }, 520);
+  }
+
+  function humanTurn() {
+    return !!state && !state.over && state.current === 0;
+  }
+
+  function humanPlay(cardIndex) {
+    if (!humanTurn()) return;
+    var card = state.players[0].hand[cardIndex];
+    if (!card) return;
+    if (card.effect && card.effect.type === 'upgrade') {
+      pendingUpgrade = { cardIndex: cardIndex, count: card.effect.count, levels: [] };
+      render();
+      return;
+    }
+    act({ type: 'play', cardIndex: cardIndex, upgrades: [] });
+  }
+
+  function act(move) {
+    if (!humanTurn()) return;
+    try {
+      state = E.applyMove(state, move);
+    } catch (error) {
+      toast('不能这样做：' + error.message);
+      return;
+    }
+    pendingUpgrade = null;
+    render();
+    maybeAI();
+  }
+
+  function renderPlayers() {
+    var host = el('players');
+    host.innerHTML = '';
+    state.players.forEach(function (p, index) {
+      var box = document.createElement('div');
+      box.className = 'player' + (state.current === index && !state.over ? ' active' : '');
+      var top = document.createElement('div');
+      top.className = 'top';
+      var name = document.createElement('span');
+      name.className = 'name';
+      name.textContent = p.name + (index === 0 ? '（先手）' : '');
+      var score = document.createElement('span');
+      score.className = 'score';
+      score.textContent = p.score + ' 分';
+      score.setAttribute('aria-label', p.name + ' ' + p.score + ' 分');
+      top.appendChild(name); top.appendChild(score);
+      var meta = document.createElement('div');
+      meta.className = 'meta';
+      meta.textContent = '得分卡 ' + p.scoreCards.length + '/5 · 手牌 ' + p.hand.length + ' · 弃牌 ' + p.played.length + ' · 商队 ' + E.totalSpices(p.spices) + '/10';
+      var spices = document.createElement('div');
+      spices.className = 'spices';
+      p.spices.forEach(function (n, i) {
+        var chip = document.createElement('span');
+        chip.className = 'spice';
+        chip.style.setProperty('--c', spiceColor(i));
+        chip.innerHTML = '<i></i>' + spiceName(i) + ' <b>' + n + '</b>';
+        chip.setAttribute('aria-label', spiceName(i) + ' ' + n + ' 个');
+        spices.appendChild(chip);
+      });
+      box.appendChild(top); box.appendChild(meta); box.appendChild(spices);
+      host.appendChild(box);
+    });
+  }
+
+  function costChips(cost) {
+    var wrap = document.createElement('div');
+    wrap.className = 'cost';
+    cost.forEach(function (n, i) {
+      if (!n) return;
+      var em = document.createElement('em');
+      em.style.setProperty('--c', spiceColor(i));
+      em.innerHTML = '<i></i>' + spiceName(i) + ' ' + n;
+      wrap.appendChild(em);
+    });
+    return wrap;
+  }
+
+  function renderActionMarket() {
+    var host = el('actionMarket');
+    host.innerHTML = '';
+    state.actionMarket.forEach(function (card, index) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'card';
+      b.setAttribute('aria-label', '拿取行动卡：' + card.name + '，' + card.text);
+      b.innerHTML = '<span class="title">' + card.name + '</span><span class="desc">' + card.text + '</span>';
+      b.disabled = !humanTurn();
+      b.addEventListener('click', function () { act({ type: 'takeCard', marketIndex: index }); });
+      host.appendChild(b);
+    });
+    if (!state.actionMarket.length) {
+      var empty = document.createElement('div');
+      empty.className = 'desc';
+      empty.textContent = '市场已空，只能打出手牌或休息。';
+      host.appendChild(empty);
+    }
+  }
+
+  function renderScoreMarket() {
+    var host = el('scoreMarket');
+    host.innerHTML = '';
+    var player = state.players[0];
+    state.scoreMarket.forEach(function (card) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'card';
+      b.setAttribute('aria-label', '购买 ' + card.points + ' 分香料卡，需要 ' + card.cost.map(function (n, i) { return n ? spiceName(i) + n : ''; }).filter(Boolean).join('、'));
+      var head = document.createElement('div');
+      head.style.display = 'flex';
+      head.style.justifyContent = 'space-between';
+      head.style.alignItems = 'center';
+      head.innerHTML = '<span class="title">' + card.points + ' 分香料卡</span><span class="pts">+' + card.points + '</span>';
+      b.appendChild(head);
+      b.appendChild(costChips(card.cost));
+      b.disabled = !humanTurn() || !E.canAfford(player.spices, card.cost) || player.scoreCards.length >= E.SCORE_CARDS_TO_END;
+      b.addEventListener('click', function () { act({ type: 'buy', cardId: card.id }); });
+      host.appendChild(b);
+    });
+  }
+
+  function renderHand() {
+    var host = el('hand');
+    host.innerHTML = '';
+    var player = state.players[0];
+    var legalIndexes = {};
+    if (humanTurn()) {
+      E.getLegalMoves(state).forEach(function (m) {
+        if (m.type === 'play') legalIndexes[m.cardIndex] = true;
+      });
+    }
+    player.hand.forEach(function (card, index) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'card' + (card.effect && card.effect.type === 'upgrade' ? ' upgrade' : '');
+      b.setAttribute('aria-label', '打出行动卡：' + card.name + '，' + card.text);
+      b.innerHTML = '<span class="title">' + card.name + '</span><span class="desc">' + card.text + '</span>';
+      b.disabled = !humanTurn() || !legalIndexes[index];
+      b.addEventListener('click', function () { humanPlay(index); });
+      host.appendChild(b);
+    });
+    if (!player.hand.length) {
+      var empty = document.createElement('div');
+      empty.className = 'desc';
+      empty.textContent = '手牌已空，可休息取回弃牌或从市场拿牌。';
+      host.appendChild(empty);
+    }
+    el('restBtn').disabled = !humanTurn() || player.played.length === 0;
+    el('playedInfo').textContent = '弃牌区 ' + player.played.length + ' 张；休息可取回全部。';
+  }
+
+  function renderUpgrade() {
+    var section = el('upgradeSection');
+    if (!pendingUpgrade) { section.hidden = true; return; }
+    section.hidden = false;
+    var card = state.players[0].hand[pendingUpgrade.cardIndex];
+    var count = pendingUpgrade.count;
+    var chosen = pendingUpgrade.levels;
+    el('upgradeHint').textContent = (card ? '「' + card.name + '」' : '') +
+      '：请选择 ' + count + ' 个香料升级（已选 ' + chosen.length + '/' + count + '）。' +
+      '升级 = 姜黄→藏红花→豆蔻→肉桂。';
+    var host = el('upgradeOptions');
+    host.innerHTML = '';
+    var spices = state.players[0].spices;
+    for (var level = 0; level <= 2; level++) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'chipbtn';
+      b.textContent = spiceName(level) + '→' + spiceName(level + 1) + '（余 ' + spices[level] + '）';
+      b.setAttribute('aria-label', '把 1 个' + spiceName(level) + '升级为' + spiceName(level + 1));
+      b.disabled = chosen.length >= count || spices[level] <= 0;
+      (function (lv) {
+        b.addEventListener('click', function () {
+          pendingUpgrade.levels.push(lv);
+          render();
+        });
+      })(level);
+      host.appendChild(b);
+    }
+    var undo = document.createElement('button');
+    undo.type = 'button';
+    undo.className = 'chipbtn';
+    undo.textContent = '撤销选择';
+    undo.setAttribute('aria-label', '撤销上一个升级选择');
+    undo.disabled = chosen.length === 0;
+    undo.addEventListener('click', function () {
+      pendingUpgrade.levels.pop();
+      render();
+    });
+    host.appendChild(undo);
+    el('upgradeConfirm').disabled = chosen.length !== count;
+  }
+
+  function renderLog() {
+    var host = el('log');
+    host.innerHTML = '';
+    state.log.slice(-12).reverse().forEach(function (line) {
+      var d = document.createElement('div');
+      d.textContent = line;
+      host.appendChild(d);
+    });
+  }
+
+  function renderBanner() {
+    var host = el('bannerWrap');
+    host.innerHTML = '';
+    if (!state.over) return;
+    var result = E.getResults(state);
+    var banner = document.createElement('div');
+    banner.className = 'banner';
+    var title = result.tie ? '平局' : (result.winner === 0 ? '你赢了！' : 'AI 商队获胜');
+    banner.innerHTML = '<b>' + title + '</b><div style="margin-top:4px;font-size:13px">你 ' +
+      result.scores[0] + ' 分 · AI ' + result.scores[1] + ' 分（得分卡 ' +
+      result.scoreCards[0] + ' : ' + result.scoreCards[1] + '）</div>';
+    var again = document.createElement('button');
+    again.type = 'button';
+    again.className = 'btn gold';
+    again.style.marginTop = '10px';
+    again.textContent = '再来一局';
+    again.setAttribute('aria-label', '再来一局');
+    again.addEventListener('click', newGame);
+    banner.appendChild(again);
+    host.appendChild(banner);
+  }
+
+  function renderStatus() {
+    if (state.over) {
+      toast(state.deadlock ? '对局因无合法动作结束。' : '对局结束。');
+    } else if (state.current === 0) {
+      toast('<b>你的回合</b> · 打出行动卡、拿取市场卡或购买得分卡（每种各一次）');
+    } else {
+      toast('AI 商队正在行动…');
+    }
+  }
+
+  function render() {
+    renderPlayers();
+    renderStatus();
+    renderActionMarket();
+    renderScoreMarket();
+    renderHand();
+    renderUpgrade();
+    renderBanner();
+    renderLog();
+  }
+
+  el('newGame').addEventListener('click', newGame);
+  el('restBtn').addEventListener('click', function () { act({ type: 'rest' }); });
+  el('upgradeConfirm').addEventListener('click', function () {
+    if (!pendingUpgrade || pendingUpgrade.levels.length !== pendingUpgrade.count) return;
+    var move = { type: 'play', cardIndex: pendingUpgrade.cardIndex, upgrades: pendingUpgrade.levels.slice() };
+    pendingUpgrade = null;
+    act(move);
+  });
+  el('upgradeCancel').addEventListener('click', function () { pendingUpgrade = null; render(); });
+
+  newGame();
+})();
+</script>
+</body>
+</html>

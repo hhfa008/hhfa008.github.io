@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2b2f36">
+<title>排行榜 · 桌游</title>
+<meta name="description" content="本地桌游排行榜：卡牌对战与麻将积分，匿名设备 id，零外部请求。">
+<link rel="stylesheet" href="demos.css">
+<style>
+.rank-list { list-style: none; display: flex; flex-direction: column; gap: 6px; padding: 0; }
+.rank-row {
+  display: grid; grid-template-columns: 42px 1fr auto; gap: 10px; align-items: center;
+  min-height: 52px; padding: 8px 10px; border: 1px solid var(--line);
+  border-radius: 12px; background: var(--input, #fffdf8);
+}
+.rank-row .pos { font-family: var(--mono); font-size: 15px; font-weight: 750; color: var(--brass); text-align: center; }
+.rank-row .who { min-width: 0; }
+.rank-row .who strong { display: block; font-size: 14px; overflow-wrap: anywhere; }
+.rank-row .who span { display: block; font-size: 11.5px; color: var(--muted); }
+.rank-row .score { font-family: var(--mono); font-size: 17px; font-weight: 750; color: var(--red); font-variant-numeric: tabular-nums; }
+.rank-row.me { border-color: var(--brass); box-shadow: inset 3px 0 0 var(--brass); }
+.rank-tools { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+.rank-tools select {
+  min-height: 44px; padding: 0 12px; border-radius: 11px; border: 1px solid var(--line-strong);
+  background: var(--input, #fffdf8); color: var(--ink); font: inherit; font-size: 14px;
+}
+.rank-tools button {
+  min-height: 44px; padding: 0 14px; border-radius: 11px; border: 1px solid var(--line-strong);
+  background: var(--paper-2); font-weight: 700; cursor: pointer;
+}
+.empty-rank { padding: 18px; border: 1px dashed var(--line-strong); border-radius: 12px; color: var(--muted); text-align: center; font-size: 13px; }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="wrap">
+    <a href="../index.html">← 目录</a>
+    <span class="title">排行榜</span>
+    <button id="sound" type="button" aria-pressed="false">声音 开</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="page-head">
+    <p class="eyebrow">LOCAL BOARD · LEADERBOARD</p>
+    <h1>本地排行榜</h1>
+    <p class="lede">分数只存在浏览器 localStorage；榜单只显示匿名设备 hash，不显示原始设备 id 或任何个人信息。</p>
+  </section>
+
+  <p class="file-warning">这个页面用 ES modules 引用 <code>../app/</code>。请用本地静态服务器打开，例如在 <code>games/boardgame</code> 下运行 <code>python3 -m http.server 8123</code>，再访问 <code>http://127.0.0.1:8123/demo/leaderboard.html</code>。</p>
+
+  <section class="panel">
+    <h2>榜单</h2>
+    <div class="rank-tools">
+      <label class="sr-only" for="game">游戏</label>
+      <select id="game">
+        <option value="all">全部游戏</option>
+        <option value="card-battle">卡牌对战</option>
+        <option value="mahjong">麻将</option>
+      </select>
+      <button id="refresh" type="button">刷新</button>
+      <span class="muted" id="rank-note" style="font-size:12px"></span>
+    </div>
+    <ol class="rank-list" id="list" aria-live="polite"></ol>
+    <p class="empty-rank" id="empty" hidden>还没有成绩。去玩一局卡牌或麻将，结算后会自动写入本地榜单。</p>
+  </section>
+
+  <section class="panel">
+    <h2>我的设备</h2>
+    <div class="meta" id="device"></div>
+  </section>
+
+  <section class="panel">
+    <h2>快速入口</h2>
+    <div class="actions">
+      <a class="topbar-link" href="card-battle.html" style="display:inline-flex;align-items:center;min-height:44px;padding:0 14px;border:1px solid var(--line-strong);border-radius:11px;text-decoration:none;font-weight:700">卡牌对战</a>
+      <a href="mahjong.html" style="display:inline-flex;align-items:center;min-height:44px;padding:0 14px;border:1px solid var(--line-strong);border-radius:11px;text-decoration:none;font-weight:700">麻将</a>
+      <a href="share.html" style="display:inline-flex;align-items:center;min-height:44px;padding:0 14px;border:1px solid var(--line-strong);border-radius:11px;text-decoration:none;font-weight:700">分享结果页</a>
+    </div>
+  </section>
+</main>
+
+<script>
+if (location.protocol === 'file:') document.documentElement.classList.add('file-mode');
+</script>
+<script type="module">
+import { createLeaderboard, getOrCreateDeviceId } from '../app/leaderboard.js';
+import { audio } from '../app/audio.js';
+
+const $ = (id) => document.getElementById(id);
+const board = createLeaderboard();
+const deviceId = getOrCreateDeviceId();
+const myHash = board.deviceHashFor(deviceId);
+let lastRows = [];
+
+function esc(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function shortHash(hash) {
+  return hash ? hash.slice(0, 10) + '…' : '—';
+}
+
+function render() {
+  const filter = $('game').value;
+  const options = filter === 'all' ? {} : { gameId: filter };
+  lastRows = board.top(20, options);
+  $('empty').hidden = lastRows.length !== 0;
+  $('list').innerHTML = lastRows.map(function (row) {
+    const mine = row.deviceHash === myHash;
+    return '<li class="rank-row' + (mine ? ' me' : '') + '">' +
+      '<span class="pos">#' + row.rank + '</span>' +
+      '<span class="who"><strong>' + (mine ? '我的设备' : shortHash(row.deviceHash)) + '</strong>' +
+      '<span>' + esc(row.gameId) + ' · ' + new Date(row.at).toLocaleString('zh-CN') + '</span></span>' +
+      '<span class="score">' + row.score + '</span>' +
+      '</li>';
+  }).join('');
+  $('device').innerHTML = '设备 hash <strong class="mono">' + shortHash(myHash) + '</strong>' +
+    ' · 本机名次 <strong>' + (function () {
+      if (filter === 'all') return '按游戏查看';
+      const rank = board.getRank(myHash, filter);
+      return rank == null ? '未上榜' : '#' + rank;
+    })() + '</strong>' +
+    ' · 榜单总数 <strong>' + board.top(1000, options).length + '</strong>';
+  if (lastRows.length) {
+    audio.play('click');
+  }
+  $('rank-note').textContent = filter === 'all' ? '显示各游戏混合前 20' : '仅显示 ' + filter + ' 前 20';
+}
+
+function syncSound() {
+  const muted = audio.isMuted();
+  $('sound').textContent = muted ? '声音 关' : '声音 开';
+  $('sound').setAttribute('aria-pressed', String(!muted));
+}
+
+$('game').addEventListener('change', render);
+$('refresh').addEventListener('click', function () { audio.play('click'); render(); });
+$('sound').addEventListener('click', function () { audio.toggle(); audio.play('click'); syncSound(); });
+
+syncSound();
+render();
+</script>
+</body>
+</html>

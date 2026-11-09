@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>政变 Coup — 身份欺诈单机桌游</title>
+<meta name="description" content="政变 Coup 中文单机版：公爵、刺客、队长、大使、女伯爵五种身份，收入、征税、暗杀、偷取、交换与政变，挑战和阻挡，最后存活者获胜。">
+<meta name="theme-color" content="#17120f">
+<style>
+:root{--bg:#14100d;--panel:#211a15;--panel2:#2d241c;--ink:#f5eee4;--muted:#bcae9c;
+--gold:#d9a441;--red:#b64a3c;--green:#5f8c5a;--line:#45372a}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:radial-gradient(900px 500px at 50% 0%,#2a2119,var(--bg));color:var(--ink);
+font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
+padding-bottom:calc(26px + env(safe-area-inset-bottom))}
+.wrap{max-width:700px;margin:0 auto;padding:0 14px}
+header{padding:16px 0 8px;display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap}
+h1{font-size:1.35rem;margin:0}
+h1 small{display:block;font-size:.74rem;color:var(--muted);letter-spacing:.2em;font-weight:400;margin-top:3px}
+button{font:inherit;color:inherit;cursor:pointer;min-height:44px;border-radius:10px;border:1px solid var(--line);
+background:var(--panel2);padding:8px 12px}
+button:hover{filter:brightness(1.12)}
+button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+button:disabled{opacity:.45;cursor:default}
+button.primary{background:var(--gold);color:#241a06;font-weight:700;border-color:var(--gold)}
+button.danger{background:#5b2720;border-color:#8e4539}
+button.good{background:#284427;border-color:#4f7a49}
+.players{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0 12px}
+.player{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 8px;min-width:0}
+.player.me{border-color:var(--gold);box-shadow:0 0 0 1px rgba(217,164,65,.25) inset}
+.player.out{opacity:.45}
+.player.turn{background:#33281c}
+.player h2{font-size:.9rem;margin:0 0 4px;display:flex;justify-content:space-between;gap:4px;align-items:center}
+.coins{color:var(--gold);font-size:.8rem;white-space:nowrap}
+.cards{display:flex;gap:4px;flex-wrap:wrap}
+.card{flex:1 1 44%;min-height:44px;border-radius:7px;border:1px dashed var(--line);display:flex;
+align-items:center;justify-content:center;font-size:.74rem;text-align:center;background:#1a1410;padding:3px}
+.card.revealed{background:#3a221e;border-style:solid;color:#e7b7ac;text-decoration:line-through;opacity:.8}
+.card.known{background:#3a3323;border-color:#6d5b35}
+.status{background:rgba(33,26,21,.85);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:8px 0 12px}
+.status .big{font-weight:700}
+.status .sub{color:var(--muted);font-size:.86rem;margin-top:2px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.actions button{flex:1 1 120px}
+.log{max-height:150px;overflow:auto;border-top:1px solid var(--line);margin-top:14px;padding-top:8px;
+font-size:.82rem;color:var(--muted)}
+.log p{margin:3px 0}
+.banner{margin:10px 0;padding:10px;border-radius:10px;background:#3c4a2e;border:1px solid #68834f;
+text-align:center;font-weight:700}
+.links{display:flex;justify-content:space-between;margin-top:14px;font-size:.86rem;flex-wrap:wrap;gap:8px}
+.links a{color:var(--gold);text-decoration:none;min-height:44px;display:inline-flex;align-items:center}
+.hint{color:var(--muted);font-size:.78rem;margin:4px 2px}
+@media (max-width:360px){.players{grid-template-columns:1fr}.wrap{padding:0 10px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>政变 <small>COUP · 欺诈与虚张声势</small></h1>
+  <button id="newGame">新对局</button>
+</header>
+<div class="players" id="players" aria-label="玩家状态"></div>
+<div class="banner" id="banner" hidden></div>
+<div class="status" id="status" aria-live="polite"></div>
+<div class="actions" id="actions" aria-label="可选行动"></div>
+<div class="hint" id="hint"></div>
+<div class="log" id="log" aria-live="polite"></div>
+<div class="links">
+  <a href="rules.html">查看中文规则</a>
+  <a href="../index.html">返回桌游目录</a>
+</div>
+</div>
+<script src="engine.js"></script>
+<script>
+(function () {
+  'use strict';
+  var E = window.CoupEngine;
+  var state = null;
+  var gen = 0;
+  var selected = [];
+  var playersEl = document.getElementById('players');
+  var actionsEl = document.getElementById('actions');
+  var statusEl = document.getElementById('status');
+  var logEl = document.getElementById('log');
+  var banner = document.getElementById('banner');
+  var hintEl = document.getElementById('hint');
+
+  function esc(t) {
+    return String(t).replace(/[&<>"']/g, function (c) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+    });
+  }
+  function rn(role) { return E.ROLE_NAMES[role] || '未知'; }
+  function an(a) { return E.ACTION_NAMES[a] || a; }
+
+  function render() {
+    if (!state) return;
+    var v = E.viewFor(state, 0);
+    playersEl.innerHTML = v.players.map(function (p) {
+      var me = p.id === 0;
+      var cls = 'player' + (me ? ' me' : '') + (p.eliminated ? ' out' : '') +
+        (v.current === p.id && v.phase !== 'over' ? ' turn' : '');
+      return '<div class="' + cls + '">' +
+        '<h2><span>' + esc(p.name) + (me ? '（你）' : '') + '</span><span class="coins">' +
+        p.coins + ' 币</span></h2><div class="cards">' +
+        p.influence.map(function (c) {
+          var known = c.role !== 'hidden';
+          var txt = c.revealed ? rn(c.role) + '（已失去）' : (known ? rn(c.role) : '身份牌');
+          return '<div class="card ' + (c.revealed ? 'revealed' : (known ? 'known' : '')) +
+            '" aria-label="' + esc(txt) + '">' + esc(txt) + '</div>';
+        }).join('') + '</div></div>';
+    }).join('');
+
+    var big = '', sub = '';
+    var act = E.actorId(state);
+    if (v.phase === 'over') {
+      big = '对局结束';
+      sub = v.winner >= 0 ? v.players[v.winner].name + ' 获胜。' : '对局结束。';
+    } else if (v.phase === 'action') {
+      big = v.current === 0 ? '你的回合：选择一个行动' : '等待 ' + v.players[v.current].name + ' 行动…';
+      sub = '行动可虚张声势；被挑战时要亮出对应身份，否则失去一张牌。';
+    } else if (v.phase === 'challenge') {
+      big = act === 0 ? '是否挑战？' : '等待 ' + v.players[act].name + ' 决定是否挑战…';
+      sub = '宣称：' + an(v.pending.action) + (v.pending.claim ? '（' + rn(v.pending.claim) + '）' : '');
+    } else if (v.phase === 'block') {
+      big = act === 0 ? '是否阻挡？' : '等待 ' + v.players[act].name + ' 决定是否阻挡…';
+      sub = '针对：' + an(v.pending.action) +
+        (v.pending.target != null ? '，目标 ' + v.players[v.pending.target].name : '');
+    } else if (v.phase === 'blockChallenge') {
+      big = act === 0 ? '是否挑战这次阻挡？' : '等待 ' + v.players[act].name + ' 决定…';
+      sub = '阻挡宣称：' + rn(v.pending.blockClaim);
+    } else if (v.phase === 'discard') {
+      big = act === 0 ? '选择一张身份牌弃掉' : '等待 ' + v.players[act].name + ' 弃牌…';
+      sub = '原因：' + (v.pending.discardReason || '');
+    } else if (v.phase === 'exchange') {
+      big = '选择保留两张身份牌';
+      sub = '现在有 4 张，确认后其余两张洗回牌堆。';
+    }
+    statusEl.innerHTML = '<div class="big">' + esc(big) + '</div><div class="sub">' + esc(sub) + '</div>';
+    if (v.phase === 'over') {
+      banner.hidden = false;
+      banner.textContent = v.winner === 0 ? '你存活到了最后，获胜！' :
+        (v.winner >= 0 ? v.players[v.winner].name + ' 获胜。' : '对局结束。');
+    } else banner.hidden = true;
+
+    var buttons = [];
+    if (v.phase === 'over') {
+      buttons.push('<button class="primary" data-act="new">再来一局</button>');
+    } else if (!E.needsHuman(state)) {
+      buttons.push('<button disabled>AI 行动中…</button>');
+    } else if (v.phase === 'action') {
+      buttons.push('<button data-act="income">收入 +1</button>');
+      buttons.push('<button data-act="foreign_aid">外援 +2</button>');
+      buttons.push('<button data-act="tax">征税 +3（公爵）</button>');
+      buttons.push('<button data-act="exchange">交换（大使）</button>');
+      v.players.forEach(function (p) {
+        if (p.id === 0 || p.eliminated) return;
+        buttons.push('<button data-act="steal" data-target="' + p.id + '">偷取 ' + esc(p.name) + '（队长）</button>');
+        if (v.players[0].coins >= 3) {
+          buttons.push('<button data-act="assassinate" data-target="' + p.id + '" class="danger">暗杀 ' +
+            esc(p.name) + '（3 币）</button>');
+        }
+        if (v.players[0].coins >= 7) {
+          buttons.push('<button data-act="coup" data-target="' + p.id + '" class="danger">政变 ' +
+            esc(p.name) + '（7 币）</button>');
+        }
+      });
+    } else if (v.phase === 'challenge') {
+      buttons.push('<button data-act="challenge" class="danger">挑战</button>');
+      buttons.push('<button data-act="pass">不挑战</button>');
+    } else if (v.phase === 'block') {
+      (E.BLOCK_BY_ACTION[v.pending.action] || []).forEach(function (role) {
+        buttons.push('<button data-act="block" data-role="' + role + '" class="good">声称' + rn(role) + '阻挡</button>');
+      });
+      buttons.push('<button data-act="pass">不阻挡</button>');
+    } else if (v.phase === 'blockChallenge') {
+      buttons.push('<button data-act="challenge" class="danger">挑战阻挡</button>');
+      buttons.push('<button data-act="pass">接受阻挡</button>');
+    } else if (v.phase === 'discard') {
+      var me = v.players[0];
+      me.influence.forEach(function (c, i) {
+        if (!c.revealed) buttons.push('<button data-act="discard" data-index="' + i + '" class="danger">弃掉 ' + rn(c.role) + '</button>');
+      });
+    } else if (v.phase === 'exchange') {
+      var mine = v.players[0];
+      mine.influence.forEach(function (c, i) {
+        var on = selected.indexOf(i) >= 0;
+        buttons.push('<button data-act="toggle" data-index="' + i + '" class="' + (on ? 'primary' : '') +
+          '">' + (on ? '已选 ' : '保留 ') + rn(c.role) + '</button>');
+      });
+      buttons.push('<button data-act="keep" class="primary"' + (selected.length === 2 ? '' : ' disabled') +
+        '>确认保留</button>');
+    }
+    actionsEl.innerHTML = buttons.join('');
+    hintEl.textContent = v.phase === 'action' && v.current === 0
+      ? '提示：宣称身份不需要真的持有；但被挑战且拿不出牌，就会失去一张身份牌。' : '';
+    logEl.innerHTML = v.log.slice(-10).map(function (line) { return '<p>' + esc(line) + '</p>'; }).join('');
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function pump() {
+    var my = gen;
+    function step() {
+      if (my !== gen || !state || E.isOver(state) || E.needsHuman(state)) { render(); return; }
+      var a = E.aiAction(state);
+      if (!a) { render(); return; }
+      E.applyAction(state, a);
+      render();
+      setTimeout(step, 620);
+    }
+    setTimeout(step, 300);
+  }
+
+  function afterHuman() {
+    selected = [];
+    render();
+    if (!E.isOver(state) && !E.needsHuman(state)) pump();
+  }
+
+  function doAction(a) {
+    var r = E.applyAction(state, a);
+    if (!r.ok) { statusEl.innerHTML = '<div class="big">无法执行</div><div class="sub">' + esc(r.error) + '</div>'; return; }
+    afterHuman();
+  }
+
+  actionsEl.addEventListener('click', function (ev) {
+    var btn = ev.target.closest('button[data-act]');
+    if (!btn || !state) return;
+    var act = btn.getAttribute('data-act');
+    if (act === 'new') { newGame(); return; }
+    if (act === 'toggle') {
+      var idx = Number(btn.getAttribute('data-index'));
+      var at = selected.indexOf(idx);
+      if (at >= 0) selected.splice(at, 1);
+      else if (selected.length < 2) selected.push(idx);
+      render();
+      return;
+    }
+    if (act === 'keep') {
+      if (selected.length !== 2) return;
+      doAction({ type: 'keep', indices: selected.slice() });
+      return;
+    }
+    var action = { type: act };
+    var target = btn.getAttribute('data-target');
+    var role = btn.getAttribute('data-role');
+    var index = btn.getAttribute('data-index');
+    if (target != null) action.target = Number(target);
+    if (role) action.role = role;
+    if (index != null) action.index = Number(index);
+    doAction(action);
+  });
+
+  function newGame() {
+    gen++;
+    state = E.createGame({ seed: (Date.now() % 1000000) + 3 });
+    selected = [];
+    render();
+    if (!E.needsHuman(state) && !E.isOver(state)) pump();
+  }
+
+  document.getElementById('newGame').addEventListener('click', newGame);
+  newGame();
+}());
+</script>
+</body>
+</html>

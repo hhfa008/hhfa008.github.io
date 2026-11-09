@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#12171d">
+<title>战争宝箱规则（简化版）— War Chest 双人据点争夺</title>
+<meta name="description" content="战争宝箱 War Chest 简化版中文规则：7×7 棋盘、12 个据点、5 种单位、每回合抽 3 枚币、部署/移动/攻击、控制 4 个据点或攻入大本营获胜，附 AI 说明。">
+<meta name="robots" content="index,follow">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2312171d'/%3E%3Cpath d='M6 26V10h4V7h4v3h2V6h4v4h2V7h4v19h-7v-4h-4v4H6z' fill='%23c9a46a'/%3E%3C/svg%3E">
+<style>
+:root {
+  --bg: #12171d;
+  --panel: #1b232c;
+  --panel-2: #202a34;
+  --line: #2c3844;
+  --ink: #ece6d8;
+  --muted: #9aa5af;
+  --brass: #c9a46a;
+  --brass-bright: #e3c48d;
+  --p0: #4c9db5;
+  --p1: #c96a52;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  font-size: 15px;
+  line-height: 1.65;
+  overflow-x: clip;
+  background:
+    radial-gradient(900px 420px at 50% -10%, rgba(201, 164, 106, 0.09), transparent 62%),
+    var(--bg);
+  -webkit-text-size-adjust: 100%;
+}
+a { color: var(--brass-bright); text-decoration: underline; text-underline-offset: 2px; }
+:focus-visible { outline: 2px solid var(--brass-bright); outline-offset: 2px; }
+
+.wrap { max-width: 760px; margin: 0 auto; padding: 14px 14px 40px; }
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 2px 0 12px;
+}
+.topbar .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; letter-spacing: 0.05em; }
+.topbar .mark {
+  width: 32px; height: 32px; display: grid; place-items: center;
+  border-radius: 9px; border: 1px solid #3a4754;
+  background: linear-gradient(145deg, #2c3844, #1a222b);
+  color: var(--brass-bright);
+}
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 44px; padding: 0 14px; border-radius: 11px;
+  border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+  font-size: 14px; font-weight: 600; text-decoration: none;
+  transition: background 0.15s ease;
+}
+.btn:hover { background: var(--panel-2); }
+.btn.primary { background: linear-gradient(180deg, #d3b17c, #b9905a); border-color: #8e6b3d; color: #241a0d; }
+
+.simplified {
+  margin: 0 0 16px;
+  padding: 13px 15px;
+  border-radius: 13px;
+  border: 1px solid rgba(201, 164, 106, 0.45);
+  background: linear-gradient(180deg, rgba(201, 164, 106, 0.14), rgba(201, 164, 106, 0.06));
+  color: #f0dfbc;
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+.simplified strong { color: var(--brass-bright); }
+
+header.hero h1 {
+  margin: 0 0 6px;
+  font-size: clamp(25px, 7vw, 36px);
+  line-height: 1.18;
+  letter-spacing: 0.03em;
+}
+header.hero .sub { margin: 0 0 18px; color: var(--muted); font-size: 14px; }
+
+.card {
+  margin-top: 14px;
+  padding: 16px 16px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(32, 42, 52, 0.8), rgba(24, 32, 41, 0.8));
+}
+.card h2 {
+  margin: 0 0 9px;
+  font-size: 18px;
+  letter-spacing: 0.03em;
+  color: var(--brass-bright);
+}
+.card h3 { margin: 16px 0 6px; font-size: 15px; color: #dfe6ec; }
+.card p { margin: 6px 0; }
+.card ul, .card ol { margin: 6px 0; padding-left: 1.25em; }
+.card li { margin: 4px 0; }
+.card li::marker { color: var(--brass); }
+.small { color: var(--muted); font-size: 12.5px; }
+
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 560px) { .two-col { grid-template-columns: 1fr; } }
+
+.table-wrap { overflow-x: auto; margin: 8px 0 4px; }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+th, td { padding: 8px 7px; border-bottom: 1px solid #2a3540; text-align: left; vertical-align: top; }
+th { color: #cfd8df; font-size: 12px; letter-spacing: 0.05em; white-space: nowrap; }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+.tag {
+  display: inline-block; padding: 0 6px; border-radius: 6px;
+  background: rgba(201, 164, 106, 0.16); color: var(--brass-bright);
+  font-size: 11.5px; font-weight: 700;
+}
+
+.grid-map {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  max-width: 330px;
+  margin: 12px auto;
+  padding: 6px;
+  border-radius: 12px;
+  border: 1px solid #34414e;
+  background: #151c23;
+}
+.gm-cell {
+  aspect-ratio: 1 / 1;
+  border-radius: 5px;
+  border: 1px solid #2d3a46;
+  background: #222d37;
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: #96a2ad;
+}
+.gm-cell.sh0 { background: #223945; border-color: #3f8ea8; color: #8ed6e8; }
+.gm-cell.sh1 { background: #3a2b29; border-color: #c96a52; color: #f0a48d; }
+.gm-cell.base0 { background: #263541; border-color: var(--brass); color: var(--brass-bright); }
+.gm-cell.base1 { background: #3a2b29; border-color: var(--brass); color: var(--brass-bright); }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 14px; justify-content: center; font-size: 11.5px; color: var(--muted); margin-top: 4px; }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.legend i { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+
+.cta { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 18px; }
+.cta .btn { flex: 1 1 160px; }
+
+footer.note { margin-top: 22px; color: #6c7985; font-size: 11.5px; text-align: center; line-height: 1.7; }
+
+@media (max-width: 430px) {
+  .wrap { padding: 10px 11px 32px; }
+  .card { padding: 13px 12px 11px; }
+  body { font-size: 14.5px; }
+  th, td { padding: 7px 6px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition-duration: 0.001ms !important; animation-duration: 0.001ms !important; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand">
+      <span class="mark" aria-hidden="true">⚔</span>
+      <span>战争宝箱 · 规则</span>
+    </div>
+    <a class="btn primary" href="index.html">返回对局</a>
+  </div>
+
+  <div class="simplified" role="note">
+    <strong>简化版，非官方完整规则。</strong>
+    本页与游戏采用一套自洽的简化规则，保留「抽币 → 部署 → 移动 / 攻击 → 占点」的核心循环，
+    但没有还原 War Chest 原版的皇家币、先手轮换、军械库、单位特殊能力与精确计分。
+    如与原版规则冲突，以本页和游戏内提示为准。
+  </div>
+
+  <header class="hero">
+    <h1>战争宝箱：7×7 据点争夺</h1>
+    <p class="sub">双人对战 · 你 vs AI · 纯前端离线 · 手机优先</p>
+  </header>
+
+  <section class="card">
+    <h2>一、目标</h2>
+    <p>任意一方满足以下任一条件立即获胜：</p>
+    <ul>
+      <li><strong>控制 4 个据点</strong>（全场共 12 个，双方都可以争夺）；</li>
+      <li><strong>攻入敌方大本营</strong>：己方单位移动到敌方大本营格上。</li>
+    </ul>
+    <p class="small">如果达到 100 个玩家回合仍未分胜负，依次比较：据点数 → 场上单位数 → 仍是平局则判平。</p>
+  </section>
+
+  <section class="card">
+    <h2>二、棋盘与据点</h2>
+    <p>棋盘为 7×7，共 49 格。上方是 AI 的大本营，下方是你的大本营；双方各有 6 个据点，中央与边缘混合分布。</p>
+    <div class="grid-map" role="img" aria-label="7×7 棋盘布局示意：上方 AI 大本营，下方玩家大本营，12 个据点镜像分布">
+      <span class="gm-cell"></span><span class="gm-cell"></span><span class="gm-cell"></span><span class="gm-cell base1">AI</span><span class="gm-cell"></span><span class="gm-cell"></span><span class="gm-cell"></span>
+      <span class="gm-cell"></span><span class="gm-cell sh1">据</span><span class="gm-cell"></span><span class="gm-cell sh1">据</span><span class="gm-cell"></span><span class="gm-cell sh1">据</span><span class="gm-cell"></span>
+      <span class="gm-cell sh1">据</span><span class="gm-cell"></span><span class="gm-cell"></span><span class="gm-cell sh1">据</span><span class="gm-cell"></span><span class="gm-cell"></span><span class="gm-cell sh1">据</span>
+      <span class="gm-cell"></span><span class="gm-cell"></span><span class="gm-cell"></span><span class="gm-cell"></span><span class="gm-cell"></span><span class="gm-cell"></span><span class="gm-cell"></span>
+      <span class="gm-cell sh0">据</span><span class="gm-cell"></span><span class="gm-cell"></span><span class="gm-cell sh0">据</span><span class="gm-cell"></span><span class="gm-cell"></span><span class="gm-cell sh0">据</span>
+      <span class="gm-cell"></span><span class="gm-cell sh0">据</span><span class="gm-cell"></span><span class="gm-cell sh0">据</span><span class="gm-cell"></span><span class="gm-cell sh0">据</span><span class="gm-cell"></span>
+      <span class="gm-cell"></span><span class="gm-cell"></span><span class="gm-cell"></span><span class="gm-cell base0">你</span><span class="gm-cell"></span><span class="gm-cell"></span><span class="gm-cell"></span>
+    </div>
+    <div class="legend">
+      <span><i style="background:#263541;border:1px solid #c9a46a"></i>大本营</span>
+      <span><i style="background:#223945;border:1px solid #4c9db5"></i>你方据点</span>
+      <span><i style="background:#3a2b29;border:1px solid #c96a52"></i>AI 方据点</span>
+      <span><i style="background:#222d37;border:1px solid #2d3a46"></i>平地</span>
+    </div>
+    <p class="small">图中「据」只表示据点的初始位置，不代表归属；开局时全部 12 个据点都是中立的。</p>
+  </section>
+
+  <section class="card">
+    <h2>三、回合流程</h2>
+    <ol>
+      <li><strong>抽币</strong>：回合开始时，从自己的单位袋抽 3 枚单位币加入手牌。若袋已空，把弃币堆洗回袋中再抽。</li>
+      <li><strong>行动</strong>：每花 1 枚对应类型的单位币，执行 1 次「部署」或「激活一个单位（移动 / 攻击）」。一回合最多用掉手里的 3 枚币。</li>
+      <li><strong>结束回合</strong>：未使用的单位币全部进入弃币堆，然后轮到对手。</li>
+    </ol>
+    <p class="small">单位币只是行动资源；每个单位棋子的数量另由「预备队」限制。部署会消耗预备队，单位被击杀后棋子回到预备队。</p>
+  </section>
+
+  <section class="card">
+    <h2>四、三种行动</h2>
+
+    <h3>1. 部署（1 枚对应单位币）</h3>
+    <ul>
+      <li>把预备队里的 1 个单位放到<strong>己方大本营</strong>，或己方大本营 / 已控据点的<strong>上下左右相邻空格</strong>。</li>
+      <li>不能直接部署到任何据点上，也不能部署到敌方大本营或有单位的格子。</li>
+      <li>部署不改变据点控制权；想占点必须把单位移动上去。</li>
+    </ul>
+
+    <h3>2. 移动（1 枚对应单位币）</h3>
+    <ul>
+      <li>选择一个己方单位，沿上下左右移动到步数范围内的空格；不能斜走，不能穿过任何单位。</li>
+      <li>可以停在己方大本营、敌方大本营或据点上。</li>
+      <li>站在敌方大本营上立即获胜。</li>
+    </ul>
+
+    <h3>3. 攻击（1 枚对应单位币）</h3>
+    <ul>
+      <li>选择己方单位和一个敌方单位。若目标在攻击距离内，直接击杀；若不在，单位会先沿最短路移动到能攻击的位置，再击杀。</li>
+      <li>攻击距离按曼哈顿距离计算（横纵格数相加），不检查视线遮挡。</li>
+      <li>被击杀单位的棋子回到其主人预备队。攻击方不会受到反击。</li>
+      <li>斥候攻击距离为 0，不能攻击，只能抢点。</li>
+    </ul>
+
+    <h3>4. 控制据点</h3>
+    <ul>
+      <li>己方单位<strong>停留在据点格上</strong>时，该据点立即归你；若上面是敌方控制的据点，则改为你控制。</li>
+      <li>控制权会保留：单位离开后据点仍是你的，直到敌方单位再次停上去。</li>
+      <li>控制第 4 个据点的瞬间获胜。</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2>五、单位表</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>单位</th><th class="num">数量</th><th class="num">移动</th><th class="num">攻击距离</th><th>说明</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>步兵 <span class="tag">步</span></td><td class="num">5</td><td class="num">1</td><td class="num">1</td><td>基础单位，稳扎稳打。</td></tr>
+          <tr><td>弓箭手 <span class="tag">弓</span></td><td class="num">3</td><td class="num">1</td><td class="num">2</td><td>唯一远程单位，可隔一格攻击。</td></tr>
+          <tr><td>骑兵 <span class="tag">骑</span></td><td class="num">3</td><td class="num">2</td><td class="num">1</td><td>机动支援，适合快速换线。</td></tr>
+          <tr><td>斥候 <span class="tag">斥</span></td><td class="num">2</td><td class="num">3</td><td class="num">0</td><td>最快抢点，但完全不能攻击。</td></tr>
+          <tr><td>指挥官 <span class="tag">指</span></td><td class="num">1</td><td class="num">2</td><td class="num">1</td><td>高价值单位；简化版没有额外光环。</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="small">每方共 14 个单位 / 14 枚单位币。单位被击杀后，棋子回到预备队，可以再次部署；单位币则始终在袋、手牌、弃币三者之间循环。</p>
+  </section>
+
+  <section class="card">
+    <h2>六、AI 怎么打</h2>
+    <ul>
+      <li>优先抢占未被控制的据点，并阻止你凑齐 4 个据点；</li>
+      <li>优先攻击指挥官、弓箭手等高价值单位，以及靠近自己大本营的威胁；</li>
+      <li>会在大本营受到威胁时回防，或把新单位部署在基地附近；</li>
+      <li>所有动作都来自引擎的合法动作列表，不会作弊或卡死；没有可用动作时会结束回合。</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2>七、常见问题</h2>
+    <h3>为什么单位币不能直接变成新单位？</h3>
+    <p>简化版把「招募」和「部署」合并：花 1 枚对应单位币，从预备队放 1 个单位上场。这样抽币、行动和单位数量三者各自独立，规则更好理解。</p>
+    <h3>单位站在据点上，离开后会丢点吗？</h3>
+    <p>不会。控制权只在敌方单位停上据点时转移。</p>
+    <h3>敌方大本营上有守军怎么办？</h3>
+    <p>先用攻击击杀守军，再用另一次移动踏上大本营。踏入的瞬间获胜。</p>
+    <h3>为什么有时候只能部署在很少的格子？</h3>
+    <p>部署范围只包括己方大本营和已控据点的相邻空格。开局没有据点，所以只有大本营周围几格；占点后部署选择会变多。</p>
+  </section>
+
+  <div class="cta">
+    <a class="btn primary" href="index.html">开始对局</a>
+    <a class="btn" href="../index.html">返回桌游目录</a>
+  </div>
+
+  <footer class="note">
+    战争宝箱 War Chest 简化网页版 · 纯前端、无外部依赖、离线可玩。<br>
+    本页为简化规则说明，非官方规则书。
+  </footer>
+</div>
+</body>
+</html>

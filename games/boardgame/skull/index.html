@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>骷髅 Skull — 暗放与下注单机桌游</title>
+<meta name="description" content="骷髅 Skull 中文单机版：每人 4 枚圆片（3 花 1 骷髅），暗放、下注、翻片；翻到骷髅失去一枚圆片，先得 2 分或让对手失去全部圆片者获胜。">
+<meta name="theme-color" content="#14100d">
+<style>
+:root{--bg:#120f0c;--panel:#211a14;--panel2:#2e241b;--ink:#f4eadb;--muted:#bfae96;
+--flower:#d9899e;--flowerbg:#5a2a38;--skull:#e8ded0;--skullbg:#161310;--gold:#d8a84e;--line:#473829}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:radial-gradient(900px 500px at 50% -10%,#2c2218,var(--bg));color:var(--ink);
+font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
+padding-bottom:calc(26px + env(safe-area-inset-bottom))}
+.wrap{max-width:680px;margin:0 auto;padding:0 14px}
+header{padding:16px 0 8px;display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap}
+h1{font-size:1.35rem;margin:0}
+h1 small{display:block;font-size:.74rem;color:var(--muted);letter-spacing:.18em;font-weight:400;margin-top:3px}
+button{font:inherit;color:inherit;cursor:pointer;min-height:44px;border-radius:10px;border:1px solid var(--line);
+background:var(--panel2);padding:8px 12px}
+button:hover{filter:brightness(1.12)}
+button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+button:disabled{opacity:.45;cursor:default}
+button.primary{background:var(--gold);border-color:var(--gold);color:#241a06;font-weight:700}
+button.danger{background:#5b2720;border-color:#8e4539}
+.players{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0 12px}
+.player{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px}
+.player.turn{border-color:var(--gold);box-shadow:0 0 0 1px rgba(216,168,78,.3) inset}
+.player h2{font-size:.9rem;margin:0 0 6px;display:flex;justify-content:space-between;gap:6px}
+.badge{font-size:.68rem;color:var(--gold);border:1px solid var(--line);border-radius:99px;padding:1px 7px}
+.row{font-size:.76rem;color:var(--muted);margin:4px 0}
+.discs{display:flex;gap:5px;flex-wrap:wrap;min-height:40px}
+.disc{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+font-size:.62rem;border:1px solid var(--line);background:var(--panel2);text-align:center;line-height:1.1;padding:2px}
+.disc.flower{background:var(--flowerbg);border-color:#a05e70;color:#ffe2ea}
+.disc.skull{background:var(--skullbg);border-color:#6b5f4f;color:var(--skull)}
+.disc.hidden{background:linear-gradient(135deg,#3a3024,#241c14);color:var(--muted)}
+.disc.revealed{box-shadow:0 0 0 2px var(--gold)}
+.status{background:rgba(33,26,20,.85);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:8px 0 12px}
+.status .big{font-weight:700}
+.status .sub{color:var(--muted);font-size:.86rem;margin-top:2px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.actions button{flex:1 1 140px}
+.log{max-height:150px;overflow:auto;border-top:1px solid var(--line);margin-top:14px;padding-top:8px;
+font-size:.82rem;color:var(--muted)}
+.log p{margin:3px 0}
+.banner{margin:10px 0;padding:10px;border-radius:10px;background:#3c3323;border:1px solid #7d6b3e;
+text-align:center;font-weight:700}
+.links{display:flex;justify-content:space-between;margin-top:14px;font-size:.86rem;flex-wrap:wrap;gap:8px}
+.links a{color:var(--gold);text-decoration:none;min-height:44px;display:inline-flex;align-items:center}
+.hint{color:var(--muted);font-size:.78rem;margin:4px 2px}
+@media (max-width:360px){.wrap{padding:0 10px}.players{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>骷髅 <small>SKULL · 暗放 · 下注 · 翻片</small></h1>
+  <button id="newGame">新对局</button>
+</header>
+<div class="players" id="players" aria-label="双方圆片与得分"></div>
+<div class="banner" id="banner" hidden></div>
+<div class="status" id="status" aria-live="polite"></div>
+<div class="actions" id="actions" aria-label="可选行动"></div>
+<div class="hint" id="hint"></div>
+<div class="log" id="log" aria-live="polite"></div>
+<div class="links">
+  <a href="rules.html">查看中文规则</a>
+  <a href="../index.html">返回桌游目录</a>
+</div>
+</div>
+<script src="engine.js"></script>
+<script>
+(function () {
+  'use strict';
+  var E = window.SkullEngine;
+  var state = null;
+  var gen = 0;
+  var playersEl = document.getElementById('players');
+  var actionsEl = document.getElementById('actions');
+  var statusEl = document.getElementById('status');
+  var logEl = document.getElementById('log');
+  var banner = document.getElementById('banner');
+  var hintEl = document.getElementById('hint');
+
+  function esc(t) {
+    return String(t).replace(/[&<>"']/g, function (c) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+    });
+  }
+  function discLabel(type) { return type === 'skull' ? '骷髅' : (type === 'flower' ? '花' : '?'); }
+
+  function render() {
+    if (!state) return;
+    var v = E.viewFor(state, 0);
+    playersEl.innerHTML = v.players.map(function (p) {
+      var cls = 'player' + (v.turn === p.id && v.phase !== 'over' ? ' turn' : '');
+      return '<div class="' + cls + '"><h2><span>' + esc(p.name) +
+        (p.id === state.seat ? '（你）' : '') + '</span><span class="badge">' + p.points + ' / 2 分</span></h2>' +
+        '<div class="row">手中 ' + p.handCount + ' 枚 · 已放 ' + p.placed.length + ' 枚' +
+        (p.eliminated ? ' · 已出局' : '') + '</div>' +
+        '<div class="row">手中圆片</div><div class="discs">' +
+        (p.hand.length ? p.hand.map(function (t) {
+          return '<div class="disc ' + (t === 'hidden' ? 'hidden' : t) + '" aria-label="' +
+            (t === 'hidden' ? '未知圆片' : discLabel(t) + '圆片') + '">' + (t === 'hidden' ? '?' : discLabel(t)) + '</div>';
+        }).join('') : '<span class="row">无</span>') +
+        '</div><div class="row">桌上圆片</div><div class="discs">' +
+        (p.placed.length ? p.placed.map(function (d) {
+          var t = d.revealed ? d.type : (p.id === state.seat ? d.type : 'hidden');
+          return '<div class="disc ' + t + (d.revealed ? ' revealed' : '') + '" aria-label="' +
+            (d.revealed ? '已翻开' + discLabel(d.type) : (p.id === state.seat ? '暗放' + discLabel(d.type) : '暗放圆片')) +
+            '">' + (d.revealed ? discLabel(d.type) : '暗') + '</div>';
+        }).join('') : '<span class="row">无</span>') +
+        '</div></div>';
+    }).join('');
+
+    var big = '', sub = '';
+    if (v.phase === 'over') {
+      big = '对局结束';
+      sub = v.winner === 0 ? '你获胜！' : (v.winner === 1 ? 'AI 获胜。' : '平局。');
+    } else if (v.phase === 'place') {
+      big = v.turn === 0 ? '你的回合：暗放一枚圆片或下注' : 'AI 正在暗放…';
+      sub = '第 ' + v.round + ' 回合 · 桌上共 ' + (v.players[0].placed.length + v.players[1].placed.length) +
+        ' 枚 · 当前注 ' + v.bid;
+    } else if (v.phase === 'bid') {
+      big = v.turn === 0 ? '轮到你加注或放弃' : 'AI 正在考虑加注…';
+      sub = '当前注：' + v.bid + (v.bidder != null ? '（' + v.players[v.bidder].name + '）' : '') +
+        ' · 桌上 ' + (v.players[0].placed.length + v.players[1].placed.length) + ' 枚';
+    } else if (v.phase === 'reveal') {
+      big = '最高出价者翻片：还需 ' + v.revealNeed + ' 枚';
+      sub = v.bidder === 0 ? '你是出价者，先翻自己的圆片，再翻对手的。' :
+        'AI 是出价者，正在翻片… 注：' + v.bid;
+    }
+    statusEl.innerHTML = '<div class="big">' + esc(big) + '</div><div class="sub">' + esc(sub) + '</div>';
+    if (v.phase === 'over') {
+      banner.hidden = false;
+      banner.textContent = v.winner === 0 ? '你赢下了骷髅对局！' : (v.winner === 1 ? 'AI 获胜，再来一局。' : '平局。');
+    } else banner.hidden = true;
+
+    var buttons = [];
+    if (v.phase === 'over') {
+      buttons.push('<button class="primary" data-act="new">再来一局</button>');
+    } else if (!E.needsHuman(state)) {
+      buttons.push('<button disabled>AI 行动中…</button>');
+    } else {
+      E.legalActions(state).forEach(function (a, i) {
+        var label;
+        if (a.type === 'place') {
+          var d = v.players[0].hand[a.index];
+          label = '暗放 ' + discLabel(d);
+        } else if (a.type === 'bid') label = '下注 ' + a.amount;
+        else if (a.type === 'raise') label = '加注到 ' + a.amount;
+        else if (a.type === 'pass') label = '放弃加注';
+        else if (a.type === 'reveal') {
+          var own = a.owner === 0;
+          label = own ? '翻开自己第 ' + (a.index + 1) + ' 枚' : '翻开对手第 ' + (a.index + 1) + ' 枚';
+        } else label = a.type;
+        buttons.push('<button data-i="' + i + '"' + (a.type === 'pass' ? ' class="danger"' : '') + '>' +
+          esc(label) + '</button>');
+      });
+    }
+    actionsEl.innerHTML = buttons.join('');
+    hintEl.textContent = v.phase === 'bid' || (v.phase === 'place' && v.bid === 0)
+      ? '提示：出价越高，要翻出的花朵越多；翻到骷髅就会失去一枚圆片。' : '';
+    logEl.innerHTML = v.log.slice(-12).map(function (line) { return '<p>' + esc(line) + '</p>'; }).join('');
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function pump() {
+    var my = gen;
+    function step() {
+      if (my !== gen || !state || E.isOver(state) || E.needsHuman(state)) { render(); return; }
+      var a = E.aiAction(state);
+      if (!a) { render(); return; }
+      E.applyAction(state, a);
+      render();
+      setTimeout(step, 560);
+    }
+    setTimeout(step, 300);
+  }
+
+  actionsEl.addEventListener('click', function (ev) {
+    var btn = ev.target.closest('button[data-act], button[data-i]');
+    if (!btn || !state) return;
+    if (btn.getAttribute('data-act') === 'new') { newGame(); return; }
+    var i = Number(btn.getAttribute('data-i'));
+    var acts = E.legalActions(state);
+    var a = acts[i];
+    if (!a) return;
+    var r = E.applyAction(state, a);
+    if (!r.ok) { statusEl.innerHTML = '<div class="big">无法执行</div><div class="sub">' + esc(r.error) + '</div>'; return; }
+    render();
+    if (!E.isOver(state) && !E.needsHuman(state)) pump();
+  });
+
+  function newGame() {
+    gen++;
+    state = E.createGame({ seed: (Date.now() % 1000000) + 7 });
+    render();
+    if (!E.needsHuman(state) && !E.isOver(state)) pump();
+  }
+
+  document.getElementById('newGame').addEventListener('click', newGame);
+  newGame();
+}());
+</script>
+</body>
+</html>

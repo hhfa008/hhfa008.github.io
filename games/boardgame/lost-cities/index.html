@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>失落之城 · Lost Cities 双人探险桌游（人机对战）</title>
+<meta name="description" content="与 AI 对战 Lost Cities 失落之城：5 色探险列、数字递增、赌注倍数与终局计分，纯前端离线可玩。">
+<meta name="theme-color" content="#1f3b36">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231f3b36'/%3E%3Cpath d='M6 24 14 8l4 8 3-5 5 13z' fill='%23d9b46a'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#152b27;--panel:#1e3b35;--panel-2:#26473f;--card:#f4ecd8;--ink:#22302c;--muted:#9db8ae;
+  --gold:#d9b46a;--gold-2:#f0d59a;--line:#3b5b52;--red:#b8574c;--green:#6fbf92;--shadow:0 6px 18px rgba(0,0,0,.28);
+  --yellow:#d8ad3f;--blue:#4b83b8;--white:#e8e3d6;--green-c:#4f9a6b;--red-c:#bd5a4e;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:linear-gradient(180deg,#122521,#152b27 40%,#11211e);color:#e8f0ea;font-family:var(--sans);line-height:1.45;min-height:100vh;overflow-x:hidden}
+.wrap{max-width:1040px;margin:0 auto;padding:14px 14px 40px}
+header{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:12px}
+h1{font-size:20px;margin:0;letter-spacing:.5px;color:var(--gold-2)}
+h1 small{font-size:12px;color:var(--muted);font-weight:400;margin-left:6px}
+.scores{display:flex;gap:8px;flex-wrap:wrap}
+.pill{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:13px}
+.pill b{color:var(--gold-2);font-size:16px;margin-left:4px}
+button{font-family:inherit;min-height:44px;min-width:44px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:#eef5f0;font-size:14px;padding:8px 14px;cursor:pointer;touch-action:manipulation}
+button:hover:not(:disabled){border-color:var(--gold)}
+button:disabled{opacity:.42;cursor:not-allowed}
+button.primary{background:var(--gold);border-color:var(--gold);color:#22302c;font-weight:700}
+button.ghost{background:transparent}
+.board{display:grid;gap:10px}
+.section{background:rgba(30,59,53,.72);border:1px solid var(--line);border-radius:14px;padding:10px;box-shadow:var(--shadow)}
+.section h2{font-size:13px;margin:0 0 8px;color:var(--muted);font-weight:600;letter-spacing:.4px}
+.exp{display:grid;grid-template-columns:58px 1fr 52px;gap:6px;align-items:center;margin:5px 0;min-height:30px}
+.color-tag{font-size:12px;font-weight:700;border-radius:6px;padding:3px 5px;text-align:center;color:#21302b}
+.exp-track{display:flex;gap:4px;flex-wrap:wrap;align-items:center;min-height:28px}
+.num{min-width:28px;height:30px;display:inline-flex;align-items:center;justify-content:center;border-radius:7px;background:var(--card);color:var(--ink);font-weight:800;font-size:14px;padding:0 7px}
+.wager{min-width:28px;height:30px;display:inline-flex;align-items:center;justify-content:center;border-radius:7px;background:#25342f;color:var(--gold-2);border:1px dashed var(--gold);font-weight:700;padding:0 6px}
+.exp-score{font-size:12px;color:var(--muted);text-align:right}
+.discards{display:flex;gap:6px;flex-wrap:wrap}
+.discard-col{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:64px}
+.discard-stack{display:flex;gap:2px;flex-wrap:wrap;justify-content:center;min-height:32px}
+.mini{display:inline-flex;align-items:center;justify-content:center;height:26px;min-width:24px;border-radius:5px;background:var(--card);color:var(--ink);font-size:12px;font-weight:700;padding:0 5px}
+.mini.w{background:#25342f;color:var(--gold-2);border:1px dashed var(--gold)}
+.hand{display:flex;gap:8px;flex-wrap:wrap}
+.card-btn{padding:0;width:62px;height:88px;border-radius:10px;background:var(--card);color:var(--ink);border:2px solid transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-weight:800;position:relative}
+.card-btn .val{font-size:24px;line-height:1}
+.card-btn .kind{font-size:11px;color:#5a6a63;font-weight:600}
+.card-btn.sel{border-color:var(--gold);box-shadow:0 0 0 3px rgba(217,180,106,.3)}
+.card-btn.playable::after{content:"";position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:var(--green)}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.status{font-size:13px;color:var(--gold-2);min-height:20px;margin:8px 0 2px}
+.log{max-height:130px;overflow:auto;font-size:12px;color:var(--muted);border-top:1px solid var(--line);margin-top:8px;padding-top:8px}
+.log div{padding:2px 0}
+.hint{font-size:12px;color:var(--muted);margin-top:6px}
+.overlay{position:fixed;inset:0;background:rgba(8,16,14,.72);display:none;align-items:center;justify-content:center;padding:20px;z-index:20}
+.overlay.show{display:flex}
+.dialog{background:var(--panel);border:1px solid var(--gold);border-radius:16px;padding:20px;max-width:340px;width:100%;box-shadow:var(--shadow);text-align:center}
+.dialog h3{margin:0 0 8px;color:var(--gold-2)}
+.dialog p{font-size:14px;color:#dfeae3}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row .score-tag{margin-left:auto;font-size:12px;color:var(--gold-2)}
+@media (max-width:430px){
+  .wrap{padding:10px 10px 30px}
+  h1{font-size:17px}
+  .exp{grid-template-columns:52px 1fr 44px}
+  .card-btn{width:56px;height:80px}
+  .section{padding:8px;border-radius:12px}
+  .discard-col{min-width:58px}
+  .scores{width:100%}
+  .pill{font-size:12px;padding:5px 8px}
+  button{padding:8px 11px;font-size:13px}
+}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>失落之城 <small>Lost Cities · 人机对战</small></h1>
+    <div class="scores" aria-label="比分">
+      <div class="pill">你 <b id="score-human">0</b></div>
+      <div class="pill">AI <b id="score-ai">0</b></div>
+      <div class="pill">牌堆 <b id="deck-left">44</b></div>
+      <button id="restart" class="ghost" aria-label="重新开始一局">重开</button>
+    </div>
+  </header>
+
+  <main class="board" aria-label="失落之城棋盘">
+    <section class="section" aria-label="AI 探险区">
+      <h2>AI 探险区 · 手牌 <span id="ai-hand-count">8</span> 张</h2>
+      <div id="ai-exp"></div>
+    </section>
+
+    <section class="section" aria-label="弃牌堆">
+      <h2>弃牌堆（按颜色）</h2>
+      <div id="discards" class="discards"></div>
+    </section>
+
+    <section class="section" aria-label="你的探险区">
+      <h2>你的探险区</h2>
+      <div id="human-exp"></div>
+    </section>
+
+    <section class="section" aria-label="你的手牌与操作">
+      <h2>你的手牌 · 先选牌，再打出或弃掉</h2>
+      <div id="hand" class="hand" role="group" aria-label="你的手牌"></div>
+      <div class="actions">
+        <button id="play-btn" class="primary" disabled aria-label="打出选中的牌">打出</button>
+        <button id="discard-btn" disabled aria-label="弃掉选中的牌">弃掉</button>
+      </div>
+      <div id="status" class="status" role="status" aria-live="polite"></div>
+      <div class="hint">打出数字必须比该列最后一张大；赌注牌只能在空列先打出。</div>
+      <div id="log" class="log" aria-label="对局日志"></div>
+    </section>
+  </main>
+</div>
+
+<div id="overlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="result-title">
+  <div class="dialog">
+    <h3 id="result-title">本局结束</h3>
+    <p id="result-text"></p>
+    <button id="again" class="primary" aria-label="再来一局">再来一局</button>
+  </div>
+</div>
+
+<script src="engine.js"></script>
+<script>
+(function () {
+  'use strict';
+  var E = window.LostCitiesEngine;
+  var COLORS = E.COLORS;
+  var NAMES = E.COLOR_NAMES;
+  var CSS = { yellow: 'var(--yellow)', blue: 'var(--blue)', white: 'var(--white)', green: 'var(--green-c)', red: 'var(--red-c)' };
+  var game, selected = null, aiTimer = null;
+
+  function $(id) { return document.getElementById(id); }
+
+  function colorHex(c) {
+    return { yellow: '#d8ad3f', blue: '#4b83b8', white: '#e8e3d6', green: '#4f9a6b', red: '#bd5a4e' }[c];
+  }
+
+  function cardLabel(card) {
+    return NAMES[card.c] + (card.k === 'w' ? '赌注' : card.v);
+  }
+
+  function expTrack(exp) {
+    var out = [];
+    for (var i = 0; i < exp.wagers; i++) out.push('<span class="wager" title="赌注">×</span>');
+    exp.nums.forEach(function (n) { out.push('<span class="num">' + n + '</span>'); });
+    return out.join('') || '<span class="hint">空</span>';
+  }
+
+  function renderExp(container, player) {
+    container.innerHTML = COLORS.map(function (c) {
+      var exp = player.exp[COLORS.indexOf(c)];
+      var sc = E.expeditionScore(exp);
+      return '<div class="exp">' +
+        '<span class="color-tag" style="background:' + colorHex(c) + '">' + NAMES[c] + '</span>' +
+        '<div class="exp-track">' + expTrack(exp) + '</div>' +
+        '<span class="exp-score">' + (sc > 0 ? '+' + sc : sc) + '</span>' +
+        '</div>';
+    }).join('');
+  }
+
+  function renderDiscards() {
+    $('discards').innerHTML = COLORS.map(function (c) {
+      var pile = game.discard[c];
+      var shown = pile.slice(-6);
+      return '<div class="discard-col">' +
+        '<span class="color-tag" style="background:' + colorHex(c) + ';min-width:58px">' + NAMES[c] + '</span>' +
+        '<div class="discard-stack">' + (shown.length ? shown.map(function (card) {
+          return '<span class="mini' + (card.k === 'w' ? ' w' : '') + '">' + (card.k === 'w' ? '×' : card.v) + '</span>';
+        }).join('') : '<span class="hint">—</span>') + '</div>' +
+        '</div>';
+    }).join('');
+  }
+
+  function renderHand() {
+    var human = game.players[0];
+    var exps = human.exp;
+    var legal = game.turn === 0 && !game.over ? E.legalMoves(game) : [];
+    var playable = {};
+    legal.forEach(function (m) { if (m.type === 'play') playable[m.handIndex] = true; });
+
+    $('hand').innerHTML = '';
+    human.hand.forEach(function (card, i) {
+      var b = document.createElement('button');
+      b.className = 'card-btn' + (selected === i ? ' sel' : '') + (playable[i] ? ' playable' : '');
+      b.setAttribute('aria-label', cardLabel(card) + (playable[i] ? '，可以打出' : ''));
+      b.setAttribute('aria-pressed', selected === i ? 'true' : 'false');
+      b.style.background = card.k === 'w' ? '#25342f' : colorHex(card.c);
+      b.style.color = card.k === 'w' ? '#f0d59a' : (card.c === 'white' ? '#22302c' : '#152b27');
+      b.innerHTML = '<span class="val">' + (card.k === 'w' ? '×' : card.v) + '</span>' +
+        '<span class="kind">' + NAMES[card.c] + (card.k === 'w' ? '赌注' : '') + '</span>';
+      b.addEventListener('click', function () {
+        if (game.turn !== 0 || game.over) return;
+        selected = selected === i ? null : i;
+        render();
+      });
+      $('hand').appendChild(b);
+    });
+
+    var canPlay = false;
+    var canDiscard = false;
+    if (selected !== null && game.turn === 0 && !game.over) {
+      canPlay = !!playable[selected];
+      canDiscard = true;
+    }
+    $('play-btn').disabled = !canPlay;
+    $('discard-btn').disabled = !canDiscard;
+
+    var p = game.players[0];
+    var status = game.over ? '本局已结束。' : (game.turn === 0 ? '轮到你行动。' : 'AI 正在思考…');
+    if (selected !== null && !game.over) {
+      status += ' 已选 ' + cardLabel(p.hand[selected]) + (canPlay ? '，可打出。' : '，该列不能打出，只能弃掉。');
+    }
+    $('status').textContent = status;
+  }
+
+  function render() {
+    var sc = E.score(game);
+    $('score-human').textContent = sc.human;
+    $('score-ai').textContent = sc.ai;
+    $('deck-left').textContent = game.deck.length;
+    $('ai-hand-count').textContent = game.players[1].hand.length;
+    renderExp($('ai-exp'), game.players[1]);
+    renderExp($('human-exp'), game.players[0]);
+    renderDiscards();
+    renderHand();
+    $('log').innerHTML = game.log.slice(-14).reverse().map(function (line) {
+      return '<div>' + line.replace(/[<>&]/g, function (ch) { return { '<': '&lt;', '>': '&gt;', '&': '&amp;' }[ch]; }) + '</div>';
+    }).join('');
+    if (game.over) showResult();
+  }
+
+  function showResult() {
+    var sc = E.score(game);
+    var w = E.winner(game);
+    $('result-title').textContent = w === 'human' ? '你赢了！' : (w === 'ai' ? 'AI 获胜' : '平局');
+    $('result-text').textContent = '最终比分：你 ' + sc.human + ' 比 ' + sc.ai + ' AI。';
+    $('overlay').classList.add('show');
+  }
+
+  function humanMove(type) {
+    if (selected === null || game.turn !== 0 || game.over) return;
+    try {
+      game = E.applyMove(game, { type: type, handIndex: selected });
+      selected = null;
+      render();
+      scheduleAI();
+    } catch (e) {
+      $('status').textContent = '动作不合法：' + e.message;
+    }
+  }
+
+  function scheduleAI() {
+    if (aiTimer) clearTimeout(aiTimer);
+    if (game.over || game.turn !== 1) return;
+    aiTimer = setTimeout(function () {
+      try {
+        game = E.applyMove(game, E.aiMove(game));
+        selected = null;
+        render();
+        scheduleAI();
+      } catch (e) {
+        $('status').textContent = 'AI 出错：' + e.message;
+      }
+    }, 520);
+  }
+
+  function start() {
+    if (aiTimer) clearTimeout(aiTimer);
+    var seed = (Date.now() ^ Math.floor(Math.random() * 1e9)) >>> 0;
+    game = E.createGame({ seed: seed, humanFirst: true });
+    selected = null;
+    $('overlay').classList.remove('show');
+    render();
+  }
+
+  $('play-btn').addEventListener('click', function () { humanMove('play'); });
+  $('discard-btn').addEventListener('click', function () { humanMove('discard'); });
+  $('restart').addEventListener('click', start);
+  $('again').addEventListener('click', start);
+  start();
+})();
+</script>
+</body>
+</html>
