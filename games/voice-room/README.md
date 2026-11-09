@@ -32,7 +32,9 @@
 
 ### 信令与状态
 
-- `GET /ws?room=1234&name=...&pid=...` 升级为 WebSocket；Worker 校验 4 位房号后转发给对应 `RoomDO`。
+- `POST /api/join`（JSON：`room`、`pid`、`create`、`password`）先校验密码，成功才发一个绑定 `room + pid`、有效期 24 小时的 HMAC token。
+- `GET /ws?room=1234&name=...&pid=...&token=...` 升级为 WebSocket；Worker 校验 4 位房号后转发给对应 `RoomDO`，DO 校验 token 后才接受连接。密码本身永远不出现在 URL 里。
+- 密码可选（4–32 字符）：DO storage 只保存 16 字节随机盐和 `SHA-256(salt + password)`，比较使用常数时间算法；连续输错 5 次后同一 IP 在该房间限流 60 秒。
 - `RoomDO` 使用 `state.acceptWebSocket()` / `webSocketMessage()` / `webSocketClose()`，成员与棋局均在 DO storage。
 - 每条客户端消息都带 `type` 与 `room`；服务端校验 `room === 本房间`，跨房间消息直接拒绝。
 - 成员上限 4；第 5 个连接收到 `room_full` 并关闭。
@@ -136,7 +138,7 @@ cd games/voice-room && python3 -m http.server 8788
 ## 已知限制
 
 - 纯 mesh，4 人时每人最多 3 条上行音频；人越多带宽/CPU/混音压力越大，不适合扩到 5 人以上。
-- 没有账号体系；4 位房号就是唯一凭证，可被枚举/碰撞，当前没有限流或密码。
+- 没有账号体系；4 位房号就是房间凭证，可被枚举/碰撞。密码是可选的第一道门，不是身份认证；连续错 5 次限流 60 秒只针对同一 IP + 房间。
 - 房间状态在单个 DO；多区域容灾、跨房间大规模调度未做。
 - 固定两位玩家对局（X/O），第三人起为观战；换人或座位宽限期结束会重置棋盘与比分。
 - 优雅关闭 WebSocket 时浏览器可能先停在 CLOSING 数秒；网络掉线靠心跳在 ~45 秒内发现并重连。
