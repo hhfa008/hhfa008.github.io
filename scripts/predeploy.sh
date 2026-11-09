@@ -358,9 +358,10 @@ const html = [...walk(path.join(ROOT, 'games'), []), ...walk(path.join(ROOT, 'to
 const actual = new Set();
 for (const file of html) {
   const rel = path.relative(ROOT, file);
-  // 非收录页：PWA 离线兜底、shared/ 下的演示页、根 404。
+  // 非收录页：PWA 离线兜底、shared/ 下的演示页、开发脚手架与模板、根 404。
   if (rel === 'games/offline.html') continue;
   if (rel.startsWith('games/shared/')) continue;
+  if (rel.startsWith('tools/tests/')) continue;
   if (rel === '404.html') continue;
   actual.add(pagePath(rel));
 }

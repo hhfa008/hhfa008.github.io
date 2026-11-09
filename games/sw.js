@@ -4,7 +4,7 @@
    Static assets: cache-first with background refresh (stale-while-revalidate). */
 'use strict';
 
-var CACHE_VERSION = 'v15';
+var CACHE_VERSION = 'v16';
 var CACHE_PREFIX = 'hhfa-games-';
 var CACHE_NAME = CACHE_PREFIX + CACHE_VERSION;
 var OFFLINE_URL = '/games/offline.html';
@@ -32,6 +32,10 @@ var PRECACHE_URLS = [
 
   // Every game entry page.
   '/games/24game/',
+  '/games/2048/',
+  '/games/2048-3/',
+  '/games/2048-5/',
+  '/games/lights-3/',
   '/games/aeroplane/',
   '/games/checkers-jump/',
   '/games/chess/',
@@ -57,6 +61,11 @@ var PRECACHE_URLS = [
   '/games/xiangqi/',
 
   // Utility pages (registered as draft: not in the hall, still reachable).
+  // turtle-soup is draft too: its runtime pulls a web-llm wrapper and model
+  // weights from external hosts, so only its same-origin files are precached.
+  '/games/turtle-soup/',
+  '/games/turtle-soup/rules.html',
+  '/games/turtle-soup/soups.js',
   '/games/profile/',
   '/games/profile/rules.html',
   '/games/leaderboard/',
@@ -71,6 +80,10 @@ var PRECACHE_URLS = [
 
   // Rules pages.
   '/games/24game/rules.html',
+  '/games/2048/rules.html',
+  '/games/2048-3/rules.html',
+  '/games/2048-5/rules.html',
+  '/games/lights-3/rules.html',
   '/games/aeroplane/rules.html',
   '/games/checkers-jump/rules.html',
   '/games/chess/rules.html',
@@ -102,6 +115,10 @@ var PRECACHE_URLS = [
 
   // Game icons used by the hall and the offline page.
   '/games/assets/icons/24game.svg',
+  '/games/assets/icons/2048.svg',
+  '/games/assets/icons/2048-3.svg',
+  '/games/assets/icons/2048-5.svg',
+  '/games/assets/icons/lights-3.svg',
   '/games/assets/icons/aeroplane.svg',
   '/games/assets/icons/checkers-jump.svg',
   '/games/assets/icons/backgammon.svg',

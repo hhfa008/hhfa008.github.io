@@ -1,10 +1,10 @@
 # 游戏集合维护说明
 
-24 款纯静态网页桌游/棋牌：免费、免登录、单文件，打开即玩。
+28 款纯静态网页桌游/棋牌：免费、免登录、单文件，打开即玩。
 
 ## 游戏清单
 
-**权威数据源是 `games/registry.json`**（当前 28 条，其中 24 条 live；`profile`、`leaderboard`、`ai-eval`、`agents` 四个工具页登记为 draft，不进三语大厅）：三语大厅的卡片区、分类计数与 ItemList 都由 `scripts/gen-hubs.js` 从它生成，并由 `scripts/check-registry.js` 校验。下表是人工摘要，自检项数来自测试输出；改名、改人数、改 AI 档位、增删游戏一律先改 registry，不要再手改三语大厅的卡片。
+**权威数据源是 `games/registry.json`**（当前 33 条，其中 28 条 live；`profile`、`leaderboard`、`ai-eval`、`agents` 四个工具页与 `turtle-soup` 登记为 draft，不进三语大厅）：三语大厅的卡片区、分类计数与 ItemList 都由 `scripts/gen-hubs.js` 从它生成，并由 `scripts/check-registry.js` 校验。下表是人工摘要，自检项数来自测试输出；改名、改人数、改 AI 档位、增删游戏一律先改 registry，不要再手改三语大厅的卡片。
 
 自检项数＝对应 node 单元测试通过的检查/断言条数；Tap Match、语音房无纯逻辑，记为浏览器 E2E 检查项。
 
@@ -34,6 +34,11 @@
 | 飞行棋 | Aeroplane | /games/aeroplane/ | 聚会 | 2–4 | 单档·简单 | rules.html | 36 |
 | Tap Match | Tap Match | /games/tap-match/ | 小游戏 | 1 | — | rules.html | 9（E2E） |
 | 语音房 | Voice Room | /games/voice-room/ | 在线联机 · 井字棋/五子棋/四子棋 | 2–4 | — | guide.html | 14（E2E） |
+| 2048 | 2048 | /games/2048/ | 数字 | 1 | — | rules.html | 24 |
+| 2048 3×3 | 2048 3×3 | /games/2048-3/ | 数字 | 1 | — | rules.html | 24 |
+| 2048 5×5 | 2048 5×5 | /games/2048-5/ | 数字 | 1 | — | rules.html | 24 |
+| 关灯 3×3 | Lights Out 3×3 | /games/lights-3/ | 小游戏 | 1 | — | rules.html | 16 |
+| 海龟汤 | Turtle Soup | /games/turtle-soup/ | 聚会 | 1 | — | rules.html | 395 |
 
 ## 技术约定
 
