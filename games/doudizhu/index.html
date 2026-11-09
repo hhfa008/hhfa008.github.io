@@ -221,6 +221,7 @@ a{color:inherit}
       <button type="button" data-lang="en">EN</button>
       <button type="button" data-lang="zh">中文</button>
       <button type="button" data-lang="id">ID</button>
+      <button type="button" class="sfx-toggle" aria-label="静音"></button>
     </nav>
   </div>
 </header>
@@ -319,10 +320,16 @@ a{color:inherit}
   <a href="https://hhfa008.github.io/" data-i="moreLink">独立开发者作品 — 更多工具在这里</a>
 </footer>
 
+<script src="/games/shared/shuffle.js"></script>
+<script src="/games/shared/sfx.js"></script>
 <script>
 // __CORE_START__
 var DDZ = (function () {
   'use strict';
+
+  // Shared Fisher-Yates + CSPRNG (games/shared/shuffle.js). Absent only if the
+  // external script failed to load, in which case the local fallback runs.
+  var SH = (typeof globalThis !== 'undefined') ? globalThis.Shuffle : null;
 
   var SMALL_JOKER = 16, BIG_JOKER = 17;
   var SUITS = ['♠', '♥', '♣', '♦']; // spade heart club diamond
@@ -351,6 +358,9 @@ var DDZ = (function () {
   }
 
   function shuffle(deck, rand) {
+    // Delegate to the shared engine when available. Passing the caller's rng
+    // (not a seed) keeps test/replay deals that inject a generator identical.
+    if (SH && SH.shuffleInPlace) return SH.shuffleInPlace(deck, rand ? { rng: rand } : {});
     rand = rand || Math.random;
     for (var i = deck.length - 1; i > 0; i--) {
       var j = Math.floor(rand() * (i + 1));
@@ -1187,10 +1197,10 @@ var DDZ = (function () {
 
   function sortHand(h) { return DDZ.sortCards(h); }
 
-  function dealNew() {
+  function dealNew(withSound) {
     S.gen++;
     S.hands = [[], [], []];
-    var d = DDZ.deal(Math.random);
+    var d = DDZ.deal(); // no injected rng -> shared CSPRNG default
     S.hands = [d.hands[0].slice(), d.hands[1].slice(), d.hands[2].slice()];
     S.bottom = d.bottom.slice();
     S.phase = 'bid';
@@ -1210,6 +1220,7 @@ var DDZ = (function () {
     S.act = {};
     S.winner = -1;
     render();
+    if (withSound && window.Sfx) window.Sfx.play('deal');
     stepBid();
   }
 
@@ -1257,7 +1268,7 @@ var DDZ = (function () {
       S.statusKey = 'allPass';
       log(t('allPass'));
       render();
-      later(dealNew, 1500);
+      later(function () { dealNew(true); }, 1500);
       return;
     }
     S.landlord = S.bidder;
@@ -1297,6 +1308,9 @@ var DDZ = (function () {
     if (!d) return false;
     if (S.lastPlay && !DDZ.canBeat(d, S.lastPlay)) return false;
     removeCards(S.hands[p], cards);
+    if (window.Sfx) {
+      window.Sfx.play(d.type === 'bomb' || d.type === 'rocket' ? 'capture' : 'move');
+    }
     S.lastPlay = d;
     S.lastPlayer = p;
     S.passes = 0;
@@ -1365,14 +1379,20 @@ var DDZ = (function () {
     var hand = S.hands[0];
     var cards = hand.filter(function (c) { return S.selected[c.id]; });
     if (!cards.length) {
-      S.statusKey = 'selectFirst'; S.statusVars = null; render(); return;
+      S.statusKey = 'selectFirst'; S.statusVars = null; render();
+      if (window.Sfx) window.Sfx.play('error');
+      return;
     }
     var d = DDZ.detect(cards);
     if (!d) {
-      S.statusKey = 'invalidType'; S.statusVars = null; render(); return;
+      S.statusKey = 'invalidType'; S.statusVars = null; render();
+      if (window.Sfx) window.Sfx.play('error');
+      return;
     }
     if (S.lastPlay && !DDZ.canBeat(d, S.lastPlay)) {
-      S.statusKey = 'mustBeat'; S.statusVars = null; render(); return;
+      S.statusKey = 'mustBeat'; S.statusVars = null; render();
+      if (window.Sfx) window.Sfx.play('error');
+      return;
     }
     doPlay(0, cards);
   }
@@ -1409,6 +1429,7 @@ var DDZ = (function () {
       S.resultKey = humanWon ? 'resultWinFarmer' : 'resultLoseFarmer';
     }
     log(t('landlordWin') + ' / ' + t('farmerWin'));
+    if (window.Sfx) window.Sfx.play(humanWon ? 'win' : 'lose');
     render();
   }
 
@@ -1555,7 +1576,8 @@ var DDZ = (function () {
     document.documentElement.lang = S.lang === 'zh' ? 'zh-CN' : S.lang;
     var btns = document.querySelectorAll('.langs button');
     for (var j = 0; j < btns.length; j++) {
-      btns[j].setAttribute('aria-pressed', btns[j].getAttribute('data-lang') === S.lang ? 'true' : 'false');
+      var code = btns[j].getAttribute('data-lang');
+      if (code) btns[j].setAttribute('aria-pressed', code === S.lang ? 'true' : 'false');
     }
   }
 
@@ -1573,18 +1595,20 @@ var DDZ = (function () {
     var id = btn.getAttribute('data-id');
     if (S.selected[id]) delete S.selected[id];
     else S.selected[id] = 1;
+    if (window.Sfx) window.Sfx.play('click');
     renderHand();
   });
 
   els.btnPlay.addEventListener('click', humanPlay);
   els.btnPass.addEventListener('click', humanPass);
   els.btnHint.addEventListener('click', humanHint);
-  document.getElementById('btn-new').addEventListener('click', dealNew);
-  document.getElementById('btn-new-2').addEventListener('click', dealNew);
+  document.getElementById('btn-new').addEventListener('click', function () { dealNew(true); });
+  document.getElementById('btn-new-2').addEventListener('click', function () { dealNew(true); });
 
   els.bidPanel.addEventListener('click', function (e) {
     var b = e.target.closest ? e.target.closest('[data-bid]') : null;
     if (!b || b.disabled) return;
+    if (window.Sfx) window.Sfx.play('click');
     humanBid(parseInt(b.getAttribute('data-bid'), 10));
   });
 

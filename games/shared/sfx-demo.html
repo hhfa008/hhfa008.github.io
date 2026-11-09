@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>合成音效试听 · Sfx Demo</title>
+<meta name="description" content="18 个完全由 Web Audio 实时合成的游戏音效，试听页。不加载任何音频文件。">
+<style>
+  :root {
+    --bg: #0f1418;
+    --panel: #171e24;
+    --panel-2: #1d262d;
+    --line: #2b363f;
+    --ink: #e8eef2;
+    --muted: #93a2ad;
+    --accent: #e3a12a;
+    --accent-2: #6fb7d8;
+    --ok: #6fbf73;
+    --radius: 14px;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Noto Sans SC", sans-serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { color-scheme: dark; }
+  body {
+    margin: 0; background: radial-gradient(1200px 600px at 50% -10%, #1b252d 0%, var(--bg) 60%);
+    color: var(--ink); font-family: var(--sans); line-height: 1.55; min-height: 100vh;
+  }
+  a { color: var(--accent-2); }
+  .wrap { width: min(1040px, 100% - 32px); margin: 0 auto; }
+  header { padding: 28px 0 6px; }
+  .eyebrow { margin: 0; font: 600 12px/1.4 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+  h1 { margin: 8px 0 6px; font-size: clamp(26px, 4.4vw, 38px); line-height: 1.15; letter-spacing: -.01em; }
+  .lede { margin: 0 0 18px; color: var(--muted); max-width: 62ch; }
+  .panel {
+    background: linear-gradient(180deg, var(--panel), var(--panel-2));
+    border: 1px solid var(--line); border-radius: var(--radius);
+  }
+  .controls {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    padding: 14px 16px; margin: 18px 0 22px;
+  }
+  .controls label { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--muted); }
+  input[type="range"] { width: min(220px, 42vw); accent-color: var(--accent); }
+  #volOut { font: 600 13px/1 var(--mono); color: var(--ink); min-width: 42px; }
+  .spacer { flex: 1 1 12px; }
+  .demo-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line);
+    background: transparent; color: var(--ink); font: 600 13px/1 var(--sans); cursor: pointer;
+  }
+  .demo-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .demo-btn:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
+  h2 { margin: 26px 0 10px; font-size: 15px; letter-spacing: .04em; color: var(--muted); font-weight: 650; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
+  .sfx-card {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 4px; text-align: left;
+    min-height: 104px; padding: 14px 15px; border-radius: 12px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+    font: inherit; transition: border-color .15s ease, transform .08s ease, background .15s ease;
+  }
+  .sfx-card:hover { border-color: #46545f; background: #1b242b; }
+  .sfx-card:active { transform: scale(.985); }
+  .sfx-card:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
+  .sfx-card.hit { border-color: var(--accent); background: #241f14; }
+  .sfx-card .name { font: 650 15px/1.3 var(--sans); }
+  .sfx-card .cn { font-size: 12.5px; color: var(--accent); }
+  .sfx-card .how { font-size: 11.5px; line-height: 1.45; color: var(--muted); margin-top: 2px; }
+  .sfx-card .idx { font: 600 10px/1 var(--mono); color: #5d6c77; margin-bottom: 2px; }
+  footer { padding: 26px 0 40px; color: var(--muted); font-size: 12.5px; }
+  footer code { font-family: var(--mono); font-size: 12px; color: #c7d2da; }
+  @media (max-width: 520px) {
+    .grid { grid-template-columns: 1fr 1fr; }
+    .sfx-card { min-height: 96px; padding: 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">games/shared/sfx.js</p>
+    <h1>纯合成游戏音效</h1>
+    <p class="lede">18 个音效全部由 Web Audio 在浏览器里实时合成：振荡器、带通滤波器、噪声缓冲和包络，没有采样、没有音频文件、零网络请求。点击任意卡片试听，第一次点击同时解锁音频。</p>
+  </header>
+
+  <section class="panel controls" aria-label="音量与静音">
+    <button type="button" class="sfx-toggle" aria-label="静音"></button>
+    <label for="vol">音量 <input id="vol" type="range" min="0" max="1" step="0.05" value="0.75"><span id="volOut">75%</span></label>
+    <span class="spacer"></span>
+    <button type="button" class="demo-btn" id="playAll">依次试听全部</button>
+  </section>
+
+  <section aria-labelledby="g-ui">
+    <h2 id="g-ui">界面与游戏 · Interface &amp; game</h2>
+    <div class="grid" data-group="ui"></div>
+  </section>
+
+  <section aria-labelledby="g-voice">
+    <h2 id="g-voice">人声模拟 · Formant voices</h2>
+    <div class="grid" data-group="voice"></div>
+  </section>
+
+  <section aria-labelledby="g-animal">
+    <h2 id="g-animal">动物叫声 · Synthesized animals</h2>
+    <div class="grid" data-group="animal"></div>
+  </section>
+
+  <footer>
+    <p>接入方式：<code>&lt;script src="/games/shared/sfx.js"&gt;&lt;/script&gt;</code>，然后 <code>Sfx.play('click')</code>。静音按钮加一个 <code>&lt;button class="sfx-toggle"&gt;&lt;/button&gt;</code> 即可，图标与点击逻辑由 sfx.js 自动接上。</p>
+    <p>音量与静音保存在 <code>localStorage</code>（<code>hhfa-sfx-volume</code> / <code>hhfa-sfx-muted</code>）。</p>
+  </footer>
+</div>
+
+<script src="./sfx.js"></script>
+<script>
+(function () {
+  'use strict';
+  var SFX = [
+    { name: 'click', cn: '点击', how: '方波，1.9 kHz 快速下坠 + 40 ms 衰减', group: 'ui' },
+    { name: 'move', cn: '落子 / 移动', how: '木质噪声脉冲 + 低音木槌', group: 'ui' },
+    { name: 'capture', cn: '吃子', how: '低频冲击 150→46 Hz + 噪声', group: 'ui' },
+    { name: 'deal', cn: '发牌', how: '三段滤波噪声扫频 1.1→3.2 kHz', group: 'ui' },
+    { name: 'dice', cn: '掷骰', how: '五次随机短脉冲，不同中心频率', group: 'ui' },
+    { name: 'win', cn: '胜利', how: 'C5–E5–G5 上行三音琶音', group: 'ui' },
+    { name: 'lose', cn: '失败', how: 'G4–D4 下行两音', group: 'ui' },
+    { name: 'error', cn: '错误', how: '方波双音，220→175 Hz', group: 'ui' },
+    { name: 'notify', cn: '提示', how: '柔和正弦双音 A5–D6', group: 'ui' },
+    { name: 'voice-a', cn: '「啊」', how: '锯齿波 + 800/1150/2900 Hz 共振峰', group: 'voice' },
+    { name: 'voice-i', cn: '「衣」', how: '共振峰 300/2300/3000 Hz', group: 'voice' },
+    { name: 'voice-u', cn: '「呜」', how: '共振峰 350/700/2500 Hz', group: 'voice' },
+    { name: 'voice-yeah', cn: '「耶」', how: 'a→i 共振峰滑动，带 5.8 Hz 颤音', group: 'voice' },
+    { name: 'bird', cn: '鸟鸣', how: '四段 2.4–4.2 kHz 快速扫频 + 颤音', group: 'animal' },
+    { name: 'cat', cn: '猫叫', how: 'i→a→u 共振峰滑动，音高上扬回落', group: 'animal' },
+    { name: 'dog', cn: '狗叫「汪汪」', how: '两声低频锯齿波 + 噪声爆破', group: 'animal' },
+    { name: 'cow', cn: '牛叫「哞」', how: '0.9 秒低音长鸣，缓慢下滑 + 4.4 Hz 颤音', group: 'animal' },
+    { name: 'duck', cn: '鸭叫「嘎嘎」', how: '两声中高频噪声爆破 + 方波', group: 'animal' }
+  ];
+
+  var grids = {
+    ui: document.querySelector('[data-group="ui"]'),
+    voice: document.querySelector('[data-group="voice"]'),
+    animal: document.querySelector('[data-group="animal"]')
+  };
+  var buttons = {};
+
+  SFX.forEach(function (item, i) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'sfx-card';
+    b.setAttribute('data-sfx', item.name);
+    b.innerHTML = '<span class="idx">' + (i < 9 ? '0' : '') + (i + 1) + '</span>' +
+      '<span class="name">' + item.name + '</span>' +
+      '<span class="cn">' + item.cn + '</span>' +
+      '<span class="how">' + item.how + '</span>';
+    b.addEventListener('click', function () { hit(item.name); });
+    grids[item.group].appendChild(b);
+    buttons[item.name] = b;
+  });
+
+  var hitTimer = null;
+  function hit(name) {
+    if (!window.Sfx) return;
+    window.Sfx.play(name);
+    var b = buttons[name];
+    if (!b) return;
+    b.classList.add('hit');
+    if (hitTimer) clearTimeout(hitTimer);
+    hitTimer = setTimeout(function () { b.classList.remove('hit'); }, 260);
+  }
+
+  var vol = document.getElementById('vol');
+  var out = document.getElementById('volOut');
+  var stats = window.Sfx ? window.Sfx.stats() : { volume: 0.75 };
+  vol.value = String(stats.volume);
+  out.textContent = Math.round(stats.volume * 100) + '%';
+  vol.addEventListener('input', function () {
+    if (!window.Sfx) return;
+    var v = window.Sfx.setVolume(parseFloat(vol.value));
+    out.textContent = Math.round(v * 100) + '%';
+  });
+
+  var playAllBtn = document.getElementById('playAll');
+  var allTimer = null;
+  var allIndex = 0;
+  playAllBtn.addEventListener('click', function () {
+    if (allTimer) {
+      clearTimeout(allTimer);
+      allTimer = null;
+      playAllBtn.textContent = '依次试听全部';
+      return;
+    }
+    allIndex = 0;
+    playAllBtn.textContent = '停止试听';
+    function next() {
+      if (allIndex >= SFX.length) {
+        allTimer = null;
+        playAllBtn.textContent = '依次试听全部';
+        return;
+      }
+      var item = SFX[allIndex++];
+      hit(item.name);
+      allTimer = setTimeout(next, 720);
+    }
+    next();
+  });
+})();
+</script>
+</body>
+</html>

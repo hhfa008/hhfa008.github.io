@@ -208,6 +208,7 @@ svg.board{display:block;width:100%;max-width:440px;height:auto;touch-action:mani
   <p><a href="/" data-i="home">Devin — free browser games</a> · <a href="/games/" data-i="allGames2">Board game collection</a></p>
 </footer>
 
+<script src="/games/shared/physics.js"></script>
 <script>
 /* === ENGINE START === */
 var AE = (function () {
@@ -617,22 +618,96 @@ var AE = (function () {
     startRoll();
   }
 
+  var diceFx = null;
+  function stopDiceFx() {
+    if (!diceFx) return;
+    cancelAnimationFrame(diceFx.raf);
+    diceFx = null;
+    var die = $('die');
+    if (die) { die.style.transform = ''; die.classList.remove('roll'); }
+  }
+  function prefersReducedMotion() {
+    try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
+    catch (e) { return false; }
+  }
+
+  // A short physical tumble: the die is a 52x52 AABB dropped onto a floor,
+  // spinning with angular velocity, then settling upright. Geometry is in
+  // die-local pixels: rest centre is (0,0), floor top is at y = 26.
+  function playDiceFx(result, done) {
+    stopDiceFx();
+    var die = $('die');
+    var PH = window.Physics;
+    if (!PH || prefersReducedMotion()) {
+      die.classList.add('roll');
+      if (rollTimer) clearTimeout(rollTimer);
+      rollTimer = setTimeout(function () {
+        die.classList.remove('roll');
+        done();
+      }, 720);
+      return;
+    }
+    var world = PH.createWorld({
+      gravity: { x: 0, y: 3000 },
+      substeps: 3,
+      iterations: 4,
+      sleep: false
+    });
+    var half = 26;
+    world.addBody({
+      shape: 'aabb', w: 420, h: 60, x: 0, y: half + 30,
+      static: true, restitution: 0.32, friction: 0.55
+    });
+    var dir = state.turn % 2 === 0 ? 1 : -1;
+    var body = world.addBody({
+      shape: 'aabb', w: 52, h: 52,
+      x: dir * (6 + result * 2.5),
+      y: -88 - (result % 3) * 14,
+      vx: -dir * (80 + result * 18),
+      vy: 30,
+      angle: dir * (result % 2 ? 0.4 : -0.4),
+      angularVelocity: dir * (6 + result * 0.8),
+      mass: 1,
+      restitution: 0.34,
+      friction: 0.5,
+      linearDamping: 0.5,
+      angularDamping: 0.6
+    });
+    var fx = { raf: 0 };
+    diceFx = fx;
+    var start = performance.now();
+    var last = start;
+    function frame(now) {
+      if (diceFx !== fx) return;
+      var dt = Math.min(0.04, Math.max(0, (now - last) / 1000));
+      last = now;
+      world.step(dt);
+      die.style.transform = 'translate3d(' + body.x.toFixed(2) + 'px,' +
+        body.y.toFixed(2) + 'px,0) rotate(' + body.angle.toFixed(4) + 'rad)';
+      if (now - start < 700) {
+        fx.raf = requestAnimationFrame(frame);
+      } else {
+        stopDiceFx();
+        done();
+      }
+    }
+    fx.raf = requestAnimationFrame(frame);
+  }
+
   function startRoll() {
     if (animating || over) return;
     animating = true;
     rolled = null;
     clearMarks();
-    $('die').classList.add('roll');
     $('roll').disabled = true;
     $('status').textContent = fmt(t('turn'), { name: pname(state.turn) });
     var result = AE.rollDie();
-    if (rollTimer) clearTimeout(rollTimer);
-    rollTimer = setTimeout(function () {
+    if (rollTimer) { clearTimeout(rollTimer); rollTimer = null; }
+    playDiceFx(result, function () {
       animating = false;
-      $('die').classList.remove('roll');
       $('die').setAttribute('data-v', result);
       afterRoll(result);
-    }, 720);
+    });
   }
 
   function afterRoll(roll) {
@@ -750,6 +825,7 @@ var AE = (function () {
     if (aiTimer) { clearTimeout(aiTimer); aiTimer = null; }
     if (rollTimer) { clearTimeout(rollTimer); rollTimer = null; }
     if (clearTimer) { clearTimeout(clearTimer); clearTimer = null; }
+    stopDiceFx();
     over = false; rolled = null; animating = false; moves = [];
     $('die').setAttribute('data-v', '1');
     $('die').classList.remove('roll');
@@ -764,6 +840,7 @@ var AE = (function () {
     if (aiTimer) { clearTimeout(aiTimer); aiTimer = null; }
     if (rollTimer) { clearTimeout(rollTimer); rollTimer = null; }
     if (clearTimer) { clearTimeout(clearTimer); clearTimer = null; }
+    stopDiceFx();
     if (hist.size() <= 1) return;
     over = false; rolled = null; animating = false; moves = [];
     hist.undo();
