@@ -2,36 +2,43 @@
    deck.css — the single visual system for the code-rendered decks.
 
    Palette is sampled from the element PNGs (PIL, opaque pixels only), not
-   invented here.  Sampling date: 2026-11-10, after the blank carriers landed.
+   invented here.  Sampling date: 2026-11-10, after the product-photography
+   carriers landed.
 
      --red    #ac1a12  xiangqi-blank-red@2x.png    mean lacquer red
                                                     (median #ad110a)
      --black  #262523  xiangqi-blank-black@2x.png  mean warm near black
                                                     (median #1e1d1c, never #000)
      --paper  #f0e3cb  card-face-frame@2x.png      mean card ivory
-     --ivory  #eed7a3  mahjong-blank@2x.png        mean tile ivory
+     --ivory  #e7d6b5  mahjong-blank@2x.png        mean tile ivory after the
+                                                    realism re-render
+                                                    (median #e8d9b9)
      --gold   #c87838  court-panel@2x.png          darker cluster of the
                                                     panel's gold border
                                                     (highlight cluster #d08840)
 
    Line rule: every drawn border/ring/recess is --line (2px at 256px output) and
    uses the base colour darkened 12% in the same hue (RGB x 0.88):
-     paper #d3c8b3 · ivory #d1bd8f · red #971710 · black #211f1f · gold #b06a31
+     paper #cdc5b4 · ivory #cab78e · red #971710 · black #211f1f · gold #b06a31
+     xiangqi wood line = carrier mean x0.88 (default #c5a063)
 
    Output background is transparent for all three sets.
    Fonts: exactly two families.  Latin/ranks = Helvetica Neue (tight tracking).
    Hanzi = Songti SC Bold (one family for mahjong + xiangqi).
+
+   The carriers are photographic product renders.  This file never fills over
+   them with flat colour; it only adds ink/engraving shading on top.
    ------------------------------------------------------------------------ */
 
 :root {
   --red: #ac1a12;
   --black: #262523;
-  --paper: #f0e3cb;
-  --ivory: #eed7a3;
+  --paper: #e9e0cd;
+  --ivory: #e5d0a1;
   --gold: #c87838;
 
-  --paper-line: #d3c8b3;
-  --ivory-line: #d1bd8f;
+  --paper-line: #cdc5b4;
+  --ivory-line: #cab78e;
   --red-line: #971710;
   --black-line: #211f1f;
   --gold-line: #b06a31;
@@ -88,7 +95,39 @@ body {
   border: var(--line) solid var(--paper-line);
   border-radius: 10px;
   pointer-events: none;
+  z-index: 3;
+  filter: url(#ink-rough);
 }
+
+/* Paper fibre, under the ink: an SVG feTurbulence tile at 2.5%, multiplied
+   into the photographic card face.  It never fills over the carrier. */
+.paper-grain {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: 14px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='linear' slope='0' intercept='1'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+  mix-blend-mode: multiply;
+  opacity: 0.025;
+  pointer-events: none;
+}
+
+/* physical card edge: upper-left catches light, lower-right sits in shadow */
+.card-edge {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  border-radius: 14px;
+  pointer-events: none;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.20),
+    inset 1px 0 0 rgba(255, 255, 255, 0.10),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.24),
+    inset -1px 0 1px rgba(0, 0, 0, 0.12);
+}
+
+.corner, .pips, .court, .joker { z-index: 3; }
 
 .suit-S, .suit-C { --ink: var(--black); }
 .suit-H, .suit-D { --ink: var(--red); }
@@ -112,6 +151,7 @@ body {
   line-height: 0.92;
   letter-spacing: -0.6px;
   color: var(--ink);
+  filter: url(#ink-rough);
 }
 .rank--ten {
   font-size: 31px;
@@ -125,6 +165,7 @@ body {
   width: 20px;
   height: 20px;
   color: var(--ink);
+  filter: url(#ink-rough);
 }
 .suit-mark img,
 .suit-mark svg {
@@ -148,6 +189,7 @@ body {
   position: absolute;
   transform: translate(-50%, -50%);
   color: var(--ink);
+  filter: url(#ink-rough);
 }
 .pip img,
 .pip svg {
@@ -196,6 +238,7 @@ body {
   line-height: 1;
   letter-spacing: -2px;
   color: var(--ink);
+  filter: url(#ink-rough);
 }
 
 /* jokers */
@@ -211,6 +254,7 @@ body {
   height: 14px;
   border: var(--line) solid var(--ink);
   transform: rotate(45deg);
+  filter: url(#ink-rough);
 }
 .joker-mark--tl { left: 17px; top: 17px; }
 .joker-mark--br { right: 17px; bottom: 17px; }
@@ -244,6 +288,7 @@ body {
   letter-spacing: 5px;
   line-height: 1;
   color: var(--ink);
+  filter: url(#ink-rough);
 }
 
 /* ============================= MAHJONG ================================= */
@@ -271,6 +316,25 @@ body {
   inset: 0;
   display: block;
 }
+
+/* physical tile edge, same upper-left key light as the cards */
+.tile-edge {
+  position: absolute;
+  left: var(--tile-x, 0px);
+  top: var(--tile-y, 0px);
+  width: var(--tile-w, 100%);
+  height: var(--tile-h, 100%);
+  z-index: 4;
+  border-radius: 16px;
+  pointer-events: none;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 1px 0 0 rgba(255, 255, 255, 0.08),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.20),
+    inset -1px 0 1px rgba(0, 0, 0, 0.10);
+}
+
+.mj-content, .mj-dots, .mj-bamboo, .mj-bird-wrap, .mj-white { z-index: 3; }
 
 /* 2px recessed line, only when the blank carrier is missing */
 .mj-recess {
@@ -301,14 +365,28 @@ body {
   font-weight: 700;
   font-size: 92px;
   line-height: 1;
-  color: var(--black);
+  /* engraved: body is 35% darker than the ink colour, with a 1px lit
+     upper edge and a 1px shadowed lower edge (light from the upper-left) */
+  color: color-mix(in srgb, var(--black) 65%, black);
+  --engrave-light: color-mix(in srgb, var(--ivory) 60%, white);
+  --engrave-dark: color-mix(in srgb, var(--black) 80%, black);
+  text-shadow:
+    0 -1px 0 var(--engrave-light),
+    0 1px 0 var(--engrave-dark),
+    0 1px 2px rgba(0, 0, 0, 0.18);
 }
 .mj-wan-char {
   font-family: var(--han);
   font-weight: 700;
   font-size: 104px;
   line-height: 1;
-  color: var(--red);
+  color: color-mix(in srgb, var(--red) 65%, black);
+  --engrave-light: color-mix(in srgb, var(--red) 60%, white);
+  --engrave-dark: color-mix(in srgb, var(--red) 50%, black);
+  text-shadow:
+    0 -1px 0 var(--engrave-light),
+    0 1px 0 var(--engrave-dark),
+    0 1px 2px rgba(0, 0, 0, 0.20);
 }
 
 /* 筒子 */
@@ -325,6 +403,9 @@ body {
   border-radius: 50%;
   border: var(--line) solid var(--ring1, var(--red));
   background: var(--ivory);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.50),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.35);
 }
 .mj-dot::before {
   content: "";
@@ -332,6 +413,9 @@ body {
   inset: 16%;
   border: var(--line) solid var(--ring2, var(--gold));
   border-radius: 50%;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.32);
 }
 .mj-dot::after {
   content: "";
@@ -340,6 +424,9 @@ body {
   border: var(--line) solid var(--ring3, var(--black));
   border-radius: 50%;
   background: var(--core, var(--red));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.40),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.35);
 }
 
 /* 条子 */
@@ -361,6 +448,9 @@ body {
     color-mix(in srgb, var(--stick, var(--red)) 62%, var(--black)) 0%,
     var(--stick, var(--red)) 46%,
     color-mix(in srgb, var(--stick, var(--red)) 70%, var(--black)) 100%);
+  box-shadow:
+    inset 1px 0 0 rgba(255, 255, 255, 0.26),
+    inset -1px 0 0 rgba(0, 0, 0, 0.40);
 }
 .bam::before,
 .bam::after {
@@ -370,6 +460,9 @@ body {
   right: 0;
   height: var(--line);
   background: var(--gold);
+  box-shadow:
+    0 -1px 0 rgba(255, 255, 255, 0.18),
+    0 1px 0 rgba(0, 0, 0, 0.22);
 }
 .bam::before { top: 32%; }
 .bam::after { top: 64%; }
@@ -385,6 +478,9 @@ body {
   display: block;
   width: 196px;
   height: 236px;
+  filter:
+    drop-shadow(0 -1px 0 rgba(255, 255, 255, 0.18))
+    drop-shadow(0 1px 1px rgba(0, 0, 0, 0.22));
 }
 
 /* 字牌 */
@@ -394,10 +490,24 @@ body {
   font-weight: 700;
   font-size: 150px;
   line-height: 1;
-  color: var(--black);
+  color: color-mix(in srgb, var(--black) 65%, black);
+  --engrave-light: color-mix(in srgb, var(--ivory) 60%, white);
+  --engrave-dark: color-mix(in srgb, var(--black) 80%, black);
+  text-shadow:
+    0 -1px 0 var(--engrave-light),
+    0 1px 0 var(--engrave-dark),
+    0 1px 2px rgba(0, 0, 0, 0.18);
 }
-.mj-honor--red { color: var(--red); }
-.mj-honor--green { color: var(--mj-green); }
+.mj-honor--red {
+  color: color-mix(in srgb, var(--red) 65%, black);
+  --engrave-light: color-mix(in srgb, var(--red) 60%, white);
+  --engrave-dark: color-mix(in srgb, var(--red) 50%, black);
+}
+.mj-honor--green {
+  color: color-mix(in srgb, var(--mj-green) 65%, black);
+  --engrave-light: color-mix(in srgb, var(--mj-green) 60%, white);
+  --engrave-dark: color-mix(in srgb, var(--mj-green) 50%, black);
+}
 
 /* 白板: no glyph, one 2px outline (double rule so it reads at 256px) */
 .mj-white {
@@ -405,18 +515,40 @@ body {
   inset: 48px;
   border: var(--line) solid var(--ivory-line);
   border-radius: 6px;
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.45),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.22);
 }
 .mj-white-inner {
   position: absolute;
   inset: 10px;
   border: var(--line) solid var(--ivory-line);
   border-radius: 4px;
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.35),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.18);
 }
 
 /* ============================= XIANGQI ================================= */
 
-.xiangqi.red { --piece-ink: var(--black); --piece-line: var(--red-line); }
-.xiangqi.black { --piece-ink: var(--gold); --piece-line: var(--black-line); }
+/* Both sides are the SAME light wood/ivory piece.  The side classes only
+   change the engraved character colour; the base and outer line are shared.
+   --xq-wood / --xq-wood-line are injected from the carrier's mean colour at
+   render time; #e8d3ab is the fallback until xiangqi-blank@2x.png lands. */
+.xiangqi {
+  --xq-wood: #e0b671;
+  --xq-wood-line: #c5a063; /* #e0b671 darkened 12% */
+}
+.xiangqi.red {
+  --char-body: color-mix(in srgb, var(--red) 65%, black);
+  --char-light: color-mix(in srgb, var(--red) 60%, white);
+  --char-dark: color-mix(in srgb, var(--red) 50%, black);
+}
+.xiangqi.black {
+  --char-body: color-mix(in srgb, var(--black) 65%, black);
+  --char-light: color-mix(in srgb, var(--paper) 65%, white);
+  --char-dark: color-mix(in srgb, var(--black) 80%, black);
+}
 
 .piece-img {
   position: absolute;
@@ -425,18 +557,20 @@ body {
   display: block;
   width: 256px;
   height: 256px;
+  z-index: 0;
 }
 
 /* code-drawn 2px outer ring, 1px inside the piece silhouette */
 .xq-rule {
   position: absolute;
-  left: 1px;
-  top: 23px;
-  width: 254px;
-  height: 254px;
-  border: var(--line) solid var(--piece-line);
+  left: calc(var(--xq-x, 0px) + 1px);
+  top: calc(var(--xq-y, 22px) + 1px);
+  width: calc(var(--xq-w, 256px) - 2px);
+  height: calc(var(--xq-h, 256px) - 2px);
+  border: var(--line) solid var(--xq-wood-line);
   border-radius: 50%;
   pointer-events: none;
+  z-index: 2;
 }
 
 .xq-disc {
@@ -447,25 +581,17 @@ body {
   height: 256px;
   border-radius: 50%;
   overflow: hidden;
-  box-shadow: inset 0 0 0 var(--line) var(--piece-line);
-}
-.xiangqi.red .xq-disc {
   background: radial-gradient(circle at 38% 30%,
-    color-mix(in srgb, var(--red) 68%, white) 0%,
-    var(--red) 52%,
-    color-mix(in srgb, var(--red) 72%, var(--black)) 100%);
-}
-.xiangqi.black .xq-disc {
-  background: radial-gradient(circle at 38% 30%,
-    color-mix(in srgb, var(--black) 76%, white) 0%,
-    var(--black) 55%,
-    color-mix(in srgb, var(--black) 84%, black) 100%);
+    color-mix(in srgb, var(--xq-wood) 72%, white) 0%,
+    var(--xq-wood) 55%,
+    color-mix(in srgb, var(--xq-wood) 82%, var(--black)) 100%);
+  box-shadow: inset 0 0 0 var(--line) var(--xq-wood-line);
 }
 .xq-disc::after {
   content: "";
   position: absolute;
   inset: 18px;
-  border: var(--line) solid var(--piece-line);
+  border: var(--line) solid var(--xq-wood-line);
   border-radius: 50%;
 }
 
@@ -474,19 +600,29 @@ body {
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
+  z-index: 3;
   font-family: var(--han);
   font-weight: 700;
   font-size: 124px;
   line-height: 1;
-  color: var(--piece-ink);
-}
-.xiangqi.red .xq-char {
+  color: var(--char-body);
   text-shadow:
-    0 1px 0 color-mix(in srgb, var(--red) 55%, white),
-    0 -1px 1px rgba(0, 0, 0, 0.35);
+    0 -1px 0 var(--char-light),
+    0 1px 0 var(--char-dark),
+    0 1px 2px rgba(0, 0, 0, 0.18);
 }
-.xiangqi.black .xq-char {
-  text-shadow:
-    0 2px 0 rgba(0, 0, 0, 0.5),
-    0 0 6px rgba(0, 0, 0, 0.35);
+
+/* physical circular edge, same upper-left key light */
+.xq-edge {
+  position: absolute;
+  left: var(--xq-x, 0px);
+  top: var(--xq-y, 22px);
+  width: var(--xq-w, 256px);
+  height: var(--xq-h, 256px);
+  z-index: 4;
+  border-radius: 50%;
+  pointer-events: none;
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.18),
+    inset -1px -1px 2px rgba(0, 0, 0, 0.28);
 }

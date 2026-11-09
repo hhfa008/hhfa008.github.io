@@ -43,6 +43,7 @@ const ELEMENT_NAMES = [
   'pip-spade', 'pip-heart', 'pip-diamond', 'pip-club',
   'court-panel',
   'mahjong-blank',
+  'xiangqi-blank',
   'xiangqi-blank-red', 'xiangqi-blank-black',
 ];
 
@@ -165,6 +166,23 @@ const BIRD_SVG = `
   <circle cx="157.5" cy="76.5" r="1.6" fill="var(--ivory)"/>
   <path d="M112 188l-2 24M126 188l6 24" stroke="var(--gold)" stroke-width="4" stroke-linecap="round"/>
   <path d="M104 212h12M126 212h12" stroke="var(--gold)" stroke-width="4" stroke-linecap="round"/>
+</svg>`;
+
+/* Print filter for the poker ink: a sub-pixel displacement roughens the edge,
+   a 0.3px blur is composited back over a solid core, and a 3.5% turbulence
+   grain is clipped to the glyph and multiplied into the ink. */
+const INK_FILTER_SVG = `
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="ink-rough" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="7" result="noise"/>
+    <feDisplacementMap in="SourceGraphic" in2="noise" scale="0.45" xChannelSelector="R" yChannelSelector="G" result="rough"/>
+    <feGaussianBlur in="rough" stdDeviation="0.3" result="soft"/>
+    <feComposite in="rough" in2="soft" operator="over" result="edge"/>
+    <feTurbulence type="fractalNoise" baseFrequency="1.8" numOctaves="2" seed="13" result="grain"/>
+    <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.035 0" result="grainAlpha"/>
+    <feComposite in="grainAlpha" in2="edge" operator="in" result="grainClipped"/>
+    <feBlend in="edge" in2="grainClipped" mode="multiply"/>
+  </filter>
 </svg>`;
 
 const CHROME_CANDIDATES = [
@@ -374,22 +392,42 @@ function pngAlphaBBox(file) {
   let minY = ihdr.height;
   let maxX = -1;
   let maxY = -1;
+  let sumR = 0;
+  let sumG = 0;
+  let sumB = 0;
+  let count = 0;
   const alphaOffset = channels === 4 ? 3 : channels === 2 ? 1 : -1;
   for (let y = 0; y < ihdr.height; y++) {
     for (let x = 0; x < ihdr.width; x++) {
-      const alpha = alphaOffset === -1 ? 255 : out[y * stride + x * channels + alphaOffset];
+      const base = y * stride + x * channels;
+      const alpha = alphaOffset === -1 ? 255 : out[base + alphaOffset];
       if (alpha > 8) {
         if (x < minX) minX = x;
         if (x > maxX) maxX = x;
         if (y < minY) minY = y;
         if (y > maxY) maxY = y;
       }
+      if (alpha > 200) {
+        if (channels >= 3) {
+          sumR += out[base];
+          sumG += out[base + 1];
+          sumB += out[base + 2];
+        } else {
+          sumR += out[base];
+          sumG += out[base];
+          sumB += out[base];
+        }
+        count++;
+      }
     }
   }
   if (maxX < minX) return null;
+  const mean = count
+    ? [Math.round(sumR / count), Math.round(sumG / count), Math.round(sumB / count)]
+    : [0, 0, 0];
   return {
     x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1,
-    width: ihdr.width, height: ihdr.height,
+    width: ihdr.width, height: ihdr.height, mean,
   };
 }
 
@@ -456,6 +494,23 @@ function carrierBg(el, targetW, targetH, mode) {
     'background-repeat:no-repeat;';
 }
 
+function carrierRect(el, targetW, targetH, mode) {
+  const b = el.bbox;
+  let sx;
+  let sy;
+  if (mode === 'contain') {
+    const s = Math.min(targetW / b.w, targetH / b.h);
+    sx = s;
+    sy = s;
+  } else {
+    sx = targetW / b.w;
+    sy = targetH / b.h;
+  }
+  const w = b.w * sx;
+  const h = b.h * sy;
+  return { x: (targetW - w) / 2, y: (targetH - h) / 2, w, h };
+}
+
 function styleAttr(css) {
   return `style="${escapeAttr(css)}"`;
 }
@@ -487,19 +542,22 @@ function pokerCard(card, elems) {
   const fallback = !frame;
   const paper = fallback ? '<div class="poker-paper"></div>' : '';
   const frameDiv = frame
-    ? `<div class="poker-frame" ${styleAttr(carrierBg(frame, card.width, card.height, 'fill'))}></div>`
+    ? `<div class="poker-frame" ${styleAttr(carrierBg(frame, card.width, card.height, 'contain'))}></div>`
     : '';
 
   if (card.joker) {
     return `<div class="card poker joker joker--${card.joker}${fallback ? ' fallback' : ''}">` +
       paper + frameDiv + (frame ? '<div class="poker-rule"></div>' : '') +
+      '<div class="paper-grain"></div>' +
       '<div class="joker">' +
       '<div class="joker-mark joker-mark--tl"></div>' +
       '<div class="joker-mark joker-mark--br"></div>' +
       '<div class="joker-emblem"><div class="joker-emblem-inner">' +
       '<span class="joker-word">JOKER</span>' +
       '</div></div>' +
-      '</div></div>';
+      '</div>' +
+      '<div class="card-edge"></div>' +
+      '</div>';
   }
 
   let center;
@@ -508,7 +566,7 @@ function pokerCard(card, elems) {
   } else if (card.rank === 'J' || card.rank === 'Q' || card.rank === 'K') {
     const panel = elems.get('court-panel');
     center = '<div class="court">' +
-      (panel ? `<div class="court-bg" ${styleAttr(carrierBg(panel, 152, 206, 'fill'))}></div>` : '') +
+      (panel ? `<div class="court-bg" ${styleAttr(carrierBg(panel, 152, 206, 'contain'))}></div>` : '') +
       `<div class="court-medallion"><span class="court-letter">${card.rank}</span></div>` +
       '</div>';
   } else {
@@ -521,9 +579,11 @@ function pokerCard(card, elems) {
 
   return `<div class="card poker suit-${card.suit.code}${fallback ? ' fallback' : ''}">` +
     paper + frameDiv + (frame ? '<div class="poker-rule"></div>' : '') +
+    '<div class="paper-grain"></div>' +
     pokerCorner(card, elems, 'corner--tl') +
     pokerCorner(card, elems, 'corner--br') +
     center +
+    '<div class="card-edge"></div>' +
     '</div>';
 }
 
@@ -531,7 +591,11 @@ function pokerCard(card, elems) {
    i is the dot index inside the tile, so 2-9 dot tiles do not all look
    like the same red bullseye. 1t is the explicit red-outside/green-inside
    exception the traditional sets use. */
-const MJ_RINGS = ['var(--red)', 'var(--mj-green)', 'var(--black)'];
+const MJ_RINGS = [
+  'color-mix(in srgb, var(--red) 65%, black)',
+  'color-mix(in srgb, var(--mj-green) 65%, black)',
+  'color-mix(in srgb, var(--black) 80%, black)',
+];
 
 function ringVarsFor(i) {
   const a = MJ_RINGS[i % 3];
@@ -541,7 +605,10 @@ function ringVarsFor(i) {
 }
 
 const ONE_TONG_RINGS =
-  '--ring1:var(--red);--ring2:var(--mj-green);--ring3:var(--mj-green);--core:var(--mj-green)';
+  '--ring1:color-mix(in srgb, var(--red) 65%, black);' +
+  '--ring2:color-mix(in srgb, var(--mj-green) 65%, black);' +
+  '--ring3:color-mix(in srgb, var(--mj-green) 65%, black);' +
+  '--core:color-mix(in srgb, var(--mj-green) 65%, black)';
 
 function dotMarkup(x, y, size, vars) {
   const style = `left:${x * 100}%;top:${y * 100}%;width:${size}px;height:${size}px` +
@@ -550,10 +617,12 @@ function dotMarkup(x, y, size, vars) {
 }
 
 function bambooMarkup(x, y, height, i) {
-  const stick = i % 2 === 0 ? 'var(--mj-green)' : 'var(--red)';
+  const stick = i % 2 === 0
+    ? 'color-mix(in srgb, var(--mj-green) 65%, black)'
+    : 'color-mix(in srgb, var(--red) 65%, black)';
   const dark = i % 2 === 0
-    ? 'color-mix(in srgb, var(--mj-green) 55%, var(--black))'
-    : 'color-mix(in srgb, var(--red) 55%, var(--black))';
+    ? 'color-mix(in srgb, var(--mj-green) 45%, black)'
+    : 'color-mix(in srgb, var(--red) 45%, black)';
   const style = `left:${x * 100}%;top:${y * 100}%;height:${height}px;` +
     `--stick:${stick};--stick-dark:${dark}`;
   return `<span class="bam" ${styleAttr(style)}></span>`;
@@ -586,23 +655,46 @@ function mahjongContent(card) {
 function mahjongTile(card, elems) {
   const blank = elems.get('mahjong-blank');
   const fallback = !blank;
-  return `<div class="card mahjong${fallback ? ' fallback' : ''}">` +
-    (blank
-      ? `<div class="tile-blank" ${styleAttr(carrierBg(blank, card.width, card.height, 'fill'))}></div>`
-      : '<div class="tile-bg"></div><div class="mj-recess"></div>') +
+  let cardStyle = '';
+  let tile = '<div class="tile-bg"></div><div class="mj-recess"></div>';
+  if (blank) {
+    const r = carrierRect(blank, card.width, card.height, 'contain');
+    cardStyle = `--tile-x:${r.x.toFixed(3)}px;--tile-y:${r.y.toFixed(3)}px;` +
+      `--tile-w:${r.w.toFixed(3)}px;--tile-h:${r.h.toFixed(3)}px;`;
+    tile = `<div class="tile-blank" ${styleAttr(carrierBg(blank, card.width, card.height, 'contain'))}></div>`;
+  }
+  const style = cardStyle ? ` ${styleAttr(cardStyle)}` : '';
+  return `<div class="card mahjong${fallback ? ' fallback' : ''}"${style}>` +
+    tile +
     mahjongContent(card) +
+    '<div class="tile-edge"></div>' +
     '</div>';
 }
 
 function xiangqiPiece(card, elems) {
-  const blank = elems.get(card.side === 'red' ? 'xiangqi-blank-red' : 'xiangqi-blank-black');
+  // Both sides must be the same physical material: one blank carrier, one
+  // wood base. Only --char-* changes with the side.
+  const blank = elems.get('xiangqi-blank');
   const fallback = !blank;
-  return `<div class="card xiangqi ${card.side}${fallback ? ' fallback' : ''}">` +
-    (blank
-      ? `<div class="piece-img" ${styleAttr(carrierBg(blank, 256, 256, 'fill'))}></div>` +
-        '<div class="xq-rule"></div>'
-      : '<div class="xq-disc"></div>') +
+  let cardStyle = '';
+  let piece = '<div class="xq-disc"></div>';
+  if (blank) {
+    const [r, g, b] = blank.bbox.mean;
+    const line = [Math.round(r * 0.88), Math.round(g * 0.88), Math.round(b * 0.88)];
+    const hex = (v) => v.toString(16).padStart(2, '0');
+    const rect = carrierRect(blank, 256, 256, 'contain');
+    cardStyle = `--xq-wood:#${hex(r)}${hex(g)}${hex(b)};` +
+      `--xq-wood-line:#${hex(line[0])}${hex(line[1])}${hex(line[2])};` +
+      `--xq-x:${rect.x.toFixed(3)}px;--xq-y:${(22 + rect.y).toFixed(3)}px;` +
+      `--xq-w:${rect.w.toFixed(3)}px;--xq-h:${rect.h.toFixed(3)}px;`;
+    piece = `<div class="piece-img" ${styleAttr(carrierBg(blank, 256, 256, 'contain'))}></div>` +
+      '<div class="xq-rule"></div>';
+  }
+  const style = cardStyle ? ` ${styleAttr(cardStyle)}` : '';
+  return `<div class="card xiangqi ${card.side}${fallback ? ' fallback' : ''}"${style}>` +
+    piece +
     `<div class="xq-char">${card.char}</div>` +
+    '<div class="xq-edge"></div>' +
     '</div>';
 }
 
@@ -610,7 +702,7 @@ function pageHtml(body, width, height, css) {
   return '<!doctype html>\n<html lang="zh-CN">\n<head>\n<meta charset="utf-8">\n' +
     '<meta name="viewport" content="width=device-width, initial-scale=1">\n' +
     `<style>${css}\nhtml, body { width: ${width}px; height: ${height}px; }\n</style>\n` +
-    `</head>\n<body>\n${body}\n</body>\n</html>\n`;
+    `</head>\n<body>\n${INK_FILTER_SVG}\n${body}\n</body>\n</html>\n`;
 }
 
 /* ------------------------------------------------------------------ Chrome */
@@ -878,7 +970,7 @@ function webpSize(buffer) {
 const SET_ELEMENTS = {
   poker: ['card-face-frame', 'pip-spade', 'pip-heart', 'pip-diamond', 'pip-club', 'court-panel'],
   mahjong: ['mahjong-blank'],
-  xiangqi: ['xiangqi-blank-red', 'xiangqi-blank-black'],
+  xiangqi: ['xiangqi-blank'],
 };
 
 const FALLBACK_NOTES = {
@@ -889,8 +981,9 @@ const FALLBACK_NOTES = {
   'pip-club': 'poker: inline SVG, flat --black',
   'court-panel': 'poker J/Q/K: ivory medallion only',
   'mahjong-blank': 'mahjong: --ivory tile + 2px recess',
-  'xiangqi-blank-red': 'xiangqi red: radial lacquer disc + 2px rings',
-  'xiangqi-blank-black': 'xiangqi black: radial near-black disc + 2px rings',
+  'xiangqi-blank': 'xiangqi: light wood/ivory disc (#e8d3ab) + 2px wood line',
+  'xiangqi-blank-red': 'unused fallback: radial lacquer disc',
+  'xiangqi-blank-black': 'unused fallback: radial near-black disc',
 };
 
 async function renderSet(browser, set, cards, elems, opts, css, tmpDir, fontState) {
@@ -1025,7 +1118,11 @@ function previewCss() {
   .card {
     position: absolute;
     display: block;
-    filter: drop-shadow(0 14px 16px rgba(0, 0, 0, 0.52));
+    /* key light from the upper-left: a short contact shadow down-right
+       darkens the edge of the card underneath, plus a longer ambient shadow */
+    filter:
+      drop-shadow(2px 5px 3px rgba(0, 0, 0, 0.55))
+      drop-shadow(0 16px 18px rgba(0, 0, 0, 0.35));
   }
   .caption {
     position: absolute;
@@ -1199,7 +1296,7 @@ async function main() {
         const b = el.bbox;
         console.log(
           `  present  ${name}@2x.png   alpha bbox ${b.w}x${b.h} at ${b.x},${b.y} ` +
-          `of ${b.width}x${b.height}`
+          `of ${b.width}x${b.height}  mean #${b.mean.map((v) => v.toString(16).padStart(2, '0')).join('')}`
         );
       }
     }

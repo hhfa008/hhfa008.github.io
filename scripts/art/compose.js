@@ -16,6 +16,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
+const zlib = require('zlib');
 const { pathToFileURL } = require('url');
 
 const ROOT = path.resolve(__dirname, '..', '..');
@@ -48,6 +49,7 @@ function usage() {
     'Options:',
     '  --elements <dir>   element PNG dir (default games/assets/art/elements)',
     '  --out <dir>        output dir (default games/assets/art/composed)',
+    '  --scenes <file>    alternate scenes file (for validation tests)',
     '',
     'Environment:',
     '  CHROME_PATH        override the Chrome executable path',
@@ -55,7 +57,7 @@ function usage() {
 }
 
 function parseArgs(argv) {
-  const opts = { game: null, all: false, list: false, sheet: false, elements: DEFAULT_ELEMENTS_DIR, out: DEFAULT_OUT_DIR };
+  const opts = { game: null, all: false, list: false, sheet: false, elements: DEFAULT_ELEMENTS_DIR, out: DEFAULT_OUT_DIR, scenes: SCENES_FILE };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === '--game') {
@@ -78,6 +80,10 @@ function parseArgs(argv) {
       opts.out = path.resolve(argv[++i] || '');
     } else if (arg.startsWith('--out=')) {
       opts.out = path.resolve(arg.slice('--out='.length));
+    } else if (arg === '--scenes') {
+      opts.scenes = path.resolve(argv[++i] || '');
+    } else if (arg.startsWith('--scenes=')) {
+      opts.scenes = path.resolve(arg.slice('--scenes='.length));
     } else if (arg === '-h' || arg === '--help') {
       opts.help = true;
     } else {
@@ -87,8 +93,8 @@ function parseArgs(argv) {
   return opts;
 }
 
-function loadScenes() {
-  const raw = fs.readFileSync(SCENES_FILE, 'utf8');
+function loadScenes(file = SCENES_FILE) {
+  const raw = fs.readFileSync(file, 'utf8');
   let scenes;
   try {
     scenes = JSON.parse(raw);
@@ -117,23 +123,242 @@ function validateScenes(scenes) {
     }
     scene.items.forEach((item, idx) => {
       const at = `${slug}.items[${idx}]`;
-      if (!item || typeof item.el !== 'string' || !item.el) throw new Error(`${at}: el must be a non-empty string`);
-      for (const key of ['x', 'y', 'scale']) {
+      if (!item || typeof item !== 'object') throw new Error(`${at}: item must be an object`);
+      const hasEl = typeof item.el === 'string' && item.el;
+      const hasSrc = typeof item.src === 'string' && item.src;
+      if (!hasEl && !hasSrc) throw new Error(`${at}: needs el or src`);
+      if (hasEl && hasSrc) throw new Error(`${at}: el and src are mutually exclusive`);
+      if ('scale' in item) throw new Error(`${at}: use realScale (default 1.0), not scale`);
+      for (const key of ['x', 'y']) {
         if (typeof item[key] !== 'number' || !Number.isFinite(item[key])) {
           throw new Error(`${at}: ${key} must be a finite number`);
         }
       }
       if (item.x < 0 || item.x > 1) throw new Error(`${at}: x must be within 0..1`);
       if (item.y < 0 || item.y > 1) throw new Error(`${at}: y must be within 0..1`);
-      if (item.scale <= 0) throw new Error(`${at}: scale must be > 0`);
+      if (item.realScale !== undefined && (!Number.isFinite(item.realScale) || item.realScale <= 0)) {
+        throw new Error(`${at}: realScale must be a positive number`);
+      }
+      if (item.stack !== undefined && (!Number.isInteger(item.stack) || item.stack < 1)) {
+        throw new Error(`${at}: stack must be a positive integer`);
+      }
       if (item.rot !== undefined && (typeof item.rot !== 'number' || !Number.isFinite(item.rot))) {
         throw new Error(`${at}: rot must be a finite number`);
       }
       if (item.shadow !== undefined && typeof item.shadow !== 'boolean') {
         throw new Error(`${at}: shadow must be a boolean`);
       }
+      if (item.shape !== undefined && item.shape !== 'flat' && item.shape !== 'standing') {
+        throw new Error(`${at}: shape must be flat or standing`);
+      }
+      if (item.cell !== undefined) {
+        if (!item.cell || !Number.isInteger(item.cell.col) || !Number.isInteger(item.cell.row)) {
+          throw new Error(`${at}: cell must have integer col/row`);
+        }
+      }
+      if (item.role !== undefined && typeof item.role !== 'string') {
+        throw new Error(`${at}: role must be a string`);
+      }
+    });
+    if (scene.realism !== undefined) {
+      const r = scene.realism;
+      if (!r || typeof r !== 'object') throw new Error(`${slug}: realism must be an object`);
+      if (r.pieceCount !== undefined && (!Number.isInteger(r.pieceCount) || r.pieceCount < 0)) {
+        throw new Error(`${slug}: realism.pieceCount must be a non-negative integer`);
+      }
+      if (r.board !== undefined && r.board !== (scene.board || 'none')) {
+        throw new Error(`${slug}: realism.board must match scene.board`);
+      }
+      if (r.mustTouchSurface !== undefined && typeof r.mustTouchSurface !== 'boolean') {
+        throw new Error(`${slug}: realism.mustTouchSurface must be a boolean`);
+      }
+    }
+  }
+}
+
+function itemName(item) {
+  if (item.src) return path.basename(item.src).replace(/\.webp$/i, '');
+  return item.el || '';
+}
+
+function itemCount(scene, predicate) {
+  return scene.items
+    .filter((item) => !['wall', 'dice', 'chip', 'accessory'].includes(item.role || '') && (!predicate || predicate(item)))
+    .reduce((sum, item) => sum + (item.stack || 1), 0);
+}
+
+function validateRealism(slug, scene) {
+  const errors = [];
+  const r = scene.realism;
+  if (!r) return errors;
+
+  const count = itemCount(scene);
+  if (r.pieceCount !== undefined && count !== r.pieceCount) {
+    errors.push(`pieceCount: expected ${r.pieceCount}, found ${count}`);
+  }
+  if (r.board !== undefined && r.board !== (scene.board || 'none')) {
+    errors.push(`board: expected ${r.board}, found ${scene.board || 'none'}`);
+  }
+  if (r.mustTouchSurface) {
+    scene.items.forEach((item, i) => {
+      if (!(item.x >= 0 && item.x <= 1 && item.y >= 0 && item.y <= 1)) {
+        errors.push(`item ${i} (${itemName(item)}) is off the ${scene.board} surface`);
+      }
     });
   }
+
+  const cells = scene.items.filter((i) => i.cell);
+  const requireCells = (minCol, maxCol, minRow, maxRow) => {
+    for (const item of scene.items) {
+      if (!item.cell) continue;
+      const { col, row } = item.cell;
+      if (col < minCol || col > maxCol || row < minRow || row > maxRow) {
+        errors.push(`${itemName(item)} cell (${col},${row}) is outside the board`);
+      }
+    }
+  };
+
+  if (slug === 'chess') {
+    const knights = scene.items.filter((i) => i.el === 'chess-knight-dark');
+    if (knights.length > 1) errors.push(`same-colour knights: ${knights.length}`);
+    const queens = scene.items.filter((i) => i.el === 'chess-queen-light');
+    if (queens.length > 1) errors.push(`same-colour queens: ${queens.length}`);
+    if (count !== 2) errors.push(`endgame close-up needs 2 pieces, found ${count}`);
+    requireCells(0, 7, 0, 7);
+  }
+
+  if (slug === 'xiangqi') {
+    const red = scene.items.filter((i) => itemName(i).startsWith('red-'));
+    const black = scene.items.filter((i) => itemName(i).startsWith('black-'));
+    if (red.length !== 16) errors.push(`red pieces: expected 16, found ${red.length}`);
+    if (black.length !== 16) errors.push(`black pieces: expected 16, found ${black.length}`);
+    const wantRed = { 'red-shuai': 1, 'red-shi': 2, 'red-xiang': 2, 'red-ma': 2, 'red-ju': 2, 'red-pao': 2, 'red-bing': 5 };
+    const wantBlack = { 'black-jiang': 1, 'black-shi': 2, 'black-xiang': 2, 'black-ma': 2, 'black-ju': 2, 'black-pao': 2, 'black-zu': 5 };
+    for (const [name, n] of Object.entries(wantRed)) {
+      const found = red.filter((i) => itemName(i) === name).length;
+      if (found !== n) errors.push(`${name}: expected ${n}, found ${found}`);
+    }
+    for (const [name, n] of Object.entries(wantBlack)) {
+      const found = black.filter((i) => itemName(i) === name).length;
+      if (found !== n) errors.push(`${name}: expected ${n}, found ${found}`);
+    }
+    requireCells(0, 8, 0, 9);
+  }
+
+  if (slug === 'go9') {
+    const black = scene.items.filter((i) => i.el === 'go-stone-black').length;
+    const white = scene.items.filter((i) => i.el === 'go-stone-white').length;
+    if (count < 10 || count > 16) errors.push(`go stones: expected 10-16, found ${count}`);
+    if (Math.abs(black - white) > 1) errors.push(`go colours differ by ${Math.abs(black - white)}`);
+    requireCells(0, 8, 0, 8);
+  }
+
+  if (slug === 'mahjong') {
+    const hand = scene.items.filter((i) => (i.role || 'hand') !== 'wall').length;
+    const wall = scene.items.filter((i) => i.role === 'wall').length;
+    if (hand !== 13) errors.push(`mahjong hand: expected 13, found ${hand}`);
+    if (wall < 4) errors.push(`mahjong wall: expected at least 4 tiles, found ${wall}`);
+  }
+
+  if (slug === 'texas-holdem') {
+    const pub = scene.items.filter((i) => i.role === 'public').length;
+    const hole = scene.items.filter((i) => i.role === 'hole').length;
+    if (pub !== 5) errors.push(`public cards: expected 5, found ${pub}`);
+    if (hole !== 2) errors.push(`hole cards: expected 2, found ${hole}`);
+    for (const item of scene.items.filter((i) => i.role === 'hole')) {
+      if (item.el !== 'card-back-red') errors.push(`hole card ${itemName(item)} is not face down`);
+    }
+  }
+
+  if (slug === 'doudizhu') {
+    const hand = scene.items.filter((i) => (i.role || 'hand') !== 'wall').length;
+    if (hand !== 17) errors.push(`doudizhu hand: expected 17, found ${hand}`);
+  }
+
+  if (slug === 'connect4') {
+    if (count !== 16) errors.push(`connect4 discs: expected 16, found ${count}`);
+    const byCol = new Map();
+    for (const item of scene.items) {
+      if (!item.cell) {
+        errors.push(`${itemName(item)} has no column/row`);
+        continue;
+      }
+      const { col, row } = item.cell;
+      if (!byCol.has(col)) byCol.set(col, []);
+      byCol.get(col).push(row);
+    }
+    for (const [col, rows] of byCol) {
+      rows.sort((a, b) => b - a);
+      for (let i = 0; i < rows.length; i++) {
+        if (rows[i] !== 5 - i) {
+          errors.push(`column ${col} floats: rows ${rows.join(',')} instead of 5..${5 - rows.length + 1}`);
+          break;
+        }
+      }
+    }
+    requireCells(0, 6, 0, 5);
+  }
+
+  if (slug === 'reversi') {
+    if (count !== 4) errors.push(`reversi opening: expected 4 discs, found ${count}`);
+    const black = scene.items.filter((i) => i.el === 'reversi-black').length;
+    const white = scene.items.filter((i) => i.el === 'reversi-white').length;
+    if (black !== 2 || white !== 2) errors.push(`reversi colours: ${black} black / ${white} white`);
+    const central = new Set(['3,3', '4,4', '3,4', '4,3']);
+    for (const item of scene.items) {
+      if (!item.cell) {
+        errors.push(`${itemName(item)} has no cell`);
+        continue;
+      }
+      const key = `${item.cell.col},${item.cell.row}`;
+      if (!central.has(key)) errors.push(`${itemName(item)} is not on a central cell (${key})`);
+    }
+    requireCells(0, 7, 0, 7);
+  }
+
+  if (slug === 'backgammon') {
+    const bySide = new Map();
+    for (const item of scene.items) {
+      if (item.role === 'dice') continue;
+      const side = item.side || 'dark';
+      bySide.set(side, (bySide.get(side) || 0) + (item.stack || 1));
+      if (!item.cell) errors.push(`${itemName(item)} is not on a point`);
+    }
+    const sizes = [...bySide.values()].sort((a, b) => a - b);
+    if (!(sizes.includes(15) && sizes.some((n) => n >= 3 && n <= 5))) {
+      errors.push(`backgammon men: expected one side 15 and the other 3-5, found ${sizes.join('/')}`);
+    }
+    requireCells(0, 11, 0, 1);
+  }
+
+  if (slug === 'checkers-jump') {
+    if (count !== 24) errors.push(`checkers: expected 24, found ${count}`);
+    const bySide = new Map();
+    for (const item of scene.items) {
+      const side = item.side || 'dark';
+      bySide.set(side, (bySide.get(side) || 0) + (item.stack || 1));
+      if (!item.cell) {
+        errors.push(`${itemName(item)} has no cell`);
+        continue;
+      }
+      if ((item.cell.col + item.cell.row) % 2 !== 1) {
+        errors.push(`${itemName(item)} is on a light square (${item.cell.col},${item.cell.row})`);
+      }
+    }
+    for (const [side, n] of bySide) {
+      if (n !== 12) errors.push(`checkers ${side}: expected 12, found ${n}`);
+    }
+    requireCells(0, 7, 0, 7);
+  }
+
+  if (slug === 'aeroplane') {
+    const planes = scene.items.filter((i) => i.el === 'airplane-token').length;
+    const dice = scene.items.filter((i) => i.el === 'die').length;
+    if (planes !== 4) errors.push(`aeroplane tokens: expected 4, found ${planes}`);
+    if (dice !== 2) errors.push(`aeroplane dice: expected 2, found ${dice}`);
+  }
+
+  return errors;
 }
 
 function findChrome() {
@@ -211,107 +436,374 @@ function projectPlanePoint(px, py, width, height) {
 /* Board geometry                                                      */
 /* ------------------------------------------------------------------ */
 
+/* ------------------------------------------------------------------ */
+/* Physical units: 1 script unit = 1 mm.                              */
+/* Board pitches and object dimensions come from real-world specs.    */
+/* ------------------------------------------------------------------ */
+
 const BOARD_TYPES = new Set([
   'chess8',
-  'go19',
+  'go9',
   'xiangqi9x10',
   'reversi8',
   'connect4frame',
   'backgammon',
   'cardtable',
+  'aeroplaneCross',
   'none',
 ]);
 
-// width: fraction of the table plane width. aspect: height / width.
-const BOARD_SPECS = {
-  chess8: { width: 0.50, aspect: 1 },
-  go19: { width: 0.50, aspect: 1 },
-  reversi8: { width: 0.50, aspect: 1 },
-  xiangqi9x10: { width: 0.46, aspect: 1.125 },
-  connect4frame: { width: 0.48, aspect: 6 / 7 },
-  backgammon: { width: 0.55, aspect: 0.5 },
+// Board box in millimetres (including any printed margin).
+const BOARD_PHYS = {
+  chess8: { w: 440, h: 440, kind: 'chess' },
+  xiangqi9x10: { w: 270, h: 300, kind: 'xiangqi' },
+  go9: { w: 200, h: 200, kind: 'go9' },
+  reversi8: { w: 260, h: 260, kind: 'reversi' },
+  connect4frame: { w: 280, h: 240, kind: 'connect4' },
+  backgammon: { w: 600, h: 300, kind: 'backgammon' },
+  cardtable: { w: 900, h: 900, kind: 'cardtable' },
+  aeroplaneCross: { w: 500, h: 500, kind: 'aeroplane' },
+  none: null,
+};
+
+const BOARD_LABEL = {
+  chess8: '8x8x55mm',
+  xiangqi9x10: 'grid 240x270mm, pitch 30mm',
+  go9: 'grid 176x176mm, pitch 22mm',
+  reversi8: 'grid 240x240mm, pitch 30mm',
+  connect4frame: '7x6 holes, pitch 40mm',
+  backgammon: '24 points, pitch 50mm',
+  cardtable: '900x900mm table',
+  aeroplaneCross: '500x500mm cross track',
+  none: '400x400mm reference',
 };
 
 const BOARD_LINE = 'rgba(245,238,220,0.20)';
-const BOARD_LINE_W = 1.5;
+const BOARD_LINE_PX = 1.5;
 
-function svgBoard(viewW, viewH, body) {
+// Real face sizes for the generated deck WebPs.
+const DECK_PHYS = {
+  poker: { w: 63, h: 88 },
+  mahjong: { w: 30, h: 40 },
+  xiangqi: { w: 28, h: (28 * 300) / 256, rw: 1, rh: 256 / 300 },
+};
+
+// Real object sizes. `main` is the visible dimension in mm; rw/rh are the
+// alpha-bbox fractions measured from the element canvases.
+const ELEMENT_PHYS = {
+  'chess-queen-light': { main: 100, mode: 'height' },
+  'chess-knight-dark': { main: 80, mode: 'height' },
+  'go-stone-black': { main: 20, mode: 'width' },
+  'go-stone-white': { main: 20, mode: 'width' },
+  'reversi-black': { main: 28, mode: 'width' },
+  'reversi-white': { main: 28, mode: 'width' },
+  'connect4-red': { main: 33, mode: 'width' },
+  'connect4-yellow': { main: 33, mode: 'width' },
+  'checker-dark': { main: 30, mode: 'width' },
+  'chip-red': { main: 39, mode: 'width' },
+  'chip-black': { main: 39, mode: 'width' },
+  die: { main: 16, mode: 'width' },
+  'airplane-token': { main: 25, mode: 'width' },
+  'card-back-red': { main: 88, mode: 'height' },
+  'card-face-blank': { main: 88, mode: 'height' },
+  'mahjong-back': { main: 40, mode: 'height' },
+  'mahjong-face-wan': { main: 40, mode: 'height' },
+  'lantern-spirit': { main: 80, mode: 'height' },
+};
+
+const BBOX_CACHE = new Map();
+
+function isPng(file) {
+  try {
+    const fd = fs.openSync(file, 'r');
+    const head = Buffer.alloc(8);
+    const n = fs.readSync(fd, head, 0, 8, 0);
+    fs.closeSync(fd);
+    return n === 8 && head.toString('hex') === '89504e470d0a1a0a';
+  } catch {
+    return false;
+  }
+}
+
+/** Minimal 8-bit PNG alpha-bbox decoder (non-interlaced). */
+function pngAlphaBBox(file) {
+  if (BBOX_CACHE.has(file)) return BBOX_CACHE.get(file);
+  if (!isPng(file)) {
+    BBOX_CACHE.set(file, null);
+    return null;
+  }
+  const buf = fs.readFileSync(file);
+  let offset = 8;
+  let ihdr = null;
+  const idat = [];
+  while (offset + 12 <= buf.length) {
+    const len = buf.readUInt32BE(offset);
+    const type = buf.toString('ascii', offset + 4, offset + 8);
+    const dataStart = offset + 8;
+    const dataEnd = dataStart + len;
+    if (dataEnd + 4 > buf.length) break;
+    if (type === 'IHDR') {
+      ihdr = {
+        width: buf.readUInt32BE(dataStart),
+        height: buf.readUInt32BE(dataStart + 4),
+        bitDepth: buf[dataStart + 8],
+        colorType: buf[dataStart + 9],
+        interlace: buf[dataStart + 12],
+      };
+    } else if (type === 'IDAT') {
+      idat.push(buf.subarray(dataStart, dataEnd));
+    } else if (type === 'IEND') {
+      break;
+    }
+    offset = dataEnd + 4;
+  }
+  if (!ihdr || !idat.length) {
+    BBOX_CACHE.set(file, null);
+    return null;
+  }
+  if (ihdr.bitDepth !== 8 || ihdr.interlace !== 0) {
+    BBOX_CACHE.set(file, null);
+    return null;
+  }
+  const channels = { 0: 1, 2: 3, 4: 2, 6: 4 }[ihdr.colorType];
+  if (!channels) {
+    BBOX_CACHE.set(file, null);
+    return null;
+  }
+  let raw;
+  try {
+    raw = zlib.inflateSync(Buffer.concat(idat));
+  } catch {
+    BBOX_CACHE.set(file, null);
+    return null;
+  }
+  const stride = ihdr.width * channels;
+  if (raw.length < (stride + 1) * ihdr.height) {
+    BBOX_CACHE.set(file, null);
+    return null;
+  }
+  const out = Buffer.alloc(stride * ihdr.height);
+  let pos = 0;
+  for (let y = 0; y < ihdr.height; y++) {
+    const filter = raw[pos++];
+    const row = y * stride;
+    const prev = (y - 1) * stride;
+    for (let x = 0; x < stride; x++) {
+      const v = raw[pos++];
+      const a = x >= channels ? out[row + x - channels] : 0;
+      const b = y > 0 ? out[prev + x] : 0;
+      const c = y > 0 && x >= channels ? out[prev + x - channels] : 0;
+      let value;
+      switch (filter) {
+        case 0: value = v; break;
+        case 1: value = v + a; break;
+        case 2: value = v + b; break;
+        case 3: value = v + ((a + b) >> 1); break;
+        case 4: {
+          const pr = a + b - c;
+          const pa = Math.abs(pr - a);
+          const pb = Math.abs(pr - b);
+          const pc = Math.abs(pr - c);
+          value = v + (pa <= pb && pa <= pc ? a : pb <= pc ? b : c);
+          break;
+        }
+        default:
+          BBOX_CACHE.set(file, null);
+          return null;
+      }
+      out[row + x] = value & 0xff;
+    }
+  }
+  let minX = ihdr.width;
+  let minY = ihdr.height;
+  let maxX = -1;
+  let maxY = -1;
+  const alphaOffset = channels === 4 ? 3 : channels === 2 ? 1 : -1;
+  for (let y = 0; y < ihdr.height; y++) {
+    for (let x = 0; x < ihdr.width; x++) {
+      const base = y * stride + x * channels;
+      const alpha = alphaOffset === -1 ? 255 : out[base + alphaOffset];
+      if (alpha > 8) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+  const bbox = maxX >= 0
+    ? { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1, width: ihdr.width, height: ihdr.height }
+    : null;
+  BBOX_CACHE.set(file, bbox);
+  return bbox;
+}
+
+function itemPhysMm(item, elementsDir) {
+  if (item.src) {
+    const set = item.src.split('/')[1];
+    const spec = DECK_PHYS[set];
+    if (!spec) throw new Error(`unknown deck set in src: ${item.src}`);
+    return { w: spec.w, h: spec.h, rw: spec.rw, rh: spec.rh, deck: true };
+  }
+  const spec = ELEMENT_PHYS[item.el];
+  if (!spec) throw new Error(`no physical size for element: ${item.el}`);
+  const file = path.join(elementsDir, `${item.el}@2x.png`);
+  const bbox = pngAlphaBBox(file);
+  const rw = bbox ? bbox.w / bbox.width : 0.84;
+  const rh = bbox ? bbox.h / bbox.height : 0.84;
+  if (spec.mode === 'height') {
+    const box = spec.main / rh;
+    return { w: box, h: box, rw, rh };
+  }
+  const box = spec.main / rw;
+  return { w: box, h: box, rw, rh };
+}
+
+/** Global px-per-mm for a scene: board/table projects to ~90% frame width. */
+function sceneScale(scene, width, height) {
+  const type = scene.board || 'none';
+  const phys = BOARD_PHYS[type] || { w: 400, h: 400 };
+  const { PW, PH } = planeSize(width, height);
+  // Largest global scale that keeps the whole board/table inside the frame.
+  const mx = 0.04 * width;
+  const my = 0.04 * height;
+  let lo = 0.01;
+  let hi = 50;
+  for (let i = 0; i < 45; i++) {
+    const k = (lo + hi) / 2;
+    const w = phys.w * k;
+    const h = phys.h * k;
+    const left = (PW - w) / 2;
+    const top = (PH - h) / 2;
+    const pts = [
+      [left, top],
+      [left + w, top],
+      [left + w, top + h],
+      [left, top + h],
+    ].map(([px, py]) => projectPlanePoint(px, py, width, height));
+    const xs = pts.map((p) => p.x);
+    const ys = pts.map((p) => p.y);
+    const fits =
+      Math.min(...xs) >= mx &&
+      Math.max(...xs) <= width - mx &&
+      Math.min(...ys) >= my &&
+      Math.max(...ys) <= height - my;
+    if (fits) lo = k;
+    else hi = k;
+  }
+  return lo;
+}
+
+function boardRect(scene, width, height, k) {
+  const type = scene.board || 'none';
+  const phys = BOARD_PHYS[type];
+  if (!phys) return null;
+  const { PW, PH } = planeSize(width, height);
+  const w = phys.w * k;
+  const h = phys.h * k;
+  return { left: (PW - w) / 2, top: (PH - h) / 2, w, h, PW, PH, k, phys };
+}
+
+function itemPlanePos(item, scene, width, height, k) {
+  const rect = boardRect(scene, width, height, k);
+  if (rect) return { x: rect.left + item.x * rect.w, y: rect.top + item.y * rect.h };
+  const { PW, PH } = planeSize(width, height);
+  return { x: item.x * PW, y: item.y * PH };
+}
+
+function itemDimsPx(item, k, elementsDir) {
+  const mm = itemPhysMm(item, elementsDir);
+  const rs = item.realScale === undefined ? 1 : item.realScale;
+  return {
+    w: mm.w * rs * k,
+    h: mm.h * rs * k,
+    visW: mm.w * mm.rw * rs * k,
+    visH: mm.h * mm.rh * rs * k,
+    mm,
+  };
+}
+
+function resolveItemFile(item, elementsDir) {
+  if (item.src) return path.join(ART_DIR, item.src);
+  return path.join(elementsDir, `${item.el}@2x.png`);
+}
+
+function itemLabel(item) {
+  if (item.el) return item.el;
+  return path.basename(item.src || '').replace(/\.(webp|png)$/i, '');
+}
+
+function svgBoard(viewW, viewH, k, body) {
   return (
     `<svg viewBox="0 0 ${viewW} ${viewH}" preserveAspectRatio="none" ` +
     `xmlns="http://www.w3.org/2000/svg">${body}</svg>`
   );
 }
 
-function boardSvg(type) {
-  const stroke = `stroke="${BOARD_LINE}" stroke-width="${BOARD_LINE_W}" fill="none"`;
+function boardSvg(type, k) {
+  const sw = BOARD_LINE_PX / k;
+  const stroke = `stroke="${BOARD_LINE}" stroke-width="${sw}" fill="none"`;
 
   if (type === 'chess8') {
-    const m = 40;
-    const inner = 920;
-    const cell = inner / 8;
+    const cell = 55;
+    const size = 440;
     const rects = [];
     for (let r = 0; r < 8; r++) {
       for (let c = 0; c < 8; c++) {
         const fill = (r + c) % 2 === 0 ? '#f2e4c8' : '#080604';
         rects.push(
-          `<rect x="${m + c * cell}" y="${m + r * cell}" width="${cell}" ` +
-            `height="${cell}" fill="${fill}"/>`
+          `<rect x="${c * cell}" y="${r * cell}" width="${cell}" height="${cell}" fill="${fill}"/>`
         );
       }
     }
     return svgBoard(
-      1000,
-      1000,
+      size,
+      size,
+      k,
       `<g opacity="0.35">${rects.join('')}</g>` +
-        `<rect x="${m}" y="${m}" width="${inner}" height="${inner}" ${stroke}/>`
+        `<rect x="0" y="0" width="${size}" height="${size}" ${stroke}/>`
     );
   }
 
   if (type === 'reversi8') {
-    const m = 40;
-    const inner = 920;
-    const step = inner / 8;
+    const m = 10;
+    const step = 30;
     const lines = [];
     for (let i = 0; i <= 8; i++) {
       const p = m + i * step;
-      lines.push(`<line x1="${p}" y1="${m}" x2="${p}" y2="${m + inner}" ${stroke}/>`);
-      lines.push(`<line x1="${m}" y1="${p}" x2="${m + inner}" y2="${p}" ${stroke}/>`);
+      lines.push(`<line x1="${p}" y1="${m}" x2="${p}" y2="${m + 240}" ${stroke}/>`);
+      lines.push(`<line x1="${m}" y1="${p}" x2="${m + 240}" y2="${p}" ${stroke}/>`);
     }
-    return svgBoard(1000, 1000, lines.join(''));
+    return svgBoard(260, 260, k, lines.join(''));
   }
 
-  if (type === 'go19') {
-    const m = 40;
-    const inner = 920;
-    const step = inner / 18;
+  if (type === 'go9') {
+    const m = 12;
+    const step = 22;
     const lines = [];
-    for (let i = 0; i <= 18; i++) {
+    for (let i = 0; i <= 8; i++) {
       const p = m + i * step;
-      lines.push(`<line x1="${p}" y1="${m}" x2="${p}" y2="${m + inner}" ${stroke}/>`);
-      lines.push(`<line x1="${m}" y1="${p}" x2="${m + inner}" y2="${p}" ${stroke}/>`);
+      lines.push(`<line x1="${p}" y1="${m}" x2="${p}" y2="${m + 176}" ${stroke}/>`);
+      lines.push(`<line x1="${m}" y1="${p}" x2="${m + 176}" y2="${p}" ${stroke}/>`);
     }
-    // four corner star points (4-4 points of a 19x19 board)
-    const stars = [3, 15]
-      .flatMap((r) => [3, 15].map((c) => [r, c]))
-      .map(
-        ([r, c]) =>
-          `<circle cx="${m + c * step}" cy="${m + r * step}" r="5.5" ` +
-          `fill="${BOARD_LINE}"/>`
+    const stars = [];
+    for (const [c, r] of [[2, 2], [2, 6], [6, 2], [6, 6], [4, 4]]) {
+      stars.push(
+        `<circle cx="${m + c * step}" cy="${m + r * step}" r="3" fill="${BOARD_LINE}"/>`
       );
-    return svgBoard(1000, 1000, lines.join('') + stars.join(''));
+    }
+    return svgBoard(200, 200, k, lines.join('') + stars.join(''));
   }
 
   if (type === 'xiangqi9x10') {
-    const mx = 50;
-    const my = 56.25;
-    const step = 112.5;
+    const mx = 15;
+    const my = 15;
+    const step = 30;
     const parts = [];
-    // 10 horizontal lines
     for (let j = 0; j <= 9; j++) {
       const y = my + j * step;
       parts.push(`<line x1="${mx}" y1="${y}" x2="${mx + 8 * step}" y2="${y}" ${stroke}/>`);
     }
-    // 9 vertical lines; inner ones stop at the river banks
     for (let i = 0; i <= 8; i++) {
       const x = mx + i * step;
       if (i === 0 || i === 8) {
@@ -323,7 +815,6 @@ function boardSvg(type) {
         );
       }
     }
-    // palace X at both ends (columns 3-5, rows 0-2 and 7-9)
     const px0 = mx + 3 * step;
     const px1 = mx + 5 * step;
     const top0 = my;
@@ -334,136 +825,117 @@ function boardSvg(type) {
     parts.push(`<line x1="${px1}" y1="${top0}" x2="${px0}" y2="${top1}" ${stroke}/>`);
     parts.push(`<line x1="${px0}" y1="${bot0}" x2="${px1}" y2="${bot1}" ${stroke}/>`);
     parts.push(`<line x1="${px1}" y1="${bot0}" x2="${px0}" y2="${bot1}" ${stroke}/>`);
-    return svgBoard(1000, 1125, parts.join(''));
+    return svgBoard(270, 300, k, parts.join(''));
   }
 
   if (type === 'connect4frame') {
-    const m = 30;
-    const w = 940;
-    const h = 797.142857;
+    const m = 20;
+    const pitch = 40;
     const cols = 7;
     const rows = 6;
-    const cw = w / cols;
-    const ch = h / rows;
     const parts = [];
     parts.push(
-      `<rect x="${m}" y="${m}" width="${w}" height="${h}" rx="42" ` +
+      `<rect x="2" y="2" width="276" height="236" rx="6" ` +
         `fill="rgba(0,0,0,0.16)" ${stroke}/>`
     );
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
-        const cx = m + (c + 0.5) * cw;
-        const cy = m + (r + 0.5) * ch;
+        const cx = m + c * pitch;
+        const cy = m + r * pitch;
         parts.push(
-          `<circle cx="${cx}" cy="${cy}" r="52" fill="rgba(0,0,0,0.38)" ` +
-            `stroke="${BOARD_LINE}" stroke-width="${BOARD_LINE_W}"/>`
+          `<circle cx="${cx}" cy="${cy}" r="18" fill="rgba(0,0,0,0.38)" ` +
+            `stroke="${BOARD_LINE}" stroke-width="${sw}"/>`
         );
         parts.push(
-          `<circle cx="${cx}" cy="${cy}" r="43" fill="none" ` +
-            `stroke="rgba(255,245,228,0.055)" stroke-width="1"/>`
+          `<circle cx="${cx}" cy="${cy}" r="15" fill="none" ` +
+            `stroke="rgba(255,245,228,0.055)" stroke-width="${0.8 / k}"/>`
         );
       }
     }
-    return svgBoard(1000, 857.142857, parts.join(''));
+    return svgBoard(280, 240, k, parts.join(''));
   }
 
   if (type === 'backgammon') {
-    const top = 20;
-    const bottom = 480;
-    const barW = 28;
-    const leftEnd = 486;
-    const rightStart = 514;
-    const pointW = (leftEnd - top) / 6; // 77.667
+    const m = 10;
+    const barW = 20;
+    const leftEnd = 290;
+    const rightStart = 310;
+    const pointW = 280 / 6;
     const parts = [];
     const tri = (x0, x1, base, tip, fill) =>
       `<path d="M${x0} ${base} L${x1} ${base} L${(x0 + x1) / 2} ${tip} Z" ` +
       `fill="${fill}" ${stroke}/>`;
     for (let i = 0; i < 6; i++) {
       const fill = i % 2 === 0 ? 'rgba(255,245,228,0.055)' : 'rgba(0,0,0,0.12)';
-      const lx0 = top + i * pointW;
+      const lx0 = m + i * pointW;
       const lx1 = lx0 + pointW;
       const rx0 = rightStart + i * pointW;
       const rx1 = rx0 + pointW;
-      parts.push(tri(lx0, lx1, top, 230, fill));
-      parts.push(tri(rx0, rx1, top, 230, fill));
-      parts.push(tri(lx0, lx1, bottom, 270, fill));
-      parts.push(tri(rx0, rx1, bottom, 270, fill));
+      parts.push(tri(lx0, lx1, 10, 150, fill));
+      parts.push(tri(rx0, rx1, 10, 150, fill));
+      parts.push(tri(lx0, lx1, 290, 150, fill));
+      parts.push(tri(rx0, rx1, 290, 150, fill));
     }
     parts.push(
-      `<rect x="${leftEnd}" y="${top}" width="${barW}" height="${bottom - top}" ` +
+      `<rect x="${leftEnd}" y="10" width="${barW}" height="280" ` +
         `fill="rgba(0,0,0,0.18)" ${stroke}/>`
     );
+    parts.push(`<rect x="10" y="10" width="580" height="280" ${stroke}/>`);
+    return svgBoard(600, 300, k, parts.join(''));
+  }
+
+  if (type === 'aeroplaneCross') {
+    const parts = [];
+    // plus-shaped track, touching the four frame edges
     parts.push(
-      `<rect x="${top}" y="${top}" width="960" height="${bottom - top}" ${stroke}/>`
+      `<path d="M0 200 H200 V0 H300 V200 H500 V300 H300 V500 H200 V300 H0 Z" ` +
+        `fill="rgba(255,255,255,0.035)" ${stroke}/>`
     );
-    return svgBoard(1000, 500, parts.join(''));
+    parts.push(`<line x1="250" y1="0" x2="250" y2="500" ${stroke}/>`);
+    parts.push(`<line x1="0" y1="250" x2="500" y2="250" ${stroke}/>`);
+    for (const [x, y] of [[60, 60], [380, 60], [60, 380], [380, 380]]) {
+      parts.push(
+        `<rect x="${x}" y="${y}" width="60" height="60" rx="14" ` +
+          `fill="rgba(255,255,255,0.045)" ${stroke}/>`
+      );
+    }
+    return svgBoard(500, 500, k, parts.join(''));
   }
 
   throw new Error(`unknown board type: ${type}`);
 }
 
-function buildBoard(type, width, height) {
+function buildBoard(type, width, height, k) {
   if (!type || type === 'none') return '';
   if (!BOARD_TYPES.has(type)) throw new Error(`unknown board type: ${type}`);
 
   const { PW, PH } = planeSize(width, height);
+  const phys = BOARD_PHYS[type];
+  const w = phys.w * k;
+  const h = phys.h * k;
+  const left = (PW - w) / 2;
+  const top = (PH - h) / 2;
+
   if (type === 'cardtable') {
-    const w = PW * 0.62;
-    const h = PH * 0.78;
     return (
-      `<div class="board board--cardtable" style="left:${round((PW - w) / 2)}px;` +
-      `top:${round((PH - h) / 2)}px;width:${round(w)}px;height:${round(h)}px"></div>`
+      `<div class="board board--cardtable" style="left:${round(left)}px;` +
+      `top:${round(top)}px;width:${round(w)}px;height:${round(h)}px"></div>`
     );
   }
 
-  const spec = BOARD_SPECS[type];
-  const w = spec.width * PW;
-  const h = w * spec.aspect;
   return (
-    `<div class="board" style="left:${round((PW - w) / 2)}px;top:${round((PH - h) / 2)}px;` +
-    `width:${round(w)}px;height:${round(h)}px">${boardSvg(type)}</div>`
+    `<div class="board" style="left:${round(left)}px;top:${round(top)}px;` +
+    `width:${round(w)}px;height:${round(h)}px">${boardSvg(type, k)}</div>`
   );
 }
 
-/**
- * Grid boards use board-local item coordinates (0..1 across the board box),
- * so the same scene stays aligned on both the 1200x630 OG and 480x320 card,
- * whose plane aspect ratios differ. Cardtable/none keep plane coordinates.
- */
-function boardRect(scene, width, height) {
-  const type = scene.board || 'none';
-  const spec = BOARD_SPECS[type];
-  if (!spec) return null;
-  const { PW, PH } = planeSize(width, height);
-  const w = spec.width * PW;
-  const h = w * spec.aspect;
-  return { left: (PW - w) / 2, top: (PH - h) / 2, w, h, PW, PH };
+function shadowDims(dims, shape) {
+  if (shape === 'standing') return [dims.visW * 0.90, dims.visW * 0.22];
+  return [dims.visW * 1.06, dims.visH * 1.06];
 }
 
-function itemPlanePos(item, scene, width, height) {
-  const rect = boardRect(scene, width, height);
-  if (rect) {
-    return { x: rect.left + item.x * rect.w, y: rect.top + item.y * rect.h };
-  }
-  const { PW, PH } = planeSize(width, height);
-  return { x: item.x * PW, y: item.y * PH };
-}
-
-/** Approximate visible footprint of an element, in plane-local px. */
-function shadowFootprint(el, shape, size) {
-  if (shape === 'standing') return [size * 0.40, size * 0.15];
-  // Flat cards/tiles sit on top of most of their own shadow, so their
-  // footprint is a little wider than the visible card to keep the contact
-  // shadow as legible as the one under a disc.
-  if (/^(card-)/.test(el)) return [size * 0.76, size * 1.00];
-  if (/^(mahjong-)/.test(el)) return [size * 0.72, size * 0.96];
-  if (el === 'die') return [size * 0.80, size * 0.80];
-  if (/^(chip|connect4|go-stone|reversi|checker)/.test(el)) return [size * 0.82, size * 0.82];
-  return [size * 0.72, size * 0.72];
-}
-
-function shadowHtml(el, shape, size, cx, cy, rot) {
-  const [w, h] = shadowFootprint(el, shape, size);
+function shadowHtml(item, shape, dims, cx, cy, rot) {
+  const [w, h] = shadowDims(dims, shape);
   const left = cx + CAMERA.shadowOffsetX - w / 2;
   const top = cy + CAMERA.shadowOffsetY - h / 2;
   const transform = shape === 'flat' ? `transform:rotate(${round(rot)}deg);` : '';
@@ -477,46 +949,41 @@ function shadowHtml(el, shape, size, cx, cy, rot) {
 /* Overlap guard                                                       */
 /* ------------------------------------------------------------------ */
 
-// Visible alpha footprint as a fraction of the square element canvas.
-// Measured from the current @2x exports; the fallback is a full square.
-const VISIBLE_RATIOS = [
-  [/^card-/, 0.59, 0.84],
-  [/^mahjong-/, 0.60, 0.84],
-  [/^go-stone-black$/, 0.84, 0.604],
-  [/^go-stone-white$/, 0.84, 0.708],
-  [/^connect4-/, 0.84, 0.84],
-  [/^chip-/, 0.82, 0.84],
-  [/^reversi-black$/, 0.84, 0.78],
-  [/^reversi-white$/, 0.84, 0.836],
-  [/^checker-/, 0.82, 0.84],
-  [/^airplane-token$/, 0.84, 0.694],
-  [/^xiangqi-/, 0.82, 0.84],
-  [/^die$/, 0.723, 0.84],
-];
-
-function visibleRatios(el) {
-  for (const [re, rw, rh] of VISIBLE_RATIOS) {
-    if (re.test(el)) return [rw, rh];
-  }
-  return [0.84, 0.84];
+function isCardItem(item) {
+  return (item.src && item.src.includes('/poker/')) || (item.el || '').startsWith('card-');
 }
 
-function projectedVisibleBox(item, scene, width, height) {
-  const size = item.scale * Math.min(width, height);
-  const [rw, rh] = visibleRatios(item.el);
-  const w = size * rw;
-  const h = size * rh;
-  const pos = itemPlanePos(item, scene, width, height);
+function isRoundItem(item) {
+  if (item.src && item.src.includes('/xiangqi/')) return true;
+  return /^(go-stone|reversi|connect4|checker|chip|xiangqi-)/.test(item.el || '');
+}
+
+function projectedVisibleBox(item, scene, width, height, k, dims) {
+  const pos = itemPlanePos(item, scene, width, height, k);
   const rad = ((item.rot || 0) * Math.PI) / 180;
   const cos = Math.cos(rad);
   const sin = Math.sin(rad);
-  const corners = [
-    [-w / 2, -h / 2],
-    [w / 2, -h / 2],
-    [w / 2, h / 2],
-    [-w / 2, h / 2],
-  ].map(([dx, dy]) => [pos.x + dx * cos - dy * sin, pos.y + dx * sin + dy * cos]);
-  const pts = corners.map(([px, py]) => projectPlanePoint(px, py, width, height));
+  let local;
+  if (isRoundItem(item)) {
+    local = [];
+    const steps = 48;
+    for (let i = 0; i < steps; i++) {
+      const a = (i / steps) * Math.PI * 2;
+      local.push([(Math.cos(a) * dims.visW) / 2, (Math.sin(a) * dims.visH) / 2]);
+    }
+  } else {
+    local = [
+      [-dims.visW / 2, -dims.visH / 2],
+      [dims.visW / 2, -dims.visH / 2],
+      [dims.visW / 2, dims.visH / 2],
+      [-dims.visW / 2, dims.visH / 2],
+    ];
+  }
+  const pts = local.map(([dx, dy]) => {
+    const px = pos.x + dx * cos - dy * sin;
+    const py = pos.y + dx * sin + dy * cos;
+    return projectPlanePoint(px, py, width, height);
+  });
   const xs = pts.map((p) => p.x);
   const ys = pts.map((p) => p.y);
   return {
@@ -527,11 +994,16 @@ function projectedVisibleBox(item, scene, width, height) {
   };
 }
 
-function overlapWarnings(slug, scene, width, height) {
+function overlapWarnings(slug, scene, width, height, k, elementsDir) {
   const flats = [];
   scene.items.forEach((item, index) => {
     if ((item.shape || 'flat') === 'flat') {
-      flats.push({ item, index, box: projectedVisibleBox(item, scene, width, height) });
+      const dims = itemDimsPx(item, k, elementsDir);
+      flats.push({
+        item,
+        index,
+        box: projectedVisibleBox(item, scene, width, height, k, dims),
+      });
     }
   });
 
@@ -547,12 +1019,12 @@ function overlapWarnings(slug, scene, width, height) {
       const areaB = (b.box.maxX - b.box.minX) * (b.box.maxY - b.box.minY);
       const ratio = (ow * oh) / Math.min(areaA, areaB);
       const cardScene = slug === 'texas-holdem' || slug === 'doudizhu';
-      const bothCards = a.item.el.startsWith('card-') && b.item.el.startsWith('card-');
+      const bothCards = isCardItem(a.item) && isCardItem(b.item);
       const limit = cardScene && bothCards ? 0.45 : 0.12;
       if (ratio > limit + 1e-9) {
         out.push({
-          a: `${a.item.el}[${a.index}]`,
-          b: `${b.item.el}[${b.index}]`,
+          a: `${itemLabel(a.item)}[${a.index}]`,
+          b: `${itemLabel(b.item)}[${b.index}]`,
           ratio,
           limit,
         });
@@ -562,67 +1034,80 @@ function overlapWarnings(slug, scene, width, height) {
   return out;
 }
 
-function buildItems(scene, width, height, elementsDir, missing) {
-  const unit = Math.min(width, height);
+function renderFlat(item, dims, pos, rot, src) {
+  const stack = item.stack || 1;
+  const stepMm = item.stackStep || 3;
+  const step = stepMm * (dims.w / Math.max(0.001, dims.mm.w));
+  const baseFilter = item.filter ? `${item.filter} ` : '';
+  const imgs = [];
+  for (let layer = 0; layer < stack; layer++) {
+    const shade = Math.max(0.4, 1 - layer * 0.12);
+    imgs.push(
+      `<img src="${escapeHtml(src)}" alt="" style="position:absolute;left:0;` +
+        `top:${round(-layer * step)}px;width:100%;height:100%;object-fit:contain;` +
+        `filter:${baseFilter}brightness(${shade})">`
+    );
+  }
+  return (
+    `<div class="flat" style="left:${round(pos.x - dims.w / 2)}px;` +
+    `top:${round(pos.y - dims.h / 2)}px;width:${round(dims.w)}px;height:${round(dims.h)}px;` +
+    `transform:rotate(${round(rot)}deg)">${imgs.join('')}</div>`
+  );
+}
+
+function buildItems(scene, width, height, elementsDir, missing, k) {
   const shadows = [];
   const flats = [];
   const billboards = [];
 
   for (const item of scene.items) {
-    const size = item.scale * unit;
     const shape = item.shape === 'standing' ? 'standing' : 'flat';
     const rot = item.rot || 0;
     const wantShadow = item.shadow !== false;
-    const pos = itemPlanePos(item, scene, width, height);
-
-    const file = path.join(elementsDir, `${item.el}@2x.png`);
+    const pos = itemPlanePos(item, scene, width, height, k);
+    const dims = itemDimsPx(item, k, elementsDir);
+    const file = resolveItemFile(item, elementsDir);
     const present = fs.existsSync(file);
+    const label = itemLabel(item);
 
     if (present) {
       const src = pathToFileURL(file).href;
 
       if (shape === 'standing') {
         const p = projectPlanePoint(pos.x, pos.y, width, height);
-        const box = size * p.k;
-        if (wantShadow) {
-          shadows.push(shadowHtml(item.el, shape, size, pos.x, pos.y, rot));
-        }
+        const box = dims.w * p.k;
+        if (wantShadow) shadows.push(shadowHtml(item, shape, dims, pos.x, pos.y, rot));
         billboards.push(
           `<div class="billboard" style="left:${round(p.x)}px;top:${round(p.y)}px;` +
             `width:${round(box)}px;height:${round(box)}px;` +
             `transform:translate(-50%, -92%) rotate(${round(rot)}deg)">` +
-            `<img src="${escapeHtml(src)}" alt=""></div>`
+            `<img src="${escapeHtml(src)}" alt=""${item.filter ? ` style="filter:${item.filter}"` : ''}></div>`
         );
       } else {
-        if (wantShadow) shadows.push(shadowHtml(item.el, shape, size, pos.x, pos.y, rot));
-        flats.push(
-          `<div class="flat" style="left:${round(pos.x - size / 2)}px;top:${round(pos.y - size / 2)}px;` +
-            `width:${round(size)}px;height:${round(size)}px;` +
-            `transform:rotate(${round(rot)}deg)">` +
-            `<img src="${escapeHtml(src)}" alt=""></div>`
-        );
+        if (wantShadow) shadows.push(shadowHtml(item, shape, dims, pos.x, pos.y, rot));
+        flats.push(renderFlat(item, dims, pos, rot, src));
       }
     } else {
-      missing.add(item.el);
+      missing.add(label);
       if (shape === 'standing') {
         const p = projectPlanePoint(pos.x, pos.y, width, height);
-        const box = size * p.k;
+        const box = dims.w * p.k;
         const fontSize = round(Math.max(9, Math.min(18, box * 0.07)));
         billboards.push(
           `<div class="billboard" style="left:${round(p.x)}px;top:${round(p.y)}px;` +
             `width:${round(box)}px;height:${round(box)}px;` +
             `transform:translate(-50%, -92%) rotate(${round(rot)}deg)">` +
             `<div class="ph" style="font-size:${fontSize}px">` +
-            `<span>${escapeHtml(item.el)}</span></div></div>`
+            `<span>${escapeHtml(label)}</span></div></div>`
         );
       } else {
-        const fontSize = round(Math.max(9, Math.min(18, size * 0.07)));
+        const fontSize = round(Math.max(9, Math.min(18, dims.w * 0.07)));
         flats.push(
-          `<div class="flat" style="left:${round(pos.x - size / 2)}px;top:${round(pos.y - size / 2)}px;` +
-            `width:${round(size)}px;height:${round(size)}px;` +
+          `<div class="flat" style="left:${round(pos.x - dims.w / 2)}px;` +
+            `top:${round(pos.y - dims.h / 2)}px;width:${round(dims.w)}px;height:${round(dims.h)}px;` +
             `transform:rotate(${round(rot)}deg)">` +
             `<div class="ph" style="font-size:${fontSize}px">` +
-            `<span>${escapeHtml(item.el)}</span></div></div>`
+            `<span>${escapeHtml(label)}</span></div></div>`
         );
       }
     }
@@ -635,7 +1120,7 @@ function buildItems(scene, width, height, elementsDir, missing) {
   };
 }
 
-function buildHtml(scene, background, layers, width, height) {
+function buildHtml(scene, background, layers, width, height, k) {
   const { PW, PH } = planeSize(width, height);
   const template = fs.readFileSync(TEMPLATE_FILE, 'utf8');
   return template
@@ -651,7 +1136,7 @@ function buildHtml(scene, background, layers, width, height) {
     .replace('{{SHADOWS}}', layers.shadows)
     .replace('{{FLATS}}', layers.flats)
     .replace('{{BILLBOARDS}}', layers.billboards)
-    .replace('{{BOARD}}', buildBoard(scene.board || 'none', width, height));
+    .replace('{{BOARD}}', buildBoard(scene.board || 'none', width, height, k));
 }
 
 function pngSize(file) {
@@ -712,12 +1197,13 @@ function renderScene(slug, scene, opts, chrome) {
 
   try {
     for (const { suffix, width, height } of SIZES) {
-      const layers = buildItems(scene, width, height, opts.elements, missing);
-      const html = buildHtml(scene, scene.background, layers, width, height);
+      const k = sceneScale(scene, width, height);
+      const layers = buildItems(scene, width, height, opts.elements, missing, k);
+      const html = buildHtml(scene, scene.background, layers, width, height, k);
       const htmlPath = path.join(tmpDir, `${slug}-${suffix}.html`);
       fs.writeFileSync(htmlPath, html);
 
-      for (const warning of overlapWarnings(slug, scene, width, height)) {
+      for (const warning of overlapWarnings(slug, scene, width, height, k, opts.elements)) {
         overlaps.push({ ...warning, size: suffix });
       }
 
@@ -854,7 +1340,7 @@ function main() {
 
   let scenes;
   try {
-    scenes = loadScenes();
+    scenes = loadScenes(opts.scenes);
   } catch (err) {
     console.error(`compose: ${err.message}`);
     process.exit(2);
@@ -866,8 +1352,11 @@ function main() {
     console.log(`Configured scenes (${slugs.length}):`);
     for (const slug of slugs) {
       const scene = scenes[slug];
-      const missing = [...new Set(scene.items.map((i) => i.el))].filter(
-        (el) => !fs.existsSync(path.join(opts.elements, `${el}@2x.png`))
+      const missing = [...new Set(scene.items.map((i) => itemLabel(i)))].filter(
+        (label) => {
+          const item = scene.items.find((i) => itemLabel(i) === label);
+          return !fs.existsSync(resolveItemFile(item, opts.elements));
+        }
       );
       const status = missing.length ? `missing ${missing.length}: ${missing.join(', ')}` : 'all elements present';
       console.log(
@@ -887,6 +1376,30 @@ function main() {
       console.error(`compose: no scene for "${slug}". Configured: ${slugs.join(', ')}`);
       process.exit(2);
     }
+  }
+
+  const realismFailures = [];
+  const validationTargets = opts.sheet ? slugs : targets;
+  for (const slug of validationTargets) {
+    for (const reason of validateRealism(slug, scenes[slug])) {
+      realismFailures.push(`${slug}: ${reason}`);
+    }
+  }
+  if (realismFailures.length) {
+    console.error(`REALISM FAIL (${realismFailures.length}) — refusing to render:`);
+    for (const line of realismFailures) console.error(`  - ${line}`);
+    process.exit(3);
+  }
+
+  for (const slug of validationTargets) {
+    const scene = scenes[slug];
+    const phys = BOARD_PHYS[scene.board || 'none'] || { w: 400, h: 400 };
+    const parts = SIZES.map(({ suffix, width, height }) =>
+      `${suffix} k=${sceneScale(scene, width, height).toFixed(3)}px/mm`
+    );
+    console.log(
+      `[scale] ${slug.padEnd(14)} board=${phys.w}x${phys.h}mm (${BOARD_LABEL[scene.board || 'none']})  ${parts.join('  ')}`
+    );
   }
 
   const chrome = findChrome();

@@ -31,35 +31,33 @@ node scripts/art/compose.js --list         # 列出场景、元素齐缺
 
 ## 三个边界
 
-### 1. 元素从哪来
+### 1. 素材从哪来
 
-`games/assets/art/elements/` 下的透明 PNG，**不是**本管线生成的：
+**元素**：`games/assets/art/elements/` 下的透明 PNG，由 AI 图像模型逐件生成、再像素级 floodfill 抠图导出。`compose.js` 会现场解码 PNG 的 alpha bbox，按真实毫米目标尺寸把可见轮廓映射到桌面上。
 
-- AI 图像模型（gpt-image-2 系列）按统一提示词逐件生成：深炭背景、左上暖光、30° 桌面视角、无文字。
-- 再用 ffmpeg / 像素级 floodfill 抠成透明背景，按 `@2x` 导出（2 倍尺寸，供视网膜屏）。
-- 每件元素是**单个物体**，构图留白、朝向稳定；不要带场景、地面或文字。
+**牌面**：`games/assets/art/decks/{poker,mahjong,xiangqi}/webp/*.webp`，由 `scripts/art/deck.js` 用字体 + SVG + 空白载体渲染，共 102 张（扑克 54、麻将 34、象棋 14）。场景里用 `src` 直接引用。
 
-命名规则：`<name>@2x.png`，`<name>` 与 `scenes.json` 里的 `el` 完全一致。`--list` 会按场景逐项标出哪些元素还缺图。
-
-`chess-queen-light`、`chess-knight-dark` 这类后缀（light/dark、red/black、face/back）表示**同一物体的不同面或阵营**，不是滤镜。
+两者都不在本管线里生成。不要手改这些目录；缺图时管线会走占位降级并打印清单。
 
 ### 2. 怎么加一款新游戏
 
 1. 在 `scenes.json` 里加一个以游戏 slug 命名的键（slug 必须和 `games/<slug>/` 一致）。
-2. 选背景：`charcoal-warm` / `charcoal-cool` / `felt-green`，只能三选一。
-3. 往 `items` 里放元素，先摆 2–5 件，跑 `node scripts/art/compose.js --game <slug>` 看效果。
-4. 输出自动落到 `games/assets/art/composed/<slug>-og.png` 与 `<slug>-card.png`。
+2. 选背景：`charcoal-warm` / `charcoal-cool` / `felt-green`。
+3. 选棋盘：`chess8` / `go9` / `xiangqi9x10` / `reversi8` / `connect4frame` / `backgammon` / `cardtable` / `aeroplaneCross` / `none`。
+4. 摆物件：`flat` 进桌面平面，`standing` 是广告牌；有网格棋盘的场景用 `cell` 记格点，`x,y` 用棋盘盒子归一化坐标。
+5. 声明 `realism`，跑 `node scripts/art/compose.js --game <slug>`；`REALISM FAIL` 会直接阻断。
 
-场景格式：
+场景示例（象棋真实开局的一枚红車）：
 
 ```json
 {
-  "chess": {
+  "xiangqi": {
     "background": "charcoal-warm",
-    "board": "chess8",
+    "board": "xiangqi9x10",
+    "realism": { "pieceCount": 32, "mustTouchSurface": true, "board": "xiangqi9x10" },
     "items": [
-      { "el": "chess-queen-light", "x": 0.558, "y": 0.443, "scale": 0.34, "rot": -3, "shadow": true, "shape": "standing" },
-      { "el": "chess-knight-dark", "x": 0.328, "y": 0.673, "scale": 0.26, "rot": -6, "shadow": true, "shape": "standing" }
+      { "src": "decks/xiangqi/webp/red-ju.webp", "shape": "flat", "rot": 0,
+        "cell": { "col": 0, "row": 9 }, "x": 0.056, "y": 0.95 }
     ]
   }
 }
@@ -67,67 +65,88 @@ node scripts/art/compose.js --list         # 列出场景、元素齐缺
 
 | 字段 | 含义 |
 |---|---|
-| `el` | 元素名，对应 `elements/<el>@2x.png` |
-| `shape` | `flat`（默认）或 `standing`，见下 |
+| `el` / `src` | 二选一。`el` → `elements/<el>@2x.png`；`src` → `games/assets/art/` 下的 WebP |
+| `shape` | `flat`（默认，进桌面平面）或 `standing`（屏幕直立广告牌） |
 | `board` | 棋盘/桌面几何，见下表；缺省 `none` |
-| `x`,`y` | 物件位置。有网格棋盘（`chess8`/`go19`/`xiangqi9x10`/`reversi8`/`connect4frame`/`backgammon`）时是**棋盘盒子内的归一化坐标** 0–1；`cardtable`/`none` 时仍是桌面平面归一化坐标 |
-| `scale` | 平面里的边长占**画布短边**的比例。1200×630 的短边是 630，480×320 的短边是 320 |
-| `rot` | `flat`：桌面上的旋转角（绕法线）；`standing`：屏幕平面内旋转角，限制在 ±8° |
+| `x`,`y` | 有棋盘的场景是**棋盘盒子归一化坐标**；`none` 时是桌面平面归一化坐标 |
+| `cell` | `{col,row}`：格点/交叉点/孔位/三角点，供对位和真实校验 |
+| `realScale` | 默认 `1.0`；只用于远景压缩，普通场景不要用 |
+| `rot` | `flat` 绕桌面法线；`standing` 是屏幕旋转（±8°） |
+| `role` | `hand` / `public` / `hole` / `wall` / `chip` / `dice` 等，参与计数与校验 |
+| `side` | `dark` / `light`，用于双方棋子区分 |
+| `stack` | 同一位置叠放的实物数量（筹码、西洋双陆棋子） |
+| `stackStep` | 每层叠放的毫米厚度，缺省 3mm |
+| `filter` | 可选的 CSS filter，用于把同一素材变成另一方颜色 |
 | `shadow` | 是否画接触阴影，缺省 `true` |
 
-棋盘类型：
+棋盘物理规格（1 unit = 1mm）：
 
-| board | 画法 | 当前场景 |
-|---|---|---|
-| `chess8` | 8×8 深浅交替方格（0.35 透明度）+ 细边框 | chess、checkers-jump |
-| `go19` | 19×19 线格 + 4 个角星位 | go9 |
-| `xiangqi9x10` | 9 列 10 行 + 河界 + 两端九宫 X | xiangqi |
-| `reversi8` | 8×8 线格，浅线，无交替色块 | reversi |
-| `connect4frame` | 7×6 圆孔阵列 + 细边框 | connect4 |
-| `backgammon` | 24 个三角点 + 中线/中线框 | backgammon |
-| `cardtable` | 一圈柔和边缘暗角 + 极细压线 | mahjong、texas-holdem、doudizhu |
-| `none` | 不画棋盘 | aeroplane、tcg-sample |
+| board | 实际尺寸 | 网格/孔位 | 当前场景 |
+|---|---|---|---|
+| `chess8` | 440×440mm | 8×8 格，格宽 55mm | chess、checkers-jump |
+| `xiangqi9x10` | 270×300mm | 9 列 10 行，格距 30mm，含河界/九宫 | xiangqi |
+| `go9` | 200×200mm | 9×9 线，格距 22mm，5 星位 | go9 |
+| `reversi8` | 260×260mm | 8×8 格，格距 30mm | reversi |
+| `connect4frame` | 280×240mm | 7×6 孔，孔距 40mm，孔半径 18mm | connect4 |
+| `backgammon` | 600×300mm | 24 个三角点，点宽 50mm，中线 20mm | backgammon |
+| `cardtable` | 900×900mm | 软边 + 极细压线，无网格 | mahjong、texas-holdem、doudizhu |
+| `aeroplaneCross` | 500×500mm | 十字轨道 + 4 个停机坪 | aeroplane |
+| `none` | 400×400mm 参考框 | 不画棋盘，只用于确定全局缩放 | tcg-sample |
 
-棋盘是桌面平面的子元素，跟着 `rotateX(52deg) rotateZ(-14deg)` 一起透视；宽度按桌面平面宽度的比例取，屏幕上占画面 ≥85% 宽度，边缘允许被裁切。网格棋盘上的物件坐标用棋盘盒子坐标，因此同一套 `x,y` 在 1200×630 OG 和 480×320 card 上都对得上格线/孔位（两档的桌面平面长宽比不同，直接用平面坐标会错位）。
+### 3. 尺寸怎么算
 
-两种物件：
+- **1 unit = 1mm**。每个场景有一个全局缩放系数 `k`（平面 px / mm），在 `sceneScale()` 里二分求出：让整个棋盘/桌面带 4% 边距完整落在画框内。`[scale]` 行会打印 `board=...mm  og k=...  card k=...`。
+- 同一场景内**所有物件共用同一个 `k`**。物件的实际毫米尺寸来自：
+  - 元素：`ELEMENT_PHYS` 里的真实目标尺寸（象棋王/后 100mm、马 80mm；围棋 20mm；黑白棋 28mm；四子棋 33mm；跳棋 30mm；筹码 39mm；骰子 16mm；扑克 63×88mm；麻将 30×40mm；灯灵 80mm），再用 PNG 的实际 alpha bbox 换算成方图盒子。
+  - deck 牌面：扑克 63×88mm、麻将 30×40mm、象棋 28mm 直径。
+- `realScale` 默认 `1.0`。除远景压缩外，不要逐件改；否则会破坏真实比例。棋盘相对物件的比例由毫米规格保证。
 
-- **`flat`**：卡牌、麻将、棋子饼、筹码、骰子、四子棋圆片、黑白棋子、飞机 token。它们是桌面平面的子元素，跟着 `rotateX(52deg) rotateZ(-14deg)` 一起透视，牌会变成梯形、圆片会压成椭圆。
-- **`standing`**：国际象棋棋子、灯灵。它们不跟平面旋转，是直立的广告牌；`compose.js` 用与 CSS 完全相同的投影公式把桌面坐标换算成屏幕位置，图片底部（元素 PNG 的 alpha 底边，正好在画布 92% 处）落在桌面上。
+### 4. 真实局面校验（REALISM FAIL）
 
-数组顺序就是叠放顺序：后面的元素压在前面的上面。
+`realism` 声明：
 
-同一件元素可以在一个场景里出现多次（例如多颗棋子、多张牌），只要重复写 `item`。
+```json
+"realism": { "pieceCount": 32, "mustTouchSurface": true, "board": "xiangqi9x10" }
+```
 
-### 3. 怎么调位置
+`validateRealism()` 在启动 Chrome 之前检查：
 
-只改 `scenes.json`，不碰模板：
+- `pieceCount` 是否等于实际件数（`stack` 按数量计；`wall`/`dice`/`chip`/`accessory` 不计入）
+- 所有物件是否在桌面/棋盘范围内（`mustTouchSurface`）
+- `board` 是否与 `scene.board` 一致
+- 按场景追加规则：象棋无同色重复骑士、象棋 32 子 16+16；围棋 10–16 子且黑白差 ≤1、全部在交叉点；黑白棋 4 子标准开局；四子棋每列从底行连续堆叠；跳棋 24 子只在深色格；西洋双陆一方 15 子、另一方 3–5；麻将 13 张手牌 + 牌墙；德州 5 公牌 + 2 底牌；斗地主 17 张；飞行棋 4 架 + 2 骰。
+- 不满足打印 `REALISM FAIL` 并 **退出码 3，不出图**。
 
-- **左右/上下挪**：改桌面平面的 `x`、`y`。因为桌面被 `rotateZ(-14deg)` 转过，平面上 `x` 增大在屏幕上往右**上**走，`y` 增大往右**下**走；这是透视桌面的正常结果。
-- **大小**：改 `scale`。`flat` 的数值是平面里的尺寸；`standing` 还会乘以该点的透视缩放 `k`（`compose.js` 自动算）。
-- **转一下**：`flat` 的 `rot` 与平面自身 -14° 叠加后，视觉上应落在 -20°~+20°。当前摆法用 `rot` 4–24，屏幕上看起来是 -10°~+10°，像随手摆的牌。禁止 90° 这类会让牌面文字倒过来的角度。`standing` 的 `rot` 直接是屏幕旋转，限制 ±8°。
-- **叠压**：调数组顺序，或让两个 `x,y` 靠近。阴影统一画在所有物件下面，所以叠压只影响物件本身。
-- **避免出框**：平面坐标不是画布坐标，不能再用简单的 `x ± scale/2` 判断。先用 `--game <slug>` 渲染，看图微调；`compose.js` 用固定相机投影，位置可复现。
+用一个临时场景文件即可验证拦截，不会碰正式场景：
 
-OG 与 card 共用同一套平面坐标和相机。card 画布更小，但桌面平面同比例缩放（1.6× 画布），所以透视角度一致；元素相对画面会更大一些，两档都要跑一遍看。
+```bash
+node -e "let s=require('./scripts/art/scenes.json');s.connect4.items[0].cell.row=0;require('fs').writeFileSync('/tmp/bad.json',JSON.stringify(s))"
+node scripts/art/compose.js --scenes /tmp/bad.json --game connect4 --out /tmp/nope
+# REALISM FAIL (1) — refusing to render:
+#   - connect4: column 0 floats: rows 5,4,... 
+```
 
 ## 重叠检查
 
-每次渲染都会对所有 `flat` 物件的**可见 alpha 包围盒**（按元素实测比例，不是方形画布）做投影后的 AABB 检查：
+每次渲染对 `flat` 物件的**实际 alpha 可见轮廓**做投影 AABB/椭圆检查：
 
-- 普通场景：任意两件重叠面积不得超过较小者的 **12%**
-- `texas-holdem` / `doudizhu` 的 `card-*` 对：允许到 **45%**（扇形叠压是有意的）
+- 普通场景：任意两件重叠不得超过较小者的 **12%**
+- `texas-holdem` / `doudizhu` 的扑克牌对：允许到 **45%**（扇形叠压是有意的）
+- 圆片类（围棋/黑白棋/四子棋/跳棋/筹码/象棋棋饼）按椭圆采样，不按方形 AABB，避免相邻棋子误报
 
-超限时在 stdout 打印 `OVERLAP WARNINGS`，列出场景、元素对、重叠百分比、上限和超限尺寸（og/card），**不阻断渲染**、退出码仍为 0。摆位时优先调小 `scale` 或拉开两个棋盘坐标；不要让告警长期挂着。
+超限打印 `OVERLAP WARNINGS`，列出场景、元素对、比例、上限和尺寸，**不阻断**。最终 12 款当前为 0 条告警。
 
 ## 相机与光影
 
-- **唯一相机**：`perspective: 1600px`、桌面 `rotateX(52deg) rotateZ(-14deg)`。`template.html` 里的 CSS 与 `compose.js` 的 `CAMERA` 常量必须一起改；只改一边会让 standing 物件的底座离开桌面。
-- **桌面**：平面尺寸 = 画布 × 1.6，居中；上面有一层很淡的点阵织纹（54px 网格，径向遮罩），让 12 张图的桌面透视角度都能被看出来。绿毡上会自动降低点阵不透明度。
-- **棋盘**：`BOARD_SPECS` 决定每种棋盘的板宽（占平面宽度的比例）和长宽比；`boardSvg` 画线格/孔/三角点。线的颜色 `rgba(245,238,220,0.20)`、线宽 1.5（viewBox 单位）、带 `drop-shadow` 微光。棋盘宽度按屏幕投影占画面 ≥85%，超出画框的部分裁掉。改棋盘尺寸时同时检查物件是否还在格线/孔位上。
-- **接触阴影**：所有物件共用模板里的 `.shadow` 一个类——椭圆径向渐变，中心在物件底部，平面内偏移 `(6, 18)`px，投影到屏幕约为右下 `10–12px`；`filter: blur(6px)` 固定，透明度固定。阴影是桌面的子元素，跟着桌面透视，不会出现「屏幕空间的圆阴影贴在斜面上」的违和。
-- **平放物件**的阴影 footprint 按元素家族取：卡牌 0.76×1.00、麻将 0.72×0.96、圆片/筹码 0.82×0.82、骰子 0.80×0.80；**直立物件**取底座 0.40×0.15。只调 `compose.js` 里的 `shadowFootprint`，不要在场景里各写阴影。
-- **光源**：屏幕左上暖光晕 + 桌面平面里的柔光池；所有阴影落右下，与光向一致。不要给单个元素加 `box-shadow` 或反方向投影。
+- **唯一相机**：`perspective: 1600px`、桌面 `rotateX(52deg) rotateZ(-14deg)`。`template.html` 与 `compose.js` 的 `CAMERA` 必须一起改。
+- **桌面**：平面 = 画布 × 1.6，居中；点阵织纹给 12 张图提供统一的透视参照。
+- **棋盘**：`BOARD_PHYS` 给真实毫米尺寸，`boardSvg` 用毫米坐标画线格/孔/三角点；线宽 `1.5/k` mm（屏幕约 1.5px），线色 `rgba(245,238,220,0.20)`，带 `drop-shadow` 微光。
+- **接触阴影**：所有物件共用 `.shadow`——椭圆径向渐变，中心在物件底部，平面偏移 `(6,18)`px（屏幕约右下 10–12px），`blur(6px)` 固定。
+- **光源**：屏幕左上暖光晕 + 桌面平面柔光池；所有阴影落右下。
+
+### 当前素材限制：国际象棋没有王/兵
+
+`elements/` 只有 `chess-queen-light` 和 `chess-knight-dark`，没有 king/pawn，也没有 chess deck。chess 场景因此是**合法残局特写**（白后 vs 黑马，2 件），不是 32 枚开局；「王高 ≈ 1.7× 兵高」的比例对比无法用现有素材做出来。要补这一项，需要先生成 1024 透明底的 chess king/pawn 元素。
 
 ## 缺图降级
 
