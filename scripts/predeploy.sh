@@ -15,7 +15,7 @@ TOTAL=7
 
 # 已确认「暂时可以没有自动化测试」的游戏：只计数，不告警。
 # 新增游戏若没有测试，不在这里登记就会在汇总里 WARN。
-ALLOW_NO_TEST="tcg-deck voice-room"
+ALLOW_NO_TEST=""
 NO_TEST_COUNT="0"
 NO_TEST_SLUGS="无"
 
@@ -142,7 +142,7 @@ const SAME_SITE = new Set([
   '[::1]'
 ]);
 // 明确允许的站外「导航链接」（不是页面加载的资源，不影响离线/隐私）。
-const OUTBOUND_ALLOW = new Set(['devinspire734.gumroad.com']);
+const OUTBOUND_ALLOW = new Set(['devinspire734.gumroad.com', 'gstonegames.com', 'www.gstonegames.com']);
 
 const RESOURCE_ATTRS = {
   script: ['src'],
