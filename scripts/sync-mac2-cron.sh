@@ -18,7 +18,7 @@
 # / MAC2_LOG_FILE / MAC2_LOCK_DIR。
 set -uo pipefail
 
-ROOT="${MAC2_ROOT:-/Users/fa/.local/share/pa/workspace/hhfa008.github.io}"
+ROOT="${MAC2_ROOT:-/Users/fa/projects/hhfa008.github.io}"
 REMOTE_NAME="${MAC2_REMOTE:-mac2repo}"
 CANONICAL_URL="${MAC2_URL:-ssh://fa@192.168.18.127/Users/fa/games.git}"
 BRANCHES="master mac2-merge"

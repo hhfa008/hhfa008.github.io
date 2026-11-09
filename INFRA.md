@@ -39,7 +39,7 @@ scripts/healthcheck.sh --json    # 机读 JSON（适合日志/告警）
 建议频率：**每 30 分钟**。cron 示例：
 
 ```cron
-*/30 * * * * cd /Users/fa/.local/share/pa/workspace/hhfa008.github.io && ./scripts/healthcheck.sh >> "$HOME/.local/share/pa/logs/healthcheck.log" 2>&1
+*/30 * * * * cd /Users/fa/projects/hhfa008.github.io && ./scripts/healthcheck.sh >> "$HOME/.local/share/pa/logs/healthcheck.log" 2>&1
 ```
 
 launchd / cron 调用时注意保留网络代理（Cloudflare 站点依赖 `7899`）。
@@ -59,7 +59,7 @@ scripts/backup.sh                # 真跑：备份 + 校验 + 清理
 建议频率：**每天一次**（例如凌晨 3:30）。cron 示例：
 
 ```cron
-30 3 * * * cd /Users/fa/.local/share/pa/workspace/hhfa008.github.io && ./scripts/backup.sh >> "$HOME/.local/share/pa/logs/backup.log" 2>&1
+30 3 * * * cd /Users/fa/projects/hhfa008.github.io && ./scripts/backup.sh >> "$HOME/.local/share/pa/logs/backup.log" 2>&1
 ```
 
 ### 频率建议汇总
