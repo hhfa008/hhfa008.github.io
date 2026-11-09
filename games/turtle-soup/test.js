@@ -134,6 +134,48 @@ s.group('答案判定 judgeAnswer', function () {
   s.eq('答案来源为规则', E.judgeAnswer(zh, '同伴的肉').source, 'rules');
 });
 
+s.group('最终答案判定：规则优先，AI 只辅助', function () {
+  var zh = findById('zh-001');
+  var hit = E.judgeAnswer(zh, '当年吃的是同伴的肉');
+  var miss = E.judgeAnswer(zh, '外星人用魔法把所有事情变成了游戏');
+
+  s.eq('错误答案确实未命中规则', miss.correct, false);
+  s.eq('正确答案确实命中规则', hit.correct, true);
+
+  // 规则未命中 + AI 判对：不得放行，只提示接近。
+  s.eq('规则未命中 + AI true 不放行', E.resolveGuess(miss, true).correct, false);
+  s.eq('规则未命中 + AI true 标记接近', E.resolveGuess(miss, true).nearMiss, true);
+  s.eq('规则未命中 + AI true 仍以规则为准', E.resolveGuess(miss, true).source, 'rules');
+  s.eq('规则未命中 + AI false 不放行', E.resolveGuess(miss, false).correct, false);
+  s.eq('规则未命中 + AI false 不算接近', E.resolveGuess(miss, false).nearMiss, false);
+  s.eq('规则未命中 + AI 缺失不放行', E.resolveGuess(miss, null).correct, false);
+
+  // 规则命中 + AI 判错：规则结论不被推翻。
+  s.eq('规则命中 + AI false 仍判对', E.resolveGuess(hit, false).correct, true);
+  s.eq('规则命中 + AI false 记录分歧', E.resolveGuess(hit, false).aiDissent, true);
+  s.eq('规则命中 + AI true 判对', E.resolveGuess(hit, true).correct, true);
+  s.eq('规则命中 + AI true 记录确认', E.resolveGuess(hit, true).aiCorrect, true);
+  s.eq('规则命中 + AI 缺失判对', E.resolveGuess(hit, null).correct, true);
+
+  // AI 输出解析：只接受布尔 correct，解析失败返回 null 交给规则。
+  s.eq('AI 解析 true', E.parseAIVerdict('{"correct":true}'), true);
+  s.eq('AI 解析 false', E.parseAIVerdict('prefix {"correct":false} suffix'), false);
+  s.eq('AI 非 JSON 解析失败', E.parseAIVerdict('sorry, I cannot answer'), null);
+  s.eq('AI 非布尔解析失败', E.parseAIVerdict('{"correct":"yes"}'), null);
+  s.eq('AI 空文本解析失败', E.parseAIVerdict(''), null);
+  s.eq('解析失败回退规则：命中仍判对',
+    E.resolveGuess(hit, E.parseAIVerdict('not json')).correct, true);
+  s.eq('解析失败回退规则：未命中仍不放行',
+    E.resolveGuess(miss, E.parseAIVerdict('not json')).correct, false);
+
+  // 真实误判样本：0.5B/1.5B 曾把这句话判为 correct=true。
+  var evidence = '外星人用魔法把所有事情变成了游戏';
+  s.eq('真实误判样本 + AI true 不放行',
+    E.resolveGuess(E.judgeAnswer(zh, evidence), true).correct, false);
+  s.eq('真实误判样本留在对局（接近提示）',
+    E.resolveGuess(E.judgeAnswer(zh, evidence), true).nearMiss, true);
+});
+
 s.group('难度筛选与选题', function () {
   var soups = BANK.soups;
   s.eq('all 返回全部', E.filterByDifficulty(soups, 'all').length, 36);
@@ -291,6 +333,15 @@ s.group('脚本与离线约束', function () {
   try { new Function(engineCode); } catch (e) { engineCompiled = false; }
   s.ok('引擎脚本语法可解析', engineCompiled);
 
+  s.ok('最终答案先走关键词规则',
+    /var rules = E\.judgeAnswer\(soup, guess\);/.test(mainCode));
+  s.ok('最终答案不再直接采用 AI 判定', mainCode.indexOf('correct: correct === true') < 0);
+  s.ok('最终答案通过 resolveGuess 合成', mainCode.indexOf('E.resolveGuess(rules') >= 0);
+  s.ok('AI 解析失败/超时回退规则',
+    mainCode.indexOf('fallback = E.resolveGuess(rules, null)') >= 0);
+  s.ok('规则命中时立即通过、不调用 AI',
+    /if \(rules\.correct\) return Promise\.resolve\(E\.resolveGuess\(rules, null\)\)/.test(mainCode));
+
   var soupSrc = fs.readFileSync(path.join(__dirname, 'soups.js'), 'utf8');
   s.ok('soups.js 支持 node require', /module\.exports\s*=\s*factory\(\)/.test(soupSrc));
   s.ok('soups.js 支持浏览器全局', /root\.SOUP_BANK\s*=\s*factory\(\)/.test(soupSrc));
@@ -378,4 +429,62 @@ s.group('脚本与离线约束', function () {
     rulesHtml.indexOf('提示次数不进入成绩') >= 0);
 });
 
-s.done();
+// Async: exercise the real checkGuess orchestration with fake engines. No
+// model is loaded and no network is used; the fake engine only returns text.
+var mainCode = lib.scriptCode(html, 'main');
+var chainStart = mainCode.indexOf('function withTimeout');
+var chainEnd = mainCode.indexOf('function bind');
+var chainSource = chainStart >= 0 && chainEnd > chainStart
+  ? mainCode.slice(chainStart, chainEnd) : '';
+var chain = chainSource
+  ? new Function('E', 'ai', 'AI_TIMEOUT_MS',
+      chainSource + '\n; return { checkGuess: checkGuess };')
+  : null;
+
+if (chain) {
+  var asyncZh = findById('zh-001');
+  var asyncMiss = '外星人用魔法把所有事情变成了游戏';
+  var asyncHit = '当年吃的是同伴的肉';
+
+  function fakeEngine(content) {
+    return {
+      chat: { completions: { create: function () {
+        return Promise.resolve({ choices: [{ message: { content: content } }] });
+      } } },
+      interruptGenerate: function () {}
+    };
+  }
+
+  var ctxAI = chain(E, { status: 'ready', engine: fakeEngine('{"correct":true}') }, 5000);
+  var ctxBad = chain(E, { status: 'ready', engine: fakeEngine('no json here') }, 5000);
+  var ctxOff = chain(E, { status: 'off', engine: null }, 5000);
+
+  Promise.all([
+    ctxAI.checkGuess(asyncZh, asyncMiss),
+    ctxAI.checkGuess(asyncZh, asyncHit),
+    ctxBad.checkGuess(asyncZh, asyncMiss),
+    ctxBad.checkGuess(asyncZh, asyncHit),
+    ctxOff.checkGuess(asyncZh, asyncMiss)
+  ]).then(function (results) {
+    s.ok('异步：规则未命中 + AI true 不放行',
+      results[0].correct === false && results[0].nearMiss === true,
+      JSON.stringify(results[0]));
+    s.ok('异步：规则命中 + AI true 判对',
+      results[1].correct === true, JSON.stringify(results[1]));
+    s.ok('异步：AI 解析失败 + 规则未命中回退不放行',
+      results[2].correct === false && results[2].fallback === true,
+      JSON.stringify(results[2]));
+    s.ok('异步：规则命中时不调用 AI（坏引擎不影响判对）',
+      results[3].correct === true && results[3].aiCorrect === null,
+      JSON.stringify(results[3]));
+    s.ok('异步：无 AI 时仅按规则判定',
+      results[4].correct === false, JSON.stringify(results[4]));
+    s.done();
+  }).catch(function (error) {
+    s.ok('异步判定链路无异常', false, error && error.message);
+    s.done();
+  });
+} else {
+  s.ok('异步判定链路可提取', false, 'checkGuess source not found');
+  s.done();
+}

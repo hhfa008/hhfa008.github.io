@@ -13,6 +13,8 @@
  *   - icon 指向的文件必须存在；
  *   - 三语 names / blurb 都不能为空（blurb 每语言 ≤30 字）；
  *   - category / status / ai 取值合法，slug 不重复。
+ *   - games/registry-unlisted.txt 里显式列出的目录允许未登记（不上大厅），
+ *     但该文件列出的目录必须真实存在。
  */
 
 const fs = require('fs');
@@ -28,6 +30,7 @@ const STATUSES = new Set(['live', 'draft', 'retired']);
 const AI_LEVELS = new Set(['easy', 'normal', 'hard']);
 // agentnet/ 与 ai-play/ 是 Worker 与共享协议库，没有页面入口，不算游戏目录。
 const NON_GAME_DIRS = new Set(['assets', 'en', 'id', 'shared', 'tests', 'agentnet', 'ai-play']);
+const UNLISTED_PATH = path.join(GAMES_DIR, 'registry-unlisted.txt');
 const BLURB_MAX = 30;
 
 const failures = [];
@@ -73,6 +76,16 @@ function loadRegistry() {
     return null;
   }
   return data;
+}
+
+function loadUnlisted() {
+  if (!fs.existsSync(UNLISTED_PATH)) return new Set();
+  return new Set(
+    fs.readFileSync(UNLISTED_PATH, 'utf8')
+      .split(/\r?\n/)
+      .map(line => line.trim())
+      .filter(line => line && !line.startsWith('#'))
+  );
 }
 
 function main() {
@@ -173,9 +186,19 @@ function main() {
       }
     });
 
+    const unlisted = loadUnlisted();
     for (const slug of dirs) {
       if (!seen.has(slug)) {
-        fail(`目录 games/${slug}/ 没有 registry 条目`);
+        if (unlisted.has(slug)) {
+          notes.push(`NOTE 目录 games/${slug}/ 未登记 registry（列于 games/registry-unlisted.txt，不上大厅）`);
+        } else {
+          fail(`目录 games/${slug}/ 没有 registry 条目`);
+        }
+      }
+    }
+    for (const slug of unlisted) {
+      if (!dirSet.has(slug)) {
+        fail(`games/registry-unlisted.txt 列出的 games/${slug}/ 不存在（请删除该行）`);
       }
     }
 

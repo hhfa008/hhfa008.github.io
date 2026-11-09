@@ -1,0 +1,97 @@
+var I18N = {
+  en: { eyebrow:'Mini Game', title:'Reaction whack-60', tagline:'Click as fast as you can!', score:'Score', best:'Best', extraLabel:'Hits',
+        boardAria:'Game board', playAgain:'Play again', newGame:'New game', hint:'Hint',
+        note:'Click the targets as they appear. Misses cost you time.', rules:'Rules (Chinese)', hall:'All games', moreLink:'Built by an indie developer',
+        overlayWin:'You win!', overlayLose:'Time\'s up!', overlayDraw:'Draw', hintText:'Click targets as they appear' },
+  zh: { eyebrow:'迷你游戏', title:'反应挑战 whack-60', tagline:'尽可能快地点击！', score:'得分', best:'最高分', extraLabel:'点击数',
+        boardAria:'游戏棋盘', playAgain:'重新开始', newGame:'新游戏', hint:'提示',
+        note:'点击出现的目标。点击错误会扣时间。', rules:'规则（中文）', hall:'所有游戏', moreLink:'由独立开发者制作',
+        overlayWin:'你赢了！', overlayLose:'时间到！', overlayDraw:'平局', hintText:'点击出现的目标' },
+  id: { eyebrow:'Permainan Mini', title:'Reaksi whack-60', tagline:'Klik secepat mungkin!', score:'Skor', best:'Tertinggi', extraLabel:'Klik',
+        boardAria:'Papan permainan', playAgain:'Main lagi', newGame:'Permainan baru', hint:'Petunjuk',
+        note:'Klik target saat mereka muncul. Klik salah akan mengurangi waktu.', rules:'Aturan (Tiongkok)', hall:'Semua permainan', moreLink:'Dibuat oleh pengembang independen',
+        overlayWin:'Kamu menang!', overlayLose:'Waktunya habis!', overlayDraw:'Seri', hintText:'Klik target saat mereka muncul' }
+};
+
+(function () {
+  'use strict';
+  var BEST_KEY = 'arcade.whack-60.best';
+  var E = {
+    board: document.getElementById('board'),
+    score: document.getElementById('stat-score'),
+    best: document.getElementById('stat-best'),
+    extra: document.getElementById('stat-extra'),
+    overlay: document.getElementById('overlay'),
+    overlayTitle: document.getElementById('overlay-title'),
+    overlayText: document.getElementById('overlay-text'),
+    feedback: document.getElementById('feedback'),
+    btnNew: document.getElementById('btn-new'),
+    btnHint: document.getElementById('btn-hint'),
+    btnOverlay: document.getElementById('btn-overlay')
+  };
+  var S = CORE.newGame(Math.random);
+  var best = Arcade.best(BEST_KEY, 0);
+  var timer;
+
+  function render() {
+    E.score.textContent = S.score;
+    E.best.textContent = best;
+    E.extra.textContent = S.hits;
+    E.board.innerHTML = '';
+    if (S.running) {
+      var target = document.createElement('div');
+      target.className = 'target';
+      target.style.left = Math.random() * 300 + 'px';
+      target.style.top = Math.random() * 300 + 'px';
+      target.addEventListener('click', function() {
+        input('hit');
+        target.remove();
+      });
+      E.board.appendChild(target);
+    }
+    if (S.over) {
+      E.overlay.hidden = false;
+      E.overlayTitle.textContent = S.score >= 10 ? I18N[I18N.lang].overlayWin : I18N[I18N.lang].overlayLose;
+      E.overlayText.textContent = S.score >= 10 ? 'Congratulations!' : 'Better luck next time!';
+    } else {
+      E.overlay.hidden = true;
+    }
+  }
+
+  function input(action) {
+    var result = CORE.act(S, action);
+    if (result.changed) {
+      S = result.state;
+      if (action === 'hit') {
+        E.feedback.textContent = '+' + result.gained;
+      } else if (action === 'miss') {
+        E.feedback.textContent = 'Miss!';
+      } else if (action === 'tick') {
+        E.feedback.textContent = '';
+      }
+      best = Arcade.setBest(BEST_KEY, Math.max(best, S.score));
+      render();
+    }
+  }
+
+  function newGame() {
+    S = CORE.newGame(Math.random);
+    best = Arcade.best(BEST_KEY, 0);
+    if (timer) clearInterval(timer);
+    timer = setInterval(function() {
+      input('tick');
+    }, 1000);
+    render();
+  }
+
+  E.btnNew.addEventListener('click', newGame);
+  E.btnOverlay.addEventListener('click', newGame);
+  E.btnHint.addEventListener('click', function() {
+    E.feedback.textContent = I18N[I18N.lang].hintText;
+  });
+  Arcade.onKeys({ ' ': function() { input('hit'); } }, input);
+  Arcade.onSwipe(E.board, input);
+  Arcade.onLang(render);
+  Arcade.init({ strings: I18N, onLang: render });
+  newGame();
+})();
