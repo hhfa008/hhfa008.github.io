@@ -1,6 +1,6 @@
 # 游戏集合维护说明
 
-19 款纯静态网页桌游/棋牌：免费、免登录、单文件，打开即玩。
+20 款纯静态网页桌游/棋牌：免费、免登录、单文件，打开即玩。
 
 ## 游戏清单
 
@@ -15,6 +15,7 @@
 | 中国跳棋 | Chinese Checkers | /games/checkers-jump/ | 棋类 | 2/6 | 三档·简单 | rules.html | 49 |
 | 国际跳棋 8×8 | Draughts | /games/draughts/ | 棋类 | 2 | 三档·中等 | rules.html | 49 |
 | 西洋双陆棋 | Backgammon | /games/backgammon/ | 棋类 | 2 | 三档·较难 | rules.html | 75 |
+| 暗棋（翻棋） | Banqi (Dark Chess) | /games/banqi/ | 棋类 | 2 | 三档·中等 | rules.html | 111 |
 | 四子棋 | Connect Four | /games/connect4/ | 棋类 | 2 | 三档·中等 | rules.html | 22 |
 | 围棋 9 路 | Go 9×9 | /games/go9/ | 棋类 | 2 | 三档·困难 | rules.html | 20 |
 | 接龙 | Klondike | /games/solitaire/ | 纸牌 | 1 | — | rules.html、rules-en.html | 218 |
@@ -47,6 +48,7 @@
 - 中国跳棋：121 孔邻接、三连跳路径、对家三角判定。
 - 国际跳棋：必吃、连吃、升王、非法走法拒绝。
 - 西洋双陆棋：24 点标准摆法、bar 复活、封闭点、必须走满、bear off、gammon/backgammon 倍数、50 局 AI 自对弈。
+- 暗棋：4×8 全暗开局与棋子构成、等级吃子、兵吃帅、炮隔子吃、走子与胜负、50 局 AI 自对弈。
 - 四子棋：重力落子、四向连线、悔棋后局面一致。
 - 围棋：提子、禁自杀、打劫、数子、AI 自对弈。
 - 接龙/空当接龙/蜘蛛：发牌结构、移动合法性、自动收牌、撤销一致。

@@ -4,7 +4,7 @@
    Static assets: cache-first with background refresh (stale-while-revalidate). */
 'use strict';
 
-var CACHE_VERSION = 'v4';
+var CACHE_VERSION = 'v5';
 var CACHE_PREFIX = 'hhfa-games-';
 var CACHE_NAME = CACHE_PREFIX + CACHE_VERSION;
 var OFFLINE_URL = '/games/offline.html';
@@ -31,6 +31,7 @@ var PRECACHE_URLS = [
   '/games/doudizhu/',
   '/games/draughts/',
   '/games/backgammon/',
+  '/games/banqi/',
   '/games/freecell/',
   '/games/go9/',
   '/games/gomoku/',
@@ -53,6 +54,7 @@ var PRECACHE_URLS = [
   '/games/doudizhu/rules.html',
   '/games/draughts/rules.html',
   '/games/backgammon/rules.html',
+  '/games/banqi/rules.html',
   '/games/freecell/rules.html',
   '/games/go9/rules.html',
   '/games/gomoku/rules.html',
@@ -74,6 +76,7 @@ var PRECACHE_URLS = [
   '/games/assets/icons/aeroplane.svg',
   '/games/assets/icons/checkers-jump.svg',
   '/games/assets/icons/backgammon.svg',
+  '/games/assets/icons/banqi.svg',
   '/games/assets/icons/chess.svg',
   '/games/assets/icons/connect4.svg',
   '/games/assets/icons/doudizhu.svg',
