@@ -1,0 +1,1454 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>日期计算器 — 日期间隔、日期加减与周岁年龄</title>
+<meta name="description" content="免费日期计算器：算两个日期之间的总天数、周、日历月、年月日、工作日与周末天数；做日期加减并处理月末夹取；算周岁、下次生日倒计时。严格校验闰年与不存在的日期，全部在浏览器本地计算。">
+<meta name="author" content="Devin">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="theme-color" content="#f2efe7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#101316" media="(prefers-color-scheme: dark)">
+<link rel="canonical" href="https://hhfa008.github.io/tools/date-calculator/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23b93d12'/%3E%3Crect x='7' y='9' width='18' height='16' rx='2' fill='%23fbf9f4'/%3E%3Cpath d='M7 14h18M12 7v4M20 7v4' stroke='%23b93d12' stroke-width='1.7' stroke-linecap='round'/%3E%3C/svg%3E">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Devin">
+<meta property="og:title" content="日期计算器 — 日期间隔、日期加减与周岁年龄">
+<meta property="og:description" content="算日期间隔、工作日、日期加减和年龄。严格校验日期，不受时区影响，全部在本地计算。">
+<meta property="og:url" content="https://hhfa008.github.io/tools/date-calculator/">
+<meta property="og:locale" content="zh_CN">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="日期计算器">
+<meta name="twitter:description" content="日期间隔、工作日、日期加减与周岁年龄。纯本地计算，严格校验闰年与不存在的日期。">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "日期计算器",
+  "url": "https://hhfa008.github.io/tools/date-calculator/",
+  "applicationCategory": "UtilitiesApplication",
+  "operatingSystem": "Any",
+  "browserRequirements": "Requires JavaScript",
+  "isAccessibleForFree": true,
+  "inLanguage": ["zh-CN", "en", "id"],
+  "description": "计算两个日期之间的总天数、周、日历月与工作日，进行日期加减并处理月末夹取，计算周岁和下次生日倒计时。",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "featureList": [
+    "日期间隔：总天数、周、日历月、年月日",
+    "工作日与周末天数（不含节假日）",
+    "日期加减天、周、月、年",
+    "月末夹取与闰年处理",
+    "周岁、月、天与下次生日倒计时",
+    "中文、英文、印尼语界面"
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "为什么总天数和日历月的结果看起来不一致？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "总天数是两个日期之间经过的真实天数；日历月与天会按月份逐步推进，并处理月末夹取。例如 1 月 31 日到 3 月 1 日，在闰年是 30 天，按日历表示为 1 个月 1 天。两者描述的是同一段时间，只是口径不同。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "工作日包含法定节假日吗？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "不包含。这里的工作日只统计周一至周五，周六和周日算周末，不查询任何节假日或调休安排。若需要排除节假日，请以当地官方日历为准。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "为什么 2024-02-30 会被判为无效日期？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "计算器会严格检查公历日期：月份必须在 1 到 12 之间，日期不能超过当月天数。2024 年是闰年，2 月只有 29 天，因此 2024-02-30 不存在。不存在或格式错误的日期会直接提示，而不会自动顺延。"
+      }
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "首页", "item": "https://hhfa008.github.io/" },
+    { "@type": "ListItem", "position": 2, "name": "工具大厅", "item": "https://hhfa008.github.io/tools/" },
+    { "@type": "ListItem", "position": 3, "name": "日期计算器", "item": "https://hhfa008.github.io/tools/date-calculator/" }
+  ]
+}
+</script>
+
+<style>
+:root{
+  --paper:#f2efe7;--paper-2:#fbf9f4;--panel:#fff;
+  --ink:#14171a;--muted:#5b615c;--muted-2:#7b807a;
+  --line:#d5d0c4;--line-strong:#bcb5a7;
+  --accent:#b93d12;--accent-soft:#f2a07a;--accent-wash:#f7e5da;
+  --ok:#2f6b3c;--ok-wash:#e8f2e7;--warn:#8a5a00;--warn-wash:#fbf1db;
+  --bad:#a32216;--bad-wash:#fbe7e3;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --radius:16px;--max:1040px;
+}
+@media (prefers-color-scheme:dark){:root{
+  --paper:#101316;--paper-2:#171b1f;--panel:#1a1f23;
+  --ink:#f2efe7;--muted:#b7b3a8;--muted-2:#948f85;
+  --line:#333a40;--line-strong:#4a535b;
+  --accent:#f08a5d;--accent-soft:#f2a07a;--accent-wash:#2b211c;
+  --ok:#8fd19e;--ok-wash:#1b2b1e;--warn:#f0c36a;--warn-wash:#2d2618;
+  --bad:#ff8a7a;--bad-wash:#321d1a;
+}}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;color-scheme:light dark;scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.6 var(--sans);overflow-x:clip;-webkit-font-smoothing:antialiased}
+[hidden]{display:none!important}
+p,h1,h2,h3,ul{margin:0}
+a{color:inherit}
+button,input,select{font:inherit;color:inherit}
+.wrap{width:100%;max-width:var(--max);margin:0 auto;padding-left:18px;padding-right:18px}
+@media (min-width:720px){.wrap{padding-left:32px;padding-right:32px}}
+.skip-link{position:absolute;left:12px;top:-64px;z-index:50;padding:12px 16px;border-radius:8px;background:var(--ink);color:var(--paper);text-decoration:none}
+.skip-link:focus{top:12px}
+:focus-visible{outline:3px solid rgba(185,61,18,.5);outline-offset:3px}
+@media (prefers-color-scheme:dark){:focus-visible{outline-color:rgba(240,138,93,.7)}}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+.site-header{border-bottom:1px solid var(--line);background:var(--paper)}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:64px;flex-wrap:wrap;padding-top:8px;padding-bottom:8px}
+.brand{display:inline-flex;align-items:center;gap:10px;min-height:44px;font-weight:700;letter-spacing:-.02em;text-decoration:none}
+.brand-mark{width:26px;height:26px;border-radius:7px;background:var(--accent);display:inline-block;position:relative}
+.brand-mark::before,.brand-mark::after{content:"";position:absolute;left:6px;right:6px;height:2px;background:var(--paper-2);border-radius:1px}
+.brand-mark::before{top:9px}.brand-mark::after{top:15px;right:10px}
+.header-tools{display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:flex-end}
+.site-nav{display:flex;align-items:center;gap:15px;font-size:14px}
+.site-nav a{text-decoration:none;color:var(--muted);min-height:44px;display:inline-flex;align-items:center}
+.site-nav a:hover{color:var(--accent)}
+.langs{display:flex;gap:4px}
+.langs button{min-width:44px;min-height:44px;padding:0 6px;border:1px solid var(--line-strong);border-radius:9px;background:transparent;color:var(--muted);font-size:12.5px;font-weight:600;cursor:pointer}
+.langs button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+@media (max-width:560px){.site-nav{gap:12px;font-size:13px}.header-tools{gap:10px}}
+
+.hero{padding:36px 0 8px}
+.eyebrow{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:10px}
+.hero h1{font-size:clamp(1.8rem,5.6vw,2.7rem);line-height:1.1;letter-spacing:-.03em;max-width:22ch;margin-bottom:12px}
+.lede{max-width:72ch;color:var(--muted);font-size:clamp(1rem,2vw,1.08rem)}
+.notice{max-width:78ch;margin-top:16px;padding:12px 16px;border-left:4px solid var(--accent);background:var(--accent-wash);border-radius:0 10px 10px 0;font-size:14px}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px}
+@media (min-width:720px){.card{padding:24px 26px}}
+section{margin:18px 0}
+h2{font-size:clamp(1.15rem,2.4vw,1.4rem);letter-spacing:-.02em}
+.muted{color:var(--muted);font-size:14px}
+.kicker{font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.11em;text-transform:uppercase;color:var(--accent);margin-bottom:6px}
+
+.tabs{display:flex;flex-wrap:wrap;gap:6px;padding:4px;border:1px solid var(--line);border-radius:12px;background:var(--paper-2);margin-bottom:18px}
+.tabs button{flex:1 1 140px;min-height:46px;padding:0 14px;border:0;border-radius:9px;background:transparent;color:var(--muted);font-size:14px;font-weight:650;cursor:pointer}
+.tabs button[aria-pressed="true"]{background:var(--panel);color:var(--accent);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.tabs button:hover{color:var(--accent)}
+
+.date-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-top:14px}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field label{font-size:13px;font-weight:600}
+.field input,.field select{width:100%;min-width:0;min-height:48px;padding:10px 12px;font-size:16px;background:var(--paper-2);border:1px solid var(--line-strong);border-radius:10px;appearance:none}
+.field select{padding-right:34px;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 18px) 50%,calc(100% - 13px) 50%;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+.field input:focus,.field select:focus{border-color:var(--accent);outline:3px solid rgba(185,61,18,.28);outline-offset:1px}
+.input-row{display:flex;align-items:center;gap:8px}
+.input-row input{flex:1 1 auto;min-width:0}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:10px 18px;border:1px solid var(--line-strong);border-radius:10px;background:var(--paper-2);font-size:15px;font-weight:600;cursor:pointer;text-decoration:none;white-space:nowrap}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.05);color:#fff}
+.today-btn{flex:0 0 auto;min-width:64px;min-height:48px;padding:0 12px;font-size:14px}
+.check{display:flex;align-items:center;gap:10px;min-height:44px;font-size:14px;cursor:pointer}
+.check input{width:44px;height:44px;padding:12px;flex:none;accent-color:var(--accent)}
+.err{min-height:18px;font-size:12.5px;color:var(--bad);font-weight:550}
+input[aria-invalid="true"],select[aria-invalid="true"]{border-color:var(--bad);background:var(--bad-wash)}
+.alert{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:12px;padding:10px 14px;border-left:4px solid var(--bad);border-radius:0 10px 10px 0;background:var(--bad-wash);color:var(--bad);font-size:13.5px}
+.alert .btn{border-color:var(--bad);color:var(--bad);background:transparent}
+.hint{margin-top:10px;font-size:12.5px;color:var(--muted-2)}
+
+.big{font-family:var(--mono);font-size:clamp(2.2rem,8vw,3rem);font-weight:600;line-height:1.05;letter-spacing:-.04em;color:var(--accent);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.big small{font-family:var(--sans);font-size:.36em;font-weight:600;letter-spacing:0;color:var(--muted);margin-left:6px}
+.result-date{font-family:var(--mono);font-size:clamp(1.25rem,4.4vw,1.75rem);font-weight:600;line-height:1.2;letter-spacing:-.03em;color:var(--accent);overflow-wrap:anywhere}
+.sub{font-size:13px;color:var(--muted);margin-top:6px}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:16px}
+.stat-box{padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--paper-2);min-width:0}
+.stat-label{display:block;font-size:11px;font-family:var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.stat-box strong{display:block;font-family:var(--mono);font-size:17px;font-weight:600;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.stat{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--line);font-size:13.5px}
+.stat span{color:var(--muted)}
+.stat strong{font-family:var(--mono);font-weight:600;text-align:right;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.stat:first-of-type{border-top:0}
+.copy-row{margin-top:14px}
+.copy-row .btn{width:100%}
+.countdown{margin-top:14px;padding:12px 14px;border-radius:10px;background:var(--ok-wash);color:var(--ok);font-size:14px;font-weight:600;text-align:center}
+.countdown.soon{background:var(--warn-wash);color:var(--warn)}
+.note{padding:10px 12px;border-radius:9px;background:var(--warn-wash);color:var(--warn);font-size:12.5px;margin-top:14px}
+
+details.formulas{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);padding:0 20px;margin-top:22px}
+details.formulas summary{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 0;cursor:pointer;font-weight:650;list-style:none}
+details.formulas summary::-webkit-details-marker{display:none}
+details.formulas summary::after{content:"+";font-family:var(--mono);font-size:20px;line-height:1;color:var(--accent)}
+details.formulas[open] summary::after{content:"\2212"}
+.f-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-bottom:16px}
+@media (min-width:760px){.f-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.formula{min-width:0;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--paper-2)}
+.formula h3{margin:0 0 7px;font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.formula code{display:inline-block;max-width:100%;padding:2px 6px;border-radius:5px;background:var(--accent-wash);font-size:12.5px;line-height:1.5;overflow-wrap:anywhere}
+.formula p{margin-top:7px;font-size:12.5px;color:var(--muted)}
+.assumptions{margin:0;padding:0 0 20px 20px;font-size:13px;color:var(--muted)}
+.assumptions li{margin-bottom:8px}
+
+.faq{margin-top:26px}
+.faq h2{font-size:clamp(1.3rem,3vw,1.7rem);letter-spacing:-.02em;margin-bottom:12px}
+.faq details{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:0 18px}
+.faq details+details{margin-top:10px}
+.faq summary{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px 0;cursor:pointer;font-weight:600;list-style:none;min-height:44px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";font-family:var(--mono);color:var(--accent);font-size:19px}
+.faq details[open] summary::after{content:"\2212"}
+.faq p{padding:0 0 18px;font-size:14px;color:var(--muted);max-width:80ch}
+
+.site-footer{margin-top:30px;padding:22px 0 34px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+.footer-inner{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:10px 20px}
+.site-footer a{display:inline-flex;align-items:center;min-height:44px;color:var(--accent);text-decoration:none}
+.site-footer a:hover{text-decoration:underline}
+.fine{font-size:12px;color:var(--muted-2);margin-top:10px}
+
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translate(-50%,12px);z-index:30;max-width:calc(100vw - 32px);padding:12px 18px;border-radius:12px;background:var(--ink);color:var(--paper);font-size:14px;font-weight:550;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.22);opacity:0;pointer-events:none;transition:opacity .16s,transform .16s}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}#toast.on{transform:translate(-50%,0)}}
+@media print{
+  .site-header,.site-footer,.langs,.btn,.tabs,.skip-link,#toast,.no-print{display:none!important}
+  body{background:#fff;color:#000}
+  .card,details{border-color:#999}
+  [hidden]{display:block!important}
+  details{display:block}
+}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#calculator" data-i="skipLink">跳到计算器</a>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="/" aria-label="Devin" data-i-aria="brandAria"><span class="brand-mark" aria-hidden="true"></span>Devin</a>
+    <div class="header-tools">
+      <nav class="site-nav" aria-label="站点导航" data-i-aria="siteNavAria">
+        <a id="nav-tools" href="/tools/" data-i="navTools">工具大厅</a>
+        <a id="nav-games" href="/games/" data-i="navGames">在线桌游</a>
+      </nav>
+      <div class="langs" role="group" aria-label="语言" data-i-aria="langLabel">
+        <button type="button" data-lang="zh" aria-pressed="true">中文</button>
+        <button type="button" data-lang="en" aria-pressed="false">EN</button>
+        <button type="button" data-lang="id" aria-pressed="false">ID</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero" aria-labelledby="page-title">
+    <p class="eyebrow" data-i="eyebrow">免费工具 · 日期与时间</p>
+    <h1 id="page-title" data-i="appTitle">日期计算器</h1>
+    <p class="lede" data-i="tagline">算两个日期之间隔了多久，做日期加减，或者算清周岁和下次生日。闰年、月末和星期几都处理妥当。</p>
+    <p class="notice" data-i="estimateNote">结果按公历计算。工作日只统计周一至周五，不含法定节假日与调休；所有计算在浏览器本地完成。</p>
+  </section>
+
+  <section id="calculator" class="card" aria-labelledby="modes-title">
+    <h2 class="sr-only" id="modes-title" data-i="tabsAria">计算模式</h2>
+    <div class="tabs" role="group" aria-label="计算模式" data-i-aria="tabsAria">
+      <button type="button" data-mode="interval" aria-pressed="true" data-i="modeInterval">日期间隔</button>
+      <button type="button" data-mode="add" aria-pressed="false" data-i="modeAdd">日期加减</button>
+      <button type="button" data-mode="age" aria-pressed="false" data-i="modeAge">年龄</button>
+    </div>
+
+    <div id="panel-interval">
+      <p class="kicker" data-i="intervalKicker">模式一</p>
+      <h2 data-i="intervalTitle">两个日期之间</h2>
+      <p class="muted" data-i="intervalHint" style="margin-top:4px">选择开始和结束日期，结果会实时更新。</p>
+      <div class="date-grid">
+        <div class="field">
+          <label for="start" data-i="startLabel">开始日期</label>
+          <div class="input-row">
+            <input id="start" type="date">
+            <button type="button" class="btn today-btn" data-target="start" data-i="todayBtn" data-i-aria="todayAria">今天</button>
+          </div>
+          <p class="err" id="err-start" role="alert"></p>
+        </div>
+        <div class="field">
+          <label for="end" data-i="endLabel">结束日期</label>
+          <div class="input-row">
+            <input id="end" type="date">
+            <button type="button" class="btn today-btn" data-target="end" data-i="todayBtn" data-i-aria="todayAria">今天</button>
+          </div>
+          <p class="err" id="err-end" role="alert"></p>
+        </div>
+        <label class="check">
+          <input id="inclusive" type="checkbox">
+          <span data-i="inclusiveLabel">包含首尾两天</span>
+        </label>
+      </div>
+      <p class="hint" data-i="inclusiveHint">勾选后相当于把结束日期算进区间，总天数和相应工作日各加 1 天。</p>
+      <div class="alert" id="order-alert" role="alert" hidden>
+        <span data-i="errOrder">结束日期早于开始日期，请交换后再计算。</span>
+        <button class="btn" type="button" id="swap" data-i="swapBtn">交换起止日期</button>
+      </div>
+      <div aria-live="polite">
+        <p class="kicker" style="margin-top:18px" data-i="resultTitle">结果</p>
+        <p class="big"><span id="res-total-days">0</span><small data-i="daysUnit">天</small></p>
+        <p class="sub" id="res-total-sub" data-i="totalDays">总天数</p>
+        <div class="stat-grid">
+          <div class="stat-box"><span class="stat-label" data-i="weeksDays">周 + 天</span><strong id="res-weeks">—</strong></div>
+          <div class="stat-box"><span class="stat-label" data-i="calendarMD">日历月 + 天</span><strong id="res-cal-md">—</strong></div>
+          <div class="stat-box"><span class="stat-label" data-i="calendarYMD">年 + 月 + 天</span><strong id="res-cal-ymd">—</strong></div>
+          <div class="stat-box"><span class="stat-label" data-i="businessDays">工作日</span><strong id="res-business">—</strong></div>
+          <div class="stat-box"><span class="stat-label" data-i="weekendDays">周末</span><strong id="res-weekend">—</strong></div>
+        </div>
+        <p class="hint" data-i="businessNote">工作日仅统计周一至周五，不查询法定节假日或调休安排。</p>
+        <div class="copy-row"><button class="btn" type="button" data-copy="interval" data-i="copyResult">复制结果</button></div>
+      </div>
+    </div>
+
+    <div id="panel-add" hidden>
+      <p class="kicker" data-i="addKicker">模式二</p>
+      <h2 data-i="addTitle">日期加减</h2>
+      <p class="muted" data-i="addHint" style="margin-top:4px">从基准日期向前或向后推算，负值表示向前。</p>
+      <div class="date-grid">
+        <div class="field">
+          <label for="base" data-i="baseLabel">基准日期</label>
+          <div class="input-row">
+            <input id="base" type="date">
+            <button type="button" class="btn today-btn" data-target="base" data-i="todayBtn" data-i-aria="todayAria">今天</button>
+          </div>
+          <p class="err" id="err-base" role="alert"></p>
+        </div>
+        <div class="field">
+          <label for="delta" data-i="amountLabel">数量</label>
+          <input id="delta" type="number" inputmode="numeric" step="1" value="1" data-i-ph="amountPh" placeholder="例如 1">
+          <p class="err" id="err-delta" role="alert"></p>
+        </div>
+        <div class="field">
+          <label for="unit" data-i="unitLabel">单位</label>
+          <select id="unit">
+            <option value="day" data-i="unitDay">天</option>
+            <option value="week" data-i="unitWeek">周</option>
+            <option value="month" data-i="unitMonth">月</option>
+            <option value="year" data-i="unitYear">年</option>
+          </select>
+        </div>
+      </div>
+      <p class="note" data-i="monthClampNote">月末夹取：2024-01-31 加 1 个月是 2024-02-29；2023-01-31 加 1 个月是 2023-02-28。</p>
+      <div aria-live="polite" style="margin-top:18px">
+        <p class="kicker" data-i="resultTitle">结果</p>
+        <p class="result-date" id="add-result-date">—</p>
+        <div class="stat"><span data-i="resultWeekday">星期</span><strong id="add-weekday">—</strong></div>
+        <div class="stat"><span data-i="movedDays">相差</span><strong id="add-moved">—</strong></div>
+        <p class="err" id="err-add-range" role="alert"></p>
+        <div class="copy-row"><button class="btn" type="button" data-copy="add" data-i="copyResult">复制结果</button></div>
+      </div>
+    </div>
+
+    <div id="panel-age" hidden>
+      <p class="kicker" data-i="ageKicker">模式三</p>
+      <h2 data-i="ageTitle">年龄与下次生日</h2>
+      <p class="muted" data-i="ageHint" style="margin-top:4px">按周岁计算，可指定参考日期，默认使用今天。</p>
+      <div class="date-grid">
+        <div class="field">
+          <label for="birth" data-i="birthLabel">出生日期</label>
+          <input id="birth" type="date">
+          <p class="err" id="err-birth" role="alert"></p>
+        </div>
+        <div class="field">
+          <label for="ref" data-i="refLabel">计算日期</label>
+          <div class="input-row">
+            <input id="ref" type="date">
+            <button type="button" class="btn today-btn" data-target="ref" data-i="todayBtn" data-i-aria="todayAria">今天</button>
+          </div>
+          <p class="err" id="err-ref" role="alert"></p>
+        </div>
+      </div>
+      <div aria-live="polite" style="margin-top:18px">
+        <p class="kicker" data-i="resultTitle">结果</p>
+        <p class="big"><span id="age-years">0</span><small data-i="ageYears">周岁</small></p>
+        <p class="sub" id="age-as-of">—</p>
+        <div class="stat-grid">
+          <div class="stat-box"><span class="stat-label" data-i="ageMonths">个月</span><strong id="age-months">—</strong></div>
+          <div class="stat-box"><span class="stat-label" data-i="ageDays">天</span><strong id="age-days">—</strong></div>
+          <div class="stat-box"><span class="stat-label" data-i="nextBirthday">下次生日</span><strong id="next-birthday">—</strong></div>
+        </div>
+        <p class="countdown" id="countdown" hidden>—</p>
+        <p class="err" id="err-age" role="alert"></p>
+        <p class="hint" data-i="ageNote">周岁按完整年数计算；2 月 29 日出生的人在平年按 2 月 28 日计算下次生日。</p>
+        <div class="copy-row"><button class="btn" type="button" data-copy="age" data-i="copyResult">复制结果</button></div>
+      </div>
+    </div>
+  </section>
+
+  <details class="formulas">
+    <summary data-i="formulasTitle">公式与假设 — 展开核对</summary>
+    <div class="f-grid">
+      <div class="formula">
+        <h3 data-i="fOrdinalTitle">用公历序数算天差</h3>
+        <code>days = ordinal(end) − ordinal(start)</code>
+        <p data-i="fOrdinalBody">每个日期先转换成公历序数（1970-01-01 为 0），再做整数相减。整个过程不经过 Date 对象，也不受时区和夏令时影响。</p>
+      </div>
+      <div class="formula">
+        <h3 data-i="fCalTitle">日历月与天</h3>
+        <code>addMonths(start, k) ≤ end &lt; addMonths(start, k + 1)</code>
+        <p data-i="fCalBody">从开始日期逐月推进，找到不超过结束日期的最大月数，剩余部分按天计算。月末会夹取到目标月份的最后一天。</p>
+      </div>
+      <div class="formula">
+        <h3 data-i="fBizTitle">工作日</h3>
+        <code>weekday(ordinal) ∈ 周一…周五</code>
+        <p data-i="fBizBody">统计区间 [开始, 结束) 内的周一至周五；勾选包含首尾两天时区间扩展为 [开始, 结束 + 1)。不扣除任何节假日。</p>
+      </div>
+      <div class="formula">
+        <h3 data-i="fClampTitle">月末夹取</h3>
+        <code>day = min(day, daysInMonth(year, month))</code>
+        <p data-i="fClampBody">加月或加年时，如果目标月份没有对应日期，就取该月最后一天：1 月 31 日加 1 个月，闰年为 2 月 29 日，平年为 2 月 28 日。</p>
+      </div>
+    </div>
+    <ul class="assumptions">
+      <li data-i="a1">所有日期按公历处理，年份范围为公元 1 年到 9999 年。</li>
+      <li data-i="a2">日期间隔默认不包含结束日当天；勾选“包含首尾两天”后，总天数和工作日各加 1 天。</li>
+      <li data-i="a3">工作日只是周一至周五的计数，不代表任何国家或地区的实际放假安排。</li>
+      <li data-i="a4">日期显示按当前语言的本地格式，但计算始终基于 {y, m, d} 的整数序数。</li>
+    </ul>
+  </details>
+
+  <section class="faq" aria-labelledby="faq-title">
+    <h2 id="faq-title" data-i="faqTitle">常见问题</h2>
+    <details>
+      <summary data-i="faqQ1">为什么总天数和日历月的结果看起来不一致？</summary>
+      <p data-i="faqA1">总天数是两个日期之间经过的真实天数；日历月与天会按月份逐步推进，并处理月末夹取。例如 1 月 31 日到 3 月 1 日，在闰年是 30 天，按日历表示为 1 个月 1 天。两者描述的是同一段时间，只是口径不同。</p>
+    </details>
+    <details>
+      <summary data-i="faqQ2">工作日包含法定节假日吗？</summary>
+      <p data-i="faqA2">不包含。这里的工作日只统计周一至周五，周六和周日算周末，不查询任何节假日或调休安排。若需要排除节假日，请以当地官方日历为准。</p>
+    </details>
+    <details>
+      <summary data-i="faqQ3">为什么 2024-02-30 会被判为无效日期？</summary>
+      <p data-i="faqA3">计算器会严格检查公历日期：月份必须在 1 到 12 之间，日期不能超过当月天数。2024 年是闰年，2 月只有 29 天，因此 2024-02-30 不存在。不存在或格式错误的日期会直接提示，而不会自动顺延。</p>
+    </details>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-inner">
+      <p data-i="footerNote">© 2026 Devin · 免费工具 · 结果仅供估算</p>
+      <p>
+        <a href="/tools/" id="foot-tools" data-i="footerTools">工具大厅</a> ·
+        <a href="/games/" data-i="footerGames">在线桌游</a> ·
+        <a href="/" data-i="footerHome">首页</a>
+      </p>
+    </div>
+    <p class="fine" data-i="footerPrivacy">纯前端页面，不收集、不上传任何数据。所有计算在您的浏览器本地完成。</p>
+  </div>
+</footer>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<noscript>
+  <div class="wrap"><p class="card" style="margin-top:16px" data-i="noscript">此日期计算器需要 JavaScript。所有计算都在您的设备本地完成，不会上传任何数据。</p></div>
+</noscript>
+
+<script id="engine">
+/* Date engine. Pure integer calendar math: no Date objects, no timezone,
+   no DST. Dates are plain {y, m, d} objects. Strings must be YYYY-MM-DD.
+   Invalid input throws TypeError with a code:
+   'date' | 'number' | 'range' | 'order'. */
+var ToolEngine = (function () {
+  'use strict';
+
+  function isInt(x) {
+    return typeof x === 'number' && isFinite(x) && Math.floor(x) === x;
+  }
+  function isLeap(y) {
+    return (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+  }
+  function daysInMonth(y, m) {
+    var dim = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    if (m === 2 && isLeap(y)) { return 29; }
+    return dim[m - 1];
+  }
+  function isValidDate(y, m, d) {
+    if (!isInt(y) || !isInt(m) || !isInt(d)) { return false; }
+    if (y < 1 || y > 9999 || m < 1 || m > 12 || d < 1) { return false; }
+    return d <= daysInMonth(y, m);
+  }
+  function parseDate(value) {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      var o = { y: Number(value.y), m: Number(value.m), d: Number(value.d) };
+      return isValidDate(o.y, o.m, o.d) ? o : null;
+    }
+    if (typeof value !== 'string') { return null; }
+    var match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+    if (!match) { return null; }
+    var date = { y: Number(match[1]), m: Number(match[2]), d: Number(match[3]) };
+    return isValidDate(date.y, date.m, date.d) ? date : null;
+  }
+  function toDate(value) {
+    var date = parseDate(value);
+    if (!date) { throw new TypeError('date'); }
+    return date;
+  }
+  function checkRange(date) {
+    if (!date || date.y < 1 || date.y > 9999) { throw new TypeError('range'); }
+    return date;
+  }
+
+  function toOrdinal(value) {
+    var date = toDate(value);
+    var y = date.y;
+    var m = date.m;
+    var d = date.d;
+    y -= m <= 2 ? 1 : 0;
+    var era = Math.floor(y / 400);
+    var yoe = y - era * 400;
+    var doy = Math.floor((153 * (m + (m > 2 ? -3 : 9)) + 2) / 5) + d - 1;
+    var doe = yoe * 365 + Math.floor(yoe / 4) - Math.floor(yoe / 100) + doy;
+    return era * 146097 + doe - 719468;
+  }
+
+  function fromOrdinal(n) {
+    if (!isInt(n)) { throw new TypeError('number'); }
+    var z = n + 719468;
+    var era = Math.floor(z / 146097);
+    var doe = z - era * 146097;
+    var yoe = Math.floor((doe - Math.floor(doe / 1460) + Math.floor(doe / 36524) - Math.floor(doe / 146096)) / 365);
+    var y = yoe + era * 400;
+    var doy = doe - (365 * yoe + Math.floor(yoe / 4) - Math.floor(yoe / 100));
+    var mp = Math.floor((5 * doy + 2) / 153);
+    var d = doy - Math.floor((153 * mp + 2) / 5) + 1;
+    var m = mp + (mp < 10 ? 3 : -9);
+    y += m <= 2 ? 1 : 0;
+    return checkRange({ y: y, m: m, d: d });
+  }
+
+  function diffDays(from, to) {
+    return toOrdinal(to) - toOrdinal(from);
+  }
+
+  function weekdayIndex(value) {
+    var ord = toOrdinal(value);
+    return ((ord + 3) % 7 + 7) % 7; /* 0 = Monday … 6 = Sunday */
+  }
+
+  function addDays(value, n) {
+    var date = toDate(value);
+    if (!isInt(n)) { throw new TypeError('number'); }
+    return fromOrdinal(toOrdinal(date) + n);
+  }
+
+  function addMonths(value, n) {
+    var date = toDate(value);
+    if (!isInt(n)) { throw new TypeError('number'); }
+    var index = date.y * 12 + (date.m - 1) + n;
+    var y = Math.floor(index / 12);
+    var m = index - y * 12 + 1;
+    var d = Math.min(date.d, daysInMonth(y, m));
+    return checkRange({ y: y, m: m, d: d });
+  }
+
+  function addYears(value, n) {
+    var date = toDate(value);
+    if (!isInt(n)) { throw new TypeError('number'); }
+    var y = date.y + n;
+    var d = Math.min(date.d, daysInMonth(y, date.m));
+    return checkRange({ y: y, m: date.m, d: d });
+  }
+
+  function calendarDiff(from, to) {
+    var a = toDate(from);
+    var b = toDate(to);
+    var ordA = toOrdinal(a);
+    var ordB = toOrdinal(b);
+    var negative = ordB < ordA;
+    var start = negative ? b : a;
+    var end = negative ? a : b;
+    var months = (end.y - start.y) * 12 + (end.m - start.m);
+    var anchor = addMonths(start, months);
+    while (toOrdinal(anchor) > toOrdinal(end)) {
+      months -= 1;
+      anchor = addMonths(start, months);
+    }
+    var days = toOrdinal(end) - toOrdinal(anchor);
+    return {
+      years: Math.floor(months / 12),
+      months: months % 12,
+      days: days,
+      totalDays: ordB - ordA,
+      negative: negative
+    };
+  }
+
+  function countWeekdays(startOrd, endOrd) {
+    if (endOrd < startOrd) { return 0; }
+    var total = endOrd - startOrd + 1;
+    var full = Math.floor(total / 7) * 5;
+    var rem = total % 7;
+    var wd = ((startOrd + 3) % 7 + 7) % 7;
+    for (var i = 0; i < rem; i++) {
+      if (wd < 5) { full += 1; }
+      wd = (wd + 1) % 7;
+    }
+    return full;
+  }
+
+  /* Counts Monday–Friday in [from, to). With inclusive, the range becomes
+     [from, to + 1), so both endpoints are counted. */
+  function businessDays(from, to, inclusive) {
+    var startOrd = toOrdinal(from);
+    var endOrd = toOrdinal(to) - 1 + (inclusive ? 1 : 0);
+    return countWeekdays(startOrd, endOrd);
+  }
+
+  function ageOn(birth, today) {
+    var b = toDate(birth);
+    var now = toDate(today);
+    if (toOrdinal(b) > toOrdinal(now)) { throw new TypeError('order'); }
+    var diff = calendarDiff(b, now);
+    var candidate = addYears(b, now.y - b.y);
+    if (toOrdinal(candidate) < toOrdinal(now)) {
+      candidate = addYears(b, now.y - b.y + 1);
+    }
+    var daysTo = toOrdinal(candidate) - toOrdinal(now);
+    return {
+      years: diff.years,
+      months: diff.months,
+      days: diff.days,
+      nextBirthday: candidate,
+      daysToNextBirthday: daysTo,
+      isBirthdayToday: daysTo === 0,
+      isBirthdayTomorrow: daysTo === 1
+    };
+  }
+
+  return {
+    isLeap: isLeap,
+    daysInMonth: daysInMonth,
+    parseDate: parseDate,
+    isValidDate: isValidDate,
+    toOrdinal: toOrdinal,
+    fromOrdinal: fromOrdinal,
+    diffDays: diffDays,
+    calendarDiff: calendarDiff,
+    businessDays: businessDays,
+    addDays: addDays,
+    addMonths: addMonths,
+    addYears: addYears,
+    ageOn: ageOn,
+    weekdayIndex: weekdayIndex
+  };
+})();
+</script>
+
+<script id="i18n">
+var TOOL_I18N = {
+  zh: {
+    docTitle: '日期计算器 — 日期间隔、日期加减与周岁年龄',
+    docDesc: '免费日期计算器：算两个日期之间的总天数、周、日历月、年月日、工作日与周末天数；做日期加减并处理月末夹取；算周岁、下次生日倒计时。严格校验闰年与不存在的日期，全部在浏览器本地计算。',
+    appTitle: '日期计算器',
+    tagline: '算两个日期之间隔了多久，做日期加减，或者算清周岁和下次生日。闰年、月末和星期几都处理妥当。',
+    privacy: '所有计算在浏览器本地完成，不采集、不上传任何数据。',
+    skipLink: '跳到计算器',
+    eyebrow: '免费工具 · 日期与时间',
+    navTools: '工具大厅',
+    navGames: '在线桌游',
+    langLabel: '语言',
+    brandAria: 'Devin，返回首页',
+    siteNavAria: '站点导航',
+    estimateNote: '结果按公历计算。工作日只统计周一至周五，不含法定节假日与调休；所有计算在浏览器本地完成。',
+    tabsAria: '计算模式',
+    modeInterval: '日期间隔',
+    modeAdd: '日期加减',
+    modeAge: '年龄',
+    intervalKicker: '模式一',
+    intervalTitle: '两个日期之间',
+    intervalHint: '选择开始和结束日期，结果会实时更新。',
+    startLabel: '开始日期',
+    endLabel: '结束日期',
+    todayBtn: '今天',
+    todayAria: '设为今天',
+    inclusiveLabel: '包含首尾两天',
+    inclusiveHint: '勾选后相当于把结束日期算进区间，总天数和相应工作日各加 1 天。',
+    swapBtn: '交换起止日期',
+    errStart: '请选择有效的开始日期。',
+    errEnd: '请选择有效的结束日期。',
+    errOrder: '结束日期早于开始日期，请交换后再计算。',
+    resultTitle: '结果',
+    totalDays: '总天数',
+    daysUnit: '天',
+    weeksDays: '周 + 天',
+    calendarMD: '日历月 + 天',
+    calendarYMD: '年 + 月 + 天',
+    businessDays: '工作日',
+    weekendDays: '周末',
+    businessNote: '工作日仅统计周一至周五，不查询法定节假日或调休安排。',
+    weeksValue: '{w} 周 {d} 天',
+    calendarMDValue: '{m} 个月 {d} 天',
+    calendarYMDValue: '{y} 年 {m} 个月 {d} 天',
+    daysValue: '{n} 天',
+    addKicker: '模式二',
+    addTitle: '日期加减',
+    addHint: '从基准日期向前或向后推算，负值表示向前。',
+    baseLabel: '基准日期',
+    amountLabel: '数量',
+    amountPh: '例如 1',
+    unitLabel: '单位',
+    unitDay: '天',
+    unitWeek: '周',
+    unitMonth: '月',
+    unitYear: '年',
+    errBase: '请选择有效的基准日期。',
+    errDelta: '请输入整数（可以为负数）。',
+    errRange: '结果超出支持的日期范围（公元 1–9999 年）。',
+    monthClampNote: '月末夹取：2024-01-31 加 1 个月是 2024-02-29；2023-01-31 加 1 个月是 2023-02-28。',
+    resultDate: '结果日期',
+    resultWeekday: '星期',
+    movedDays: '相差',
+    addKickerNote: '负值表示向基准日期之前推算。',
+    ageKicker: '模式三',
+    ageTitle: '年龄与下次生日',
+    ageHint: '按周岁计算，可指定参考日期，默认使用今天。',
+    birthLabel: '出生日期',
+    refLabel: '计算日期',
+    errBirth: '请选择有效的出生日期。',
+    errRef: '请选择有效的计算日期。',
+    errBirthFuture: '出生日期不能晚于计算日期。',
+    ageYears: '周岁',
+    ageMonths: '个月',
+    ageDays: '天',
+    nextBirthday: '下次生日',
+    ageAsOf: '按 {date} 计算',
+    birthdayToday: '就是今天，生日快乐！',
+    birthdayTomorrow: '就是明天，提前祝你生日快乐！',
+    countdownDays: '还有 {n} 天',
+    ageNote: '周岁按完整年数计算；2 月 29 日出生的人在平年按 2 月 28 日计算下次生日。',
+    copyResult: '复制结果',
+    copied: '已复制结果。',
+    copyFail: '无法自动复制，请手动选择结果文本。',
+    formulasTitle: '公式与假设 — 展开核对',
+    fOrdinalTitle: '用公历序数算天差',
+    fOrdinalBody: '每个日期先转换成公历序数（1970-01-01 为 0），再做整数相减。整个过程不经过 Date 对象，也不受时区和夏令时影响。',
+    fCalTitle: '日历月与天',
+    fCalBody: '从开始日期逐月推进，找到不超过结束日期的最大月数，剩余部分按天计算。月末会夹取到目标月份的最后一天。',
+    fBizTitle: '工作日',
+    fBizBody: '统计区间 [开始, 结束) 内的周一至周五；勾选包含首尾两天时区间扩展为 [开始, 结束 + 1)。不扣除任何节假日。',
+    fClampTitle: '月末夹取',
+    fClampBody: '加月或加年时，如果目标月份没有对应日期，就取该月最后一天：1 月 31 日加 1 个月，闰年为 2 月 29 日，平年为 2 月 28 日。',
+    a1: '所有日期按公历处理，年份范围为公元 1 年到 9999 年。',
+    a2: '日期间隔默认不包含结束日当天；勾选“包含首尾两天”后，总天数和工作日各加 1 天。',
+    a3: '工作日只是周一至周五的计数，不代表任何国家或地区的实际放假安排。',
+    a4: '日期显示按当前语言的本地格式，但计算始终基于 {y, m, d} 的整数序数。',
+    faqTitle: '常见问题',
+    faqQ1: '为什么总天数和日历月的结果看起来不一致？',
+    faqA1: '总天数是两个日期之间经过的真实天数；日历月与天会按月份逐步推进，并处理月末夹取。例如 1 月 31 日到 3 月 1 日，在闰年是 30 天，按日历表示为 1 个月 1 天。两者描述的是同一段时间，只是口径不同。',
+    faqQ2: '工作日包含法定节假日吗？',
+    faqA2: '不包含。这里的工作日只统计周一至周五，周六和周日算周末，不查询任何节假日或调休安排。若需要排除节假日，请以当地官方日历为准。',
+    faqQ3: '为什么 2024-02-30 会被判为无效日期？',
+    faqA3: '计算器会严格检查公历日期：月份必须在 1 到 12 之间，日期不能超过当月天数。2024 年是闰年，2 月只有 29 天，因此 2024-02-30 不存在。不存在或格式错误的日期会直接提示，而不会自动顺延。',
+    footerNote: '© 2026 Devin · 免费工具 · 结果仅供估算',
+    footerTools: '工具大厅',
+    footerGames: '在线桌游',
+    footerHome: '首页',
+    footerPrivacy: '纯前端页面，不收集、不上传任何数据。所有计算在您的浏览器本地完成。',
+    noscript: '此日期计算器需要 JavaScript。所有计算都在您的设备本地完成，不会上传任何数据。',
+    wd0: '周一',
+    wd1: '周二',
+    wd2: '周三',
+    wd3: '周四',
+    wd4: '周五',
+    wd5: '周六',
+    wd6: '周日'
+  },
+  en: {
+    docTitle: 'Date calculator — interval, add or subtract, and age',
+    docDesc: 'Free date calculator: find the total days, weeks, calendar months and business days between two dates; add or subtract days, weeks, months or years with month-end clamping; work out an age and the next birthday countdown. Strict leap-year validation, all local.',
+    appTitle: 'Date calculator',
+    tagline: 'Measure the gap between two dates, add or subtract time, or work out an age and the next birthday. Leap years, month ends and weekdays are handled.',
+    privacy: 'Every calculation runs in your browser. No data is collected or uploaded.',
+    skipLink: 'Skip to calculator',
+    eyebrow: 'Free tool · dates and time',
+    navTools: 'Tools',
+    navGames: 'Board games',
+    langLabel: 'Language',
+    brandAria: 'Devin, back to the home page',
+    siteNavAria: 'Site navigation',
+    estimateNote: 'Dates use the Gregorian calendar. Business days count Monday to Friday only, with no public holidays or holiday shifts; everything is computed locally.',
+    tabsAria: 'Mode',
+    modeInterval: 'Date interval',
+    modeAdd: 'Add or subtract',
+    modeAge: 'Age',
+    intervalKicker: 'Mode one',
+    intervalTitle: 'Between two dates',
+    intervalHint: 'Pick a start and end date; the result updates as you type.',
+    startLabel: 'Start date',
+    endLabel: 'End date',
+    todayBtn: 'Today',
+    todayAria: 'Set to today',
+    inclusiveLabel: 'Include both end days',
+    inclusiveHint: 'Including both endpoints adds the end date to the range, so total days and the matching weekdays each grow by one.',
+    swapBtn: 'Swap start and end',
+    errStart: 'Choose a valid start date.',
+    errEnd: 'Choose a valid end date.',
+    errOrder: 'The end date is before the start date. Swap them to calculate.',
+    resultTitle: 'Result',
+    totalDays: 'Total days',
+    daysUnit: 'days',
+    weeksDays: 'Weeks + days',
+    calendarMD: 'Calendar months + days',
+    calendarYMD: 'Years + months + days',
+    businessDays: 'Business days',
+    weekendDays: 'Weekend days',
+    businessNote: 'Business days count Monday to Friday only. No public holidays or holiday shifts are checked.',
+    weeksValue: '{w} wk {d} d',
+    calendarMDValue: '{m} mo {d} d',
+    calendarYMDValue: '{y} yr {m} mo {d} d',
+    daysValue: '{n} days',
+    addKicker: 'Mode two',
+    addTitle: 'Add or subtract dates',
+    addHint: 'Move forward or backward from a base date. Negative values move backward.',
+    baseLabel: 'Base date',
+    amountLabel: 'Amount',
+    amountPh: 'e.g. 1',
+    unitLabel: 'Unit',
+    unitDay: 'Days',
+    unitWeek: 'Weeks',
+    unitMonth: 'Months',
+    unitYear: 'Years',
+    errBase: 'Choose a valid base date.',
+    errDelta: 'Enter a whole number (negative values are allowed).',
+    errRange: 'The result is outside the supported range (years 1–9999).',
+    monthClampNote: 'Month-end clamping: 2024-01-31 plus one month is 2024-02-29; 2023-01-31 plus one month is 2023-02-28.',
+    resultDate: 'Result date',
+    resultWeekday: 'Weekday',
+    movedDays: 'Difference',
+    addKickerNote: 'A negative value counts backward from the base date.',
+    ageKicker: 'Mode three',
+    ageTitle: 'Age and next birthday',
+    ageHint: 'Full years are counted. You can use a reference date; today is the default.',
+    birthLabel: 'Date of birth',
+    refLabel: 'Reference date',
+    errBirth: 'Choose a valid date of birth.',
+    errRef: 'Choose a valid reference date.',
+    errBirthFuture: 'The date of birth cannot be after the reference date.',
+    ageYears: 'years old',
+    ageMonths: 'Months',
+    ageDays: 'Days',
+    nextBirthday: 'Next birthday',
+    ageAsOf: 'Calculated as of {date}',
+    birthdayToday: 'It is today. Happy birthday!',
+    birthdayTomorrow: 'It is tomorrow. Happy birthday in advance!',
+    countdownDays: '{n} days to go',
+    ageNote: 'Age counts complete years. A 29 February birthday is treated as 28 February in non-leap years for the next birthday.',
+    copyResult: 'Copy result',
+    copied: 'Result copied.',
+    copyFail: 'Could not copy automatically. Select the result text manually.',
+    formulasTitle: 'Formulas and assumptions — open to check',
+    fOrdinalTitle: 'Day counts from ordinals',
+    fOrdinalBody: 'Each date is converted to a Gregorian ordinal (1970-01-01 is 0) and subtracted as integers. No Date object is involved, so timezones and daylight saving cannot shift the result.',
+    fCalTitle: 'Calendar months and days',
+    fCalBody: 'Step forward month by month from the start date and take the largest month count that does not pass the end date; the remainder is counted in days. Month ends are clamped to the last day of the target month.',
+    fBizTitle: 'Business days',
+    fBizBody: 'Counts Monday to Friday in [start, end). Including both endpoints extends the range to [start, end + 1). No holidays are subtracted.',
+    fClampTitle: 'Month-end clamping',
+    fClampBody: 'When adding months or years, a day that does not exist in the target month becomes that month last day: 31 January plus one month is 29 February in a leap year and 28 February otherwise.',
+    a1: 'All dates use the Gregorian calendar, with years from 1 to 9999.',
+    a2: 'The interval excludes the end date by default. Including both endpoints adds one day to total days and to the weekday count.',
+    a3: 'Business days are only a Monday-to-Friday count. They do not represent any country actual holiday schedule.',
+    a4: 'Dates are displayed in the current language locale, but calculations always use integer {y, m, d} ordinals.',
+    faqTitle: 'Common questions',
+    faqQ1: 'Why do total days and calendar months look inconsistent?',
+    faqA1: 'Total days is the real number of days between the dates. Calendar months and days step month by month and clamp month ends. For 31 January to 1 March in a leap year the interval is 30 days, or 1 month and 1 day on a calendar basis. Both describe the same span, just in different units.',
+    faqQ2: 'Do business days include public holidays?',
+    faqA2: 'No. Business days here only count Monday to Friday, with Saturday and Sunday treated as the weekend. No holiday or holiday-shift calendar is consulted. For holiday-aware counts, use the official calendar for your region.',
+    faqQ3: 'Why is 2024-02-30 rejected?',
+    faqA3: 'The calculator strictly validates Gregorian dates: the month must be 1 to 12 and the day must exist in that month. 2024 is a leap year, so February has 29 days and 2024-02-30 does not exist. Invalid or malformed dates are reported instead of being rolled forward.',
+    footerNote: '© 2026 Devin · free tool · estimates only',
+    footerTools: 'Tools',
+    footerGames: 'Board games',
+    footerHome: 'Home',
+    footerPrivacy: 'A pure front-end page. No data is collected or uploaded; everything runs in your browser.',
+    noscript: 'This date calculator needs JavaScript. All calculations run on your device; nothing is uploaded.',
+    wd0: 'Monday',
+    wd1: 'Tuesday',
+    wd2: 'Wednesday',
+    wd3: 'Thursday',
+    wd4: 'Friday',
+    wd5: 'Saturday',
+    wd6: 'Sunday'
+  },
+  id: {
+    docTitle: 'Kalkulator tanggal — selisih, tambah kurang, dan usia',
+    docDesc: 'Kalkulator tanggal gratis: hitung total hari, minggu, bulan kalender, dan hari kerja antara dua tanggal; tambah atau kurang hari, minggu, bulan, tahun dengan pembulatan akhir bulan; hitung usia dan hitung mundur ulang tahun berikutnya. Validasi ketat tahun kabisat, semua dihitung lokal.',
+    appTitle: 'Kalkulator tanggal',
+    tagline: 'Ukur jarak antara dua tanggal, tambah atau kurangi waktu, atau hitung usia dan ulang tahun berikutnya. Tahun kabisat, akhir bulan, dan nama hari ditangani.',
+    privacy: 'Semua perhitungan berjalan di browser Anda. Tidak ada data yang dikumpulkan atau diunggah.',
+    skipLink: 'Lompat ke kalkulator',
+    eyebrow: 'Alat gratis · tanggal dan waktu',
+    navTools: 'Ruang alat',
+    navGames: 'Permainan papan',
+    langLabel: 'Bahasa',
+    brandAria: 'Devin, kembali ke halaman utama',
+    siteNavAria: 'Navigasi situs',
+    estimateNote: 'Tanggal memakai kalender Gregorian. Hari kerja hanya Senin sampai Jumat, tanpa hari libur atau cuti bersama; semua dihitung lokal.',
+    tabsAria: 'Mode',
+    modeInterval: 'Selisih tanggal',
+    modeAdd: 'Tambah atau kurang',
+    modeAge: 'Usia',
+    intervalKicker: 'Mode satu',
+    intervalTitle: 'Antara dua tanggal',
+    intervalHint: 'Pilih tanggal mulai dan selesai; hasil diperbarui saat Anda mengisi.',
+    startLabel: 'Tanggal mulai',
+    endLabel: 'Tanggal selesai',
+    todayBtn: 'Hari ini',
+    todayAria: 'Atur ke hari ini',
+    inclusiveLabel: 'Hitung kedua ujung',
+    inclusiveHint: 'Menghitung kedua ujung menambahkan tanggal selesai ke rentang, sehingga total hari dan hari kerja yang sesuai bertambah satu.',
+    swapBtn: 'Tukar tanggal',
+    errStart: 'Pilih tanggal mulai yang valid.',
+    errEnd: 'Pilih tanggal selesai yang valid.',
+    errOrder: 'Tanggal selesai lebih awal dari tanggal mulai. Tukar dulu untuk menghitung.',
+    resultTitle: 'Hasil',
+    totalDays: 'Total hari',
+    daysUnit: 'hari',
+    weeksDays: 'Minggu + hari',
+    calendarMD: 'Bulan kalender + hari',
+    calendarYMD: 'Tahun + bulan + hari',
+    businessDays: 'Hari kerja',
+    weekendDays: 'Akhir pekan',
+    businessNote: 'Hari kerja hanya menghitung Senin sampai Jumat. Tidak ada hari libur atau cuti bersama yang diperiksa.',
+    weeksValue: '{w} mgg {d} hr',
+    calendarMDValue: '{m} bln {d} hr',
+    calendarYMDValue: '{y} thn {m} bln {d} hr',
+    daysValue: '{n} hari',
+    addKicker: 'Mode dua',
+    addTitle: 'Tambah atau kurangi tanggal',
+    addHint: 'Maju atau mundur dari tanggal dasar. Nilai negatif berarti mundur.',
+    baseLabel: 'Tanggal dasar',
+    amountLabel: 'Jumlah',
+    amountPh: 'mis. 1',
+    unitLabel: 'Satuan',
+    unitDay: 'Hari',
+    unitWeek: 'Minggu',
+    unitMonth: 'Bulan',
+    unitYear: 'Tahun',
+    errBase: 'Pilih tanggal dasar yang valid.',
+    errDelta: 'Masukkan bilangan bulat (nilai negatif diperbolehkan).',
+    errRange: 'Hasil di luar rentang yang didukung (tahun 1–9999).',
+    monthClampNote: 'Pembulatan akhir bulan: 2024-01-31 ditambah satu bulan menjadi 2024-02-29; 2023-01-31 ditambah satu bulan menjadi 2023-02-28.',
+    resultDate: 'Tanggal hasil',
+    resultWeekday: 'Hari',
+    movedDays: 'Selisih',
+    addKickerNote: 'Nilai negatif dihitung mundur dari tanggal dasar.',
+    ageKicker: 'Mode tiga',
+    ageTitle: 'Usia dan ulang tahun berikutnya',
+    ageHint: 'Usia dihitung dalam tahun penuh. Anda bisa memakai tanggal acuan; bawaan adalah hari ini.',
+    birthLabel: 'Tanggal lahir',
+    refLabel: 'Tanggal acuan',
+    errBirth: 'Pilih tanggal lahir yang valid.',
+    errRef: 'Pilih tanggal acuan yang valid.',
+    errBirthFuture: 'Tanggal lahir tidak boleh setelah tanggal acuan.',
+    ageYears: 'tahun',
+    ageMonths: 'Bulan',
+    ageDays: 'Hari',
+    nextBirthday: 'Ulang tahun berikutnya',
+    ageAsOf: 'Dihitung per {date}',
+    birthdayToday: 'Hari ini! Selamat ulang tahun!',
+    birthdayTomorrow: 'Besok! Selamat ulang tahun lebih awal!',
+    countdownDays: 'Tersisa {n} hari',
+    ageNote: 'Usia dihitung dalam tahun penuh. Ulang tahun 29 Februari diperlakukan sebagai 28 Februari pada tahun bukan kabisat.',
+    copyResult: 'Salin hasil',
+    copied: 'Hasil disalin.',
+    copyFail: 'Tidak dapat menyalin otomatis. Pilih teks hasil secara manual.',
+    formulasTitle: 'Rumus dan asumsi — buka untuk memeriksa',
+    fOrdinalTitle: 'Selisih hari dengan ordinal',
+    fOrdinalBody: 'Setiap tanggal diubah menjadi ordinal Gregorian (1970-01-01 = 0) lalu dikurangkan sebagai bilangan bulat. Tidak ada objek Date, sehingga zona waktu dan DST tidak dapat menggeser hasil.',
+    fCalTitle: 'Bulan kalender dan hari',
+    fCalBody: 'Maju bulan demi bulan dari tanggal mulai dan ambil jumlah bulan terbesar yang tidak melewati tanggal selesai; sisanya dihitung dalam hari. Akhir bulan dibulatkan ke hari terakhir bulan tujuan.',
+    fBizTitle: 'Hari kerja',
+    fBizBody: 'Menghitung Senin sampai Jumat pada [mulai, selesai). Jika kedua ujung dihitung, rentang menjadi [mulai, selesai + 1). Tidak ada hari libur yang dikurangi.',
+    fClampTitle: 'Pembulatan akhir bulan',
+    fClampBody: 'Saat menambah bulan atau tahun, tanggal yang tidak ada di bulan tujuan menjadi hari terakhir bulan itu: 31 Januari ditambah satu bulan menjadi 29 Februari pada tahun kabisat dan 28 Februari pada tahun biasa.',
+    a1: 'Semua tanggal memakai kalender Gregorian, dengan tahun 1 sampai 9999.',
+    a2: 'Selisih tidak menyertakan tanggal selesai secara bawaan. Dengan kedua ujung dihitung, total hari dan jumlah hari kerja bertambah satu.',
+    a3: 'Hari kerja hanyalah hitungan Senin sampai Jumat. Ini tidak mewakili jadwal libur resmi negara mana pun.',
+    a4: 'Tanggal ditampilkan sesuai locale bahasa, tetapi perhitungan selalu memakai ordinal bilangan bulat {y, m, d}.',
+    faqTitle: 'Pertanyaan umum',
+    faqQ1: 'Mengapa total hari dan bulan kalender terlihat berbeda?',
+    faqA1: 'Total hari adalah jumlah hari sebenarnya antara dua tanggal. Bulan dan hari kalender melangkah bulan demi bulan serta membulatkan akhir bulan. Contohnya 31 Januari sampai 1 Maret pada tahun kabisat adalah 30 hari, atau 1 bulan 1 hari secara kalender. Keduanya menggambarkan rentang yang sama dengan satuan berbeda.',
+    faqQ2: 'Apakah hari kerja mencakup hari libur nasional?',
+    faqA2: 'Tidak. Hari kerja di sini hanya menghitung Senin sampai Jumat, sedangkan Sabtu dan Minggu dianggap akhir pekan. Tidak ada kalender libur atau cuti bersama yang diperiksa. Untuk hitungan yang sadar libur, gunakan kalender resmi wilayah Anda.',
+    faqQ3: 'Mengapa 2024-02-30 ditolak?',
+    faqA3: 'Kalkulator memeriksa tanggal Gregorian secara ketat: bulan harus 1 sampai 12 dan hari harus ada di bulan tersebut. 2024 adalah tahun kabisat, jadi Februari punya 29 hari dan 2024-02-30 tidak ada. Tanggal tidak valid atau salah format dilaporkan, bukan digeser otomatis.',
+    footerNote: '© 2026 Devin · alat gratis · hanya perkiraan',
+    footerTools: 'Ruang alat',
+    footerGames: 'Permainan papan',
+    footerHome: 'Beranda',
+    footerPrivacy: 'Halaman front-end murni. Tidak ada data yang dikumpulkan atau diunggah; semua berjalan di browser Anda.',
+    noscript: 'Kalkulator tanggal ini membutuhkan JavaScript. Semua perhitungan berjalan di perangkat Anda; tidak ada data yang diunggah.',
+    wd0: 'Senin',
+    wd1: 'Selasa',
+    wd2: 'Rabu',
+    wd3: 'Kamis',
+    wd4: 'Jumat',
+    wd5: 'Sabtu',
+    wd6: 'Minggu'
+  }
+};
+</script>
+
+<script>
+(function () {
+  'use strict';
+
+  var SLUG = 'date-calculator';
+  var LANG_KEY = 'hhfa.tool.' + SLUG + '.lang';
+  var LANGS = ['zh', 'en', 'id'];
+  var state = { lang: 'zh', mode: 'interval', intervalText: '', addText: '', ageText: '' };
+
+  function $(id) { return document.getElementById(id); }
+  function t(key) {
+    var dict = TOOL_I18N[state.lang] || TOOL_I18N.zh;
+    var v = dict[key];
+    if (v == null) { v = TOOL_I18N.zh[key]; }
+    return v == null ? key : v;
+  }
+  function tf(key, vars) {
+    var s = t(key);
+    for (var k in vars) {
+      if (Object.prototype.hasOwnProperty.call(vars, k)) {
+        s = s.split('{' + k + '}').join(String(vars[k]));
+      }
+    }
+    return s;
+  }
+  function locale() { return state.lang === 'zh' ? 'zh-CN' : state.lang === 'id' ? 'id-ID' : 'en-US'; }
+  function fmtNum(n) {
+    try { return new Intl.NumberFormat(locale()).format(n); }
+    catch (e) { return String(n); }
+  }
+  function pad(n) { return n < 10 ? '0' + n : String(n); }
+  function iso(date) { return date.y + '-' + pad(date.m) + '-' + pad(date.d); }
+  function todayDate() {
+    var d = new Date();
+    return { y: d.getFullYear(), m: d.getMonth() + 1, d: d.getDate() };
+  }
+  function fmtDate(date) {
+    if (!date) { return '—'; }
+    try {
+      var d = new Date(Date.UTC(date.y, date.m - 1, date.d));
+      return new Intl.DateTimeFormat(locale(), {
+        timeZone: 'UTC', year: 'numeric', month: 'long', day: 'numeric'
+      }).format(d);
+    } catch (e) { return iso(date); }
+  }
+  function wdName(date) {
+    if (!date) { return '—'; }
+    return t('wd' + ToolEngine.weekdayIndex(date));
+  }
+  function detectLang() {
+    var q = null;
+    try { q = new URLSearchParams(location.search).get('lang'); } catch (e) {}
+    if (q && LANGS.indexOf(q) !== -1) { return q; }
+    try {
+      var saved = localStorage.getItem(LANG_KEY);
+      if (saved && LANGS.indexOf(saved) !== -1) { return saved; }
+    } catch (e) {}
+    var nav = String((navigator.language || 'en')).toLowerCase();
+    if (nav.indexOf('zh') === 0) { return 'zh'; }
+    if (nav.indexOf('id') === 0) { return 'id'; }
+    return 'en';
+  }
+  function saveLang() {
+    try { localStorage.setItem(LANG_KEY, state.lang); } catch (e) {}
+  }
+  var toastTimer = null;
+  function toast(msg) {
+    var el = $('toast');
+    el.textContent = msg;
+    el.classList.add('on');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove('on'); }, 2600);
+  }
+  function setMeta(sel, attr, value) {
+    var node = document.querySelector(sel);
+    if (node) { node.setAttribute(attr, value); }
+  }
+
+  function applyLang() {
+    document.documentElement.lang = state.lang === 'zh' ? 'zh-CN' : state.lang;
+    var nodes = document.querySelectorAll('[data-i]');
+    for (var i = 0; i < nodes.length; i++) {
+      var k = nodes[i].getAttribute('data-i');
+      if (TOOL_I18N[state.lang][k] != null) { nodes[i].textContent = TOOL_I18N[state.lang][k]; }
+    }
+    var phs = document.querySelectorAll('[data-i-ph]');
+    for (var j = 0; j < phs.length; j++) {
+      var pk = phs[j].getAttribute('data-i-ph');
+      if (TOOL_I18N[state.lang][pk] != null) { phs[j].setAttribute('placeholder', TOOL_I18N[state.lang][pk]); }
+    }
+    var arias = document.querySelectorAll('[data-i-aria]');
+    for (var a = 0; a < arias.length; a++) {
+      var ak = arias[a].getAttribute('data-i-aria');
+      if (TOOL_I18N[state.lang][ak] != null) { arias[a].setAttribute('aria-label', TOOL_I18N[state.lang][ak]); }
+    }
+    document.title = t('docTitle');
+    setMeta('meta[name="description"]', 'content', t('docDesc'));
+    setMeta('meta[property="og:title"]', 'content', t('docTitle'));
+    setMeta('meta[property="og:description"]', 'content', t('docDesc'));
+    setMeta('meta[name="twitter:title"]', 'content', t('appTitle'));
+    setMeta('meta[name="twitter:description"]', 'content', t('docDesc'));
+    var toolsHref = state.lang === 'zh' ? '/tools/' : '/tools/' + state.lang + '/';
+    var navTools = $('nav-tools');
+    var footTools = $('foot-tools');
+    if (navTools) { navTools.setAttribute('href', toolsHref); }
+    if (footTools) { footTools.setAttribute('href', toolsHref); }
+    var langBtns = document.querySelectorAll('.langs button');
+    for (var b = 0; b < langBtns.length; b++) {
+      langBtns[b].setAttribute('aria-pressed', langBtns[b].getAttribute('data-lang') === state.lang ? 'true' : 'false');
+    }
+    if ($('start')) { computeAll(); }
+  }
+
+  function clearErr(id) { var el = $(id); if (el) { el.textContent = ''; } }
+  function setErr(id, key) { var el = $(id); if (el) { el.textContent = key ? t(key) : ''; } }
+  function mark(id, bad) {
+    var el = $(id);
+    if (!el) { return; }
+    if (bad) { el.setAttribute('aria-invalid', 'true'); } else { el.removeAttribute('aria-invalid'); }
+  }
+
+  function readDate(id) {
+    var value = $(id).value;
+    if (!value) { return null; }
+    return ToolEngine.parseDate(value);
+  }
+
+  function computeIntervalText(start, end, total, cal, biz, weekend, inclusive) {
+    var lines = [
+      t('intervalTitle'),
+      fmtDate(start) + ' → ' + fmtDate(end) + (inclusive ? ' (' + t('inclusiveLabel') + ')' : ''),
+      t('totalDays') + ': ' + fmtNum(total),
+      t('weeksDays') + ': ' + tf('weeksValue', { w: Math.floor(total / 7), d: total % 7 }),
+      t('calendarMD') + ': ' + tf('calendarMDValue', { m: cal.months, d: cal.days }),
+      t('calendarYMD') + ': ' + tf('calendarYMDValue', { y: cal.years, m: cal.months, d: cal.days }),
+      t('businessDays') + ': ' + tf('daysValue', { n: biz }),
+      t('weekendDays') + ': ' + tf('daysValue', { n: weekend }),
+      t('businessNote')
+    ];
+    return lines.join('\n');
+  }
+
+  function computeInterval() {
+    clearErr('err-start'); clearErr('err-end'); mark('start', false); mark('end', false);
+    var alertEl = $('order-alert');
+    alertEl.hidden = true;
+    var start = readDate('start');
+    var end = readDate('end');
+    if (!start) {
+      setErr('err-start', 'errStart'); mark('start', true);
+      clearIntervalResults();
+      return;
+    }
+    if (!end) {
+      setErr('err-end', 'errEnd'); mark('end', true);
+      clearIntervalResults();
+      return;
+    }
+    var startOrd = ToolEngine.toOrdinal(start);
+    var endOrd = ToolEngine.toOrdinal(end);
+    if (endOrd < startOrd) {
+      alertEl.hidden = false;
+      clearIntervalResults();
+      return;
+    }
+    var inclusive = $('inclusive').checked;
+    var effectiveEnd;
+    try {
+      effectiveEnd = inclusive ? ToolEngine.addDays(end, 1) : end;
+    } catch (e) {
+      setErr('err-end', 'errRange');
+      mark('end', true);
+      clearIntervalResults();
+      return;
+    }
+    var total = ToolEngine.diffDays(start, effectiveEnd);
+    var cal = ToolEngine.calendarDiff(start, effectiveEnd);
+    var biz = ToolEngine.businessDays(start, effectiveEnd, false);
+    var weekend = total - biz;
+    $('res-total-days').textContent = fmtNum(total);
+    $('res-weeks').textContent = tf('weeksValue', { w: Math.floor(total / 7), d: total % 7 });
+    $('res-cal-md').textContent = tf('calendarMDValue', { m: cal.months, d: cal.days });
+    $('res-cal-ymd').textContent = tf('calendarYMDValue', { y: cal.years, m: cal.months, d: cal.days });
+    $('res-business').textContent = tf('daysValue', { n: biz });
+    $('res-weekend').textContent = tf('daysValue', { n: weekend });
+    state.intervalText = computeIntervalText(start, end, total, cal, biz, weekend, inclusive);
+  }
+
+  function clearIntervalResults() {
+    state.intervalText = '';
+    $('res-total-days').textContent = '0';
+    $('res-weeks').textContent = '—';
+    $('res-cal-md').textContent = '—';
+    $('res-cal-ymd').textContent = '—';
+    $('res-business').textContent = '—';
+    $('res-weekend').textContent = '—';
+  }
+
+  function computeAdd() {
+    clearErr('err-base'); clearErr('err-delta'); clearErr('err-add-range');
+    mark('base', false); mark('delta', false);
+    var base = readDate('base');
+    if (!base) {
+      setErr('err-base', 'errBase'); mark('base', true);
+      clearAddResults();
+      return;
+    }
+    var raw = $('delta').value.trim();
+    var n = raw === '' ? NaN : Number(raw);
+    if (!isFinite(n) || Math.floor(n) !== n) {
+      setErr('err-delta', 'errDelta'); mark('delta', true);
+      clearAddResults();
+      return;
+    }
+    var unit = $('unit').value;
+    var result;
+    try {
+      if (unit === 'day') { result = ToolEngine.addDays(base, n); }
+      else if (unit === 'week') { result = ToolEngine.addDays(base, n * 7); }
+      else if (unit === 'month') { result = ToolEngine.addMonths(base, n); }
+      else { result = ToolEngine.addYears(base, n); }
+    } catch (e) {
+      setErr('err-add-range', 'errRange');
+      clearAddResults();
+      return;
+    }
+    var moved = ToolEngine.diffDays(base, result);
+    $('add-result-date').textContent = fmtDate(result);
+    $('add-weekday').textContent = wdName(result);
+    $('add-moved').textContent = tf('daysValue', { n: fmtNum(moved) });
+    state.addText = [
+      t('addTitle'),
+      fmtDate(base) + ' ' + (n >= 0 ? '+' : '−') + fmtNum(Math.abs(n)) + ' ' + t(unit === 'day' ? 'unitDay' : unit === 'week' ? 'unitWeek' : unit === 'month' ? 'unitMonth' : 'unitYear'),
+      t('resultDate') + ': ' + fmtDate(result),
+      t('resultWeekday') + ': ' + wdName(result),
+      t('movedDays') + ': ' + tf('daysValue', { n: fmtNum(moved) })
+    ].join('\n');
+  }
+
+  function clearAddResults() {
+    state.addText = '';
+    $('add-result-date').textContent = '—';
+    $('add-weekday').textContent = '—';
+    $('add-moved').textContent = '—';
+  }
+
+  function computeAge() {
+    clearErr('err-birth'); clearErr('err-ref'); clearErr('err-age');
+    mark('birth', false); mark('ref', false);
+    var birth = readDate('birth');
+    var ref = readDate('ref');
+    if (!birth) {
+      setErr('err-birth', 'errBirth'); mark('birth', true);
+      clearAgeResults();
+      return;
+    }
+    if (!ref) {
+      setErr('err-ref', 'errRef'); mark('ref', true);
+      clearAgeResults();
+      return;
+    }
+    var age;
+    try {
+      age = ToolEngine.ageOn(birth, ref);
+    } catch (e) {
+      if (e && e.message === 'order') {
+        setErr('err-age', 'errBirthFuture'); mark('birth', true);
+      } else {
+        setErr('err-age', 'errRange');
+      }
+      clearAgeResults();
+      return;
+    }
+    $('age-years').textContent = fmtNum(age.years);
+    $('age-months').textContent = fmtNum(age.months);
+    $('age-days').textContent = fmtNum(age.days);
+    $('age-as-of').textContent = tf('ageAsOf', { date: fmtDate(ref) });
+    $('next-birthday').textContent = fmtDate(age.nextBirthday);
+    var countdown = $('countdown');
+    countdown.hidden = false;
+    countdown.classList.remove('soon');
+    if (age.isBirthdayToday) {
+      countdown.textContent = t('birthdayToday');
+    } else if (age.isBirthdayTomorrow) {
+      countdown.textContent = t('birthdayTomorrow');
+      countdown.classList.add('soon');
+    } else {
+      countdown.textContent = tf('countdownDays', { n: fmtNum(age.daysToNextBirthday) });
+    }
+    state.ageText = [
+      t('ageTitle'),
+      fmtDate(birth) + ' → ' + fmtDate(ref),
+      fmtNum(age.years) + ' ' + t('ageYears'),
+      t('ageMonths') + ': ' + fmtNum(age.months),
+      t('ageDays') + ': ' + fmtNum(age.days),
+      t('nextBirthday') + ': ' + fmtDate(age.nextBirthday),
+      countdown.textContent
+    ].join('\n');
+  }
+
+  function clearAgeResults() {
+    state.ageText = '';
+    $('age-years').textContent = '0';
+    $('age-months').textContent = '—';
+    $('age-days').textContent = '—';
+    $('age-as-of').textContent = '—';
+    $('next-birthday').textContent = '—';
+    $('countdown').hidden = true;
+  }
+
+  function computeAll() {
+    computeInterval();
+    computeAdd();
+    computeAge();
+  }
+
+  function currentText() {
+    if (state.mode === 'interval') { return state.intervalText; }
+    if (state.mode === 'add') { return state.addText; }
+    return state.ageText;
+  }
+
+  function copyText(text) {
+    if (!text) { return; }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () {
+        toast(t('copied'));
+      }).catch(function () { fallbackCopy(text); });
+    } else {
+      fallbackCopy(text);
+    }
+  }
+  function fallbackCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.top = '-1000px';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    document.body.removeChild(ta);
+    toast(t(ok ? 'copied' : 'copyFail'));
+  }
+
+  function showMode(mode) {
+    state.mode = mode;
+    var modes = ['interval', 'add', 'age'];
+    for (var i = 0; i < modes.length; i++) {
+      $('panel-' + modes[i]).hidden = modes[i] !== mode;
+    }
+    var tabs = document.querySelectorAll('.tabs button');
+    for (var j = 0; j < tabs.length; j++) {
+      tabs[j].setAttribute('aria-pressed', tabs[j].getAttribute('data-mode') === mode ? 'true' : 'false');
+    }
+  }
+
+  function setToday(target) {
+    $(target).value = iso(todayDate());
+  }
+
+  function swapDates() {
+    var start = $('start').value;
+    $('start').value = $('end').value;
+    $('end').value = start;
+    computeInterval();
+  }
+
+  function bind() {
+    var langBtns = document.querySelectorAll('.langs button');
+    for (var i = 0; i < langBtns.length; i++) {
+      langBtns[i].addEventListener('click', function () {
+        state.lang = this.getAttribute('data-lang');
+        saveLang();
+        applyLang();
+      });
+    }
+    var tabs = document.querySelectorAll('.tabs button');
+    for (var j = 0; j < tabs.length; j++) {
+      tabs[j].addEventListener('click', function () { showMode(this.getAttribute('data-mode')); });
+    }
+    var todayBtns = document.querySelectorAll('.today-btn');
+    for (var k = 0; k < todayBtns.length; k++) {
+      todayBtns[k].addEventListener('click', function () {
+        setToday(this.getAttribute('data-target'));
+        computeAll();
+      });
+    }
+    $('start').addEventListener('input', computeInterval);
+    $('start').addEventListener('change', computeInterval);
+    $('end').addEventListener('input', computeInterval);
+    $('end').addEventListener('change', computeInterval);
+    $('inclusive').addEventListener('change', computeInterval);
+    $('swap').addEventListener('click', swapDates);
+    $('base').addEventListener('input', computeAdd);
+    $('base').addEventListener('change', computeAdd);
+    $('delta').addEventListener('input', computeAdd);
+    $('unit').addEventListener('change', computeAdd);
+    $('birth').addEventListener('input', computeAge);
+    $('birth').addEventListener('change', computeAge);
+    $('ref').addEventListener('input', computeAge);
+    $('ref').addEventListener('change', computeAge);
+    var copyBtns = document.querySelectorAll('[data-copy]');
+    for (var c = 0; c < copyBtns.length; c++) {
+      copyBtns[c].addEventListener('click', function () { copyText(currentText()); });
+    }
+  }
+
+  function fillDefaults() {
+    var today = iso(todayDate());
+    $('start').value = today;
+    $('end').value = today;
+    $('base').value = today;
+    $('ref').value = today;
+    if (!$('birth').value) {
+      try { $('birth').value = iso(ToolEngine.addYears(todayDate(), -30)); }
+      catch (e) { $('birth').value = ''; }
+    }
+  }
+
+  function init() {
+    state.lang = detectLang();
+    fillDefaults();
+    bind();
+    showMode('interval');
+    applyLang();
+    computeAll();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>

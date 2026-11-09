@@ -1,0 +1,1509 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>纸张尺寸转换器（A/B/C 与像素）</title>
+<meta name="description" content="查看 A、B、C 系列和 Letter、Legal 的毫米尺寸，按 DPI 换算像素并比较缩放比例。全部在本地计算，无需注册。">
+<meta name="author" content="Devin">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="theme-color" content="#f2efe7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#101316" media="(prefers-color-scheme: dark)">
+<link rel="canonical" href="https://hhfa008.github.io/tools/paper-size-converter/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23b93d12'/%3E%3Cpath d='M9 23 23 9' stroke='%23fbf9f4' stroke-width='2.4' stroke-linecap='round'/%3E%3Ccircle cx='11' cy='11' r='3' fill='%23fbf9f4'/%3E%3Ccircle cx='21' cy='21' r='3' fill='%23fbf9f4'/%3E%3C/svg%3E">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Devin">
+<meta property="og:title" content="纸张尺寸转换器（A/B/C 与像素）">
+<meta property="og:description" content="查看 A、B、C 系列和 Letter、Legal 的毫米尺寸，按 DPI 换算像素并比较缩放比例。全部在本地计算，无需注册。">
+<meta property="og:url" content="https://hhfa008.github.io/tools/paper-size-converter/">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:locale:alternate" content="en_US">
+<meta property="og:locale:alternate" content="id_ID">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="纸张尺寸转换器（A/B/C 与像素）">
+<meta name="twitter:description" content="查看 A、B、C 系列和 Letter、Legal 的毫米尺寸，按 DPI 换算像素并比较缩放比例。全部在本地计算，无需注册。">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "纸张尺寸转换器",
+  "url": "https://hhfa008.github.io/tools/paper-size-converter/",
+  "applicationCategory": "UtilitiesApplication",
+  "operatingSystem": "Any",
+  "browserRequirements": "Requires JavaScript",
+  "isAccessibleForFree": true,
+  "inLanguage": ["zh-CN", "en", "id"],
+  "description": "查看 A、B、C 系列和 Letter、Legal 的毫米尺寸，按 DPI 换算像素并比较缩放比例。全部在本地计算，无需注册。",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+  {
+    "@type": "Question",
+    "name": "A4 的尺寸是多少？",
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "A4 是 210 × 297 毫米，约 8.27 × 11.69 英寸。按 300 DPI 输出约为 2480 × 3508 像素。"
+    }
+  },
+  {
+    "@type": "Question",
+    "name": "A0 和 A4 的面积关系？",
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "每降一个编号面积减半，所以 A0 是 A4 的 16 倍。A 系列的长宽比始终约为 1:√2。"
+    }
+  },
+  {
+    "@type": "Question",
+    "name": "Letter 和 A4 能互相替代吗？",
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "尺寸接近但不相同，Letter 更宽更短。按 A4 排版的内容打印到 Letter 可能被缩放或裁边，正式文件请按目标纸张设置。"
+    }
+  }
+]
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "首页", "item": "https://hhfa008.github.io/" },
+    { "@type": "ListItem", "position": 2, "name": "工具大厅", "item": "https://hhfa008.github.io/tools/" },
+    { "@type": "ListItem", "position": 3, "name": "纸张尺寸转换器", "item": "https://hhfa008.github.io/tools/paper-size-converter/" }
+  ]
+}
+</script>
+
+<style>
+/* ==========================================================================
+   Design tokens — keep in sync with the existing tools pages.
+   ========================================================================== */
+:root{
+  --paper:#f2efe7; --paper-2:#fbf9f4; --panel:#ffffff;
+  --ink:#14171a; --muted:#5b615c; --muted-2:#7b807a;
+  --line:#d5d0c4; --line-strong:#bcb5a7;
+  --accent:#b93d12; --accent-soft:#f2a07a; --accent-wash:#f7e5da;
+  --ok:#2f6b3c; --ok-wash:#e8f2e7; --warn:#8a5a00; --warn-wash:#fbf1db;
+  --bad:#a32216; --bad-wash:#fbe7e3;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --radius:16px; --max:1040px;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --paper:#101316; --paper-2:#171b1f; --panel:#1a1f23;
+    --ink:#f2efe7; --muted:#b7b3a8; --muted-2:#948f85;
+    --line:#333a40; --line-strong:#4a535b;
+    --accent:#f08a5d; --accent-soft:#f2a07a; --accent-wash:#2b211c;
+    --ok:#8fd19e; --ok-wash:#1b2b1e; --warn:#f0c36a; --warn-wash:#2d2618;
+    --bad:#ff8a7a; --bad-wash:#321d1a;
+  }
+}
+
+/* Reset */
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%;color-scheme:light dark;scroll-behavior:smooth;overflow-x:clip}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font:16px/1.6 var(--sans);overflow-x:clip;
+  text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+p,h1,h2,h3,ul,ol,figure{margin:0}
+a{color:inherit}
+button,input,select,textarea{font:inherit;color:inherit}
+code,pre{font-family:var(--mono)}
+
+/* Layout */
+.wrap{width:100%;max-width:var(--max);margin:0 auto;padding-left:18px;padding-right:18px;min-width:0}
+@media (min-width:720px){.wrap{padding-left:32px;padding-right:32px}}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.skip-link{position:absolute;left:12px;top:-80px;z-index:100;padding:12px 16px;background:var(--ink);color:var(--paper);border-radius:8px;text-decoration:none}
+.skip-link:focus{top:12px}
+:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+
+/* Header */
+.site-header{border-bottom:1px solid var(--line);background:var(--paper)}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:10px 16px;min-height:64px;flex-wrap:wrap;padding-top:6px;padding-bottom:6px}
+.brand{display:inline-flex;align-items:center;gap:10px;font-weight:700;letter-spacing:-.02em;text-decoration:none;min-height:44px}
+.brand-mark{width:26px;height:26px;border-radius:7px;background:var(--accent);position:relative;flex:none}
+.brand-mark::before,.brand-mark::after{content:"";position:absolute;left:7px;height:2px;background:var(--paper-2);border-radius:1px}
+.brand-mark::before{right:7px;top:9px}
+.brand-mark::after{right:11px;top:15px}
+.header-tools{display:flex;align-items:center;gap:12px 16px;flex-wrap:wrap;justify-content:flex-end;min-width:0}
+.site-nav{display:flex;align-items:center;gap:14px;font-size:13.5px;flex-wrap:wrap}
+.site-nav a{display:inline-flex;align-items:center;min-height:44px;text-decoration:none;color:var(--muted)}
+.site-nav a:hover{color:var(--accent);text-decoration:underline}
+.lang-switch{display:flex;gap:4px}
+.lang-switch button{
+  min-width:44px;min-height:44px;padding:0 8px;border:1px solid var(--line-strong);
+  border-radius:9px;background:transparent;color:var(--muted);font-size:12.5px;
+  font-weight:650;cursor:pointer;line-height:1
+}
+.lang-switch button:hover{border-color:var(--accent);color:var(--accent)}
+.lang-switch button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+@media (prefers-color-scheme:dark){
+  .lang-switch button[aria-pressed="true"],
+  .btn.primary,.btn.danger{color:#101316}
+}
+
+/* Hero */
+.hero{padding:36px 0 22px}
+@media (min-width:720px){.hero{padding:52px 0 28px}}
+.eyebrow{margin:0 0 10px;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+h1{margin:0 0 12px;max-width:22ch;font-size:clamp(1.85rem,6vw,2.9rem);line-height:1.1;letter-spacing:-.035em;font-weight:700;overflow-wrap:anywhere}
+.lede{max-width:70ch;color:var(--muted);font-size:clamp(1rem,2vw,1.08rem);overflow-wrap:anywhere}
+.privacy{
+  display:flex;gap:9px;align-items:flex-start;max-width:78ch;margin:16px 0 0;padding:11px 14px;
+  background:var(--accent-wash);border:1px solid var(--line);border-left:4px solid var(--accent);
+  border-radius:0 10px 10px 0;font-size:13.5px
+}
+.privacy svg{width:17px;height:17px;flex:none;margin-top:3px}
+
+/* Cards and tool layout */
+.tool-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;align-items:start}
+.tool-layout>*{min-width:0}
+@media (min-width:900px){
+  .tool-layout{grid-template-columns:minmax(0,1.04fr) minmax(0,.96fr)}
+  .result-col{position:sticky;top:18px}
+}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;min-width:0}
+@media (min-width:720px){.card{padding:26px 28px}}
+.card-kicker{margin:0 0 7px;font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.11em;text-transform:uppercase;color:var(--accent)}
+.card h2{margin:0 0 14px;font-size:clamp(1.15rem,2.4vw,1.4rem);line-height:1.2;letter-spacing:-.02em;overflow-wrap:anywhere}
+.panel-desc{margin:0 0 14px;color:var(--muted);font-size:14px;overflow-wrap:anywhere}
+
+/* Fields */
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field>label,.field>span.label{font-size:13px;font-weight:650;color:var(--muted)}
+.field input,.field select,.field textarea,.field .input{
+  width:100%;min-height:46px;padding:10px 12px;border:1px solid var(--line-strong);
+  border-radius:12px;background:var(--paper-2);font-size:16px;line-height:1.4;min-width:0
+}
+.field textarea{min-height:120px;resize:vertical;line-height:1.55}
+.field select{
+  appearance:none;padding-right:34px;
+  background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);
+  background-position:calc(100% - 18px) 50%,calc(100% - 13px) 50%;
+  background-size:5px 5px,5px 5px;background-repeat:no-repeat
+}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);outline:3px solid var(--accent-wash);outline-offset:1px}
+.field input[aria-invalid="true"],.field select[aria-invalid="true"],.field textarea[aria-invalid="true"]{border-color:var(--bad)}
+.field-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+@media (min-width:600px){.field-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Buttons */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  min-height:46px;padding:0 16px;border:1px solid var(--line-strong);border-radius:12px;
+  background:var(--panel);color:var(--ink);font-size:14.5px;font-weight:650;
+  cursor:pointer;text-decoration:none;text-align:center;line-height:1.25
+}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.06);color:#fff}
+.btn.dark{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.btn.ghost{background:transparent}
+.btn.danger{background:var(--bad);border-color:var(--bad);color:#fff}
+.btn.danger:hover{filter:brightness(1.06);color:#fff}
+.btn-row{display:flex;flex-wrap:wrap;gap:8px;min-width:0}
+.btn-row .btn{flex:1 1 140px}
+
+/* Chips / segmented controls */
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px;padding:0;list-style:none}
+.chips button,.chip{
+  display:inline-flex;align-items:center;justify-content:center;min-height:44px;
+  padding:8px 14px;border:1px solid var(--line-strong);border-radius:999px;
+  background:var(--paper-2);color:var(--ink);font-size:13.5px;font-weight:650;
+  cursor:pointer;line-height:1.2;text-decoration:none
+}
+.chips button:hover,.chip:hover{border-color:var(--accent);color:var(--accent)}
+.chips button[aria-pressed="true"],.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+@media (prefers-color-scheme:dark){
+  .chips button[aria-pressed="true"],.chip.on{color:#101316}
+}
+
+/* Tabs */
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
+.tabs [role="tab"]{
+  min-height:44px;padding:9px 14px;border:1px solid var(--line-strong);border-radius:999px;
+  background:var(--paper-2);color:var(--ink);font-size:13.5px;font-weight:650;
+  cursor:pointer;line-height:1.2
+}
+.tabs [role="tab"][aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+@media (prefers-color-scheme:dark){.tabs [role="tab"][aria-selected="true"]{color:#101316}}
+
+/* Result */
+.result{background:var(--paper-2)}
+.result-live{min-height:96px}
+.result-big{
+  margin:2px 0 0;font-family:var(--mono);font-size:clamp(2rem,7.5vw,3rem);
+  font-weight:650;line-height:1.08;letter-spacing:-.04em;color:var(--accent);
+  font-variant-numeric:tabular-nums;overflow-wrap:anywhere
+}
+.result-note{margin-top:7px;color:var(--muted);font-size:14px;overflow-wrap:anywhere}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px;margin-top:14px}
+.stat{min-width:0;padding:10px 11px;border:1px solid var(--line);border-radius:11px;background:var(--paper-2)}
+.stat span{display:block;font-size:11.5px;color:var(--muted);line-height:1.3}
+.stat b{display:block;margin-top:2px;font-family:var(--mono);font-size:1.12rem;font-weight:650;font-variant-numeric:tabular-nums;letter-spacing:-.02em;overflow-wrap:anywhere}
+
+/* Tables must scroll inside their own wrapper, never the page. */
+.table-wrap{width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.table-wrap table{width:100%;border-collapse:collapse;font-size:13.5px}
+.table-wrap caption{padding:10px 12px;text-align:left;color:var(--muted);font-size:12.5px}
+.table-wrap th,.table-wrap td{padding:9px 11px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap;font-variant-numeric:tabular-nums}
+.table-wrap th{font-weight:650;color:var(--muted);font-size:12.5px}
+.table-wrap tr:last-child td{border-bottom:0}
+
+/* Notes and status */
+.hint{margin:10px 0 0;color:var(--muted-2);font-size:12.5px;line-height:1.55;overflow-wrap:anywhere}
+.error{margin:10px 0 0;padding:9px 12px;border-radius:9px;background:var(--bad-wash);border:1px solid var(--bad);color:var(--bad);font-size:13px;font-weight:600;line-height:1.5;overflow-wrap:anywhere}
+.badge{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:2px 9px;border-radius:999px;background:var(--accent-wash);color:var(--accent);font-size:12px;font-weight:650;line-height:1.6;vertical-align:middle}
+.badge.ok{background:var(--ok-wash);color:var(--ok)}
+.badge.warn{background:var(--warn-wash);color:var(--warn)}
+.badge.bad{background:var(--bad-wash);color:var(--bad)}
+
+/* Checkbox rows: browser-check measures the input box itself, so keep it 44x44. */
+.check{display:inline-flex;align-items:center;gap:8px;min-height:44px;font-size:14px;cursor:pointer}
+.check input[type="checkbox"],.check input[type="radio"]{width:44px;height:44px;flex:none;accent-color:var(--accent);cursor:pointer}
+.check-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin-top:10px}
+/* Safety net for builders: any main control must stay touchable. */
+main button{min-height:44px}
+main select{min-height:44px}
+main input[type="checkbox"],main input[type="radio"]{width:44px;height:44px;flex:none;accent-color:var(--accent)}
+
+/* Explain */
+.explain{margin-top:18px}
+.explain h2{margin:0 0 12px;font-size:clamp(1.3rem,3vw,1.7rem);letter-spacing:-.02em}
+.explain-body{padding-bottom:2px}
+.explain-body p{max-width:82ch;color:var(--muted);font-size:14px;margin-bottom:10px;overflow-wrap:anywhere}
+.explain-body p:last-child{margin-bottom:0}
+.explain-body strong{color:var(--ink)}
+.formula-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;margin:14px 0 18px}
+@media (min-width:760px){.formula-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.formula{min-width:0;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--paper-2)}
+.formula h3,.formula-title{margin:0 0 7px;font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.formula code{display:inline-block;max-width:100%;padding:2px 6px;border-radius:5px;background:var(--accent-wash);font-family:var(--mono);font-size:12.5px;line-height:1.6;overflow-wrap:anywhere}
+.assumptions{margin:0;padding-left:20px;color:var(--muted);font-size:13.5px}
+.assumptions li{margin:0 0 8px;overflow-wrap:anywhere}
+
+/* FAQ */
+.faq{margin-top:18px}
+.faq h2{margin:0 0 12px;font-size:clamp(1.3rem,3vw,1.7rem);letter-spacing:-.02em}
+.faq details{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:0 20px}
+.faq details+details{margin-top:10px}
+.faq summary{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:44px;padding:16px 0;cursor:pointer;font-weight:650;list-style:none}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";flex:none;font-family:var(--mono);font-size:19px;line-height:1;color:var(--accent)}
+.faq details[open] summary::after{content:"\2212"}
+.faq details p{margin:0;padding:0 0 18px;color:var(--muted);font-size:14px;max-width:80ch;overflow-wrap:anywhere}
+
+/* Footer */
+.site-footer{margin-top:28px;padding:22px 0 34px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted)}
+.footer-inner{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 18px}
+.footer-links{display:flex;flex-wrap:wrap;gap:4px 14px}
+.site-footer a{color:var(--accent);text-decoration:none;display:inline-flex;align-items:center;min-height:44px}
+.site-footer a:hover{text-decoration:underline}
+.footer-note{margin:8px 0 0;max-width:82ch;color:var(--muted-2);overflow-wrap:anywhere}
+.noscript{margin-top:18px}
+
+/* Toast */
+.toast{
+  position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));
+  transform:translate(-50%,12px);z-index:20;max-width:calc(100vw - 32px);
+  padding:12px 18px;border-radius:12px;background:var(--ink);color:var(--paper);
+  font-size:14px;font-weight:600;text-align:center;box-shadow:0 8px 24px rgb(0 0 0 / .22);
+  opacity:0;pointer-events:none;transition:opacity .16s,transform .16s;overflow-wrap:anywhere
+}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+
+/* Motion and print */
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .btn:active{transform:none}
+}
+@media print{
+  .site-header,.site-footer,.skip-link,.lang-switch,.tabs,.chips,.btn-row,.toast,.no-print{display:none!important}
+  body{background:#fff;color:#000;padding:0}
+  .card,.table-wrap{border-color:#999;background:#fff;break-inside:avoid}
+  .result-col{position:static}
+  .result-big{color:#000}
+  .explain,.faq{display:block}
+  details{break-inside:avoid}
+  .faq details p{display:block!important}
+}
+</style>
+</head>
+<body data-slug="paper-size-converter" data-category="life-home">
+<a class="skip-link" href="#tool" data-i="skip">跳到工具</a>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="/" aria-label="Devin" data-i-aria="brandHome">
+      <span class="brand-mark" aria-hidden="true"></span><span data-i="brandName">Devin</span>
+    </a>
+    <div class="header-tools">
+      <nav class="site-nav" aria-label="站点导航" data-i-aria="navAria">
+        <a id="nav-tools" href="/tools/" data-tools-link data-i="navHall">工具大厅</a>
+        <a href="/games/" data-i="navGames">在线桌游</a>
+      </nav>
+      <nav class="lang-switch" aria-label="语言" data-i-aria="langLabel">
+        <button type="button" data-lang="zh" aria-pressed="true" data-i="langZh">中文</button>
+        <button type="button" data-lang="en" aria-pressed="false" data-i="langEn">EN</button>
+        <button type="button" data-lang="id" aria-pressed="false" data-i="langId">ID</button>
+      </nav>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero" aria-labelledby="page-title">
+    <p class="eyebrow" data-i="eyebrow">免费工具 · 本地运行</p>
+    <h1 id="page-title" data-i="appTitle">纸张尺寸转换器</h1>
+    <p class="lede" data-i="tagline">A4 打印到 Letter，会不会被裁？</p>
+    <p class="privacy">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+      <span data-i="privacy">所有计算都在你的浏览器里完成，输入不会上传。</span>
+    </p>
+  </section>
+
+  <!-- ======================================================================
+       TOOL BODY — builder replaces this marker with the tool UI.
+       Everything between the marker and the explain section belongs to the tool.
+       Keep labels, data-i hooks, aria-live results and 44px targets.
+       ====================================================================== -->
+<div class="tool-layout">
+    <section class="card" aria-labelledby="tool-title">
+      <p class="card-kicker" data-i="psKicker">纸张尺寸</p>
+      <h2 id="tool-title" data-i="psTitle">A4、Letter 与像素换算</h2>
+      <p class="panel-desc" data-i="psDesc">查看 A/B/C 系列和 Letter、Legal 的毫米尺寸，按 DPI 换算像素，并比较两张纸的缩放比例。</p>
+      <div class="field">
+        <label for="ps-size" data-i="sizeLabel">纸张规格</label>
+        <select id="ps-size"></select>
+      </div>
+      <div class="field" style="margin-top:12px">
+        <label for="ps-dpi" data-i="dpiLabel">DPI（每英寸像素）</label>
+        <input id="ps-dpi" type="text" inputmode="numeric" autocomplete="off" value="300" placeholder="例如 300" data-i-ph="dpiPh">
+      </div>
+      <div class="chips" style="margin-top:10px">
+        <button type="button" class="chip" data-dpi="72" data-i="dpi72">72 DPI</button>
+        <button type="button" class="chip" data-dpi="150" data-i="dpi150">150 DPI</button>
+        <button type="button" class="chip" data-dpi="300" data-i="dpi300">300 DPI</button>
+        <button type="button" class="chip" data-dpi="600" data-i="dpi600">600 DPI</button>
+      </div>
+      <p class="error" id="ps-error" role="alert" hidden></p>
+      <p class="hint" data-i="inputHint">像素按 25.4 毫米 = 1 英寸换算，四舍五入到整数。</p>
+    </section>
+    <div class="result-col">
+      <section class="card result" aria-labelledby="ps-result-title">
+        <p class="card-kicker" data-i="result">结果</p>
+        <h2 id="ps-result-title" data-i="resultTitle">尺寸与像素</h2>
+        <div class="result-live" aria-live="polite">
+          <p class="result-big" id="ps-dimensions">—</p>
+          <p class="result-note" id="ps-note"></p>
+        </div>
+        <div class="stat-grid">
+          <div class="stat"><span data-i="statWidthPx">宽（像素）</span><b id="ps-stat-wpx">—</b></div>
+          <div class="stat"><span data-i="statHeightPx">高（像素）</span><b id="ps-stat-hpx">—</b></div>
+          <div class="stat"><span data-i="statWidthIn">宽（英寸）</span><b id="ps-stat-win">—</b></div>
+          <div class="stat"><span data-i="statHeightIn">高（英寸）</span><b id="ps-stat-hin">—</b></div>
+        </div>
+        <div class="btn-row" style="margin-top:14px">
+          <button class="btn primary" type="button" id="ps-copy" data-i="copy" disabled>复制结果</button>
+        </div>
+        <p class="hint" data-i="copyHintResult">复制当前规格、像素和缩放比较。</p>
+      </section>
+      <section class="card" style="margin-top:18px" aria-labelledby="ps-compare-title">
+        <p class="card-kicker" data-i="compareKicker">缩放比较</p>
+        <h2 id="ps-compare-title" data-i="compareTitle">内容从一种纸放到另一种纸</h2>
+        <div class="field">
+          <label for="ps-target" data-i="targetLabel">目标纸张</label>
+          <select id="ps-target"></select>
+        </div>
+        <div class="stat-grid">
+          <div class="stat"><span data-i="statFit">适配缩放</span><b id="ps-stat-fit">—</b></div>
+          <div class="stat"><span data-i="statWidthRatio">宽度比</span><b id="ps-stat-wratio">—</b></div>
+          <div class="stat"><span data-i="statHeightRatio">高度比</span><b id="ps-stat-hratio">—</b></div>
+          <div class="stat"><span data-i="statAreaRatio">面积比</span><b id="ps-stat-area">—</b></div>
+        </div>
+        <p class="result-note" id="ps-compare-note" style="margin-top:10px"></p>
+        <p class="hint" data-i="compareCrop">不缩放时宽高比不一致，直接打印可能被裁边或缩放。</p>
+      </section>
+      <section class="card" style="margin-top:18px" aria-labelledby="ps-table-title">
+        <p class="card-kicker" data-i="tableKicker">尺寸表</p>
+        <h2 id="ps-table-title" data-i="tableTitle">常用纸张尺寸与像素</h2>
+        <div class="table-wrap" style="margin-top:4px">
+          <table>
+            <thead><tr><th data-i="tableName">规格</th><th data-i="tableMm">毫米</th><th data-i="tableIn">英寸</th><th id="ps-table-px-head">像素</th></tr></thead>
+            <tbody id="ps-table-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <section class="explain" id="explain" aria-labelledby="explain-title">
+    <h2 id="explain-title" data-i="explainTitle">公式与假设</h2>
+    <div class="explain-body">
+      <!-- ==================================================================
+           TOOL EXPLAIN — formula, assumptions, rounding rules, limitations.
+           ================================================================== -->
+      <p class="panel-desc" data-i="explainIntro">像素尺寸按 25.4 毫米等于 1 英寸换算，再乘以 DPI 并四舍五入。缩放比较假设内容等比缩放、完整放入目标纸张，不考虑打印机边距。</p>
+      <div class="formula-grid">
+        <div class="formula">
+          <h3 data-i="formulaPxLabel">像素</h3>
+          <code data-i="formulaPx">像素 = 毫米 ÷ 25.4 × DPI</code>
+        </div>
+        <div class="formula">
+          <h3 data-i="formulaScaleLabel">缩放比例</h3>
+          <code data-i="formulaScale">适配比例 = min(目标宽 ÷ 源宽, 目标高 ÷ 源高)</code>
+        </div>
+        <div class="formula">
+          <h3 data-i="formulaAreaLabel">面积比</h3>
+          <code data-i="formulaArea">面积比 = (目标宽 × 目标高) ÷ (源宽 × 源高)</code>
+        </div>
+      </div>
+      <h3 class="formula-title" data-i="assumptionsTitle">假设与规则</h3>
+      <ul class="assumptions">
+        <li data-i="assumption1">A/B/C 系列使用 ISO 216 标准尺寸，以毫米整数表示。</li>
+        <li data-i="assumption2">像素按 25.4 毫米 = 1 英寸换算，四舍五入到整数像素。</li>
+        <li data-i="assumption3">缩放比较按等比缩放并完整放入目标纸张计算，不考虑打印机的不可打印边距。</li>
+        <li data-i="assumption4">Letter 为 215.9 × 279.4 毫米，Legal 为 215.9 × 355.6 毫米，是北美常用尺寸。</li>
+        <li data-i="assumption5">实际打印请留出边距，并在打印设置里选择目标纸张。</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="faq" id="faq" aria-labelledby="faq-title">
+    <h2 id="faq-title" data-i="faqTitle">常见问题</h2>
+    <!-- ====================================================================
+         TOOL FAQ — generator injects the Chinese FAQ from config.faqs.
+         Keep the faqQ1..faqA3 data-i keys in all three dictionaries.
+         ==================================================================== -->
+    <details>
+          <summary data-i="faqQ1">A4 的尺寸是多少？</summary>
+          <p data-i="faqA1">A4 是 210 × 297 毫米，约 8.27 × 11.69 英寸。按 300 DPI 输出约为 2480 × 3508 像素。</p>
+        </details>
+    <details>
+          <summary data-i="faqQ2">A0 和 A4 的面积关系？</summary>
+          <p data-i="faqA2">每降一个编号面积减半，所以 A0 是 A4 的 16 倍。A 系列的长宽比始终约为 1:√2。</p>
+        </details>
+    <details>
+          <summary data-i="faqQ3">Letter 和 A4 能互相替代吗？</summary>
+          <p data-i="faqA3">尺寸接近但不相同，Letter 更宽更短。按 A4 排版的内容打印到 Letter 可能被缩放或裁边，正式文件请按目标纸张设置。</p>
+        </details>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <p data-i="copyright">© 2026 Devin</p>
+    <nav class="footer-links" aria-label="页脚导航" data-i-aria="footerAria">
+      <a href="/tools/" data-tools-link data-i="backTools">工具大厅</a>
+      <a href="/games/" data-i="navGames">在线桌游</a>
+      <a href="/" data-i="navHome">首页</a>
+    </nav>
+  </div>
+  <div class="wrap"><p class="footer-note" data-i="footerNote">所有处理都在本地完成，不上传任何数据。</p></div>
+</footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<noscript>
+  <div class="wrap"><p class="card noscript" data-i="noscript">这个工具需要 JavaScript 才能运行。所有计算都在你的设备上完成，不会上传任何数据。</p></div>
+</noscript>
+
+<!-- ==========================================================================
+     ENGINE — pure functions only. No DOM, no window, no clock, no storage.
+     Builder replaces everything between TOOL_ENGINE_START and TOOL_ENGINE_END,
+     then updates the return object. Must stay Node-evaluable.
+     ========================================================================== -->
+<script id="engine">
+var ToolEngine = (function () {
+  'use strict';
+
+  // TOOL_ENGINE_START
+  var SIZES = (function () {
+    var out = [];
+    var a = [[841, 1189], [594, 841], [420, 594], [297, 420], [210, 297], [148, 210],
+      [105, 148], [74, 105], [52, 74], [37, 52], [26, 37]];
+    var b = [[1000, 1414], [707, 1000], [500, 707], [353, 500], [250, 353], [176, 250],
+      [125, 176], [88, 125], [62, 88], [44, 62], [31, 44]];
+    var c = [[917, 1297], [648, 917], [458, 648], [324, 458], [229, 324], [162, 229],
+      [114, 162], [81, 114], [57, 81], [40, 57], [28, 40]];
+    var i;
+    for (i = 0; i < a.length; i++) out.push({ name: 'A' + i, widthMm: a[i][0], heightMm: a[i][1], group: 'A' });
+    for (i = 0; i < b.length; i++) out.push({ name: 'B' + i, widthMm: b[i][0], heightMm: b[i][1], group: 'B' });
+    for (i = 0; i < c.length; i++) out.push({ name: 'C' + i, widthMm: c[i][0], heightMm: c[i][1], group: 'C' });
+    out.push({ name: 'Letter', widthMm: 215.9, heightMm: 279.4, group: 'Letter' });
+    out.push({ name: 'Legal', widthMm: 215.9, heightMm: 355.6, group: 'Legal' });
+    return out;
+  })();
+  var MAX_PX = 1e9;
+
+  function isNum(n) {
+    return typeof n === 'number' && isFinite(n);
+  }
+
+  function fail(code) {
+    return { ok: false, error: code };
+  }
+
+  function paperSize(name) {
+    if (typeof name !== 'string') return fail('bad_value');
+    var key = name.trim().toUpperCase();
+    if (!key) return fail('bad_value');
+    for (var i = 0; i < SIZES.length; i++) {
+      if (SIZES[i].name.toUpperCase() === key) {
+        return {
+          ok: true,
+          name: SIZES[i].name,
+          widthMm: SIZES[i].widthMm,
+          heightMm: SIZES[i].heightMm,
+          group: SIZES[i].group
+        };
+      }
+    }
+    return fail('not_found');
+  }
+
+  function sizes() {
+    return SIZES.map(function (item) {
+      return { name: item.name, widthMm: item.widthMm, heightMm: item.heightMm, group: item.group };
+    });
+  }
+
+  function toPixels(mm, dpi) {
+    if (!isNum(mm) || !isNum(dpi)) return fail('bad_value');
+    if (mm < 0) return fail('range');
+    if (dpi <= 0) return fail('range');
+    var raw = (mm / 25.4) * dpi;
+    var value = Math.floor(raw + 0.5 + 1e-9);
+    if (!isFinite(value) || value > MAX_PX) return fail('overflow');
+    return { ok: true, value: value, dpi: dpi };
+  }
+
+  function toInches(mm) {
+    if (!isNum(mm)) return fail('bad_value');
+    if (mm < 0) return fail('range');
+    return { ok: true, value: mm / 25.4 };
+  }
+
+  function paperPixels(name, dpi) {
+    var size = paperSize(name);
+    if (!size.ok) return size;
+    if (!isNum(dpi) || dpi <= 0) return fail(isNum(dpi) ? 'range' : 'bad_value');
+    var w = toPixels(size.widthMm, dpi);
+    if (!w.ok) return w;
+    var h = toPixels(size.heightMm, dpi);
+    if (!h.ok) return h;
+    return {
+      ok: true,
+      name: size.name,
+      widthMm: size.widthMm,
+      heightMm: size.heightMm,
+      widthPx: w.value,
+      heightPx: h.value,
+      dpi: dpi
+    };
+  }
+
+  function scaleRatio(sourceName, targetName) {
+    var source = paperSize(sourceName);
+    if (!source.ok) return source;
+    var target = paperSize(targetName);
+    if (!target.ok) return target;
+    var widthRatio = target.widthMm / source.widthMm;
+    var heightRatio = target.heightMm / source.heightMm;
+    var fitScale = Math.min(widthRatio, heightRatio);
+    var areaRatio = (target.widthMm * target.heightMm) / (source.widthMm * source.heightMm);
+    return {
+      ok: true,
+      source: source.name,
+      target: target.name,
+      widthRatio: widthRatio,
+      heightRatio: heightRatio,
+      fitScale: fitScale,
+      areaRatio: areaRatio,
+      fitsWithoutScaling: widthRatio >= 1 && heightRatio >= 1
+    };
+  }
+  // TOOL_ENGINE_END
+
+  return {
+    paperSize: paperSize,
+    sizes: sizes,
+    toPixels: toPixels,
+    toInches: toInches,
+    paperPixels: paperPixels,
+    scaleRatio: scaleRatio,
+    isNum: isNum
+  };
+})();
+</script>
+
+<!-- ==========================================================================
+     DICTIONARIES — zh / en / id must always expose exactly the same keys.
+     Generic keys live above the TOOL_DICT_* marker.
+     Tool-specific keys (including faqQ1..faqA3) live below the marker and are
+     replaced by the builder. No hard-coded visible copy anywhere in the page.
+     ========================================================================== -->
+<script id="i18n">
+var TOOL_I18N = {
+  zh: {
+    /* ---- generic keys: do not remove ---- */
+    docTitle: '纸张尺寸转换器（A/B/C 与像素）',
+    docDesc: '查看 A、B、C 系列和 Letter、Legal 的毫米尺寸，按 DPI 换算像素并比较缩放比例。全部在本地计算，无需注册。',
+    appTitle: '纸张尺寸转换器',
+    tagline: 'A4 打印到 Letter，会不会被裁？',
+    eyebrow: '免费工具 · 本地运行',
+    privacy: '所有计算都在你的浏览器里完成，输入不会上传。',
+    skip: '跳到工具',
+    navAria: '站点导航',
+    navHall: '工具大厅',
+    navGames: '在线桌游',
+    langLabel: '语言',
+    langZh: '中文',
+    langEn: 'EN',
+    langId: 'ID',
+    brandName: 'Devin',
+    brandHome: 'Devin 首页',
+    navHome: '首页',
+    footerAria: '页脚导航',
+    footerNote: '所有处理都在本地完成，不上传任何数据。',
+    copyright: '© 2026 Devin',
+    copy: '复制结果',
+    copied: '已复制。',
+    copyFail: '无法自动复制，请手动选中后复制。',
+    copyHint: '复制的是未加千分位的原始数值。',
+    reset: '重置',
+    result: '结果',
+    explainTitle: '公式与假设',
+    faqTitle: '常见问题',
+    formulaTitle: '公式',
+    assumptionsTitle: '假设与规则',
+    backTools: '工具大厅',
+    moreTools: '更多工具',
+    notMedical: '仅供估算，不构成医疗建议。',
+    notFinancial: '仅供估算，不构成财务建议。',
+    unitNote: '换算结果按四舍五入显示。',
+    download: '下载',
+    downloadFail: '下载失败，请重试。',
+    clear: '清除',
+    swap: '交换',
+    add: '添加',
+    remove: '删除',
+    close: '关闭',
+    yes: '是',
+    no: '否',
+    errorInvalid: '请输入有效的数字。',
+    errorRequired: '请填写这一项。',
+    errorGeneric: '无法计算，请检查输入。',
+    storageFail: '无法写入本地存储，本次设置不会被保存。',
+    noscript: '这个工具需要 JavaScript 才能运行。所有计算都在你的设备上完成，不会上传任何数据。',
+
+    /* ---- tool-specific keys: replace below this line ---- */
+    // TOOL_DICT_ZH
+    psKicker: '纸张尺寸',
+    psTitle: 'A4、Letter 与像素换算',
+    psDesc: '查看 A/B/C 系列和 Letter、Legal 的毫米尺寸，按 DPI 换算像素，并比较两张纸的缩放比例。',
+    sizeLabel: '纸张规格',
+    dpiLabel: 'DPI（每英寸像素）',
+    dpiPh: '例如 300',
+    dpi72: '72 DPI',
+    dpi150: '150 DPI',
+    dpi300: '300 DPI',
+    dpi600: '600 DPI',
+    inputHint: '像素按 25.4 毫米 = 1 英寸换算，四舍五入到整数。',
+    resultTitle: '尺寸与像素',
+    resultNote: '{name} · {w} × {h} 毫米 · {dpi} DPI',
+    statWidthPx: '宽（像素）',
+    statHeightPx: '高（像素）',
+    statWidthIn: '宽（英寸）',
+    statHeightIn: '高（英寸）',
+    copyHintResult: '复制当前规格、像素和缩放比较。',
+    compareKicker: '缩放比较',
+    compareTitle: '内容从一种纸放到另一种纸',
+    targetLabel: '目标纸张',
+    statFit: '适配缩放',
+    statWidthRatio: '宽度比',
+    statHeightRatio: '高度比',
+    statAreaRatio: '面积比',
+    compareNote: '{source} → {target}：按比例缩放到 {percent}% 可完整放入。',
+    compareEnough: '{source} → {target}：无需缩小即可容纳。',
+    compareCrop: '不缩放时宽高比不一致，直接打印可能被裁边或缩放。',
+    compareNoTarget: '选择目标纸张后显示缩放比例。',
+    tableKicker: '尺寸表',
+    tableTitle: '常用纸张尺寸与像素',
+    tableName: '规格',
+    tableMm: '毫米',
+    tableIn: '英寸',
+    tablePx: '像素（{dpi} DPI）',
+    copyLine: '{name}：{w} × {h} 毫米（{win} × {hin} 英寸），{dpi} DPI 下 {wpx} × {hpx} 像素',
+    copyCompare: '{source} → {target}：适配缩放 {percent}%',
+    errorSize: '请选择有效的纸张规格。',
+    errorDpi: 'DPI 必须是大于 0 的数字。',
+    explainIntro: '像素尺寸按 25.4 毫米等于 1 英寸换算，再乘以 DPI 并四舍五入。缩放比较假设内容等比缩放、完整放入目标纸张，不考虑打印机边距。',
+    formulaPxLabel: '像素',
+    formulaPx: '像素 = 毫米 ÷ 25.4 × DPI',
+    formulaScaleLabel: '缩放比例',
+    formulaScale: '适配比例 = min(目标宽 ÷ 源宽, 目标高 ÷ 源高)',
+    formulaAreaLabel: '面积比',
+    formulaArea: '面积比 = (目标宽 × 目标高) ÷ (源宽 × 源高)',
+    assumption1: 'A/B/C 系列使用 ISO 216 标准尺寸，以毫米整数表示。',
+    assumption2: '像素按 25.4 毫米 = 1 英寸换算，四舍五入到整数像素。',
+    assumption3: '缩放比较按等比缩放并完整放入目标纸张计算，不考虑打印机的不可打印边距。',
+    assumption4: 'Letter 为 215.9 × 279.4 毫米，Legal 为 215.9 × 355.6 毫米，是北美常用尺寸。',
+    assumption5: '实际打印请留出边距，并在打印设置里选择目标纸张。',
+    faqQ1: 'A4 的尺寸是多少？',
+    faqA1: 'A4 是 210 × 297 毫米，约 8.27 × 11.69 英寸。按 300 DPI 输出约为 2480 × 3508 像素。',
+    faqQ2: 'A0 和 A4 的面积关系？',
+    faqA2: '每降一个编号面积减半，所以 A0 是 A4 的 16 倍（按标准尺寸近似）。A 系列的长宽比始终约为 1:√2。',
+    faqQ3: 'Letter 和 A4 能互相替代吗？',
+    faqA3: '尺寸接近但不相同，Letter 更宽更短。按 A4 排版的内容打印到 Letter 可能被缩放或裁边，正式文件请按目标纸张设置。'
+  },
+  en: {
+    /* ---- generic keys: do not remove ---- */
+    docTitle: 'Paper Size Converter',
+    docDesc: 'Look up A, B and C series plus Letter and Legal paper sizes in millimetres, convert to pixels at a chosen DPI and compare scale ratios. Local, no sign-up.',
+    appTitle: 'Paper Size Converter',
+    tagline: 'Will A4 fit on Letter paper?',
+    eyebrow: 'Free tool · runs locally',
+    privacy: 'Everything runs in your browser. Nothing you type is uploaded.',
+    skip: 'Skip to the tool',
+    navAria: 'Site navigation',
+    navHall: 'Tools',
+    navGames: 'Games',
+    langLabel: 'Language',
+    langZh: '中文',
+    langEn: 'EN',
+    langId: 'ID',
+    brandName: 'Devin',
+    brandHome: 'Devin home',
+    navHome: 'Home',
+    footerAria: 'Footer navigation',
+    footerNote: 'Everything runs locally. No data is uploaded.',
+    copyright: '© 2026 Devin',
+    copy: 'Copy result',
+    copied: 'Copied.',
+    copyFail: 'Could not copy automatically. Select the text and copy it manually.',
+    copyHint: 'Copies the plain number without thousands separators.',
+    reset: 'Reset',
+    result: 'Result',
+    explainTitle: 'Formulas and assumptions',
+    faqTitle: 'Frequently asked questions',
+    formulaTitle: 'Formula',
+    assumptionsTitle: 'Assumptions and rules',
+    backTools: 'Tools',
+    moreTools: 'More tools',
+    notMedical: 'Estimates only, not medical advice.',
+    notFinancial: 'Estimates only, not financial advice.',
+    unitNote: 'Converted values are rounded for display.',
+    download: 'Download',
+    downloadFail: 'Download failed. Try again.',
+    clear: 'Clear',
+    swap: 'Swap',
+    add: 'Add',
+    remove: 'Remove',
+    close: 'Close',
+    yes: 'Yes',
+    no: 'No',
+    errorInvalid: 'Enter a valid number.',
+    errorRequired: 'Fill in this field.',
+    errorGeneric: 'Could not calculate. Check the inputs.',
+    storageFail: 'Could not write to local storage, so this setting will not be saved.',
+    noscript: 'This tool needs JavaScript to run. All calculations happen on your device; nothing is uploaded.',
+
+    /* ---- tool-specific keys: replace below this line ---- */
+    // TOOL_DICT_EN
+    psKicker: 'Paper sizes',
+    psTitle: 'A4, Letter and pixels',
+    psDesc: 'Look up A, B and C series plus Letter and Legal in millimetres, convert to pixels at a chosen DPI and compare scale ratios.',
+    sizeLabel: 'Paper size',
+    dpiLabel: 'DPI (pixels per inch)',
+    dpiPh: 'e.g. 300',
+    dpi72: '72 DPI',
+    dpi150: '150 DPI',
+    dpi300: '300 DPI',
+    dpi600: '600 DPI',
+    inputHint: 'Pixels use 25.4 mm = 1 inch and round to a whole pixel.',
+    resultTitle: 'Size and pixels',
+    resultNote: '{name} · {w} × {h} mm · {dpi} DPI',
+    statWidthPx: 'Width (px)',
+    statHeightPx: 'Height (px)',
+    statWidthIn: 'Width (in)',
+    statHeightIn: 'Height (in)',
+    copyHintResult: 'Copies the current size, pixels and scale comparison.',
+    compareKicker: 'Scale comparison',
+    compareTitle: 'Moving content between papers',
+    targetLabel: 'Target paper',
+    statFit: 'Fit scale',
+    statWidthRatio: 'Width ratio',
+    statHeightRatio: 'Height ratio',
+    statAreaRatio: 'Area ratio',
+    compareNote: '{source} → {target}: scale to {percent}% to fit the whole page.',
+    compareEnough: '{source} → {target}: fits without shrinking.',
+    compareCrop: 'Without scaling, the aspect ratios differ, so direct printing may crop or resize.',
+    compareNoTarget: 'Choose a target paper to see the scale ratio.',
+    tableKicker: 'Size table',
+    tableTitle: 'Common paper sizes and pixels',
+    tableName: 'Size',
+    tableMm: 'Millimetres',
+    tableIn: 'Inches',
+    tablePx: 'Pixels ({dpi} DPI)',
+    copyLine: '{name}: {w} × {h} mm ({win} × {hin} in), {wpx} × {hpx} px at {dpi} DPI',
+    copyCompare: '{source} → {target}: fit scale {percent}%',
+    errorSize: 'Choose a valid paper size.',
+    errorDpi: 'DPI must be a number greater than 0.',
+    explainIntro: 'Pixel dimensions use 25.4 mm = 1 inch, multiplied by DPI and rounded. The comparison assumes the content scales proportionally to fit the whole target page and ignores printer margins.',
+    formulaPxLabel: 'Pixels',
+    formulaPx: 'pixels = millimetres ÷ 25.4 × DPI',
+    formulaScaleLabel: 'Scale',
+    formulaScale: 'fit scale = min(target width ÷ source width, target height ÷ source height)',
+    formulaAreaLabel: 'Area ratio',
+    formulaArea: 'area ratio = (target width × target height) ÷ (source width × source height)',
+    assumption1: 'A, B and C series use ISO 216 sizes, rounded to whole millimetres.',
+    assumption2: 'Pixels use 25.4 mm = 1 inch and round to the nearest whole pixel.',
+    assumption3: 'The comparison scales proportionally to fit the whole target page and ignores printer margins.',
+    assumption4: 'Letter is 215.9 × 279.4 mm and Legal is 215.9 × 355.6 mm, the common North American sizes.',
+    assumption5: 'Leave room for printer margins and set the target paper in the print dialog.',
+    faqQ1: 'What size is A4?',
+    faqA1: 'A4 is 210 × 297 mm, about 8.27 × 11.69 inches. At 300 DPI that is about 2480 × 3508 pixels.',
+    faqQ2: 'How do A0 and A4 relate in area?',
+    faqA2: 'Each step down halves the area, so A0 has about 16 times the area of A4 with the standard rounded sizes. The A series keeps an aspect ratio of about 1:√2.',
+    faqQ3: 'Can Letter and A4 replace each other?',
+    faqA3: 'They are close but not identical: Letter is wider and shorter. A4 content printed on Letter may be scaled or cropped, so set the target paper for formal documents.'
+  },
+  id: {
+    /* ---- generic keys: do not remove ---- */
+    docTitle: 'Konverter Ukuran Kertas',
+    docDesc: 'Lihat ukuran kertas seri A, B, C serta Letter dan Legal dalam milimeter, konversi ke piksel pada DPI pilihan, dan bandingkan rasio skala. Diproses lokal, tanpa daftar.',
+    appTitle: 'Konverter Ukuran Kertas',
+    tagline: 'Apakah A4 muat di kertas Letter?',
+    eyebrow: 'Alat gratis · berjalan lokal',
+    privacy: 'Semua perhitungan berjalan di browser Anda. Tidak ada yang diunggah.',
+    skip: 'Lompat ke alat',
+    navAria: 'Navigasi situs',
+    navHall: 'Alat',
+    navGames: 'Permainan',
+    langLabel: 'Bahasa',
+    langZh: '中文',
+    langEn: 'EN',
+    langId: 'ID',
+    brandName: 'Devin',
+    brandHome: 'Beranda Devin',
+    navHome: 'Beranda',
+    footerAria: 'Navigasi footer',
+    footerNote: 'Semua diproses secara lokal. Tidak ada data yang diunggah.',
+    copyright: '© 2026 Devin',
+    copy: 'Salin hasil',
+    copied: 'Tersalin.',
+    copyFail: 'Tidak bisa menyalin otomatis. Pilih teksnya lalu salin manual.',
+    copyHint: 'Menyalin angka polos tanpa pemisah ribuan.',
+    reset: 'Atur ulang',
+    result: 'Hasil',
+    explainTitle: 'Rumus dan asumsi',
+    faqTitle: 'Pertanyaan yang sering diajukan',
+    formulaTitle: 'Rumus',
+    assumptionsTitle: 'Asumsi dan aturan',
+    backTools: 'Alat',
+    moreTools: 'Alat lainnya',
+    notMedical: 'Hanya perkiraan, bukan saran medis.',
+    notFinancial: 'Hanya perkiraan, bukan saran keuangan.',
+    unitNote: 'Nilai hasil konversi dibulatkan untuk tampilan.',
+    download: 'Unduh',
+    downloadFail: 'Unduh gagal. Coba lagi.',
+    clear: 'Bersihkan',
+    swap: 'Tukar',
+    add: 'Tambah',
+    remove: 'Hapus',
+    close: 'Tutup',
+    yes: 'Ya',
+    no: 'Tidak',
+    errorInvalid: 'Masukkan angka yang valid.',
+    errorRequired: 'Isi kolom ini.',
+    errorGeneric: 'Tidak dapat menghitung. Periksa input.',
+    storageFail: 'Tidak bisa menulis ke penyimpanan lokal, jadi pengaturan ini tidak akan disimpan.',
+    noscript: 'Alat ini memerlukan JavaScript. Semua perhitungan terjadi di perangkat Anda; tidak ada yang diunggah.',
+
+    /* ---- tool-specific keys: replace below this line ---- */
+    // TOOL_DICT_ID
+    psKicker: 'Ukuran kertas',
+    psTitle: 'A4, Letter, dan piksel',
+    psDesc: 'Lihat ukuran seri A, B, C serta Letter dan Legal dalam milimeter, konversi ke piksel pada DPI pilihan, dan bandingkan rasio skala.',
+    sizeLabel: 'Ukuran kertas',
+    dpiLabel: 'DPI (piksel per inci)',
+    dpiPh: 'mis. 300',
+    dpi72: '72 DPI',
+    dpi150: '150 DPI',
+    dpi300: '300 DPI',
+    dpi600: '600 DPI',
+    inputHint: 'Piksel memakai 25,4 mm = 1 inci dan dibulatkan ke piksel bulat.',
+    resultTitle: 'Ukuran dan piksel',
+    resultNote: '{name} · {w} × {h} mm · {dpi} DPI',
+    statWidthPx: 'Lebar (px)',
+    statHeightPx: 'Tinggi (px)',
+    statWidthIn: 'Lebar (inci)',
+    statHeightIn: 'Tinggi (inci)',
+    copyHintResult: 'Menyalin ukuran, piksel, dan perbandingan skala saat ini.',
+    compareKicker: 'Perbandingan skala',
+    compareTitle: 'Memindahkan konten antar kertas',
+    targetLabel: 'Kertas target',
+    statFit: 'Skala pas',
+    statWidthRatio: 'Rasio lebar',
+    statHeightRatio: 'Rasio tinggi',
+    statAreaRatio: 'Rasio luas',
+    compareNote: '{source} → {target}: skala ke {percent}% agar seluruh halaman muat.',
+    compareEnough: '{source} → {target}: muat tanpa diperkecil.',
+    compareCrop: 'Tanpa skala, rasio aspek berbeda, jadi cetak langsung bisa terpotong atau berubah ukuran.',
+    compareNoTarget: 'Pilih kertas target untuk melihat rasio skala.',
+    tableKicker: 'Tabel ukuran',
+    tableTitle: 'Ukuran kertas umum dan piksel',
+    tableName: 'Ukuran',
+    tableMm: 'Milimeter',
+    tableIn: 'Inci',
+    tablePx: 'Piksel ({dpi} DPI)',
+    copyLine: '{name}: {w} × {h} mm ({win} × {hin} inci), {wpx} × {hpx} px pada {dpi} DPI',
+    copyCompare: '{source} → {target}: skala pas {percent}%',
+    errorSize: 'Pilih ukuran kertas yang valid.',
+    errorDpi: 'DPI harus angka lebih dari 0.',
+    explainIntro: 'Ukuran piksel memakai 25,4 mm = 1 inci, dikali DPI lalu dibulatkan. Perbandingan menganggap konten diskalakan proporsional agar seluruh halaman target muat dan mengabaikan margin printer.',
+    formulaPxLabel: 'Piksel',
+    formulaPx: 'piksel = milimeter ÷ 25,4 × DPI',
+    formulaScaleLabel: 'Skala',
+    formulaScale: 'skala pas = min(lebar target ÷ lebar sumber, tinggi target ÷ tinggi sumber)',
+    formulaAreaLabel: 'Rasio luas',
+    formulaArea: 'rasio luas = (lebar target × tinggi target) ÷ (lebar sumber × tinggi sumber)',
+    assumption1: 'Seri A, B, dan C memakai ISO 216, dibulatkan ke milimeter bulat.',
+    assumption2: 'Piksel memakai 25,4 mm = 1 inci dan dibulatkan ke piksel bulat terdekat.',
+    assumption3: 'Perbandingan memakai skala proporsional agar seluruh halaman target muat dan mengabaikan margin printer.',
+    assumption4: 'Letter 215,9 × 279,4 mm dan Legal 215,9 × 355,6 mm, ukuran umum Amerika Utara.',
+    assumption5: 'Sisakan ruang untuk margin printer dan atur kertas target di dialog cetak.',
+    faqQ1: 'Berapa ukuran A4?',
+    faqA1: 'A4 adalah 210 × 297 mm, sekitar 8,27 × 11,69 inci. Pada 300 DPI sekitar 2480 × 3508 piksel.',
+    faqQ2: 'Bagaimana hubungan luas A0 dan A4?',
+    faqA2: 'Setiap turun satu nomor luasnya menjadi setengah, jadi A0 sekitar 16 kali luas A4 pada ukuran standar yang dibulatkan. Seri A mempertahankan rasio sekitar 1:√2.',
+    faqQ3: 'Apakah Letter dan A4 bisa saling menggantikan?',
+    faqA3: 'Ukurannya mirip tetapi tidak sama: Letter lebih lebar dan lebih pendek. Konten A4 yang dicetak di Letter bisa diperkecil atau terpotong, jadi atur kertas target untuk dokumen resmi.'
+  }
+};
+</script>
+
+<!-- ==========================================================================
+     UI RUNTIME — language switching plus the global ToolUI helpers.
+     Builder replaces only the TOOL_UI_START / TOOL_UI_END block.
+     ========================================================================== -->
+<script>
+(function () {
+  'use strict';
+
+  var I18N = (typeof TOOL_I18N !== 'undefined') ? TOOL_I18N : { zh: {}, en: {}, id: {} };
+  var TOOL_SLUG = 'paper-size-converter';
+  var LANG_KEY = 'hhfa.tool.' + TOOL_SLUG + '.lang';
+  var LANGS = ['zh', 'en', 'id'];
+  var LOCALES = { zh: 'zh-CN', en: 'en-US', id: 'id-ID' };
+  var OG_LOCALES = { zh: 'zh_CN', en: 'en_US', id: 'id_ID' };
+  var state = { lang: 'zh' };
+  var toastTimer = null;
+  var started = false;
+  var langHooks = [];
+
+  function $(sel) {
+    return typeof sel === 'string' ? document.querySelector(sel) : sel;
+  }
+
+  function $$(sel) {
+    return Array.prototype.slice.call(document.querySelectorAll(sel));
+  }
+
+  function T(key, vars) {
+    var dict = I18N[state.lang] || {};
+    var value = Object.prototype.hasOwnProperty.call(dict, key) ? dict[key] : null;
+    if (typeof value !== 'string' && I18N.zh && typeof I18N.zh[key] === 'string') {
+      value = I18N.zh[key];
+    }
+    if (typeof value !== 'string') return key;
+    if (vars) {
+      value = value.replace(/\{(\w+)\}/g, function (match, name) {
+        return vars[name] != null ? String(vars[name]) : '';
+      });
+    }
+    return value;
+  }
+
+  function locale() {
+    return LOCALES[state.lang] || 'en-US';
+  }
+
+  function fmt(n, opts) {
+    if (typeof n !== 'number' || !isFinite(n)) return '—';
+    try {
+      return new Intl.NumberFormat(locale(), opts || {}).format(n);
+    } catch (e) {
+      return String(n);
+    }
+  }
+
+  function toast(message) {
+    var el = $('#toast');
+    if (!el) return;
+    el.textContent = message == null ? '' : String(message);
+    el.classList.add('on');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove('on'); }, 2600);
+  }
+
+  function legacyCopy(text) {
+    try {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.top = '-1000px';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { ta.setSelectionRange(0, ta.value.length); } catch (e) { /* ignore */ }
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      document.body.removeChild(ta);
+      return ok;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function copy(text) {
+    var value = text == null ? '' : String(text);
+    return new Promise(function (resolve) {
+      function done() { toast(T('copied')); resolve(true); }
+      function fail() { toast(T('copyFail')); resolve(false); }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(value).then(done, function () {
+          if (legacyCopy(value)) done(); else fail();
+        });
+      } else if (legacyCopy(value)) {
+        done();
+      } else {
+        fail();
+      }
+    });
+  }
+
+  function download(name, content, mime) {
+    try {
+      var blob = new Blob([content], { type: mime || 'text/plain;charset=utf-8' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = name || 'download.txt';
+      a.rel = 'noopener';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function () {
+        try {
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        } catch (e) { /* ignore */ }
+      }, 0);
+      return true;
+    } catch (e) {
+      toast(T('downloadFail'));
+      return false;
+    }
+  }
+
+  function readStore(key, fallback) {
+    try {
+      var raw = localStorage.getItem(key);
+      if (raw == null) return fallback;
+      var value = JSON.parse(raw);
+      return value == null ? fallback : value;
+    } catch (e) {
+      return fallback;
+    }
+  }
+
+  function writeStore(key, value) {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+      return true;
+    } catch (e) {
+      toast(T('storageFail'));
+      return false;
+    }
+  }
+
+  function debounce(fn, ms) {
+    var timer = null;
+    var wait = isFinite(ms) ? ms : 150;
+    return function () {
+      var ctx = this;
+      var args = arguments;
+      clearTimeout(timer);
+      timer = setTimeout(function () { fn.apply(ctx, args); }, wait);
+    };
+  }
+
+  function on(target, event, handler) {
+    var el = typeof target === 'string' ? $(target) : target;
+    if (!el || !el.addEventListener) return function () {};
+    el.addEventListener(event, handler);
+    return function () { el.removeEventListener(event, handler); };
+  }
+
+  function setError(el, message) {
+    if (!el) return;
+    if (!message) { clearError(el); return; }
+    el.textContent = String(message);
+    el.hidden = false;
+    el.classList.add('on');
+  }
+
+  function clearError(el) {
+    if (!el) return;
+    el.textContent = '';
+    el.hidden = true;
+    el.classList.remove('on');
+  }
+
+  function onLangChange(fn) {
+    if (typeof fn !== 'function') return function () {};
+    langHooks.push(fn);
+    if (started) {
+      try { fn(state.lang); } catch (e) { /* a broken hook must not break switching */ }
+    }
+    return function () {
+      var i = langHooks.indexOf(fn);
+      if (i !== -1) langHooks.splice(i, 1);
+    };
+  }
+
+  function setMeta(attr, name, content) {
+    var nodes = document.querySelectorAll('meta');
+    for (var i = 0; i < nodes.length; i++) {
+      if (nodes[i].getAttribute(attr) === name) {
+        nodes[i].setAttribute('content', content);
+        return;
+      }
+    }
+  }
+
+  function renderLanguage() {
+    var lang = state.lang;
+    document.documentElement.lang = lang === 'zh' ? 'zh-CN' : lang;
+
+    var nodes = $$('[data-i]');
+    for (var i = 0; i < nodes.length; i++) {
+      nodes[i].textContent = T(nodes[i].getAttribute('data-i'));
+    }
+    var placeholders = $$('[data-i-ph]');
+    for (var j = 0; j < placeholders.length; j++) {
+      placeholders[j].setAttribute('placeholder', T(placeholders[j].getAttribute('data-i-ph')));
+    }
+    var labelled = $$('[data-i-aria]');
+    for (var k = 0; k < labelled.length; k++) {
+      labelled[k].setAttribute('aria-label', T(labelled[k].getAttribute('data-i-aria')));
+    }
+    var buttons = $$('[data-lang]');
+    for (var b = 0; b < buttons.length; b++) {
+      buttons[b].setAttribute('aria-pressed', buttons[b].getAttribute('data-lang') === lang ? 'true' : 'false');
+    }
+
+    document.title = T('docTitle');
+    setMeta('name', 'description', T('docDesc'));
+    setMeta('property', 'og:title', T('docTitle'));
+    setMeta('property', 'og:description', T('docDesc'));
+    setMeta('property', 'og:locale', OG_LOCALES[lang] || 'en_US');
+    setMeta('name', 'twitter:title', T('docTitle'));
+    setMeta('name', 'twitter:description', T('docDesc'));
+
+    var toolsHref = lang === 'zh' ? '/tools/' : '/tools/' + lang + '/';
+    var links = $$('[data-tools-link]');
+    for (var l = 0; l < links.length; l++) links[l].setAttribute('href', toolsHref);
+  }
+
+  function applyLang() {
+    renderLanguage();
+    for (var i = 0; i < langHooks.length; i++) {
+      try { langHooks[i](state.lang); } catch (e) { /* keep the page usable */ }
+    }
+    started = true;
+  }
+
+  function detectLang() {
+    try {
+      var q = new URLSearchParams(window.location.search).get('lang');
+      if (LANGS.indexOf(q) !== -1) return q;
+    } catch (e) { /* ignore */ }
+    try {
+      var saved = localStorage.getItem(LANG_KEY);
+      if (LANGS.indexOf(saved) !== -1) return saved;
+    } catch (e) { /* ignore */ }
+    var nav = String(navigator.language || '').toLowerCase();
+    if (nav.indexOf('zh') === 0) return 'zh';
+    if (nav.indexOf('id') === 0 || nav.indexOf('in') === 0) return 'id';
+    return 'en';
+  }
+
+  function saveLang() {
+    try { localStorage.setItem(LANG_KEY, state.lang); } catch (e) { /* ignore */ }
+  }
+
+  function bindLanguages() {
+    var buttons = $$('[data-lang]');
+    for (var i = 0; i < buttons.length; i++) {
+      (function (button) {
+        button.addEventListener('click', function () {
+          var next = button.getAttribute('data-lang');
+          if (LANGS.indexOf(next) === -1 || next === state.lang) return;
+          state.lang = next;
+          saveLang();
+          applyLang();
+        });
+      })(buttons[i]);
+    }
+  }
+
+  function init() {
+    state.lang = detectLang();
+    bindLanguages();
+    applyLang();
+  }
+
+  var ToolUI = {
+    T: T,
+    fmt: fmt,
+    copy: copy,
+    toast: toast,
+    download: download,
+    readStore: readStore,
+    writeStore: writeStore,
+    debounce: debounce,
+    on: on,
+    setError: setError,
+    clearError: clearError,
+    onLangChange: onLangChange,
+    lang: function () { return state.lang; },
+    locale: locale,
+    $: $,
+    $$: $$
+  };
+
+  window.ToolUI = ToolUI;
+  window.T = T;
+
+  // TOOL_UI_START
+  (function () {
+    var sizeEl = ToolUI.$('#ps-size');
+    var targetEl = ToolUI.$('#ps-target');
+    var dpiEl = ToolUI.$('#ps-dpi');
+    var errorEl = ToolUI.$('#ps-error');
+    var dimensionsEl = ToolUI.$('#ps-dimensions');
+    var noteEl = ToolUI.$('#ps-note');
+    var statWpx = ToolUI.$('#ps-stat-wpx');
+    var statHpx = ToolUI.$('#ps-stat-hpx');
+    var statWin = ToolUI.$('#ps-stat-win');
+    var statHin = ToolUI.$('#ps-stat-hin');
+    var statFit = ToolUI.$('#ps-stat-fit');
+    var statWratio = ToolUI.$('#ps-stat-wratio');
+    var statHratio = ToolUI.$('#ps-stat-hratio');
+    var statArea = ToolUI.$('#ps-stat-area');
+    var compareNoteEl = ToolUI.$('#ps-compare-note');
+    var tableBody = ToolUI.$('#ps-table-body');
+    var tablePxHead = ToolUI.$('#ps-table-px-head');
+    var copyEl = ToolUI.$('#ps-copy');
+    if (!sizeEl || !targetEl || !dpiEl || !dimensionsEl) return;
+
+    var lastCopy = '';
+
+    function parseNum(text) {
+      var raw = String(text == null ? '' : text).trim().replace(/,/g, '.');
+      if (!raw) return null;
+      var n = Number(raw);
+      return isFinite(n) ? n : NaN;
+    }
+
+    function trimNum(n, digits) {
+      var d = digits == null ? 2 : digits;
+      var s = Number(n).toFixed(d).replace(/\.?0+$/, '');
+      return s === '-0' ? '0' : s;
+    }
+
+    function fmtNum(n, digits) {
+      if (typeof n !== 'number' || !isFinite(n)) return '—';
+      return ToolUI.fmt(n, { maximumFractionDigits: digits == null ? 2 : digits });
+    }
+
+    function fillSelect(select) {
+      if (!select) return;
+      var list = ToolEngine.sizes();
+      while (select.firstChild) select.removeChild(select.firstChild);
+      list.forEach(function (item) {
+        var option = document.createElement('option');
+        option.value = item.name;
+        option.textContent = item.name;
+        select.appendChild(option);
+      });
+    }
+
+    function clearResult() {
+      dimensionsEl.textContent = '—';
+      if (noteEl) noteEl.textContent = '';
+      if (statWpx) statWpx.textContent = '—';
+      if (statHpx) statHpx.textContent = '—';
+      if (statWin) statWin.textContent = '—';
+      if (statHin) statHin.textContent = '—';
+      if (statFit) statFit.textContent = '—';
+      if (statWratio) statWratio.textContent = '—';
+      if (statHratio) statHratio.textContent = '—';
+      if (statArea) statArea.textContent = '—';
+      if (compareNoteEl) compareNoteEl.textContent = '';
+      lastCopy = '';
+      if (copyEl) copyEl.disabled = true;
+    }
+
+    function render() {
+      var dpi = parseNum(dpiEl.value);
+      if (dpi === null || !isFinite(dpi) || dpi <= 0) {
+        clearResult();
+        ToolUI.setError(errorEl, ToolUI.T('errorDpi'));
+        return;
+      }
+      var size = ToolEngine.paperPixels(sizeEl.value, dpi);
+      if (!size.ok) {
+        clearResult();
+        ToolUI.setError(errorEl, ToolUI.T('errorSize'));
+        return;
+      }
+      ToolUI.clearError(errorEl);
+
+      var wIn = size.widthMm / 25.4;
+      var hIn = size.heightMm / 25.4;
+      dimensionsEl.textContent = trimNum(size.widthMm, 1) + ' × ' + trimNum(size.heightMm, 1) + ' mm';
+      if (noteEl) {
+        noteEl.textContent = ToolUI.T('resultNote', {
+          name: size.name,
+          w: trimNum(size.widthMm, 1),
+          h: trimNum(size.heightMm, 1),
+          dpi: trimNum(dpi, 2)
+        });
+      }
+      if (statWpx) statWpx.textContent = String(size.widthPx);
+      if (statHpx) statHpx.textContent = String(size.heightPx);
+      if (statWin) statWin.textContent = fmtNum(wIn, 2);
+      if (statHin) statHin.textContent = fmtNum(hIn, 2);
+
+      var compare = ToolEngine.scaleRatio(sizeEl.value, targetEl.value);
+      var comparePercent = '';
+      if (compare.ok) {
+        comparePercent = fmtNum(compare.fitScale * 100, 1);
+        if (statFit) statFit.textContent = comparePercent + '%';
+        if (statWratio) statWratio.textContent = fmtNum(compare.widthRatio, 3);
+        if (statHratio) statHratio.textContent = fmtNum(compare.heightRatio, 3);
+        if (statArea) statArea.textContent = fmtNum(compare.areaRatio, 3);
+        if (compareNoteEl) {
+          compareNoteEl.textContent = compare.fitsWithoutScaling
+            ? ToolUI.T('compareEnough', { source: compare.source, target: compare.target })
+            : ToolUI.T('compareNote', {
+              source: compare.source,
+              target: compare.target,
+              percent: comparePercent
+            });
+        }
+      } else {
+        if (statFit) statFit.textContent = '—';
+        if (statWratio) statWratio.textContent = '—';
+        if (statHratio) statHratio.textContent = '—';
+        if (statArea) statArea.textContent = '—';
+        if (compareNoteEl) compareNoteEl.textContent = ToolUI.T('compareNoTarget');
+      }
+
+      if (tablePxHead) {
+        tablePxHead.textContent = ToolUI.T('tablePx', { dpi: trimNum(dpi, 2) });
+      }
+      if (tableBody) {
+        while (tableBody.firstChild) tableBody.removeChild(tableBody.firstChild);
+        ToolEngine.sizes().forEach(function (item) {
+          var px = ToolEngine.paperPixels(item.name, dpi);
+          var tr = document.createElement('tr');
+          [
+            item.name,
+            trimNum(item.widthMm, 1) + ' × ' + trimNum(item.heightMm, 1),
+            trimNum(item.widthMm / 25.4, 2) + ' × ' + trimNum(item.heightMm / 25.4, 2),
+            px.ok ? px.widthPx + ' × ' + px.heightPx : '—'
+          ].forEach(function (text) {
+            var td = document.createElement('td');
+            td.textContent = text;
+            tr.appendChild(td);
+          });
+          tableBody.appendChild(tr);
+        });
+      }
+
+      var lines = [ToolUI.T('copyLine', {
+        name: size.name,
+        w: trimNum(size.widthMm, 1),
+        h: trimNum(size.heightMm, 1),
+        win: trimNum(wIn, 2),
+        hin: trimNum(hIn, 2),
+        dpi: trimNum(dpi, 2),
+        wpx: String(size.widthPx),
+        hpx: String(size.heightPx)
+      })];
+      if (compare.ok) {
+        lines.push(ToolUI.T('copyCompare', {
+          source: compare.source,
+          target: compare.target,
+          percent: comparePercent
+        }));
+      }
+      lastCopy = lines.join('\n');
+      if (copyEl) copyEl.disabled = false;
+    }
+
+    fillSelect(sizeEl);
+    fillSelect(targetEl);
+    sizeEl.value = 'A4';
+    targetEl.value = 'Letter';
+
+    ToolUI.on(sizeEl, 'change', render);
+    ToolUI.on(targetEl, 'change', render);
+    ToolUI.on(dpiEl, 'input', ToolUI.debounce(render, 120));
+    ToolUI.$$('[data-dpi]').forEach(function (button) {
+      ToolUI.on(button, 'click', function () {
+        dpiEl.value = button.getAttribute('data-dpi');
+        render();
+      });
+    });
+    ToolUI.on(copyEl, 'click', function () {
+      if (lastCopy) ToolUI.copy(lastCopy);
+    });
+    ToolUI.onLangChange(render);
+  })();
+  // TOOL_UI_END
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>

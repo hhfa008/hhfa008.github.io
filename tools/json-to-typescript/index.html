@@ -1,0 +1,1483 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>JSON 转 TypeScript 接口</title>
+<meta name="description" content="把 JSON 推断成 TypeScript interface 或 type，合并数组元素、标记可选与可空、命名根类型并选择是否导出。全部在本地处理，无需注册。">
+<meta name="author" content="Devin">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="theme-color" content="#f2efe7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#101316" media="(prefers-color-scheme: dark)">
+<link rel="canonical" href="https://hhfa008.github.io/tools/json-to-typescript/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23b93d12'/%3E%3Cpath d='M9 23 23 9' stroke='%23fbf9f4' stroke-width='2.4' stroke-linecap='round'/%3E%3Ccircle cx='11' cy='11' r='3' fill='%23fbf9f4'/%3E%3Ccircle cx='21' cy='21' r='3' fill='%23fbf9f4'/%3E%3C/svg%3E">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Devin">
+<meta property="og:title" content="JSON 转 TypeScript 接口">
+<meta property="og:description" content="把 JSON 推断成 TypeScript interface 或 type，合并数组元素、标记可选与可空、命名根类型并选择是否导出。全部在本地处理，无需注册。">
+<meta property="og:url" content="https://hhfa008.github.io/tools/json-to-typescript/">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:locale:alternate" content="en_US">
+<meta property="og:locale:alternate" content="id_ID">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="JSON 转 TypeScript 接口">
+<meta name="twitter:description" content="把 JSON 推断成 TypeScript interface 或 type，合并数组元素、标记可选与可空、命名根类型并选择是否导出。全部在本地处理，无需注册。">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "JSON 转 TypeScript",
+  "url": "https://hhfa008.github.io/tools/json-to-typescript/",
+  "applicationCategory": "UtilitiesApplication",
+  "operatingSystem": "Any",
+  "browserRequirements": "Requires JavaScript",
+  "isAccessibleForFree": true,
+  "inLanguage": ["zh-CN", "en", "id"],
+  "description": "把 JSON 推断成 TypeScript interface 或 type，合并数组元素、标记可选与可空、命名根类型并选择是否导出。全部在本地处理，无需注册。",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+  {
+    "@type": "Question",
+    "name": "数组里不同类型会怎么处理？",
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "工具会合并所有元素的结构：共同字段保留，缺失字段标记为可选，类型冲突时生成联合类型。若差异过大，建议手动拆分模型。"
+    }
+  },
+  {
+    "@type": "Question",
+    "name": "可选和可空是一回事吗？",
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "不是。可选是字段可能不存在（?），可空是字段存在但值为 null。工具会分别推断，避免把 null 误当成缺失。"
+    }
+  },
+  {
+    "@type": "Question",
+    "name": "生成的类型能直接用吗？",
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "可作为起点。请按业务补充更精确的字面量类型、日期字符串格式和品牌类型，并检查根类型命名是否与项目约定一致。"
+    }
+  }
+]
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "首页", "item": "https://hhfa008.github.io/" },
+    { "@type": "ListItem", "position": 2, "name": "工具大厅", "item": "https://hhfa008.github.io/tools/" },
+    { "@type": "ListItem", "position": 3, "name": "JSON 转 TypeScript", "item": "https://hhfa008.github.io/tools/json-to-typescript/" }
+  ]
+}
+</script>
+
+<style>
+/* ==========================================================================
+   Design tokens — keep in sync with the existing tools pages.
+   ========================================================================== */
+:root{
+  --paper:#f2efe7; --paper-2:#fbf9f4; --panel:#ffffff;
+  --ink:#14171a; --muted:#5b615c; --muted-2:#7b807a;
+  --line:#d5d0c4; --line-strong:#bcb5a7;
+  --accent:#b93d12; --accent-soft:#f2a07a; --accent-wash:#f7e5da;
+  --ok:#2f6b3c; --ok-wash:#e8f2e7; --warn:#8a5a00; --warn-wash:#fbf1db;
+  --bad:#a32216; --bad-wash:#fbe7e3;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --radius:16px; --max:1040px;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --paper:#101316; --paper-2:#171b1f; --panel:#1a1f23;
+    --ink:#f2efe7; --muted:#b7b3a8; --muted-2:#948f85;
+    --line:#333a40; --line-strong:#4a535b;
+    --accent:#f08a5d; --accent-soft:#f2a07a; --accent-wash:#2b211c;
+    --ok:#8fd19e; --ok-wash:#1b2b1e; --warn:#f0c36a; --warn-wash:#2d2618;
+    --bad:#ff8a7a; --bad-wash:#321d1a;
+  }
+}
+
+/* Reset */
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%;color-scheme:light dark;scroll-behavior:smooth;overflow-x:clip}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font:16px/1.6 var(--sans);overflow-x:clip;
+  text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+p,h1,h2,h3,ul,ol,figure{margin:0}
+a{color:inherit}
+button,input,select,textarea{font:inherit;color:inherit}
+code,pre{font-family:var(--mono)}
+
+/* Layout */
+.wrap{width:100%;max-width:var(--max);margin:0 auto;padding-left:18px;padding-right:18px;min-width:0}
+@media (min-width:720px){.wrap{padding-left:32px;padding-right:32px}}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.skip-link{position:absolute;left:12px;top:-80px;z-index:100;padding:12px 16px;background:var(--ink);color:var(--paper);border-radius:8px;text-decoration:none}
+.skip-link:focus{top:12px}
+:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+
+/* Header */
+.site-header{border-bottom:1px solid var(--line);background:var(--paper)}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:10px 16px;min-height:64px;flex-wrap:wrap;padding-top:6px;padding-bottom:6px}
+.brand{display:inline-flex;align-items:center;gap:10px;font-weight:700;letter-spacing:-.02em;text-decoration:none;min-height:44px}
+.brand-mark{width:26px;height:26px;border-radius:7px;background:var(--accent);position:relative;flex:none}
+.brand-mark::before,.brand-mark::after{content:"";position:absolute;left:7px;height:2px;background:var(--paper-2);border-radius:1px}
+.brand-mark::before{right:7px;top:9px}
+.brand-mark::after{right:11px;top:15px}
+.header-tools{display:flex;align-items:center;gap:12px 16px;flex-wrap:wrap;justify-content:flex-end;min-width:0}
+.site-nav{display:flex;align-items:center;gap:14px;font-size:13.5px;flex-wrap:wrap}
+.site-nav a{display:inline-flex;align-items:center;min-height:44px;text-decoration:none;color:var(--muted)}
+.site-nav a:hover{color:var(--accent);text-decoration:underline}
+.lang-switch{display:flex;gap:4px}
+.lang-switch button{
+  min-width:44px;min-height:44px;padding:0 8px;border:1px solid var(--line-strong);
+  border-radius:9px;background:transparent;color:var(--muted);font-size:12.5px;
+  font-weight:650;cursor:pointer;line-height:1
+}
+.lang-switch button:hover{border-color:var(--accent);color:var(--accent)}
+.lang-switch button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+@media (prefers-color-scheme:dark){
+  .lang-switch button[aria-pressed="true"],
+  .btn.primary,.btn.danger{color:#101316}
+}
+
+/* Hero */
+.hero{padding:36px 0 22px}
+@media (min-width:720px){.hero{padding:52px 0 28px}}
+.eyebrow{margin:0 0 10px;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+h1{margin:0 0 12px;max-width:22ch;font-size:clamp(1.85rem,6vw,2.9rem);line-height:1.1;letter-spacing:-.035em;font-weight:700;overflow-wrap:anywhere}
+.lede{max-width:70ch;color:var(--muted);font-size:clamp(1rem,2vw,1.08rem);overflow-wrap:anywhere}
+.privacy{
+  display:flex;gap:9px;align-items:flex-start;max-width:78ch;margin:16px 0 0;padding:11px 14px;
+  background:var(--accent-wash);border:1px solid var(--line);border-left:4px solid var(--accent);
+  border-radius:0 10px 10px 0;font-size:13.5px
+}
+.privacy svg{width:17px;height:17px;flex:none;margin-top:3px}
+
+/* Cards and tool layout */
+.tool-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;align-items:start}
+.tool-layout>*{min-width:0}
+@media (min-width:900px){
+  .tool-layout{grid-template-columns:minmax(0,1.04fr) minmax(0,.96fr)}
+  .result-col{position:sticky;top:18px}
+}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;min-width:0}
+@media (min-width:720px){.card{padding:26px 28px}}
+.card-kicker{margin:0 0 7px;font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.11em;text-transform:uppercase;color:var(--accent)}
+.card h2{margin:0 0 14px;font-size:clamp(1.15rem,2.4vw,1.4rem);line-height:1.2;letter-spacing:-.02em;overflow-wrap:anywhere}
+.panel-desc{margin:0 0 14px;color:var(--muted);font-size:14px;overflow-wrap:anywhere}
+
+/* Fields */
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field>label,.field>span.label{font-size:13px;font-weight:650;color:var(--muted)}
+.field input,.field select,.field textarea,.field .input{
+  width:100%;min-height:46px;padding:10px 12px;border:1px solid var(--line-strong);
+  border-radius:12px;background:var(--paper-2);font-size:16px;line-height:1.4;min-width:0
+}
+.field textarea{min-height:120px;resize:vertical;line-height:1.55}
+.field select{
+  appearance:none;padding-right:34px;
+  background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);
+  background-position:calc(100% - 18px) 50%,calc(100% - 13px) 50%;
+  background-size:5px 5px,5px 5px;background-repeat:no-repeat
+}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);outline:3px solid var(--accent-wash);outline-offset:1px}
+.field input[aria-invalid="true"],.field select[aria-invalid="true"],.field textarea[aria-invalid="true"]{border-color:var(--bad)}
+.field-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+@media (min-width:600px){.field-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Buttons */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  min-height:46px;padding:0 16px;border:1px solid var(--line-strong);border-radius:12px;
+  background:var(--panel);color:var(--ink);font-size:14.5px;font-weight:650;
+  cursor:pointer;text-decoration:none;text-align:center;line-height:1.25
+}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.06);color:#fff}
+.btn.dark{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.btn.ghost{background:transparent}
+.btn.danger{background:var(--bad);border-color:var(--bad);color:#fff}
+.btn.danger:hover{filter:brightness(1.06);color:#fff}
+.btn-row{display:flex;flex-wrap:wrap;gap:8px;min-width:0}
+.btn-row .btn{flex:1 1 140px}
+
+/* Chips / segmented controls */
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px;padding:0;list-style:none}
+.chips button,.chip{
+  display:inline-flex;align-items:center;justify-content:center;min-height:44px;
+  padding:8px 14px;border:1px solid var(--line-strong);border-radius:999px;
+  background:var(--paper-2);color:var(--ink);font-size:13.5px;font-weight:650;
+  cursor:pointer;line-height:1.2;text-decoration:none
+}
+.chips button:hover,.chip:hover{border-color:var(--accent);color:var(--accent)}
+.chips button[aria-pressed="true"],.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+@media (prefers-color-scheme:dark){
+  .chips button[aria-pressed="true"],.chip.on{color:#101316}
+}
+
+/* Tabs */
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
+.tabs [role="tab"]{
+  min-height:44px;padding:9px 14px;border:1px solid var(--line-strong);border-radius:999px;
+  background:var(--paper-2);color:var(--ink);font-size:13.5px;font-weight:650;
+  cursor:pointer;line-height:1.2
+}
+.tabs [role="tab"][aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+@media (prefers-color-scheme:dark){.tabs [role="tab"][aria-selected="true"]{color:#101316}}
+
+/* Result */
+.result{background:var(--paper-2)}
+.result-live{min-height:96px}
+.result-big{
+  margin:2px 0 0;font-family:var(--mono);font-size:clamp(2rem,7.5vw,3rem);
+  font-weight:650;line-height:1.08;letter-spacing:-.04em;color:var(--accent);
+  font-variant-numeric:tabular-nums;overflow-wrap:anywhere
+}
+.result-note{margin-top:7px;color:var(--muted);font-size:14px;overflow-wrap:anywhere}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px;margin-top:14px}
+.stat{min-width:0;padding:10px 11px;border:1px solid var(--line);border-radius:11px;background:var(--paper-2)}
+.stat span{display:block;font-size:11.5px;color:var(--muted);line-height:1.3}
+.stat b{display:block;margin-top:2px;font-family:var(--mono);font-size:1.12rem;font-weight:650;font-variant-numeric:tabular-nums;letter-spacing:-.02em;overflow-wrap:anywhere}
+
+/* Tables must scroll inside their own wrapper, never the page. */
+.table-wrap{width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.table-wrap table{width:100%;border-collapse:collapse;font-size:13.5px}
+.table-wrap caption{padding:10px 12px;text-align:left;color:var(--muted);font-size:12.5px}
+.table-wrap th,.table-wrap td{padding:9px 11px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap;font-variant-numeric:tabular-nums}
+.table-wrap th{font-weight:650;color:var(--muted);font-size:12.5px}
+.table-wrap tr:last-child td{border-bottom:0}
+
+/* Notes and status */
+.hint{margin:10px 0 0;color:var(--muted-2);font-size:12.5px;line-height:1.55;overflow-wrap:anywhere}
+.error{margin:10px 0 0;padding:9px 12px;border-radius:9px;background:var(--bad-wash);border:1px solid var(--bad);color:var(--bad);font-size:13px;font-weight:600;line-height:1.5;overflow-wrap:anywhere}
+.badge{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:2px 9px;border-radius:999px;background:var(--accent-wash);color:var(--accent);font-size:12px;font-weight:650;line-height:1.6;vertical-align:middle}
+.badge.ok{background:var(--ok-wash);color:var(--ok)}
+.badge.warn{background:var(--warn-wash);color:var(--warn)}
+.badge.bad{background:var(--bad-wash);color:var(--bad)}
+
+/* Checkbox rows: browser-check measures the input box itself, so keep it 44x44. */
+.check{display:inline-flex;align-items:center;gap:8px;min-height:44px;font-size:14px;cursor:pointer}
+.check input[type="checkbox"],.check input[type="radio"]{width:44px;height:44px;flex:none;accent-color:var(--accent);cursor:pointer}
+.check-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin-top:10px}
+/* Safety net for builders: any main control must stay touchable. */
+main button{min-height:44px}
+main select{min-height:44px}
+main input[type="checkbox"],main input[type="radio"]{width:44px;height:44px;flex:none;accent-color:var(--accent)}
+
+/* Explain */
+.explain{margin-top:18px}
+.explain h2{margin:0 0 12px;font-size:clamp(1.3rem,3vw,1.7rem);letter-spacing:-.02em}
+.explain-body{padding-bottom:2px}
+.explain-body p{max-width:82ch;color:var(--muted);font-size:14px;margin-bottom:10px;overflow-wrap:anywhere}
+.explain-body p:last-child{margin-bottom:0}
+.explain-body strong{color:var(--ink)}
+.formula-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;margin:14px 0 18px}
+@media (min-width:760px){.formula-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.formula{min-width:0;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--paper-2)}
+.formula h3,.formula-title{margin:0 0 7px;font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.formula code{display:inline-block;max-width:100%;padding:2px 6px;border-radius:5px;background:var(--accent-wash);font-family:var(--mono);font-size:12.5px;line-height:1.6;overflow-wrap:anywhere}
+.assumptions{margin:0;padding-left:20px;color:var(--muted);font-size:13.5px}
+.assumptions li{margin:0 0 8px;overflow-wrap:anywhere}
+
+/* FAQ */
+.faq{margin-top:18px}
+.faq h2{margin:0 0 12px;font-size:clamp(1.3rem,3vw,1.7rem);letter-spacing:-.02em}
+.faq details{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:0 20px}
+.faq details+details{margin-top:10px}
+.faq summary{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:44px;padding:16px 0;cursor:pointer;font-weight:650;list-style:none}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";flex:none;font-family:var(--mono);font-size:19px;line-height:1;color:var(--accent)}
+.faq details[open] summary::after{content:"\2212"}
+.faq details p{margin:0;padding:0 0 18px;color:var(--muted);font-size:14px;max-width:80ch;overflow-wrap:anywhere}
+
+/* Footer */
+.site-footer{margin-top:28px;padding:22px 0 34px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted)}
+.footer-inner{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 18px}
+.footer-links{display:flex;flex-wrap:wrap;gap:4px 14px}
+.site-footer a{color:var(--accent);text-decoration:none;display:inline-flex;align-items:center;min-height:44px}
+.site-footer a:hover{text-decoration:underline}
+.footer-note{margin:8px 0 0;max-width:82ch;color:var(--muted-2);overflow-wrap:anywhere}
+.noscript{margin-top:18px}
+
+/* Toast */
+.toast{
+  position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));
+  transform:translate(-50%,12px);z-index:20;max-width:calc(100vw - 32px);
+  padding:12px 18px;border-radius:12px;background:var(--ink);color:var(--paper);
+  font-size:14px;font-weight:600;text-align:center;box-shadow:0 8px 24px rgb(0 0 0 / .22);
+  opacity:0;pointer-events:none;transition:opacity .16s,transform .16s;overflow-wrap:anywhere
+}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+
+/* Motion and print */
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .btn:active{transform:none}
+}
+@media print{
+  .site-header,.site-footer,.skip-link,.lang-switch,.tabs,.chips,.btn-row,.toast,.no-print{display:none!important}
+  body{background:#fff;color:#000;padding:0}
+  .card,.table-wrap{border-color:#999;background:#fff;break-inside:avoid}
+  .result-col{position:static}
+  .result-big{color:#000}
+  .explain,.faq{display:block}
+  details{break-inside:avoid}
+  .faq details p{display:block!important}
+}
+</style>
+</head>
+<body data-slug="json-to-typescript" data-category="text-dev">
+<a class="skip-link" href="#tool" data-i="skip">跳到工具</a>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="/" aria-label="Devin" data-i-aria="brandHome">
+      <span class="brand-mark" aria-hidden="true"></span><span data-i="brandName">Devin</span>
+    </a>
+    <div class="header-tools">
+      <nav class="site-nav" aria-label="站点导航" data-i-aria="navAria">
+        <a id="nav-tools" href="/tools/" data-tools-link data-i="navHall">工具大厅</a>
+        <a href="/games/" data-i="navGames">在线桌游</a>
+      </nav>
+      <nav class="lang-switch" aria-label="语言" data-i-aria="langLabel">
+        <button type="button" data-lang="zh" aria-pressed="true" data-i="langZh">中文</button>
+        <button type="button" data-lang="en" aria-pressed="false" data-i="langEn">EN</button>
+        <button type="button" data-lang="id" aria-pressed="false" data-i="langId">ID</button>
+      </nav>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero" aria-labelledby="page-title">
+    <p class="eyebrow" data-i="eyebrow">免费工具 · 本地运行</p>
+    <h1 id="page-title" data-i="appTitle">JSON 转 TypeScript</h1>
+    <p class="lede" data-i="tagline">接口字段太多，让工具先写一遍。</p>
+    <p class="privacy">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+      <span data-i="privacy">所有计算都在你的浏览器里完成，输入不会上传。</span>
+    </p>
+  </section>
+
+  <!-- ======================================================================
+       TOOL BODY — builder replaces this marker with the tool UI.
+       Everything between the marker and the explain section belongs to the tool.
+       Keep labels, data-i hooks, aria-live results and 44px targets.
+       ====================================================================== -->
+  
+<style>
+.out-pre{margin:12px 0 0;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--paper-2);font-size:13px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;max-height:440px;overflow:auto;min-height:160px}
+</style>
+<div class="tool-layout">
+  <section class="card" aria-labelledby="ts-in-label">
+    <p class="card-kicker" data-i="kickerInput">输入</p>
+    <h2 id="ts-in-label" data-i="appTitle">JSON 转 TypeScript</h2>
+    <div class="field">
+      <label for="json-input" data-i="inputLabel">JSON 文本</label>
+      <textarea id="json-input" rows="13" spellcheck="false" autocomplete="off" autocapitalize="off" data-i-ph="inputPh" placeholder="粘贴 JSON，或点击“加载示例”。"></textarea>
+    </div>
+    <div class="field-grid two" style="margin-top:12px">
+      <div class="field">
+        <label for="root-name" data-i="rootLabel">根类型名</label>
+        <input id="root-name" type="text" value="Root" autocomplete="off" spellcheck="false" data-i-ph="rootPh" placeholder="例如 ApiResponse">
+      </div>
+      <div class="field">
+        <label for="mode" data-i="modeLabel">输出形式</label>
+        <select id="mode">
+          <option value="interface" data-i="modeInterface">interface</option>
+          <option value="type" data-i="modeType">type 别名</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-grid two" style="margin-top:12px">
+      <div class="field">
+        <label for="indent" data-i="indentLabel">缩进</label>
+        <select id="indent">
+          <option value="2" data-i="indent2">2 个空格</option>
+          <option value="4" data-i="indent4">4 个空格</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="check" style="min-height:46px"><input type="checkbox" id="export" checked><span data-i="exportLabel">添加 export</span></label>
+      </div>
+    </div>
+    <div class="btn-row" style="margin-top:14px">
+      <button class="btn primary" type="button" id="generate" data-i="btnGenerate">生成类型</button>
+      <button class="btn" type="button" id="example" data-i="btnExample">加载示例</button>
+      <button class="btn ghost" type="button" id="clear" data-i="btnClear">清空</button>
+    </div>
+    <p class="error" id="ts-error" role="alert" hidden></p>
+    <p class="hint" data-i="exampleNote">示例包含嵌套对象、数组元素合并、可选字段和 null 字段。</p>
+  </section>
+
+  <section class="card result-col" aria-labelledby="ts-out-label">
+    <p class="card-kicker" data-i="kickerOutput">输出</p>
+    <h2 id="ts-out-label" data-i="result">结果</h2>
+    <div class="result" aria-live="polite">
+      <p class="result-note" id="ts-summary" data-i="emptyState">等待输入</p>
+      <div class="stat-grid" id="ts-stats" hidden>
+        <div class="stat"><span data-i="statInterfaces">接口数</span><b id="stat-interfaces">—</b></div>
+        <div class="stat"><span data-i="statFields">字段数</span><b id="stat-fields">—</b></div>
+        <div class="stat"><span data-i="statRoot">根类型</span><b id="stat-root">—</b></div>
+      </div>
+    </div>
+    <pre class="out-pre" id="ts-output" aria-live="polite" tabindex="0" data-i-aria="outputAria"></pre>
+    <div class="btn-row">
+      <button class="btn" type="button" id="copy" data-i="btnCopy">复制类型</button>
+      <button class="btn" type="button" id="download" data-i="btnDownload">下载 .ts</button>
+    </div>
+  </section>
+</div>
+
+
+  <section class="explain" id="explain" aria-labelledby="explain-title">
+    <h2 id="explain-title" data-i="explainTitle">公式与假设</h2>
+    <div class="explain-body">
+      <!-- ==================================================================
+           TOOL EXPLAIN — formula, assumptions, rounding rules, limitations.
+           ================================================================== -->
+      
+<div class="formula-grid">
+  <div class="formula"><h3 data-i="eTitle1">类型推断</h3><p data-i="eText1">字符串、数字、布尔值、null 分别推断为 string、number、boolean、null；对象按字段递归推断，空数组推断为 unknown[]。</p></div>
+  <div class="formula"><h3 data-i="eTitle2">数组合并</h3><p data-i="eText2">数组会合并所有元素的结构：仅部分元素拥有的键标为可选（?），类型冲突时生成联合类型，出现 null 时保留可空（| null）。</p></div>
+  <div class="formula"><h3 data-i="eTitle3">命名规则</h3><p data-i="eText3">根类型名转换为 PascalCase；嵌套对象用“父类型名 + 字段名”命名，数组成员用“父类型名 + 字段名 + Item”，重名时追加数字后缀。</p></div>
+  <div class="formula"><h3 data-i="eTitle4">限制</h3><p data-i="eText4">不推断字面量类型、日期格式或品牌类型；空对象输出 Record&lt;string, unknown&gt;。生成的代码是起点，请按业务补精确类型。</p></div>
+</div>
+
+    </div>
+  </section>
+
+  <section class="faq" id="faq" aria-labelledby="faq-title">
+    <h2 id="faq-title" data-i="faqTitle">常见问题</h2>
+    <!-- ====================================================================
+         TOOL FAQ — generator injects the Chinese FAQ from config.faqs.
+         Keep the faqQ1..faqA3 data-i keys in all three dictionaries.
+         ==================================================================== -->
+    <details>
+          <summary data-i="faqQ1">数组里不同类型会怎么处理？</summary>
+          <p data-i="faqA1">工具会合并所有元素的结构：共同字段保留，缺失字段标记为可选，类型冲突时生成联合类型。若差异过大，建议手动拆分模型。</p>
+        </details>
+    <details>
+          <summary data-i="faqQ2">可选和可空是一回事吗？</summary>
+          <p data-i="faqA2">不是。可选是字段可能不存在（?），可空是字段存在但值为 null。工具会分别推断，避免把 null 误当成缺失。</p>
+        </details>
+    <details>
+          <summary data-i="faqQ3">生成的类型能直接用吗？</summary>
+          <p data-i="faqA3">可作为起点。请按业务补充更精确的字面量类型、日期字符串格式和品牌类型，并检查根类型命名是否与项目约定一致。</p>
+        </details>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <p data-i="copyright">© 2026 Devin</p>
+    <nav class="footer-links" aria-label="页脚导航" data-i-aria="footerAria">
+      <a href="/tools/" data-tools-link data-i="backTools">工具大厅</a>
+      <a href="/games/" data-i="navGames">在线桌游</a>
+      <a href="/" data-i="navHome">首页</a>
+    </nav>
+  </div>
+  <div class="wrap"><p class="footer-note" data-i="footerNote">所有处理都在本地完成，不上传任何数据。</p></div>
+</footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<noscript>
+  <div class="wrap"><p class="card noscript" data-i="noscript">这个工具需要 JavaScript 才能运行。所有计算都在你的设备上完成，不会上传任何数据。</p></div>
+</noscript>
+
+<!-- ==========================================================================
+     ENGINE — pure functions only. No DOM, no window, no clock, no storage.
+     Builder replaces everything between TOOL_ENGINE_START and TOOL_ENGINE_END,
+     then updates the return object. Must stay Node-evaluable.
+     ========================================================================== -->
+<script id="engine">
+var ToolEngine = (function () {
+  'use strict';
+
+  function fail(code) { return { ok: false, error: code }; }
+
+  function locateJsonError(text, message) {
+    var match = /line\s+(\d+)\s+column\s+(\d+)/i.exec(message);
+    if (match) return { line: Number(match[1]), column: Number(match[2]) };
+    match = /position\s+(\d+)/i.exec(message);
+    if (!match) return { line: 1, column: 1 };
+    var position = Number(match[1]);
+    if (!isFinite(position) || position < 0) position = 0;
+    var line = 1;
+    var column = 1;
+    for (var i = 0; i < position && i < text.length; i++) {
+      if (text.charAt(i) === '\n') { line += 1; column = 1; } else { column += 1; }
+    }
+    return { line: line, column: column };
+  }
+
+  function parseJsonText(text) {
+    if (typeof text !== 'string') return fail('invalid_input');
+    try {
+      return { ok: true, value: JSON.parse(text) };
+    } catch (error) {
+      var at = locateJsonError(text, String(error && error.message));
+      return { ok: false, error: 'invalid_json', line: at.line, column: at.column };
+    }
+  }
+
+  function inferType(value) {
+    if (value === null) return { kind: 'null' };
+    if (Array.isArray(value)) {
+      if (value.length === 0) return { kind: 'array', element: { kind: 'unknown' } };
+      var element = inferType(value[0]);
+      for (var i = 1; i < value.length; i++) {
+        element = mergeTypes(element, inferType(value[i]));
+      }
+      return { kind: 'array', element: element };
+    }
+    if (typeof value === 'string') return { kind: 'string' };
+    if (typeof value === 'number') return { kind: 'number' };
+    if (typeof value === 'boolean') return { kind: 'boolean' };
+    if (typeof value === 'object') {
+      var props = [];
+      var keys = Object.keys(value);
+      for (var k = 0; k < keys.length; k++) {
+        props.push({ name: keys[k], type: inferType(value[keys[k]]), optional: false });
+      }
+      return { kind: 'object', props: props };
+    }
+    return { kind: 'unknown' };
+  }
+
+  function signature(type) {
+    try { return JSON.stringify(type); } catch (error) { return String(type); }
+  }
+
+  function unionOf(members) {
+    var flat = [];
+    var seen = Object.create(null);
+    function add(member) {
+      if (member.kind === 'union') {
+        for (var i = 0; i < member.types.length; i++) add(member.types[i]);
+        return;
+      }
+      var key = signature(member);
+      if (!seen[key]) { seen[key] = true; flat.push(member); }
+    }
+    for (var i = 0; i < members.length; i++) add(members[i]);
+    if (flat.length === 1) return flat[0];
+    return { kind: 'union', types: flat };
+  }
+
+  function mergeObjects(left, right) {
+    var rightMap = Object.create(null);
+    var leftMap = Object.create(null);
+    var i;
+    for (i = 0; i < right.props.length; i++) rightMap[right.props[i].name] = right.props[i];
+    for (i = 0; i < left.props.length; i++) leftMap[left.props[i].name] = true;
+    var props = [];
+    for (i = 0; i < left.props.length; i++) {
+      var leftProp = left.props[i];
+      var rightProp = rightMap[leftProp.name];
+      props.push({
+        name: leftProp.name,
+        type: rightProp ? mergeTypes(leftProp.type, rightProp.type) : leftProp.type,
+        optional: leftProp.optional || !rightProp
+      });
+    }
+    for (i = 0; i < right.props.length; i++) {
+      if (!leftMap[right.props[i].name]) {
+        props.push({ name: right.props[i].name, type: right.props[i].type, optional: true });
+      }
+    }
+    return { kind: 'object', props: props };
+  }
+
+  function mergeTypes(left, right) {
+    if (!left) return right;
+    if (!right) return left;
+    if (left.kind === 'unknown') return right;
+    if (right.kind === 'unknown') return left;
+    if (left.kind === 'object' && right.kind === 'object') return mergeObjects(left, right);
+    if (left.kind === 'array' && right.kind === 'array') {
+      return { kind: 'array', element: mergeTypes(left.element, right.element) };
+    }
+    if (left.kind === right.kind) {
+      if (left.kind === 'union') return unionOf([left, right]);
+      return left;
+    }
+    return unionOf([left, right]);
+  }
+
+  function sanitizeName(raw) {
+    var text = String(raw == null ? '' : raw).replace(/[^A-Za-z0-9_$]+/g, ' ').trim();
+    if (!text) return 'Root';
+    var parts = text.split(/\s+/);
+    var out = '';
+    for (var i = 0; i < parts.length; i++) {
+      var part = parts[i];
+      out += part.charAt(0).toUpperCase() + part.slice(1);
+    }
+    if (/^[0-9]/.test(out)) out = '_' + out;
+    return out;
+  }
+
+  function isIdentifier(name) {
+    return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(name);
+  }
+
+  function propertyLabel(name) {
+    return isIdentifier(name) ? name : JSON.stringify(name);
+  }
+
+  function toTypeScript(value, opts) {
+    opts = opts || {};
+    var rootName = sanitizeName(opts.rootName || 'Root');
+    var unit = opts.indent === 4 ? '    ' : '  ';
+    var mode = opts.mode === 'type' ? 'type' : 'interface';
+    var exportPrefix = opts.export === false ? '' : 'export ';
+    var root = inferType(value);
+    var interfaces = [];
+    var used = Object.create(null);
+    var fieldCount = 0;
+
+    function pad(depth) {
+      var out = '';
+      for (var i = 0; i < depth; i++) out += unit;
+      return out;
+    }
+
+    function uniqueName(base) {
+      var name = sanitizeName(base);
+      var candidate = name;
+      var counter = 2;
+      while (used[candidate]) {
+        candidate = name + counter;
+        counter += 1;
+      }
+      used[candidate] = true;
+      return candidate;
+    }
+
+    function objectRef(type, baseName, depth) {
+      if (type.props.length === 0) return 'Record<string, unknown>';
+      if (mode === 'type') return inlineObject(type, depth);
+      var name = uniqueName(baseName);
+      interfaces.push({ name: name, type: type });
+      return name;
+    }
+
+    function inlineObject(type, depth) {
+      if (type.props.length === 0) return 'Record<string, unknown>';
+      var lines = ['{'];
+      for (var i = 0; i < type.props.length; i++) {
+        var prop = type.props[i];
+        fieldCount += 1;
+        lines.push(pad(depth + 1) + propertyLabel(prop.name) + (prop.optional ? '?' : '') + ': ' +
+          typeRender(prop.type, 'Field' + sanitizeName(prop.name), depth + 1) + ';');
+      }
+      lines.push(pad(depth) + '}');
+      return lines.join('\n');
+    }
+
+    function typeRender(type, baseName, depth) {
+      var level = depth || 0;
+      if (type.kind === 'object') return objectRef(type, baseName, level);
+      if (type.kind === 'array') {
+        var element = typeRender(type.element, baseName + 'Item', level);
+        if (type.element.kind === 'union') return 'Array<' + element + '>';
+        return element + '[]';
+      }
+      if (type.kind === 'union') {
+        var members = [];
+        for (var i = 0; i < type.types.length; i++) {
+          var memberBase = i === 0 ? baseName : baseName + 'Alt' + (i + 1);
+          members.push(typeRender(type.types[i], memberBase, level));
+        }
+        return members.join(' | ');
+      }
+      if (type.kind === 'null') return 'null';
+      if (type.kind === 'string' || type.kind === 'number' || type.kind === 'boolean') return type.kind;
+      return 'unknown';
+    }
+
+    function interfaceText(record) {
+      var lines = [exportPrefix + 'interface ' + record.name + ' {'];
+      for (var i = 0; i < record.type.props.length; i++) {
+        var prop = record.type.props[i];
+        fieldCount += 1;
+        var childName = record.name + sanitizeName(prop.name);
+        lines.push(unit + propertyLabel(prop.name) + (prop.optional ? '?' : '') + ': ' +
+          typeRender(prop.type, childName, 1) + ';');
+      }
+      lines.push('}');
+      return lines.join('\n');
+    }
+
+    var declarations = [];
+    if (mode === 'interface' && root.kind === 'object' && root.props.length > 0) {
+      used[rootName] = true;
+      interfaces.push({ name: rootName, type: root });
+      for (var i = 0; i < interfaces.length; i++) {
+        declarations.push(interfaceText(interfaces[i]));
+      }
+    } else {
+      var rendered = typeRender(root, rootName, 0);
+      declarations.push(exportPrefix + 'type ' + rootName + ' = ' + rendered + ';');
+      if (mode === 'interface') {
+        for (var j = 0; j < interfaces.length; j++) {
+          declarations.push(interfaceText(interfaces[j]));
+        }
+      }
+    }
+
+    return {
+      ok: true,
+      code: declarations.join('\n\n'),
+      rootName: rootName,
+      interfaces: interfaces.length,
+      fields: fieldCount,
+      rootKind: root.kind
+    };
+  }
+
+  return {
+    parseJsonText: parseJsonText,
+    locateJsonError: locateJsonError,
+    inferType: inferType,
+    mergeTypes: mergeTypes,
+    sanitizeName: sanitizeName,
+    toTypeScript: toTypeScript
+  };
+})();
+</script>
+
+<!-- ==========================================================================
+     DICTIONARIES — zh / en / id must always expose exactly the same keys.
+     Generic keys live above the TOOL_DICT_* marker.
+     Tool-specific keys (including faqQ1..faqA3) live below the marker and are
+     replaced by the builder. No hard-coded visible copy anywhere in the page.
+     ========================================================================== -->
+<script id="i18n">
+var TOOL_I18N = {
+  zh: {
+    /* ---- generic keys: do not remove ---- */
+    docTitle: 'JSON 转 TypeScript 接口',
+    docDesc: '把 JSON 推断成 TypeScript interface 或 type，合并数组元素、标记可选与可空、命名根类型并选择是否导出。全部在本地处理，无需注册。',
+    appTitle: 'JSON 转 TypeScript',
+    tagline: '接口字段太多，让工具先写一遍。',
+    eyebrow: '免费工具 · 本地运行',
+    privacy: '所有计算都在你的浏览器里完成，输入不会上传。',
+    skip: '跳到工具',
+    navAria: '站点导航',
+    navHall: '工具大厅',
+    navGames: '在线桌游',
+    langLabel: '语言',
+    langZh: '中文',
+    langEn: 'EN',
+    langId: 'ID',
+    brandName: 'Devin',
+    brandHome: 'Devin 首页',
+    navHome: '首页',
+    footerAria: '页脚导航',
+    footerNote: '所有处理都在本地完成，不上传任何数据。',
+    copyright: '© 2026 Devin',
+    copy: '复制结果',
+    copied: '已复制。',
+    copyFail: '无法自动复制，请手动选中后复制。',
+    copyHint: '复制的是未加千分位的原始数值。',
+    reset: '重置',
+    result: '结果',
+    explainTitle: '公式与假设',
+    faqTitle: '常见问题',
+    formulaTitle: '公式',
+    assumptionsTitle: '假设与规则',
+    backTools: '工具大厅',
+    moreTools: '更多工具',
+    notMedical: '仅供估算，不构成医疗建议。',
+    notFinancial: '仅供估算，不构成财务建议。',
+    unitNote: '换算结果按四舍五入显示。',
+    download: '下载',
+    downloadFail: '下载失败，请重试。',
+    clear: '清除',
+    swap: '交换',
+    add: '添加',
+    remove: '删除',
+    close: '关闭',
+    yes: '是',
+    no: '否',
+    errorInvalid: '请输入有效的数字。',
+    errorRequired: '请填写这一项。',
+    errorGeneric: '无法计算，请检查输入。',
+    storageFail: '无法写入本地存储，本次设置不会被保存。',
+    noscript: '这个工具需要 JavaScript 才能运行。所有计算都在你的设备上完成，不会上传任何数据。',
+
+    /* ---- tool-specific keys: replace below this line ---- */
+    // TOOL_DICT_ZH
+    kickerInput: '输入',
+    kickerOutput: '输出',
+    inputLabel: 'JSON 文本',
+    inputPh: '粘贴 JSON，或点击“加载示例”。',
+    rootLabel: '根类型名',
+    rootPh: '例如 ApiResponse',
+    modeLabel: '输出形式',
+    modeInterface: 'interface',
+    modeType: 'type 别名',
+    indentLabel: '缩进',
+    indent2: '2 个空格',
+    indent4: '4 个空格',
+    exportLabel: '添加 export',
+    btnGenerate: '生成类型',
+    btnExample: '加载示例',
+    btnClear: '清空',
+    btnCopy: '复制类型',
+    btnDownload: '下载 .ts',
+    outputAria: 'TypeScript 输出',
+    emptyState: '等待输入',
+    summaryTypes: '{n} 个接口 · {fields} 个字段',
+    statInterfaces: '接口数',
+    statFields: '字段数',
+    statRoot: '根类型',
+    errInvalidJson: 'JSON 无效。',
+    errorAt: '第 {line} 行，第 {column} 列',
+    exampleNote: '示例包含嵌套对象、数组元素合并、可选字段和 null 字段。',
+    eTitle1: '类型推断',
+    eText1: '字符串、数字、布尔值、null 分别推断为 string、number、boolean、null；对象按字段递归推断，空数组推断为 unknown[]。',
+    eTitle2: '数组合并',
+    eText2: '数组会合并所有元素的结构：仅部分元素拥有的键标为可选（?），类型冲突时生成联合类型，出现 null 时保留可空（| null）。',
+    eTitle3: '命名规则',
+    eText3: '根类型名转换为 PascalCase；嵌套对象用“父类型名 + 字段名”命名，数组成员用“父类型名 + 字段名 + Item”，重名时追加数字后缀。',
+    eTitle4: '限制',
+    eText4: '不推断字面量类型、日期格式或品牌类型；空对象输出 Record<string, unknown>。生成的代码是起点，请按业务补精确类型。',
+    faqQ1: '数组里不同类型会怎么处理？',
+    faqA1: '工具会合并所有元素的结构：共同字段保留，缺失字段标记为可选，类型冲突时生成联合类型。若差异过大，建议手动拆分模型。',
+    faqQ2: '可选和可空是一回事吗？',
+    faqA2: '不是。可选是字段可能不存在（?），可空是字段存在但值为 null。工具会分别推断，避免把 null 误当成缺失。',
+    faqQ3: '生成的类型能直接用吗？',
+    faqA3: '可作为起点。请按业务补充更精确的字面量类型、日期字符串格式和品牌类型，并检查根类型命名是否与项目约定一致。'
+  },
+  en: {
+    /* ---- generic keys: do not remove ---- */
+    docTitle: 'JSON to TypeScript',
+    docDesc: 'Infer TypeScript interfaces or types from JSON, merge array element shapes, mark optional and nullable fields, name the root type and choose exports. Local, no sign-up.',
+    appTitle: 'JSON to TypeScript',
+    tagline: 'Let the tool write the first draft.',
+    eyebrow: 'Free tool · runs locally',
+    privacy: 'Everything runs in your browser. Nothing you type is uploaded.',
+    skip: 'Skip to the tool',
+    navAria: 'Site navigation',
+    navHall: 'Tools',
+    navGames: 'Games',
+    langLabel: 'Language',
+    langZh: '中文',
+    langEn: 'EN',
+    langId: 'ID',
+    brandName: 'Devin',
+    brandHome: 'Devin home',
+    navHome: 'Home',
+    footerAria: 'Footer navigation',
+    footerNote: 'Everything runs locally. No data is uploaded.',
+    copyright: '© 2026 Devin',
+    copy: 'Copy result',
+    copied: 'Copied.',
+    copyFail: 'Could not copy automatically. Select the text and copy it manually.',
+    copyHint: 'Copies the plain number without thousands separators.',
+    reset: 'Reset',
+    result: 'Result',
+    explainTitle: 'Formulas and assumptions',
+    faqTitle: 'Frequently asked questions',
+    formulaTitle: 'Formula',
+    assumptionsTitle: 'Assumptions and rules',
+    backTools: 'Tools',
+    moreTools: 'More tools',
+    notMedical: 'Estimates only, not medical advice.',
+    notFinancial: 'Estimates only, not financial advice.',
+    unitNote: 'Converted values are rounded for display.',
+    download: 'Download',
+    downloadFail: 'Download failed. Try again.',
+    clear: 'Clear',
+    swap: 'Swap',
+    add: 'Add',
+    remove: 'Remove',
+    close: 'Close',
+    yes: 'Yes',
+    no: 'No',
+    errorInvalid: 'Enter a valid number.',
+    errorRequired: 'Fill in this field.',
+    errorGeneric: 'Could not calculate. Check the inputs.',
+    storageFail: 'Could not write to local storage, so this setting will not be saved.',
+    noscript: 'This tool needs JavaScript to run. All calculations happen on your device; nothing is uploaded.',
+
+    /* ---- tool-specific keys: replace below this line ---- */
+    // TOOL_DICT_EN
+    kickerInput: 'Input',
+    kickerOutput: 'Output',
+    inputLabel: 'JSON text',
+    inputPh: 'Paste JSON, or load the example.',
+    rootLabel: 'Root type name',
+    rootPh: 'e.g. ApiResponse',
+    modeLabel: 'Output form',
+    modeInterface: 'interface',
+    modeType: 'type alias',
+    indentLabel: 'Indent',
+    indent2: '2 spaces',
+    indent4: '4 spaces',
+    exportLabel: 'Add export',
+    btnGenerate: 'Generate types',
+    btnExample: 'Load example',
+    btnClear: 'Clear',
+    btnCopy: 'Copy types',
+    btnDownload: 'Download .ts',
+    outputAria: 'TypeScript output',
+    emptyState: 'Waiting for input',
+    summaryTypes: '{n} interfaces · {fields} fields',
+    statInterfaces: 'Interfaces',
+    statFields: 'Fields',
+    statRoot: 'Root type',
+    errInvalidJson: 'The JSON is invalid.',
+    errorAt: 'line {line}, column {column}',
+    exampleNote: 'The example has nested objects, merged array elements, optional fields and a null field.',
+    eTitle1: 'Type inference',
+    eText1: 'Strings, numbers, booleans and null map to string, number, boolean and null. Objects are inferred field by field, and an empty array becomes unknown[].',
+    eTitle2: 'Array merging',
+    eText2: 'Array elements are merged: keys present in only some elements become optional (?), conflicting types become a union, and null keeps the field nullable (| null).',
+    eTitle3: 'Naming',
+    eText3: 'The root name is converted to PascalCase. Nested objects use parent name plus field name; array members use parent name plus field name plus Item. Collisions get a numeric suffix.',
+    eTitle4: 'Limits',
+    eText4: 'Literal types, date formats and brand types are not inferred. Empty objects become Record<string, unknown>. Treat the output as a starting point and refine it for your domain.',
+    faqQ1: 'How are mixed array elements handled?',
+    faqA1: 'All element shapes are merged: shared fields stay, missing fields become optional, and conflicting types become a union. If the shapes differ a lot, split them into separate models by hand.',
+    faqQ2: 'Are optional and nullable the same?',
+    faqA2: 'No. Optional means the field may not exist (?), while nullable means it exists but is null. The tool infers them separately so null is not mistaken for a missing field.',
+    faqQ3: 'Can I use the generated types as-is?',
+    faqA3: 'Use them as a starting point. Add precise literal types, date string formats and brand types for your domain, and check the root type name against your project conventions.'
+  },
+  id: {
+    /* ---- generic keys: do not remove ---- */
+    docTitle: 'JSON ke TypeScript',
+    docDesc: 'Hasilkan interface atau type TypeScript dari JSON, gabungkan bentuk elemen array, tandai bidang opsional dan nullable, beri nama tipe root, dan pilih ekspor. Lokal, tanpa daftar.',
+    appTitle: 'JSON ke TypeScript',
+    tagline: 'Biarkan alat menulis draf tipe.',
+    eyebrow: 'Alat gratis · berjalan lokal',
+    privacy: 'Semua perhitungan berjalan di browser Anda. Tidak ada yang diunggah.',
+    skip: 'Lompat ke alat',
+    navAria: 'Navigasi situs',
+    navHall: 'Alat',
+    navGames: 'Permainan',
+    langLabel: 'Bahasa',
+    langZh: '中文',
+    langEn: 'EN',
+    langId: 'ID',
+    brandName: 'Devin',
+    brandHome: 'Beranda Devin',
+    navHome: 'Beranda',
+    footerAria: 'Navigasi footer',
+    footerNote: 'Semua diproses secara lokal. Tidak ada data yang diunggah.',
+    copyright: '© 2026 Devin',
+    copy: 'Salin hasil',
+    copied: 'Tersalin.',
+    copyFail: 'Tidak bisa menyalin otomatis. Pilih teksnya lalu salin manual.',
+    copyHint: 'Menyalin angka polos tanpa pemisah ribuan.',
+    reset: 'Atur ulang',
+    result: 'Hasil',
+    explainTitle: 'Rumus dan asumsi',
+    faqTitle: 'Pertanyaan yang sering diajukan',
+    formulaTitle: 'Rumus',
+    assumptionsTitle: 'Asumsi dan aturan',
+    backTools: 'Alat',
+    moreTools: 'Alat lainnya',
+    notMedical: 'Hanya perkiraan, bukan saran medis.',
+    notFinancial: 'Hanya perkiraan, bukan saran keuangan.',
+    unitNote: 'Nilai hasil konversi dibulatkan untuk tampilan.',
+    download: 'Unduh',
+    downloadFail: 'Unduh gagal. Coba lagi.',
+    clear: 'Bersihkan',
+    swap: 'Tukar',
+    add: 'Tambah',
+    remove: 'Hapus',
+    close: 'Tutup',
+    yes: 'Ya',
+    no: 'Tidak',
+    errorInvalid: 'Masukkan angka yang valid.',
+    errorRequired: 'Isi kolom ini.',
+    errorGeneric: 'Tidak dapat menghitung. Periksa input.',
+    storageFail: 'Tidak bisa menulis ke penyimpanan lokal, jadi pengaturan ini tidak akan disimpan.',
+    noscript: 'Alat ini memerlukan JavaScript. Semua perhitungan terjadi di perangkat Anda; tidak ada yang diunggah.',
+
+    /* ---- tool-specific keys: replace below this line ---- */
+    // TOOL_DICT_ID
+    kickerInput: 'Masukan',
+    kickerOutput: 'Keluaran',
+    inputLabel: 'Teks JSON',
+    inputPh: 'Tempel JSON, atau muat contoh.',
+    rootLabel: 'Nama tipe akar',
+    rootPh: 'mis. ApiResponse',
+    modeLabel: 'Bentuk keluaran',
+    modeInterface: 'interface',
+    modeType: 'alias type',
+    indentLabel: 'Indentasi',
+    indent2: '2 spasi',
+    indent4: '4 spasi',
+    exportLabel: 'Tambahkan export',
+    btnGenerate: 'Hasilkan tipe',
+    btnExample: 'Muat contoh',
+    btnClear: 'Bersihkan',
+    btnCopy: 'Salin tipe',
+    btnDownload: 'Unduh .ts',
+    outputAria: 'Keluaran TypeScript',
+    emptyState: 'Menunggu masukan',
+    summaryTypes: '{n} interface · {fields} bidang',
+    statInterfaces: 'Interface',
+    statFields: 'Bidang',
+    statRoot: 'Tipe akar',
+    errInvalidJson: 'JSON tidak valid.',
+    errorAt: 'baris {line}, kolom {column}',
+    exampleNote: 'Contoh memuat objek bersarang, elemen array yang digabung, bidang opsional, dan bidang null.',
+    eTitle1: 'Inferensi tipe',
+    eText1: 'String, angka, boolean, dan null dipetakan ke string, number, boolean, dan null. Objek diinferensi per bidang, dan array kosong menjadi unknown[].',
+    eTitle2: 'Penggabungan array',
+    eText2: 'Elemen array digabung: kunci yang hanya ada di sebagian elemen menjadi opsional (?), tipe yang bertentangan menjadi union, dan null mempertahankan sifat nullable (| null).',
+    eTitle3: 'Penamaan',
+    eText3: 'Nama akar diubah ke PascalCase. Objek bersarang memakai nama induk plus nama bidang; anggota array memakai nama induk plus nama bidang plus Item. Nama bentrok diberi akhiran angka.',
+    eTitle4: 'Batas',
+    eText4: 'Tipe literal, format tanggal, dan brand type tidak diinferensi. Objek kosong menjadi Record<string, unknown>. Perlakukan keluaran sebagai titik awal dan perhalus sesuai domain.',
+    faqQ1: 'Bagaimana elemen array dengan tipe campuran ditangani?',
+    faqA1: 'Semua bentuk elemen digabung: bidang bersama dipertahankan, bidang yang hilang menjadi opsional, dan tipe yang bertentangan menjadi union. Jika bentuknya sangat berbeda, pisahkan model secara manual.',
+    faqQ2: 'Apakah opsional dan nullable sama?',
+    faqA2: 'Tidak. Opsional berarti bidang mungkin tidak ada (?), sedangkan nullable berarti bidang ada tetapi bernilai null. Alat menginferensinya terpisah agar null tidak dianggap hilang.',
+    faqQ3: 'Bisakah tipe hasil langsung dipakai?',
+    faqA3: 'Pakai sebagai titik awal. Tambahkan tipe literal yang presisi, format string tanggal, dan brand type sesuai domain, lalu periksa nama tipe akar terhadap konvensi proyek Anda.'
+  }
+};
+</script>
+
+<!-- ==========================================================================
+     UI RUNTIME — language switching plus the global ToolUI helpers.
+     Builder replaces only the TOOL_UI_START / TOOL_UI_END block.
+     ========================================================================== -->
+<script>
+(function () {
+  'use strict';
+
+  var I18N = (typeof TOOL_I18N !== 'undefined') ? TOOL_I18N : { zh: {}, en: {}, id: {} };
+  var TOOL_SLUG = 'json-to-typescript';
+  var LANG_KEY = 'hhfa.tool.' + TOOL_SLUG + '.lang';
+  var LANGS = ['zh', 'en', 'id'];
+  var LOCALES = { zh: 'zh-CN', en: 'en-US', id: 'id-ID' };
+  var OG_LOCALES = { zh: 'zh_CN', en: 'en_US', id: 'id_ID' };
+  var state = { lang: 'zh' };
+  var toastTimer = null;
+  var started = false;
+  var langHooks = [];
+
+  function $(sel) {
+    return typeof sel === 'string' ? document.querySelector(sel) : sel;
+  }
+
+  function $$(sel) {
+    return Array.prototype.slice.call(document.querySelectorAll(sel));
+  }
+
+  function T(key, vars) {
+    var dict = I18N[state.lang] || {};
+    var value = Object.prototype.hasOwnProperty.call(dict, key) ? dict[key] : null;
+    if (typeof value !== 'string' && I18N.zh && typeof I18N.zh[key] === 'string') {
+      value = I18N.zh[key];
+    }
+    if (typeof value !== 'string') return key;
+    if (vars) {
+      value = value.replace(/\{(\w+)\}/g, function (match, name) {
+        return vars[name] != null ? String(vars[name]) : '';
+      });
+    }
+    return value;
+  }
+
+  function locale() {
+    return LOCALES[state.lang] || 'en-US';
+  }
+
+  function fmt(n, opts) {
+    if (typeof n !== 'number' || !isFinite(n)) return '—';
+    try {
+      return new Intl.NumberFormat(locale(), opts || {}).format(n);
+    } catch (e) {
+      return String(n);
+    }
+  }
+
+  function toast(message) {
+    var el = $('#toast');
+    if (!el) return;
+    el.textContent = message == null ? '' : String(message);
+    el.classList.add('on');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove('on'); }, 2600);
+  }
+
+  function legacyCopy(text) {
+    try {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.top = '-1000px';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { ta.setSelectionRange(0, ta.value.length); } catch (e) { /* ignore */ }
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      document.body.removeChild(ta);
+      return ok;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function copy(text) {
+    var value = text == null ? '' : String(text);
+    return new Promise(function (resolve) {
+      function done() { toast(T('copied')); resolve(true); }
+      function fail() { toast(T('copyFail')); resolve(false); }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(value).then(done, function () {
+          if (legacyCopy(value)) done(); else fail();
+        });
+      } else if (legacyCopy(value)) {
+        done();
+      } else {
+        fail();
+      }
+    });
+  }
+
+  function download(name, content, mime) {
+    try {
+      var blob = new Blob([content], { type: mime || 'text/plain;charset=utf-8' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = name || 'download.txt';
+      a.rel = 'noopener';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function () {
+        try {
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        } catch (e) { /* ignore */ }
+      }, 0);
+      return true;
+    } catch (e) {
+      toast(T('downloadFail'));
+      return false;
+    }
+  }
+
+  function readStore(key, fallback) {
+    try {
+      var raw = localStorage.getItem(key);
+      if (raw == null) return fallback;
+      var value = JSON.parse(raw);
+      return value == null ? fallback : value;
+    } catch (e) {
+      return fallback;
+    }
+  }
+
+  function writeStore(key, value) {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+      return true;
+    } catch (e) {
+      toast(T('storageFail'));
+      return false;
+    }
+  }
+
+  function debounce(fn, ms) {
+    var timer = null;
+    var wait = isFinite(ms) ? ms : 150;
+    return function () {
+      var ctx = this;
+      var args = arguments;
+      clearTimeout(timer);
+      timer = setTimeout(function () { fn.apply(ctx, args); }, wait);
+    };
+  }
+
+  function on(target, event, handler) {
+    var el = typeof target === 'string' ? $(target) : target;
+    if (!el || !el.addEventListener) return function () {};
+    el.addEventListener(event, handler);
+    return function () { el.removeEventListener(event, handler); };
+  }
+
+  function setError(el, message) {
+    if (!el) return;
+    if (!message) { clearError(el); return; }
+    el.textContent = String(message);
+    el.hidden = false;
+    el.classList.add('on');
+  }
+
+  function clearError(el) {
+    if (!el) return;
+    el.textContent = '';
+    el.hidden = true;
+    el.classList.remove('on');
+  }
+
+  function onLangChange(fn) {
+    if (typeof fn !== 'function') return function () {};
+    langHooks.push(fn);
+    if (started) {
+      try { fn(state.lang); } catch (e) { /* a broken hook must not break switching */ }
+    }
+    return function () {
+      var i = langHooks.indexOf(fn);
+      if (i !== -1) langHooks.splice(i, 1);
+    };
+  }
+
+  function setMeta(attr, name, content) {
+    var nodes = document.querySelectorAll('meta');
+    for (var i = 0; i < nodes.length; i++) {
+      if (nodes[i].getAttribute(attr) === name) {
+        nodes[i].setAttribute('content', content);
+        return;
+      }
+    }
+  }
+
+  function renderLanguage() {
+    var lang = state.lang;
+    document.documentElement.lang = lang === 'zh' ? 'zh-CN' : lang;
+
+    var nodes = $$('[data-i]');
+    for (var i = 0; i < nodes.length; i++) {
+      nodes[i].textContent = T(nodes[i].getAttribute('data-i'));
+    }
+    var placeholders = $$('[data-i-ph]');
+    for (var j = 0; j < placeholders.length; j++) {
+      placeholders[j].setAttribute('placeholder', T(placeholders[j].getAttribute('data-i-ph')));
+    }
+    var labelled = $$('[data-i-aria]');
+    for (var k = 0; k < labelled.length; k++) {
+      labelled[k].setAttribute('aria-label', T(labelled[k].getAttribute('data-i-aria')));
+    }
+    var buttons = $$('[data-lang]');
+    for (var b = 0; b < buttons.length; b++) {
+      buttons[b].setAttribute('aria-pressed', buttons[b].getAttribute('data-lang') === lang ? 'true' : 'false');
+    }
+
+    document.title = T('docTitle');
+    setMeta('name', 'description', T('docDesc'));
+    setMeta('property', 'og:title', T('docTitle'));
+    setMeta('property', 'og:description', T('docDesc'));
+    setMeta('property', 'og:locale', OG_LOCALES[lang] || 'en_US');
+    setMeta('name', 'twitter:title', T('docTitle'));
+    setMeta('name', 'twitter:description', T('docDesc'));
+
+    var toolsHref = lang === 'zh' ? '/tools/' : '/tools/' + lang + '/';
+    var links = $$('[data-tools-link]');
+    for (var l = 0; l < links.length; l++) links[l].setAttribute('href', toolsHref);
+  }
+
+  function applyLang() {
+    renderLanguage();
+    for (var i = 0; i < langHooks.length; i++) {
+      try { langHooks[i](state.lang); } catch (e) { /* keep the page usable */ }
+    }
+    started = true;
+  }
+
+  function detectLang() {
+    try {
+      var q = new URLSearchParams(window.location.search).get('lang');
+      if (LANGS.indexOf(q) !== -1) return q;
+    } catch (e) { /* ignore */ }
+    try {
+      var saved = localStorage.getItem(LANG_KEY);
+      if (LANGS.indexOf(saved) !== -1) return saved;
+    } catch (e) { /* ignore */ }
+    var nav = String(navigator.language || '').toLowerCase();
+    if (nav.indexOf('zh') === 0) return 'zh';
+    if (nav.indexOf('id') === 0 || nav.indexOf('in') === 0) return 'id';
+    return 'en';
+  }
+
+  function saveLang() {
+    try { localStorage.setItem(LANG_KEY, state.lang); } catch (e) { /* ignore */ }
+  }
+
+  function bindLanguages() {
+    var buttons = $$('[data-lang]');
+    for (var i = 0; i < buttons.length; i++) {
+      (function (button) {
+        button.addEventListener('click', function () {
+          var next = button.getAttribute('data-lang');
+          if (LANGS.indexOf(next) === -1 || next === state.lang) return;
+          state.lang = next;
+          saveLang();
+          applyLang();
+        });
+      })(buttons[i]);
+    }
+  }
+
+  function init() {
+    state.lang = detectLang();
+    bindLanguages();
+    applyLang();
+  }
+
+  var ToolUI = {
+    T: T,
+    fmt: fmt,
+    copy: copy,
+    toast: toast,
+    download: download,
+    readStore: readStore,
+    writeStore: writeStore,
+    debounce: debounce,
+    on: on,
+    setError: setError,
+    clearError: clearError,
+    onLangChange: onLangChange,
+    lang: function () { return state.lang; },
+    locale: locale,
+    $: $,
+    $$: $$
+  };
+
+  window.ToolUI = ToolUI;
+  window.T = T;
+
+  // TOOL_UI_START
+  (function () {
+    var input = ToolUI.$('#json-input');
+    var rootNameInput = ToolUI.$('#root-name');
+    var mode = ToolUI.$('#mode');
+    var indent = ToolUI.$('#indent');
+    var exportBox = ToolUI.$('#export');
+    var output = ToolUI.$('#ts-output');
+    var summary = ToolUI.$('#ts-summary');
+    var stats = ToolUI.$('#ts-stats');
+    var statInterfaces = ToolUI.$('#stat-interfaces');
+    var statFields = ToolUI.$('#stat-fields');
+    var statRoot = ToolUI.$('#stat-root');
+    var errorBox = ToolUI.$('#ts-error');
+    var copyButton = ToolUI.$('#copy');
+    var downloadButton = ToolUI.$('#download');
+    if (!input || !output) return;
+
+    var lastCode = '';
+
+    function clearView() {
+      lastCode = '';
+      output.textContent = '';
+      if (summary) { summary.textContent = ToolUI.T('emptyState'); summary.removeAttribute('data-i'); }
+      if (stats) stats.hidden = true;
+      if (copyButton) copyButton.disabled = true;
+      if (downloadButton) downloadButton.disabled = true;
+      ToolUI.clearError(errorBox);
+      input.removeAttribute('aria-invalid');
+    }
+
+    function generate() {
+      var text = input.value;
+      if (!text.trim()) { clearView(); return; }
+      var parsed = ToolEngine.parseJsonText(text);
+      if (!parsed.ok) {
+        clearView();
+        input.setAttribute('aria-invalid', 'true');
+        ToolUI.setError(errorBox, ToolUI.T('errInvalidJson') + ' ' + ToolUI.T('errorAt', { line: parsed.line, column: parsed.column }));
+        return;
+      }
+      var result = ToolEngine.toTypeScript(parsed.value, {
+        rootName: rootNameInput ? rootNameInput.value : 'Root',
+        mode: mode ? mode.value : 'interface',
+        indent: indent && indent.value === '4' ? 4 : 2,
+        export: exportBox ? exportBox.checked : true
+      });
+      if (!result.ok) {
+        clearView();
+        ToolUI.setError(errorBox, ToolUI.T('errorGeneric'));
+        return;
+      }
+      input.removeAttribute('aria-invalid');
+      ToolUI.clearError(errorBox);
+      lastCode = result.code;
+      output.textContent = result.code;
+      if (summary) {
+        summary.removeAttribute('data-i');
+        summary.textContent = ToolUI.T('summaryTypes', { n: result.interfaces, fields: result.fields });
+      }
+      if (stats) stats.hidden = false;
+      if (statInterfaces) statInterfaces.textContent = ToolUI.fmt(result.interfaces);
+      if (statFields) statFields.textContent = ToolUI.fmt(result.fields);
+      if (statRoot) statRoot.textContent = result.rootName;
+      if (copyButton) copyButton.disabled = false;
+      if (downloadButton) downloadButton.disabled = false;
+    }
+
+    var debounced = ToolUI.debounce(generate, 200);
+    ToolUI.on(input, 'input', debounced);
+    ToolUI.on(rootNameInput, 'input', debounced);
+    ToolUI.on(mode, 'change', generate);
+    ToolUI.on(indent, 'change', generate);
+    ToolUI.on(exportBox, 'change', generate);
+    ToolUI.on('#generate', 'click', generate);
+    ToolUI.on('#example', 'click', function () {
+      input.value = '{\n  "id": 42,\n  "name": "Ada",\n  "active": true,\n  "profile": { "city": "London", "website": null },\n  "tags": ["math", "code"],\n  "orders": [\n    { "id": 1, "total": 19.9 },\n    { "id": 2, "total": 5, "note": "gift" }\n  ]\n}\n';
+      generate();
+      input.focus();
+    });
+    ToolUI.on('#clear', 'click', function () {
+      input.value = '';
+      clearView();
+      input.focus();
+    });
+    ToolUI.on(copyButton, 'click', function () { if (lastCode) ToolUI.copy(lastCode); });
+    ToolUI.on(downloadButton, 'click', function () {
+      if (lastCode) ToolUI.download('types.ts', lastCode, 'text/plain;charset=utf-8');
+    });
+    ToolUI.onLangChange(function () {
+      if (input.value.trim()) { generate(); }
+      else if (summary) { summary.textContent = ToolUI.T('emptyState'); }
+    });
+    clearView();
+  })();
+  // TOOL_UI_END
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>

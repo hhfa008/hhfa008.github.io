@@ -1,6 +1,6 @@
 # 游戏集合维护说明
 
-20 款纯静态网页桌游/棋牌：免费、免登录、单文件，打开即玩。
+21 款纯静态网页桌游/棋牌：免费、免登录、单文件，打开即玩。
 
 ## 游戏清单
 
@@ -26,6 +26,7 @@
 | 拓荒者：九岛 | Pioneers of Nine Isles | /games/pioneers/ | 德式 | 2–4 | 单档·贪心 | rules.html | 52 |
 | 谁是卧底 | Undercover | /games/undercover/ | 聚会 | 4–12 | — | rules.html | 50 |
 | 飞行棋 | Aeroplane | /games/aeroplane/ | 聚会 | 2–4 | 单档·简单 | rules.html | 36 |
+| 海龟汤 | Turtle Soup | /games/turtle-soup/ | 聚会 | 1 | 规则裁判+本地 AI | rules.html | 389 |
 | Tap Match | Tap Match | /games/tap-match/ | 小游戏 | 1 | — | rules.html | 9（E2E） |
 | 语音房 | Voice Room | /games/voice-room/ | 在线联机 · 井字棋/五子棋/四子棋 | 2–4 | — | guide.html | 14（E2E） |
 
@@ -34,6 +35,7 @@
 - 单文件：CSS/JS 内联在 `index.html`；例外是 `pioneers/engine.js`、`shared/rules.js`（五子棋/四子棋单机版与语音房服务端共用规则）、`shared/share.js`（全站分享按钮：原生分享优先，不支持时复制链接）和 `shared/hand-eval.js`（德州扑克/麻将共用验牌引擎），均同目录同源加载，仍无外部依赖。
 - 分享：每个游戏页与三个大厅底部都有分享按钮，链接不带用户标识、不带追踪参数；语音房另提供「复制邀请链接」「复制邀请文案」，邀请链接形如 `/games/voice-room/?room=1234`。
 - 无外部依赖：不引 CDN、字体、图标库；棋盘与棋子用内联 SVG/CSS 自绘。
+- 本地 AI 例外：`turtle-soup` 可选启用浏览器内 WebLLM 本地模型，仅在用户主动点击后从 jsdelivr 与 HuggingFace（失败走 hf-mirror）加载权重；这是全站唯一例外，默认不加载、无外部请求，其余游戏仍严格无外部依赖。
 - 无追踪：不接 analytics、不上报；最高分与战绩只写 `localStorage`。
 - 三语：15 款走 EN／简中／ID 字典与切换；Tap Match 为 EN／ID／FIL；中国象棋、语音房暂为中文单语，改版时应优先补齐。
 - 触控优先：以手机竖屏为基准，点按目标不小于 32px，棋盘随视口缩放。

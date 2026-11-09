@@ -4,7 +4,11 @@
    Static assets: cache-first with background refresh (stale-while-revalidate). */
 'use strict';
 
+<<<<<<< HEAD
 var CACHE_VERSION = 'v9';
+=======
+var CACHE_VERSION = 'v7';
+>>>>>>> d1567fd (wip: mac2 local changes before sync)
 var CACHE_PREFIX = 'hhfa-games-';
 var CACHE_NAME = CACHE_PREFIX + CACHE_VERSION;
 var OFFLINE_URL = '/games/offline.html';
@@ -45,7 +49,13 @@ var PRECACHE_URLS = [
   '/games/solitaire/',
   '/games/spider/',
   '/games/tap-match/',
+<<<<<<< HEAD
   '/games/texas-holdem/',
+=======
+  '/games/turtle-soup/',
+  // Turtle Soup's entry page loads its puzzle bank from here.
+  '/games/turtle-soup/soups.js',
+>>>>>>> d1567fd (wip: mac2 local changes before sync)
   '/games/undercover/',
   '/games/voice-room/',
   '/games/xiangqi/',
@@ -71,7 +81,11 @@ var PRECACHE_URLS = [
   '/games/solitaire/rules-en.html',
   '/games/spider/rules.html',
   '/games/tap-match/rules.html',
+<<<<<<< HEAD
   '/games/texas-holdem/rules.html',
+=======
+  '/games/turtle-soup/rules.html',
+>>>>>>> d1567fd (wip: mac2 local changes before sync)
   '/games/undercover/rules.html',
   '/games/xiangqi/rules.html',
 
@@ -96,7 +110,11 @@ var PRECACHE_URLS = [
   '/games/assets/icons/solitaire.svg',
   '/games/assets/icons/spider.svg',
   '/games/assets/icons/tap-match.svg',
+<<<<<<< HEAD
   '/games/assets/icons/texas-holdem.svg',
+=======
+  '/games/assets/icons/turtle-soup.svg',
+>>>>>>> d1567fd (wip: mac2 local changes before sync)
   '/games/assets/icons/undercover.svg',
   '/games/assets/icons/voice-room.svg',
   '/games/assets/icons/xiangqi.svg'

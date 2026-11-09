@@ -116,6 +116,72 @@ function mulberry32(a) {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Tool-page helpers (tools/tests/*.test.js)
+// ---------------------------------------------------------------------------
+
+// Every key referenced from markup: data-i / data-i-ph / data-i-aria.
+function dataIKeys(html) {
+  var seen = Object.create(null);
+  var re = /data-i(?:-ph|-aria)?="([^"]+)"/g;
+  var m;
+  while ((m = re.exec(html))) seen[m[1]] = true;
+  return Object.keys(seen).sort();
+}
+
+// Parse every JSON-LD block. Throws when a block is not valid JSON.
+function jsonLd(html) {
+  var out = [];
+  var re = /<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi;
+  var m;
+  while ((m = re.exec(html))) out.push(JSON.parse(m[1]));
+  return out;
+}
+
+// Strings that would cause the page to make a network request or load remote
+// code. The list is intentionally conservative: tools must work offline.
+function externalRefs(html) {
+  var checks = [
+    { re: /<script[^>]*\bsrc\s*=/gi, why: '<script src>' },
+    { re: /<link[^>]*\brel\s*=\s*["']?stylesheet/gi, why: 'stylesheet link' },
+    { re: /@import/gi, why: '@import' },
+    { re: /url\(\s*["']?https?:/gi, why: 'remote url()' },
+    { re: /\bfetch\s*\(/g, why: 'fetch()' },
+    { re: /XMLHttpRequest/g, why: 'XMLHttpRequest' },
+    { re: /sendBeacon/g, why: 'sendBeacon' }
+  ];
+  var hits = [];
+  checks.forEach(function (c) {
+    var m = html.match(c.re);
+    if (m) hits.push(c.why + ' ×' + m.length);
+  });
+  return hits;
+}
+
+// Assert the three dictionaries exist and expose exactly the same keys.
+function checkI18n(t, dict, extraKeys) {
+  var langs = ['zh', 'en', 'id'];
+  langs.forEach(function (lang) {
+    t.ok('i18n ' + lang + ' exists', dict && dict[lang] && typeof dict[lang] === 'object');
+  });
+  if (!dict || !dict.zh) return [];
+  var base = Object.keys(dict.zh).sort();
+  langs.slice(1).forEach(function (lang) {
+    var keys = dict[lang] ? Object.keys(dict[lang]).sort() : [];
+    t.eq('i18n ' + lang + ' key set matches zh', keys, base);
+  });
+  base.forEach(function (k) {
+    langs.forEach(function (lang) {
+      var v = dict[lang] && dict[lang][k];
+      t.ok('i18n ' + lang + '.' + k + ' non-empty', typeof v === 'string' && v.trim().length > 0);
+    });
+  });
+  (extraKeys || []).forEach(function (k) {
+    t.ok('i18n has ' + k, base.indexOf(k) !== -1);
+  });
+  return base;
+}
+
 module.exports = {
   page: page,
   between: between,
@@ -124,5 +190,9 @@ module.exports = {
   evalBetween: evalBetween,
   evalScript: evalScript,
   suite: suite,
-  mulberry32: mulberry32
+  mulberry32: mulberry32,
+  dataIKeys: dataIKeys,
+  jsonLd: jsonLd,
+  externalRefs: externalRefs,
+  checkI18n: checkI18n
 };
