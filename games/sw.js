@@ -4,7 +4,7 @@
    Static assets: cache-first with background refresh (stale-while-revalidate). */
 'use strict';
 
-var CACHE_VERSION = 'v17';
+var CACHE_VERSION = 'v18';
 var CACHE_PREFIX = 'hhfa-games-';
 var CACHE_NAME = CACHE_PREFIX + CACHE_VERSION;
 var OFFLINE_URL = '/games/offline.html';
