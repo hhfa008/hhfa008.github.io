@@ -16,15 +16,10 @@
 <meta property="og:title" content="Go 9×9 Online — capture, ko and area scoring vs AI">
 <meta property="og:description" content="Free 9×9 Go with captures, suicide rule, ko, pass and Chinese area scoring. Three AI levels, local two-player, undo. 9 路围棋在线。">
 <meta property="og:url" content="https://hhfa008.github.io/games/go9/">
-<meta property="og:image" content="https://hhfa008.github.io/games/assets/art/composed/go9-og.png">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="围棋 9 路">
 <meta property="og:locale" content="en_US">
 <meta property="og:locale:alternate" content="zh_CN">
 <meta property="og:locale:alternate" content="id_ID">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="https://hhfa008.github.io/games/assets/art/composed/go9-og.png">
+<meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Go 9×9 Online — capture, ko and area scoring">
 <meta name="twitter:description" content="9×9 Go with captures, ko, suicide rule and Chinese area scoring. Three AI levels, undo, no sign-up.">
 
@@ -199,6 +194,9 @@ canvas{display:block;background:var(--board);border-radius:12px;touch-action:non
   <a href="https://hhfa008.github.io/" data-i="moreLink">Built by an indie developer — more tools here</a>
 </footer>
 
+<script src="../shared/store.js"></script>
+<script src="../shared/i18n.js"></script>
+<script src="../shared/dom.js"></script>
 <script>
 (function () {
   'use strict';
@@ -311,7 +309,6 @@ canvas{display:block;background:var(--board);border-radius:12px;touch-action:non
     }
   };
 
-  var ui = { lang: 'en' };
   var board = new Uint8Array(NN);
   var history = [];
   var turn = BLACK;
@@ -330,11 +327,10 @@ canvas{display:block;background:var(--board);border-radius:12px;touch-action:non
 
   var $ = function (id) { return document.getElementById(id); };
   var t = function (k) {
-    var d = I18N[ui.lang] || I18N.en;
-    return d[k] != null ? d[k] : (I18N.en[k] != null ? I18N.en[k] : k);
+    return i18n.t(k);
   };
   var fillText = function (s, map) {
-    return s.replace(/\{(\w+)\}/g, function (m, k) { return map[k] != null ? map[k] : ''; });
+    return Dom.format(s, map);
   };
   var fmt = function (n) {
     return Math.abs(n - Math.round(n)) < 0.001 ? String(Math.round(n)) : n.toFixed(1);
@@ -521,17 +517,23 @@ canvas{display:block;background:var(--board);border-radius:12px;touch-action:non
   }
   // __TEST_CORE_END__
 
+  var i18n = I18n.create({
+    strings: I18N,
+    defaultLang: 'auto',
+    storageKey: 'go9-lang-v1',
+    attrs: { text: 'data-i', ph: 'data-i-ph', aria: 'data-i-aria' },
+    buttons: '.langs button'
+  });
+  i18n.onLang(function () { updateUI(); });
+
   function loadPrefs() {
-    try {
-      var saved = localStorage.getItem(RECORD_KEY);
-      if (saved) stats = JSON.parse(saved) || {};
-    } catch (e) { stats = {}; }
-    var l = (navigator.language || 'en').toLowerCase();
-    if (l.indexOf('zh') === 0) ui.lang = 'zh';
-    else if (l.indexOf('id') === 0 || l.indexOf('in') === 0) ui.lang = 'id';
+    // Same key and "parse ... || {}" semantics as before; a denied read
+    // degrades to {} because Store.getJSON returns the fallback instead of throwing.
+    stats = Store.getJSON(RECORD_KEY, {}) || {};
   }
   function saveStats() {
-    try { localStorage.setItem(RECORD_KEY, JSON.stringify(stats)); } catch (e) {}
+    // Same stored JSON as before; a failed write stays silent.
+    Store.setJSON(RECORD_KEY, stats);
   }
   function recordOf() {
     var r = stats[depth];
@@ -728,20 +730,6 @@ canvas{display:block;background:var(--board);border-radius:12px;touch-action:non
     canvas.setAttribute('aria-label', t('boardAria'));
   }
 
-  function applyLang() {
-    document.documentElement.lang = ui.lang === 'zh' ? 'zh-CN' : ui.lang;
-    var nodes = document.querySelectorAll('[data-i]');
-    for (var i = 0; i < nodes.length; i++) {
-      var k = nodes[i].getAttribute('data-i');
-      if (I18N[ui.lang][k] != null) nodes[i].textContent = I18N[ui.lang][k];
-    }
-    var langs = document.querySelectorAll('.langs button');
-    for (var j = 0; j < langs.length; j++) {
-      langs[j].setAttribute('aria-pressed', langs[j].getAttribute('data-lang') === ui.lang ? 'true' : 'false');
-    }
-    updateUI();
-  }
-
   function resize() {
     if (!canvas) return;
     var wrap = $('boardwrap');
@@ -893,13 +881,6 @@ canvas{display:block;background:var(--board);border-radius:12px;touch-action:non
   }
 
   function bind() {
-    var langBtns = document.querySelectorAll('.langs button');
-    for (var i = 0; i < langBtns.length; i++) {
-      langBtns[i].addEventListener('click', function () {
-        ui.lang = this.getAttribute('data-lang');
-        applyLang();
-      });
-    }
     var modeBtns = document.querySelectorAll('[data-mode]');
     for (var m = 0; m < modeBtns.length; m++) {
       modeBtns[m].addEventListener('click', function () {
@@ -941,7 +922,7 @@ canvas{display:block;background:var(--board);border-radius:12px;touch-action:non
     ctx = canvas.getContext('2d');
     loadPrefs();
     bind();
-    applyLang();
+    i18n.apply();
     resize();
     newGame();
   }

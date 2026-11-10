@@ -36,6 +36,7 @@
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
 }
 </script>
+<link rel="stylesheet" href="/games/shared/arcade/legacy-mobile.css">
 
 <style>
 :root{
@@ -65,7 +66,7 @@ a{color:inherit}
 .langs button[aria-pressed="true"]{background:var(--cream);color:var(--ink);border-color:var(--cream)}
 
 .hero{padding:22px 0 2px}
-.eyebrow{font-family:var(--mono);font-size:11px;font-weight:650;letter-spacing:.13em;text-transform:uppercase;color:var(--wood-d);margin-bottom:7px}
+.eyebrow{font-family:var(--mono);font-size:12px;font-weight:650;letter-spacing:.13em;text-transform:uppercase;color:var(--wood-d);margin-bottom:7px}
 .hero h1{font-size:clamp(1.9rem,7vw,2.6rem);line-height:1.08;letter-spacing:-.02em;margin-bottom:8px}
 .lede{color:var(--muted);max-width:62ch}
 
@@ -75,7 +76,7 @@ a{color:inherit}
 .toolbar{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px}
 .stats{display:flex;gap:14px;flex-wrap:wrap}
 .stat{display:flex;flex-direction:column;line-height:1.12}
-.stat span{font-family:var(--mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--dark-muted)}
+.stat span{font-family:var(--mono);font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--dark-muted)}
 .stat b{font-size:18px;font-variant-numeric:tabular-nums;font-weight:700}
 .stat b.clk{cursor:pointer;display:inline-flex;align-items:center;min-height:44px;min-width:44px;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px}
 .controls{display:flex;gap:6px;flex-wrap:wrap}
@@ -238,6 +239,8 @@ a{color:inherit}
   </div>
 </div>
 
+<script src="../shared/store.js"></script>
+<script src="../shared/i18n.js"></script>
 <script src="/games/shared/shuffle.js"></script>
 <script id="freecell-core">
 (function (root) {
@@ -570,17 +573,14 @@ a{color:inherit}
     }
   };
 
-  var lang = 'en';
-  function detectLang() {
-    var nav = (navigator.language || 'en').toLowerCase();
-    if (nav.indexOf('zh') === 0) return 'zh';
-    if (nav.indexOf('id') === 0) return 'id';
-    return 'en';
-  }
-  try {
-    var savedLang = localStorage.getItem('fc.lang.v1');
-    lang = (savedLang === 'en' || savedLang === 'zh' || savedLang === 'id') ? savedLang : detectLang();
-  } catch (e) { lang = detectLang(); }
+  var i18n = I18n.create({
+    strings: DICT,
+    defaultLang: 'auto',
+    storageKey: 'fc.lang.v1',
+    attrs: { text: 'data-i18n' },
+    buttons: '.langs button'
+  });
+  var lang = i18n.lang();
   function t(key) {
     var d = DICT[lang] || DICT.en;
     return d[key] !== undefined ? d[key] : DICT.en[key];
@@ -626,11 +626,13 @@ a{color:inherit}
   }
 
   function readBest() {
-    try { return JSON.parse(localStorage.getItem('fc.best.v1') || '{}') || {}; }
-    catch (e) { return {}; }
+    // Same key and "parse ... || {}" semantics as before; a denied read
+    // degrades to {} because Store.getJSON returns the fallback instead of throwing.
+    return Store.getJSON('fc.best.v1', {}) || {};
   }
   function saveBest(obj) {
-    try { localStorage.setItem('fc.best.v1', JSON.stringify(obj)); } catch (e) {}
+    // Same stored JSON as before; a failed write stays silent.
+    Store.setJSON('fc.best.v1', obj);
   }
   function updateBest() {
     var rec = readBest();
@@ -913,32 +915,16 @@ a{color:inherit}
     }
   }
 
-  function setLang(next) {
+  i18n.onLang(function (next) {
     lang = next;
-    try { localStorage.setItem('fc.lang.v1', lang); } catch (e) {}
-    applyLang();
-  }
-
-  function applyLang() {
-    document.documentElement.lang = lang === 'zh' ? 'zh-CN' : lang;
-    var nodes = document.querySelectorAll('[data-i18n]');
-    for (var i = 0; i < nodes.length; i++) {
-      var key = nodes[i].getAttribute('data-i18n');
-      var value = t(key);
-      if (value !== undefined) nodes[i].textContent = value;
-    }
     var rules = t('rules') || [];
     document.getElementById('rulesList').innerHTML = rules.map(function (r) { return '<li>' + r + '</li>'; }).join('');
-    var langBtns = document.querySelectorAll('.langs button');
-    for (var j = 0; j < langBtns.length; j++) {
-      langBtns[j].setAttribute('aria-pressed', String(langBtns[j].getAttribute('data-lang') === lang));
-    }
     renderAll();
     if (game && !winOverlay.hidden) {
       winStatsEl.textContent = t('winStats').replace('{t}', fmt(winSeconds)).replace('{m}', game.state.moves);
       winRecordEl.textContent = t('record');
     }
-  }
+  });
 
   boardEl.addEventListener('click', function (e) {
     tapOn(e.target.closest('[data-zone]'));
@@ -973,20 +959,13 @@ a{color:inherit}
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); promptSeed(); }
   });
 
-  var langBtns = document.querySelectorAll('.langs button');
-  for (var li = 0; li < langBtns.length; li++) {
-    (function (btn) {
-      btn.addEventListener('click', function () { setLang(btn.getAttribute('data-lang')); });
-    })(langBtns[li]);
-  }
-
   var startSeed = null;
   try {
     var q = new URLSearchParams(location.search).get('seed');
     if (q && /^\d{1,9}$/.test(q)) startSeed = parseInt(q, 10) >>> 0;
   } catch (e) {}
   newGame(startSeed == null ? null : startSeed);
-  applyLang();
+  i18n.apply();
   setInterval(function () { if (timerOn) updateTime(); }, 500);
 })();
 </script>

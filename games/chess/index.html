@@ -16,18 +16,18 @@
 <meta property="og:title" content="Chess Online — play vs AI, full rules">
 <meta property="og:description" content="Free chess with three AI levels, local two-player and undo. Castling, en passant, promotion, checkmate and stalemate all implemented. 国际象棋在线。">
 <meta property="og:url" content="https://hhfa008.github.io/games/chess/">
-<meta property="og:image" content="https://hhfa008.github.io/games/assets/art/composed/chess-og.png">
-<meta property="og:image:type" content="image/png">
+<meta property="og:image" content="https://hhfa008.github.io/games/assets/og/chess.jpg">
+<meta property="og:image:type" content="image/jpeg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="国际象棋">
+<meta property="og:image:alt" content="国际象棋棋盘与自绘棋子，标注王车易位、吃过路兵、兵升变。">
 <meta property="og:locale" content="en_US">
 <meta property="og:locale:alternate" content="zh_CN">
 <meta property="og:locale:alternate" content="id_ID">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Chess Online — free vs AI with full rules">
 <meta name="twitter:description" content="Three AI levels, local two-player, undo, castling, en passant and promotion. Works on mobile.">
-<meta name="twitter:image" content="https://hhfa008.github.io/games/assets/art/composed/chess-og.png">
+<meta name="twitter:image" content="https://hhfa008.github.io/games/assets/og/chess.jpg">
 
 <script type="application/ld+json">
 {
@@ -46,6 +46,7 @@
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
 }
 </script>
+<link rel="stylesheet" href="/games/shared/arcade/legacy-mobile.css">
 
 <style>
 :root{
@@ -75,7 +76,7 @@ a{color:inherit}
   background:transparent;color:var(--on-dark-muted);font-size:13px;font-weight:600;cursor:pointer}
 .langs button[aria-pressed="true"]{background:var(--on-dark);color:var(--dark);border-color:var(--on-dark)}
 .hero{padding:24px 0 4px}
-.eyebrow{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.12em;
+.eyebrow{font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.12em;
   text-transform:uppercase;color:var(--accent);margin-bottom:8px}
 .hero h1{font-size:clamp(1.9rem,7.4vw,2.5rem);line-height:1.1;letter-spacing:-.02em;margin-bottom:8px}
 .hero h1 span{font-weight:400;color:var(--muted);font-size:.58em;letter-spacing:0}
@@ -140,7 +141,7 @@ a{color:inherit}
   padding:4px;border:1px solid #3a4248;border-radius:9px;background:#22282d;cursor:pointer}
 .promo button:hover{background:#2c343a;border-color:#4a535a}
 .promo .piece{position:static;width:34px;height:34px;filter:none}
-.promo em{font-style:normal;font-size:10px;color:var(--on-dark-muted);font-weight:600}
+.promo em{font-style:normal;font-size:12px;color:var(--on-dark-muted);font-weight:600}
 .hint{min-height:20px;font-size:12.5px;color:var(--on-dark-muted);text-align:center;padding:6px 4px 0}
 .info{margin-top:26px}
 .info h2{font-size:1.25rem;letter-spacing:-.01em;margin-bottom:8px}
@@ -783,6 +784,8 @@ a{color:inherit}
 });
 </script>
 
+<script src="../shared/store.js"></script>
+<script src="../shared/i18n.js"></script>
 <script>
 (function () {
   'use strict';
@@ -874,11 +877,12 @@ a{color:inherit}
   var FILES = 'abcdefgh', PNAME = { P: 'pawn', N: 'knight', B: 'bishop', R: 'rook', Q: 'queen', K: 'king' };
   var pos, mode = 'ai', level = 2, selected = null, lastMove = null;
   var st = null, history = [], posKeys = [], aiThinking = false, gen = 0;
-  var lang = 'en', legalCache = [], pendingPromo = null, drag = null;
+  var lang = 'en', legalCache = [], pendingPromo = null, drag = null, i18n = null;
   var squares = [], boardEl, promoEl, promoButtons, promoLabel;
 
   var $ = function (id) { return document.getElementById(id); };
   function t(k) {
+    if (i18n) return i18n.t(k);
     var d = I18N[lang] || I18N.en;
     return d[k] != null ? d[k] : (I18N.en[k] || k);
   }
@@ -892,21 +896,18 @@ a{color:inherit}
   }
 
   function loadPrefs() {
-    try {
-      var raw = localStorage.getItem(PREF_KEY);
-      if (raw) {
-        var o = JSON.parse(raw) || {};
-        if (o.lang && I18N[o.lang]) lang = o.lang;
-        if (o.level >= 1 && o.level <= 3) level = o.level;
-      }
-    } catch (e) {}
+    var o = Store.getJSON(PREF_KEY, null);
+    if (o) {
+      if (o.lang && I18N[o.lang]) lang = o.lang;
+      if (o.level >= 1 && o.level <= 3) level = o.level;
+    }
     if (!lang || !I18N[lang]) {
       var l = (navigator.language || 'en').toLowerCase();
       lang = l.indexOf('zh') === 0 ? 'zh' : (l.indexOf('id') === 0 || l.indexOf('in') === 0) ? 'id' : 'en';
     }
   }
   function savePrefs() {
-    try { localStorage.setItem(PREF_KEY, JSON.stringify({ lang: lang, level: level })); } catch (e) {}
+    Store.setJSON(PREF_KEY, { lang: lang, level: level });
   }
 
   function buildBoard() {
@@ -1207,21 +1208,6 @@ a{color:inherit}
     });
   }
 
-  function applyLang() {
-    document.documentElement.lang = lang === 'zh' ? 'zh-CN' : lang;
-    var nodes = document.querySelectorAll('[data-i]');
-    for (var i = 0; i < nodes.length; i++) {
-      var k = nodes[i].getAttribute('data-i');
-      if (I18N[lang][k] == null) continue;
-      nodes[i].textContent = I18N[lang][k];
-    }
-    var lbs = document.querySelectorAll('.langs button');
-    for (var j = 0; j < lbs.length; j++) lbs[j].setAttribute('aria-pressed', lbs[j].getAttribute('data-lang') === lang ? 'true' : 'false');
-    if (promoEl && pendingPromo) showPromo();
-    updateUI();
-    savePrefs();
-  }
-
   function init() {
     loadPrefs();
     buildBoard();
@@ -1231,17 +1217,25 @@ a{color:inherit}
     promoLabel = $('promoLabel');
     pos = X.initialPosition();
     posKeys = [X.positionKey(pos)];
+
+    i18n = I18n.create({
+      strings: I18N,
+      defaultLang: lang,
+      storageKey: PREF_KEY,
+      attrs: { text: 'data-i', ph: 'data-i-ph', aria: 'data-i-aria' },
+      buttons: '.langs button'
+    });
+    i18n.onLang(function (next) {
+      lang = next;
+      if (promoEl && pendingPromo) showPromo();
+      updateUI();
+      savePrefs();
+    });
+
     refresh();
-    applyLang();
+    i18n.apply();
     savePrefs();
 
-    var lbs = document.querySelectorAll('.langs button');
-    for (var i = 0; i < lbs.length; i++) {
-      lbs[i].addEventListener('click', function () {
-        lang = this.getAttribute('data-lang');
-        applyLang();
-      });
-    }
     var mb = document.querySelectorAll('[data-mode]');
     for (var m = 0; m < mb.length; m++) {
       mb[m].addEventListener('click', function () {
