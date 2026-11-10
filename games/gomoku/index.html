@@ -173,6 +173,9 @@ canvas{display:block;background:#e9d3ab;border-radius:12px;touch-action:none;
 </footer>
 
 <script src="../shared/rules.js"></script>
+<script src="../shared/store.js"></script>
+<script src="../shared/i18n.js"></script>
+<script src="../shared/dom.js"></script>
 <script>
 (function () {
   'use strict';
@@ -260,7 +263,7 @@ canvas{display:block;background:#e9d3ab;border-radius:12px;touch-action:none;
     return d[k] != null ? d[k] : (I18N.en[k] != null ? I18N.en[k] : k);
   };
   var fillText = function (s, map) {
-    return s.replace(/\{(\w+)\}/g, function (m, k) { return map[k] != null ? map[k] : ''; });
+    return Dom.format(s, map);
   };
 
   var inBoard = GOMOKU.inBoard;
@@ -454,16 +457,13 @@ canvas{display:block;background:#e9d3ab;border-radius:12px;touch-action:none;
   }
 
   function loadPrefs() {
-    try {
-      var saved = localStorage.getItem(RECORD_KEY);
-      if (saved) stats = JSON.parse(saved) || {};
-    } catch (e) { stats = {}; }
-    var l = (navigator.language || 'en').toLowerCase();
-    if (l.indexOf('zh') === 0) ui.lang = 'zh';
-    else if (l.indexOf('id') === 0 || l.indexOf('in') === 0) ui.lang = 'id';
+    // Same key and "parse ... || {}" semantics as before; a denied read
+    // degrades to {} because Store.getJSON returns the fallback instead of throwing.
+    stats = Store.getJSON(RECORD_KEY, {}) || {};
   }
   function saveStats() {
-    try { localStorage.setItem(RECORD_KEY, JSON.stringify(stats)); } catch (e) {}
+    // Same stored JSON as before; a failed write stays silent.
+    Store.setJSON(RECORD_KEY, stats);
   }
   function recordOf() {
     var r = stats[depth];
@@ -589,20 +589,6 @@ canvas{display:block;background:#e9d3ab;border-radius:12px;touch-action:none;
     else hint.textContent = t('howTo');
   }
 
-  function applyLang() {
-    document.documentElement.lang = ui.lang === 'zh' ? 'zh-CN' : ui.lang;
-    var nodes = document.querySelectorAll('[data-i]');
-    for (var i = 0; i < nodes.length; i++) {
-      var k = nodes[i].getAttribute('data-i');
-      if (I18N[ui.lang][k] != null) nodes[i].textContent = I18N[ui.lang][k];
-    }
-    var langs = document.querySelectorAll('.langs button');
-    for (var j = 0; j < langs.length; j++) {
-      langs[j].setAttribute('aria-pressed', langs[j].getAttribute('data-lang') === ui.lang ? 'true' : 'false');
-    }
-    updateUI();
-  }
-
   function resize() {
     if (!canvas) return;
     var wrap = $('boardwrap');
@@ -726,13 +712,6 @@ canvas{display:block;background:#e9d3ab;border-radius:12px;touch-action:none;
   }
 
   function bind() {
-    var langBtns = document.querySelectorAll('.langs button');
-    for (var i = 0; i < langBtns.length; i++) {
-      langBtns[i].addEventListener('click', function () {
-        ui.lang = this.getAttribute('data-lang');
-        applyLang();
-      });
-    }
     var modeBtns = document.querySelectorAll('[data-mode]');
     for (var m = 0; m < modeBtns.length; m++) {
       modeBtns[m].addEventListener('click', function () {
@@ -773,8 +752,19 @@ canvas{display:block;background:#e9d3ab;border-radius:12px;touch-action:none;
     canvas = $('board');
     ctx = canvas.getContext('2d');
     loadPrefs();
+    var i18n = I18n.create({
+      strings: I18N,
+      defaultLang: 'auto',
+      storageKey: 'gomoku-lang-v1',
+      attrs: { text: 'data-i', ph: 'data-i-ph', aria: 'data-i-aria' },
+      buttons: '.langs button'
+    });
+    i18n.onLang(function (next) {
+      ui.lang = next;
+      updateUI();
+    });
     bind();
-    applyLang();
+    i18n.apply();
     resize();
     newGame();
   }

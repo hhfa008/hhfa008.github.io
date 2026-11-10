@@ -211,6 +211,9 @@ svg.board{display:block;width:100%;max-width:440px;height:auto;touch-action:mani
   <p><a href="/" data-i="home">Devin — free browser games</a> · <a href="/games/" data-i="allGames2">Game collection</a></p>
 </footer>
 
+<script src="../shared/store.js"></script>
+<script src="../shared/i18n.js"></script>
+<script src="../shared/dom.js"></script>
 <script>
 /* === ENGINE START === */
 var DR = (function () {
@@ -513,13 +516,11 @@ var DR = (function () {
     return d[k] != null ? d[k] : (I18N.en[k] != null ? I18N.en[k] : k);
   }
   function fmt(s, map) {
-    return s.replace(/\{(\w+)\}/g, function (m, k) { return map[k] != null ? map[k] : ''; });
+    return Dom.format(s, map);
   }
   function sideName(side) { return side === DR.WHITE ? t('white') : t('black'); }
   function el(name, attrs) {
-    var node = document.createElementNS(NS, name);
-    if (attrs) for (var k in attrs) node.setAttribute(k, attrs[k]);
-    return node;
+    return Dom.el(name, attrs, { ns: NS });
   }
   function px(c) { return M + c * S; }
   function py(r) { return M + r * S; }
@@ -774,30 +775,20 @@ var DR = (function () {
     if (over) $('bannerText').textContent = resultLine(st);
   }
 
-  function applyLang() {
-    document.documentElement.lang = ui.lang === 'zh' ? 'zh-CN' : ui.lang;
-    var nodes = document.querySelectorAll('[data-i]');
-    for (var i = 0; i < nodes.length; i++) {
-      var k = nodes[i].getAttribute('data-i');
-      if (I18N[ui.lang][k] != null) nodes[i].textContent = I18N[ui.lang][k];
-    }
-    var langs = document.querySelectorAll('.langs button');
-    for (var j = 0; j < langs.length; j++) {
-      langs[j].setAttribute('aria-pressed', langs[j].getAttribute('data-lang') === ui.lang ? 'true' : 'false');
-    }
-    $('titleMain').textContent = t('title');
-    $('titleSub').textContent = t('sub');
-    updateUI();
-  }
-
   function bind() {
-    var langBtns = document.querySelectorAll('.langs button');
-    for (var i = 0; i < langBtns.length; i++) {
-      langBtns[i].addEventListener('click', function () {
-        ui.lang = this.getAttribute('data-lang');
-        applyLang();
-      });
-    }
+    var i18n = I18n.create({
+      strings: I18N,
+      defaultLang: 'auto',
+      storageKey: 'draughts-lang-v1',
+      attrs: { text: 'data-i', ph: 'data-i-ph', aria: 'data-i-aria' },
+      buttons: '.langs button'
+    });
+    i18n.onLang(function (next) {
+      ui.lang = next;
+      $('titleMain').textContent = t('title');
+      $('titleSub').textContent = t('sub');
+      updateUI();
+    });
     var modeBtns = document.querySelectorAll('#modeRow button');
     for (var m = 0; m < modeBtns.length; m++) {
       modeBtns[m].addEventListener('click', function () {
@@ -816,10 +807,7 @@ var DR = (function () {
     $('undo').addEventListener('click', undo);
     $('restart').addEventListener('click', newGame);
     $('again').addEventListener('click', newGame);
-    var l = (navigator.language || 'en').toLowerCase();
-    if (l.indexOf('zh') === 0) ui.lang = 'zh';
-    else if (l.indexOf('id') === 0 || l.indexOf('in') === 0) ui.lang = 'id';
-    applyLang();
+    i18n.apply();
   }
 
   buildBoard();

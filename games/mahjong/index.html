@@ -289,6 +289,7 @@ a{color:inherit}
 <script src="/games/shared/shuffle.js"></script>
 <script src="/games/shared/hand-eval.js"></script>
 <script src="/games/shared/sfx.js"></script>
+<script src="/games/shared/store.js"></script>
 
 <script id="engine">
 // Pure rules engine: no DOM, no timers. The page and the Node tests run this
@@ -932,8 +933,9 @@ globalThis.Mahjong = Mahjong;
   var G = { game: null, lang: 'zh', gen: 0, timer: 0, err: '' };
 
   function pickLang() {
-    var saved = null;
-    try { saved = localStorage.getItem(LANG_KEY); } catch (e) {}
+    // Same key and fallback as before; a denied read yields null instead of
+    // throwing, so the browser language is used below.
+    var saved = Store.get(LANG_KEY, null);
     if (saved && I18N[saved]) return saved;
     var n = (navigator.language || 'zh').toLowerCase();
     if (n.indexOf('zh') === 0) return 'zh';
@@ -1271,7 +1273,8 @@ globalThis.Mahjong = Mahjong;
   function setLang(lang) {
     if (!I18N[lang]) return;
     G.lang = lang;
-    try { localStorage.setItem(LANG_KEY, lang); } catch (e) {}
+    // Same stored string as before; a failed write stays silent.
+    Store.set(LANG_KEY, lang);
     applyStatic();
     render();
   }
