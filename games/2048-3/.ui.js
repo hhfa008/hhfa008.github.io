@@ -76,7 +76,7 @@ var I18N = {
       S = result.state;
       if (S.score > best) {
         best = S.score;
-        localStorage.setItem(BEST_KEY, best);
+        Store.set(BEST_KEY, String(best));
       }
       render();
     }
