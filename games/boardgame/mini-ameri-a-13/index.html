@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>火山幼龙 Cinder Wyrm — 单机对 AI 极简美式桌游</title>
+<meta name="description" content="火山幼龙：5 点暴击，幼龙的鳞片挡不住火。原创极简美式桌游，单机对 AI，零外部请求。">
+<meta name="theme-color" content="#0f1a14">
+<style>
+:root{--bg:#0f1a14;--panel:#17271d;--panel2:#20392a;--ink:#eafbee;--muted:#a9c9b2;
+--accent:#7ee0a1;--accent2:#2f7a4b;--line:#31563f}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:radial-gradient(700px 420px at 50% -12%,var(--panel2),var(--bg));color:var(--ink);
+font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+padding-bottom:calc(20px + env(safe-area-inset-bottom))}
+.wrap{max-width:680px;margin:0 auto;padding:0 12px}
+header{padding:14px 0 6px;display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap}
+h1{font-size:1.3rem;margin:0}
+h1 small{display:block;font-size:0.75rem;color:var(--muted);letter-spacing:.14em;font-weight:400;margin-top:3px}
+.headlinks{display:flex;gap:8px}
+.headlinks a{min-height:44px;min-width:44px;display:inline-flex;align-items:center;justify-content:center;
+padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);text-decoration:none;font-size:.85rem}
+button{font:inherit;color:inherit;cursor:pointer;min-height:48px;border-radius:10px;border:1px solid var(--line);
+background:var(--panel2);padding:8px 10px;touch-action:manipulation}
+button:hover{filter:brightness(1.14)}
+button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+button:disabled{opacity:.4;cursor:default;filter:none}
+button.primary{background:var(--accent);border-color:var(--accent);color:#151515;font-weight:700}
+.players{display:grid;grid-template-columns:1fr;gap:10px;margin:8px 0 10px}
+@media(min-width:480px){.players{grid-template-columns:1fr 1fr}}
+.player{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.player.turn{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.player h2{font-size:.92rem;margin:0 0 6px;display:flex;justify-content:space-between;gap:8px}
+.badge{font-size:0.75rem;color:var(--accent);border:1px solid var(--line);border-radius:99px;padding:1px 7px}
+.bar{height:10px;border-radius:99px;background:#0006;overflow:hidden;margin:4px 0 6px}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));width:100%;transition:width .25s}
+.stats{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:.78rem;color:var(--muted)}
+.stat b{color:var(--ink);font-size:.95rem}
+.stat i{font-style:normal;color:var(--muted)}
+.center{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:9px 12px;margin:0 0 10px;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+.round{font-size:.82rem;color:var(--muted)}
+.dice{font-size:1.05rem;font-weight:700;color:var(--accent);letter-spacing:.08em}
+.event{font-size:.8rem;color:var(--accent);margin-top:4px}
+.log{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 12px;margin:0 0 10px;
+font-size:.78rem;color:var(--muted);height:104px;overflow-y:auto}
+.log div{padding:2px 0;border-bottom:1px dashed transparent}
+.log div:last-child{color:var(--ink)}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.actions button{min-height:52px}
+.over{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:20px;background:#000a;z-index:9}
+.over.show{display:flex}
+.over .card{background:var(--panel);border:1px solid var(--accent);border-radius:16px;padding:22px;max-width:340px;width:100%;text-align:center}
+.over h2{margin:0 0 6px;font-size:1.2rem;color:var(--accent)}
+.over p{color:var(--muted);margin:0 0 16px}
+.over button{width:100%}
+.note{font-size:0.75rem;color:var(--muted);text-align:center;margin:12px 0 0}
+/* mini-quality: reduced-motion */
+@media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; scroll-behavior:auto !important; } }
+</style>
+  <link rel="canonical" href="https://hhfa008.github.io/games/boardgame/mini-ameri-a-13/index.html">
+</head>
+<body>
+<div class="wrap">
+<header>
+<h1>火山幼龙<small>Cinder Wyrm · 单机对 AI</small></h1>
+<div class="headlinks">
+<a href="rules.html" aria-label="查看游戏规则">规则</a>
+<button id="restart" type="button" aria-label="重新开始对局">重开</button>
+</div>
+</header>
+
+<div class="players">
+  <section class="player turn" id="p0card" aria-label="你的状态">
+    <h2><span>驯龙者·焰（你）</span><span class="badge" id="turn0">行动中</span></h2>
+    <div class="bar"><i id="hp0bar"></i></div>
+    <div class="stats">
+      <div class="stat"><span>生命</span> <b id="hp0">18</b><i>/18</i></div>
+      <div class="stat"><span>护盾</span> <b id="g0">0</b></div>
+      <div class="stat"><span>能量</span> <b id="r0">0</b></div>
+      
+    </div>
+  </section>
+  <section class="player" id="p1card" aria-label="对手状态">
+    <h2><span>幼龙·赤鳞（AI）</span><span class="badge" id="turn1">等待</span></h2>
+    <div class="bar"><i id="hp1bar"></i></div>
+    <div class="stats">
+      <div class="stat"><span>生命</span> <b id="hp1">30</b><i>/30</i></div>
+      <div class="stat"><span>护盾</span> <b id="g1">0</b></div>
+      <div class="stat"><span>能量</span> <b id="r1">0</b></div>
+      
+    </div>
+  </section>
+</div>
+
+<div class="center">
+  <span class="round" id="round">第 1 轮</span>
+  <span class="dice" id="dice">—</span>
+  
+</div>
+
+<div class="log" id="log" aria-live="polite"></div>
+
+<div class="actions">
+  <button type="button" data-act="attack" aria-label="发动攻击">攻击</button>
+  <button type="button" data-act="guard" aria-label="举盾防御">举盾 +2</button>
+  <button type="button" data-act="focus" aria-label="蓄力获得能量">蓄力 +2</button>
+  <button type="button" data-act="special" class="primary" aria-label="发动角色技能">驯龙鞭 · 3</button>
+</div>
+<p class="note">原创极简美式桌游 · 零外部请求 · 触控操作</p>
+</div>
+
+<div class="over" id="over" role="dialog" aria-modal="true" aria-label="对局结果">
+  <div class="card">
+    <h2 id="overTitle">对局结束</h2>
+    <p id="overText"></p>
+    <button type="button" class="primary" id="again" aria-label="再来一局">再来一局</button>
+  </div>
+</div>
+
+<script src="engine.js"></script>
+<script>
+(function () {
+  'use strict';
+  var E = window.MiniEngine;
+  var g = null;
+  var busy = false;
+
+  function $(id) { return document.getElementById(id); }
+  function setText(id, v) { var el = $(id); if (el) el.textContent = String(v); }
+  function isFaction() { return E.CONFIG.family === 'faction'; }
+
+  function newGame() {
+    var seed = (Date.now() ^ Math.floor(Math.random() * 1e9)) >>> 0;
+    g = E.createGame({ seed: seed });
+    busy = false;
+    $('over').classList.remove('show');
+    render();
+  }
+
+  function render() {
+    if (!g) return;
+    for (var i = 0; i < 2; i++) {
+      var p = g.players[i];
+      setText('hp' + i, p.hp);
+      setText('g' + i, p.guard);
+      setText('r' + i, p.res);
+      var bar = $('hp' + i + 'bar');
+      if (bar) bar.style.width = Math.max(0, Math.min(100, p.hp / p.maxHp * 100)) + '%';
+      if (isFaction()) setText('b' + i, p.banners);
+      var card = $('p' + i + 'card');
+      if (card) card.classList.toggle('turn', g.turn === i && g.phase !== 'over');
+      var badge = $('turn' + i);
+      if (badge) badge.textContent = g.phase === 'over' ? '结束' : (g.turn === i ? (i === 0 ? '行动中' : '思考中') : '等待');
+    }
+    setText('round', '第 ' + g.round + ' 轮');
+    setText('dice', g.lastRoll && g.lastRoll.length ? g.lastRoll.join(' · ') + ' → ' + g.lastDamage : '—');
+    var ev = $('event');
+    if (ev) ev.textContent = g.event ? ('事件：' + g.event.name + ' — ' + g.event.text) : '事件：本回合无';
+    var log = $('log');
+    if (log) {
+      var lines = g.log.slice(-6).map(function (t) {
+        var d = document.createElement('div');
+        d.textContent = t;
+        return d;
+      });
+      log.innerHTML = '';
+      lines.forEach(function (d) { log.appendChild(d); });
+      log.scrollTop = log.scrollHeight;
+    }
+    var acts = E.legalActions(g);
+    var myTurn = g.phase !== 'over' && g.turn === 0 && !busy;
+    var buttons = document.querySelectorAll('[data-act]');
+    for (var b = 0; b < buttons.length; b++) {
+      var key = buttons[b].getAttribute('data-act');
+      buttons[b].disabled = !myTurn || acts.indexOf(key) < 0;
+    }
+    if (g.phase === 'over') {
+      var title = g.winner === 'draw' ? '平局' : (g.winner === 0 ? '你赢了' : '你输了');
+      setText('overTitle', title);
+      setText('overText', g.winner === 'draw' ? '双方势均力敌。' :
+        (g.winner === 0 ? '你击败了 ' + g.players[1].name + '。' : g.players[1].name + ' 击败了你，再来一局？'));
+      $('over').classList.add('show');
+    }
+  }
+
+  function act(type) {
+    if (!g || busy || g.phase === 'over' || g.turn !== 0) return;
+    if (E.legalActions(g).indexOf(type) < 0) return;
+    var r = E.applyAction(g, { type: type });
+    if (!r.ok) return;
+    busy = true;
+    render();
+    if (g.phase === 'over') { busy = false; render(); return; }
+    setTimeout(function () {
+      var a = E.aiAction(g);
+      if (a) E.applyAction(g, a);
+      busy = false;
+      render();
+    }, 480);
+  }
+
+  var buttons = document.querySelectorAll('[data-act]');
+  for (var i = 0; i < buttons.length; i++) {
+    buttons[i].addEventListener('click', function () { act(this.getAttribute('data-act')); });
+  }
+  $('restart').addEventListener('click', newGame);
+  $('again').addEventListener('click', newGame);
+  newGame();
+}());
+</script>
+</body>
+</html>

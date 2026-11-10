@@ -15,55 +15,19 @@
  * then screenshotted element-by-element at deviceScaleFactor 2.
  */
 
-import http from 'node:http';
 import { readFile, mkdir, rm, readdir, stat } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { pokerCards, mahjongTiles, chessPieces } from './cardart.js';
+import { startServer } from '../../../tools/serve.mjs';
 
 const HERE = import.meta.dirname;
 const ROOT = path.resolve(HERE, '../../..');
 const OUT = path.join(ROOT, 'games/boardgame/assets/cardart');
 const MAX_BYTES_PER_FILE = 100 * 1024;
 const MAX_TOTAL_BYTES = 15 * 1024 * 1024;
-
-const MIME = {
-  '.html': 'text/html; charset=utf-8',
-  '.js': 'text/javascript; charset=utf-8',
-  '.mjs': 'text/javascript; charset=utf-8',
-  '.css': 'text/css; charset=utf-8',
-  '.png': 'image/png',
-};
-
-function startServer() {
-  const server = http.createServer(async (req, res) => {
-    try {
-      const url = new URL(req.url || '/', 'http://127.0.0.1');
-      let pathname = decodeURIComponent(url.pathname);
-      if (pathname === '/') pathname = '/games/boardgame/demo/cardart.html';
-      const file = path.normalize(path.join(ROOT, pathname));
-      if (!file.startsWith(ROOT)) {
-        res.writeHead(403);
-        res.end('forbidden');
-        return;
-      }
-      const data = await readFile(file);
-      res.writeHead(200, {
-        'content-type': MIME[path.extname(file)] || 'application/octet-stream',
-        'cache-control': 'no-store',
-      });
-      res.end(data);
-    } catch {
-      res.writeHead(404, { 'content-type': 'text/plain' });
-      res.end('not found');
-    }
-  });
-  return new Promise((resolve) => {
-    server.listen(0, '127.0.0.1', () => resolve({ server, port: server.address().port }));
-  });
-}
 
 function loadPlaywright() {
   const req = createRequire(import.meta.url);
@@ -202,7 +166,7 @@ let server;
 let browser;
 try {
   const { chromium } = loadPlaywright();
-  const started = await startServer();
+  const started = await startServer({ root: ROOT, port: 0 });
   server = started.server;
   const base = `http://127.0.0.1:${started.port}`;
 

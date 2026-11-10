@@ -66,6 +66,14 @@ var I18N = {
 - 棋盘/画布尺寸自适应，390px 宽不横向溢出；按钮与可点目标 ≥44×44。
 - 键盘可达；棋盘有 `aria-label`（`data-aria="boardAria"`）。
 - 分数变化放 `#stat-score`；额外计数放 `#stat-extra`；结束遮罩用 `#overlay`。
+- 结算文案统一取 `I18N[Arcade.lang()][Arcade.overlayKey(status)]`：`won`/`win` → `overlayWin`，
+  `lost`/`lose` → `overlayLose`，其它 → `overlayDraw`。**禁止**用 `status + 'Overlay'` 或
+  `` `overlay${...}` `` 自己拼字典键。
+- `#overlay` 在模板里自带 `hidden` 属性，显示/隐藏必须写 `E.overlay.hidden = false` / `= true`
+  （或 `removeAttribute('hidden')`）；`classList.remove/add('hidden')` 都动不了这个属性，
+  遮罩会一直 `display:none`（或显示后关不掉）。
+- 语言：`Arcade.init({ strings: I18N })` 会把当前语言写回 `I18N.lang`，页面里
+  `I18N[I18N.lang]` 才成立；语言切换复用同一入口，会同步更新。
 - 最高分写 `localStorage`，key 固定 `arcade.<slug>.best`。
 - 三语字典键必须齐全且一致（构建时会校验）。
 - `CORE.status` 可能是 `playing` / `won` / `lost` / `draw`。

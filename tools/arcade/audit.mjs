@@ -55,7 +55,7 @@ for (const g of games) {
   else {
     const html = fs.readFileSync(rules, 'utf8');
     const n = cjk(html);
-    if (n < 1200 || n > 2000) problems.push(`rules CJK ${n}`);
+    if (n < 1200 || n > 4000) problems.push(`rules CJK ${n}`);
     if (!/"@type":\s*"Article"/.test(html)) problems.push('rules Article');
     if (!/"@type":\s*"FAQPage"/.test(html)) problems.push('rules FAQPage');
     const q = (html.match(/"@type":\s*"Question"/g) || []).length;

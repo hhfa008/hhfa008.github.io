@@ -31,13 +31,19 @@ var I18N = {
   };
   var S = CORE.newGame(Math.random);
   var best = Arcade.best(BEST_KEY, 0);
+  var FLIP_BACK_MS = 600;
+  var locked = false;
+  var pendingFlipBack = null;
 
-  function render() {
+  function render(peek) {
     var html = '';
     for (var i = 0; i < S.cards.length; i++) {
       var card = S.cards[i];
-      var up = card.up || card.matched;
-      html += '<div class="card' + (up ? ' up' : '') + '" data-index="' + i + '"></div>';
+      var up = card.up || card.matched || (Array.isArray(peek) && (i === peek[0] || i === peek[1]));
+      var faceKey = card.pair >= 0 ? ArcadeMemorySymbols.faceFor(card.pair) : '';
+      html += '<div class="' + 'card' + (up ? ' up' : '') + '" data-index="' + i + '">' +
+        (faceKey ? '<img class="face" data-symbol="' + faceKey + '" src="' + ArcadeMemorySymbols.url(faceKey) + '" alt="" draggable="false">' : '') +
+        '</div>';
     }
     E.board.innerHTML = html;
     E.score.textContent = S.flips;
@@ -63,24 +69,45 @@ var I18N = {
     }
   }
 
+  function matchFeedback() { return 'Match found!'; }
+
   function input(action) {
-    if (typeof action === 'number') {
-      var result = CORE.act(S, action, Math.random);
-      if (result.changed) {
-        S = result.state;
-        if (result.gained > 0) {
-          E.feedback.textContent = 'Match found!';
-          setTimeout(function() { E.feedback.textContent = ''; }, 1000);
-        } else if (result.gained === 0 && S.moves > 0) {
-          E.feedback.textContent = 'No match. Try again.';
-          setTimeout(function() { E.feedback.textContent = ''; }, 1000);
-        }
-        render();
-      }
+    // 翻回动画期间（locked）忽略一切输入：连点同一张卡不会「翻回后又翻开」。
+    if (locked || typeof action !== 'number') return;
+    var before = S;
+    var result = CORE.act(S, action, Math.random);
+    if (!result.changed) return;
+    S = result.state;
+
+    var upBefore = [];
+    for (var k = 0; k < before.cards.length; k++) {
+      if (before.cards[k].up && !before.cards[k].matched) upBefore.push(k);
     }
+    // 第二张与第一张不匹配：两张继续可见 600ms，再翻回；期间锁输入。
+    if (result.gained === 0 && upBefore.length === 1) {
+      locked = true;
+      render([upBefore[0], action]);
+      if ('No match. Try again.') {
+        E.feedback.textContent = 'No match. Try again.';
+        setTimeout(function () { E.feedback.textContent = ''; }, 600 + 400);
+      }
+      pendingFlipBack = setTimeout(function () {
+        pendingFlipBack = null;
+        locked = false;
+        render();
+      }, 600);
+      return;
+    }
+    if (result.gained > 0) {
+      E.feedback.textContent = matchFeedback();
+      setTimeout(function () { E.feedback.textContent = ''; }, 1000);
+    }
+    render();
   }
 
   function newGame() {
+    if (pendingFlipBack) { clearTimeout(pendingFlipBack); pendingFlipBack = null; }
+    locked = false;
     S = CORE.newGame(Math.random);
     best = Arcade.best(BEST_KEY, 0);
     render();

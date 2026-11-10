@@ -59,6 +59,32 @@ module.exports = function run(CORE, params, s) {
     s.ok('已配对牌不可再翻', same.changed === false);
   });
 
+  s.group('卡面图案', function () {
+    var symbols = require('../memory-symbols.js');
+    var fs = require('fs');
+    var path = require('path');
+    var dir = path.join(__dirname, '../../../assets/art/arcade/memory-pairs/symbols');
+
+    var seen = {};
+    for (var i = 0; i < P; i++) seen[symbols.faceFor(i)] = (seen[symbols.faceFor(i)] || 0) + 1;
+    var distinct = Object.keys(seen).length;
+    s.eq('本款每个对子都有不同图案', distinct, P);
+    s.ok('同一款内至少 6 种图案', distinct >= 6);
+    s.ok('图案总数覆盖最大盘面', symbols.count >= P);
+    s.ok('图案键名非空', symbols.keys.every(function (k) { return /^[a-z]+-[a-z]+$/.test(k); }));
+    s.ok('图案不是纯色块占位（形状 ≥ 6 种）', symbols.shapes.length >= 6);
+
+    var manifest = JSON.parse(fs.readFileSync(path.join(dir, 'symbols.json'), 'utf8'));
+    var expected = [];
+    manifest.palettes.forEach(function (pal) {
+      Object.keys(manifest.shapes).forEach(function (shape) { expected.push(shape + '-' + pal.key); });
+    });
+    s.eq('共享目录顺序与 manifest 一致', symbols.keys.join(','), expected.join(','));
+    var missing = symbols.keys.filter(function (k) { return !fs.existsSync(path.join(dir, k + '.png')); });
+    s.eq('24 个透明底 PNG 均存在', missing.join(',') || 'ok', 'ok');
+    s.eq('图案按卡面绝对路径引用', symbols.url('star-amber'), '/games/assets/art/arcade/memory-pairs/symbols/star-amber.png');
+  });
+
   s.group('胜负与纯函数', function () {
     var g = CORE.newGame(function () { return 0.4; });
     var before = JSON.stringify(g);

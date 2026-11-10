@@ -228,6 +228,30 @@ export function createRoomStoreInternal(options) {
       return joinInternal(rec, optsJoin.playerId, optsJoin.nickname, false, optsJoin.password);
     },
 
+    /*
+     * 服务器内部补位：跳过房间密码，仅供 server 的 AI 自动补位使用。
+     * 浏览器端不能直接调用（HTTP 层没有暴露这个动作）。
+     */
+    addAi(roomIdOrCode, input) {
+      const rec = getRecord(roomIdOrCode);
+      if (!rec) return fail('E_NOT_FOUND', 'room not found');
+      const optsAi = input || {};
+      if (!optsAi.playerId) return fail('E_PLAYER', 'playerId is required');
+      const existing = playerOf(rec, optsAi.playerId);
+      if (existing) {
+        return { ok: true, room: publicRoom(rec), player: Object.assign({}, existing) };
+      }
+      if (rec.room.status === 'playing' || rec.room.status === 'finished') {
+        return fail('E_LOCKED', 'room already started');
+      }
+      if (rec.room.players.length >= rec.room.maxPlayers) {
+        return fail('E_FULL', 'room is full');
+      }
+      const player = addPlayer(rec, optsAi.playerId, optsAi.nickname || 'AI 补位');
+      player.ai = true;
+      return { ok: true, room: publicRoom(rec), player: Object.assign({}, player) };
+    },
+
     invite(roomId, input) {
       const rec = getRecord(roomId);
       if (!rec) throw throwCode('E_NOT_FOUND', 'room not found');

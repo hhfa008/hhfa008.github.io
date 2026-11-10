@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>雾隐深井 · 美式微桌游 · 美式微桌游</title>
+<meta name="description" content="雾隐深井是一场两人竞速的轻量探索游戏。你与 AI 对手老矿工同时进入废弃矿井，先取得 12 点秘藏者获胜。">
+<style>:root{--bg:#14100b;--panel:#211a12;--panel2:#33271a;--ink:#f7efe2;--muted:#c9b696;--gold:#f2c14e;--red:#ef6b5b;--green:#5fd39a;--line:#4d3b28}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(700px 420px at 50% -10%,#3a2b1a,#0d0a07 70%) fixed;color:var(--ink);font:16px/1.5 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;min-height:100vh}
+a{color:var(--gold)}
+.wrap{max-width:420px;margin:0 auto;padding:8px 12px 36px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 0 10px}
+.top h1{font-size:18px;margin:0;flex:1;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nav{display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:56px;padding:0 10px;border-radius:12px;background:var(--panel);border:1px solid var(--line);color:var(--ink);text-decoration:none;font-size:14px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px}
+button{font:inherit;color:var(--ink);background:var(--panel2);border:1px solid var(--line);border-radius:12px;min-height:48px;padding:10px 12px;cursor:pointer;touch-action:manipulation}
+button:active{transform:translateY(1px)}
+button:disabled{opacity:.42;cursor:default}
+button.primary{background:linear-gradient(160deg,#f3cd6b,#d99b2b);color:#2a1a00;font-weight:800;border:none}
+button.ghost{background:transparent}
+.grid{display:grid;gap:8px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.stat{display:flex;justify-content:space-between;gap:8px;font-size:15px;padding:3px 0}
+.stat b{color:var(--gold)}
+.bar{height:8px;background:#0e0a06;border-radius:99px;overflow:hidden;margin-top:4px}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,#e3b04b,#f2d78a)}
+.log{font-size:12.5px;color:var(--muted);max-height:140px;overflow:auto;margin-top:8px}
+.log div{padding:2px 0;border-bottom:1px dashed rgba(255,255,255,.06)}
+.turn{text-align:center;color:var(--gold);font-weight:800;margin:8px 0;font-size:14px}
+.big{font-size:19px;font-weight:900;text-align:center;margin:8px 0;line-height:1.35}
+.note{font-size:13px;color:var(--muted)}
+.end{text-align:center;padding:8px}
+.end h2{font-size:20px;margin:4px 0 6px}
+@media (max-width:360px){.g3{grid-template-columns:repeat(2,minmax(0,1fr))}.wrap{padding:8px 10px 30px}}
+/* mini-quality: safe-area */
+.wrap { --mini-safe-bottom: 30px; padding-bottom: calc(var(--mini-safe-bottom) + env(safe-area-inset-bottom, 0px)); }
+/* mini-quality: reduced-motion */
+@media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; scroll-behavior:auto !important; } }
+</style>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/mini-ameri-b-01/">
+</head>
+<body>
+<div class="wrap">
+<header class="top"><a class="nav" href="../index.html" aria-label="返回桌游目录">← 目录</a><h1>雾隐深井</h1><a class="nav" href="rules.html" aria-label="查看规则">规则</a></header>
+<main>
+<section class="panel">
+  <div class="stat"><span>你 · 秘藏</span><b id="s0">0 / 12</b></div>
+  <div class="bar"><i id="b0" style="width:0"></i></div>
+  <div class="stat" style="margin-top:6px"><span>补给</span><b id="u0">5</b></div>
+</section>
+<section class="panel">
+  <div class="stat"><span>老矿工 · 秘藏</span><b id="s1">0 / 12</b></div>
+  <div class="bar"><i id="b1" style="width:0"></i></div>
+  <div class="stat" style="margin-top:6px"><span>补给</span><b id="u1">5</b></div>
+</section>
+<section class="panel">
+  <div class="turn" id="turn">轮到你</div>
+  <div class="big" id="event">准备下探</div>
+  <div class="grid g2">
+    <button class="primary" id="advance">深入</button>
+    <button id="rest">休整</button>
+  </div>
+  <button class="ghost" id="reset" style="width:100%;margin-top:8px">重开一局</button>
+</section>
+<section class="panel"><div class="note">探索记录</div><div class="log" id="log"></div></section>
+</main>
+</div>
+<script src="engine.js"></script>
+<script>
+(function () {
+  'use strict';
+  var E = window.MiniEngine, game;
+  function $(id) { return document.getElementById(id); }
+  function render() {
+    var p = game.players[0], q = game.players[1];
+    $('s0').textContent = p.score + ' / ' + game.target;
+    $('s1').textContent = q.score + ' / ' + game.target;
+    $('u0').textContent = p.supply;
+    $('u1').textContent = q.supply;
+    $('b0').style.width = Math.min(100, p.score / game.target * 100) + '%';
+    $('b1').style.width = Math.min(100, q.score / game.target * 100) + '%';
+    $('turn').textContent = game.over ? ('结束：' + game.reason) : (game.turn === 0 ? '轮到你' : '对手行动中');
+    $('event').textContent = game.lastEvent || '准备下探';
+    $('log').innerHTML = game.log.slice(-10).map(function (t) {
+      return '<div>' + t.replace(/</g, '&lt;') + '</div>';
+    }).join('');
+    var lock = game.over || game.turn !== 0;
+    $('advance').disabled = lock;
+    $('rest').disabled = lock;
+  }
+  function act(a) {
+    if (game.over || game.turn !== 0) return;
+    E.applyAction(game, a);
+    if (!game.over && game.turn === 1) {
+      var ai = E.aiAction(game);
+      if (ai) E.applyAction(game, ai);
+    }
+    render();
+  }
+  $('advance').onclick = function () { act('advance'); };
+  $('rest').onclick = function () { act('rest'); };
+  $('reset').onclick = function () { game = E.createGame({ seed: (Date.now() % 900000) + 1 }); render(); };
+  game = E.createGame({ seed: (Date.now() % 900000) + 1 });
+  render();
+})();
+</script>
+</body>
+</html>

@@ -31,7 +31,7 @@ var I18N = {
   };
   var S = CORE.newGame(Math.random);
   var best = Arcade.best(BEST_KEY, 0);
-  var timer;
+  var TICKER = null;
 
   function render() {
     E.score.textContent = S.score;
@@ -84,8 +84,6 @@ var I18N = {
     S = CORE.newGame(Math.random);
     best = Arcade.best(BEST_KEY, 0);
     render();
-    if (timer) clearInterval(timer);
-    timer = setInterval(() => input('tick'), 1000);
   }
 
   E.btnNew.addEventListener('click', newGame);
@@ -96,5 +94,10 @@ var I18N = {
   Arcade.onLang(render);
   Arcade.init({ strings: I18N, onLang: render });
   render();
-  timer = setInterval(() => input('tick'), 1000);
+  // 每秒一步（固定步长累加器）；标签页隐藏时不推进，回前台不补步。
+  TICKER = ArcadeTick.create({
+    step: 1000,
+    onStep: function () { input('tick'); }
+  });
+  TICKER.start();
 })();

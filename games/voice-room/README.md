@@ -77,15 +77,6 @@
 - 4 次仍失败显示「连接失败」与「重新加入」按钮。
 - peer 层失败同样按 1/2/4/8 秒做 `restartIce()`，4 次后在该成员行标注失败。
 
-### 网络诊断工具
-
-`tools/rtc-diag/` 是独立的三项连通性测试（STUN / TURN / 信令），不需要进房：
-
-- STUN：拿到 srflx 候选则 PASS，公网 IP 只显示前两段。
-- TURN：向 `/api/ice` 取短期凭据，用 `iceTransportPolicy:'relay'` 尝试分配中继（只建 DataChannel，不传媒体）。
-- 信令：申请临时 token、连 `/ws`、发一次 ping 测 RTT 后断开。
-- 每项独立 PASS/FAIL，并给出「可能被防火墙拦截 UDP / TURN 未配置 / Worker 不可达」等人话建议；离线时三项直接 FAIL。
-
 ## 部署
 
 ### 1. Worker
@@ -125,7 +116,7 @@ GitHub Pages 会自动从 `master` 发布 `games/voice-room/index.html` 与 `gam
 ### 3. 本地调试
 
 ```bash
-cd games/voice-room && python3 -m http.server 8788
+cd ../.. && node tools/serve.mjs --root games/voice-room --port 8788
 # 打开 http://127.0.0.1:8788/?api=http://127.0.0.1:8787
 # 先在本机跑 wrangler dev --local --port 8787
 ```
@@ -186,7 +177,4 @@ games/
         └── src/
             ├── index.js  # 路由 / ICE / WebSocket 转发 / CORS
             └── room.js   # RoomDO：成员、信令、三款棋局、房主 60s 宽限与移交
-tools/
-└── rtc-diag/
-    └── index.html      # STUN / TURN / 信令三项连通性诊断（中英印尼）
 ```

@@ -26,12 +26,14 @@ const limit = Number(arg('limit', '1000'));
 const only = arg('only', null);
 const port = arg('port', '8082');
 const force = process.argv.includes('--force');
+const shard = arg('shard', '1/1');
+const [shardIdx, shardCount] = shard.split('/').map(Number);
 
 function state() {
   try { return JSON.parse(fs.readFileSync(STATE, 'utf8')); } catch { return {}; }
 }
 
-const games = allGames().filter((g) => (only ? g.slug === only : true));
+const games = allGames().filter((g, i) => (only ? g.slug === only : (i % shardCount) === (shardIdx - 1)));
 const st = state();
 const todo = games.filter((g) => force || st[g.slug]?.status !== 'done').slice(0, limit);
 

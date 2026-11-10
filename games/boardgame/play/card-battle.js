@@ -40,6 +40,16 @@ const OPPONENT = 1;
 const INITIAL_SEED = 20261110;
 const AI_STEP_DELAY = 170;
 
+/*
+ * Share card: fixed 1080x1350 portrait (4:5), system fonts only, drawn with
+ * canvas primitives so there is no external image/font request. It contains
+ * only the match result, score, level, trophies, match id and the site mark —
+ * never the anonymous device id or anything that identifies a person.
+ */
+const SHARE_CARD_WIDTH = 1080;
+const SHARE_CARD_HEIGHT = 1350;
+const SHARE_CARD_FONT = '-apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif';
+
 const TYPE_COLORS = {
   colorless: '#94a3b8',
   fire: '#ef4444',
@@ -69,6 +79,7 @@ let currentMatchId = '';
 let matchStartedAt = 0;
 let actionCount = 0;
 let matchRecorded = false;
+let lastResultRecord = null;
 
 function $(id) {
   return document.getElementById(id);
@@ -83,7 +94,7 @@ function cacheDom() {
     'attacks', 'status', 'log',
     'result-panel', 'result-title', 'rr-summary', 'rr-points', 'rr-level', 'rr-level-title',
     'rr-streak', 'rr-levelup', 'rr-daily', 'rr-anti', 'rr-board', 'rr-device',
-    'rr-trophies', 'rr-share', 'rr-claim', 'rr-status'
+    'rr-trophies', 'rr-share', 'rr-card', 'rr-claim', 'rr-status'
   ].forEach(function (id) { dom[id] = $(id); });
 }
 
@@ -333,10 +344,12 @@ function renderSelection(state) {
   activeBtn.disabled = !canPlay || !activeFree;
   activeBtn.title = me.active ? '出战区已有宝可梦（进化暂未支持）' : '将基础宝可梦放入出战区';
 
-  const benchFree = isBasic(card) && (me.bench || []).length < SAMPLE_RULES.benchSize;
+  const benchFree = isBasic(card) && Boolean(me.active) &&
+    (me.bench || []).length < SAMPLE_RULES.benchSize;
   benchBtn.hidden = !isPokemon(card);
   benchBtn.disabled = !canPlay || !benchFree;
-  benchBtn.title = (me.bench || []).length >= SAMPLE_RULES.benchSize ? '备战区已满' : '放入备战区';
+  benchBtn.title = !me.active ? '先放出战生物'
+    : ((me.bench || []).length >= SAMPLE_RULES.benchSize ? '备战区已满' : '放入备战区');
 
   energyBtn.hidden = !isEnergy(card);
   const alreadyAttached = attachedTurn === state.turn;
@@ -468,6 +481,7 @@ function dailyText(record) {
 function renderResult(record) {
   const panel = dom['result-panel'];
   if (!panel || !record) return;
+  lastResultRecord = record;
   panel.hidden = false;
 
   const result = record.breakdown ? record.breakdown.result : 'draw';
@@ -536,6 +550,239 @@ function renderResult(record) {
       (record.duplicate ? '（已记录）' : '，+' + Math.max(0, record.points || 0) + ' 积分') +
       (record.rank ? '，本机名次第 ' + record.rank + ' 名。' : '。');
   }
+}
+
+function roundRectPath(ctx, x, y, width, height, radius) {
+  const r = Math.min(radius, width / 2, height / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + width - r, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + r);
+  ctx.lineTo(x + width, y + height - r);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+  ctx.lineTo(x + r, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function fitCanvasText(ctx, text, maxWidth, startSize, weight) {
+  let size = startSize;
+  do {
+    ctx.font = String(weight) + ' ' + size + 'px ' + SHARE_CARD_FONT;
+    if (ctx.measureText(text).width <= maxWidth) break;
+    size -= 2;
+  } while (size > 16);
+  return size;
+}
+
+function shareCardModel(record) {
+  const result = record.breakdown ? record.breakdown.result : (record.result || 'draw');
+  const trophies = (Array.isArray(record.trophies) ? record.trophies : [])
+    .map(function (id) { return trophyLabel(id); })
+    .slice(0, 5);
+  return {
+    result: result,
+    resultLabel: RESULT_LABELS[result] || '结束',
+    score: Math.max(0, Number(record.points) || 0),
+    total: Math.max(0, Number(record.total != null ? record.total : record.points) || 0),
+    level: Math.max(1, Number(record.level) || 1),
+    levelTitle: record.levelTitle || '',
+    streak: Math.max(0, Number(record.streak) || 0),
+    matchId: record.matchId || (record.lastMatch && record.lastMatch.matchId) || currentMatchId || '',
+    trophies: trophies
+  };
+}
+
+function drawShareCard(record) {
+  const canvas = document.createElement('canvas');
+  canvas.width = SHARE_CARD_WIDTH;
+  canvas.height = SHARE_CARD_HEIGHT;
+  const ctx = canvas.getContext('2d');
+  const W = SHARE_CARD_WIDTH;
+  const H = SHARE_CARD_HEIGHT;
+  const model = shareCardModel(record);
+  const text = [];
+
+  const background = ctx.createLinearGradient(0, 0, W, H);
+  background.addColorStop(0, '#0a0f1d');
+  background.addColorStop(0.55, '#141d36');
+  background.addColorStop(1, '#0a0f1d');
+  ctx.fillStyle = background;
+  ctx.fillRect(0, 0, W, H);
+
+  const glow = ctx.createRadialGradient(880, 180, 20, 880, 180, 520);
+  glow.addColorStop(0, 'rgba(122, 162, 255, 0.34)');
+  glow.addColorStop(1, 'rgba(122, 162, 255, 0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, W, H);
+
+  const goldGlow = ctx.createRadialGradient(180, 1210, 20, 180, 1210, 380);
+  goldGlow.addColorStop(0, 'rgba(255, 212, 121, 0.18)');
+  goldGlow.addColorStop(1, 'rgba(255, 212, 121, 0)');
+  ctx.fillStyle = goldGlow;
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.strokeStyle = 'rgba(122, 162, 255, 0.35)';
+  ctx.lineWidth = 3;
+  roundRectPath(ctx, 36, 36, W - 72, H - 72, 28);
+  ctx.stroke();
+
+  ctx.fillStyle = '#ffd479';
+  ctx.font = '700 30px ' + SHARE_CARD_FONT;
+  ctx.fillText('桌游板块 · BOARDGAME', 84, 140);
+  text.push('桌游板块 · BOARDGAME');
+
+  ctx.fillStyle = '#eef2ff';
+  ctx.font = '700 58px ' + SHARE_CARD_FONT;
+  ctx.fillText('卡牌对战 · 本局战报', 84, 236);
+  text.push('卡牌对战 · 本局战报');
+
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
+  roundRectPath(ctx, 84, 300, W - 168, 430, 34);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  const resultColor = model.result === 'win' ? '#ffd479'
+    : (model.result === 'loss' ? '#ff8a8a' : '#7cc4ff');
+  ctx.fillStyle = resultColor;
+  ctx.font = '800 150px ' + SHARE_CARD_FONT;
+  ctx.fillText(model.resultLabel, 132, 490);
+  text.push(model.resultLabel);
+
+  ctx.fillStyle = '#eef2ff';
+  ctx.font = '700 66px ' + SHARE_CARD_FONT;
+  ctx.fillText('+' + model.score + ' 积分', 132, 592);
+  text.push('+' + model.score + ' 积分');
+
+  ctx.fillStyle = '#a7b3c6';
+  ctx.font = '500 32px ' + SHARE_CARD_FONT;
+  ctx.fillText('累计 ' + model.total + ' 积分 · Lv.' + model.level +
+    (model.levelTitle ? ' ' + model.levelTitle : '') + ' · 连胜 ' + model.streak + ' 天', 132, 654);
+  text.push('累计 ' + model.total + ' 积分 · Lv.' + model.level);
+
+  ctx.fillStyle = '#eef2ff';
+  ctx.font = '700 34px ' + SHARE_CARD_FONT;
+  ctx.fillText('本局奖杯', 84, 820);
+  text.push('本局奖杯');
+
+  const chips = model.trophies.length ? model.trophies : ['完成一局即可解锁奖杯'];
+  let chipX = 84;
+  let chipY = 856;
+  chips.forEach(function (label) {
+    ctx.font = '600 28px ' + SHARE_CARD_FONT;
+    const width = Math.min(W - 168, ctx.measureText(label).width + 52);
+    if (chipX + width > W - 84) {
+      chipX = 84;
+      chipY += 70;
+    }
+    ctx.fillStyle = model.trophies.length ? 'rgba(255, 212, 121, 0.12)' : 'rgba(255, 255, 255, 0.06)';
+    roundRectPath(ctx, chipX, chipY, width, 54, 27);
+    ctx.fill();
+    ctx.strokeStyle = model.trophies.length ? 'rgba(255, 212, 121, 0.55)' : 'rgba(255, 255, 255, 0.14)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = model.trophies.length ? '#ffd479' : '#a7b3c6';
+    ctx.font = '600 28px ' + SHARE_CARD_FONT;
+    ctx.fillText(label, chipX + 26, chipY + 37);
+    text.push(label);
+    chipX += width + 14;
+  });
+
+  ctx.fillStyle = '#a7b3c6';
+  ctx.font = '500 28px ' + SHARE_CARD_FONT;
+  ctx.fillText('对局编号', 84, 1060);
+  text.push('对局编号');
+  const idSize = fitCanvasText(ctx, model.matchId, W - 168, 30, 600);
+  ctx.fillStyle = '#eef2ff';
+  ctx.font = '600 ' + idSize + 'px ' + SHARE_CARD_FONT;
+  ctx.fillText(model.matchId, 84, 1104);
+  text.push(model.matchId);
+
+  ctx.fillStyle = '#7cc4ff';
+  ctx.font = '700 34px ' + SHARE_CARD_FONT;
+  ctx.fillText('hhfa008.github.io/games', 84, 1214);
+  text.push('hhfa008.github.io/games');
+
+  ctx.fillStyle = '#a7b3c6';
+  ctx.font = '500 26px ' + SHARE_CARD_FONT;
+  ctx.fillText('本地匿名记录 · 无账号 · 无追踪 · 系统字体绘制', 84, 1258);
+  text.push('本地匿名记录 · 无账号 · 无追踪');
+
+  return { canvas: canvas, model: model, text: text };
+}
+
+function canvasToPngBlob(canvas) {
+  return new Promise(function (resolve, reject) {
+    if (typeof canvas.toBlob === 'function') {
+      canvas.toBlob(function (blob) {
+        if (blob) resolve(blob);
+        else reject(new Error('canvas.toBlob returned null'));
+      }, 'image/png');
+      return;
+    }
+    try {
+      const dataUrl = canvas.toDataURL('image/png');
+      const binary = atob(String(dataUrl).split(',')[1] || '');
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+      resolve(new Blob([bytes], { type: 'image/png' }));
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
+function generateShareCard() {
+  if (!lastResultRecord) return Promise.reject(new Error('no finished match to share'));
+  const drawn = drawShareCard(lastResultRecord);
+  return canvasToPngBlob(drawn.canvas).then(function (blob) {
+    return new Promise(function (resolve, reject) {
+      const reader = new FileReader();
+      reader.onload = function () {
+        const dataURL = String(reader.result || '');
+        const safeId = String(drawn.model.matchId || 'match').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 24);
+        const filename = 'boardgame-card-battle-' + (safeId || 'match') + '.png';
+        const anchor = document.createElement('a');
+        anchor.href = dataURL;
+        anchor.download = filename;
+        anchor.rel = 'noopener';
+        anchor.style.display = 'none';
+        document.body.appendChild(anchor);
+        let triggered = false;
+        try {
+          anchor.click();
+          triggered = true;
+        } catch (err) {
+          triggered = false;
+        }
+        document.body.removeChild(anchor);
+        const card = {
+          dataURL: dataURL,
+          width: drawn.canvas.width,
+          height: drawn.canvas.height,
+          bytes: blob.size,
+          filename: filename,
+          downloaded: triggered,
+          matchId: drawn.model.matchId,
+          result: drawn.model.result,
+          score: drawn.model.score,
+          total: drawn.model.total,
+          trophies: drawn.model.trophies,
+          text: drawn.text
+        };
+        window.__shareCard = card;
+        resolve(card);
+      };
+      reader.onerror = function () {
+        reject(reader.error || new Error('failed to read PNG blob'));
+      };
+      reader.readAsDataURL(blob);
+    });
+  });
 }
 
 async function shareCurrentResult() {
@@ -910,6 +1157,24 @@ function bind() {
       });
     });
   }
+  if (dom['rr-card']) {
+    dom['rr-card'].addEventListener('click', function () {
+      if (!lastResultRecord) {
+        if (dom['rr-status']) dom['rr-status'].textContent = '先完成一局，才能生成分享卡片。';
+        return;
+      }
+      if (dom['rr-status']) dom['rr-status'].textContent = '正在生成分享卡片…';
+      generateShareCard().then(function (card) {
+        if (dom['rr-status']) {
+          dom['rr-status'].textContent = '分享卡片已生成并下载：' + card.width + '×' + card.height +
+            '，' + Math.max(1, Math.round(card.bytes / 1024)) + 'KB。';
+        }
+      }).catch(function (err) {
+        if (dom['rr-status']) dom['rr-status'].textContent = '分享卡片生成失败：' +
+          (err && err.message ? err.message : '未知错误');
+      });
+    });
+  }
   if (dom['rr-claim']) dom['rr-claim'].addEventListener('click', claimDailyReward);
   document.addEventListener('pointerdown', ensureAudio, { once: true, passive: true });
   document.addEventListener('keydown', ensureAudio, { once: true });
@@ -943,6 +1208,7 @@ function start() {
       return finishMatch(state, override);
     },
     snapshot: function () { return resultTracker ? resultTracker.snapshot() : null; },
+    generateShareCard: function () { return generateShareCard(); },
     seed: INITIAL_SEED
   };
 }

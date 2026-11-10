@@ -1,0 +1,733 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14110c">
+<meta name="description" content="英雄领域 Hero Realms 精品桌游：2 人 50 点生命，7 金币 + 3 匕首起始牌组。购买市场牌构筑牌库，打出金币与战斗，击倒冠军或直接击败对手。本地 AI 对战与双人联机。">
+<meta property="og:title" content="英雄领域 HERO REALMS · 构筑你的牌库">
+<meta property="og:description" content="50 点生命、5 张市场、无限购买。七枚金币与三把匕首，能长成什么样的英雄牌组？">
+<meta property="og:type" content="website">
+<meta property="og:image" content="assets/og.webp">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preload" as="image" href="../../assets/art/premium/hero-realms/leather-mat.webp">
+<link rel="preload" as="image" href="../../assets/art/premium/hero-realms/stone-table.webp">
+<link rel="preload" as="image" href="../../assets/art/premium/hero-realms/gold-coin.webp">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2314110c'/%3E%3Cpath d='M20 12h8l4 22 4-22h8L36 52h-8z' fill='%23e2b85e'/%3E%3C/svg%3E">
+<title>英雄领域 HERO REALMS · 精品桌游</title>
+<style>
+  :root{
+    --art-mat:url("../../assets/art/premium/hero-realms/leather-mat.webp");
+    --art-stone:url("../../assets/art/premium/hero-realms/stone-table.webp");
+    --art-parchment:url("../../assets/art/premium/hero-realms/parchment.webp");
+    --art-gold:url("../../assets/art/premium/hero-realms/gold-coin.webp");
+    --art-dagger:url("../../assets/art/premium/hero-realms/dagger.webp");
+    --art-crystal:url("../../assets/art/premium/hero-realms/health-crystal.webp");
+    --art-standee:url("../../assets/art/premium/hero-realms/champion-standee.webp");
+    --font-serif:"Songti SC","Iowan Old Style","Palatino Linotype",Georgia,serif;
+    --font-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    --bg:#12100b; --bg2:#1c1811; --panel:rgba(39,34,25,.92); --panel2:rgba(52,45,32,.78);
+    --line:#5c5038; --line2:rgba(226,184,94,.28); --ink:#f8f1df; --muted:#b9ac90; --soft:#8e8269;
+    --gold:#e9be66; --gold2:#ffd98c; --combat:#ff8b72; --heal:#79d5a4; --draw:#87b8ff;
+    --imp:#6f9fe0; --guild:#e0b45c; --necros:#cf6f92; --wild:#9ccb76; --basic:#a99a7d;
+    --danger:#ff7d6b; --shadow:0 22px 50px rgba(0,0,0,.46); --radius:18px;
+    --card-face:#efe2c4; --card-ink:#2b2116; --card-edge:#c9b189; --tap:46px;
+  }
+  :root[data-theme="light"]{
+    --bg:#efe6d3; --bg2:#f8f1e2; --panel:rgba(255,251,241,.94); --panel2:rgba(247,238,221,.9);
+    --line:#cbb994; --line2:rgba(150,108,34,.28); --ink:#2b2217; --muted:#6d604c; --soft:#95876e;
+    --gold:#9a6b13; --gold2:#7d540a; --combat:#bc4a34; --heal:#1f8d63; --draw:#2f6fae;
+    --imp:#2f63a8; --guild:#9a6b13; --necros:#a13d61; --wild:#4d7a2c; --basic:#77684f;
+    --danger:#b33f35; --shadow:0 18px 40px rgba(91,68,42,.2);
+    --card-face:#fffaf0; --card-ink:#2b2217; --card-edge:#d6c3a0;
+  }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){
+      --bg:#efe6d3; --bg2:#f8f1e2; --panel:rgba(255,251,241,.94); --panel2:rgba(247,238,221,.9);
+      --line:#cbb994; --line2:rgba(150,108,34,.28); --ink:#2b2217; --muted:#6d604c; --soft:#95876e;
+      --gold:#9a6b13; --gold2:#7d540a; --combat:#bc4a34; --heal:#1f8d63; --draw:#2f6fae;
+      --imp:#2f63a8; --guild:#9a6b13; --necros:#a13d61; --wild:#4d7a2c; --basic:#77684f;
+      --danger:#b33f35; --shadow:0 18px 40px rgba(91,68,42,.2);
+      --card-face:#fffaf0; --card-ink:#2b2217; --card-edge:#d6c3a0;
+    }
+  }
+  *{box-sizing:border-box}
+  html,body{max-width:100%;overflow-x:hidden}
+  body{
+    margin:0; color:var(--ink); font:15px/1.45 var(--font-sans); background-color:var(--bg);
+    background:
+      radial-gradient(900px 520px at 50% -14%, rgba(75,63,39,.75), transparent 66%),
+      linear-gradient(170deg, var(--bg2), var(--bg) 62%);
+    -webkit-tap-highlight-color:transparent; text-size-adjust:100%;
+  }
+  body::before{
+    content:""; position:fixed; inset:0; z-index:0; pointer-events:none; opacity:.18;
+    background:var(--art-stone) center/cover no-repeat; mix-blend-mode:luminosity;
+  }
+  a{color:var(--gold)}
+  .wrap{position:relative; z-index:1; max-width:900px; margin:0 auto; padding:8px 10px 34px}
+  .top{display:flex; align-items:center; gap:7px; padding:4px 0 10px}
+  .brand{flex:1; min-width:0; text-align:center}
+  .brand h1{margin:0; font-family:var(--font-serif); font-weight:700; font-size:20px; letter-spacing:.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .brand p{margin:1px 0 0; font-size:12px; color:var(--muted); letter-spacing:.5px}
+  .icon-btn{
+    display:inline-flex; align-items:center; justify-content:center; min-width:var(--tap); min-height:var(--tap);
+    padding:0 10px; border-radius:12px; border:1px solid var(--line); background:var(--panel);
+    color:var(--ink); font:inherit; font-size:13px; font-weight:800; text-decoration:none; cursor:pointer;
+    box-shadow:0 3px 0 rgba(0,0,0,.2); touch-action:manipulation;
+  }
+  .icon-btn:active{transform:translateY(2px); box-shadow:0 1px 0 rgba(0,0,0,.2)}
+  .icon-btn:focus-visible,button:focus-visible{outline:3px solid var(--draw); outline-offset:2px}
+
+  .arena{display:grid; gap:9px}
+  .seat{
+    position:relative; border:1px solid var(--line); border-radius:var(--radius); padding:9px 10px;
+    background:linear-gradient(155deg, var(--panel), rgba(0,0,0,.12)); box-shadow:var(--shadow); overflow:hidden;
+  }
+  .seat::before{content:""; position:absolute; inset:0; background:var(--art-mat) center/cover no-repeat; opacity:.10; pointer-events:none}
+  .seat > *{position:relative; z-index:1}
+  .seat.foe{border-color:rgba(207,111,146,.4)}
+  .seat.you{border-color:rgba(226,184,94,.44)}
+  .seat.turn{box-shadow:var(--shadow), inset 0 0 0 2px var(--gold)}
+  .seat .who{display:flex; align-items:center; gap:8px; min-width:0}
+  .avatar{width:31px; height:31px; flex:0 0 31px; border-radius:50%; display:grid; place-items:center; font-size:14px; font-weight:900; color:#20170a;
+    background:radial-gradient(circle at 35% 28%, #fff8, transparent 40%), linear-gradient(150deg, var(--guild), #8a5c10);
+    border:1px solid rgba(255,235,190,.5)}
+  .seat.foe .avatar{background:radial-gradient(circle at 35% 28%, #fff6, transparent 40%), linear-gradient(150deg, var(--necros), #5d1c33)}
+  .who .nm{font-family:var(--font-serif); font-weight:700; font-size:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .who .tag{margin-left:auto; font-size:12px; color:var(--muted); font-weight:800; white-space:nowrap}
+  .hp-row{display:flex; align-items:center; gap:8px; margin-top:6px}
+  .hp-bar{flex:1; height:15px; border-radius:999px; background:rgba(0,0,0,.34); border:1px solid var(--line); overflow:hidden; position:relative}
+  .hp-fill{height:100%; width:100%; border-radius:999px; transition:width .35s ease;
+    background:linear-gradient(90deg, #8f3a33, var(--combat) 48%, var(--heal)); box-shadow:inset 0 0 10px rgba(255,255,255,.2)}
+  .hp-text{font-size:13px; font-weight:900; min-width:58px; text-align:right; color:var(--ink)}
+  .hp-crystal{width:19px; height:19px; flex:0 0 19px; background:var(--art-crystal) center/cover no-repeat; filter:drop-shadow(0 2px 3px rgba(0,0,0,.4))}
+  .stat-row{display:flex; flex-wrap:wrap; gap:5px; margin-top:6px}
+  .stat{display:inline-flex; align-items:center; gap:5px; min-height:26px; padding:1px 9px; border-radius:999px; border:1px solid var(--line2); background:rgba(0,0,0,.2); font-size:12px; font-weight:800; color:var(--muted)}
+  .stat b{color:var(--ink); font-size:14px}
+  .stat.gold b{color:var(--gold)}
+  .stat.combat b{color:var(--combat)}
+  .coin{width:16px; height:16px; background:var(--art-gold) center/cover no-repeat; border-radius:50%}
+  .blade{width:15px; height:15px; background:var(--art-dagger) center/cover no-repeat; transform:rotate(45deg)}
+
+  .row-title{display:flex; align-items:center; justify-content:space-between; gap:8px; margin:0 0 5px; font-size:12px; letter-spacing:1.4px; text-transform:uppercase; color:var(--muted); font-weight:800}
+  .champs{display:flex; flex-wrap:wrap; gap:6px; min-height:0}
+  .champ{
+    position:relative; width:112px; min-height:76px; text-align:left; padding:6px 7px; border-radius:10px;
+    border:1px solid var(--card-edge); background:linear-gradient(160deg, rgba(255,250,238,.97), rgba(236,222,193,.97)), var(--art-parchment) center/cover;
+    color:var(--card-ink); cursor:pointer; font:inherit; box-shadow:0 4px 0 rgba(0,0,0,.22); touch-action:manipulation;
+  }
+  .champ:disabled{opacity:.55; cursor:default}
+  .champ .cn{font-family:var(--font-serif); font-weight:700; font-size:12.5px; line-height:1.15; display:block}
+  .champ .cf{font-size:12px; letter-spacing:.5px; font-weight:800; text-transform:uppercase; opacity:.75; display:block; margin-top:2px}
+  .champ .def{position:absolute; right:5px; top:5px; min-width:22px; height:22px; padding:0 4px; border-radius:8px; display:grid; place-items:center; font-size:13px; font-weight:900; color:#fff; background:#4a3c2a; border:1px solid rgba(255,255,255,.35)}
+  .champ.foe-champ .def{background:#7a2339}
+  .champ .used{position:absolute; left:5px; bottom:4px; font-size:12px; font-weight:900; letter-spacing:.4px; color:#7a4c12; background:rgba(255,214,130,.65); border-radius:4px; padding:0 4px}
+  .champ.targetable{outline:2px solid var(--combat); outline-offset:1px; animation:targetPulse 1.4s ease-in-out infinite}
+
+  .board{
+    position:relative; border:1px solid var(--line); border-radius:20px; padding:10px; overflow:hidden;
+    background:linear-gradient(160deg, rgba(31,26,18,.86), rgba(16,13,9,.94)), var(--art-mat) center/cover no-repeat;
+    box-shadow:var(--shadow), inset 0 1px 0 rgba(255,255,255,.08);
+  }
+  .board::before{content:""; position:absolute; inset:7px; border:1px dashed rgba(226,184,94,.18); border-radius:14px; pointer-events:none}
+  .board-top{display:flex; align-items:center; justify-content:space-between; gap:7px; position:relative; z-index:1; margin-bottom:7px; font-size:12px; color:var(--muted); font-weight:800}
+  .board-top .eyebrow{letter-spacing:1.5px; text-transform:uppercase}
+  .deckchip{display:inline-flex; align-items:center; gap:6px; padding:2px 9px; border-radius:999px; background:rgba(0,0,0,.3); border:1px solid var(--line2); color:var(--gold2)}
+  .market{display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:6px; position:relative; z-index:1}
+  .card{
+    position:relative; min-width:0; min-height:120px; padding:7px 6px 6px; border-radius:11px; border:1px solid var(--card-edge);
+    background:
+      radial-gradient(circle at 22% 14%, rgba(255,255,255,.85), transparent 38%),
+      linear-gradient(158deg, rgba(255,252,243,.96), rgba(240,226,199,.95) 58%, rgba(224,205,172,.96)),
+      var(--art-parchment) center/cover no-repeat;
+    color:var(--card-ink); text-align:left; font:inherit; cursor:pointer; touch-action:manipulation;
+    box-shadow:0 6px 0 rgba(0,0,0,.2), inset 0 0 0 3px rgba(255,255,255,.4);
+    display:flex; flex-direction:column; gap:2px; transition:transform .14s ease, filter .2s ease;
+  }
+  .card:hover{transform:translateY(-2px)}
+  .card:active{transform:translateY(1px)}
+  .card:disabled{opacity:.55; cursor:default; filter:grayscale(.25)}
+  .card .cost{position:absolute; right:5px; top:5px; min-width:23px; height:23px; padding:0 4px; border-radius:50%; display:grid; place-items:center;
+    background:radial-gradient(circle at 34% 28%, #fff7c9, #c58a19 70%); color:#3a2506; border:1px solid #8a5c10; font-size:13px; font-weight:900}
+  .card .fdot{width:9px; height:9px; border-radius:50%; background:var(--basic); box-shadow:0 0 0 2px rgba(255,255,255,.45)}
+  .card .cname{font-family:var(--font-serif); font-weight:700; font-size:13px; line-height:1.15; margin-top:1px; padding-right:20px; word-break:break-word}
+  .card .ctext{font-size:12px; line-height:1.3; color:#4a3b28; margin-top:2px; word-break:break-word}
+  .card .ctype{font-size:12px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:#7b6648; margin-top:auto}
+  .card.f-imperial{border-color:var(--imp)} .card.f-guild{border-color:var(--guild)}
+  .card.f-necros{border-color:var(--necros)} .card.f-wild{border-color:var(--wild)}
+  .card.f-imperial .fdot{background:var(--imp)} .card.f-guild .fdot{background:var(--guild)}
+  .card.f-necros .fdot{background:var(--necros)} .card.f-wild .fdot{background:var(--wild)}
+  .card.f-basic .fdot{background:var(--basic)}
+  .market-note{display:flex; align-items:center; justify-content:space-between; gap:7px; margin-top:8px; position:relative; z-index:1}
+  .hint{font-size:12px; color:var(--muted); min-height:18px; line-height:1.35}
+  .hint b{color:var(--gold2)}
+  .actions{display:flex; flex-wrap:wrap; gap:7px; margin-top:9px}
+  button.act{
+    flex:1 1 128px; min-height:50px; padding:7px 12px; border-radius:12px; border:1px solid var(--line);
+    background:var(--panel2); color:var(--ink); font:inherit; font-size:14px; font-weight:900; cursor:pointer;
+    touch-action:manipulation; box-shadow:0 4px 0 rgba(0,0,0,.24);
+  }
+  button.act:active{transform:translateY(2px); box-shadow:0 2px 0 rgba(0,0,0,.24)}
+  button.act:disabled{opacity:.38; cursor:default; box-shadow:none; filter:grayscale(.4)}
+  button.act.attack{background:linear-gradient(160deg, var(--combat), #b4432f); color:#2b0d07; border-color:transparent}
+  button.act.end{background:linear-gradient(160deg, var(--gold), #a9780b); color:#2a1a04; border-color:transparent}
+  .hand{
+    display:flex; justify-content:center; align-items:flex-end; gap:0; min-height:150px; padding:12px 0 2px;
+    position:relative; z-index:1;
+  }
+  .hand .card{width:128px; flex:0 0 128px; min-height:168px; margin:0 -9px; transform-origin:50% 100%; animation:dealIn .42s cubic-bezier(.2,.9,.25,1.2) both}
+  .hand .card:nth-child(1){transform:rotate(-5deg) translateY(3px)}
+  .hand .card:nth-child(2){transform:rotate(-2deg)}
+  .hand .card:nth-child(3){transform:rotate(0deg) translateY(-2px)}
+  .hand .card:nth-child(4){transform:rotate(2deg)}
+  .hand .card:nth-child(5){transform:rotate(5deg) translateY(3px)}
+  .hand .card:nth-child(n+6){transform:rotate(0deg)}
+  .hand .card .cname{font-size:14px}
+  .hand .card .ctext{font-size:12px}
+  .hand-empty{min-height:72px; display:grid; place-items:center; width:100%; border:1px dashed rgba(226,184,94,.3); border-radius:12px; color:var(--muted); font-size:13px}
+  .played{display:flex; flex-wrap:wrap; gap:4px; min-height:0; margin-top:4px}
+  .played-chip{font-size:12px; padding:2px 7px; border-radius:6px; background:rgba(0,0,0,.24); border:1px solid var(--line2); color:var(--muted)}
+
+  .log{border:1px solid var(--line); border-radius:14px; background:var(--panel); padding:8px 10px; margin-top:9px}
+  .log h2{margin:0 0 4px; font-size:12px; letter-spacing:1.5px; color:var(--muted); font-weight:800; text-transform:uppercase; display:flex; justify-content:space-between}
+  .log ul{list-style:none; margin:0; padding:0; max-height:132px; overflow:auto; display:grid; gap:1px}
+  .log li{font-size:12px; color:var(--muted); padding:2px 0; border-bottom:1px dashed rgba(150,130,96,.16)}
+  .log li:last-child{color:var(--ink)}
+  .log li::before{content:"›"; color:var(--gold); margin-right:5px; font-weight:900}
+  .log li.side-ai::before{color:var(--necros)}
+
+  .finale{position:fixed; inset:0; z-index:30; display:none; align-items:center; justify-content:center; padding:16px;
+    background:radial-gradient(circle at 50% 35%, rgba(28,22,14,.72), rgba(8,7,5,.94)); backdrop-filter:blur(3px)}
+  .finale.show{display:flex; animation:fadeIn .3s ease both}
+  .finale-card{width:100%; max-width:350px; border-radius:20px; padding:20px 18px; text-align:center;
+    background:linear-gradient(165deg, var(--panel2), var(--panel)); border:1px solid var(--line); box-shadow:var(--shadow);
+    animation:riseIn .45s cubic-bezier(.2,.9,.2,1.1) both}
+  .finale-card .crown{font-size:34px; line-height:1}
+  .finale-card h2{margin:5px 0 2px; font-size:23px; font-family:var(--font-serif)}
+  .finale-card p{margin:2px 0 12px; color:var(--muted); font-size:13px}
+  .finale-row{display:flex; justify-content:space-between; gap:8px; padding:7px 10px; border-radius:9px; margin-bottom:5px;
+    background:rgba(0,0,0,.16); font-size:13px}
+  .finale-row.win{background:rgba(121,213,164,.14); border:1px solid rgba(121,213,164,.4); font-weight:800}
+  .finale-row b{color:var(--gold2)}
+  .foot{text-align:center; margin-top:14px; font-size:12px; color:var(--muted)}
+  .foot a{display:inline-flex; align-items:center; min-height:44px; margin:0 8px; color:var(--muted); text-decoration:none}
+  .foot a:hover{color:var(--gold)}
+  .sr-only{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0}
+
+  @keyframes dealIn{0%{transform:translateY(-22px) scale(.92); opacity:0}70%{opacity:1}100%{opacity:1}}
+  @keyframes targetPulse{0%,100%{opacity:.72}50%{opacity:1}}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  @keyframes riseIn{from{transform:translateY(14px) scale(.97); opacity:0}to{transform:none; opacity:1}}
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important}
+  }
+  @media (max-width:620px){
+    .wrap{padding:6px 8px 28px}
+    .brand h1{font-size:18px}
+    .market{grid-template-columns:repeat(auto-fit,minmax(88px,1fr))}
+    .hand{display:grid; grid-template-columns:repeat(auto-fit,minmax(96px,1fr)); gap:7px; justify-content:stretch; min-height:0; padding:8px 0 0}
+    .hand .card{width:auto; flex:none; min-height:142px; margin:0; transform:none !important}
+    .champ{width:104px}
+    button.act{flex:1 1 110px; min-height:48px; font-size:13px}
+  }
+  @media (max-width:360px){
+    .wrap{padding:5px 6px 26px}
+    .brand h1{font-size:16px}
+    .brand p{font-size:12px}
+    .market{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .card{min-height:112px}
+    .hand{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .champ{width:100%}
+  }
+/* safe-area: keep the original bottom padding, clear the iOS home indicator */
+body{padding-bottom:env(safe-area-inset-bottom)}
+</style>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/hero-realms-premium/">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="icon-btn" href="../index.html" aria-label="返回桌游目录">← 目录</a>
+    <div class="brand">
+      <h1>英雄领域 HERO REALMS</h1>
+      <p>七枚金币，三把匕首，一场牌库构筑之战</p>
+    </div>
+    <button class="icon-btn" id="themeBtn" type="button" aria-label="切换深色或浅色主题">◐</button>
+    <button class="icon-btn" id="muteBtn" type="button" aria-label="静音或开启音效" aria-pressed="false">♪</button>
+  </header>
+
+  <main class="arena">
+    <section class="seat foe" id="foeSeat" aria-label="对手状态">
+      <div class="who">
+        <span class="avatar" aria-hidden="true">☠</span>
+        <span class="nm" id="foeName">黑曜领主</span>
+        <span class="tag" id="foeTag">手牌 0 · 牌库 10</span>
+      </div>
+      <div class="hp-row">
+        <span class="hp-crystal" aria-hidden="true"></span>
+        <div class="hp-bar" id="foeHpBar" role="progressbar" aria-label="对手生命" aria-valuemin="0" aria-valuemax="50" aria-valuenow="50">
+          <div class="hp-fill" id="foeHpFill"></div>
+        </div>
+        <span class="hp-text" id="foeHpText">50 / 50</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat gold"><span class="coin" aria-hidden="true"></span><b id="foeGold">0</b> 金币</span>
+        <span class="stat combat"><span class="blade" aria-hidden="true"></span><b id="foeCombat">0</b> 战斗</span>
+        <span class="stat">弃牌 <b id="foeDiscard">0</b></span>
+      </div>
+      <div class="row-title" style="margin-top:7px"><span>对手冠军</span><span id="foeChampCount">0</span></div>
+      <div class="champs" id="foeChampions" aria-label="对手冠军区"></div>
+    </section>
+
+    <section class="board" aria-label="市场与战场">
+      <div class="board-top">
+        <span class="eyebrow">Market · 5 张公开市场</span>
+        <span class="deckchip" id="marketDeckChip">补牌堆 —</span>
+      </div>
+      <div class="market" id="market" aria-label="市场牌"></div>
+      <div class="market-note">
+        <span class="hint" id="statusLine" aria-live="polite"></span>
+        <span class="hint" id="turnChip"></span>
+      </div>
+      <div class="actions">
+        <button class="act attack" id="attackBtn" type="button">攻击对手英雄</button>
+        <button class="act" id="activateBtn" type="button">激活首个冠军</button>
+        <button class="act end" id="endBtn" type="button">结束回合</button>
+      </div>
+      <div class="row-title" style="margin-top:9px"><span>你的冠军</span><span id="youChampCount">0</span></div>
+      <div class="champs" id="youChampions" aria-label="你的冠军区"></div>
+      <div class="row-title" style="margin-top:9px"><span>本回合已打出</span><span id="playedCount">0</span></div>
+      <div class="played" id="playedRow"></div>
+      <div class="row-title" style="margin-top:9px"><span>你的手牌 · 点击出牌</span><span id="handCount">0</span></div>
+      <div class="hand" id="handFan" aria-label="你的手牌"></div>
+    </section>
+
+    <section class="seat you" id="youSeat" aria-label="你的状态">
+      <div class="who">
+        <span class="avatar" aria-hidden="true">⚔</span>
+        <span class="nm" id="youName">你</span>
+        <span class="tag" id="youTag">牌库 5 · 弃牌 0</span>
+      </div>
+      <div class="hp-row">
+        <span class="hp-crystal" aria-hidden="true"></span>
+        <div class="hp-bar" id="youHpBar" role="progressbar" aria-label="你的生命" aria-valuemin="0" aria-valuemax="50" aria-valuenow="50">
+          <div class="hp-fill" id="youHpFill"></div>
+        </div>
+        <span class="hp-text" id="youHpText">50 / 50</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat gold"><span class="coin" aria-hidden="true"></span><b id="youGold">0</b> 金币</span>
+        <span class="stat combat"><span class="blade" aria-hidden="true"></span><b id="youCombat">0</b> 战斗</span>
+        <span class="stat">牌库 <b id="youDeck">5</b></span>
+        <span class="stat">弃牌 <b id="youDiscard">0</b></span>
+      </div>
+    </section>
+
+    <section class="log" aria-label="战斗日志">
+      <h2><span>战斗日志</span><span id="logCount"></span></h2>
+      <ul id="logList" aria-live="polite"></ul>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <a href="rules.html">完整规则</a>
+    <a href="online.html">联机对战</a>
+    <a href="../index.html">更多桌游</a>
+  </footer>
+</div>
+
+<div class="finale" id="finale" role="dialog" aria-modal="true" aria-labelledby="finaleTitle">
+  <div class="finale-card">
+    <div class="crown" aria-hidden="true">♛</div>
+    <h2 id="finaleTitle">结算</h2>
+    <p id="finaleSub"></p>
+    <div id="finaleRows"></div>
+    <button class="act end" id="restartBtn" type="button" style="width:100%">再来一局</button>
+  </div>
+</div>
+
+<script src="../../shared/shuffle.js"></script>
+<script src="../../shared/sfx.js"></script>
+<script src="data.js"></script>
+<script src="engine.js"></script>
+<script>
+(function () {
+  'use strict';
+  var E = window.HeroRealmsPremiumEngine;
+  var D = window.HeroRealmsPremiumData;
+  var game = null;
+  var busy = false;
+  var fast = /(?:\?|&)fast=1/.test(location.search);
+  var finalized = false;
+  var cardMap = {};
+  D.cards.forEach(function (c) { cardMap[c.id] = c; });
+
+  function $(id) { return document.getElementById(id); }
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+  function safeGet(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
+  function safeSet(key, value) { try { localStorage.setItem(key, value); } catch (e) {} }
+
+  // ---- Theme -------------------------------------------------------------
+  var theme = safeGet('hrp-theme');
+  if (theme === 'light' || theme === 'dark') document.documentElement.setAttribute('data-theme', theme);
+  function effectiveLight() {
+    var attr = document.documentElement.getAttribute('data-theme');
+    if (attr === 'light') return true;
+    if (attr === 'dark') return false;
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+  }
+  function updateThemeLabel() {
+    $('themeBtn').setAttribute('aria-label', effectiveLight() ? '切换到深色主题' : '切换到浅色主题');
+  }
+  updateThemeLabel();
+
+  // ---- Audio -------------------------------------------------------------
+  var Sfx = window.Sfx;
+  var muted = safeGet('hrp-muted') === '1';
+  if (Sfx && muted) Sfx.mute(true);
+  $('muteBtn').setAttribute('aria-pressed', muted ? 'true' : 'false');
+  $('muteBtn').textContent = muted ? '×' : '♪';
+  function sfx(name) {
+    if (muted || !Sfx) return;
+    try { Sfx.play(name); } catch (e) {}
+  }
+  $('muteBtn').addEventListener('click', function () {
+    muted = !muted;
+    safeSet('hrp-muted', muted ? '1' : '0');
+    if (Sfx) Sfx.mute(muted);
+    $('muteBtn').setAttribute('aria-pressed', muted ? 'true' : 'false');
+    $('muteBtn').textContent = muted ? '×' : '♪';
+    if (!muted) sfx('click');
+  });
+  $('themeBtn').addEventListener('click', function () {
+    var next = effectiveLight() ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', next);
+    safeSet('hrp-theme', next);
+    updateThemeLabel();
+    sfx('deal');
+  });
+
+  // ---- Card rendering ----------------------------------------------------
+  function factionColor(id) {
+    var f = cardMap[id] && cardMap[id].faction;
+    return ({ imperial: 'var(--imp)', guild: 'var(--guild)', necros: 'var(--necros)', wild: 'var(--wild)' })[f] || 'var(--basic)';
+  }
+  function cardButton(cardId, opts) {
+    opts = opts || {};
+    var card = cardMap[cardId];
+    var b = el('button', 'card f-' + card.faction);
+    b.type = 'button';
+    b.setAttribute('data-card-id', cardId);
+    if (opts.index != null) b.setAttribute('data-index', String(opts.index));
+    if (opts.championUid != null) b.setAttribute('data-uid', String(opts.championUid));
+    b.setAttribute('aria-label', (opts.label || card.name) + ' · ' + card.text);
+    if (opts.disabled) b.disabled = true;
+    var cost = el('span', 'cost', String(card.cost));
+    cost.setAttribute('aria-hidden', 'true');
+    b.appendChild(cost);
+    var dot = el('span', 'fdot');
+    dot.setAttribute('aria-hidden', 'true');
+    b.appendChild(dot);
+    b.appendChild(el('span', 'cname', card.name));
+    b.appendChild(el('span', 'ctext', card.text));
+    b.appendChild(el('span', 'ctype', (D.typeLabels[card.type] || '') + ' · ' + (D.factionLabels[card.faction] || '')));
+    return b;
+  }
+  function championButton(champ, foe, canAttack) {
+    var card = cardMap[champ.cardId];
+    var b = el('button', 'champ' + (foe ? ' foe-champ' : '') + (canAttack ? ' targetable' : ''));
+    b.type = 'button';
+    b.setAttribute('data-uid', String(champ.uid));
+    b.setAttribute('aria-label', foe
+      ? '攻击冠军' + card.name + '，剩余防御 ' + champ.hp
+      : '激活冠军' + card.name + (champ.used ? '，本回合已激活' : ''));
+    if (foe) {
+      if (!canAttack) b.disabled = true;
+    } else if (champ.used) {
+      b.disabled = true;
+    }
+    var def = el('span', 'def', String(Math.max(0, champ.hp)));
+    def.setAttribute('aria-label', '防御 ' + champ.hp + ' / ' + champ.maxHp);
+    b.appendChild(def);
+    b.appendChild(el('span', 'cn', card.name));
+    b.appendChild(el('span', 'cf', (D.factionLabels[card.faction] || '') + ' · ' + (D.typeLabels[card.type] || '')));
+    if (!foe && champ.used) b.appendChild(el('span', 'used', '已激活'));
+    return b;
+  }
+
+  // ---- Render ------------------------------------------------------------
+  function render() {
+    if (!game) return;
+    var view = E.publicView(game, 'player');
+    var me = view.sides.player;
+    var foe = view.sides.ai;
+    var myTurn = view.phase === 'playing' && view.turn === 'player';
+    var foeTurn = view.phase === 'playing' && view.turn === 'ai';
+
+    $('foeName').textContent = foe.name;
+    $('foeTag').textContent = '手牌 ' + foe.handCount + ' · 牌库 ' + foe.deckCount;
+    setHp('foe', foe.hp, foe.maxHp);
+    $('foeGold').textContent = foe.gold;
+    $('foeCombat').textContent = foe.combat;
+    $('foeDiscard').textContent = foe.discardCount;
+    $('foeChampCount').textContent = foe.champions.length;
+    $('foeSeat').classList.toggle('turn', foeTurn);
+    var foeRow = $('foeChampions');
+    foeRow.innerHTML = '';
+    foe.champions.forEach(function (ch) {
+      foeRow.appendChild(championButton(ch, true, myTurn && me.combat > 0));
+    });
+
+    $('youName').textContent = me.name;
+    $('youTag').textContent = '牌库 ' + me.deckCount + ' · 弃牌 ' + me.discardCount;
+    setHp('you', me.hp, me.maxHp);
+    $('youGold').textContent = me.gold;
+    $('youCombat').textContent = me.combat;
+    $('youDeck').textContent = me.deckCount;
+    $('youDiscard').textContent = me.discardCount;
+    $('youSeat').classList.toggle('turn', myTurn);
+
+    var market = $('market');
+    market.innerHTML = '';
+    view.market.forEach(function (cardId, index) {
+      var card = cardMap[cardId];
+      var affordable = myTurn && me.gold >= card.cost;
+      var b = cardButton(cardId, {
+        index: index,
+        disabled: !affordable,
+        label: '购买' + card.name + '，花费 ' + card.cost + ' 金币'
+      });
+      b.addEventListener('click', function () { act(function (g) { return E.buyCard(g, 'player', index); }); });
+      market.appendChild(b);
+    });
+
+    var hand = $('handFan');
+    hand.innerHTML = '';
+    if (!me.hand.length) {
+      hand.appendChild(el('div', 'hand-empty', myTurn ? '手牌已空，可以结束回合。' : '等待对手行动…'));
+    } else {
+      me.hand.forEach(function (cardId, index) {
+        var b = cardButton(cardId, { index: index, disabled: !myTurn, label: '打出' + cardMap[cardId].name });
+        b.addEventListener('click', function () { act(function (g) { return E.playCard(g, 'player', index); }); });
+        hand.appendChild(b);
+      });
+    }
+
+    var youRow = $('youChampions');
+    youRow.innerHTML = '';
+    me.champions.forEach(function (ch) {
+      var card = cardMap[ch.cardId];
+      var b = championButton(ch, false, false);
+      b.disabled = !myTurn || ch.used || !card.ability;
+      b.addEventListener('click', function () {
+        act(function (g) { return E.activateChampion(g, 'player', ch.uid); });
+      });
+      youRow.appendChild(b);
+    });
+
+    var playedRow = $('playedRow');
+    playedRow.innerHTML = '';
+    $('playedCount').textContent = me.played.length;
+    me.played.forEach(function (id) {
+      playedRow.appendChild(el('span', 'played-chip', cardMap[id].name));
+    });
+
+    $('marketDeckChip').textContent = '补牌堆 ' + view.marketDeckCount + ' · 市场 ' + view.market.length;
+    $('handCount').textContent = me.hand.length + ' 张';
+    $('youChampCount').textContent = me.champions.length;
+
+    $('attackBtn').disabled = !myTurn || me.combat <= 0;
+    $('attackBtn').textContent = me.combat > 0 && myTurn ? '攻击对手英雄（' + me.combat + '）' : '攻击对手英雄';
+    var firstUsable = null;
+    for (var i = 0; i < me.champions.length; i += 1) {
+      if (!me.champions[i].used && cardMap[me.champions[i].cardId].ability) { firstUsable = me.champions[i]; break; }
+    }
+    $('activateBtn').disabled = !myTurn || !firstUsable;
+    $('activateBtn').textContent = firstUsable ? '激活「' + cardMap[firstUsable.cardId].name + '」' : '激活首个冠军';
+    $('endBtn').disabled = !myTurn;
+
+    if (view.phase === 'over') {
+      $('statusLine').textContent = view.winner === 'player' ? '你击败了对手。' : '你被对手击败了。';
+    } else if (foeTurn) {
+      $('statusLine').textContent = '对手正在购买与出牌…';
+    } else if (me.combat > 0) {
+      $('statusLine').textContent = '战斗池有 ' + me.combat + ' 点：攻击英雄或点击敌方冠军。';
+    } else if (me.gold > 0) {
+      $('statusLine').textContent = '金币 ' + me.gold + '：点击市场牌购买，可买任意多张。';
+    } else {
+      $('statusLine').textContent = '点击手牌打出，或结束回合。';
+    }
+    $('turnChip').textContent = '第 ' + view.turnNumber + ' 回合 · ' + (myTurn ? '你的回合' : (foeTurn ? '对手回合' : '对局结束'));
+
+    var logList = $('logList');
+    logList.innerHTML = '';
+    view.log.slice(-12).forEach(function (row) {
+      var li = el('li', row.side ? 'side-' + row.side : '', row.text);
+      logList.appendChild(li);
+    });
+    $('logCount').textContent = view.log.length + ' 条';
+    if (view.phase === 'over') renderFinale(view);
+  }
+
+  function setHp(prefix, hp, maxHp) {
+    var pct = Math.max(0, Math.min(100, (hp / maxHp) * 100));
+    $(prefix + 'HpFill').style.width = pct + '%';
+    $(prefix + 'HpText').textContent = hp + ' / ' + maxHp;
+    $(prefix + 'HpBar').setAttribute('aria-valuenow', String(hp));
+    $(prefix + 'HpBar').setAttribute('aria-valuemax', String(maxHp));
+  }
+
+  function renderFinale(view) {
+    if (finalized) return;
+    finalized = true;
+    var box = $('finale');
+    var win = view.winner === 'player';
+    $('finaleTitle').textContent = win ? '你赢了！' : (view.sides.ai.name + ' 获胜');
+    $('finaleSub').textContent = '50 点生命归零 · 第 ' + view.turnNumber + ' 回合结束';
+    var rows = $('finaleRows');
+    rows.innerHTML = '';
+    [
+      { name: '你', hp: view.sides.player.hp, deck: view.sides.player.deckCount, discard: view.sides.player.discardCount, win: win },
+      { name: view.sides.ai.name, hp: view.sides.ai.hp, deck: view.sides.ai.deckCount, discard: view.sides.ai.discardCount, win: !win }
+    ].forEach(function (p) {
+      var row = el('div', 'finale-row' + (p.win ? ' win' : ''));
+      row.appendChild(el('span', null, p.name));
+      row.appendChild(el('b', null, 'HP ' + p.hp + ' · 牌库 ' + p.deck));
+      rows.appendChild(row);
+    });
+    box.classList.add('show');
+    sfx(win ? 'win' : 'lose');
+  }
+
+  // ---- Game loop ---------------------------------------------------------
+  function start() {
+    game = E.createGame({
+      cards: D,
+      seed: (Date.now() % 1000000) + 17,
+      firstSide: 'player',
+      names: D.aiNames
+    });
+    busy = false;
+    finalized = false;
+    $('finale').classList.remove('show');
+    render();
+    pump();
+  }
+
+  function playLogSfx(previousLength) {
+    if (!game) return;
+    var added = game.log.slice(previousLength);
+    var texts = added.map(function (row) { return row.text; }).join(' ');
+    if (/购买/.test(texts)) sfx('move');
+    else if (/攻击|击倒|造成/.test(texts)) sfx('capture');
+    else if (/恢复|治疗/.test(texts)) sfx('notify');
+    else if (/打出|抽了|洗回/.test(texts)) sfx('deal');
+    else if (/激活/.test(texts)) sfx('click');
+  }
+
+  function act(fn) {
+    if (busy || !game || game.winner) return;
+    var previous = game.log.length;
+    try {
+      game = fn(game);
+    } catch (e) {
+      $('statusLine').textContent = '这一步不能这样做：' + (e.message || '非法动作');
+      sfx('error');
+      return;
+    }
+    playLogSfx(previous);
+    render();
+    pump();
+  }
+
+  function pump() {
+    if (!game || game.winner) { busy = false; return; }
+    if (game.turn !== 'ai') { busy = false; return; }
+    busy = true;
+    setTimeout(function () {
+      if (!game || game.winner || game.turn !== 'ai') { busy = false; render(); return; }
+      var previous = game.log.length;
+      var result = E.aiAct(game, 'ai');
+      if (!result) { busy = false; return; }
+      game = result.state;
+      playLogSfx(previous);
+      render();
+      busy = false;
+      pump();
+    }, fast ? 4 : 170);
+  }
+
+  $('attackBtn').addEventListener('click', function () {
+    act(function (g) { return E.attack(g, 'player', { kind: 'player' }, g.sides.player.combat); });
+  });
+  $('endBtn').addEventListener('click', function () {
+    act(function (g) { return E.endTurn(g, 'player'); });
+  });
+  $('activateBtn').addEventListener('click', function () {
+    var view = E.publicView(game, 'player');
+    var target = null;
+    view.sides.player.champions.forEach(function (ch) {
+      if (target) return;
+      if (!ch.used && cardMap[ch.cardId].ability) target = ch.uid;
+    });
+    if (target == null) return;
+    act(function (g) { return E.activateChampion(g, 'player', target); });
+  });
+  $('restartBtn').addEventListener('click', start);
+
+  // Enemy champion attacks are delegated because the row re-renders.
+  $('foeChampions').addEventListener('click', function (event) {
+    var btn = event.target.closest('button[data-uid]');
+    if (!btn) return;
+    if (!game || game.turn !== 'player' || game.sides.player.combat <= 0) return;
+    var uid = Number(btn.getAttribute('data-uid'));
+    act(function (g) {
+      var ch = null;
+      g.sides.ai.champions.forEach(function (c) { if (c.uid === uid) ch = c; });
+      if (!ch) throw new Error('该冠军已不在场');
+      return E.attack(g, 'player', { kind: 'champion', uid: uid }, Math.min(g.sides.player.combat, ch.hp));
+    });
+  });
+
+  // Keyboard: digits play hand, shift+digits buy, A attack, C activate, E end turn.
+  document.addEventListener('keydown', function (e) {
+    if (!game || game.winner || game.turn !== 'player' || busy) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    var digit = /^[1-9]$/.test(e.key) ? Number(e.key) - 1 : -1;
+    if (digit >= 0) {
+      e.preventDefault();
+      if (e.shiftKey) {
+        act(function (g) { return E.buyCard(g, 'player', digit); });
+      } else {
+        act(function (g) { return E.playCard(g, 'player', digit); });
+      }
+      return;
+    }
+    var key = String(e.key || '').toLowerCase();
+    if (key === 'a') { e.preventDefault(); $('attackBtn').click(); }
+    else if (key === 'c') { e.preventDefault(); $('activateBtn').click(); }
+    else if (key === 'e' || key === 'enter') { e.preventDefault(); $('endBtn').click(); }
+  });
+
+  // Public test hook: only the viewer's public information.
+  window.__premium = {
+    state: function () { return game ? E.publicView(game, 'player') : null; },
+    over: function () { return !!game && !!game.winner; },
+    winner: function () { return game ? game.winner : null; },
+    start: start,
+    fast: fast
+  };
+
+  start();
+})();
+</script>
+</body>
+</html>

@@ -5,9 +5,19 @@
  *
  * Run: node games/shared/shuffle.test.js
  *
- * The heavy tests use the production CSPRNG path (no seed), because that is
- * what players actually get. Sample sizes are deliberately large enough that
- * a biased shuffle would show up:
+ * The heavy tests draw their samples from a fixed seeded PRNG
+ * (Shuffle.createRng(SEED), one generator advanced across all trials). Under
+ * the null hypothesis a p-value is uniform on [0,1], so an unseeded sample
+ * rejects a strict threshold by chance: `p > 0.001` fails about once per 1000
+ * runs (observed in practice). A fixed seed makes the same statistic come out
+ * of every run while keeping the same 200,000-shuffle sample and the same
+ * strict thresholds — the assertions are regression checks, not coin flips.
+ * The sample still runs the real Fisher-Yates / nextBelow code, including the
+ * exact 32-bit rejection sampling; only the word source is deterministic.
+ * The production CSPRNG path is exercised separately (group 5).
+ *
+ * Sample sizes are deliberately large enough that a biased shuffle would show
+ * up:
  *   - 200,000 full shuffles for the 52x52 card/position contingency table
  *   - 100,000 full shuffles for permutation diversity
  */
@@ -67,14 +77,20 @@ function pInterval(p) {
  * -------------------------------------------------------------------------- */
 
 var UNIFORM_TRIALS = 200000;
+// Fixed seeds: deterministic samples, so the strict thresholds below cannot
+// flake. Changing the shuffle algorithm changes these statistics, which is
+// exactly what the assertions should catch.
+var UNIFORM_SEED = 'shuffle/uniformity/200000/v1';
+var DIVERSITY_SEED = 'shuffle/diversity/100000/v1';
 var counts = new Int32Array(N * N); // counts[position * N + card]
 var uniformStats = null;
 
 function runUniformity() {
   var t0 = Date.now();
   var deck = orderedDeck();
+  var rng = Shuffle.createRng(UNIFORM_SEED);
   for (var t = 0; t < UNIFORM_TRIALS; t++) {
-    Shuffle.shuffleInPlace(deck); // unseeded: production CSPRNG
+    Shuffle.shuffleInPlace(deck, { rng: rng }); // fixed seed: reproducible sample
     for (var pos = 0; pos < N; pos++) counts[pos * N + deck[pos]]++;
   }
   var expected = UNIFORM_TRIALS / N;
@@ -145,8 +161,9 @@ s.group('3. 排列多样性：100,000 次洗牌的互异排列数', function () 
   var t0 = Date.now();
   var seen = new Set();
   var deck = orderedDeck();
+  var rng = Shuffle.createRng(DIVERSITY_SEED); // fixed seed: reproducible sample
   for (var t = 0; t < trials; t++) {
-    Shuffle.shuffleInPlace(deck);
+    Shuffle.shuffleInPlace(deck, { rng: rng });
     seen.add(permKey(deck));
   }
   var unique = seen.size;

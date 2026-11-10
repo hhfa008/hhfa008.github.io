@@ -367,4 +367,89 @@ s.group('API 与只读约定', function () {
   return 'bodies 长度 ' + w.bodies.length + '，约束与碰撞过滤正常';
 });
 
+/* ------------------------------------------------------------------ *
+ * 10. Render interpolation (fixed-step alpha)
+ * ------------------------------------------------------------------ */
+s.group('渲染插值：alpha 范围与 interpolate 端点', function () {
+  // alpha must always stay in [0, 1), whatever mix of frame times arrives.
+  var w = Physics.createWorld({ gravity: { x: 0, y: 0 } });
+  w.addBody({ shape: 'circle', r: 5, x: 0, y: 0, vx: 120, mass: 1 });
+  var dts = [1 / 120, 1 / 144, 1 / 90, 0.016, 0.011, 0.023];
+  var alphaOk = true;
+  var alphaMax = -1;
+  var alphaMin = 2;
+  for (var i = 0; i < 2000; i++) {
+    w.step(dts[i % dts.length]);
+    var a = w.alpha;
+    if (!(a >= 0 && a < 1)) { alphaOk = false; break; }
+    if (a > alphaMax) alphaMax = a;
+    if (a < alphaMin) alphaMin = a;
+  }
+  s.ok('2000 次不规则步进后 alpha 始终在 [0,1)', alphaOk,
+    'min=' + alphaMin + ', max=' + alphaMax);
+  s.ok('alpha 确实在变化（不是恒 0）', alphaMax > 0, 'max=' + alphaMax);
+  s.near('alpha = accumulator / fixedDt', w.alpha, w.accumulator / w.fixedDt, 1e-12);
+
+  // The same wall-clock duration must produce the same number of fixed steps
+  // at 60 Hz and 120 Hz: only the interpolation interval changes.
+  function stepsFor(hz, seconds) {
+    var world = Physics.createWorld({ gravity: { x: 0, y: 0 } });
+    var frames = Math.round(hz * seconds);
+    var frameDt = seconds / frames;
+    for (var k = 0; k < frames; k++) world.step(frameDt);
+    return world;
+  }
+  var r60 = stepsFor(60, 2);
+  var r120 = stepsFor(120, 2);
+  s.eq('60Hz 2 秒产生 120 个固定步', r60.steps, 120);
+  s.eq('120Hz 2 秒产生 120 个固定步', r120.steps, 120);
+  s.eq('120Hz 与 60Hz 同一时长步进次数一致', r120.steps, r60.steps);
+
+  // Optional render hook: gets (world, alpha) and does not disturb physics.
+  var gotAlpha = -1;
+  var gotWorld = null;
+  var wc = Physics.createWorld({ gravity: { x: 0, y: 0 } });
+  wc.step(1 / 120, function (world, alpha) {
+    gotWorld = world;
+    gotAlpha = alpha;
+  });
+  s.ok('step 回调收到同一个 world', gotWorld === wc);
+  s.near('step 回调第二个参数是 alpha', gotAlpha, 0.5, 1e-12);
+  s.near('回调 alpha 与 world.alpha 一致', gotAlpha, wc.alpha, 1e-12);
+  s.ok('不传回调时 step 仍返回 world', wc.step(1 / 60) === wc);
+
+  function buildFalling() {
+    var world = Physics.createWorld({ gravity: { x: 0, y: 900 }, substeps: 3 });
+    world.addBody({ shape: 'aabb', w: 400, h: 20, x: 0, y: 200, static: true });
+    var b = world.addBody({
+      shape: 'circle', r: 10, x: -30, y: 0, vx: 40, mass: 1,
+      restitution: 0.4, friction: 0.3
+    });
+    return { world: world, body: b };
+  }
+  var plain = buildFalling();
+  var hooked = buildFalling();
+  stepN(plain.world, 180);
+  for (var n = 0; n < 180; n++) hooked.world.step(DT, function () {});
+  s.eq('带渲染回调的 180 步结果逐位不变',
+    [hooked.body.x, hooked.body.y, hooked.body.vx, hooked.body.vy],
+    [plain.body.x, plain.body.y, plain.body.vx, plain.body.vy]);
+
+  // interpolate: exact endpoints, midpoint, and no input mutation.
+  var prev = { x: 0, y: 10, angle: 0, label: 'prev' };
+  var curr = { x: 20, y: 30, angle: 1, label: 'curr' };
+  var i0 = Physics.interpolate(prev, curr, 0);
+  var i1 = Physics.interpolate(prev, curr, 1);
+  var im = Physics.interpolate(prev, curr, 0.5);
+  s.eq('alpha=0 精确落在 prev 端点', [i0.x, i0.y, i0.angle], [0, 10, 0]);
+  s.eq('alpha=1 精确落在 curr 端点', [i1.x, i1.y, i1.angle], [20, 30, 1]);
+  s.eq('alpha=0.5 取中点', [im.x, im.y, im.angle], [10, 20, 0.5]);
+  s.eq('interpolate 不修改输入', [prev.x, prev.y, curr.x, curr.y], [0, 10, 20, 30]);
+  s.near('数字插值', Physics.interpolate(10, 20, 0.25), 12.5, 1e-12);
+  s.near('alpha 超过 1 时按端点饱和', Physics.interpolate(10, 20, 3), 20, 1e-12);
+
+  return 'alpha ∈ [' + alphaMin.toFixed(3) + ', ' + alphaMax.toFixed(3) +
+    ')；60/120Hz 均为 ' + r60.steps + ' 步；alpha=0.5 中点 (10,20)';
+});
+
 s.done();

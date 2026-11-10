@@ -42,14 +42,30 @@ export const CARD_MAP = Object.freeze(
 );
 
 export const RULES = [
-  '双方训练师各 20 HP。',
-  '起手 5 张，初始能量 1；每回合开始 +1 能量（上限 6）并摸 1 张。',
-  '出牌消耗卡牌费用；场上没有生物时才能出牌。',
+  '牌库 60 张，起手 7 张，奖赏卡 6 张，备战区 5 个位置。',
+  '双方训练师各 20 HP（页面演示计分；官方 TCG 以取完 6 张奖赏卡决胜负）。',
+  '初始能量 1；每回合开始 +1 能量（上限 6）并摸 1 张。',
+  '出牌消耗卡牌费用；基础生物可放出战区或备战区。',
   '每回合可攻击一次，不消耗能量。',
   '对方有生物时打生物；击倒生物造成 2 点突破伤害。',
   '对方空场时攻击直接打训练师。',
-  '训练师 HP 归零即分出胜负；牌库空了洗回弃牌堆。'
+  '训练师 HP 归零或取完 6 张奖赏卡即获胜；牌库空了洗回弃牌堆。'
 ];
+
+/*
+ * Physical deck-construction numbers shared with the playable page and the
+ * realism fixture. 60 cards / 7 opening hand / 6 prizes / 5 bench is the
+ * standard Pokémon TCG deck contract; the sample engine keeps its 20 HP
+ * trainer and breakthrough damage as a demo scoring layer (see
+ * games/boardgame/realism/card-battle.json deviations).
+ */
+export const RULES_META = Object.freeze({
+  deckSize: 60,
+  openingHand: 7,
+  prizeCards: 6,
+  benchSize: 5,
+  maxCopiesPerName: 4
+});
 
 const MAX_ENERGY = 6;
 
@@ -101,6 +117,18 @@ function cloneCard(card) {
     energies: [],
     energyCount: 0
   };
+}
+
+/*
+ * Official TCG: when the Active Pokémon is Knocked Out, the owner promotes a
+ * Benched Pokémon. The sample has no manual switch action, so promote the
+ * first benched Basic automatically.
+ */
+function promoteBench(player) {
+  if (!player || player.active) return null;
+  if (!Array.isArray(player.bench) || !player.bench.length) return null;
+  player.active = player.bench.shift();
+  return player.active;
 }
 
 function makePlayer(index, name) {
@@ -257,6 +285,23 @@ export function legalActions(state, playerIndex) {
         });
       }
     });
+    const bench = Array.isArray(player.bench) ? player.bench : [];
+    if (bench.length < RULES_META.benchSize) {
+      const seenBench = new Set();
+      player.hand.forEach(function (cardId) {
+        const card = cardById(cardId);
+        if (!card || card.category === 'energy') return;
+        if ((card.stage || 'basic') !== 'basic') return;
+        if (player.energy < card.cost || seenBench.has(cardId)) return;
+        seenBench.add(cardId);
+        actions.push({
+          type: 'play',
+          cardId: cardId,
+          target: 'bench',
+          card: card
+        });
+      });
+    }
     return actions;
   }
   const seen = new Set();
@@ -270,13 +315,14 @@ export function legalActions(state, playerIndex) {
   return actions;
 }
 
-export function playCard(state, playerIndex, cardId) {
+export function playCard(state, playerIndex, cardId, options) {
+  const opts = options || {};
   const err = playerError(state, playerIndex);
   if (err) return err;
   if (state.phase !== 'playing') return { ok: false, code: 'E_PHASE', message: '对局已结束' };
   if (playerIndex !== currentIndex(state)) return { ok: false, code: 'E_TURN', message: '还没轮到你' };
   const player = state.players[playerIndex];
-  if (player.active) return { ok: false, code: 'E_ACTIVE', message: '场上已有生物，等它被击倒后再出牌' };
+  const toBench = opts.target === 'bench';
   const index = player.hand.indexOf(cardId);
   if (index === -1) return { ok: false, code: 'E_CARD', message: '手牌中没有这张卡' };
   const card = cardById(cardId);
@@ -284,12 +330,29 @@ export function playCard(state, playerIndex, cardId) {
   if (card.category === 'energy') return { ok: false, code: 'E_CARD', message: '能量卡请使用 attachEnergy' };
   if (player.energy < card.cost) return { ok: false, code: 'E_ENERGY', message: '能量不足' };
 
+  if (toBench) {
+    if (!player.active) return { ok: false, code: 'E_ACTIVE', message: '请先放出战生物' };
+    if (!Array.isArray(player.bench)) player.bench = [];
+    if (player.bench.length >= RULES_META.benchSize) {
+      return { ok: false, code: 'E_BENCH_FULL', message: '备战区已满（' + RULES_META.benchSize + '）' };
+    }
+    // Official TCG: only Basic Pokémon may be placed directly on the bench.
+    if ((card.stage || 'basic') !== 'basic') {
+      return { ok: false, code: 'E_BENCH_STAGE', message: '只有基础生物可直接放入备战区' };
+    }
+  } else if (player.active) {
+    return { ok: false, code: 'E_ACTIVE', message: '场上已有生物，等它被击倒后再出牌' };
+  }
+
   player.energy -= card.cost;
   player.hand.splice(index, 1);
-  player.active = cloneCard(card);
-  const text = player.name + ' 打出「' + card.name + '」（HP ' + card.hp + ' / 攻击 ' + card.attack + '）。';
+  const placed = cloneCard(card);
+  if (toBench) player.bench.push(placed);
+  else player.active = placed;
+  const text = player.name + ' 打出「' + card.name + '」（HP ' + card.hp + ' / 攻击 ' + card.attack + '）' +
+    (toBench ? '放入备战区。' : '出战。');
   state.log.push({ turn: state.turn, text: text });
-  return { ok: true, state: state, card: player.active, log: [text] };
+  return { ok: true, state: state, card: placed, target: toBench ? 'bench' : 'active', log: [text] };
 }
 
 /*
@@ -342,7 +405,12 @@ export function knockOut(state, target) {
   if (knocked) {
     player.discard.push(knocked.cardId);
     player.active = null;
-    state.log.push({ turn: state.turn, text: player.name + ' 的「' + knocked.name + '」被击倒。' });
+    const promoted = promoteBench(player);
+    state.log.push({
+      turn: state.turn,
+      text: player.name + ' 的「' + knocked.name + '」被击倒。' +
+        (promoted ? '「' + promoted.name + '」从备战区补位。' : '')
+    });
   }
   return { ok: true, state: state, knockedOut: knocked };
 }
@@ -368,6 +436,12 @@ export function takePrize(state, playerIndex) {
   player.hand.push(cardId);
   const text = player.name + ' 取 1 张奖赏卡（剩 ' + player.prizes.length + ' 张）。';
   state.log.push({ turn: state.turn, text: text });
+  // Official win condition: take your last prize card.
+  if (state.prizeCards > 0 && player.prizes.length === 0 && state.phase === 'playing') {
+    state.phase = 'ended';
+    state.winner = playerIndex;
+    state.log.push({ turn: state.turn, text: player.name + ' 取完 6 张奖赏卡，获胜。' });
+  }
   return { ok: true, state: state, cardId: cardId, prizesLeft: player.prizes.length, log: [text] };
 }
 
@@ -397,7 +471,9 @@ export function attack(state, playerIndex) {
       defender.discard.push(dead.cardId);
       defender.active = null;
       defender.hp -= 2;
-      text += '「' + dead.name + '」被击倒，突破造成 2 点训练师伤害。';
+      const promoted = promoteBench(defender);
+      text += '「' + dead.name + '」被击倒，突破造成 2 点训练师伤害。' +
+        (promoted ? '「' + promoted.name + '」从备战区补位。' : '');
     }
   } else {
     defender.hp -= damage;

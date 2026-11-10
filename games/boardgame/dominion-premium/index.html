@@ -1,0 +1,641 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#1b1424">
+<title>领土 · Dominion 桌游（牌库构筑 · 人机对战）</title>
+<meta name="description" content="精美领土 Dominion 单机版：打出行动牌、购买财宝与胜利卡、洗牌抽五张，和 AI 打一场完整的牌库构筑对局。零外部请求，支持暗/浅色与手机。">
+<meta property="og:image" content="../../assets/art/premium/dominion/og.webp">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23251b2e'/%3E%3Cpath d='M16 10h32v42l-16-11-16 11z' fill='%23d8b26a'/%3E%3Ccircle cx='32' cy='28' r='7' fill='%23a78be0'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#171020;--bg2:#1e1629;--panel:#261d33;--panel2:#30243f;--ink:#f3edf8;--muted:#b6a7c8;
+  --line:#463458;--line2:#5d4675;--gold:#d8b26a;--gold2:#f1d9a8;--purple:#a78be0;--green:#83c99a;
+  --red:#d78373;--blue:#7fa8c9;--shadow:0 16px 38px rgba(0,0,0,.4);
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
+  --serif:"Palatino Linotype","Songti SC",Georgia,serif;
+}
+html[data-theme="light"]{
+  --bg:#f0e9df;--bg2:#e8dfd2;--panel:#fbf6ee;--panel2:#f2eadf;--ink:#2d2433;--muted:#75657f;
+  --line:#d2c3c0;--line2:#bba6b9;--gold:#a5762a;--gold2:#7b5315;--purple:#7656a6;--green:#447d5c;
+  --red:#a94a36;--blue:#3d6b8c;--shadow:0 16px 38px rgba(70,45,60,.16);
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{font-family:var(--sans);color:var(--ink);line-height:1.5;overflow-x:hidden;
+  background:radial-gradient(1000px 500px at 50% -180px,rgba(167,139,224,.16),transparent 62%),
+    radial-gradient(700px 420px at 100% 105%,rgba(216,178,106,.09),transparent 60%),var(--bg);
+  transition:background .35s,color .35s}
+body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.13;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.4'/%3E%3C/svg%3E")}
+body::after{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.06;
+  background:url("../../assets/art/premium/dominion/detail.webp") center/cover no-repeat,
+    url("../../assets/art/premium/dominion/cover.webp") center/cover no-repeat}
+button,a{font-family:inherit;color:inherit}
+button{min-height:44px;min-width:44px;border-radius:11px;border:1px solid var(--line2);background:var(--panel2);
+  color:var(--ink);padding:8px 12px;font-size:13px;cursor:pointer;touch-action:manipulation;
+  transition:transform .14s,border-color .18s,background .2s,box-shadow .2s}
+button:hover:not(:disabled){transform:translateY(-1px);border-color:var(--gold);box-shadow:0 6px 16px rgba(0,0,0,.2)}
+button:active:not(:disabled){transform:translateY(1px) scale(.985)}
+button:disabled{opacity:.42;cursor:not-allowed}
+button.primary{background:linear-gradient(180deg,var(--gold2),var(--gold));color:#251b2e;border-color:var(--gold2);font-weight:800}
+button.ghost{background:transparent}
+.iconbtn{width:44px;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:17px}
+a.btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:8px 13px;border-radius:11px;
+  background:var(--panel2);border:1px solid var(--line2);text-decoration:none;font-size:13px;transition:.18s}
+a.btn:hover{border-color:var(--gold);transform:translateY(-1px)}
+.app{position:relative;z-index:1;max-width:1320px;margin:0 auto;padding:12px 12px 44px}
+.topbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:12px}
+.brand{display:flex;align-items:center;gap:10px;min-width:210px}
+.crest{width:42px;height:42px;border-radius:12px;background:linear-gradient(145deg,#4b3464,#241a30);
+  border:1px solid var(--line2);display:grid;place-items:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.15)}
+.crest svg{width:28px;height:28px}
+h1{margin:0;font-family:var(--serif);font-size:23px;letter-spacing:1px;line-height:1.1}
+h1 span{display:block;font-family:var(--sans);font-size:12px;letter-spacing:3.2px;color:var(--muted);font-weight:600;margin-top:2px}
+.scores{display:flex;gap:8px;flex-wrap:wrap;flex:1}
+.score{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);
+  border-radius:12px;padding:6px 10px;min-width:112px;position:relative;overflow:hidden}
+.score::after{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--c,var(--red))}
+.score .who{font-size:12px;color:var(--muted)}
+.score b{font-size:19px;color:var(--gold2);margin-left:auto;font-variant-numeric:tabular-nums}
+.score .sub{font-size:12px;color:var(--muted)}
+.toggles{display:flex;gap:6px;flex-wrap:wrap}
+.layout{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(330px,.78fr);gap:12px;align-items:start}
+.panel{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:16px;
+  padding:12px;box-shadow:var(--shadow);margin-bottom:12px}
+.panel h2{font-size:12px;letter-spacing:1.6px;color:var(--muted);margin:0 0 9px;text-transform:uppercase;font-weight:700}
+.phasebar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:9px}
+.phase{display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:999px;font-size:12px;
+  border:1px solid var(--line);color:var(--muted);background:rgba(0,0,0,.1)}
+.phase.on{color:var(--gold2);border-color:rgba(216,178,106,.55);background:rgba(216,178,106,.12)}
+.phase::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.8}
+.resbar{display:flex;gap:7px;flex-wrap:wrap;margin-left:auto}
+.coin{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);background:rgba(0,0,0,.12);
+  border-radius:9px;padding:4px 9px;font-size:12px;color:var(--muted)}
+.coin b{color:var(--gold2);font-size:16px;font-variant-numeric:tabular-nums}
+.coin.pulse b{animation:coinPulse .42s ease}
+/* 素材接线：牌托背景、牌背堆、铜/银/金币面 */
+.deck-tray{display:flex;align-items:center;gap:4px;padding:3px 6px;border-radius:9px;border:1px solid var(--line);
+  background:url("../../assets/art/premium/dominion/card-tray.webp") center/cover no-repeat;background-color:#2a2035;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.35)}
+.deck-tray .stack{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#e9dcc4;text-shadow:0 1px 2px rgba(0,0,0,.75)}
+.deck-tray .stack b{color:var(--gold2);font-size:12px;font-variant-numeric:tabular-nums}
+.deck-tray .card-back-ico{display:inline-block;width:15px;height:20px;border-radius:2px;flex:none;
+  background:url("../../assets/art/premium/dominion/card-back.webp") center/cover no-repeat;
+  border:1px solid rgba(255,255,255,.28);box-shadow:1px -1px 0 rgba(0,0,0,.45)}
+.deck-tray .stack.discard .card-back-ico{filter:saturate(.55) brightness(.82);transform:rotate(4deg)}
+.deck-tray .sep{width:1px;height:16px;background:rgba(255,255,255,.22)}
+.card .art.coin-art{background-size:contain;background-repeat:no-repeat;background-position:center}
+.supply{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.pile{position:relative;display:flex;flex-direction:column;align-items:stretch;gap:4px;padding:0;border:0;background:transparent;
+  min-height:0;text-align:left}
+.pile .face{width:100%}
+.pile .meta{display:flex;align-items:center;gap:5px;padding:3px 4px 0;font-size:12px;color:var(--muted)}
+.pile .meta .left{margin-left:auto;color:var(--gold2);font-weight:700}
+.pile .buyhint{font-size:12px;color:var(--green);padding:0 4px}
+.pile:disabled .face{filter:saturate(.45) brightness(.78);opacity:.62}
+.pile.bought .face{animation:buyFlash .5s ease}
+.card{position:relative;border-radius:10px;background:linear-gradient(160deg,#3b2c4f,#251a30 70%);
+  border:1px solid #66517c;box-shadow:0 5px 12px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.08);
+  overflow:hidden;color:#f4eef9;animation:cardIn .3s ease both}
+html[data-theme="light"] .card{background:linear-gradient(160deg,#fffaf1,#efe4d2 75%);border-color:#c6b39a;
+  color:#332839;box-shadow:0 5px 13px rgba(80,55,30,.16),inset 0 1px 0 #fff}
+.card::before{content:"";position:absolute;inset:4px;border:1px solid var(--tc,#d8b26a);border-radius:7px;opacity:.45;pointer-events:none}
+.card::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.18;
+  background-image:radial-gradient(circle at 20% 10%,rgba(255,255,255,.35),transparent 45%),repeating-linear-gradient(115deg,rgba(255,255,255,.05) 0 1px,transparent 1px 5px)}
+.card .cost{position:absolute;left:6px;top:6px;width:22px;height:22px;border-radius:50%;z-index:3;
+  display:grid;place-items:center;background:linear-gradient(180deg,#f1d9a8,#c99a4d);color:#2a1e12;font-size:12px;font-weight:900;
+  box-shadow:0 2px 5px rgba(0,0,0,.35)}
+.card .glyph{position:absolute;right:6px;top:5px;z-index:2;color:var(--tc);opacity:.9}
+.card .glyph svg{width:22px;height:22px}
+.card .name{position:relative;z-index:2;font-family:var(--serif);font-size:13.5px;font-weight:700;text-align:center;
+  margin:26px 7px 1px;letter-spacing:.3px}
+.card .art{height:36px;margin:2px 8px 0;border-radius:5px;border:1px solid rgba(255,255,255,.09);
+  background:linear-gradient(135deg,color-mix(in srgb,var(--tc) 26%,transparent),rgba(0,0,0,.18));
+  display:grid;place-items:center;overflow:hidden;position:relative;z-index:2}
+.card .art svg{width:34px;height:28px}
+.card .desc{position:relative;z-index:2;font-size:12px;line-height:1.3;text-align:center;color:#cbbdda;
+  padding:3px 8px 7px;min-height:29px}
+html[data-theme="light"] .card .desc{color:#6c5c74}
+.card .kind{position:relative;z-index:2;font-size:12px;letter-spacing:1px;text-align:center;padding-bottom:5px;color:var(--tc);font-weight:800}
+.hand{display:flex;gap:8px;overflow-x:auto;padding:2px 1px 8px;scrollbar-width:thin;scrollbar-color:var(--line2) transparent}
+.hcard{flex:0 0 116px;display:flex;flex-direction:column;gap:5px;animation:cardIn .28s ease both}
+.hcard .card{height:148px}
+.hcard .row{display:flex;align-items:center;gap:4px}
+.hcard .row button{flex:1;min-height:44px;font-size:12px;padding:5px 6px}
+.hcard .cnt{font-size:12px;color:var(--muted);min-width:18px;text-align:center}
+.hcard.playable .card{box-shadow:0 0 0 1.5px rgba(131,201,154,.55),0 7px 18px rgba(0,0,0,.3)}
+.hcard.playable:hover{transform:translateY(-2px)}
+.played{display:flex;gap:6px;flex-wrap:wrap;min-height:40px;align-items:center}
+.mini{width:64px;border-radius:7px;border:1px solid var(--line2);background:var(--panel);padding:4px 5px;
+  font-size:12px;text-align:center;color:var(--muted);animation:playLift .32s ease both}
+.mini b{display:block;color:var(--ink);font-size:12px;font-family:var(--serif)}
+.opp{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.chip{border:1px solid var(--line);border-radius:10px;padding:6px 8px;background:rgba(0,0,0,.09);font-size:12px;color:var(--muted)}
+.chip b{display:block;font-size:17px;color:var(--gold2);font-variant-numeric:tabular-nums}
+.log{max-height:180px;overflow:auto;font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+.log .row{display:flex;gap:6px;line-height:1.35}
+.log .t{color:var(--line2);flex:none;font-variant-numeric:tabular-nums}
+.log .row.attack{color:var(--red)}
+.log .row.over{color:var(--green);font-weight:700}
+.log .row.buy{color:var(--gold2)}
+.hint{font-size:12px;color:var(--muted);line-height:1.55}
+.hint kbd{font-family:inherit;background:var(--panel);border:1px solid var(--line);border-radius:5px;padding:0 4px;color:var(--ink)}
+.ai-banner{position:fixed;left:50%;top:12px;transform:translate(-50%,-14px);z-index:50;opacity:0;pointer-events:none;
+  background:rgba(23,16,32,.94);border:1px solid rgba(167,139,224,.55);color:#e2d4f5;border-radius:999px;
+  padding:7px 16px;font-size:12px;backdrop-filter:blur(8px);transition:.25s;box-shadow:0 10px 24px rgba(0,0,0,.3)}
+.ai-banner.show{opacity:1;transform:translate(-50%,0)}
+.toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);opacity:0;pointer-events:none;z-index:60;
+  background:rgba(23,16,32,.94);border:1px solid var(--gold);color:var(--gold2);border-radius:999px;padding:9px 18px;
+  font-size:13px;transition:.28s;max-width:88vw;text-align:center}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.modal{position:fixed;inset:0;z-index:80;display:none;align-items:center;justify-content:center;padding:16px;
+  background:rgba(9,6,13,.76);backdrop-filter:blur(5px)}
+.modal.show{display:flex}
+.dialog{width:100%;max-width:500px;background:linear-gradient(180deg,var(--panel),var(--panel2));
+  border:1px solid var(--gold);border-radius:20px;padding:20px;box-shadow:0 30px 80px rgba(0,0,0,.55);animation:dialogIn .3s ease both}
+.dialog h3{margin:0 0 3px;font-family:var(--serif);font-size:24px;color:var(--gold2);text-align:center}
+.dialog .sub{text-align:center;color:var(--muted);font-size:12px;margin-bottom:12px}
+.finals{display:grid;gap:7px;margin:12px 0}
+.frow{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:11px;padding:8px 10px}
+.frow.win{border-color:var(--gold);background:rgba(216,178,106,.1)}
+.frow .nm{font-size:13px;font-weight:700}
+.frow .sc{margin-left:auto;font-size:21px;color:var(--gold2);font-family:var(--serif)}
+.break{font-size:12px;color:var(--muted);max-height:120px;overflow:auto;margin:4px 0 12px;display:grid;gap:3px}
+@media(max-width:940px){
+  .layout{grid-template-columns:1fr}
+}
+@media(max-width:430px){
+  .app{padding:8px 8px 36px}
+  h1{font-size:19px}.brand{min-width:0}
+  .scores{order:3;width:100%}
+  .score{flex:1;min-width:0;padding:5px 8px}
+  .score b{font-size:17px}
+  .toggles{width:100%;justify-content:flex-end}
+  .panel{padding:9px;border-radius:13px}
+  .supply{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  .card .desc{font-size:12px}
+  .hcard{flex-basis:104px}
+  .hcard .card{height:138px}
+  .opp{grid-template-columns:1fr 1fr}
+  button{padding:7px 10px;font-size:12.5px}
+}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+@keyframes cardIn{0%{opacity:0;transform:translateY(10px) rotate(-1deg)}100%{opacity:1;transform:none}}
+@keyframes playLift{0%{opacity:0;transform:translateY(16px) scale(.9)}100%{opacity:1;transform:none}}
+@keyframes coinPulse{0%{transform:scale(1)}40%{transform:scale(1.35);color:#fff}100%{transform:scale(1)}}
+@keyframes buyFlash{0%{transform:scale(1)}35%{transform:scale(1.05);box-shadow:0 0 0 3px rgba(216,178,106,.7)}100%{transform:scale(1)}}
+@keyframes dialogIn{0%{opacity:0;transform:translateY(14px) scale(.96)}100%{opacity:1;transform:none}}
+/* safe-area: keep the original bottom padding, clear the iOS home indicator */
+body{padding-bottom:env(safe-area-inset-bottom)}
+</style>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/dominion-premium/">
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="crest" aria-hidden="true">
+        <svg viewBox="0 0 64 64"><path d="M15 8h34v48L32 44 15 56z" fill="#d8b26a" stroke="#7a5a2a" stroke-width="2"/><circle cx="32" cy="27" r="9" fill="#a78be0" stroke="#6b4a8a" stroke-width="2"/><path d="M32 19v16M24 27h16" stroke="#f1d9a8" stroke-width="2"/></svg>
+      </div>
+      <h1>领土<span>DOMINION · 牌库构筑</span></h1>
+    </div>
+    <div class="scores" aria-label="比分">
+      <div class="score" style="--c:#cc6a4f"><div><div class="who">你 · 红方</div><div class="sub" id="you-sub">牌库 10</div></div><b id="score-you">0</b></div>
+      <div class="score" style="--c:#7fa8c9"><div><div class="who">AI · 蓝方</div><div class="sub" id="ai-sub">牌库 10</div></div><b id="score-ai">0</b></div>
+    </div>
+    <div class="toggles">
+      <button class="iconbtn ghost" id="theme" aria-label="切换明暗主题" title="明暗">◐</button>
+      <button class="iconbtn ghost" id="sound" aria-label="开关音效" title="音效">♪</button>
+      <button class="iconbtn ghost" id="restart" aria-label="重开一局" title="重开">↻</button>
+      <a class="btn" href="rules.html">规则</a>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="panel" aria-label="公共牌堆">
+      <div class="phasebar">
+        <span class="phase" id="phase-action">行动阶段</span>
+        <span class="phase" id="phase-buy">购买阶段</span>
+        <span class="mini" id="empty-piles" style="font-size:12px;color:var(--muted)">空堆 0 / 3</span>
+        <div class="deck-tray" id="deck-tray" aria-label="牌库与弃牌堆">
+          <span class="stack" title="你的牌库"><i class="card-back-ico" aria-hidden="true"></i>牌库 <b id="tray-deck">10</b></span>
+          <span class="sep" aria-hidden="true"></span>
+          <span class="stack discard" title="你的弃牌堆"><i class="card-back-ico" aria-hidden="true"></i>弃牌 <b id="tray-discard">0</b></span>
+        </div>
+        <div class="resbar">
+          <span class="coin" id="coin-box">金币 <b id="coins">0</b></span>
+          <span class="coin">行动 <b id="actions">1</b></span>
+          <span class="coin">购买 <b id="buys">1</b></span>
+        </div>
+      </div>
+      <h2>公共牌堆 · 点击买入</h2>
+      <div class="supply" id="supply"></div>
+    </section>
+
+    <aside>
+      <section class="panel" aria-label="你的手牌">
+        <div class="phasebar" style="margin-bottom:7px">
+          <h2 style="margin:0">你的手牌</h2>
+          <span class="mini" id="hand-hint" style="margin-left:auto;font-size:12px;color:var(--muted)"></span>
+        </div>
+        <div class="hand" id="hand" role="list" aria-label="手牌列表"></div>
+        <div class="phasebar" style="margin-top:2px">
+          <button class="primary" id="end-phase" aria-label="结束当前阶段">结束行动阶段</button>
+          <button class="ghost" id="play-treasure" aria-label="自动打出全部财宝" disabled>财宝自动结算</button>
+        </div>
+        <h2 style="margin-top:13px">本回合已打出</h2>
+        <div class="played" id="played"></div>
+      </section>
+
+      <section class="panel" aria-label="对手状态">
+        <h2>AI 状态</h2>
+        <div class="opp">
+          <div class="chip">手牌<b id="opp-hand">5</b></div>
+          <div class="chip">牌库<b id="opp-deck">5</b></div>
+          <div class="chip">弃牌<b id="opp-discard">0</b></div>
+          <div class="chip">已出<b id="opp-played">0</b></div>
+        </div>
+        <div class="hint" id="opp-last" style="margin-top:7px">AI 还没有行动。</div>
+      </section>
+
+      <section class="panel" aria-label="对局记录">
+        <h2>对局记录</h2>
+        <div class="log" id="log" role="log" aria-live="polite"></div>
+      </section>
+
+      <section class="panel" aria-label="玩法提示">
+        <h2>小提示</h2>
+        <div class="hint">行动阶段先打行动牌，再结束行动；系统会自动打出全部财宝并进入购买阶段。购买阶段可以连续买牌，直到金币或购买次数用完。行省堆空或任意三个牌堆空时终局，牌库总分高者胜。<kbd>Enter</kbd> 结束阶段。</div>
+      </section>
+    </aside>
+  </main>
+</div>
+
+<div class="ai-banner" id="ai-banner">AI 正在构筑牌库…</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="dialog">
+    <h3 id="modal-title">对局结束</h3>
+    <div class="sub" id="modal-sub"></div>
+    <div class="finals" id="finals"></div>
+    <div class="break" id="breakdown"></div>
+    <div class="phasebar" style="justify-content:center;margin-top:12px">
+      <button class="primary" id="again">再来一局</button>
+      <a class="btn" href="rules.html">查看规则</a>
+    </div>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script src="engine.js"></script>
+<script>
+(function () {
+  'use strict';
+  var E = window.DominionEngine;
+  var D = window.DominionData;
+  var game = null;
+  var muted = false;
+  var audio = null;
+  var aiTimer = null;
+  var aiSteps = 0;
+  var lastBuy = '';
+  var lastCoins = 0;
+  /* 素材：财宝卡用对应硬币面图，牌托/牌背用于牌库与弃牌显示 */
+  var COIN_ART = {
+    copper: '../../assets/art/premium/dominion/coin-copper.webp',
+    silver: '../../assets/art/premium/dominion/coin-silver.webp',
+    gold: '../../assets/art/premium/dominion/coin-gold.webp'
+  };
+  var toastTimer = null;
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+  function storeGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function storeSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* ignore */ } }
+
+  /* ---------------------------- 音效 ---------------------------- */
+  function ac() {
+    if (audio) return audio;
+    var C = window.AudioContext || window.webkitAudioContext;
+    if (!C) return null;
+    try { audio = new C(); } catch (e) { audio = null; }
+    return audio;
+  }
+  function tone(freq, start, dur, type, vol) {
+    var ctx = ac(); if (!ctx) return;
+    var t = ctx.currentTime + start;
+    var o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = type || 'sine';
+    o.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol == null ? .08 : vol, t + .015);
+    g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t + dur + .02);
+  }
+  function sfx(name) {
+    if (muted) return;
+    var ctx = ac(); if (!ctx) return;
+    if (ctx.state === 'suspended') { try { ctx.resume(); } catch (e) { /* ignore */ } }
+    if (name === 'click') tone(330, 0, .05, 'triangle', .04);
+    else if (name === 'play') { tone(392, 0, .09, 'triangle', .07); tone(523, .05, .12, 'sine', .055); }
+    else if (name === 'buy') { tone(494, 0, .07, 'square', .035); tone(659, .05, .1, 'sine', .06); tone(988, .12, .16, 'sine', .045); }
+    else if (name === 'coin') { tone(880, 0, .06, 'sine', .05); tone(1174, .045, .1, 'sine', .04); }
+    else if (name === 'attack') { tone(180, 0, .16, 'sawtooth', .05); tone(140, .1, .18, 'sawtooth', .04); }
+    else if (name === 'score') { tone(659, 0, .1, 'sine', .06); tone(880, .07, .16, 'sine', .05); }
+    else if (name === 'win') { [523, 659, 784, 1046].forEach(function (f, i) { tone(f, i * .11, .28, 'sine', .065); }); }
+  }
+
+  /* ---------------------------- 卡面 ---------------------------- */
+  function icon(c) {
+    if (c.type === 'treasure') {
+      return '<svg viewBox="0 0 40 32"><ellipse cx="20" cy="22" rx="13" ry="5" fill="#b8873c"/><ellipse cx="20" cy="20" rx="13" ry="5" fill="#f1d9a8" stroke="#8a6124" stroke-width="1.4"/><ellipse cx="20" cy="16" rx="13" ry="5" fill="#f1d9a8" stroke="#8a6124" stroke-width="1.4"/><ellipse cx="20" cy="12" rx="13" ry="5" fill="#f1d9a8" stroke="#8a6124" stroke-width="1.4"/><path d="M20 9v7M17 11h6" stroke="#8a6124" stroke-width="1.6" stroke-linecap="round"/></svg>';
+    }
+    if (c.type === 'victory') {
+      return '<svg viewBox="0 0 40 32"><path d="M20 3l12 5v8c0 7-5 11-12 14C13 27 8 23 8 16V8z" fill="#c9b4ef" stroke="#6b4a8a" stroke-width="1.5"/><path d="M14 16l4 4 8-9" fill="none" stroke="#4d2f73" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    }
+    return '<svg viewBox="0 0 40 32"><path d="M9 27V6l11 4 11-4v21l-11-4z" fill="#b9e0c4" stroke="#3f6b4d" stroke-width="1.5"/><path d="M20 9v15M15 16h10" stroke="#31563c" stroke-width="1.8" stroke-linecap="round"/><circle cx="20" cy="8" r="3" fill="#83c99a" stroke="#31563c" stroke-width="1.2"/></svg>';
+  }
+  function cardFace(c, compact) {
+    var t = D.TYPES[c.type];
+    var coinArt = COIN_ART[c.id];
+    return '<div class="card" style="--tc:' + t.color + '" role="img" aria-label="' + esc(c.name) + '，' + t.name + '，费用 ' + c.cost + '">' +
+      '<div class="cost" aria-hidden="true">' + c.cost + '</div>' +
+      '<div class="glyph" aria-hidden="true">' + icon(c) + '</div>' +
+      '<div class="name">' + esc(c.name) + '</div>' +
+      (coinArt
+        ? '<div class="art coin-art" aria-hidden="true" style="background-image:url(\'' + coinArt + '\')"></div>'
+        : '<div class="art" aria-hidden="true">' + icon(c) + '</div>') +
+      '<div class="desc">' + esc(c.desc) + '</div>' +
+      '<div class="kind">' + t.name + '</div>' +
+      '</div>';
+  }
+  function effectShort(c) {
+    var p = [];
+    if (c.coins) p.push('+' + c.coins + ' 金');
+    if (c.cards) p.push('+' + c.cards + ' 牌');
+    if (c.actions) p.push('+' + c.actions + ' 行动');
+    if (c.buys) p.push('+' + c.buys + ' 购买');
+    if (c.attack) p.push('对手弃到 3');
+    if (c.gain) p.push('得' + E.CARD_BY_ID[c.gain].name);
+    if (c.vp) p.push(c.vp + ' 分');
+    return p.join(' · ') || '终局计分';
+  }
+
+  /* ---------------------------- 渲染 ---------------------------- */
+  function humanTurn() { return game && game.turn === 0 && !game.over; }
+  function legalMoves() { return game && !game.over ? E.legalMoves(game) : []; }
+  function canPlay(id) { return legalMoves().some(function (m) { return m.type === 'playAction' && m.cardId === id; }); }
+  function canBuy(id) { return humanTurn() && legalMoves().some(function (m) { return m.type === 'buy' && m.cardId === id; }); }
+  function countHand(id) { return game.players[0].hand.filter(function (x) { return x === id; }).length; }
+
+  function renderScores() {
+    var sc = E.score(game);
+    $('score-you').textContent = sc.human;
+    $('score-ai').textContent = sc.ai;
+    var p0 = game.players[0], p1 = game.players[1];
+    $('you-sub').textContent = '牌库 ' + p0.deck.length + ' · 弃牌 ' + p0.discard.length;
+    $('ai-sub').textContent = '牌库 ' + p1.deck.length + ' · 弃牌 ' + p1.discard.length;
+    $('tray-deck').textContent = p0.deck.length;
+    $('tray-discard').textContent = p0.discard.length;
+  }
+  function renderStatus() {
+    $('phase-action').classList.toggle('on', game.phase === 'action' && game.turn === 0);
+    $('phase-buy').classList.toggle('on', game.phase === 'buy' && game.turn === 0);
+    $('coins').textContent = game.coins;
+    $('actions').textContent = game.actions;
+    $('buys').textContent = game.buys;
+    $('empty-piles').textContent = '空堆 ' + E.emptyPileCount(game) + ' / 3';
+    $('coin-box').classList.toggle('pulse', game.coins !== lastCoins);
+    if (game.coins !== lastCoins) { setTimeout(function () { $('coin-box').classList.remove('pulse'); }, 450); lastCoins = game.coins; }
+    var end = $('end-phase');
+    if (game.over) { end.disabled = true; end.textContent = '对局结束'; }
+    else if (game.turn !== 0) { end.disabled = true; end.textContent = 'AI 回合'; }
+    else if (game.phase === 'action') { end.disabled = false; end.textContent = '结束行动 · 打出财宝'; }
+    else { end.disabled = false; end.textContent = '结束回合 · 弃牌抽五'; }
+    $('play-treasure').disabled = true;
+    $('hand-hint').textContent = game.over ? '终局' : (game.turn === 1 ? 'AI 行动中' : (game.phase === 'action' ? '点击行动牌打出' : '购买阶段 · 点击上方牌堆买入'));
+  }
+  function renderSupply() {
+    var html = E.CARDS.map(function (c) {
+      var left = game.supply[c.id];
+      var isBuy = canBuy(c.id);
+      var cls = 'pile' + (lastBuy === c.id ? ' bought' : '');
+      return '<button class="' + cls + '" data-buy="' + c.id + '"' + (isBuy ? '' : ' disabled') + ' aria-label="买入' + esc(c.name) + '，费用 ' + c.cost + '，剩余 ' + left + ' 张">' +
+        cardFace(c) +
+        '<span class="meta"><span>余 ' + left + '</span><span class="left">' + c.cost + ' 金</span></span>' +
+        '<span class="buyhint">' + (isBuy ? '可买入' : (game.turn === 0 && game.phase === 'buy' ? (game.coins < c.cost ? '金币不足' : '牌堆已空') : ' ')) + '</span>' +
+        '</button>';
+    }).join('');
+    $('supply').innerHTML = html;
+    Array.prototype.forEach.call($('supply').querySelectorAll('[data-buy]'), function (b) {
+      b.addEventListener('click', function () { humanBuy(b.getAttribute('data-buy')); });
+    });
+  }
+  function renderHand() {
+    var hand = game.players[0].hand;
+    var ids = [];
+    hand.forEach(function (id) { if (ids.indexOf(id) < 0) ids.push(id); });
+    if (!ids.length) {
+      $('hand').innerHTML = '<div class="hint" style="padding:8px">手牌为空。</div>';
+      return;
+    }
+    $('hand').innerHTML = ids.map(function (id) {
+      var c = E.CARD_BY_ID[id];
+      var playable = canPlay(id);
+      var cnt = countHand(id);
+      return '<div class="hcard' + (playable ? ' playable' : '') + '" role="listitem">' +
+        cardFace(c) +
+        '<div class="row"><span class="cnt">×' + cnt + '</span>' +
+        (c.type === 'action' ? '<button data-play="' + id + '"' + (playable ? '' : ' disabled') + ' aria-label="打出' + esc(c.name) + '">' + (playable ? '打出' : '不可打出') + '</button>' : '<span class="cnt" style="flex:1;font-size:12px">' + effectShort(c) + '</span>') +
+        '</div></div>';
+    }).join('');
+    Array.prototype.forEach.call($('hand').querySelectorAll('[data-play]'), function (b) {
+      b.addEventListener('click', function () { humanPlay(b.getAttribute('data-play')); });
+    });
+  }
+  function renderPlayed() {
+    var played = game.players[0].playArea;
+    if (!played.length) { $('played').innerHTML = '<span class="hint">还没有打出牌。</span>'; return; }
+    $('played').innerHTML = played.map(function (id) {
+      var c = E.CARD_BY_ID[id];
+      return '<div class="mini"><b>' + esc(c.name) + '</b>' + effectShort(c) + '</div>';
+    }).join('');
+  }
+  function renderOpp() {
+    var p = game.players[1];
+    $('opp-hand').textContent = p.hand.length;
+    $('opp-deck').textContent = p.deck.length;
+    $('opp-discard').textContent = p.discard.length;
+    $('opp-played').textContent = p.playArea.length;
+    var last = null;
+    for (var i = game.log.length - 1; i >= 0; i--) {
+      if (game.log[i].player === 1) { last = game.log[i]; break; }
+    }
+    $('opp-last').textContent = last ? last.text : 'AI 还没有行动。';
+  }
+  function renderLog() {
+    var rows = game.log.slice(-16).reverse();
+    $('log').innerHTML = rows.map(function (x) {
+      return '<div class="row ' + (x.type || '') + '"><span class="t">' + x.turn + '</span><span>' + esc(x.text) + '</span></div>';
+    }).join('') || '<div class="hint">还没有记录。</div>';
+  }
+  function renderAll() {
+    renderScores(); renderStatus(); renderSupply(); renderHand(); renderPlayed(); renderOpp(); renderLog();
+  }
+
+  /* ---------------------------- 交互 ---------------------------- */
+  function humanPlay(id) {
+    if (!humanTurn() || !canPlay(id)) { sfx('click'); return; }
+    try {
+      var before = game;
+      game = E.applyMove(game, { type: 'playAction', cardId: id });
+      lastBuy = '';
+      sfx('play');
+      handleEvents(game.events.slice(-3));
+      renderAll();
+      if (game.over) endGame();
+    } catch (err) { sfx('attack'); toast(err.message); }
+  }
+  function humanBuy(id) {
+    if (!canBuy(id)) { sfx('click'); return; }
+    try {
+      game = E.applyMove(game, { type: 'buy', cardId: id });
+      lastBuy = id;
+      sfx('buy');
+      toast('买入「' + E.CARD_BY_ID[id].name + '」');
+      renderAll();
+      setTimeout(function () { lastBuy = ''; }, 550);
+    } catch (err) { sfx('attack'); toast(err.message); }
+  }
+  function endPhase() {
+    if (!humanTurn()) return;
+    try {
+      var phaseBefore = game.phase;
+      game = E.applyMove(game, { type: 'endPhase' });
+      sfx(phaseBefore === 'action' ? 'coin' : 'click');
+      if (game.over) { renderAll(); endGame(); return; }
+      renderAll();
+      if (game.turn === 1) scheduleAI();
+      else if (phaseBefore === 'action') toast('财宝已打出，进入购买阶段');
+    } catch (err) { sfx('attack'); toast(err.message); }
+  }
+  function handleEvents(events) {
+    events.forEach(function (ev) {
+      if (ev.kind === 'attack' && ev.count) { toast('民兵：对手弃掉 ' + ev.count + ' 张牌'); sfx('attack'); }
+      if (ev.kind === 'gain') { toast('工坊获得一张银币'); sfx('coin'); }
+    });
+  }
+  var toastTimer2 = null;
+  function toast(msg) {
+    var el = $('toast');
+    el.textContent = msg; el.classList.add('show');
+    clearTimeout(toastTimer2);
+    toastTimer2 = setTimeout(function () { el.classList.remove('show'); }, 2200);
+  }
+  function showAI(on) { $('ai-banner').classList.toggle('show', !!on); }
+  function scheduleAI() {
+    clearTimeout(aiTimer);
+    if (game.over) { showAI(false); endGame(); return; }
+    if (game.turn !== 1) { showAI(false); return; }
+    showAI(true);
+    aiSteps = 0;
+    aiTimer = setTimeout(aiStep, 650);
+  }
+  function aiStep() {
+    if (!game || game.over) { showAI(false); endGame(); return; }
+    if (game.turn !== 1) { showAI(false); renderAll(); return; }
+    if (aiSteps++ > 80) { showAI(false); toast('AI 回合过长，已暂停'); return; }
+    try {
+      var move = E.aiMove(game);
+      game = E.applyMove(game, move);
+      if (move.type === 'playAction') sfx('play');
+      else if (move.type === 'buy') sfx('buy');
+      else sfx('click');
+      lastBuy = move.type === 'buy' ? move.cardId : '';
+      renderAll();
+      if (game.over) { showAI(false); setTimeout(endGame, 380); return; }
+      if (game.turn === 1) aiTimer = setTimeout(aiStep, 430);
+      else { showAI(false); renderAll(); toast('轮到你行动'); }
+    } catch (err) {
+      showAI(false);
+      toast('AI 行动异常：' + err.message);
+      renderAll();
+    }
+  }
+  function endGame() {
+    showAI(false);
+    clearTimeout(aiTimer);
+    var result = game.result;
+    if (!result) { result = { scores: E.score(game), winner: E.winner(game) }; game.result = result; }
+    var sc = result.scores;
+    sfx(sc.human >= sc.ai ? 'win' : 'click');
+    $('modal-sub').textContent = result.reason ? result.reason + ' · 终局比分' : '终局比分';
+    $('finals').innerHTML = game.players.map(function (p, i) {
+      var win = sc.human === sc.ai ? true : (i === 0 ? sc.human > sc.ai : sc.ai > sc.human);
+      return '<div class="frow' + (win ? ' win' : '') + '"><span class="nm">' + esc(p.name) + '</span><span class="sc">' + (i === 0 ? sc.human : sc.ai) + '</span></div>';
+    }).join('');
+    var rows = [];
+    [0, 1].forEach(function (pi) {
+      var bd = E.breakdown(game, pi);
+      var parts = Object.keys(bd).map(function (id) { return E.CARD_BY_ID[id].name + ' ×' + bd[id]; });
+      rows.push('<div>' + esc(game.players[pi].name) + '：' + (parts.join(' · ') || '没有胜利卡') + '</div>');
+    });
+    $('breakdown').innerHTML = rows.join('');
+    $('modal').classList.add('show');
+    renderAll();
+  }
+  function newGame() {
+    clearTimeout(aiTimer);
+    showAI(false);
+    game = E.createGame({ seed: (Date.now() ^ (Math.random() * 0xffffffff)) >>> 0 });
+    lastBuy = ''; lastCoins = 0;
+    $('modal').classList.remove('show');
+    renderAll();
+    toast('新的一局：你先行动，打行动牌或结束行动');
+  }
+
+  /* ---------------------------- 绑定 ---------------------------- */
+  $('end-phase').addEventListener('click', endPhase);
+  $('play-treasure').addEventListener('click', function () { sfx('click'); toast('结束行动阶段时会自动打出全部财宝'); });
+  $('again').addEventListener('click', newGame);
+  $('restart').addEventListener('click', function () {
+    if (game && !game.over && game.moves > 3 && !window.confirm('当前对局尚未结束，确定重开？')) return;
+    newGame();
+  });
+  $('theme').addEventListener('click', function () {
+    var next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', next);
+    storeSet('dom-prem-theme', next);
+    sfx('click');
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', next === 'light' ? '#f0e9df' : '#1b1424');
+  });
+  $('sound').addEventListener('click', function () {
+    muted = !muted;
+    $('sound').style.opacity = muted ? '.45' : '1';
+    storeSet('dom-prem-muted', muted ? '1' : '0');
+    if (!muted) sfx('click');
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && humanTurn()) { endPhase(); e.preventDefault(); }
+    else if (e.key === 'Escape') $('modal').classList.remove('show');
+  });
+
+  var savedTheme = storeGet('dom-prem-theme');
+  if (savedTheme === 'light' || savedTheme === 'dark') document.documentElement.setAttribute('data-theme', savedTheme);
+  muted = storeGet('dom-prem-muted') === '1';
+  $('sound').style.opacity = muted ? '.45' : '1';
+  newGame();
+})();
+</script>
+</body>
+</html>

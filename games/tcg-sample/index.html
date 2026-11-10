@@ -20,7 +20,7 @@
 <meta property="og:title" content="灯语者：余烬对决 — 原创集换式卡牌对战">
 <meta property="og:description" content="长夜世界观、30 张原创卡、灯力与灯心；1 人对 AI，三语界面。本作为原创设计，与任何现有卡牌游戏无关。">
 <meta property="og:url" content="https://hhfa008.github.io/games/tcg-sample/">
-<meta property="og:image" content="https://hhfa008.github.io/games/assets/art/composed/tcg-sample-og.png">
+<meta property="og:image" content="https://hhfa008.github.io/games/assets/art/composed/tcg-sample-og.webp">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="灯语者：余烬对决">
@@ -30,7 +30,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="灯语者：余烬对决 — 原创卡牌对战">
 <meta name="twitter:description" content="原创长夜世界观、30 张原创卡、两种 AI。打开网页就能玩。">
-<meta name="twitter:image" content="https://hhfa008.github.io/games/assets/art/composed/tcg-sample-og.png">
+<meta name="twitter:image" content="https://hhfa008.github.io/games/assets/art/composed/tcg-sample-og.webp">
 
 <script type="application/ld+json">
 {
@@ -299,6 +299,7 @@ footer{max-width:1040px;margin:0 auto;padding:0 var(--safe) 30px;font-size:12px;
 
 <script src="/games/shared/tcg.js"></script>
 <script src="/games/shared/store.js"></script>
+<script src="/games/shared/i18n.js"></script>
 
 <script id="sample-data">
 (function () {
@@ -676,10 +677,6 @@ footer{max-width:1040px;margin:0 auto;padding:0 var(--safe) 30px;font-size:12px;
   if (!D || !TCG || !AI) return;
 
   var LANG_KEY = 'hhfa-tcg-lang';
-  // Same key and 'zh' fallback as before; a denied read now degrades to 'zh'
-  // instead of throwing.
-  var lang = Store.get(LANG_KEY, 'zh') || 'zh';
-  if (['zh', 'en', 'id'].indexOf(lang) < 0) lang = 'zh';
 
   var TEXT = {
     zh: {
@@ -815,8 +812,18 @@ footer{max-width:1040px;margin:0 auto;padding:0 var(--safe) 30px;font-size:12px;
 
   var KEY_LOCAL = { not_enough_lampower: 'notEnough', target_invalid: 'targetInvalid', target_required: 'noTarget', unit_not_ready: 'notReady', unit_not_found: 'targetInvalid', card_not_in_hand: 'cannotPlay', not_your_turn: 'notYourTurn', ability_used: 'abilityUsed', ability_not_found: 'illegal', match_over: 'matchOver', unexpected_target: 'targetInvalid' };
 
+  // Shared switcher: same storage key, same 'zh' fallback, same '.lang button'
+  // row. Storage reads and click wiring now live in games/shared/i18n.js.
+  var i18n = I18n.create({
+    strings: TEXT,
+    defaultLang: 'zh',
+    storageKey: LANG_KEY,
+    buttons: '.lang button'
+  });
+  var lang = i18n.lang();
+
   function $(id) { return document.getElementById(id); }
-  function t(key) { return (TEXT[lang] && TEXT[lang][key]) || TEXT.en[key] || key; }
+  function t(key) { return i18n.t(key); }
   function fmt(s, map) {
     return String(s).replace(/\{(\w+)\}/g, function (m, k) {
       return map[k] === undefined ? m : String(map[k]);
@@ -1320,22 +1327,16 @@ footer{max-width:1040px;margin:0 auto;padding:0 var(--safe) 30px;font-size:12px;
     $('overlay').classList.add('show');
   }
 
-  function applyLang() {
+  // The shared switcher owns the click handlers; this hook keeps the page's
+  // own wiring: `.on` highlight plus a full re-render on every switch.
+  i18n.onLang(function (next) {
+    lang = next;
     document.querySelectorAll('.lang button').forEach(function (b) {
-      b.classList.toggle('on', b.getAttribute('data-lang') === lang);
+      b.classList.toggle('on', b.getAttribute('data-lang') === next);
     });
     render();
-  }
-
-  // Wiring
-  document.querySelectorAll('.lang button').forEach(function (b) {
-    b.addEventListener('click', function () {
-      lang = b.getAttribute('data-lang');
-      // Same stored string as before; a failed write stays silent.
-      Store.set(LANG_KEY, lang);
-      applyLang();
-    });
   });
+
   $('endTurn').addEventListener('click', function () {
     if (!match || match.state.phase === 'over') return;
     if (match.state.activePlayer !== 0) { toast(t('notYourTurn')); return; }
@@ -1355,6 +1356,7 @@ footer{max-width:1040px;margin:0 auto;padding:0 var(--safe) 30px;font-size:12px;
   });
 
   newMatch();
+  i18n.apply();
 })();
 </script>
 

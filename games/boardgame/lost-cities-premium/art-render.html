@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="失落之城 美术合成页：本地生成的素材在浏览器中的渲染预览。">
+<title>失落之城 · 美术合成</title>
+<link rel="icon" href="assets/cover.webp">
+<style>
+:root{
+  --display:"Songti SC","STSong","Noto Serif SC",Georgia,serif;
+  --body:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB",sans-serif;
+  --gold:#d8b66f; --gold2:#f4dda2; --ink:#f4ecdc; --dim:#b9c4ac; --faint:#7f927a;
+  --paper:#e9ddc3; --moss:#17281a; --moss2:#233b27;
+  --red:#a9473d; --blue:#2f6fa8; --yellow:#c9a227; --white:#ded3ba; --green:#486b46;
+  --felt:url("../../assets/art/premium/lost-cities/jungle-felt.webp");
+  --paperart:url("../../assets/art/premium/lost-cities/card-paper.webp");
+  --compass:url("../../assets/art/premium/lost-cities/compass.webp");
+  --stone:url("../../assets/art/premium/lost-cities/stone-tablet.webp");
+  --chest:url("../../assets/art/premium/lost-cities/wood-chest.webp");
+  --seal:url("../../assets/art/premium/lost-cities/wager-seal.webp");
+  --scroll:url("../../assets/art/premium/lost-cities/map-scroll.webp");
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:#060e08}
+body{width:1200px;overflow:hidden;color:var(--ink);font-family:var(--body)}
+.stage{position:relative;width:1200px;height:1200px;overflow:hidden;
+  background:
+    radial-gradient(900px 700px at 12% 0%,rgba(201,163,95,.20),transparent 62%),
+    radial-gradient(760px 700px at 96% 10%,rgba(90,130,88,.20),transparent 58%),
+    linear-gradient(rgba(6,14,8,.78),rgba(6,14,8,.88)),
+    var(--felt) center/cover no-repeat;
+}
+.stage::before{content:"";position:absolute;inset:0;background:linear-gradient(rgba(5,13,8,.88),rgba(5,13,8,.9)),var(--scroll) center/80% no-repeat;background-blend-mode:multiply,normal;opacity:.45;pointer-events:none}
+.stage::after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 44%,rgba(0,0,0,.55) 100%);pointer-events:none}
+.frame{position:absolute;inset:28px;border:1px solid rgba(216,182,111,.42);border-radius:24px;box-shadow:inset 0 0 0 7px rgba(216,182,111,.05);z-index:1;pointer-events:none}
+.frame::before,.frame::after{content:"";position:absolute;width:64px;height:64px;border:2px solid rgba(216,182,111,.5)}
+.frame::before{left:14px;top:14px;border-right:0;border-bottom:0;border-radius:14px 0 0 0}
+.frame::after{right:14px;bottom:14px;border-left:0;border-top:0;border-radius:0 0 14px 0}
+.content{position:relative;z-index:2;height:100%;display:flex;flex-direction:column;padding:62px 64px 44px}
+.topline{display:flex;align-items:center;justify-content:space-between;gap:24px}
+.brandline{display:flex;align-items:center;gap:20px;min-width:0}
+.compass{width:92px;height:92px;flex:0 0 92px;border-radius:50%;border:1px solid rgba(216,182,111,.55);
+  background:linear-gradient(rgba(8,18,11,.32),rgba(8,18,11,.32)),var(--compass) center/120% no-repeat;background-blend-mode:multiply,normal;
+  box-shadow:0 16px 36px rgba(0,0,0,.45),inset 0 0 0 5px rgba(216,182,111,.08)}
+h1{font-family:var(--display);font-weight:700;font-size:84px;line-height:.92;letter-spacing:.12em;margin:0;color:#f6edd8;text-shadow:0 10px 32px rgba(0,0,0,.5)}
+h1 span{color:var(--gold2)}
+.brandline p{margin:12px 0 0;font-size:17px;letter-spacing:.30em;color:var(--dim)}
+.chips{display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+.chip{border:1px solid rgba(216,182,111,.35);border-radius:999px;padding:6px 14px;background:rgba(7,18,11,.55);font-size:13px;color:var(--gold2);letter-spacing:.12em;white-space:nowrap}
+.main{flex:1;display:grid;grid-template-columns:1.86fr .92fr;gap:28px;min-height:0;padding:20px 0 12px}
+.board-wrap{border:1px solid rgba(216,182,111,.24);border-radius:20px;padding:13px;background:linear-gradient(155deg,rgba(30,51,33,.8),rgba(9,20,13,.88));box-shadow:0 22px 48px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.05);display:flex;flex-direction:column;gap:7px}
+.field-head{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;letter-spacing:.16em;color:var(--dim);padding:0 2px}
+.field-head b{color:var(--gold2);letter-spacing:.06em;font-weight:600}
+.lanes{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px}
+.lane{border:1px solid rgba(255,255,255,.07);border-radius:11px;padding:6px;background:rgba(5,14,8,.48);min-width:0;display:flex;flex-direction:column;gap:6px}
+.discard-row{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;margin:1px 0}
+.lane-h{display:flex;align-items:center;justify-content:space-between;font-size:12px;line-height:1;color:var(--dim);white-space:nowrap}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:4px;box-shadow:inset 0 1px 1px rgba(255,255,255,.45)}
+.c-yellow .dot{background:var(--yellow)}.c-blue .dot{background:var(--blue)}.c-white .dot{background:var(--white)}.c-green .dot{background:var(--green)}.c-red .dot{background:var(--red)}
+.expedition{min-height:70px;border:1px solid rgba(216,182,111,.16);border-radius:8px;background:rgba(26,44,29,.62);display:flex;align-items:center;justify-content:center;padding:5px 3px;overflow:hidden}
+.exp-cards{display:flex;align-items:center;justify-content:center;min-height:51px;width:100%}
+.mini{width:43px;height:58px;flex:0 0 43px;margin-left:-19px;border-radius:5px;border:1px solid rgba(87,66,33,.46);
+  background:
+    linear-gradient(145deg,rgba(255,250,236,.28),rgba(84,62,27,.10)),
+    var(--paperart) center/cover no-repeat;
+  background-blend-mode:soft-light,normal;
+  color:#292417;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:4px 2px;position:relative;box-shadow:0 3px 7px rgba(0,0,0,.3)}
+.mini:first-child{margin-left:0}
+.mini b{font-family:var(--display);font-weight:700;font-size:25px;line-height:.9}
+.mini small{font-size:10px;line-height:1.1;color:#fff8e2;background:#4f6137;padding:0 4px;border-radius:3px;max-width:100%;overflow:hidden;white-space:nowrap}
+.mini.w{background:linear-gradient(rgba(72,48,12,.24),rgba(72,48,12,.24)),var(--seal) center/126% no-repeat;background-blend-mode:multiply,normal}
+.mini.w .sealmark{font-family:var(--display);font-weight:700;font-size:20px;color:#fff2cd;text-shadow:0 1px 2px #5a3f12}
+.mini.w small{background:rgba(62,42,10,.72)}
+.discard-pile{min-height:40px;border:1px solid rgba(216,182,111,.16);border-radius:7px;background:rgba(8,17,10,.48);display:flex;align-items:center;justify-content:center;gap:4px;padding:2px}
+.discard-pile .mini{width:28px;height:36px;flex:0 0 28px;margin:0;font-size:12px;padding:2px}
+.discard-pile .mini b{font-size:16px}
+.discard-pile .mini small{display:none}
+.pile-n{font-size:11px;color:var(--faint)}
+.midline{display:flex;align-items:center;justify-content:center;gap:10px;margin:1px 0;color:var(--faint);font-size:11px;letter-spacing:.22em}
+.midline::before,.midline::after{content:"";height:1px;flex:1;background:linear-gradient(90deg,transparent,rgba(216,182,111,.25),transparent)}
+.deck{width:118px;min-height:48px;border:1px solid rgba(216,182,111,.4);border-radius:9px;background:linear-gradient(rgba(14,27,17,.28),rgba(14,27,17,.28)),var(--chest) center/135% no-repeat;background-blend-mode:multiply,normal;display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;color:var(--gold2);box-shadow:0 8px 18px rgba(0,0,0,.32)}
+.deck b{font-family:var(--display);font-size:24px;line-height:1}
+.side{display:flex;flex-direction:column;gap:12px;min-height:0}
+.scoreboard{border:1px solid rgba(216,182,111,.26);border-radius:16px;padding:13px;background:linear-gradient(150deg,rgba(32,54,35,.86),rgba(9,20,13,.92));box-shadow:0 18px 38px rgba(0,0,0,.24)}
+.scoreboard h2{font-family:var(--display);font-weight:700;font-size:20px;margin:0 0 8px;color:#f3e8d0;letter-spacing:.08em}
+.score-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px dashed rgba(216,182,111,.14);font-size:13px;color:var(--dim)}
+.score-row:last-child{border-bottom:0}
+.score-row b{font-family:var(--display);font-size:22px;color:var(--gold2);font-weight:700}
+.pips{display:flex;gap:4px;margin-top:8px}
+.pip{width:28px;height:9px;border-radius:9px;background:rgba(0,0,0,.25);border:1px solid rgba(216,182,111,.28)}
+.pip.on{background:linear-gradient(90deg,#8b652a,#efd399)}
+.handbox{border:1px solid rgba(216,182,111,.24);border-radius:16px;padding:12px;background:linear-gradient(160deg,rgba(28,47,31,.82),rgba(8,18,11,.9))}
+.handbox h2{font-family:var(--display);font-weight:700;font-size:18px;margin:0 0 8px;color:#f2e7cf;display:flex;justify-content:space-between;align-items:baseline;letter-spacing:.06em}
+.handbox h2 span{font-family:var(--body);font-size:11px;color:var(--dim);letter-spacing:.08em}
+.hand{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.hand .mini{width:100%;height:78px;margin:0;flex:none}
+.hand .mini b{font-size:30px}
+.hand .mini.w .sealmark{font-size:28px}
+.legend{border:1px solid rgba(216,182,111,.16);border-radius:12px;padding:10px 12px;background:rgba(7,17,10,.35);font-size:12px;color:var(--dim);line-height:1.6}
+.legend b{color:var(--gold2);font-weight:600}
+.stone{flex:1;min-height:88px;border:1px solid rgba(216,182,111,.2);border-radius:14px;background:linear-gradient(rgba(9,20,13,.72),rgba(9,20,13,.86)),var(--stone) center/cover no-repeat;background-blend-mode:multiply,normal;display:flex;align-items:center;justify-content:center;text-align:center;padding:12px;font-family:var(--display);font-weight:700;font-size:20px;letter-spacing:.15em;color:#e9dcc0;text-shadow:0 2px 6px rgba(0,0,0,.5)}
+.foot{display:flex;align-items:center;justify-content:space-between;gap:14px;padding-top:8px;border-top:1px solid rgba(216,182,111,.18);font-size:12px;color:var(--faint);letter-spacing:.1em}
+.foot b{color:var(--gold2);font-weight:600}
+/* OG: 1200×630 */
+body[data-shot="og"] .stage{height:630px}
+body[data-shot="og"] .content{padding:34px 50px 26px}
+body[data-shot="og"] h1{font-size:60px}
+body[data-shot="og"] .compass{width:64px;height:64px;flex-basis:64px}
+body[data-shot="og"] .brandline p{font-size:13px;margin-top:6px;letter-spacing:.24em}
+body[data-shot="og"] .chips{display:none}
+body[data-shot="og"] .main{padding:12px 0 6px;grid-template-columns:1.9fr .92fr;gap:18px}
+body[data-shot="og"] .board-wrap{padding:9px;gap:4px}
+body[data-shot="og"] .lane{padding:4px;gap:4px}
+body[data-shot="og"] .lane-h{font-size:10px}
+body[data-shot="og"] .expedition{min-height:49px}
+body[data-shot="og"] .mini{width:31px;height:42px;flex-basis:31px;margin-left:-14px;padding:3px 1px}
+body[data-shot="og"] .mini b{font-size:18px}
+body[data-shot="og"] .mini small{font-size:8px;padding:0 2px}
+body[data-shot="og"] .mini.w .sealmark{font-size:15px}
+body[data-shot="og"] .discard-row{gap:4px}body[data-shot="og"] .discard-pile{min-height:28px}
+body[data-shot="og"] .discard-pile .mini{width:20px;height:26px;flex-basis:20px}
+body[data-shot="og"] .discard-pile .mini b{font-size:12px}
+body[data-shot="og"] .pile-n{font-size:9px}
+body[data-shot="og"] .midline{font-size:9px}
+body[data-shot="og"] .deck{min-height:36px;width:96px;font-size:10px}
+body[data-shot="og"] .deck b{font-size:18px}
+body[data-shot="og"] .side{gap:7px}
+body[data-shot="og"] .scoreboard{padding:8px}
+body[data-shot="og"] .scoreboard h2{font-size:14px;margin-bottom:3px}
+body[data-shot="og"] .score-row{font-size:10px;padding:3px 0}
+body[data-shot="og"] .score-row b{font-size:15px}
+body[data-shot="og"] .pips{margin-top:4px}.pip{width:18px;height:6px}
+body[data-shot="og"] .handbox{padding:8px}
+body[data-shot="og"] .handbox h2{font-size:13px;margin-bottom:4px}
+body[data-shot="og"] .hand .mini{height:48px}.hand .mini b{font-size:18px}.hand .mini small{font-size:8px}
+body[data-shot="og"] .hand{gap:4px}.hand .mini.w .sealmark{font-size:18px}
+body[data-shot="og"] .legend{font-size:10px;padding:6px 8px}.stone{display:none}
+body[data-shot="og"] .foot{font-size:10px;padding-top:4px}
+body[data-shot="og"] .field-head{font-size:10px}
+/* details 1200×800 */
+body[data-shot="detail1"] .stage,body[data-shot="detail2"] .stage{height:800px}
+body[data-shot="detail1"] .content,body[data-shot="detail2"] .content{padding:38px 50px 28px}
+body[data-shot="detail1"] h1,body[data-shot="detail2"] h1{font-size:58px}
+body[data-shot="detail1"] .compass,body[data-shot="detail2"] .compass{width:66px;height:66px;flex-basis:66px}
+body[data-shot="detail1"] .brandline p,body[data-shot="detail2"] .brandline p{font-size:12px;margin-top:6px}
+body[data-shot="detail1"] .chips,body[data-shot="detail2"] .chips{display:none}
+body[data-shot="detail1"] .main,body[data-shot="detail2"] .main{grid-template-columns:1.95fr .88fr;gap:18px;padding:12px 0 6px}
+body[data-shot="detail1"] .board-wrap,body[data-shot="detail2"] .board-wrap{padding:10px;gap:5px}
+body[data-shot="detail1"] .expedition{min-height:62px}
+body[data-shot="detail1"] .mini{width:38px;height:52px;flex-basis:38px;margin-left:-17px}
+body[data-shot="detail1"] .mini b{font-size:23px}
+body[data-shot="detail1"] .discard-pile{min-height:36px}
+body[data-shot="detail2"] .expedition{min-height:57px}
+body[data-shot="detail2"] .mini{width:35px;height:48px;flex-basis:35px;margin-left:-16px}
+body[data-shot="detail2"] .mini b{font-size:21px}
+body[data-shot="detail1"] .side,body[data-shot="detail2"] .side{gap:8px}
+body[data-shot="detail1"] .scoreboard,body[data-shot="detail2"] .scoreboard{padding:9px}
+body[data-shot="detail1"] .scoreboard h2,body[data-shot="detail2"] .scoreboard h2{font-size:16px;margin-bottom:4px}
+body[data-shot="detail1"] .score-row,body[data-shot="detail2"] .score-row{font-size:11px;padding:4px 0}
+body[data-shot="detail1"] .score-row b,body[data-shot="detail2"] .score-row b{font-size:18px}
+body[data-shot="detail1"] .pip,body[data-shot="detail2"] .pip{width:20px;height:7px}
+body[data-shot="detail1"] .handbox,body[data-shot="detail2"] .handbox{padding:8px}
+body[data-shot="detail1"] .handbox h2,body[data-shot="detail2"] .handbox h2{font-size:14px;margin-bottom:4px}
+body[data-shot="detail1"] .hand .mini,body[data-shot="detail2"] .hand .mini{height:57px}
+body[data-shot="detail1"] .hand .mini b,body[data-shot="detail2"] .hand .mini b{font-size:22px}
+body[data-shot="detail1"] .legend,body[data-shot="detail2"] .legend{font-size:10px;padding:7px 9px}
+body[data-shot="detail1"] .stone,body[data-shot="detail2"] .stone{font-size:16px;min-height:64px}
+body[data-shot="detail1"] .foot,body[data-shot="detail2"] .foot{font-size:10px;padding-top:4px}
+body[data-shot="detail1"] .lane-h,body[data-shot="detail2"] .lane-h{font-size:11px}
+body[data-shot="detail1"] .field-head,body[data-shot="detail2"] .field-head{font-size:11px}
+/* detail2 emphasises hand + wagers */
+body[data-shot="detail2"] .main{grid-template-columns:1.4fr 1.2fr}
+body[data-shot="detail2"] .hand .mini{height:92px}
+body[data-shot="detail2"] .hand .mini b{font-size:34px}
+body[data-shot="detail2"] .hand .mini.w .sealmark{font-size:32px}
+body[data-shot="detail2"] .stone{display:none}
+body[data-shot="detail2"] .legend{font-size:11px}
+</style>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/lost-cities-premium/art-render.html">
+<style>
+/* site-quality: fixed-size art composition must not create page overflow */
+html{overflow-x:hidden}
+body{width:100%!important;max-width:100vw!important;overflow-x:hidden}
+.stage,#stage{max-width:100vw;overflow:hidden}
+</style>
+</head>
+<body data-shot="cover">
+<div class="stage">
+  <div class="frame"></div>
+  <div class="content">
+    <header class="topline">
+      <div class="brandline">
+        <span class="compass" aria-hidden="true"></span>
+        <div><h1>失落<span>之城</span></h1><p>LOST CITIES · 雨林三局远征</p></div>
+      </div>
+      <div class="chips"><span class="chip">2 人 · 60 张</span><span class="chip">5 色探险 · 赌注 · 8 张奖励</span><span class="chip">3 局累计总分</span></div>
+    </header>
+    <div class="main">
+      <section class="board-wrap">
+        <div class="field-head"><span>对手探险区 <b id="rivalName">AI · 苔原学者</b></span><span>手牌 <b id="rivalHand">8</b> 张</span></div>
+        <div class="lanes" id="rivalLanes"></div>
+        <div class="discard-row" id="discardRow"></div>
+        <div class="midline"><span class="deck"><span>牌堆</span><b>10</b><span>张</span></span><span>五色弃牌堆公开</span></div>
+        <div class="lanes" id="ownLanes"></div>
+        <div class="field-head"><span>你的探险区 <b>探险家</b></span><span>手牌 <b id="ownHand">8</b> 张</span></div>
+      </section>
+      <aside class="side">
+        <div class="scoreboard">
+          <h2>远征记分</h2>
+          <div class="score-row"><span>你 · 本局 / 累计</span><span><b>18</b> / 18</span></div>
+          <div class="score-row"><span>AI · 本局 / 累计</span><span><b>12</b> / 12</span></div>
+          <div class="pips"><i class="pip on"></i><i class="pip on"></i><i class="pip"></i></div>
+        </div>
+        <div class="handbox">
+          <h2>手牌 <span>8 张 · 数字 + 赌注</span></h2>
+          <div class="hand" id="hand"></div>
+        </div>
+        <div class="legend"><b>规则骨架</b> 每色严格递增 · 赌注只能在数字前 · 抽走牌堆最后一张立即结束 · 数字 + 赌注 ≥ 8 张再 +20。</div>
+        <div class="stone">五色 · 三局 · 一条雨林路线</div>
+      </aside>
+    </div>
+    <footer class="foot"><span><b>LOST CITIES</b> · PREMIUM EDITION</span><span>黄铜罗盘 · 羊皮纸地图 · 苔藓绿绒布</span><span>2P · 30–45 MIN</span></footer>
+  </div>
+</div>
+<script>
+(function(){
+  'use strict';
+  var COLORS = {
+    yellow:{zh:'黄色', cls:'c-yellow'},
+    blue:{zh:'蓝色', cls:'c-blue'},
+    white:{zh:'白色', cls:'c-white'},
+    green:{zh:'绿色', cls:'c-green'},
+    red:{zh:'红色', cls:'c-red'}
+  };
+  var own = {
+    yellow:{wagers:1, nums:[4,7,10]},
+    blue:{wagers:1, nums:[5,8]},
+    white:{wagers:0, nums:[6,9]},
+    green:{wagers:1, nums:[3,6,10]},
+    red:{wagers:0, nums:[2,5,9]}
+  };
+  var rival = {
+    yellow:{wagers:0, nums:[3,6,9]},
+    blue:{wagers:1, nums:[4,7]},
+    white:{wagers:1, nums:[5,8,10]},
+    green:{wagers:0, nums:[2,7]},
+    red:{wagers:0, nums:[4,8]}
+  };
+  var discards = {yellow:{top:6,count:3},blue:{top:6,count:2},white:{top:4,count:4},green:{top:9,count:2},red:{top:6,count:2}};
+  var hand = [
+    {c:'yellow',v:2},{c:'yellow',v:5},{c:'yellow',v:8},{c:'blue',v:9},{c:'blue',v:10},{c:'white',v:2},{c:'white',v:3},{c:'green',v:4}
+  ];
+  function mini(color, value, wager){
+    if (wager) return '<span class="mini w" aria-label="赌注"><span class="sealmark">✦</span><small>' + COLORS[color].zh + '</small></span>';
+    return '<span class="mini" aria-label="' + value + '"><b>' + value + '</b><small>' + COLORS[color].zh + '</small></span>';
+  }
+  function lane(color, exp){
+    var cards = '';
+    for (var w=0;w<exp.wagers;w++) cards += mini(color, 0, true);
+    exp.nums.forEach(function(v){ cards += mini(color, v, false); });
+    return '<div class="lane ' + COLORS[color].cls + '" data-color="' + color + '">' +
+      '<div class="lane-h"><span><i class="dot"></i>' + COLORS[color].zh + '</span><span>' + (exp.wagers + exp.nums.length) + ' 张</span></div>' +
+      '<div class="expedition"><div class="exp-cards">' + cards + '</div></div>' +
+    '</div>';
+  }
+  var keys = Object.keys(COLORS);
+  document.getElementById('rivalLanes').innerHTML = keys.map(function(k){ return lane(k, rival[k]); }).join('');
+  document.getElementById('ownLanes').innerHTML = keys.map(function(k){ return lane(k, own[k]); }).join('');
+  document.getElementById('discardRow').innerHTML = keys.map(function(k){ var d=discards[k]; return '<div class="discard-pile">' + mini(k, d.top, false) + '<span class="pile-n">' + COLORS[k].zh + ' ' + d.count + '</span></div>'; }).join('');
+  document.getElementById('hand').innerHTML = hand.map(function(c){ return mini(c.c, c.v, false); }).join('');
+  document.getElementById('rivalHand').textContent = '8';
+  document.getElementById('ownHand').textContent = '8';
+  try {
+    var shot = new URLSearchParams(location.search).get('shot') || 'cover';
+    if (['cover','og','detail1','detail2'].indexOf(shot) === -1) shot = 'cover';
+    document.body.setAttribute('data-shot', shot);
+  } catch (e) {}
+  var urls = [
+    '../../assets/art/premium/lost-cities/jungle-felt.webp',
+    '../../assets/art/premium/lost-cities/card-paper.webp',
+    '../../assets/art/premium/lost-cities/compass.webp',
+    '../../assets/art/premium/lost-cities/stone-tablet.webp',
+    '../../assets/art/premium/lost-cities/wood-chest.webp',
+    '../../assets/art/premium/lost-cities/wager-seal.webp',
+    '../../assets/art/premium/lost-cities/map-scroll.webp'
+  ];
+  Promise.all(urls.map(function(url){
+    return new Promise(function(resolve){
+      var img = new Image();
+      img.onload = function(){ resolve(true); };
+      img.onerror = function(){ resolve(false); };
+      img.src = url;
+    });
+  })).then(function(loaded){
+    window.__artMaterialCount = loaded.filter(Boolean).length;
+    document.body.setAttribute('data-art-ready', 'true');
+    window.__artReady = true;
+  });
+})();
+</script>
+</body>
+</html>

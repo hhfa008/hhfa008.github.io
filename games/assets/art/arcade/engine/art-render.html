@@ -1,0 +1,725 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="arcade family 美术合成页：本地生成的素材在浏览器中的渲染预览。">
+<title>arcade family art render</title>
+<meta name="description" content="Arcade family art render harness: composes the table, tiles and pieces in code for reproducible OG and detail art captures.">
+<link rel="canonical" href="https://hhfa008.github.io/games/assets/art/arcade/engine/art-render.html">
+<style>
+  :root {
+    --ink: #fff7ea;
+    --ink-dim: rgba(255, 240, 220, .58);
+    --gold: #e8c27a;
+    --hero: none;
+    --surface: none;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #17110d; }
+  body {
+    font-family: "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: geometricPrecision;
+  }
+
+  .stage { position: fixed; inset: 0; overflow: hidden; }
+  .table {
+    position: absolute; inset: -8%;
+    background-image: var(--surface);
+    background-size: cover; background-position: center;
+    filter: brightness(.58) saturate(.84) contrast(1.06);
+    transform: scale(1.1) rotate(.4deg);
+  }
+  .table::after {
+    content: ""; position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 58% 44% at 54% 36%, rgba(255, 214, 160, .26), transparent 62%),
+      linear-gradient(115deg, rgba(255, 190, 120, .07), transparent 44%, rgba(0, 0, 0, .28));
+  }
+  .vignette {
+    position: absolute; inset: 0; pointer-events: none;
+    background:
+      radial-gradient(ellipse 72% 68% at 50% 45%, transparent 42%, rgba(8, 4, 2, .64) 100%),
+      linear-gradient(to bottom, rgba(0, 0, 0, .20), transparent 26%, transparent 72%, rgba(0, 0, 0, .40));
+  }
+
+  .brand { position: absolute; z-index: 6; color: var(--ink); }
+  .brand .title {
+    font-size: var(--title-size);
+    font-weight: 800; line-height: .84; letter-spacing: -.055em;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 6px 22px rgba(0, 0, 0, .50), 0 1px 0 rgba(255, 255, 255, .16);
+  }
+  .brand .rule {
+    width: var(--rule-w); height: 2px; margin: var(--rule-gap) 0 var(--sub-gap);
+    background: linear-gradient(90deg, var(--gold), rgba(232, 194, 122, 0));
+    border-radius: 2px;
+  }
+  .brand .sub {
+    font-size: var(--sub-size); font-weight: 600; letter-spacing: .30em;
+    color: var(--ink-dim); text-transform: uppercase; white-space: nowrap;
+  }
+
+  .hud { position: absolute; z-index: 6; display: flex; gap: var(--hud-gap); }
+  .chip {
+    min-width: var(--chip-w);
+    padding: var(--chip-pad-y) var(--chip-pad-x);
+    border-radius: calc(var(--chip-w) * .16);
+    background: linear-gradient(160deg, rgba(46, 27, 19, .82), rgba(24, 13, 9, .72));
+    border: 1px solid rgba(255, 220, 170, .20);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .10), 0 10px 24px rgba(0, 0, 0, .35);
+  }
+  .chip .label {
+    display: block; font-size: var(--hud-label); font-weight: 600;
+    letter-spacing: .22em; color: var(--ink-dim); line-height: 1.25; text-transform: uppercase;
+  }
+  .chip .value {
+    display: block; margin-top: .18em;
+    font-size: var(--hud-value); font-weight: 700; line-height: 1;
+    color: var(--ink); font-variant-numeric: tabular-nums;
+    letter-spacing: -.02em; text-shadow: 0 2px 8px rgba(0, 0, 0, .35);
+  }
+
+  .caption {
+    position: absolute; z-index: 6; color: var(--ink-dim);
+    font-size: var(--caption-size); font-weight: 600; letter-spacing: .18em;
+    text-transform: uppercase; font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
+
+  .scene {
+    position: absolute; z-index: 3;
+    left: var(--bx); top: var(--by);
+    width: var(--bw); height: var(--bh, var(--bw));
+    transform: translate(-50%, -50%);
+    perspective: 1900px; perspective-origin: 50% 48%;
+  }
+  .board3d {
+    position: absolute; inset: 0; transform-style: preserve-3d;
+    transform: rotateX(var(--rx)) rotateZ(var(--rz));
+    transform-origin: 50% 50%;
+  }
+  .tray {
+    position: absolute; inset: 0;
+    padding: 4.2%;
+    border-radius: 4.6%;
+    background-image:
+      linear-gradient(155deg, rgba(28, 15, 10, .52), rgba(16, 9, 6, .70)),
+      var(--hero);
+    background-size: cover; background-position: center;
+    box-shadow:
+      0 44px 84px rgba(0, 0, 0, .58),
+      0 14px 22px rgba(0, 0, 0, .38),
+      inset 0 0 0 2px rgba(255, 220, 180, .13),
+      inset 0 16px 26px rgba(0, 0, 0, .40),
+      inset 0 -10px 18px rgba(255, 190, 130, .05);
+    transform-style: preserve-3d;
+  }
+  .tray::before {
+    content: ""; position: absolute; inset: 2.9%;
+    border: 1px solid rgba(255, 220, 180, .12);
+    border-radius: 3.2%; pointer-events: none;
+    box-shadow: inset 0 0 24px rgba(0, 0, 0, .35);
+  }
+
+  /* ---------------- slide-puzzle ---------------- */
+  .family-slide-puzzle .tray { padding: 5.2%; background-image: linear-gradient(160deg, rgba(52, 30, 18, .42), rgba(24, 13, 8, .62)), var(--hero); }
+  .sgrid { position: relative; width: 100%; height: 100%; display: grid; gap: 2.4%; transform-style: preserve-3d; }
+  .sslot { position: relative; transform-style: preserve-3d; }
+  .scell { position: absolute; inset: 0; border-radius: 12%;
+    background: linear-gradient(160deg, #2a160e, #1a0c07 68%, #120705);
+    box-shadow: inset 0 5px 12px rgba(0, 0, 0, .74), inset 0 -2px 0 rgba(255, 220, 180, .05); }
+  .stile { position: absolute; inset: 0; z-index: 2; border-radius: 11%;
+    background-image: linear-gradient(160deg, rgba(255, 236, 200, .16), rgba(70, 36, 18, .18)), var(--hero);
+    background-size: 145% 145%; background-position: center;
+    box-shadow: 0 7px 0 #2b160e, 0 11px 0 #1c0d08, 0 18px 22px rgba(0, 0, 0, .44),
+      inset 0 2px 0 rgba(255, 255, 255, .30), inset 0 -3px 0 rgba(45, 20, 8, .22);
+    transform: translateZ(14px); transform-style: preserve-3d;
+    filter: saturate(1.02) contrast(1.02);
+  }
+  .stile .sheen { position: absolute; inset: 2.5% 2.5% 54% 2.5%; border-radius: 8%;
+    background: linear-gradient(to bottom, rgba(255, 255, 255, .22), rgba(255, 255, 255, 0)); mix-blend-mode: screen; }
+  .stile .num { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-weight: 800; color: #2d1c12; letter-spacing: -.05em; font-variant-numeric: tabular-nums;
+    text-shadow: 0 1px 0 rgba(255, 245, 225, .45), 0 -1px 0 rgba(40, 18, 8, .28);
+    transform: translateZ(1px); user-select: none; }
+  .sslot.filled .scell::after { content: ""; position: absolute; z-index: 0; left: 4%; right: 4%; bottom: -8%; height: 34%;
+    border-radius: 50%; background: radial-gradient(ellipse at 50% 50%, rgba(0, 0, 0, .60), rgba(0, 0, 0, 0) 70%);
+    filter: blur(5px); transform: translateZ(1px); }
+
+  /* ---------------- lights-out ---------------- */
+  .family-lights-out .tray { padding: 5.4%; background-image: linear-gradient(160deg, rgba(12, 20, 22, .46), rgba(5, 9, 10, .72)), var(--hero); }
+  .lgrid { position: relative; width: 100%; height: 100%; display: grid; gap: 4.2%; transform-style: preserve-3d; }
+  .lslot { position: relative; display: flex; align-items: center; justify-content: center; }
+  .lbutton { position: relative; width: 78%; height: 78%; border-radius: 50%;
+    background: radial-gradient(circle at 38% 30%, #35464a 0%, #1b282b 38%, #0d1416 74%, #070b0c 100%);
+    box-shadow: inset 0 4px 8px rgba(0, 0, 0, .72), inset 0 -2px 4px rgba(255, 255, 255, .06),
+      0 2px 4px rgba(0, 0, 0, .55), 0 0 0 2px rgba(255, 220, 180, .06);
+    transform: translateZ(7px); transform-style: preserve-3d; }
+  .lbutton::after { content: ""; position: absolute; inset: 14%; border-radius: 50%;
+    background: radial-gradient(circle at 40% 32%, rgba(255, 255, 255, .16), rgba(255, 255, 255, 0) 62%);
+    mix-blend-mode: screen; }
+  .lslot.lit .lbutton {
+    background: radial-gradient(circle at 38% 30%, #fff4c8 0%, #ffd47a 22%, #f2a43c 54%, #a75c18 100%);
+    box-shadow: inset 0 3px 7px rgba(255, 248, 210, .55), inset 0 -6px 12px rgba(120, 50, 6, .38),
+      0 0 18px 4px rgba(255, 176, 66, .40), 0 0 46px 10px rgba(255, 140, 34, .18),
+      0 0 0 2px rgba(255, 226, 160, .18);
+  }
+  .lslot.lit .lbutton::after { background: radial-gradient(circle at 40% 32%, rgba(255, 255, 255, .55), rgba(255, 255, 255, 0) 58%); }
+
+  /* ---------------- minesweeper ---------------- */
+  .family-minesweeper .tray { padding: 3.6%; background-image: linear-gradient(160deg, rgba(22, 24, 22, .42), rgba(10, 11, 10, .66)), var(--hero); }
+  .mgrid { position: relative; width: 100%; height: 100%; display: grid; gap: 1.1%; transform-style: preserve-3d; }
+  .mcell { position: relative; border-radius: 12%; transform-style: preserve-3d; }
+  .mcell.covered {
+    background-image: linear-gradient(155deg, rgba(255, 255, 255, .24), rgba(70, 74, 72, .30)), var(--hero);
+    background-size: 160% 160%; background-position: center;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .40), inset 0 -2px 0 rgba(0, 0, 0, .22),
+      0 2px 0 #26292a, 0 4px 6px rgba(0, 0, 0, .38); transform: translateZ(8px);
+  }
+  .mcell.revealed {
+    background: linear-gradient(160deg, #2a302f, #1b201f 72%, #141817);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, .62), inset 0 -1px 0 rgba(255, 255, 255, .04);
+    transform: translateZ(1px);
+  }
+  .mcell .mnum { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-variant-numeric: tabular-nums; text-shadow: 0 1px 2px rgba(0, 0, 0, .55); }
+  .mcell .flag { position: absolute; inset: 14%; transform: translateZ(4px); }
+  .mcell .flag::before { content: ""; position: absolute; left: 46%; top: 12%; width: 7%; height: 72%;
+    background: linear-gradient(to right, #cfc6b4, #8f8778); border-radius: 2px; box-shadow: 0 1px 2px rgba(0,0,0,.5); }
+  .mcell .flag::after { content: ""; position: absolute; left: 50%; top: 10%; width: 38%; height: 30%;
+    background: linear-gradient(140deg, #e0523f, #9e2418); clip-path: polygon(0 0, 100% 22%, 0 88%);
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .45)); }
+
+  /* ---------------- memory-pairs ---------------- */
+  .family-memory-pairs .tray { padding: 4.4%; background-image: linear-gradient(160deg, rgba(20, 42, 30, .38), rgba(8, 20, 14, .62)), var(--hero); }
+  .memgrid { position: relative; width: 100%; height: 100%; display: grid; gap: 3.4%; transform-style: preserve-3d; }
+  .mcard { position: relative; border-radius: 9%; transform-style: preserve-3d; transform: translateZ(10px); }
+  .mcard .back { position: absolute; inset: 0; border-radius: inherit;
+    background-image: linear-gradient(150deg, rgba(255, 220, 190, .14), rgba(40, 12, 10, .28)), var(--hero);
+    background-size: 180% 180%; background-position: center;
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, .24), inset 0 -3px 0 rgba(30, 10, 8, .32),
+      0 5px 0 #2a1210, 0 9px 14px rgba(0, 0, 0, .42); border: 2px solid rgba(240, 210, 170, .18); }
+  .mcard .back::before { content: ""; position: absolute; inset: 13%; border-radius: 6%;
+    border: 1px solid rgba(255, 226, 180, .30);
+    background: repeating-linear-gradient(45deg, rgba(255, 226, 180, .10) 0 2px, transparent 2px 7px); }
+  .mcard .face { position: absolute; inset: 0; border-radius: inherit; display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(155deg, #fbf3e1, #e8d9bf 70%, #d8c4a2);
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, .70), inset 0 -4px 8px rgba(90, 60, 30, .18),
+      0 5px 0 #7b6549, 0 9px 14px rgba(0, 0, 0, .40); border: 2px solid rgba(255, 255, 255, .45); }
+  .mcard .face svg { width: 62%; height: 62%; }
+  .mcard.matched { transform: translateZ(4px); opacity: .82; }
+  .mcard.matched .face { box-shadow: inset 0 2px 0 rgba(255, 255, 255, .55), 0 2px 0 #6b573e, 0 4px 7px rgba(0, 0, 0, .34); }
+  .mcard.up { transform: translateZ(20px); }
+
+  /* ---------------- snake ---------------- */
+  .family-snake .tray { padding: 4.6%; background-image: linear-gradient(160deg, rgba(8, 30, 18, .40), rgba(4, 12, 8, .68)), var(--hero); }
+  .sngrid { position: relative; width: 100%; height: 100%; border-radius: 2%;
+    background:
+      repeating-linear-gradient(to right, rgba(210, 255, 220, .055) 0 1px, transparent 1px calc(100% / var(--sn-size))),
+      repeating-linear-gradient(to bottom, rgba(210, 255, 220, .055) 0 1px, transparent 1px calc(100% / var(--sn-size))),
+      radial-gradient(ellipse at 50% 45%, rgba(90, 200, 120, .06), transparent 70%);
+    box-shadow: inset 0 0 30px rgba(0, 0, 0, .55); transform-style: preserve-3d; }
+  .sngrid svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; transform: translateZ(12px); }
+  .snake-body { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .snake-glow { stroke: rgba(120, 255, 160, .20); }
+  .snake-dark { stroke: #0d3b20; }
+  .snake-main { stroke: #43c470; }
+  .snake-hi { stroke: rgba(190, 255, 200, .42); }
+
+  /* ---------------- pong ---------------- */
+  .family-pong .tray { padding: 3.2%; background-image: linear-gradient(160deg, rgba(18, 18, 18, .40), rgba(6, 6, 6, .70)), var(--hero); }
+  .pcourt { position: relative; width: 100%; height: 100%; overflow: hidden; border-radius: 1.6%;
+    background:
+      radial-gradient(ellipse at 50% 50%, rgba(120, 255, 190, .08), transparent 68%),
+      linear-gradient(155deg, #14231d, #0b1411 60%, #07100c);
+    box-shadow: inset 0 0 0 2px rgba(190, 255, 220, .10), inset 0 0 34px rgba(0, 0, 0, .70);
+    transform-style: preserve-3d; }
+  .pcourt::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(to bottom, rgba(255, 255, 255, .032) 0 1px, transparent 1px 4px); }
+  .pcenter { position: absolute; left: 50%; top: 4%; bottom: 4%; width: 2px; transform: translateX(-50%);
+    background: repeating-linear-gradient(to bottom, rgba(190, 255, 220, .40) 0 12px, transparent 12px 26px); }
+  .pscore { position: absolute; top: 9%; font-weight: 800; font-size: 9vmin; line-height: 1;
+    color: rgba(210, 255, 230, .88); font-variant-numeric: tabular-nums;
+    text-shadow: 0 0 18px rgba(90, 255, 170, .34), 0 2px 0 rgba(0, 0, 0, .4); }
+  .pscore.left { left: 26%; } .pscore.right { right: 26%; }
+  .ppaddle { position: absolute; width: 2.4%; min-width: 5px; height: 26.7%; border-radius: 3px;
+    background: linear-gradient(to right, #d9d0bd, #f6efdd 45%, #b9ad97);
+    box-shadow: 0 0 14px rgba(255, 245, 210, .35), 0 3px 6px rgba(0, 0, 0, .5); transform: translateY(-50%); }
+  .pball { position: absolute; width: 2.4%; aspect-ratio: 1; border-radius: 50%;
+    background: radial-gradient(circle at 36% 32%, #ffffff, #e8ffe8 38%, #9df3b8 74%, #43a565);
+    box-shadow: 0 0 12px 3px rgba(140, 255, 180, .45), 0 0 30px 8px rgba(80, 220, 140, .18);
+    transform: translate(-50%, -50%); }
+
+  /* ---------------- tictactoe ---------------- */
+  .family-tictactoe .tray { padding: 5.4%; background-image: linear-gradient(160deg, rgba(255, 236, 200, .10), rgba(80, 48, 24, .22)), var(--hero); }
+  .tttgrid { position: relative; width: 100%; height: 100%; display: grid; transform-style: preserve-3d; }
+  .tttcell { position: relative; display: flex; align-items: center; justify-content: center;
+    box-shadow: inset 0 0 0 1px rgba(82, 54, 28, .42), inset 0 2px 4px rgba(255, 255, 255, .18);
+    background: radial-gradient(ellipse at 50% 40%, rgba(255, 244, 220, .10), transparent 72%); }
+  .mark { position: relative; width: 58%; height: 58%; transform: translateZ(9px); filter: drop-shadow(0 3px 2px rgba(60, 32, 12, .35)); }
+  .mark.x::before, .mark.x::after { content: ""; position: absolute; left: 44%; top: 4%; width: 12%; height: 92%;
+    border-radius: 6px; background: linear-gradient(to right, #4a2a16, #2b170a 55%, #5d3a20); }
+  .mark.x::before { transform: rotate(45deg); } .mark.x::after { transform: rotate(-45deg); }
+  .mark.o { border-radius: 50%; border: 0.9vmin solid #a84f2b;
+    background: linear-gradient(145deg, rgba(255, 210, 170, .10), rgba(70, 20, 8, .12));
+    box-shadow: inset 0 2px 3px rgba(255, 230, 200, .30), inset 0 -3px 5px rgba(70, 20, 8, .30); }
+
+  /* ---------------- hanoi ---------------- */
+  .family-hanoi .tray { padding: 5.2%; background-image: linear-gradient(160deg, rgba(255, 232, 190, .10), rgba(70, 42, 20, .20)), var(--hero); }
+  .hbase { position: absolute; inset: 0; border-radius: 3%;
+    background-image: linear-gradient(160deg, rgba(255, 240, 210, .12), rgba(60, 32, 14, .22)), var(--hero);
+    background-size: cover; box-shadow: inset 0 3px 8px rgba(255, 250, 235, .20), inset 0 -8px 18px rgba(45, 20, 8, .35);
+    transform: translateZ(2px); }
+  .hpeg, .hdisk { position: absolute; transform-origin: 50% 100%;
+    transform: rotateZ(calc(-1 * var(--rz))) rotateX(calc(-1 * var(--rx))); }
+  .hpeg { bottom: 16%; width: 1.5%; height: 56%; transform-origin: 50% 100%;
+    background: linear-gradient(to right, #6e4726, #c79a62 42%, #8d5f33 76%, #4a2a12);
+    border-radius: 40% 40% 20% 20%; box-shadow: 0 0 0 1px rgba(40, 20, 8, .35), 4px 3px 8px rgba(0, 0, 0, .30); }
+  .hpeg::before { content: ""; position: absolute; left: -180%; top: -2%; width: 460%; height: 5%;
+    border-radius: 50%; background: linear-gradient(to bottom, #d2a46c, #7d5128); box-shadow: 0 2px 4px rgba(0, 0, 0, .35); }
+  .hdisk { height: 4.4%; border-radius: 999px;
+    background-image: linear-gradient(to bottom, rgba(255, 248, 225, .30), rgba(120, 70, 30, .18)), var(--hero);
+    background-size: 220% 320%; background-position: center;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .34), inset 0 -2px 3px rgba(60, 28, 10, .35),
+      0 2px 3px rgba(0, 0, 0, .38); }
+  .hdisk::after { content: ""; position: absolute; left: 50%; top: 24%; width: 7%; height: 52%;
+    transform: translateX(-50%); border-radius: 50%; background: rgba(50, 28, 12, .38); box-shadow: inset 0 1px 2px rgba(0,0,0,.55); }
+  .hshadow { position: absolute; bottom: 13%; height: 3.2%; border-radius: 50%;
+    background: radial-gradient(ellipse at 50% 50%, rgba(0, 0, 0, .48), rgba(0, 0, 0, 0) 70%);
+    filter: blur(4px); transform: translateZ(1px); }
+
+  /* ---------------- reaction ---------------- */
+  .family-reaction .tray { padding: 4.4%; background-image: linear-gradient(160deg, rgba(20, 20, 22, .44), rgba(8, 8, 9, .70)), var(--hero); }
+  .rgrid { position: relative; width: 100%; height: 100%; display: grid; gap: 3.2%;
+    grid-template-columns: repeat(6, 1fr); grid-template-rows: repeat(6, 1fr); transform-style: preserve-3d; }
+  .rcell { border-radius: 16%; background: linear-gradient(160deg, #22272a, #141719 65%, #0e1112);
+    box-shadow: inset 0 3px 6px rgba(0, 0, 0, .60), inset 0 -1px 0 rgba(255, 255, 255, .05); }
+  .rtarget { position: absolute; z-index: 4; width: 15.2%; aspect-ratio: 1; transform: translate(-50%, -50%) translateZ(16px);
+    border-radius: 50%; background: radial-gradient(circle, #eaffd8 0%, #7dff9e 20%, #22c55e 48%, #0a7a36 72%, rgba(10, 80, 40, .10) 100%);
+    box-shadow: 0 0 18px 6px rgba(60, 255, 120, .45), 0 0 54px 18px rgba(30, 200, 90, .22); }
+  .rtarget::before { content: ""; position: absolute; inset: 18%; border-radius: 50%;
+    border: 2px solid rgba(240, 255, 240, .68); }
+  .rtarget::after { content: ""; position: absolute; inset: 38%; border-radius: 50%;
+    background: rgba(245, 255, 240, .92); }
+  .rtimer { position: absolute; z-index: 5; left: 4%; right: 4%; bottom: 3.4%; height: 3.4%; border-radius: 999px;
+    background: rgba(0, 0, 0, .42); box-shadow: inset 0 1px 3px rgba(0, 0, 0, .60); overflow: hidden; transform: translateZ(10px); }
+  .rtimer i { display: block; height: 100%; border-radius: inherit;
+    background: linear-gradient(90deg, #f3c15f, #ff8a4c); box-shadow: 0 0 12px rgba(255, 150, 60, .48); }
+
+  /* ---------------- shot layouts ---------------- */
+  body[data-shot="cover"] {
+    --bw: 74vmin; --bh: 74vmin; --bx: 50%; --by: 57%; --rx: 34deg; --rz: -11deg;
+    --title-size: 12.6vmin; --sub-size: 1.32vmin; --rule-w: 18vmin; --rule-gap: 1.6vmin; --sub-gap: 1.05vmin;
+    --hud-gap: 1.35vmin; --chip-w: 11.6vmin; --chip-pad-y: 1.2vmin; --chip-pad-x: 1.45vmin;
+    --hud-label: 1.0vmin; --hud-value: 2.35vmin; --caption-size: 1.0vmin;
+  }
+  body[data-shot="cover"] .brand { left: 6%; top: 5.2%; }
+  body[data-shot="cover"] .hud { right: 6%; top: 5.6%; }
+  body[data-shot="cover"] .caption { display: none; }
+
+  body[data-shot="og"] {
+    --bw: 68vmin; --bh: 68vmin; --bx: 73%; --by: 52%; --rx: 32deg; --rz: -12deg;
+    --title-size: 18.0vmin; --sub-size: 1.62vmin; --rule-w: 24vmin; --rule-gap: 1.8vmin; --sub-gap: 1.45vmin;
+    --hud-gap: 1.55vmin; --chip-w: 14vmin; --chip-pad-y: 1.35vmin; --chip-pad-x: 1.65vmin;
+    --hud-label: 1.16vmin; --hud-value: 2.7vmin; --caption-size: 1.16vmin;
+  }
+  body[data-shot="og"] .brand { left: 5.5%; top: 12.5%; }
+  body[data-shot="og"] .hud { left: 5.5%; top: 61.5%; }
+  body[data-shot="og"] .caption { left: 5.5%; bottom: 8.5%; }
+
+  body[data-shot="detail"] {
+    --bw: 69vmin; --bh: 69vmin; --bx: 50%; --by: 56%; --rx: 35deg; --rz: -9deg;
+    --title-size: 8.4vmin; --sub-size: 1.28vmin; --rule-w: 13vmin; --rule-gap: 1.3vmin; --sub-gap: .9vmin;
+    --hud-gap: 1.2vmin; --chip-w: 10.2vmin; --chip-pad-y: 1.02vmin; --chip-pad-x: 1.22vmin;
+    --hud-label: .90vmin; --hud-value: 2.05vmin; --caption-size: 1.0vmin;
+  }
+  body[data-shot="detail"] .brand { left: 5%; top: 5%; }
+  body[data-shot="detail"] .hud { right: 5%; top: 5%; }
+  body[data-shot="detail"] .caption { left: 5%; bottom: 5.6%; }
+
+  body[data-shot="card"] {
+    --bw: 74vmin; --bh: 74vmin; --bx: 69.5%; --by: 53%; --rx: 36deg; --rz: -11deg;
+    --title-size: 12.0vmin; --sub-size: 0; --rule-w: 11vmin; --rule-gap: 1.2vmin; --sub-gap: 0;
+    --hud-gap: 1.35vmin; --chip-w: 15vmin; --chip-pad-y: 1.35vmin; --chip-pad-x: 1.6vmin;
+    --hud-label: 1.6vmin; --hud-value: 3.9vmin; --caption-size: 0;
+  }
+  body[data-shot="card"] .brand { left: 6%; top: 8%; }
+  body[data-shot="card"] .sub { display: none; }
+  body[data-shot="card"] .hud { left: 6%; top: 64%; flex-direction: column; }
+  body[data-shot="card"] .caption { display: none; }
+
+  /* Wide boards keep the same scene box height but a wider footprint. */
+  body.family-pong { --bh: calc(var(--bw) * .62); }
+  body.family-minesweeper[data-shot="og"] { --bw: 66vmin; --bx: 73%; }
+  body.family-hanoi[data-shot="cover"] { --bw: 78vmin; }
+  body.family-hanoi[data-shot="og"] { --bw: 72vmin; }
+  body.family-hanoi[data-shot="detail"] { --bw: 73vmin; }
+</style>
+<link rel="canonical" href="https://hhfa008.github.io/games/assets/art/arcade/engine/art-render.html">
+</head>
+<body data-shot="cover" data-family="">
+<div class="stage">
+  <div class="table"></div>
+  <div class="vignette"></div>
+
+  <header class="brand">
+    <div class="title" id="brand-title"></div>
+    <div class="rule"></div>
+    <div class="sub" id="brand-sub"></div>
+  </header>
+
+  <div class="hud" id="hud"></div>
+  <p class="caption" id="caption"></p>
+
+  <div class="scene">
+    <div class="board3d">
+      <div class="tray" id="tray"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(async function () {
+  'use strict';
+  var params = new URLSearchParams(location.search);
+  var shot = params.get('shot') || 'cover';
+  var family = params.get('family') || 'slide-puzzle';
+  document.body.dataset.shot = shot;
+  document.body.dataset.family = family;
+  document.body.classList.add('family-' + family);
+
+  var BASE = '../';
+  var STATE_URL = BASE + 'state/' + family + '.json';
+  var HERO = BASE + 'materials/' + family + '/hero.png';
+  var SURFACE = BASE + 'materials/' + family + '/surface.png';
+
+  function el(tag, cls, parent) {
+    var node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (parent) parent.appendChild(node);
+    return node;
+  }
+  function setText(id, text) {
+    var node = document.getElementById(id);
+    if (node) node.textContent = text;
+  }
+  function loadImage(src) {
+    return new Promise(function (resolve, reject) {
+      var img = new Image();
+      img.onload = function () { resolve(src); };
+      img.onerror = function () { reject(new Error('image failed: ' + src)); };
+      img.src = src;
+    });
+  }
+  function svgIcon(kind, color) {
+    var c = color || '#8a4b2c';
+    var paths = {
+      star: '<path d="M12 2.6l2.9 5.9 6.5 1-4.7 4.6 1.1 6.5L12 17.6 6.2 20.6l1.1-6.5L2.6 9.5l6.5-1z"/>',
+      moon: '<path d="M15.8 3.2a8.8 8.8 0 1 0 5 13.6A7.4 7.4 0 0 1 15.8 3.2z"/>',
+      leaf: '<path d="M20.4 3.6C11 4.2 4.2 8.6 4.2 15.4c0 2.3.8 4.1 2 5.4 6.8 0 12.4-6.6 14.2-17.2zM6.6 19.7c1.6-4.2 4.8-7.6 9.3-9.8-3.9 2.8-6.3 6.2-7.4 10.1z"/>',
+      drop: '<path d="M12 2.4S5.2 10.1 5.2 14.6a6.8 6.8 0 0 0 13.6 0C18.8 10.1 12 2.4 12 2.4zm0 16.2a3.8 3.8 0 0 1-3.8-3.8c0-.5.1-1.1.3-1.7.5 1.6 1.7 2.8 3.3 3.3.1-.6.2-1.2.2-1.8z"/>',
+      bolt: '<path d="M13.4 2 4.8 13.2h6.1L9.7 22l9.5-12.1h-6.2z"/>',
+      heart: '<path d="M12 21s-8.2-5.2-8.2-11.1A4.8 4.8 0 0 1 12 6.6a4.8 4.8 0 0 1 8.2 3.3C20.2 15.8 12 21 12 21z"/>',
+      diamond: '<path d="M12 2.2 2.8 9.4 12 21.8 21.2 9.4z"/>',
+      ring: '<path d="M12 3.2a8.8 8.8 0 1 0 0 17.6 8.8 8.8 0 0 0 0-17.6zm0 3.2a5.6 5.6 0 1 1 0 11.2 5.6 5.6 0 0 1 0-11.2z"/>'
+    };
+    return '<svg viewBox="0 0 24 24" fill="' + c + '" xmlns="http://www.w3.org/2000/svg">' + (paths[kind] || paths.star) + '</svg>';
+  }
+
+  var state;
+  try {
+    var res = await fetch(STATE_URL, { cache: 'no-store' });
+    if (!res.ok) throw new Error('state.json HTTP ' + res.status);
+    state = await res.json();
+  } catch (err) {
+    document.body.dataset.error = String(err);
+    console.error(err);
+    return;
+  }
+
+  document.documentElement.style.setProperty('--hero', 'url("' + HERO + '")');
+  document.documentElement.style.setProperty('--surface', 'url("' + SURFACE + '")');
+  var SHORT_TITLE = {
+    'slide-puzzle': 'Slide', 'lights-out': 'Lights', 'minesweeper': 'Mines',
+    'memory-pairs': 'Memory', 'snake': 'Snake', 'pong': 'Pong',
+    'tictactoe': 'Tic-Tac', 'hanoi': 'Hanoi', 'reaction': 'Reaction'
+  };
+  setText('brand-title', (shot === 'card' && SHORT_TITLE[family]) ? SHORT_TITLE[family] : ((state.art && state.art.title) || family));
+  setText('brand-sub', (state.art && state.art.sub) || '');
+  setText('caption', state.caption || '');
+
+  var hud = document.getElementById('hud');
+  (state.hud || []).forEach(function (item) {
+    var chip = el('div', 'chip', hud);
+    el('span', 'label', chip).textContent = item.label;
+    el('span', 'value', chip).textContent = item.value;
+  });
+
+  var tray = document.getElementById('tray');
+  var n = state.config && state.config.n;
+  var i, j, cell, slot;
+
+  function buildSlide() {
+    var grid = el('div', 'sgrid', tray);
+    grid.style.gridTemplateColumns = 'repeat(' + n + ', 1fr)';
+    grid.style.gridTemplateRows = 'repeat(' + n + ', 1fr)';
+    var tiles = state.position.tiles;
+    var built = [];
+    for (i = 0; i < n * n; i++) {
+      slot = el('div', 'sslot', grid);
+      el('div', 'scell', slot);
+      var v = tiles[i];
+      if (v) {
+        var tile = el('div', 'stile', slot);
+        el('div', 'sheen', tile);
+        var num = el('span', 'num', tile);
+        num.textContent = String(v);
+        slot.classList.add('filled');
+        built.push({ slot: slot, num: num, digits: String(v).length });
+      }
+    }
+    built.forEach(function (item) {
+      var factor = { 1: 0.52, 2: 0.38, 3: 0.30 }[item.digits] || 0.30;
+      item.num.style.fontSize = (item.slot.offsetWidth * factor).toFixed(2) + 'px';
+    });
+  }
+
+  function buildLights() {
+    var grid = el('div', 'lgrid', tray);
+    grid.style.gridTemplateColumns = 'repeat(' + n + ', 1fr)';
+    grid.style.gridTemplateRows = 'repeat(' + n + ', 1fr)';
+    for (i = 0; i < n * n; i++) {
+      slot = el('div', 'lslot' + (state.position.lights[i] ? ' lit' : ''), grid);
+      el('div', 'lbutton', slot);
+    }
+  }
+
+  function buildMines() {
+    var rows = state.config.rows, cols = state.config.cols;
+    var grid = el('div', 'mgrid', tray);
+    grid.style.gridTemplateColumns = 'repeat(' + cols + ', 1fr)';
+    grid.style.gridTemplateRows = 'repeat(' + rows + ', 1fr)';
+    var mines = new Set(state.position.mines);
+    var revealed = new Set(state.position.revealed);
+    var flags = new Set(state.position.flags);
+    function countAt(index) {
+      var r = Math.floor(index / cols), c = index % cols, total = 0;
+      for (var dr = -1; dr <= 1; dr++) for (var dc = -1; dc <= 1; dc++) {
+        if (!dr && !dc) continue;
+        var rr = r + dr, cc = c + dc;
+        if (rr >= 0 && rr < rows && cc >= 0 && cc < cols && mines.has(rr * cols + cc)) total++;
+      }
+      return total;
+    }
+    var colors = { 1: '#6fb3ff', 2: '#74d18a', 3: '#ff8171', 4: '#c79cff', 5: '#ffc069', 6: '#7ee5e1', 7: '#efe8da', 8: '#c4bdb0' };
+    for (i = 0; i < rows * cols; i++) {
+      cell = el('div', 'mcell', grid);
+      if (revealed.has(i)) {
+        cell.classList.add('revealed');
+        var count = countAt(i);
+        if (count) {
+          var num = el('span', 'mnum', cell);
+          num.textContent = String(count);
+          num.style.color = colors[count] || '#efe8da';
+          num.style.fontSize = (tray.offsetWidth / cols * 0.62).toFixed(2) + 'px';
+        }
+      } else {
+        cell.classList.add('covered');
+        if (flags.has(i)) el('div', 'flag', cell);
+      }
+    }
+  }
+
+  function buildMemory() {
+    var rows = state.config.rows, cols = state.config.cols;
+    var grid = el('div', 'memgrid', tray);
+    grid.style.gridTemplateColumns = 'repeat(' + cols + ', 1fr)';
+    grid.style.gridTemplateRows = 'repeat(' + rows + ', 1fr)';
+    var symbols = state.position.symbols || ['star', 'moon', 'leaf', 'drop', 'bolt', 'heart', 'diamond', 'ring'];
+    state.position.cards.forEach(function (card) {
+      var cls = 'mcard';
+      if (card.matched) cls += ' matched';
+      if (card.up || card.matched) cls += ' up';
+      cell = el('div', cls, grid);
+      if (card.up || card.matched) {
+        var face = el('div', 'face', cell);
+        face.innerHTML = svgIcon(symbols[card.pair] || 'star', card.matched ? '#a8653f' : '#8a4b2c');
+      } else {
+        el('div', 'back', cell);
+      }
+    });
+  }
+
+  function buildSnake() {
+    var size = state.config.size;
+    var grid = el('div', 'sngrid', tray);
+    grid.style.setProperty('--sn-size', String(size));
+    var body = state.position.body;
+    var pts = body.map(function (p) { return (p[1] + 0.5) + ',' + (p[0] + 0.5); }).join(' ');
+    var head = body[0], food = state.position.food;
+    var ns = 'http://www.w3.org/2000/svg';
+    var svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('viewBox', '0 0 ' + size + ' ' + size);
+    function line(cls, width) {
+      var p = document.createElementNS(ns, 'polyline');
+      p.setAttribute('points', pts);
+      p.setAttribute('class', 'snake-body ' + cls);
+      p.setAttribute('stroke-width', String(width));
+      svg.appendChild(p);
+    }
+    line('snake-glow', 1.05);
+    line('snake-dark', 0.86);
+    line('snake-main', 0.70);
+    line('snake-hi', 0.20);
+    // Rounded head and a readable eye pair.
+    var headCircle = document.createElementNS(ns, 'circle');
+    headCircle.setAttribute('cx', String(head[1] + 0.5));
+    headCircle.setAttribute('cy', String(head[0] + 0.5));
+    headCircle.setAttribute('r', '0.46');
+    headCircle.setAttribute('fill', '#43c470');
+    headCircle.setAttribute('stroke', '#0d3b20');
+    headCircle.setAttribute('stroke-width', '0.10');
+    svg.appendChild(headCircle);
+    [[-0.14, -0.10], [-0.14, 0.10]].forEach(function (o) {
+      var eye = document.createElementNS(ns, 'circle');
+      eye.setAttribute('cx', String(head[1] + 0.5 + o[0]));
+      eye.setAttribute('cy', String(head[0] + 0.5 + o[1]));
+      eye.setAttribute('r', '0.075');
+      eye.setAttribute('fill', '#fff9e8');
+      svg.appendChild(eye);
+      var pupil = document.createElementNS(ns, 'circle');
+      pupil.setAttribute('cx', String(head[1] + 0.5 + o[0]));
+      pupil.setAttribute('cy', String(head[0] + 0.5 + o[1]));
+      pupil.setAttribute('r', '0.035');
+      pupil.setAttribute('fill', '#142019');
+      svg.appendChild(pupil);
+    });
+    // Apple: body, leaf, stem.
+    var apple = document.createElementNS(ns, 'circle');
+    apple.setAttribute('cx', String(food[1] + 0.5));
+    apple.setAttribute('cy', String(food[0] + 0.56));
+    apple.setAttribute('r', '0.34');
+    apple.setAttribute('fill', '#c9402f');
+    apple.setAttribute('stroke', '#7d1d14');
+    apple.setAttribute('stroke-width', '0.06');
+    svg.appendChild(apple);
+    var leaf = document.createElementNS(ns, 'ellipse');
+    leaf.setAttribute('cx', String(food[1] + 0.62));
+    leaf.setAttribute('cy', String(food[0] + 0.24));
+    leaf.setAttribute('rx', '0.15');
+    leaf.setAttribute('ry', '0.08');
+    leaf.setAttribute('transform', 'rotate(-24 ' + (food[1] + 0.62) + ' ' + (food[0] + 0.24) + ')');
+    leaf.setAttribute('fill', '#5fae4e');
+    svg.appendChild(leaf);
+    grid.appendChild(svg);
+  }
+
+  function buildPong() {
+    var pos = state.position;
+    var court = el('div', 'pcourt', tray);
+    el('div', 'pcenter', court);
+    var scoreL = el('div', 'pscore left', court);
+    scoreL.textContent = String(pos.score[0]);
+    var scoreR = el('div', 'pscore right', court);
+    scoreR.textContent = String(pos.score[1]);
+    var pl = el('div', 'ppaddle', court);
+    pl.style.left = '4%'; pl.style.top = (pos.left.y / pos.h * 100) + '%';
+    var pr = el('div', 'ppaddle', court);
+    pr.style.right = '4%'; pr.style.top = (pos.right.y / pos.h * 100) + '%';
+    var ball = el('div', 'pball', court);
+    ball.style.left = (pos.ball.x / pos.w * 100) + '%';
+    ball.style.top = (pos.ball.y / pos.h * 100) + '%';
+  }
+
+  function buildTictactoe() {
+    var grid = el('div', 'tttgrid', tray);
+    grid.style.gridTemplateColumns = 'repeat(' + n + ', 1fr)';
+    grid.style.gridTemplateRows = 'repeat(' + n + ', 1fr)';
+    state.position.board.forEach(function (v) {
+      cell = el('div', 'tttcell', grid);
+      if (v === 1 || v === 2) el('div', 'mark ' + (v === 1 ? 'x' : 'o'), cell);
+    });
+  }
+
+  function buildHanoi() {
+    el('div', 'hbase', tray);
+    var pegs = state.position.pegs;
+    var disks = state.config.disks;
+    var pegX = [25, 50, 75];
+    var baseBottom = 16;
+    var diskH = 4.4;
+    var gap = 0.5;
+    for (var p = 0; p < 3; p++) {
+      var shadow = el('div', 'hshadow', tray);
+      shadow.style.left = (pegX[p] - 17) + '%';
+      shadow.style.width = '34%';
+      var peg = el('div', 'hpeg', tray);
+      peg.style.left = (pegX[p] - 0.75) + '%';
+      // Disks are stored bottom-to-top; draw bottom first.
+      for (var d = 0; d < pegs[p].length; d++) {
+        var disk = el('div', 'hdisk', tray);
+        var size = pegs[p][d];
+        var width = 16 + (size - 1) / Math.max(1, disks - 1) * 28;
+        disk.style.width = width + '%';
+        disk.style.left = (pegX[p] - width / 2) + '%';
+        disk.style.bottom = (baseBottom + 1.4 + d * (diskH + gap)) + '%';
+        var tint = d % 2 ? 'rgba(150, 92, 40, .10)' : 'rgba(255, 230, 190, .08)';
+        disk.style.backgroundImage = 'linear-gradient(to bottom, ' + tint + ', rgba(90, 48, 18, .10)), var(--hero)';
+        disk.style.backgroundSize = '220% 320%';
+      }
+    }
+  }
+
+  function buildReaction() {
+    var grid = el('div', 'rgrid', tray);
+    for (i = 0; i < 36; i++) el('div', 'rcell', grid);
+    var target = state.position.targets[0];
+    var dot = el('div', 'rtarget', tray);
+    dot.style.left = ((target.c + 0.5) / 6 * 100) + '%';
+    dot.style.top = ((target.r + 0.5) / 6 * 100) + '%';
+    var timer = el('div', 'rtimer', tray);
+    var fill = el('i', null, timer);
+    var configTime = state.config.time || state.config.rounds || 20;
+    fill.style.width = Math.max(8, Math.min(100, state.position.timeLeft / configTime * 100)) + '%';
+  }
+
+  var builders = {
+    'slide-puzzle': buildSlide,
+    'lights-out': buildLights,
+    'minesweeper': buildMines,
+    'memory-pairs': buildMemory,
+    'snake': buildSnake,
+    'pong': buildPong,
+    'tictactoe': buildTictactoe,
+    'hanoi': buildHanoi,
+    'reaction': buildReaction
+  };
+  if (!builders[family]) {
+    document.body.dataset.error = 'unknown family ' + family;
+    console.error('unknown family', family);
+    return;
+  }
+  builders[family]();
+
+  // Every family must show its own contact shadow: one soft ellipse under the
+  // tray, in the board plane, shared by all nine scenes.
+  var trayShadow = el('div', 'tray-shadow', document.querySelector('.board3d'));
+  trayShadow.style.cssText = 'position:absolute;left:8%;right:8%;bottom:-6%;height:14%;border-radius:50%;background:radial-gradient(ellipse at 50% 50%,rgba(0,0,0,.55),rgba(0,0,0,0) 70%);filter:blur(14px);transform:translateZ(-8px);';
+
+  try {
+    await Promise.all([loadImage(HERO), loadImage(SURFACE)]);
+  } catch (err) {
+    document.body.dataset.error = String(err);
+    console.error(err);
+    return;
+  }
+  requestAnimationFrame(function () {
+    requestAnimationFrame(function () {
+      document.body.dataset.ready = '1';
+    });
+  });
+})();
+</script>
+</body>
+</html>

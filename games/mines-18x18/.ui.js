@@ -65,17 +65,17 @@ var I18N = {
     if (S.status === 'won') {
       E.overlayTitle.textContent = I18N[Arcade.lang()].overlayWin;
       E.overlayText.textContent = '';
-      E.overlay.classList.remove('hidden');
+      E.overlay.hidden = false;
     } else if (S.status === 'lost') {
       E.overlayTitle.textContent = I18N[Arcade.lang()].overlayLose;
       E.overlayText.textContent = '';
-      E.overlay.classList.remove('hidden');
+      E.overlay.hidden = false;
     } else if (S.status === 'draw') {
       E.overlayTitle.textContent = I18N[Arcade.lang()].overlayDraw;
       E.overlayText.textContent = I18N[Arcade.lang()].hintText;
-      E.overlay.classList.remove('hidden');
+      E.overlay.hidden = false;
     } else {
-      E.overlay.classList.add('hidden');
+      E.overlay.hidden = true;
     }
   }
 

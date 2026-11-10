@@ -58,6 +58,22 @@
     return s;
   }
 
+  // 结算键名唯一规则：引擎状态 → 字典键。
+  //   won / win  → overlayWin
+  //   lost / lose → overlayLose
+  //   其它（draw）→ overlayDraw
+  // 页面统一用 I18N[Arcade.lang()][Arcade.overlayKey(status)] 取文案，
+  // 不再自己拼 'status + Overlay' / 'overlay' + 状态。
+  function overlayKey(status) {
+    if (status === 'won' || status === 'win') return 'overlayWin';
+    if (status === 'lost' || status === 'lose') return 'overlayLose';
+    return 'overlayDraw';
+  }
+
+  function overlayText(status) {
+    return t(overlayKey(status));
+  }
+
   function apply() {
     if (typeof document === 'undefined') return;
     document.documentElement.lang = LANGS[state.lang] || 'en';
@@ -78,6 +94,10 @@
   function setLang(lang, silent) {
     if (!LANGS[lang]) lang = 'en';
     state.lang = lang;
+    // 页面用 Arcade.init({ strings: I18N }) 传入的是同一个对象引用。
+    // 把当前语言写回 strings.lang，页面里的 I18N[I18N.lang] 才能取到字典；
+    // 语言切换复用同一入口，切完立即同步。
+    if (state.strings && typeof state.strings === 'object') state.strings.lang = lang;
     storageSet(LANG_KEY, lang);
     apply();
     if (!silent) {
@@ -209,6 +229,7 @@
   return {
     init: init, t: t, apply: apply, setLang: setLang, onLang: onLang,
     lang: function () { return state.lang; }, LANG_KEY: LANG_KEY,
+    overlayKey: overlayKey, overlayText: overlayText,
     storageGet: storageGet, storageSet: storageSet,
     best: best, setBest: setBest,
     onKeys: onKeys, onSwipe: onSwipe, KEYMAP: KEYMAP,

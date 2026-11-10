@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Dominion 美术合成页：本地生成的素材在浏览器中的渲染预览。">
+<title>Dominion art composition</title>
+<style>
+:root{
+  --serif:"Songti SC","Noto Serif SC","Palatino Linotype",Georgia,serif;
+  --sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+  --gold:#d8b66f;--gold2:#f4dda2;--ink:#f5eeda;--dim:#c9b9d8;
+  --felt:url("../../assets/art/premium/dominion/table-felt.webp");
+  --back:url("../../assets/art/premium/dominion/card-back.webp");
+  --copper:url("../../assets/art/premium/dominion/coin-copper.webp");
+  --silver:url("../../assets/art/premium/dominion/coin-silver.webp");
+  --goldcoin:url("../../assets/art/premium/dominion/coin-gold.webp");
+  --tray:url("../../assets/art/premium/dominion/card-tray.webp");
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:#07040a;overflow:hidden}
+body{width:1200px;height:1200px;font-family:var(--sans);color:var(--ink)}
+.stage{position:relative;width:1200px;height:1200px;overflow:hidden;
+  background:radial-gradient(900px 700px at 20% 0%,rgba(167,139,224,.28),transparent 60%),
+    radial-gradient(800px 600px at 90% 100%,rgba(216,178,106,.18),transparent 60%),
+    linear-gradient(150deg,#171020,#09050d 74%)}
+.stage::before{content:"";position:absolute;inset:0;background:var(--felt) center/cover;opacity:.55;filter:saturate(.75) contrast(1.06)}
+.stage::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(5,2,8,.15),rgba(5,2,8,.72))}
+.frame{position:absolute;inset:28px;border:1px solid rgba(216,178,106,.5);border-radius:28px;
+  box-shadow:inset 0 0 0 7px rgba(216,178,106,.06),0 40px 100px rgba(0,0,0,.5);z-index:2}
+.frame::before,.frame::after{content:"";position:absolute;width:60px;height:60px;border:2px solid rgba(216,178,106,.6)}
+.frame::before{left:14px;top:14px;border-right:0;border-bottom:0;border-radius:18px 0 0 0}
+.frame::after{right:14px;bottom:14px;border-left:0;border-top:0;border-radius:0 0 18px 0}
+.content{position:absolute;inset:70px;z-index:3;display:flex;flex-direction:column}
+.brand{display:flex;align-items:flex-start;gap:20px}
+.crest{width:88px;height:88px;border-radius:22px;display:grid;place-items:center;flex:none;
+  background:linear-gradient(145deg,#4b3464,#241a30);border:1px solid rgba(216,178,106,.4);
+  box-shadow:0 18px 40px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.2);transform:rotate(-3deg)}
+.crest svg{width:60px;height:60px}
+h1{margin:0;font-family:var(--serif);font-weight:700;font-size:96px;line-height:.86;letter-spacing:.12em;
+  text-shadow:0 14px 40px rgba(0,0,0,.5)}
+h1 span{color:var(--gold2)}
+.tag{margin:14px 0 0;font-size:18px;letter-spacing:.3em;color:var(--dim);font-weight:600}
+.rule{height:2px;background:linear-gradient(90deg,var(--gold),transparent);margin:18px 0 0;width:520px}
+.chips{display:flex;gap:10px;margin-top:22px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;height:40px;padding:0 17px;border-radius:999px;
+  border:1px solid rgba(216,178,106,.4);background:rgba(10,6,14,.55);color:var(--gold2);font-size:15px;letter-spacing:.08em}
+.table{position:absolute;left:0;right:0;bottom:0;height:720px;z-index:3}
+.fan{position:absolute;left:50%;bottom:150px;transform:translateX(-50%);width:760px;height:500px}
+.card{position:absolute;width:220px;height:310px;border-radius:14px;overflow:hidden;
+  background:linear-gradient(160deg,#3b2c4f,#251a30 70%);border:1px solid #7c6394;
+  box-shadow:0 22px 40px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.12)}
+.card::before{content:"";position:absolute;inset:6px;border:1px solid var(--tc,#d8b26a);border-radius:9px;opacity:.5}
+.card .cost{position:absolute;left:10px;top:10px;width:34px;height:34px;border-radius:50%;
+  display:grid;place-items:center;background:linear-gradient(180deg,#f4dda2,#c99a4d);color:#2a1e12;font-size:16px;font-weight:900}
+.card .name{position:relative;margin:44px 12px 0;text-align:center;font-family:var(--serif);font-size:23px;font-weight:700}
+.card .art{height:86px;margin:9px 14px 0;border-radius:8px;display:grid;place-items:center;
+  background:linear-gradient(145deg,color-mix(in srgb,var(--tc) 30%,transparent),rgba(0,0,0,.2));border:1px solid rgba(255,255,255,.1)}
+.card .art svg{width:70px;height:60px}
+.card .desc{font-size:11px;line-height:1.4;text-align:center;color:#d7c9e6;padding:8px 14px}
+.card .kind{position:absolute;bottom:9px;left:0;right:0;text-align:center;font-size:10px;letter-spacing:.18em;color:var(--tc)}
+.c0{--tc:#83c99a}.c1{--tc:#a78be0}.c2{--tc:#d8b26a}.c3{--tc:#d78373}.c4{--tc:#7fa8c9}
+.backcard{position:absolute;width:250px;height:350px;border-radius:16px;background:var(--back) center/cover;
+  border:1px solid #76608d;box-shadow:0 26px 50px rgba(0,0,0,.5);left:calc(50% - 125px);bottom:110px;transform:rotate(-5deg);opacity:.96}
+.coins{position:absolute;left:50%;bottom:52px;transform:translateX(-50%);display:flex;align-items:flex-end;gap:-10px}
+.coin{width:150px;height:150px;background-size:contain;background-repeat:no-repeat;background-position:center;
+  filter:drop-shadow(0 18px 20px rgba(0,0,0,.45))}
+.coin.c{margin-right:-38px;background-image:var(--copper);transform:rotate(-9deg)}
+.coin.s{margin-right:-38px;background-image:var(--silver);transform:rotate(3deg)}
+.coin.g{background-image:var(--goldcoin);transform:rotate(10deg)}
+.tray{position:absolute;right:80px;bottom:60px;width:420px;height:420px;background:var(--tray) center/contain no-repeat;
+  filter:drop-shadow(0 24px 30px rgba(0,0,0,.4));opacity:.94;transform:rotate(-4deg)}
+.foot{position:absolute;left:70px;bottom:54px;font-size:13px;letter-spacing:.22em;color:rgba(244,236,220,.7);z-index:4}
+
+/* OG 1200x630 */
+body[data-shot="og"]{height:630px}
+body[data-shot="og"] .stage{height:630px}
+body[data-shot="og"] .content{inset:52px 64px}
+body[data-shot="og"] h1{font-size:78px}
+body[data-shot="og"] .tag{font-size:15px}
+body[data-shot="og"] .crest{width:70px;height:70px}
+body[data-shot="og"] .table{height:630px}
+body[data-shot="og"] .fan{left:auto;right:40px;transform:none;bottom:30px;width:560px;height:430px;transform:scale(.78);transform-origin:right bottom}
+body[data-shot="og"] .backcard{left:auto;right:60px;bottom:20px;transform:rotate(-5deg) scale(.82);transform-origin:right bottom}
+body[data-shot="og"] .coins{left:auto;right:300px;bottom:20px;transform:scale(.72);transform-origin:right bottom}
+body[data-shot="og"] .tray{display:none}
+body[data-shot="og"] .rule{width:420px}
+body[data-shot="og"] .chips{margin-top:16px}
+body[data-shot="og"] .foot{left:64px;bottom:34px}
+
+/* detail 1536x1024 */
+body[data-shot="detail"]{width:1536px;height:1024px}
+body[data-shot="detail"] .stage{width:1536px;height:1024px}
+body[data-shot="detail"] .content{inset:48px 60px}
+body[data-shot="detail"] .brand,body[data-shot="detail"] .rule,body[data-shot="detail"] .chips{display:none}
+body[data-shot="detail"] .table{height:1024px}
+body[data-shot="detail"] .fan{left:50%;bottom:190px;transform:translateX(-50%) scale(1.22);transform-origin:center bottom}
+body[data-shot="detail"] .backcard{left:100px;bottom:110px;transform:rotate(-8deg) scale(1.1)}
+body[data-shot="detail"] .coins{left:auto;right:150px;bottom:180px;transform:scale(1.15)}
+body[data-shot="detail"] .tray{right:40px;bottom:20px;width:560px;height:560px}
+body[data-shot="detail"] .foot{left:60px;bottom:40px;font-size:15px}
+.detail-title{display:none}
+body[data-shot="detail"] .detail-title{display:block;font-family:var(--serif);font-size:64px;color:var(--gold2);margin:0}
+body[data-shot="detail"] .detail-sub{display:block;font-size:16px;letter-spacing:.24em;color:var(--dim);margin-top:10px}
+</style>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/dominion-premium/art-render.html">
+<style>
+/* site-quality: fixed-size art composition must not create page overflow */
+html{overflow-x:hidden}
+body{width:100%!important;max-width:100vw!important;overflow-x:hidden}
+.stage,#stage{max-width:100vw;overflow:hidden}
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="frame"></div>
+  <div class="content">
+    <div class="brand">
+      <div class="crest" aria-hidden="true">
+        <svg viewBox="0 0 64 64"><path d="M15 8h34v48L32 44 15 56z" fill="#d8b26a" stroke="#7a5a2a" stroke-width="2"/><circle cx="32" cy="27" r="9" fill="#a78be0" stroke="#6b4a8a" stroke-width="2"/><path d="M32 19v16M24 27h16" stroke="#f1d9a8" stroke-width="2"/></svg>
+      </div>
+      <div>
+        <h1>领土 <span>DOMINION</span></h1>
+        <p class="tag">牌库构筑 · 2 人 · 45 分钟</p>
+        <div class="rule"></div>
+        <div class="chips"><span class="chip">14 张行动/财宝/胜利卡</span><span class="chip">本地 AI</span><span class="chip">双人联机</span></div>
+      </div>
+    </div>
+    <div class="detail-title">领土 · 牌库构筑</div>
+    <div class="detail-sub">DOMINION · PREMIUM EDITION</div>
+  </div>
+  <div class="table">
+    <div class="fan">
+      <div class="card c0" style="left:30px;bottom:20px;transform:rotate(-13deg)">
+        <span class="cost">3</span><span class="name">村庄</span>
+        <span class="art"><svg viewBox="0 0 70 60"><path d="M10 52V26l12-10 12 10v26z" fill="#b9e0c4" stroke="#3f6b4d" stroke-width="2"/><path d="M34 52V30l12-9 12 9v22z" fill="#9ccbb0" stroke="#3f6b4d" stroke-width="2"/><rect x="20" y="36" width="7" height="16" fill="#31563c"/></svg></span>
+        <span class="desc">+2 行动，+1 牌。</span><span class="kind">ACTION</span>
+      </div>
+      <div class="card c1" style="left:170px;bottom:40px;transform:rotate(-5deg)">
+        <span class="cost">4</span><span class="name">铁匠</span>
+        <span class="art"><svg viewBox="0 0 70 60"><path d="M18 50l16-30 18 30z" fill="#d8c1f0" stroke="#6b4a8a" stroke-width="2"/><path d="M26 42h17M22 50h25" stroke="#4d2f73" stroke-width="3" stroke-linecap="round"/></svg></span>
+        <span class="desc">抽 3 张牌。</span><span class="kind">ACTION</span>
+      </div>
+      <div class="card c2" style="left:315px;bottom:54px;transform:rotate(2deg)">
+        <span class="cost">5</span><span class="name">市场</span>
+        <span class="art"><svg viewBox="0 0 70 60"><path d="M12 24h46l-5-12H17z" fill="#f1d9a8" stroke="#8a6124" stroke-width="2"/><path d="M16 24v26h38V24M28 50V36h14v14" fill="none" stroke="#8a6124" stroke-width="2"/></svg></span>
+        <span class="desc">+1 牌，+1 行动，+1 购买，+1 金币。</span><span class="kind">ACTION</span>
+      </div>
+      <div class="card c3" style="left:460px;bottom:40px;transform:rotate(9deg)">
+        <span class="cost">4</span><span class="name">民兵</span>
+        <span class="art"><svg viewBox="0 0 70 60"><path d="M12 50l23-32 23 32z" fill="#e7b3a6" stroke="#7c251c" stroke-width="2"/><path d="M35 18v32M27 28h16" stroke="#7c251c" stroke-width="3" stroke-linecap="round"/></svg></span>
+        <span class="desc">+2 金币；对手弃牌至 3 张。</span><span class="kind">ATTACK</span>
+      </div>
+      <div class="card c4" style="left:600px;bottom:20px;transform:rotate(15deg)">
+        <span class="cost">3</span><span class="name">工坊</span>
+        <span class="art"><svg viewBox="0 0 70 60"><circle cx="35" cy="30" r="15" fill="none" stroke="#7fa8c9" stroke-width="3"/><path d="M35 15v30M20 30h30M24 19l22 22M46 19L24 41" stroke="#3d6b8c" stroke-width="2"/></svg></span>
+        <span class="desc">获得一张费用 ≤4 的牌。</span><span class="kind">ACTION</span>
+      </div>
+    </div>
+    <div class="backcard"></div>
+    <div class="coins"><span class="coin c"></span><span class="coin s"></span><span class="coin g"></span></div>
+    <div class="tray"></div>
+  </div>
+  <div class="foot">PREMIUM EDITION · LOCAL AI + ONLINE · ZERO EXTERNAL REQUESTS</div>
+</div>
+<script>
+  var shot = new URLSearchParams(location.search).get('shot') || 'cover';
+  document.body.setAttribute('data-shot', shot);
+</script>
+</body>
+</html>

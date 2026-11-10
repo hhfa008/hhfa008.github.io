@@ -1,0 +1,256 @@
+{
+  "slug": "backgammon-premium",
+  "name": {
+    "zh": "双陆棋",
+    "en": "Backgammon"
+  },
+  "type": "boardgame",
+  "status": "shipped",
+  "statusReason": "五项门禁全过：单测 334/0；双客户端联机 E2E 73/0（--control exit 1）；浏览器 E2E 142/0（--control exit 1）；390×844 与 320×568 冒烟各 19 项 PASS、0 console error、0 外部请求。单测覆盖 24 点 4 象限、30 枚棋子、开局 pip 167、bar 优先、对子四步、较骰、封闭点、击中送 bar、离盘、gammon/backgammon 与倍数方块；封面 1200×1200 + OG 1200×630 + 两张详情 1200×800 本地代码合成；realism 8 项 7 类检查通过；全部美术 1,293,406 bytes（≤2MB）。",
+  "entry": "index.html",
+  "rules": "rules.html",
+  "design": "DESIGN.md",
+  "acceptance": "ACCEPTANCE.md",
+  "e2e": {
+    "script": "e2e.mjs",
+    "record": "E2E.md",
+    "command": "node games/boardgame/backgammon-premium/e2e.mjs",
+    "control": "node games/boardgame/backgammon-premium/e2e.mjs --control  # exit 1, intentional failure",
+    "environment": "dedicated resident audit Chrome via CDP 9333 (persistent profile, reused across runs); chrome-ensure reuse; one tab opened and closed; no temp Chrome/profile",
+    "online": {
+      "script": "test-online.js",
+      "command": "node games/boardgame/backgammon-premium/test-online.js",
+      "runAll": "auto-discovered by node games/tests/run-all.js",
+      "control": "node games/boardgame/backgammon-premium/test-online.js --control  # exit 1",
+      "assertions": 73,
+      "evidence": "online-e2e.json — 73 assertions, 0 failed"
+    },
+    "assertions": 142
+  },
+  "singlePlayer": false,
+  "modeLabel": "双人联机 + AI 补位 / 单人执白 vs AI 黑方",
+  "players": {
+    "min": 2,
+    "max": 2,
+    "best": [
+      2
+    ]
+  },
+  "playTime": {
+    "min": 15,
+    "max": 30
+  },
+  "age": 8,
+  "designer": "传统游戏 / Edmond Hoyle（1743 现代规则整理）",
+  "year": 1743,
+  "awards": [],
+  "online": {
+    "status": "ready",
+    "required": [
+      "online-rooms",
+      "invite-flow",
+      "state-sync",
+      "reconnect",
+      "timeout-ai-takeover",
+      "leaderboard",
+      "dual-client-e2e-in-run-all"
+    ],
+    "entry": "online.html",
+    "server": "online-server.mjs",
+    "sharedServer": "../../shared/online-room-server.mjs",
+    "transport": "HTTP/JSON + 700ms polling; server-authoritative; LAN-only by default",
+    "features": {
+      "rooms": "2 seats; room id + single-use invite token + optional password",
+      "invite": "inviteUrl uses the request Host; opens /boardgame/backgammon-premium/online.html?room=&code=",
+      "stateSync": "stateVersion + lastAction; both viewers receive the same public board, bar/off, dice, cube and turn",
+      "aiFill": "empty seat fills with the engine's legal-move AI; the server applies one action per tick",
+      "reconnect": "session token + POST /api/rooms/:id/reconnect; reconnect clears timeout takeover",
+      "timeoutTakeover": "no session request for 15s → server AI plays the seat; reconnect restores it",
+      "leaderboard": "GET /api/leaderboard?game=backgammon-premium; AI participants included; raw playerId hashed",
+      "idempotency": "per-player idempotencyKey cached before the action guard",
+      "cube": "double/take/pass actions are server-authoritative; pass concedes the current stake; cap 64"
+    },
+    "evidence": {
+      "http": "node games/boardgame/backgammon-premium/test-online.js — 73 assertions",
+      "browser": "node games/boardgame/backgammon-premium/e2e.mjs online section",
+      "runAll": "test-online.js is auto-discovered by node games/tests/run-all.js"
+    }
+  },
+  "shared": {
+    "shuffle": "N/A — dice use engine.js mulberry32-seeded RNG with injectable dice/rng",
+    "sfx": "games/shared/sfx.js — index.html script tag; no per-game AudioContext",
+    "rules": "Backgammon rules live in engine.js; no shared rules module",
+    "physics": "N/A — no physics simulation",
+    "leaderboard": "shared room server keeps an anonymous in-memory board; no leaderboard copy"
+  },
+  "assets": {
+    "cover": "assets/cover.webp",
+    "og": "assets/og.webp",
+    "detailImages": [
+      "assets/detail-1.webp",
+      "assets/detail-2.webp"
+    ],
+    "singleObject": [
+      "../../assets/art/premium/backgammon/walnut.webp",
+      "../../assets/art/premium/backgammon/maple.webp",
+      "../../assets/art/premium/backgammon/leather.webp",
+      "../../assets/art/premium/backgammon/ivory-checker.webp"
+    ],
+    "compositionSource": "art-render.html",
+    "compositionScript": "render-art.mjs",
+    "localOnly": true,
+    "totalBytes": 1293406,
+    "coverBytes": 185638,
+    "ogBytes": 101396,
+    "detailBytes": [
+      123452,
+      130538
+    ],
+    "materialBytes": 752382,
+    "pageResourceBytes": 835212
+  },
+  "serviceWorker": {
+    "precacheIncludes": [
+      "index.html",
+      "rules.html",
+      "online.html",
+      "engine.js",
+      "data.js",
+      "ui.js",
+      "ui.css",
+      "meta.json",
+      "assets/cover.webp",
+      "assets/og.webp",
+      "assets/detail-1.webp",
+      "assets/detail-2.webp",
+      "walnut.webp",
+      "maple.webp",
+      "leather.webp",
+      "ivory-checker.webp"
+    ],
+    "artBase": "../../assets/art/premium/backgammon/"
+  },
+  "realism": {
+    "rules": {
+      "points": 24,
+      "quadrants": 4,
+      "pointsPerQuadrant": 6,
+      "checkersPerSide": 15,
+      "checkersTotal": 30,
+      "openingPipBoth": 167,
+      "whiteStart": "24:2, 13:5, 8:3, 6:5",
+      "blackStart": "1:2, 12:5, 17:3, 19:5",
+      "directions": "White 24→1, Black 1→24",
+      "dice": "two d6; doubles are four moves; use both when legal, otherwise the higher die",
+      "bar": "must re-enter before any other checker; White 25−die, Black die",
+      "closedPoint": "two or more opposing checkers",
+      "hit": "a blot goes to the bar",
+      "bearOff": "all 15 in home board and bar empty; exact or overshoot from the highest occupied point",
+      "scoring": "single ×1, gammon ×2, backgammon ×3; multiplied by the cube",
+      "cube": "starts 1, take/pass before rolling, cap 64, single game not a match"
+    },
+    "dimensions": {
+      "boardOpenMm": [
+        600,
+        480
+      ],
+      "boardOpenRangeMm": {
+        "length": [
+          600,
+          610
+        ],
+        "width": [
+          480,
+          490
+        ]
+      },
+      "checkerDiameterMm": 44,
+      "checkerThicknessMm": 10,
+      "dieMm": 16,
+      "cubeMm": 32
+    },
+    "sources": [
+      "Bilibili BV1BL4y1z7SB — 双陆棋，原来我也是另一种棋，规则教学，Backgammon",
+      "Bilibili BV14D4y197By — 怎么玩双陆棋？一盘双陆棋实战教会你！",
+      "Bilibili BV1cU516ME9k — 【中文】新手教程：如何玩西洋双陆棋"
+    ]
+  },
+  "performanceBudgets": {
+    "fcpMs": 2500,
+    "domContentLoadedMs": 4000,
+    "loadEventEndMs": 4000,
+    "domNodes": 2500,
+    "fps": 30,
+    "newGameRenderMs": 200,
+    "materialBytes": 2097152,
+    "externalRequests": 0
+  },
+  "mobile": {
+    "viewports": [
+      "390x844",
+      "320x568"
+    ],
+    "touchTargetPx": 44,
+    "safeArea": true,
+    "dvh": true,
+    "offline": true,
+    "hoverDependent": false,
+    "fontMinPx": 12,
+    "measured": {
+      "390x844": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "minFont": 12,
+        "touchButtons": 11,
+        "overflow": false
+      },
+      "320x568": {
+        "scrollWidth": 320,
+        "clientWidth": 320,
+        "minFont": 12,
+        "touchButtons": 11,
+        "overflow": false
+      },
+      "fps": 62,
+      "domNodes": 450,
+      "fcpMs": 0,
+      "loadEventEndMs": 33,
+      "newGameRenderMs": 0.8,
+      "materialBytes": 835212,
+      "externalRequests": 0,
+      "domContentLoadedMs": 32
+    }
+  },
+  "bilibili": {
+    "sources": [
+      {
+        "bv": "BV1BL4y1z7SB",
+        "title": "双陆棋，原来我也是另一种棋，规则教学，Backgammon",
+        "up": "桌游怎么玩",
+        "url": "https://www.bilibili.com/video/BV1BL4y1z7SB",
+        "fact": "标题与简介确认为双陆棋规则教学视频；用作规则教学来源。"
+      },
+      {
+        "bv": "BV14D4y197By",
+        "title": "怎么玩双陆棋？一盘双陆棋实战教会你！",
+        "up": "瑞成男中音",
+        "url": "https://www.bilibili.com/video/BV14D4y197By",
+        "fact": "页面评论区文字说明倍数方块：掷骰前加倍，接受或认输；接受后本局翻倍，gammon 再翻倍。"
+      },
+      {
+        "bv": "BV1cU516ME9k",
+        "title": "【中文】新手教程：如何玩西洋双陆棋",
+        "up": "SebunTsuki",
+        "url": "https://www.bilibili.com/video/BV1cU516ME9k",
+        "fact": "简介确认为中文新手教程，原视频 Beginner Tutorial: How To Play Backgammon。"
+      }
+    ]
+  },
+  "gates": {
+    "tests": "test.js — 334 passed, 0 failed",
+    "art": "cover.webp + og.webp + detail-1/2.webp; 4 local material WebP; total 1,243,164 bytes",
+    "realism": "realism.json — 8 checks / 7 kinds, all ok",
+    "mobile": "390x844 + 320x568 smoke PASS (19 checks each); e2e mobile section 142/0",
+    "online": "test-online.js 73/0 + e2e online section; online-e2e.json"
+  }
+}

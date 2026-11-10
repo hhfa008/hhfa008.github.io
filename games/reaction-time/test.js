@@ -6,4 +6,5 @@ var kit = require('../shared/arcade/kits/reaction.js');
 var run = require('../shared/arcade/tests/reaction.js');
 var params = {"rounds":5};
 run(kit.create(params), params, s);
+require('../shared/arcade/tests/terminal.js').check("reaction-time", s);
 s.done();

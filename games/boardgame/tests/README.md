@@ -98,3 +98,9 @@ node games/boardgame/tests/run.js
 - `fixtures/ai-scenarios.json`：创建对局、读状态、读合法动作、提交动作、AI 评估五个 HTTP 场景及期望状态码/字段。
 
 fixtures 是**输入数据**，不是游戏实现。
+
+## 7. E2E 与性能运行手册
+
+- 跑法：`node games/boardgame/play/e2e.mjs`、`node games/boardgame/test-e2e.js`、全量 `node games/tests/run-all.js`。
+- 阈值：FCP < 2000ms；交互 FPS ≥ 30；堆增长 < 8MB 且采样非单调上升。
+- 常见红因：端口/Chrome 不可用；房间密码或选择器漂移；冷启动导致 FCP 超时；重动画/headless 节流导致 FPS 低；监听器/状态未释放导致堆持续增长。

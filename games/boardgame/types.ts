@@ -25,6 +25,13 @@ export interface BoardGameSource {
   fetchedAt: string;
 }
 
+export interface BoardGamePlayable {
+  /** 相对 boardgame 根目录的入口，例如 "hero-realms/"。 */
+  href: string;
+  /** true 表示可跨设备联机；false 表示同屏/AI 本地开局。 */
+  online: boolean;
+}
+
 export interface BoardGame {
   /** 稳定 id，例如 "gstone-550" 或 "bgg-230802"。 */
   id: string;
@@ -49,4 +56,8 @@ export interface BoardGame {
   coverUrl: string;
   source: BoardGameSource;
   tags?: string[];
+  /** 仅填确证可玩的版本；缺省表示目录收录、暂未提供可玩版本。 */
+  playable?: BoardGamePlayable;
+  /** 相对 boardgame 根目录的规则页；文件不存在时页面显示「规则待补」。 */
+  rules?: string;
 }

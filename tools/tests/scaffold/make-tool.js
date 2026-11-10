@@ -14,6 +14,12 @@
  *
  * Without "demo": true (or --demo), the body / explain / engine / UI regions
  * are left as clean placeholders for the builder.
+ *
+ * Delivery gate:
+ *   - --check fails on placeholders (<!--TOOL_BODY-->, <!--TOOL_EXPLAIN-->,
+ *     "TODO: builder", empty ToolEngine) unless --allow-placeholder is passed.
+ *   - An existing output whose body/engine is not a placeholder is treated as
+ *     an implementation and is not overwritten without --force.
  */
 
 var fs = require('fs');
@@ -119,6 +125,44 @@ var CLEAN_UI = [
 ].join('\n');
 
 // ---------------------------------------------------------------------------
+// Placeholder detection (shared by --check, the overwrite guard, and the
+// catalog-integrity test).
+// ---------------------------------------------------------------------------
+
+function stripJsComments(code) {
+  return code
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^\s*\/\/[^\n]*$/gm, '');
+}
+
+function engineSource(html) {
+  var m = html.match(/<script[^>]*\bid\s*=\s*["']engine["'][^>]*>([\s\S]*?)<\/script>/i);
+  return m ? m[1] : null;
+}
+
+// True when the engine still ends in the scaffold's bare `return {};`.
+function hasEmptyEngine(html) {
+  var code = engineSource(html);
+  if (code == null) return false;
+  var clean = stripJsComments(code);
+  var m = clean.match(/return\s*\{([\s\S]*?)\}\s*;?\s*\}\s*\)\s*\(\s*\)/);
+  if (!m) return false;
+  return m[1].replace(/[\s,;]/g, '') === '';
+}
+
+// Every marker that means "not ready for delivery".
+function placeholderIssues(html) {
+  var issues = [];
+  ['<!--TOOL_BODY-->', '<!--TOOL_EXPLAIN-->'].forEach(function (marker) {
+    if (html.indexOf(marker) !== -1) issues.push('内容占位: ' + marker);
+  });
+  if (/TODO:\s*builder/i.test(html)) issues.push('内容占位: TODO: builder');
+  if (hasEmptyEngine(html)) issues.push('空 ToolEngine（return {}）');
+  return issues;
+}
+
+
+// ---------------------------------------------------------------------------
 // CLI
 // ---------------------------------------------------------------------------
 
@@ -134,6 +178,8 @@ function usage() {
     '  --scaffold <file>  覆盖 scaffold.html 路径',
     '  --demo             注入内置演示 body/explain（config 里 "demo": true 等效）',
     '  --check            生成后（或对已有文件）运行静态检查，失败 exit 1',
+    '  --allow-placeholder 开发中允许占位页通过 --check（占位降级为 WARN）',
+    '  --force            覆盖已存在且非占位的实现；默认拒绝覆盖',
     '  --max-bytes <kb>   --check 的体积上限，默认 90（KB）',
     '  --quiet            只输出错误',
     '  --help             显示帮助'
@@ -147,6 +193,8 @@ function parseArgs(argv) {
     scaffold: SCAFFOLD_PATH,
     demo: false,
     check: false,
+    allowPlaceholder: false,
+    force: false,
     maxBytes: MAX_BYTES,
     quiet: false,
     help: false
@@ -163,6 +211,10 @@ function parseArgs(argv) {
       opts.demo = true;
     } else if (a === '--check') {
       opts.check = true;
+    } else if (a === '--allow-placeholder') {
+      opts.allowPlaceholder = true;
+    } else if (a === '--force') {
+      opts.force = true;
     } else if (a === '--max-bytes') {
       var kb = parseInt(argv[++i], 10);
       if (!isFinite(kb) || kb <= 0) throw new Error('--max-bytes 需要正整数 KB');
@@ -321,8 +373,26 @@ function faqJsonLd(faqs) {
   return jsonForScript(list);
 }
 
-function generate(configFile, outFile, scaffoldFile, forceDemo, quiet) {
+function generate(configFile, outFile, scaffoldFile, forceDemo, quiet, force) {
   var config = validateConfig(readConfig(configFile));
+  var resolvedOut = path.resolve(outFile);
+
+  // Never silently replace an implementation. A placeholder scaffold is fine
+  // to regenerate; real body/engine content requires an explicit --force.
+  if (fs.existsSync(resolvedOut)) {
+    var existing = fs.readFileSync(resolvedOut, 'utf8');
+    var existingPlaceholders = placeholderIssues(existing);
+    if (!existingPlaceholders.length && !force) {
+      throw new Error('拒绝覆盖已有实现: ' + resolvedOut +
+        '（未检测到占位内容）。确需覆盖请加 --force。');
+    }
+    if (force) {
+      console.error('强制覆盖已有输出（--force）: ' + resolvedOut);
+    } else {
+      console.error('覆盖占位输出（允许）: ' + resolvedOut + ' · ' + existingPlaceholders.join('; '));
+    }
+  }
+
   var html = fs.readFileSync(scaffoldFile, 'utf8');
   var url = SITE + '/tools/' + config.slug + '/';
   var demo = forceDemo || config.demo === true;
@@ -439,7 +509,7 @@ function dataKeys(html) {
   return Object.keys(seen).sort();
 }
 
-function checkOutput(file, quiet, maxBytes) {
+function checkOutput(file, quiet, maxBytes, allowPlaceholder) {
   var limit = isFinite(maxBytes) && maxBytes > 0 ? maxBytes : MAX_BYTES;
   var errors = [];
   var warnings = [];
@@ -476,12 +546,24 @@ function checkOutput(file, quiet, maxBytes) {
   }
   var placeholders = html.match(/<!--TOOL_[A-Z_]+-->/g) || [];
   Array.from(new Set(placeholders)).forEach(function (marker) {
+    var issue = '内容占位未替换: ' + marker;
     if (marker === '<!--TOOL_BODY-->' || marker === '<!--TOOL_EXPLAIN-->') {
-      warnings.push('内容占位仍存在（交付前必须替换）: ' + marker);
+      if (allowPlaceholder) warnings.push(issue + '（--allow-placeholder）');
+      else errors.push(issue + '（交付前必须替换，或开发中加 --allow-placeholder）');
     } else {
       errors.push('未替换占位: ' + marker);
     }
   });
+  if (/TODO:\s*builder/i.test(html)) {
+    var todo = '内容占位未替换: TODO: builder';
+    if (allowPlaceholder) warnings.push(todo + '（--allow-placeholder）');
+    else errors.push(todo + '（交付前必须替换，或开发中加 --allow-placeholder）');
+  }
+  if (hasEmptyEngine(html)) {
+    var empty = 'ToolEngine 仍为空实现（return {}）';
+    if (allowPlaceholder) warnings.push(empty + '（--allow-placeholder）');
+    else errors.push(empty + '（交付前必须实现，或开发中加 --allow-placeholder）');
+  }
   if (html.indexOf('innerHTML') !== -1) {
     warnings.push('页面出现 innerHTML；确认只用于静态模板，绝不拼接用户输入');
   }
@@ -641,7 +723,7 @@ function main() {
   try {
     if (opts.config) {
       if (!out) throw new Error('生成时必须提供 --out');
-      var result = generate(opts.config, out, opts.scaffold, opts.demo, opts.quiet);
+      var result = generate(opts.config, out, opts.scaffold, opts.demo, opts.quiet, opts.force);
       out = result.out;
     } else if (!out) {
       usage();
@@ -650,7 +732,7 @@ function main() {
     }
 
     if (opts.check) {
-      var ok = checkOutput(out, opts.quiet, opts.maxBytes);
+      var ok = checkOutput(out, opts.quiet, opts.maxBytes, opts.allowPlaceholder);
       if (!ok) process.exitCode = 1;
     }
   } catch (e) {
@@ -665,6 +747,8 @@ module.exports = {
   generate: generate,
   checkOutput: checkOutput,
   validateConfig: validateConfig,
+  placeholderIssues: placeholderIssues,
+  hasEmptyEngine: hasEmptyEngine,
   CATEGORY_SCHEMA: CATEGORY_SCHEMA,
   GENERIC_KEYS: GENERIC_KEYS,
   MAX_BYTES: MAX_BYTES

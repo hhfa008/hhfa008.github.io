@@ -430,7 +430,7 @@ s.group('页面与规则页静态契约', function () {
   s.ok('页面无外链样式表', !/<link[^>]+rel="stylesheet"/i.test(pageHtml));
   s.ok('页面无 fetch/XHR', !/\bfetch\s*\(|XMLHttpRequest/.test(pageHtml));
   s.ok('页面支持 reduced-motion', /prefers-reduced-motion/.test(pageHtml));
-  s.ok('页面无 https 资源引用', !/(?:src|href)="https?:\/\//.test(pageHtml));
+  s.ok('页面无 https 资源引用', !/(?:src|href)="https?:\/\//.test(pageHtml.replace(/<link[^>]*rel=["']canonical["'][^>]*>/gi, '')));
   s.ok('页面有 390px 媒体查询', /max-width:430px/.test(pageHtml));
   s.ok('页面有棋盘缩放', /15×15/.test(pageHtml) && /zoomIn/.test(pageHtml));
   s.ok('页面引用规则页', /href="rules.html"/.test(pageHtml));
@@ -454,7 +454,7 @@ s.group('页面与规则页静态契约', function () {
   s.ok('规则页正文至少 1200 个中文字符', chineseCount >= 1200, String(chineseCount));
   s.ok('规则页 CTA 返回游戏', /href="index.html"/.test(rulesHtml));
   s.ok('规则页无外链脚本', !/<script[^>]*\bsrc=/.test(rulesHtml));
-  s.ok('规则页无 https 资源引用', !/(?:src|href)="https?:\/\//.test(rulesHtml));
+  s.ok('规则页无 https 资源引用', !/(?:src|href)="https?:\/\//.test(rulesHtml.replace(/<link[^>]*rel=["']canonical["'][^>]*>/gi, '')));
   s.ok('规则页说明简化点', /简化/.test(rulesHtml));
   s.ok('规则页说明农田计分', /农田/.test(rulesHtml) && /3 分/.test(rulesHtml));
 });

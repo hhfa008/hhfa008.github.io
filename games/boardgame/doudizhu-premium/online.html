@@ -1,0 +1,713 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1a1010">
+<meta name="description" content="斗地主 3 人联机房间：创建或邀请加入、密码房间、空位 AI 补位、断线重连与超时托管、排行榜与重赛。服务端权威判牌，底牌与对手手牌不下发。">
+<meta property="og:title" content="斗地主 3 人联机 · 房间 / 邀请 / AI 补位">
+<meta property="og:description" content="2 名真人 + 1 名 AI 或 1 人 + 2 AI，完整叫分与出牌同步，断线可重连、超时自动托管。">
+<meta property="og:type" content="website">
+<meta property="og:image" content="assets/og.webp">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<title>斗地主 · 3 人联机房间</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23201612'/%3E%3Crect x='8' y='8' width='48' height='48' rx='9' fill='%23f2e6cf'/%3E%3Cpath d='M32 17c-4 5-10 7-10 13a5 5 0 0 0 9 2c0 3-1 5-3 7h8c-2-2-3-4-3-7a5 5 0 0 0 9-2c0-6-6-8-10-13z' fill='%23a92b25'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --art-paper:url("../../assets/art/premium/doudizhu/card-paper.webp");
+    --art-back:url("../../assets/art/premium/doudizhu/card-back.webp");
+    --art-felt:url("../../assets/art/premium/doudizhu/table-felt.webp");
+    --font-serif:"Songti SC","Iowan Old Style","Palatino Linotype","Georgia",serif;
+    --font-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    --bg:#170f0e;--bg2:#241614;--panel:rgba(43,28,24,.94);--panel2:rgba(58,38,30,.8);
+    --line:rgba(216,168,96,.28);--line2:rgba(216,168,96,.52);
+    --ink:#f7ecd8;--muted:#c9b294;--soft:#9b8467;
+    --gold:#e6bd76;--gold2:#f6dda7;--red:#b53026;--green:#72d3a2;--sky:#8fc8ff;
+    --paper:#f6efdf;--paper2:#e6d8bd;--tap:48px;
+  }
+  *{box-sizing:border-box}
+  html,body{min-height:100%}
+  body{margin:0;color:var(--ink);font:16px/1.5 var(--font-sans);background:radial-gradient(900px 520px at 50% -16%,rgba(126,52,40,.5),transparent 64%),linear-gradient(168deg,var(--bg2),var(--bg) 64%);background-color:var(--bg);-webkit-tap-highlight-color:transparent}
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.1;background:var(--art-felt) center/cover no-repeat;mix-blend-mode:soft-light}
+  a{color:var(--gold);text-decoration:none}
+  button{font:inherit;color:inherit}
+  .wrap{position:relative;z-index:1;max-width:780px;margin:0 auto;padding:10px 12px 40px}
+  .top{display:flex;align-items:center;gap:8px;padding:2px 0 10px}
+  .top .brand{flex:1;min-width:0;text-align:center}
+  .brand h1{margin:0;font-family:var(--font-serif);font-weight:700;font-size:20px;letter-spacing:.16em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .brand p{margin:1px 0 0;font-size:12px;color:var(--muted)}
+  .icon-btn{display:inline-flex;align-items:center;justify-content:center;min-width:48px;min-height:48px;padding:0 12px;border-radius:13px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font-size:13px;font-weight:700;cursor:pointer;text-decoration:none;box-shadow:0 4px 0 rgba(0,0,0,.24);touch-action:manipulation}
+  .icon-btn:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(0,0,0,.24)}
+  button:focus-visible,.card:focus-visible,input:focus-visible{outline:3px solid var(--sky);outline-offset:2px}
+  .box{margin-top:10px;padding:13px 14px;border-radius:16px;border:1px solid var(--line);background:var(--panel);box-shadow:0 12px 26px rgba(0,0,0,.28)}
+  .box h2{margin:0 0 8px;font-size:12.5px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase}
+  .field{display:grid;gap:4px;margin:9px 0}
+  .field label{font-size:12.5px;color:var(--muted);font-weight:800}
+  .field input{width:100%;min-height:46px;font-size:16px;color:var(--ink);background:rgba(0,0,0,.26);border:1px solid var(--line);border-radius:11px;padding:0 12px}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+  .btn{min-height:48px;min-width:44px;border-radius:12px;border:1px solid var(--line);background:linear-gradient(160deg,var(--panel2),var(--panel));font-size:13.5px;font-weight:800;cursor:pointer;box-shadow:0 4px 0 rgba(0,0,0,.22);touch-action:manipulation;padding:0 10px}
+  .btn:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(0,0,0,.22)}
+  .btn.primary{background:linear-gradient(160deg,var(--gold2),#c9963f);color:#2a1608;border-color:transparent}
+  .btn.ghost{background:transparent}
+  .btn:disabled{opacity:.42;cursor:default;transform:none}
+  .hint{font-size:12.5px;color:var(--muted);line-height:1.6;margin:8px 0 0}
+  .status{display:flex;align-items:center;gap:7px;min-height:42px;margin-top:9px;padding:6px 11px;border-radius:12px;border:1px solid var(--line);background:var(--panel);font-size:13px;font-weight:700;line-height:1.35}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--green);flex:none;box-shadow:0 0 0 4px rgba(114,211,162,.16)}
+  .dot.wait{background:var(--gold);box-shadow:0 0 0 4px rgba(230,189,118,.14)}
+
+  .room-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+  .room-code{font-family:var(--font-serif);font-size:22px;font-weight:700;letter-spacing:.14em;color:var(--gold2)}
+  .pill{display:inline-flex;align-items:center;min-height:26px;padding:0 10px;border-radius:999px;border:1px solid var(--line);font-size:12px;font-weight:800;color:var(--muted);background:rgba(0,0,0,.2)}
+  .pill.on{color:var(--green);border-color:rgba(114,211,162,.42);background:rgba(114,211,162,.1)}
+  .invite{width:100%;min-height:44px;margin-top:8px;font-size:12.5px;color:var(--muted);background:rgba(0,0,0,.24);border:1px dashed var(--line);border-radius:11px;padding:6px 10px;word-break:break-all;line-height:1.5}
+  .seats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:10px}
+  .seat{padding:9px 7px;border-radius:13px;border:1px solid var(--line);background:linear-gradient(160deg,var(--panel2),var(--panel));text-align:center;min-width:0}
+  .seat.you{border-color:var(--line2);box-shadow:inset 0 0 0 1px rgba(230,189,118,.35)}
+  .seat .name{font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .seat .meta{font-size:12px;color:var(--muted);margin-top:2px;line-height:1.4}
+  .seat .role{display:inline-flex;align-items:center;min-height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:800;margin-top:5px;border:1px solid var(--line);color:var(--muted)}
+  .seat .role.landlord{color:#2a1608;background:linear-gradient(160deg,var(--gold2),#c9963f);border-color:transparent}
+  .seat .role.farmer{color:var(--green);border-color:rgba(114,211,162,.4);background:rgba(114,211,162,.1)}
+
+  .table{position:relative;margin-top:10px;border-radius:20px;padding:12px;min-height:210px;border:1px solid rgba(230,189,118,.32);background:radial-gradient(ellipse at 50% 40%,rgba(22,74,55,.5),transparent 68%),linear-gradient(155deg,rgba(20,60,46,.86),rgba(10,30,24,.94)),var(--art-felt) center/cover no-repeat;box-shadow:0 18px 40px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.12);overflow:hidden}
+  .bottom-wrap{display:flex;flex-direction:column;align-items:center;gap:4px}
+  .bottom-label{font-size:12px;letter-spacing:.14em;color:var(--muted);font-weight:800}
+  .bottom-cards{display:flex;gap:5px}
+  .mini-card{width:30px;height:42px;border-radius:4px;border:1px solid rgba(120,82,40,.6);background:linear-gradient(148deg,var(--paper),var(--paper2) 78%),var(--art-paper) center/cover no-repeat;box-shadow:0 3px 6px rgba(0,0,0,.34);position:relative;overflow:hidden;display:inline-block}
+  .mini-card.back{background:linear-gradient(150deg,#7c2a24,#4c1614),var(--art-back) center/cover no-repeat;border-color:rgba(230,189,118,.55)}
+  .mini-card .mini-rank{position:absolute;top:1px;left:2px;font-family:var(--font-serif);font-weight:700;font-size:12px;line-height:1}
+  .mini-card .mini-pip{position:absolute;left:50%;top:56%;transform:translate(-50%,-50%);width:15px;height:15px}
+  .mini-card.red{color:#b53026;fill:#b53026}
+  .mini-card.black{color:#1d1712;fill:#1d1712}
+  .last-play{display:flex;flex-wrap:wrap;justify-content:center;gap:3px;min-height:44px;align-items:center;margin-top:9px}
+  .play-label{display:block;text-align:center;font-size:12.5px;color:var(--gold2);font-weight:800;margin-top:5px}
+
+  .hand{position:relative;height:104px;margin-top:9px;padding:0 4px;border-radius:14px;border:1px solid var(--line);background:linear-gradient(165deg,rgba(48,31,26,.94),rgba(25,16,14,.96));overflow:hidden;isolation:isolate}
+  .card{position:absolute;bottom:4px;border-radius:6px;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:manipulation;overflow:hidden;background:linear-gradient(150deg,var(--paper),var(--paper2) 80%),var(--art-paper) center/cover no-repeat;border:1px solid rgba(126,88,46,.55);box-shadow:0 4px 0 rgba(78,52,24,.5),0 8px 14px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.8);transition:transform .12s ease}
+  .card .corner{position:absolute;display:flex;flex-direction:column;align-items:center;gap:1px;line-height:1;font-family:var(--font-serif);font-weight:700}
+  .card .corner.tl{left:2px;top:1px}
+  .card .corner.br{right:2px;bottom:1px;transform:rotate(180deg)}
+  .card .corner b{font-size:var(--rank-font)}
+  .card .corner svg{width:var(--pip-font);height:var(--pip-font)}
+  .card.red .corner,.card.red .bigpip{color:#b53026;fill:#b53026}
+  .card.black .corner,.card.black .bigpip{color:#1d1712;fill:#1d1712}
+  .card .bigpip{position:absolute;left:50%;top:52%;width:44%;height:44%;transform:translate(-50%,-50%)}
+  .card .joker-label{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);writing-mode:vertical-rl;font-family:var(--font-serif);font-weight:700;font-size:calc(var(--rank-font) * 1.2);color:#b53026}
+  .card.sel{transform:translateY(-14px);box-shadow:0 8px 0 rgba(78,52,24,.5),0 0 0 2px rgba(114,211,162,.75)}
+  .card.hinted{box-shadow:0 0 0 2px var(--sky),0 8px 14px rgba(0,0,0,.32)}
+
+  .bid-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-top:9px}
+  .bid-grid .btn{font-size:13px}
+  .controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:9px}
+  .log{list-style:none;margin:0;padding:0;max-height:150px;overflow:auto;display:grid;gap:1px}
+  .log li{font-size:12.5px;color:var(--muted);padding:3px 0;border-bottom:1px dashed rgba(216,168,96,.16)}
+  .log li:last-child{color:var(--ink);border-bottom:0}
+  .log li::before{content:"›";color:var(--gold);margin-right:5px;font-weight:900}
+  .lb{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+  .lb li{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;color:var(--muted);border-bottom:1px dashed rgba(216,168,96,.14);padding:3px 0}
+  .lb b{color:var(--ink)}
+  .result{margin-top:10px;padding:12px 14px;border-radius:15px;border:1px solid rgba(230,189,118,.42);background:linear-gradient(160deg,rgba(230,189,118,.16),rgba(43,28,24,.92))}
+  .result[hidden]{display:none}
+  .result h3{margin:0 0 4px;font-family:var(--font-serif);font-size:21px;letter-spacing:.06em}
+  .result p{margin:0;font-size:13px;color:var(--muted);line-height:1.55}
+  .foot{margin-top:14px;font-size:12.5px;color:var(--soft);text-align:center;line-height:1.7}
+  .foot a{display:inline-flex;align-items:center;min-height:44px;padding:0 8px;font-weight:700}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  @media (prefers-reduced-motion: reduce){*{animation-duration:.01ms !important;transition-duration:.01ms !important}}
+  @media (max-width:420px){.wrap{padding:8px 9px 30px}.brand h1{font-size:18px}.row{grid-template-columns:1fr}}
+  @media (max-width:350px){.wrap{padding:7px 7px 26px}.icon-btn{min-width:44px;padding:0 8px;font-size:12px}.seat .name{font-size:12px}.bid-grid .btn{font-size:12px}}
+/* safe-area: keep the original bottom padding, clear the iOS home indicator */
+body{padding-bottom:env(safe-area-inset-bottom)}
+</style>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/doudizhu-premium/online.html">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="icon-btn" href="index.html" aria-label="返回单机斗地主">← 单机</a>
+    <div class="brand">
+      <h1>斗 地 主 · 联 机</h1>
+      <p>3 个座位 · 空位 AI 补位 · 服务端判牌</p>
+    </div>
+    <a class="icon-btn" href="rules.html" aria-label="查看规则">规则</a>
+  </header>
+
+  <main>
+    <section class="box" id="lobby">
+      <h2>创建 / 加入房间</h2>
+      <div class="field"><label for="nickname">昵称</label><input id="nickname" maxlength="16" autocomplete="nickname" placeholder="例如：阿发"></div>
+      <div class="field"><label for="password">房间密码（可选）</label><input id="password" maxlength="24" autocomplete="off" placeholder="留空表示公开房间"></div>
+      <div class="row">
+        <button class="btn primary" id="createBtn" type="button">创建房间</button>
+        <button class="btn" id="joinBtn" type="button">加入房间</button>
+      </div>
+      <div class="field"><label for="roomId">房间号 / 房间 ID</label><input id="roomId" maxlength="80" autocomplete="off" placeholder="粘贴房间号"></div>
+      <div class="field"><label for="inviteCode">邀请码（可选）</label><input id="inviteCode" maxlength="120" autocomplete="off" placeholder="从邀请链接自动带入"></div>
+      <p class="hint" id="lobbyHint">2 名真人 + 1 个 AI，或 1 人 + 2 个 AI 都能开局。断线后可用同一会话重连，超时由 AI 托管。</p>
+      <div class="status"><i class="dot wait" id="lobbyDot"></i><span id="lobbyStatus">尚未连接房间。</span></div>
+    </section>
+
+    <section id="room" hidden>
+      <div class="box">
+        <h2>房间</h2>
+        <div class="room-head">
+          <span class="room-code" id="roomCode">------</span>
+          <span class="pill" id="roomStatePill">等待开始</span>
+          <span class="pill" id="versionPill">v0</span>
+          <button class="btn ghost" id="copyBtn" type="button" style="margin-left:auto">复制邀请链接</button>
+        </div>
+        <div class="invite" id="inviteText">邀请链接会显示在这里。</div>
+        <div class="seats" id="seats"></div>
+        <div class="status"><i class="dot" id="roomDot"></i><span id="roomStatus">等待开局…</span></div>
+      </div>
+
+      <div class="table">
+        <div class="bottom-wrap">
+          <span class="bottom-label">底 牌</span>
+          <div class="bottom-cards" id="bottomCards"></div>
+        </div>
+        <div class="last-play" id="lastPlay"></div>
+        <div class="play-label" id="playLabel">等待叫分</div>
+      </div>
+
+      <div class="hand" id="hand"></div>
+
+      <div class="bid-grid" id="bidPanel" hidden>
+        <button class="btn" type="button" data-bid="0">不叫</button>
+        <button class="btn" type="button" data-bid="1">1 分</button>
+        <button class="btn" type="button" data-bid="2">2 分</button>
+        <button class="btn" type="button" data-bid="3">3 分</button>
+      </div>
+
+      <div class="controls">
+        <button class="btn primary" id="playBtn" type="button">出牌</button>
+        <button class="btn" id="passBtn" type="button">不要</button>
+        <button class="btn" id="hintBtn" type="button">提示</button>
+      </div>
+      <div class="controls">
+        <button class="btn" id="startBtn" type="button">开始对局</button>
+        <button class="btn" id="reconnectBtn" type="button">重连</button>
+        <button class="btn ghost" id="leaveBtn" type="button">离开</button>
+      </div>
+
+      <div class="result" id="result" hidden>
+        <h3 id="resultTitle">本局结束</h3>
+        <p id="resultText"></p>
+        <div class="controls" style="grid-template-columns:1fr 1fr">
+          <button class="btn primary" id="rematchBtn" type="button">再来一局</button>
+          <button class="btn" id="resultLeaveBtn" type="button">回到大厅</button>
+        </div>
+      </div>
+
+      <div class="box">
+        <h2>对局记录</h2>
+        <ul class="log" id="log"></ul>
+      </div>
+      <div class="box">
+        <h2>排行榜</h2>
+        <ul class="lb" id="leaderboard"></ul>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <a href="index.html">单机打 AI</a> · <a href="rules.html">完整规则</a> · <a href="../../index.html">全部游戏</a>
+    <p>房间 / 邀请 / 密码 / 重连 / 托管 / 排行榜由共享房间服务提供；本页只做斗地主适配。</p>
+  </footer>
+</div>
+
+<script src="../../shared/shuffle.js"></script>
+<script src="../../shared/sfx.js"></script>
+<script src="../../shared/store.js"></script>
+<script src="engine.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var E = window.DoudizhuPremiumEngine;
+  var $ = function (id) { return document.getElementById(id); };
+  var SUIT_PATH = {
+    0: 'M12 2C9 6 4 8.5 4 12.5A4 4 0 0 0 11 15.5C10.6 17.5 9.5 19 8 20h8c-1.5-1-2.6-2.5-3-4.5A4 4 0 0 0 20 12.5C20 8.5 15 6 12 2z',
+    1: 'M12 21S3 14.5 3 8.5A4.6 4.6 0 0 1 12 6a4.6 4.6 0 0 1 9 2.5C21 14.5 12 21 12 21z',
+    2: 'M12 2a4 4 0 0 1 4 4c0 1.4-.7 2.6-1.8 3.3A4 4 0 1 1 13 16h-2a4 4 0 1 1-1.2-6.7A4 4 0 0 1 12 2zM11 16h2l1 6h-4z',
+    3: 'M12 2l7 10-7 10-7-10z'
+  };
+  var JOKER_CROWN = 'M4 17l2-8 4 4 2-7 2 7 4-4 2 8zM5 19h14v2H5z';
+  var SESSION_KEY = 'doudizhu-premium:online';
+
+  var roomId = null;
+  var session = null;
+  var playerId = null;
+  var inviteToken = null;
+  var room = null;
+  var selected = {};
+  var hintIds = {};
+  var pollTimer = null;
+  var actionSeq = 0;
+
+  function safeGet(key, fallback) {
+    try { var v = window.localStorage.getItem(key); return v == null ? fallback : v; }
+    catch (e) { return fallback; }
+  }
+  function safeSet(key, value) {
+    try { window.localStorage.setItem(key, value); } catch (e) { /* private mode */ }
+  }
+  function safeJson(value, fallback) {
+    try { return JSON.parse(value); } catch (e) { return fallback; }
+  }
+  function beep(name) {
+    if (!window.Sfx || typeof window.Sfx.play !== 'function') return;
+    try { window.Sfx.play(name); } catch (e) { /* audio unavailable */ }
+  }
+  function esc(text) {
+    return String(text).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+  function clientId() {
+    var id = safeGet(SESSION_KEY + ':client', '');
+    if (!id) {
+      id = 'ddz-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+      safeSet(SESSION_KEY + ':client', id);
+    }
+    return id;
+  }
+  function setStatus(text, kind) {
+    $('roomStatus').textContent = text;
+    $('roomDot').className = 'dot' + (kind === 'wait' ? ' wait' : '');
+  }
+  function api(method, route, body) {
+    return fetch(route, {
+      method: method,
+      headers: { 'content-type': 'application/json' },
+      body: body == null ? undefined : JSON.stringify(body)
+    }).then(function (res) {
+      return res.json().catch(function () { return null; }).then(function (json) {
+        return { status: res.status, body: json };
+      });
+    });
+  }
+
+  function cardBy(id) {
+    var deck = E.makeDeck();
+    for (var i = 0; i < deck.length; i++) if (deck[i].id === id) return deck[i];
+    return null;
+  }
+  function miniCard(card) {
+    if (!card) return '';
+    var r = card.r;
+    if (r >= 16) {
+      return '<span class="mini-card ' + (E.isRed(card) ? 'red' : 'black') + '"><span class="mini-rank">' +
+        (r === E.BIG_JOKER ? '大王' : '小王') + '</span></span>';
+    }
+    return '<span class="mini-card ' + (E.isRed(card) ? 'red' : 'black') + '"><span class="mini-rank">' +
+      esc(E.rankName(r)) + '</span><svg class="mini-pip" viewBox="0 0 24 24" aria-hidden="true"><path d="' +
+      SUIT_PATH[card.s] + '"/></svg></span>';
+  }
+  function cardFace(card) {
+    var r = card.r;
+    var red = E.isRed(card);
+    var cls = 'card ' + (red ? 'red' : 'black');
+    var corner = function (pos) {
+      return '<span class="corner ' + pos + '"><b>' + esc(r >= 16 ? (r === E.BIG_JOKER ? '大' : '小') : E.rankName(r)) + '</b>' +
+        (r >= 16 ? '<svg viewBox="0 0 24 24"><path d="' + JOKER_CROWN + '"/></svg>' : '<svg viewBox="0 0 24 24"><path d="' + SUIT_PATH[card.s] + '"/></svg>') +
+        '</span>';
+    };
+    if (r >= 16) {
+      return '<div class="' + cls + '" data-id="' + esc(card.id) + '" tabindex="0" aria-label="' +
+        (r === E.BIG_JOKER ? '大王' : '小王') + '"><span class="joker-label">' +
+        (r === E.BIG_JOKER ? '大王' : '小王') + '</span>' + corner('tl') + corner('br') + '</div>';
+    }
+    if (r === 14) {
+      return '<div class="' + cls + '" data-id="' + esc(card.id) + '" tabindex="0" aria-label="' + esc(E.cardLabel(card)) + '">' +
+        corner('tl') + corner('br') + '<svg class="bigpip" viewBox="0 0 24 24" aria-hidden="true"><path d="' + SUIT_PATH[card.s] + '"/></svg></div>';
+    }
+    return '<div class="' + cls + '" data-id="' + esc(card.id) + '" tabindex="0" aria-label="' + esc(E.cardLabel(card)) + '">' +
+      corner('tl') + corner('br') + '<svg class="bigpip" viewBox="0 0 24 24" aria-hidden="true" style="width:36%;height:36%"><path d="' + SUIT_PATH[card.s] + '"/></svg></div>';
+  }
+  function layoutHand() {
+    var handEl = $('hand');
+    var cards = handEl.querySelectorAll('.card');
+    var n = cards.length;
+    if (!n) return;
+    var W = handEl.clientWidth || 320;
+    var cw = Math.floor(W / (n * 0.62 + 0.38));
+    cw = Math.max(28, Math.min(44, cw));
+    var step = n > 1 ? Math.min(cw * 0.72, (W - cw - 8) / (n - 1)) : 0;
+    if (step < 12) step = Math.max(10, (W - cw - 8) / (n - 1));
+    var total = cw + step * (n - 1);
+    var offset = Math.max(4, (W - total) / 2);
+    for (var i = 0; i < n; i++) {
+      var el = cards[i];
+      el.style.width = cw + 'px';
+      el.style.height = Math.round(cw * 1.42) + 'px';
+      el.style.left = Math.round(offset + i * step) + 'px';
+      el.style.setProperty('--rank-font', Math.max(12, Math.round(cw * 0.36)) + 'px');
+      el.style.setProperty('--pip-font', Math.max(10, Math.round(cw * 0.22)) + 'px');
+      el.style.zIndex = String(i + 1);
+    }
+    handEl.style.height = Math.round(cw * 1.42 + 22) + 'px';
+  }
+  function renderHand() {
+    var handEl = $('hand');
+    var view = room && room.state;
+    handEl.innerHTML = '';
+    if (!view || !view.hand || !view.hand.length) return;
+    var sorted = view.hand.slice().sort(function (a, b) { return E.cardCmp(a, b); });
+    for (var i = 0; i < sorted.length; i++) {
+      var holder = document.createElement('div');
+      holder.innerHTML = cardFace(sorted[i]);
+      var el = holder.firstChild;
+      if (selected[sorted[i].id]) el.classList.add('sel');
+      if (hintIds[sorted[i].id]) el.classList.add('hinted');
+      handEl.appendChild(el);
+    }
+    layoutHand();
+  }
+  function selectedIds() {
+    return Object.keys(selected);
+  }
+  function clearSelected() {
+    selected = {};
+    var cards = $('hand').querySelectorAll('.card.sel');
+    for (var i = 0; i < cards.length; i++) cards[i].classList.remove('sel');
+  }
+
+  function renderSeats() {
+    if (!room) return;
+    var seats = room.seats || [];
+    var players = (room.state && room.state.players) || [];
+    $('seats').innerHTML = seats.map(function (seat) {
+      var player = players[seat.index] || {};
+      var role = player.isLandlord ? '地主' : (room.state && room.state.landlord >= 0 ? '农民' : '待定');
+      var roleCls = player.isLandlord ? 'role landlord' : (room.state && room.state.landlord >= 0 ? 'role farmer' : 'role');
+      return '<div class="seat' + (seat.isYou ? ' you' : '') + '">' +
+        '<div class="name">' + esc(seat.name) + '</div>' +
+        '<div class="meta">' + (seat.ai ? 'AI' : (seat.isHost ? '房主' : '玩家')) +
+        (player.handCount != null ? ' · ' + player.handCount + ' 张' : '') +
+        (seat.connected ? '' : ' · 离线') + '</div>' +
+        '<span class="' + roleCls + '">' + role + '</span></div>';
+    }).join('');
+  }
+
+  function renderTable() {
+    var view = room && room.state;
+    if (!view) {
+      $('bottomCards').innerHTML = '<span class="mini-card back"></span><span class="mini-card back"></span><span class="mini-card back"></span>';
+      $('lastPlay').innerHTML = '';
+      $('playLabel').textContent = '等待开局';
+      return;
+    }
+    if (view.bottom && view.bottom.revealed && view.bottom.cards) {
+      $('bottomCards').innerHTML = view.bottom.cards.map(miniCard).join('');
+    } else {
+      $('bottomCards').innerHTML = '<span class="mini-card back"></span><span class="mini-card back"></span><span class="mini-card back"></span>';
+    }
+    if (view.lastPlay) {
+      $('lastPlay').innerHTML = view.lastPlay.cards.map(miniCard).join('');
+      $('playLabel').textContent = (view.players && view.players[view.lastPlayer] ? view.players[view.lastPlayer].name : '') +
+        ' · ' + E.typeName(view.lastPlay.type);
+    } else {
+      $('lastPlay').innerHTML = '';
+      $('playLabel').textContent = view.phase === 'bid' ? '等待叫分' : (view.phase === 'over' ? '本局结束' : '自由出牌');
+    }
+  }
+
+  function renderControls() {
+    var view = room && room.state;
+    var you = room ? room.you : -1;
+    var myTurn = view && view.phase !== 'over' && view.turnSeat === you;
+    var bidBtns = $('bidPanel').querySelectorAll('button[data-bid]');
+    var canBid = myTurn && view.phase === 'bid';
+    $('bidPanel').hidden = !canBid;
+    if (canBid) {
+      var highest = view.bidding ? view.bidding.highest : 0;
+      for (var i = 0; i < bidBtns.length; i++) {
+        var score = Number(bidBtns[i].getAttribute('data-bid'));
+        bidBtns[i].disabled = score !== 0 && score <= highest;
+      }
+    }
+    var canPlay = myTurn && view.phase === 'play';
+    $('playBtn').disabled = !canPlay;
+    $('passBtn').disabled = !canPlay || !view.lastPlay;
+    $('hintBtn').disabled = !canPlay;
+    $('startBtn').disabled = !room || room.started;
+    $('rematchBtn').disabled = !(room && room.over && room.canRestart);
+    if (!room || !room.over) $('result').hidden = true;
+  }
+
+  function renderRoom() {
+    if (!room) return;
+    $('lobby').hidden = true;
+    $('room').hidden = false;
+    $('roomCode').textContent = room.code || room.roomId || '------';
+    $('roomStatePill').textContent = room.over ? '已结束' : (room.started ? '进行中' : '等待开始');
+    $('roomStatePill').className = 'pill' + (room.over ? '' : (room.started ? ' on' : ''));
+    $('versionPill').textContent = '状态 v' + (room.stateVersion || 0);
+    var link = location.origin + location.pathname + '?room=' + encodeURIComponent(room.roomId) +
+      '&code=' + encodeURIComponent(inviteToken || room.inviteCode || '');
+    $('inviteText').textContent = link;
+    renderSeats();
+    renderTable();
+    renderHand();
+    renderControls();
+    var view = room.state;
+    if (room.over && room.result) {
+      $('result').hidden = false;
+      var r = room.result;
+      $('resultTitle').textContent = r.winnerSide === 'landlord' ? '地主获胜' : '农民获胜';
+      $('resultText').textContent = '本局 ' + r.points + ' 分（叫分 ' + r.bid + ' × ' + r.multiplier +
+        ' 倍）；' + (r.details || []).map(function (d) {
+          return d.name + ' ' + (d.delta > 0 ? '+' : '') + d.delta;
+        }).join('，') + '。';
+    } else {
+      $('result').hidden = true;
+    }
+    if (view) {
+      if (view.phase === 'bid') {
+        setStatus(view.turnSeat === room.you ? '轮到你叫分。' : '等待 ' + (view.turnName || '对手') + ' 叫分…', view.turnSeat === room.you ? '' : 'wait');
+      } else if (view.phase === 'play') {
+        setStatus(view.turnSeat === room.you ? (view.lastPlay ? '轮到你出牌或不要。' : '轮到你自由出牌。') : '等待 ' + (view.turnName || '对手') + ' 出牌…', view.turnSeat === room.you ? '' : 'wait');
+      } else {
+        setStatus('本局结束。', '');
+      }
+    } else {
+      setStatus(room.started ? '等待服务器状态…' : '等待房主开始对局…', 'wait');
+    }
+    renderLog();
+  }
+
+  function renderLog() {
+    var view = room && room.state;
+    var lines = view && view.log ? view.log.slice(-18).reverse() : [];
+    $('log').innerHTML = lines.map(function (line) { return '<li>' + esc(line) + '</li>'; }).join('');
+  }
+
+  async function loadLeaderboard() {
+    try {
+      var res = await api('GET', '/api/leaderboard?game=doudizhu-premium');
+      var entries = (res.body && res.body.entries) || [];
+      $('leaderboard').innerHTML = entries.slice(0, 10).map(function (e) {
+        return '<li><b>' + esc(e.name || '玩家') + '</b><span>' + (e.ai ? 'AI' : '玩家') +
+          ' · ' + (e.winner ? '胜' : '负') + (e.score != null ? ' · ' + e.score + ' 分' : '') + '</span></li>';
+      }).join('');
+    } catch (e) { /* keep previous board */ }
+  }
+
+  async function refresh() {
+    if (!roomId || !session) return;
+    try {
+      var res = await api('GET', '/api/rooms/' + encodeURIComponent(roomId) + '?session=' + encodeURIComponent(session) + '&playerId=' + encodeURIComponent(playerId));
+      if (res.status === 404) { leaveLocal(); return; }
+      if (!res.body || res.body.ok === false) return;
+      room = res.body;
+      if (res.body.inviteCode) inviteToken = res.body.inviteCode;
+      renderRoom();
+      if (room.over) loadLeaderboard();
+    } catch (e) { /* network hiccup; next poll retries */ }
+  }
+  function startPolling() {
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(refresh, 1000);
+    refresh();
+  }
+  function stopPolling() {
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = null;
+  }
+
+  function saveSession() {
+    safeSet(SESSION_KEY, JSON.stringify({ roomId: roomId, session: session, playerId: playerId, inviteToken: inviteToken }));
+  }
+  function leaveLocal() {
+    stopPolling();
+    roomId = null; session = null; playerId = null; inviteToken = null; room = null;
+    safeSet(SESSION_KEY, '');
+    $('room').hidden = true;
+    $('lobby').hidden = false;
+    $('lobbyStatus').textContent = '已离开房间。';
+    $('lobbyDot').className = 'dot wait';
+  }
+
+  async function enterRoom(id, sess, pid, invite) {
+    roomId = id; session = sess; playerId = pid; inviteToken = invite || null;
+    saveSession();
+    await refresh();
+    startPolling();
+  }
+
+  async function createRoom() {
+    var nickname = $('nickname').value.trim() || '房主';
+    var password = $('password').value.trim() || null;
+    $('lobbyStatus').textContent = '正在创建房间…';
+    try {
+      var res = await api('POST', '/api/rooms', { playerId: clientId(), nickname: nickname, password: password });
+      if (res.status !== 201 || !res.body || !res.body.roomId) {
+        $('lobbyStatus').textContent = '创建失败：' + ((res.body && res.body.error && res.body.error.message) || res.status);
+        return;
+      }
+      beep('deal');
+      await enterRoom(res.body.roomId, res.body.session, res.body.playerId, res.body.inviteToken);
+      } catch (e) {
+      $('lobbyStatus').textContent = '创建失败：' + e.message;
+    }
+  }
+  async function joinRoom() {
+    var id = $('roomId').value.trim();
+    if (!id) { $('lobbyStatus').textContent = '先填写房间号。'; return; }
+    var nickname = $('nickname').value.trim() || '玩家';
+    var invite = $('inviteCode').value.trim() || null;
+    var password = $('password').value.trim() || null;
+    $('lobbyStatus').textContent = '正在加入房间…';
+    try {
+      var res = await api('POST', '/api/rooms/' + encodeURIComponent(id) + '/join', {
+        playerId: clientId(), nickname: nickname, inviteCode: invite, password: password
+      });
+      if (res.status !== 200 || !res.body || !res.body.session) {
+        $('lobbyStatus').textContent = '加入失败：' + ((res.body && res.body.error && res.body.error.message) || res.status);
+        return;
+      }
+      beep('deal');
+      await enterRoom(res.body.roomId || id, res.body.session, res.body.playerId || clientId(), invite);
+      loadLeaderboard();
+    } catch (e) {
+      $('lobbyStatus').textContent = '加入失败：' + e.message;
+    }
+  }
+
+  async function postAction(route, body) {
+    if (!roomId || !session) return null;
+    try {
+      var res = await api('POST', '/api/rooms/' + encodeURIComponent(roomId) + '/' + route, Object.assign({ session: session, playerId: playerId }, body || {}));
+      if (res.status >= 400) {
+        setStatus('操作被拒绝：' + ((res.body && res.body.error && res.body.error.message) || res.status), '');
+        beep('error');
+        return res;
+      }
+      if (res.body && res.body.roomId) { room = res.body; renderRoom(); }
+      else { await refresh(); }
+      if (room && room.over) loadLeaderboard();
+      return res;
+    } catch (e) {
+      setStatus('网络错误：' + e.message, '');
+      return null;
+    }
+  }
+
+  async function playCards() {
+    var ids = selectedIds();
+    if (!ids.length) { setStatus('先点选要出的牌。', ''); return; }
+    var key = 'ddz-' + clientId() + '-' + (++actionSeq);
+    var res = await postAction('actions', { action: { k: 'play', cards: ids }, idempotencyKey: key });
+    if (res && res.status === 200) { beep('move'); clearSelected(); hintIds = {}; await refresh(); }
+  }
+  async function passTurn() {
+    var key = 'ddz-' + clientId() + '-' + (++actionSeq);
+    var res = await postAction('actions', { action: { k: 'pass' }, idempotencyKey: key });
+    if (res && res.status === 200) { beep('click'); clearSelected(); hintIds = {}; await refresh(); }
+  }
+  function hint() {
+    var view = room && room.state;
+    if (!view || !view.hand) return;
+    var play = E.suggest(view.hand, view.lastPlay);
+    clearSelected();
+    hintIds = {};
+    if (!play) { setStatus('没有能压过上家的牌，只能不要。', ''); return; }
+    play.cards.forEach(function (c) { hintIds[c.id] = 1; selected[c.id] = 1; });
+    renderHand();
+    setStatus('提示：' + E.typeName(play.type) + '（已选中，可直接出牌）。', '');
+    beep('click');
+  }
+  async function bid(score) {
+    var key = 'ddz-' + clientId() + '-' + (++actionSeq);
+    var res = await postAction('actions', { action: { k: 'bid', score: score }, idempotencyKey: key });
+    if (res && res.status === 200) { beep('click'); await refresh(); }
+  }
+
+  function wire() {
+    $('createBtn').addEventListener('click', createRoom);
+    $('joinBtn').addEventListener('click', joinRoom);
+    $('copyBtn').addEventListener('click', function () {
+      var text = $('inviteText').textContent || '';
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(function () { setStatus('邀请链接已复制。', ''); },
+            function () { setStatus('复制失败，请手动选择链接。', ''); });
+        } else { setStatus('请手动选择上方链接复制。', ''); }
+      } catch (e) { setStatus('请手动选择上方链接复制。', ''); }
+    });
+    $('startBtn').addEventListener('click', async function () {
+      await postAction('start', {});
+      beep('deal');
+      await refresh();
+    });
+    $('rematchBtn').addEventListener('click', async function () {
+      await postAction('restart', {});
+      beep('deal');
+      await refresh();
+    });
+    $('reconnectBtn').addEventListener('click', async function () {
+      var res = await postAction('reconnect', {});
+      if (res && res.status === 200) { setStatus('重连成功，托管已清除。', ''); await refresh(); }
+    });
+    $('leaveBtn').addEventListener('click', async function () {
+      await postAction('leave', {});
+      leaveLocal();
+    });
+    $('resultLeaveBtn').addEventListener('click', leaveLocal);
+    $('playBtn').addEventListener('click', playCards);
+    $('passBtn').addEventListener('click', passTurn);
+    $('hintBtn').addEventListener('click', hint);
+    var bids = $('bidPanel').querySelectorAll('button[data-bid]');
+    for (var i = 0; i < bids.length; i++) {
+      bids[i].addEventListener('click', function () { bid(Number(this.getAttribute('data-bid'))); });
+    }
+    $('hand').addEventListener('click', function (e) {
+      var card = e.target.closest ? e.target.closest('.card') : null;
+      if (!card) return;
+      var id = card.getAttribute('data-id');
+      if (!id) return;
+      if (selected[id]) delete selected[id]; else selected[id] = 1;
+      card.classList.toggle('sel', !!selected[id]);
+      beep('click');
+    });
+    $('hand').addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      var card = e.target.closest ? e.target.closest('.card') : null;
+      if (!card) return;
+      e.preventDefault();
+      var id = card.getAttribute('data-id');
+      if (selected[id]) delete selected[id]; else selected[id] = 1;
+      card.classList.toggle('sel', !!selected[id]);
+    });
+    window.addEventListener('resize', layoutHand);
+  }
+
+  async function boot() {
+    wire();
+    $('nickname').value = safeGet(SESSION_KEY + ':nick', '');
+    $('nickname').addEventListener('change', function () { safeSet(SESSION_KEY + ':nick', this.value.trim()); });
+    var params = new URLSearchParams(location.search);
+    var urlRoom = params.get('room');
+    var urlCode = params.get('code');
+    var saved = safeJson(safeGet(SESSION_KEY, '{}'), {});
+    if (urlRoom) {
+      $('roomId').value = urlRoom;
+      if (urlCode) $('inviteCode').value = urlCode;
+      if (saved && saved.roomId === urlRoom && saved.session) {
+        await enterRoom(saved.roomId, saved.session, saved.playerId, saved.inviteToken);
+      } else {
+        $('lobbyStatus').textContent = '已带入房间号与邀请码，填写昵称后点「加入房间」。';
+      }
+    } else if (saved && saved.roomId && saved.session) {
+      await enterRoom(saved.roomId, saved.session, saved.playerId, saved.inviteToken);
+    }
+  }
+
+  boot();
+})();
+</script>
+</body>
+</html>

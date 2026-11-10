@@ -14,6 +14,10 @@
  * take down the other contracts. Each child prints one final line:
  *   RESULT: N passed, M failed, K skipped
  *
+ * Files whose wall clock is inherently longer than the 120s default carry a
+ * per-file limit in TIMEOUT_OVERRIDES (keyed by path relative to the boardgame
+ * root). An explicit --timeout always wins and applies to every file.
+ *
  * Exit code:
  *   0 — all executed assertions passed (skipped future modules allowed)
  *   1 — an assertion failed, a child crashed, or --strict was used and any
@@ -28,16 +32,38 @@ import { fileURLToPath } from 'node:url';
 const TESTS_DIR = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.dirname(TESTS_DIR);
 const RESULT_RE = /RESULT:\s*(\d+)\s+passed,\s*(\d+)\s+failed(?:,\s*(\d+)\s+skipped)?/g;
+const DEFAULT_TIMEOUT_MS = 120000;
+
+// play/e2e.mjs drives two CDP tabs through the whole user-visible chain
+// (lobby -> rooms -> match -> result). Since the static server now force-closes
+// keep-alive sockets and the E2E client sends Connection: close, teardown no
+// longer dominates: measured 8.56s / 8.69s / 8.59s total (close phase 0.00s,
+// chain ~8.5s). 20s is ~2.3x the slowest measured run; the 120s default
+// remains for every other file.
+// Keyed by path relative to ROOT, with forward slashes.
+const TIMEOUT_OVERRIDES = {
+  'play/e2e.mjs': 20000
+};
+
+function timeoutFor(relPath, opts) {
+  if (opts.timeoutExplicit) return opts.timeout;
+  return Object.prototype.hasOwnProperty.call(TIMEOUT_OVERRIDES, relPath)
+    ? TIMEOUT_OVERRIDES[relPath]
+    : opts.timeout;
+}
 
 function parseArgs(argv) {
-  const opts = { strict: false, filter: null, timeout: 120000, baseline: true };
+  const opts = { strict: false, filter: null, timeout: DEFAULT_TIMEOUT_MS, timeoutExplicit: false, baseline: true, json: false };
   for (const arg of argv) {
     if (arg === '--strict') opts.strict = true;
     else if (arg === '--no-baseline') opts.baseline = false;
+    else if (arg === '--json') opts.json = true;
     else if (arg.startsWith('--filter=')) opts.filter = arg.slice('--filter='.length);
-    else if (arg.startsWith('--timeout=')) opts.timeout = Number(arg.slice('--timeout='.length)) || 120000;
-    else if (arg === '--help' || arg === '-h') {
-      console.log('usage: node run-all.mjs [--strict] [--no-baseline] [--filter=<substr>] [--timeout=<ms>]');
+    else if (arg.startsWith('--timeout=')) {
+      opts.timeout = Number(arg.slice('--timeout='.length)) || DEFAULT_TIMEOUT_MS;
+      opts.timeoutExplicit = true;
+    } else if (arg === '--help' || arg === '-h') {
+      console.log('usage: node run-all.mjs [--strict] [--no-baseline] [--json] [--filter=<substr>] [--timeout=<ms>]');
       process.exit(0);
     } else {
       console.error('unknown argument: ' + arg);
@@ -95,6 +121,15 @@ function main() {
     files.unshift(baseline);
   }
 
+  // 双客户端 → 同一局 → 结算一致的浏览器 e2e。质量门禁要求它进 run-all，
+  // 让联机证据随每次测试一起复跑；--no-baseline 时跳过。
+  const e2e = path.join(TESTS_DIR, '..', 'play', 'e2e.mjs');
+  if (opts.baseline && fs.existsSync(e2e) && (!opts.filter
+    || path.relative(ROOT, e2e).indexOf(opts.filter) !== -1
+    || 'e2e'.indexOf(opts.filter) !== -1)) {
+    files.push(e2e);
+  }
+
   if (files.length === 0) {
     console.error('no *.test.mjs files matched' + (opts.filter ? ' filter ' + opts.filter : ''));
     console.log('');
@@ -110,11 +145,13 @@ function main() {
 
   for (const file of files) {
     const label = path.relative(ROOT, file);
+    const relPath = label.split(path.sep).join('/');
+    const timeout = timeoutFor(relPath, opts);
     const started = Date.now();
     const child = spawnSync(process.execPath, [file], {
       cwd: ROOT,
       encoding: 'utf8',
-      timeout: opts.timeout,
+      timeout: timeout,
       env: Object.assign({}, process.env, { BOARDGAME_TEST: '1' })
     });
     const duration = Date.now() - started;
@@ -191,6 +228,31 @@ function main() {
 
   console.log('');
   console.log('RESULT: ' + totalPassed + ' passed, ' + totalFailed + ' failed, ' + totalSkipped + ' skipped');
+
+  if (opts.json) {
+    const report = {
+      generatedAt: new Date().toISOString(),
+      runner: 'games/boardgame/tests/run-all.mjs',
+      summary: {
+        files: rows.length,
+        passed: totalPassed,
+        failed: totalFailed,
+        skipped: totalSkipped,
+        ok: bad.length === 0 && totalFailed === 0,
+      },
+      rows: rows.map(function (row) {
+        return {
+          label: row.label,
+          status: row.status,
+          passed: row.passed,
+          failed: row.failed,
+          skipped: row.skipped,
+          durationMs: row.duration,
+        };
+      }),
+    };
+    fs.writeFileSync(path.join(TESTS_DIR, 'report.json'), JSON.stringify(report, null, 2) + '\n');
+  }
 
   const skipExit = opts.strict && totalSkipped > 0;
   if (totalFailed > 0 || bad.length > 0 || skipExit) {

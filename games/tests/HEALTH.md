@@ -1,37 +1,38 @@
 # 游戏自动化测试健康报告
 
-- 最后运行：2026-11-09 03:34:56（CST）
-- 运行命令：`node games/tests/run-all.js --json`
-- 结果：**17 个测试文件全部通过，617 条断言通过，0 失败**，退出码 0
-- 覆盖：**17 / 18 款游戏**有可运行的自动化测试；`voice-room` 尚无
+- 最后运行：2026-11-10 10:10:52（CST）
+- 运行命令：`node games/tests/run-all.js`
+- 结果：**605 个测试文件 / 127,864 条断言；127,762 通过 / 102 失败**。失败全部在 `site-quality`，且全部落在 `*-premium` 页面既有债（canonical/description/touch-target/console 等），非 premium 页面 0 失败
+- 覆盖：**124 / 124 款游戏**有可运行的自动化测试（含 100 个 arcade 变体与 voice-room）
 
 ## 逐游戏结果
 
 | 游戏 | 测试文件 | 断言数 | 最后运行时间 | 状态 |
 | --- | --- | ---: | --- | --- |
-| 24game | `games/24game/test.js` | 34 | 2026-11-09 03:34:56 | PASS |
-| aeroplane | `games/aeroplane/test.js` | 39 | 2026-11-09 03:34:56 | PASS |
-| checkers-jump | `games/checkers-jump/test.js` | 30 | 2026-11-09 03:34:56 | PASS |
-| chess | `games/chess/test.js` | 25 | 2026-11-09 03:34:56 | PASS |
-| connect4 | `games/connect4/test.js` | 28 | 2026-11-09 03:34:56 | PASS |
-| doudizhu | `games/doudizhu/test.js` | 110 | 2026-11-09 03:34:56 | PASS |
-| draughts | `games/draughts/test.js` | 35 | 2026-11-09 03:34:56 | PASS |
-| freecell | `games/freecell/test.js` | 38 | 2026-11-09 03:34:56 | PASS |
-| go9 | `games/go9/test.js` | 31 | 2026-11-09 03:34:56 | PASS |
-| gomoku | `games/gomoku/test.js` | 22 | 2026-11-09 03:34:56 | PASS |
-| pioneers | `games/pioneers/test.js` | 45 | 2026-11-09 03:34:56 | PASS |
-| reversi | `games/reversi/test.js` | 23 | 2026-11-09 03:34:56 | PASS |
-| solitaire | `games/solitaire/test.js` | 37 | 2026-11-09 03:34:56 | PASS |
-| spider | `games/spider/test.js` | 34 | 2026-11-09 03:34:56 | PASS |
-| tap-match | `games/tap-match/test.js` | 23 | 2026-11-09 03:34:56 | PASS |
-| undercover | `games/undercover/test.js` | 29 | 2026-11-09 03:34:56 | PASS |
-| xiangqi | `games/xiangqi/test.js` | 34 | 2026-11-09 03:34:56 | PASS |
+| 24game | `games/24game/test.js` | 34 | 2026-11-10 03:44:26 | PASS |
+| aeroplane | `games/aeroplane/test.js` | 39 | 2026-11-10 03:44:26 | PASS |
+| checkers-jump | `games/checkers-jump/test.js` | 30 | 2026-11-10 03:44:26 | PASS |
+| chess | `games/chess/test.js` | 25 | 2026-11-10 03:44:26 | PASS |
+| connect4 | `games/connect4/test.js` | 28 | 2026-11-10 03:44:26 | PASS |
+| doudizhu | `games/doudizhu/test.js` | 110 | 2026-11-10 03:44:26 | PASS |
+| draughts | `games/draughts/test.js` | 35 | 2026-11-10 03:44:26 | PASS |
+| freecell | `games/freecell/test.js` | 38 | 2026-11-10 03:44:26 | PASS |
+| go9 | `games/go9/test.js` | 31 | 2026-11-10 03:44:26 | PASS |
+| gomoku | `games/gomoku/test.js` | 22 | 2026-11-10 03:44:26 | PASS |
+| pioneers | `games/pioneers/test.js` | 45 | 2026-11-10 03:44:26 | PASS |
+| reversi | `games/reversi/test.js` | 23 | 2026-11-10 03:44:26 | PASS |
+| solitaire | `games/solitaire/test.js` | 37 | 2026-11-10 03:44:26 | PASS |
+| spider | `games/spider/test.js` | 34 | 2026-11-10 03:44:26 | PASS |
+| tap-match | `games/tap-match/test.js` | 23 | 2026-11-10 03:44:26 | PASS |
+| undercover | `games/undercover/test.js` | 29 | 2026-11-10 03:44:26 | PASS |
+| voice-room | `games/voice-room/test.js` | 96 | 2026-11-10 03:44:26 | PASS |
+| xiangqi | `games/xiangqi/test.js` | 34 | 2026-11-10 03:44:26 | PASS |
 
-## 还没有自动化测试的游戏
+## 覆盖补充说明（2026-11-10）
 
-| 游戏 | 原因 | 现有兜底 |
-| --- | --- | --- |
-| voice-room（语音房） | 实时联机房间，核心是 Cloudflare Worker / Durable Object 的信令与房间状态机，依赖运行时网络与存储，页面逻辑也以 DOM 为主；本轮未建立可脱离运行时的测试入口。 | 仅人工浏览器联调 / E2E；`games/shared/rules.js` 的棋类规则已被 connect4、gomoku 测试覆盖。 |
+- voice-room 已有自动化测试：`games/voice-room/test.js`（96 条断言，PASS）。此前「voice-room 无自动化」的结论已过期。
+- 100 个 arcade 变体各有 `games/<slug>/test.js`，共享模块测试由 `run-all.js` 的 `EXTRA_TESTS` 显式运行；完整清单以最近一次运行输出为准。
+- 上表 17 款经典游戏的断言数经 2026-11-10 复跑核对未变，并补入 voice-room。
 
 `games/en/`、`games/id/` 是语言首页，`games/assets/`、`games/shared/` 是资源与共享引擎，均不是游戏，不计入覆盖率。
 

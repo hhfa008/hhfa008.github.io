@@ -54,9 +54,9 @@ var I18N = {
     var status = CORE.status(S);
     if (status !== 'playing') {
       E.overlay.hidden = false;
-      E.overlayTitle.textContent = I18N[I18n.lang()][status + 'Overlay'] || '';
-      E.overlayText.textContent = I18N[I18n.lang()].hintText;
-      E.btnOverlay.textContent = I18N[I18n.lang()].playAgain;
+      E.overlayTitle.textContent = I18N[Arcade.lang()][Arcade.overlayKey(status)] || '';
+      E.overlayText.textContent = I18N[Arcade.lang()].hintText;
+      E.btnOverlay.textContent = I18N[Arcade.lang()].playAgain;
     } else {
       E.overlay.hidden = true;
     }
@@ -86,4 +86,10 @@ var I18N = {
   Arcade.onLang(render);
   Arcade.init({ strings: I18N, onLang: render });
   render();
+  // 固定步长推进：60 步/秒，标签页隐藏时由 ticker 暂停累积，回来不补帧。
+  var TICKER = ArcadeTick.create({
+    step: 1000 / 60,
+    onStep: function () { input('tick'); }
+  });
+  TICKER.start();
 })();

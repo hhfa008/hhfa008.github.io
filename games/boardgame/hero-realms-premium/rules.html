@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2314110c'/%3E%3Cpath d='M20 12h8l4 22 4-22h8L36 52h-8z' fill='%23e2b85e'/%3E%3C/svg%3E">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14110c">
+<meta name="description" content="英雄领域 Hero Realms 完整规则：2 人 50 点生命、7 金币 + 3 匕首起始牌组、5 张市场、无限购买、冠军防御与同盟能力。含本实现与实体基础版的差异说明。">
+<title>英雄领域 HERO REALMS · 完整规则</title>
+<style>
+  :root{
+    --art-parchment:url("../../assets/art/premium/hero-realms/parchment.webp");
+    --serif:"Songti SC","Iowan Old Style","Palatino Linotype",Georgia,serif;
+    --bg:#12100b;--panel:#241f16;--panel2:#2d271b;--line:#57492f;--ink:#f6efdd;--muted:#b9ac90;
+    --gold:#e9be66;--gold2:#ffd98c;--combat:#ff8b72;--heal:#79d5a4;--imp:#8db4ea;--necros:#df8cac;--wild:#b3da8d;
+  }
+  @media (prefers-color-scheme: light){
+    :root{--bg:#f0e7d5;--panel:#fffaf0;--panel2:#f6eddc;--line:#cdbb97;--ink:#2b2217;--muted:#6d604c;
+      --gold:#946411;--gold2:#7b5208;--combat:#b8432d;--heal:#1f8d63;--imp:#2f63a8;--necros:#a13d61;--wild:#4d7a2c}
+  }
+  *{box-sizing:border-box}
+  html,body{max-width:100%;overflow-x:hidden}
+  body{margin:0; color:var(--ink); font:16px/1.8 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:radial-gradient(900px 520px at 50% -10%,#3a3020,transparent 64%), var(--bg); background-color:var(--bg)}
+  .wrap{max-width:780px; margin:0 auto; padding:12px 14px 48px}
+  .top{display:flex; align-items:center; gap:8px; padding:5px 0 12px}
+  .top a{display:inline-flex; align-items:center; justify-content:center; min-height:44px; padding:0 13px; border:1px solid var(--line);
+    border-radius:11px; background:var(--panel); color:var(--ink); text-decoration:none; font-size:14px}
+  .top h1{flex:1; text-align:center; font-family:var(--serif); font-size:19px; margin:0}
+  article{background:linear-gradient(160deg, var(--panel), var(--panel2)); border:1px solid var(--line); border-radius:20px; padding:20px 18px; box-shadow:0 18px 44px rgba(0,0,0,.28)}
+  h2{font-family:var(--serif); font-size:19px; margin:24px 0 8px; padding-top:16px; border-top:1px dashed var(--line)}
+  h2:first-of-type{margin-top:6px; padding-top:0; border-top:0}
+  h3{font-size:15px; margin:14px 0 4px; color:var(--gold2)}
+  p{margin:0 0 10px}
+  ul,ol{margin:0 0 12px; padding-left:22px}
+  li{margin:3px 0}
+  .lead{font-size:17px; color:var(--gold2); font-weight:800; line-height:1.65}
+  .note,.warn,.cut{background:rgba(233,190,102,.09); border-left:3px solid var(--gold); border-radius:0 10px 10px 0; padding:10px 13px; margin:12px 0; color:var(--muted)}
+  .warn{background:rgba(255,139,114,.1); border-left-color:var(--combat)}
+  .cut{background:rgba(141,180,234,.1); border-left-color:var(--imp)}
+  .note b,.warn b,.cut b{color:var(--ink)}
+  table{width:100%; border-collapse:collapse; margin:10px 0 16px; font-size:13px}
+  th,td{border:1px solid var(--line); padding:8px 9px; text-align:left; vertical-align:top}
+  th{background:rgba(255,255,255,.05); font-size:12px; letter-spacing:.4px; color:var(--muted)}
+  a{color:var(--gold); word-break:break-word}
+  .sources li{margin-bottom:12px}
+  .sources b{display:block; font-size:14px}
+  .sources span{display:block; font-size:13px; color:var(--muted)}
+  .pill{display:inline-block; border:1px solid var(--line); border-radius:999px; padding:0 9px; font-size:12px; color:var(--muted); margin:0 4px 4px 0}
+  .foot{text-align:center; margin-top:18px; font-size:13px; color:var(--muted)}
+  .foot a{display:inline-flex; align-items:center; min-height:44px; margin:0 10px}
+  figure{margin:16px 0; border:1px solid var(--line); border-radius:14px; overflow:hidden; background:rgba(0,0,0,.16)}
+  figure img{display:block; width:100%; height:auto}
+  figcaption{font-size:12px; color:var(--muted); padding:8px 10px}
+  .factions{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px; margin:10px 0 14px}
+  .faction{background:rgba(0,0,0,.14); border:1px solid var(--line); border-radius:12px; padding:9px 11px}
+  .faction b{display:block; font-size:14px}
+  .faction span{font-size:13px; color:var(--muted)}
+  .faq p{margin:0 0 8px}
+/* safe-area: keep the original bottom padding, clear the iOS home indicator */
+body{padding-bottom:env(safe-area-inset-bottom)}
+</style>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "英雄领域 Hero Realms · 完整规则",
+  "description": "2 人 50 点生命、7 金币 + 3 匕首起始牌组、5 张公开市场、无限购买、冠军防御与同盟能力。含本实现与实体基础版的差异说明。",
+  "inLanguage": "zh-CN",
+  "author": { "@type": "Organization", "name": "boardgame premium" },
+  "about": "Hero Realms 英雄领域 桌游规则",
+  "image": "assets/og.webp"
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "一回合能买几张市场牌？",
+      "acceptedAnswer": { "@type": "Answer", "text": "没有数量上限。只要金币足够，你可以购买任意多张市场牌；每买一张立即从补牌堆补位，买到的牌进入弃牌堆。" }
+    },
+    {
+      "@type": "Question",
+      "name": "同盟能力什么时候触发？",
+      "acceptedAnswer": { "@type": "Answer", "text": "当你打出一张带同盟能力的牌，且场上已经有一张同派系的牌（在出牌区或冠军区）时触发。第一张同派系牌不会触发自己的同盟能力。" }
+    },
+    {
+      "@type": "Question",
+      "name": "战斗可以打冠军吗？",
+      "acceptedAnswer": { "@type": "Answer", "text": "可以。战斗池里的点数可以分配给对手英雄或任意一个对手冠军。冠军有防御力，伤害达到或超过防御力时被击倒并进入对手弃牌堆。" }
+    },
+    {
+      "@type": "Question",
+      "name": "治疗能超过 50 点生命吗？",
+      "acceptedAnswer": { "@type": "Answer", "text": "不能。任何治疗最多把生命补到 50 点，超出部分无效。" }
+    },
+    {
+      "@type": "Question",
+      "name": "本实现和实体基础版完全一样吗？",
+      "acceptedAnswer": { "@type": "Answer", "text": "不完全一样。本实现使用 7 金币 + 3 匕首起始牌组，并从基础版市场牌中截取 51 个卡名、约 80 张牌；卡牌数值为适配本引擎的公开规则实现，已在规则页明确标注。" }
+    }
+  ]
+}
+</script>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/hero-realms-premium/rules.html">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a href="index.html">← 返回牌桌</a>
+    <h1>英雄领域 · 完整规则</h1>
+    <a href="../index.html">目录</a>
+  </header>
+
+  <article>
+    <p class="lead">一句话规则：双方各有 50 点生命，用 7 枚金币和 3 把匕首起手。每回合抽 5 张牌，打出金币购买更强的市场牌，打出战斗攻击对手英雄或冠军；谁先把对方的生命打到 0，谁就获胜。</p>
+
+    <figure>
+      <img src="assets/detail-1.webp" width="1200" height="800" alt="英雄领域市场与手牌示意：5 张公开市场牌、金币与战斗计数" loading="lazy">
+      <figcaption>5 张公开市场牌构成牌库构筑的核心：金币买牌，战斗施压，治疗拖长对局。</figcaption>
+    </figure>
+
+    <figure>
+      <img src="assets/detail-2.webp" width="1200" height="800" alt="英雄领域冠军区与战斗结算示意：冠军防御力、生命条与派系颜色" loading="lazy">
+      <figcaption>冠军拥有防御力并留在场上；击倒冠军可以清除对手的持续威胁，但也会消耗战斗。</figcaption>
+    </figure>
+
+    <h2>一、游戏目标与人数</h2>
+    <p>《英雄领域》（Hero Realms）是 Wise Wizard Games 于 2016 年出版的牌库构筑卡牌游戏，基础版支持 2 至 4 人。本实现采用官方双人对战口径：两名玩家各有 50 点生命，一方生命归零时对局立即结束，另一方获胜。单局通常持续 20 至 30 分钟。</p>
+    <p>牌库构筑的核心不是“这一手打出多少伤害”，而是“这次购买会让下一轮抽牌变成什么样”。你起始的 10 张牌很弱，但随着金币不断变成更强的行动牌、物品和冠军，牌库会逐渐从 1 点金币、1 点战斗的小牌，成长为能在一回合内打出十几点战斗的引擎。</p>
+
+    <h2>二、组件与本实现口径</h2>
+    <p>实体基础版的市场牌约有 80 张，包含帝国、公会、死灵、荒野四个派系，以及金币、红宝石、匕首、短剑等基础牌。本实现遵循以下口径，并在本页明确区分“官方规则”与“本作实现”：</p>
+    <ul>
+      <li><b>生命：</b>双方各 50 点，与官方双人规则一致。</li>
+      <li><b>起始牌组：</b>本作按产品口径使用 <b>7 张金币 + 3 张匕首</b>，共 10 张。实体基础版的起始牌组为 7 金币 + 1 红宝石 + 1 匕首 + 1 短剑；这是本作有意采用的入门简化。</li>
+      <li><b>市场：</b>5 张公开市场牌。本作从基础版中选取 <b>51 个卡名、约 80 张市场牌</b>，未纳入 Fire Gem、英雄牌组、守卫关键词与部分扩展卡。</li>
+      <li><b>卡牌数值：</b>名称、派系与类型取自基础版；具体数值为适配本引擎的公开规则实现，不声称与实体卡逐字一致。</li>
+    </ul>
+    <div class="cut"><b>范围声明：</b>本页不会把简化规则伪装成官方完整规则。所有与实体基础版不同的地方，都在这里和 <code>realism.json</code> 中标注。</div>
+
+    <div class="factions">
+      <div class="faction"><b style="color:var(--imp)">帝国</b><span>金币、治疗与稳健的冠军，擅长把局面拖向后期。</span></div>
+      <div class="faction"><b style="color:var(--gold)">公会</b><span>高效率的金币与抽牌，让牌库转得更快。</span></div>
+      <div class="faction"><b style="color:var(--necros)">死灵</b><span>高攻击冠军与吸血，用战斗直接压垮对手。</span></div>
+      <div class="faction"><b style="color:var(--wild)">荒野</b><span>爆发战斗与治疗，野兽冠军提供持续威胁。</span></div>
+    </div>
+
+    <h2>三、开局与回合流程</h2>
+    <ol>
+      <li>双方各取 10 张起始牌，洗混后作为牌库；先手玩家先从牌库抽 5 张作为起手。</li>
+      <li>从市场牌堆翻出 5 张牌，正面朝上排成市场行；其余市场牌作为补牌堆。</li>
+      <li>回合开始时，当前玩家抽 5 张牌，金币与战斗池清空，自己所有冠军恢复为可激活状态。</li>
+      <li>回合内可以按任意顺序打出任意数量的手牌。金币、战斗、治疗与抽牌效果立即结算。</li>
+      <li>金币用于购买市场牌；购买没有次数上限，只要金币足够就可以一直买。</li>
+      <li>战斗进入战斗池，可以攻击对手英雄，也可以攻击对手冠军。未使用的战斗在回合结束时清空。</li>
+      <li>结束回合时，弃掉剩余手牌与已经打出的行动/物品牌，轮到对手；对手回合开始抽 5 张。</li>
+    </ol>
+    <div class="note"><b>回合开始的抽牌发生在上一回合结束之后。</b>因此你结束回合时不需要自己抽牌，系统会把下一位玩家的 5 张牌补齐。牌库抽空时，弃牌堆会自动洗回牌库，保证抽牌继续。</div>
+
+    <h2>四、金币、战斗与治疗</h2>
+    <p>金币是本作的购买资源。金币牌、行动牌和冠军能力都能增加金币；金币只在当前回合有效，回合结束时清零。购买市场牌时，按卡牌右上角的价格扣除金币，买到的牌直接进入你的弃牌堆，而不是手牌。它会在下一次洗牌后进入牌库，成为后续抽牌的一部分。</p>
+    <p>战斗是本作的伤害资源。战斗牌不会自动造成伤害，而是把点数放进战斗池。你可以自由决定把战斗分配给对手英雄或某个冠军：攻击英雄会直接减少对手生命；攻击冠军会先削减它的防御力。战斗池在回合结束时清空，所以能打出的伤害不要留到下一回合。</p>
+    <p>治疗会立即恢复生命，但任何治疗都不能把生命补到 50 以上。治疗牌的价值取决于你损失了多少生命：满血时治疗几乎不产生收益，被压制时则可能争取到关键的一两个回合。</p>
+    <table>
+      <thead><tr><th>资源</th><th>来源</th><th>用途</th><th>回合结束</th></tr></thead>
+      <tbody>
+        <tr><td>金币</td><td>金币牌、行动牌、冠军能力</td><td>购买市场牌，可买任意多张</td><td>清零</td></tr>
+        <tr><td>战斗</td><td>匕首、武器/行动牌、冠军能力</td><td>攻击对手英雄或冠军</td><td>清零</td></tr>
+        <tr><td>生命</td><td>治疗牌、冠军能力</td><td>维持到 50 点上限</td><td>保留</td></tr>
+      </tbody>
+    </table>
+
+    <h2>五、购买与市场补位</h2>
+    <p>市场中始终公开 5 张牌。购买一张牌后，该位置立即从补牌堆补入新牌；如果补牌堆已经耗尽，市场行会相应缩短。购买到的牌进入弃牌堆，因此本回合买到的牌不会立刻出现在手里，但会在下一次牌库耗尽、弃牌堆洗回牌库后被抽到。</p>
+    <p><b>本作修正了入门版常见的“每回合只能购买 1 张”简化。</b>官方规则允许在一回合内购买任意多张市场牌，只要你有足够的金币。比如你先打出两张金币牌得到 4 金币，就可以连续购买一张 2 费牌和另一张 2 费牌，或者买一张 4 费牌；剩下的金币不会保留到下一回合。</p>
+    <div class="warn"><b>购买顺序会影响选择。</b>先买走市场里最关键的牌，可能会让补牌堆翻出更好的牌；也可能因为金币花光而错过另一张更适合当前局面的牌。每次购买前先想清楚：这张牌是现在就要用，还是只是为了让牌库变厚？</div>
+
+    <h2>六、冠军与战斗结算</h2>
+    <p>冠军牌打出后不会进入弃牌堆，而是留在你的冠军区，拥有独立的防御力。冠军可以每回合激活一次自己的能力，例如获得战斗、金币、治疗或抽牌；激活后本回合不能再激活，直到你的下一个回合开始才恢复。</p>
+    <p>对手可以用战斗攻击你的冠军。冠军的防御力就是它的生命：伤害达到或超过防御力时，冠军被击倒，卡牌进入其拥有者的弃牌堆。没有被打倒的冠军会保留已经受到的伤害，不会在回合结束时自动回满。因此持续攻击同一个冠军，最终可以把它清掉。</p>
+    <p>攻击冠军是一种取舍：击杀一个每回合提供 3 点战斗的冠军，长期收益可能高于直接打对手 3 点生命；但如果对手生命已经很低，直接攻击英雄往往更快结束对局。AI 也会做同样的判断：能一击击杀冠军时优先击杀，否则优先把伤害打到英雄身上。</p>
+
+    <h2>七、同盟能力</h2>
+    <p>许多市场牌带有“同盟”能力。它的触发条件是：<b>你打出这张牌时，场上已经有一张同派系的另一张牌</b>。这张牌可以在出牌区，也可以在冠军区；刚刚打出的这张牌本身不算“另一张”。因此第一张帝国牌不会触发同盟，第二张帝国牌就会触发。</p>
+    <p>举例：你先打出「征募」（帝国），再打出「征税」（帝国）。征税的基础效果是获得 2 金币、恢复 2 点生命；因为场上已经有征募，征税的同盟效果再恢复 4 点生命，合计恢复 6 点。又比如你先打出「死亡之触」（死灵），再打出「邪教祭司」（死灵冠军），邪教祭司的同盟能力会额外提供 4 点战斗。</p>
+    <div class="note"><b>同盟是“场上”而不是“手牌”。</b>手里有两张同派系牌并不能触发同盟；你必须先把第一张打出去。冠军区里的同派系冠军也会计入，所以在同派系冠军旁边打出同派系行动牌，同样可以触发同盟。</div>
+
+    <h2>八、牌库耗尽与洗牌</h2>
+    <p>当你要抽牌而牌库为空时，把弃牌堆全部洗混，作为新的牌库继续抽。这个动作自动发生，不需要额外费用。若牌库和弃牌堆都为空，则抽牌停止；但在正常对局中，双方各有 10 张起始牌并会不断购买新牌，几乎不会出现无牌可抽的情况。</p>
+    <p>洗牌使用项目共享的 seeded Fisher-Yates 实现（<code>games/shared/shuffle.js</code>）：相同种子会得到相同的洗牌顺序，便于测试、回放与联机同步。联机对局中，洗牌与规则判定都在服务端完成，客户端只接收自己的公共视图。</p>
+
+    <h2>九、结束与胜负</h2>
+    <p>当一方生命降到 0 时，对局立即结束，另一方获胜。生命不会变成负数；治疗不能超过 50；已经结束的对局不能再打出卡牌、购买或攻击。结算面板会显示双方剩余生命、牌库与弃牌数量。</p>
+    <p>如果双方在同一时间归零（本实现中不会发生，因为伤害是逐个目标结算的），则以最后一个造成伤害的玩家为胜者；本作没有平局分支。联机对局中，服务端会向两个客户端下发同一份结算结果，包括胜者座位、双方生命与最终牌库状态。</p>
+
+    <h2>十、策略要点</h2>
+    <ul>
+      <li><b>先经济，后伤害。</b>开局优先购买金币牌和抽牌牌，让牌库转起来；没有经济支撑的高费战斗牌，往往打不出第二次。</li>
+      <li><b>不要把金币留到下一回合。</b>金币回合结束清零，能买就买。买不起 5 费牌时，买两张 2 费牌通常比空过更划算。</li>
+      <li><b>冠军是长期投资。</b>一个每回合提供 2 点战斗的冠军，只要活过三个回合，就已经超过大多数一次性行动牌的价值。</li>
+      <li><b>同盟需要铺垫。</b>同派系牌越多，同盟触发越稳定。纯色牌库的爆发力通常高于杂色牌库，但也更怕被针对。</li>
+      <li><b>计算斩杀线。</b>当对手生命低于你的战斗池时，直接攻击英雄；否则先清掉能持续治疗的冠军，避免伤害被拖回来。</li>
+      <li><b>注意弃牌堆。</b>买到的牌进入弃牌堆，下一次洗牌后才会出现。刚买的好牌不会立刻救场，购买时要把这个延迟算进去。</li>
+    </ul>
+
+    <h2>十一、本实现的交互说明</h2>
+    <ul>
+      <li>点击手牌即可打出；点击市场牌即可购买；战斗池有战斗时，点击「攻击对手英雄」或敌方冠军头像进行攻击。</li>
+      <li>键盘：数字键 1–9 打出手牌，Shift + 数字键购买对应市场牌，A 攻击英雄，C 激活首个冠军，E 或 Enter 结束回合。</li>
+      <li>右上角 ◐ 切换深色/浅色主题，♪ 开关音效；两项设置保存在本机。动画在 <code>prefers-reduced-motion</code> 下自动关闭。</li>
+      <li>页面完整离线运行，不加载外部字体、图片、脚本或样式表；材质为本地生成素材，音效由共享 WebAudio 模块合成。</li>
+      <li>联机模式为双人房间，服务端权威判定；对手手牌与双方牌库顺序不会下发到客户端。</li>
+    </ul>
+
+    <h2>十二、B 站规则来源</h2>
+    <ul class="sources">
+      <li>
+        <b>超好玩的卡牌游戏推荐：《hero realms（英雄领域）》</b>
+        <span>UP：普-拉-斯-先-生 · BV1oG411G7Dj</span>
+        <span><a href="https://www.bilibili.com/video/BV1oG411G7Dj" rel="noopener noreferrer">https://www.bilibili.com/video/BV1oG411G7Dj</a></span>
+        <span>规则要点：2 人 50 点生命；金币购买市场牌构筑牌库；把对手生命打到 0 获胜。</span>
+      </li>
+      <li>
+        <b>【翎教学】《英雄领域》一大扩教学</b>
+        <span>UP：翎-IrisYang- · BV1UN411e7Ah</span>
+        <span><a href="https://www.bilibili.com/video/BV1UN411e7Ah" rel="noopener noreferrer">https://www.bilibili.com/video/BV1UN411e7Ah</a></span>
+        <span>规则要点：金币、战斗、治疗三种资源；冠军防御与每回合激活；同派系同盟能力。</span>
+      </li>
+      <li>
+        <b>【英雄领域】地下城扩展，2024年发售！</b>
+        <span>UP：泰尔康塔 · BV1gX4y1b7Gw</span>
+        <span><a href="https://www.bilibili.com/video/BV1gX4y1b7Gw" rel="noopener noreferrer">https://www.bilibili.com/video/BV1gX4y1b7Gw</a></span>
+        <span>规则要点：基础版与扩展的卡牌体系；市场牌与派系机制；合作模式扩展的定位。</span>
+      </li>
+    </ul>
+    <p>以上视频仅作为规则校对与背景来源；本页文字、卡面排版、动画与 AI 均为本项目原创实现，未复制视频画面或音频。</p>
+
+    <h2>十三、常见问题</h2>
+    <div class="faq">
+      <p><b>问：一回合能买几张市场牌？</b>没有数量上限。只要金币足够，就可以连续购买；每买一张立即补位，买到的牌进入弃牌堆。</p>
+      <p><b>问：同盟能力什么时候触发？</b>打出带同盟的牌时，若场上已有一张同派系的另一张牌（出牌区或冠军区都算），就额外结算同盟效果。第一张同派系牌不会触发自己的同盟。</p>
+      <p><b>问：战斗可以打冠军吗？</b>可以。战斗池可以分配给对手英雄或任意一个对手冠军；冠军伤害达到防御力即被击倒并进入弃牌堆。</p>
+      <p><b>问：冠军没被打死，伤害会保留吗？</b>会。冠军受到的伤害不会在回合结束自动恢复，持续攻击可以逐步削减它的防御。</p>
+      <p><b>问：治疗能超过 50 点生命吗？</b>不能。任何治疗最多把生命补到 50，超出部分无效。</p>
+      <p><b>问：本实现和实体基础版完全一样吗？</b>不完全一样。本实现使用 7 金币 + 3 匕首起始牌组，并从基础版市场牌中截取 51 个卡名、约 80 张牌；卡牌数值为适配本引擎的公开规则实现，差异已在第二节标注。</p>
+    </div>
+  </article>
+
+  <footer class="foot">
+    <a href="index.html">回到牌桌</a>
+    <a href="online.html">联机对战</a>
+    <a href="../index.html">更多桌游</a>
+  </footer>
+</div>
+</body>
+</html>

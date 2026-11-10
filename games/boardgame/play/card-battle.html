@@ -5,8 +5,26 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#172033">
-<meta name="description" content="浏览器可玩的卡牌对战最小闭环：抽牌、出牌、附着能量、攻击、击倒与奖赏。">
-<title>卡牌对战 · 宝可梦样板</title>
+<meta name="description" content="浏览器可玩的原创奇幻卡牌对战：60 张牌库、7 张起手、6 张奖赏、5 个备战位，抽牌、出牌、附着能量、攻击与击倒。">
+<title>卡牌对战 · 原创奇幻卡牌</title>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/play/card-battle.html">
+<meta property="og:title" content="卡牌对战 · 原创奇幻卡牌样板">
+<meta property="og:description" content="60 张牌库、7 张起手、6 张奖赏、5 个备战位；支持双人联机与 AI 补位。">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://hhfa008.github.io/games/boardgame/play/card-battle.html">
+<meta property="og:image" content="../assets/art/card-battle-og.webp">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="game-status" content="draft">
+<meta name="game-mode" content="multiplayer">
+<meta name="game-cover" content="../assets/art/card-battle-cover.webp">
+<meta name="game-image" content="../assets/art/card-battle-detail-deck.webp">
+<meta name="game-art-detail" content="../assets/art/card-battle-detail-hand.webp">
+<meta name="game-process" content="validated">
+<meta name="game-art" content="validated">
+<meta name="game-realism" content="validated">
+<meta name="game-mobile" content="validated">
+<meta name="game-multiplayer" content="validated">
 <link rel="icon" href="data:,">
 <style>
 :root {
@@ -365,6 +383,29 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   .bench { grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); }
   .topbar h1 { font-size: 16px; }
 }
+/* 封面 / OG / 详情配图与 realism 依据：可见、可折叠、不挤占主操作区 */
+.game-art-panel,
+.game-realism {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  box-shadow: var(--shadow);
+  min-width: 0;
+}
+.game-art-panel summary { cursor: pointer; font-size: 14px; font-weight: 700; min-height: 44px; display: flex; align-items: center; }
+.game-art-panel[open] summary { margin-bottom: 8px; }
+.art-grid { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: 8px; align-items: start; min-width: 0; }
+.art-cover, .art-details figure { margin: 0; min-width: 0; }
+.art-cover img, .art-details img { display: block; width: 100%; max-width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--line); }
+.art-details { display: grid; gap: 8px; min-width: 0; }
+.art-details img { aspect-ratio: 16 / 9; object-fit: cover; }
+.art-details figcaption { margin-top: 3px; color: var(--muted); font-size: 11px; }
+.game-realism h2 { font-size: 14px; margin-bottom: 4px; }
+.game-realism p { font-size: 12px; color: var(--muted); margin-top: 4px; overflow-wrap: anywhere; }
+.game-realism a { color: var(--accent); }
+.game-realism code { font-size: 11px; }
+@media (max-width: 430px) { .art-grid { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
@@ -374,9 +415,10 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 <main class="app">
   <header class="topbar">
     <div>
-      <h1>卡牌对战</h1>
+      <h1>卡牌对战</h1><span class="game-mode-badge" aria-label="多人游戏" style="display:inline-block;margin-left:8px;padding:2px 8px;border:1px solid currentColor;border-radius:999px;font-size:12px;line-height:1.4;vertical-align:middle;font-weight:600;opacity:.92">多人</span>
       <p id="turn-indicator" class="turn" aria-live="polite">准备中…</p>
       <p id="room-context" class="turn" hidden></p>
+      <p class="turn">本页为单人 vs AI；联机 + AI 匹配请进 <a href="./online.html">联机房间</a>。</p>
     </div>
     <div class="top-actions">
       <button id="btn-sound" class="icon-btn" type="button" aria-pressed="true" aria-label="音效开关" title="音效开关">🔊</button>
@@ -450,6 +492,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
     <p id="rr-device" class="rr-hint"></p>
     <div class="rr-actions">
       <button id="rr-share" class="primary" type="button">分享战绩</button>
+      <button id="rr-card" type="button">生成分享卡片</button>
       <button id="rr-claim" type="button">打满 3 局可领奖励</button>
     </div>
     <p id="rr-status" class="status" role="status" aria-live="polite"></p>
@@ -458,6 +501,33 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   <section class="log-wrap" aria-labelledby="log-title">
     <h2 id="log-title">战斗日志</h2>
     <ol id="log" class="log" reversed></ol>
+  </section>
+
+  <details class="game-art-panel" aria-labelledby="art-title">
+    <summary id="art-title">封面与配图 · 原创奇幻卡牌</summary>
+    <div class="art-grid">
+      <figure class="art-cover">
+        <img src="../assets/art/card-battle-cover.webp" alt="原创奇幻卡牌对战封面：木桌上摆放 60 张牌库、7 张手牌与 6 张奖赏卡" width="1086" height="1448" loading="lazy" decoding="async">
+      </figure>
+      <div class="art-details">
+        <figure>
+          <img src="../assets/art/card-battle-detail-deck.webp" alt="60 张实体卡牌叠成一摞，旁边整齐排列 6 张背面朝上的奖赏卡" width="1672" height="941" loading="lazy" decoding="async">
+          <figcaption>60 张牌库 + 6 张奖赏卡</figcaption>
+        </figure>
+        <figure>
+          <img src="../assets/art/card-battle-detail-hand.webp" alt="扇形展开的 7 张起手牌，其中 1 张正面为原创火焰狐卡牌" width="1536" height="1024" loading="lazy" decoding="async">
+          <figcaption>7 张起手牌</figcaption>
+        </figure>
+      </div>
+    </div>
+  </details>
+
+  <section class="game-realism" aria-labelledby="realism-title">
+    <h2 id="realism-title">真实规则依据</h2>
+    <p>牌库 60 张（10 种生物各 4 张 + 20 张基础能量）· 起手 7 张 · 奖赏 6 张 · 备战 5 位；同名牌最多 4 张，基础能量不限。实体牌 63×88mm、300gsm 纸板。</p>
+    <p>来源：Pokémon Trading Card Game Rulebook（牌组与开局数量）；ART-GUIDE.md（实体尺寸与材质）。校验：<a href="../realism/card-battle.json">realism/card-battle.json</a> · <code>tests/realism.test.mjs</code>。</p>
+    <p>演示偏差：保留 20 点训练师 HP 与 2 点突破伤害；出战生物被击倒时自动从备战区补位。</p>
+    <p>状态：draft。缺口：跨设备证据为 loopback + Host 模拟，尚无真机 LAN 实测；因此不标 shipped。</p>
   </section>
 </main>
 <script type="module" src="./card-battle.js"></script>

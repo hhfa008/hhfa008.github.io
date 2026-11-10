@@ -6,4 +6,5 @@ var kit = require('../shared/arcade/kits/pong.js');
 var run = require('../shared/arcade/tests/pong.js');
 var params = {"ai":true,"speed":6};
 run(kit.create(params), params, s);
+require('../shared/arcade/tests/terminal.js').check("pong-6", s);
 s.done();

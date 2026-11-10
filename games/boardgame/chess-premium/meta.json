@@ -1,0 +1,253 @@
+{
+  "slug": "chess-premium",
+  "name": {
+    "zh": "国际象棋",
+    "en": "Chess"
+  },
+  "type": "boardgame",
+  "status": "shipped",
+  "statusReason": "五项门禁全过：test.js 281 断言 0 失败；双客户端联机 E2E 80 断言 0 失败并输出 ONLINE_E2E_JSON（含 --control exit 1）；浏览器 E2E 152 断言 0 失败、--control exit 1；封面 1200×1200、OG 1200×630、两张详情 1200×800 由本地材质代码合成，美术总量 1,305,054 B；realism 六类校验通过；390×844 与 320×568 冒烟 PASS（19 项检查，0 console error / 0 external request / 无横向溢出）。",
+  "entry": "index.html",
+  "rules": "rules.html",
+  "design": "DESIGN.md",
+  "acceptance": "ACCEPTANCE.md",
+  "e2e": {
+    "script": "e2e.mjs",
+    "record": "E2E.md",
+    "command": "node games/boardgame/chess-premium/e2e.mjs",
+    "control": "node games/boardgame/chess-premium/e2e.mjs --control  # exit 1, intentional failure",
+    "environment": "resident audit Chrome via CDP 9331 (CHESS_PORT overrides; verified on the resident instance); one tab opened and closed; chrome-ensure reuse; no temp Chrome/profile",
+    "assertions": 152,
+    "online": {
+      "script": "test-online.js",
+      "command": "node games/boardgame/chess-premium/test-online.js",
+      "runAll": "auto-discovered by node games/tests/run-all.js",
+      "control": "node games/boardgame/chess-premium/test-online.js --control  # exit 1",
+      "assertions": 80,
+      "evidence": "online-e2e.json (80 assertions)"
+    }
+  },
+  "singlePlayer": false,
+  "modeLabel": "2 人 · 人机 / 本地双人 / 联机房间 + AI 补位",
+  "players": {
+    "min": 2,
+    "max": 2,
+    "best": [
+      2
+    ]
+  },
+  "playTime": {
+    "min": 10,
+    "max": 60
+  },
+  "age": 6,
+  "designer": "传统棋类（现代规则定型）",
+  "year": 1475,
+  "awards": [],
+  "online": {
+    "status": "ready",
+    "required": [
+      "online-rooms",
+      "invite-flow",
+      "state-sync",
+      "reconnect",
+      "timeout-ai-takeover",
+      "leaderboard",
+      "dual-client-e2e-in-run-all"
+    ],
+    "entry": "online.html",
+    "server": "online-server.mjs",
+    "sharedServer": "../../shared/online-room-server.mjs",
+    "transport": "HTTP/JSON + 700ms polling; server-authoritative; LAN-only by default",
+    "features": {
+      "rooms": "2 seats; room id + single-use invite token + optional password",
+      "invite": "inviteUrl uses the request Host; opens /boardgame/chess-premium/online.html?room=&code=",
+      "stateSync": "stateVersion + lastAction; both seats receive the same 64-square board, SAN history and captured trays",
+      "aiFill": "an empty seat becomes AI; the shared tick loop lets it answer within the same action request",
+      "reconnect": "session token + POST /api/rooms/:id/reconnect; reconnect clears timeout takeover",
+      "timeoutTakeover": "no session request for the configured idle window → server AI plays the seat; reconnect restores it",
+      "leaderboard": "GET /api/leaderboard?game=chess-premium; AI participants included; raw playerId hashed",
+      "idempotency": "per-player idempotencyKey cached before the action guard",
+      "rematch": "host restart creates a new game with colours swapped"
+    },
+    "evidence": {
+      "http": "node games/boardgame/chess-premium/test-online.js",
+      "browser": "node games/boardgame/chess-premium/e2e.mjs online section",
+      "runAll": "test-online.js is auto-discovered by node games/tests/run-all.js"
+    }
+  },
+  "shared": {
+    "sfx": "games/shared/sfx.js — index.html and online.html script tag; single shared AudioContext",
+    "shuffle": "N/A — chess is deterministic; aiMove uses an injectable seeded RNG for tie-breaks",
+    "rules": "N/A — FIDE rules live in engine.js",
+    "physics": "N/A — no physics simulation",
+    "leaderboard": "shared room server keeps an anonymous in-memory board; no leaderboard copy"
+  },
+  "assets": {
+    "cover": "assets/cover.webp",
+    "og": "assets/og.webp",
+    "detailImages": [
+      "assets/detail-1.webp",
+      "assets/detail-2.webp"
+    ],
+    "singleObject": [
+      "../../assets/art/premium/chess/light-maple.webp",
+      "../../assets/art/premium/chess/dark-walnut.webp",
+      "../../assets/art/premium/chess/felt-cloth.webp",
+      "../../assets/art/premium/chess/board-edge.webp"
+    ],
+    "compositionSource": "art-render.html",
+    "compositionScript": "render-art.mjs",
+    "localOnly": true
+  },
+  "realism": {
+    "boardSquares": 64,
+    "pieces": 32,
+    "piecesPerSide": 16,
+    "startLayout": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+    "squareMm": 57,
+    "pieceHeightsMm": {
+      "K": 95,
+      "Q": 82,
+      "B": 70,
+      "N": 62,
+      "R": 55,
+      "P": 45
+    },
+    "baseDiameterMm": [
+      30,
+      35
+    ],
+    "colors": {
+      "lightSquare": "#e8d3a9",
+      "darkSquare": "#6b4a2f",
+      "maple": "#e8cfa4",
+      "walnut": "#4a2f1c"
+    },
+    "rules": "FIDE: pawn double-step/en passant/promotion; knight/bishop/rook/queen/king; castling rights and through-check; check/checkmate/stalemate; threefold repetition; 50-move; insufficient material; FEN",
+    "perft": {
+      "depth1": 20,
+      "depth2": 400,
+      "depth3": 8902,
+      "depth4": 197281
+    },
+    "sources": [
+      "Bilibili BV1PuokBiEb6 — 11分钟零基础完整学会国际象棋！",
+      "Bilibili BV1uA4y1Q7uQ — 国际象棋吃过路兵【国际象棋基础】",
+      "Bilibili BV1HS4y1w7Ey — 国际象棋王车易位【国际象棋基础】"
+    ]
+  },
+  "performanceBudgets": {
+    "fcpMs": 2500,
+    "domContentLoadedMs": 4000,
+    "loadEventEndMs": 4000,
+    "domNodes": 2500,
+    "fps": 30,
+    "newGameRenderMs": 200,
+    "materialBytes": 2097152,
+    "externalRequests": 0
+  },
+  "mobile": {
+    "viewports": [
+      "390x844",
+      "320x568"
+    ],
+    "touchTargetPx": 44,
+    "boardComposite": "8×8 board is one composite grid widget; individual squares scale with the board and are not separate touch targets",
+    "safeArea": true,
+    "dvh": true,
+    "offline": true,
+    "hoverDependent": false,
+    "fontMinPx": 12,
+    "measured": {
+      "390x844": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "minControlPx": 44,
+        "minFontPx": 12,
+        "overflow": false,
+        "boardWidthPx": 358
+      },
+      "320x568": {
+        "scrollWidth": 320,
+        "clientWidth": 320,
+        "minControlPx": 44,
+        "minFontPx": 12,
+        "overflow": false,
+        "boardWidthPx": 292
+      },
+      "fps": 61,
+      "domNodes": 325,
+      "fcpMs": 36,
+      "loadEventEndMs": 15,
+      "newGameRenderMs": 0.3,
+      "materialBytes": 743695,
+      "externalRequests": 0,
+      "source": "e2e.mjs mobile/perf sections + game-smoke 390x844 / 320x568 (19/19 PASS each)",
+      "domContentLoadedMs": 14
+    }
+  },
+  "bilibili": {
+    "sources": [
+      {
+        "bv": "BV1PuokBiEb6",
+        "title": "11分钟零基础完整学会国际象棋！",
+        "up": "子聪学长",
+        "url": "https://www.bilibili.com/video/BV1PuokBiEb6",
+        "fact": "章节列出将军、应将、将死、逼和，以及升变、吃过路兵、王车易位三种特殊走法。"
+      },
+      {
+        "bv": "BV1uA4y1Q7uQ",
+        "title": "国际象棋吃过路兵【国际象棋基础】",
+        "up": "国际象棋IM杨海南",
+        "url": "https://www.bilibili.com/video/BV1uA4y1Q7uQ",
+        "fact": "吃过路兵只在相邻兵双步经过可吃格时成立，且必须立即执行。"
+      },
+      {
+        "bv": "BV1HS4y1w7Ey",
+        "title": "国际象棋王车易位【国际象棋基础】",
+        "up": "国际象棋IM杨海南",
+        "url": "https://www.bilibili.com/video/BV1HS4y1w7Ey",
+        "fact": "王车易位要求王与车未移动、之间无子、王不在被将状态，经过格与落点格都不能被攻击。"
+      }
+    ]
+  },
+  "serviceWorker": {
+    "precacheIncludes": [
+      "assets/cover.webp",
+      "assets/og.webp",
+      "assets/detail-1.webp",
+      "assets/detail-2.webp",
+      "engine.js",
+      "data.js",
+      "online.html",
+      "meta.json",
+      "light-maple.webp",
+      "dark-walnut.webp",
+      "felt-cloth.webp",
+      "board-edge.webp"
+    ]
+  },
+  "gates": {
+    "tests": {
+      "status": "pass",
+      "evidence": "test.js RESULT: 281 passed, 0 failed"
+    },
+    "art": {
+      "status": "pass",
+      "evidence": "4 material WebP 1024² + 4 composed WebP; total 1,305,054 B; no PNG masters"
+    },
+    "realism": {
+      "status": "pass",
+      "evidence": "realism.json 6 checks, 6 distinct kinds, all ok"
+    },
+    "mobile": {
+      "status": "pass",
+      "evidence": "game-smoke 390x844 19/19 PASS and 320x568 19/19 PASS"
+    },
+    "online": {
+      "status": "pass",
+      "evidence": "test-online.js RESULT: 80 passed, 0 failed + e2e.mjs online section"
+    }
+  }
+}

@@ -1,0 +1,869 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1a1010">
+<meta name="description" content="斗地主精品版：54 张牌、三人叫分抢地主、完整牌型与压牌规则，三档 AI、提示、音效与 3 人联机房间（2 人 + AI 补位）。">
+<meta property="og:title" content="斗地主 · 叫分抢地主 · 54 张完整牌型">
+<meta property="og:description" content="17+17+17 加 3 张底牌，单张到飞机带对全部可判。三档 AI 与 3 人联机，底牌与对手手牌由服务端隐藏。">
+<meta property="og:type" content="website">
+<meta property="og:image" content="assets/og.webp">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<title>斗地主 · 精品桌游 · 叫分抢地主</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23201612'/%3E%3Crect x='8' y='8' width='48' height='48' rx='9' fill='%23f2e6cf'/%3E%3Cpath d='M32 17c-4 5-10 7-10 13a5 5 0 0 0 9 2c0 3-1 5-3 7h8c-2-2-3-4-3-7a5 5 0 0 0 9-2c0-6-6-8-10-13z' fill='%23a92b25'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --art-paper:url("../../assets/art/premium/doudizhu/card-paper.webp");
+    --art-back:url("../../assets/art/premium/doudizhu/card-back.webp");
+    --art-felt:url("../../assets/art/premium/doudizhu/table-felt.webp");
+    --art-chip:url("../../assets/art/premium/doudizhu/chip.webp");
+    --font-serif:"Songti SC","Iowan Old Style","Palatino Linotype","Georgia",serif;
+    --font-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    --bg:#170f0e;--bg2:#241614;--panel:rgba(43,28,24,.94);--panel2:rgba(58,38,30,.8);
+    --line:rgba(216,168,96,.28);--line2:rgba(216,168,96,.52);
+    --ink:#f7ecd8;--muted:#c9b294;--soft:#9b8467;
+    --gold:#e6bd76;--gold2:#f6dda7;--red:#b53026;--green:#72d3a2;--sky:#8fc8ff;
+    --paper:#f6efdf;--paper2:#e6d8bd;--blackInk:#1d1712;
+    --radius:16px;--tap:52px;
+  }
+  *{box-sizing:border-box}
+  html,body{min-height:100%}
+  body{
+    margin:0;color:var(--ink);font:16px/1.5 var(--font-sans);
+    background:
+      radial-gradient(900px 520px at 50% -16%,rgba(126,52,40,.5),transparent 64%),
+      radial-gradient(720px 460px at 92% 108%,rgba(66,40,26,.72),transparent 60%),
+      linear-gradient(168deg,var(--bg2),var(--bg) 64%);
+    background-color:var(--bg);background-attachment:fixed;-webkit-tap-highlight-color:transparent;
+  }
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.12;background:var(--art-felt) center/cover no-repeat;mix-blend-mode:soft-light}
+  a{color:var(--gold);text-decoration:none}
+  button{font:inherit;color:inherit}
+  .wrap{position:relative;z-index:1;max-width:780px;margin:0 auto;padding:10px 12px 40px}
+  .top{display:flex;align-items:center;gap:8px;padding:2px 0 10px}
+  .top .brand{flex:1;min-width:0;text-align:center}
+  .brand h1{margin:0;font-family:var(--font-serif);font-weight:700;font-size:21px;letter-spacing:.2em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .brand p{margin:1px 0 0;font-size:12px;color:var(--muted);letter-spacing:.06em}
+  .icon-btn{display:inline-flex;align-items:center;justify-content:center;min-width:var(--tap);min-height:var(--tap);padding:0 12px;border-radius:13px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font-size:13px;font-weight:700;cursor:pointer;text-decoration:none;box-shadow:0 4px 0 rgba(0,0,0,.24);touch-action:manipulation}
+  .icon-btn:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(0,0,0,.24)}
+  .icon-btn:focus-visible,button:focus-visible,.card:focus-visible{outline:3px solid var(--sky);outline-offset:2px}
+
+  /* table */
+  .table{
+    position:relative;border-radius:24px;padding:12px;min-height:318px;
+    border:1px solid rgba(230,189,118,.34);
+    background:
+      radial-gradient(ellipse at 50% 40%,rgba(22,74,55,.55),transparent 68%),
+      linear-gradient(155deg,rgba(20,60,46,.86),rgba(10,30,24,.94)),
+      var(--art-felt) center/cover no-repeat;
+    box-shadow:0 22px 50px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.14),inset 0 -3px 0 rgba(0,0,0,.5);
+    overflow:hidden;
+  }
+  .table::before{content:"";position:absolute;inset:8px;border:1px solid rgba(230,189,118,.18);border-radius:18px;pointer-events:none}
+  .table::after{content:"";position:absolute;left:50%;top:44%;width:210px;height:210px;transform:translate(-50%,-50%);border-radius:50%;border:1px solid rgba(246,221,167,.12);box-shadow:0 0 0 22px rgba(246,221,167,.035),0 0 0 52px rgba(246,221,167,.02);pointer-events:none}
+
+  .seat{position:absolute;width:118px;display:flex;flex-direction:column;align-items:center;gap:5px;z-index:2}
+  .seat-left{left:8px;top:12px}
+  .seat-right{right:8px;top:12px}
+  .avatar{
+    width:46px;height:46px;border-radius:50%;display:grid;place-items:center;
+    font-family:var(--font-serif);font-weight:700;font-size:19px;line-height:1;
+    background:radial-gradient(circle at 34% 27%,rgba(255,255,255,.4),transparent 40%),linear-gradient(150deg,#4a3126,#2a1a14);
+    border:1px solid rgba(230,189,118,.5);color:var(--gold2);
+    box-shadow:0 5px 0 rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.25);
+  }
+  .seat.is-turn .avatar{box-shadow:0 0 0 3px rgba(114,211,162,.65),0 5px 0 rgba(0,0,0,.32)}
+  .seat-name{font-size:12.5px;font-weight:800;max-width:118px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
+  .seat-meta{font-size:12px;color:var(--muted);display:flex;gap:5px;align-items:center;flex-wrap:wrap;justify-content:center}
+  .role{display:inline-flex;align-items:center;min-height:20px;padding:0 7px;border-radius:999px;font-size:12px;font-weight:800;border:1px solid var(--line);color:var(--muted);background:rgba(0,0,0,.22)}
+  .role.landlord{color:#2a1608;background:linear-gradient(160deg,var(--gold2),#c9963f);border-color:transparent}
+  .role.farmer{color:var(--green);border-color:rgba(114,211,162,.4);background:rgba(114,211,162,.1)}
+  .backstack{display:flex;align-items:center;gap:0;height:34px;padding-left:4px}
+  .backstack i{display:block;width:22px;height:31px;border-radius:4px;margin-left:-12px;border:1px solid rgba(255,230,190,.4);background:linear-gradient(150deg,#7c2a24,#4c1614),var(--art-back) center/cover no-repeat;box-shadow:0 2px 4px rgba(0,0,0,.4);transform:rotate(-4deg)}
+  .backstack i:nth-child(2){transform:rotate(0)}
+  .backstack i:nth-child(3){transform:rotate(4deg)}
+  .seat-count{font-size:12px;font-weight:800;color:var(--gold2)}
+
+  .bottom-row{position:absolute;left:50%;top:10px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:5px;z-index:2}
+  .bottom-label{font-size:12px;letter-spacing:.14em;color:var(--muted);font-weight:800}
+  .bottom-cards{display:flex;gap:5px}
+  .mini-card{width:30px;height:42px;border-radius:4px;border:1px solid rgba(120,82,40,.6);background:linear-gradient(148deg,var(--paper),var(--paper2) 78%),var(--art-paper) center/cover no-repeat;box-shadow:0 3px 6px rgba(0,0,0,.34);position:relative;overflow:hidden}
+  .mini-card.back{background:linear-gradient(150deg,#7c2a24,#4c1614),var(--art-back) center/cover no-repeat;border-color:rgba(230,189,118,.55)}
+  .mini-card .mini-rank{position:absolute;top:1px;left:2px;font-family:var(--font-serif);font-weight:700;font-size:12px;line-height:1}
+  .mini-card .mini-pip{position:absolute;left:50%;top:56%;transform:translate(-50%,-50%);width:15px;height:15px}
+  .mini-card.red .mini-rank,.mini-card.red .mini-pip{color:#b53026;fill:#b53026}
+  .mini-card.black .mini-rank,.mini-card.black .mini-pip{color:#1d1712;fill:#1d1712}
+  .mini-card.joker .mini-rank{font-size:12px;letter-spacing:0;top:4px;left:50%;transform:translateX(-50%);writing-mode:vertical-rl;white-space:nowrap}
+
+  .center{position:absolute;left:50%;top:48%;transform:translate(-50%,-50%);width:min(92%,560px);display:flex;flex-direction:column;align-items:center;gap:7px;z-index:3;text-align:center}
+  .last-play{display:flex;flex-wrap:wrap;justify-content:center;gap:3px;min-height:46px;align-items:center}
+  .last-play .mini-card{width:28px;height:39px}
+  .play-label{font-size:12.5px;color:var(--gold2);font-weight:800;letter-spacing:.06em}
+  .pass-note{font-size:13px;color:var(--muted);font-weight:700}
+
+  .status{display:flex;align-items:center;justify-content:center;gap:7px;min-height:42px;margin:9px 0 0;padding:6px 11px;border-radius:12px;border:1px solid var(--line);background:var(--panel);font-size:13px;font-weight:700;line-height:1.35}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--green);flex:none;box-shadow:0 0 0 4px rgba(114,211,162,.16)}
+  .dot.wait{background:var(--gold);box-shadow:0 0 0 4px rgba(230,189,118,.14)}
+  .dot.over{background:var(--sky);box-shadow:0 0 0 4px rgba(143,200,255,.14)}
+
+  /* my strip */
+  .me-strip{display:flex;align-items:center;gap:9px;margin:8px 0 0;padding:8px 11px;border-radius:13px;border:1px solid var(--line);background:linear-gradient(160deg,var(--panel),rgba(0,0,0,.12));min-width:0}
+  .me-strip.is-turn{border-color:var(--line2);box-shadow:inset 0 0 0 1px rgba(230,189,118,.35)}
+  .me-strip .avatar{width:38px;height:38px;font-size:16px;flex:none}
+  .me-strip .who{flex:1;min-width:0}
+  .me-strip .who strong{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .me-strip .who span{display:block;margin-top:1px;font-size:12px;color:var(--muted)}
+  .me-strip .who span b{color:var(--ink)}
+  .me-strip .role{flex:none;min-height:26px;font-size:12px}
+
+  /* hand fan */
+  .hand-shell{position:relative;margin-top:9px;padding:10px 6px 4px;border-radius:18px;border:1px solid var(--line);background:linear-gradient(165deg,rgba(48,31,26,.94),rgba(25,16,14,.96));box-shadow:0 14px 30px rgba(0,0,0,.36),inset 0 1px 0 rgba(255,255,255,.08)}
+  .hand{position:relative;height:112px;overflow:hidden;isolation:isolate}
+  .hand-empty{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-size:13px;font-weight:700}
+  .card{position:absolute;bottom:4px;border-radius:6px;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:manipulation;overflow:hidden;background:linear-gradient(150deg,var(--paper),var(--paper2) 80%),var(--art-paper) center/cover no-repeat;border:1px solid rgba(126,88,46,.55);box-shadow:0 4px 0 rgba(78,52,24,.5),0 8px 14px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.8);transition:transform .12s ease,box-shadow .12s ease}
+  .card .corner{position:absolute;display:flex;flex-direction:column;align-items:center;gap:1px;line-height:1;font-family:var(--font-serif);font-weight:700}
+  .card .corner.tl{left:3px;top:2px}
+  .card .corner.br{right:3px;bottom:2px;transform:rotate(180deg)}
+  .card .corner b{font-size:var(--rank-font);letter-spacing:-.04em}
+  .card .corner svg{width:var(--pip-font);height:var(--pip-font)}
+  .card.red .corner,.card.red .court{color:#b53026;fill:#b53026}
+  .card.black .corner,.card.black .court{color:#1d1712;fill:#1d1712}
+  .card .pips{position:absolute;left:22%;right:22%;top:16%;bottom:16%}
+  .card .pips svg{position:absolute;width:var(--pip-font);height:var(--pip-font);fill:currentColor}
+  .card.red .pips{color:#b53026}
+  .card.black .pips{color:#1d1712}
+  .card .bigpip{position:absolute;left:50%;top:52%;width:46%;height:46%;transform:translate(-50%,-50%);fill:currentColor}
+  .card.red .bigpip{color:#b53026}
+  .card.black .bigpip{color:#1d1712}
+  .card .court{position:absolute;left:21%;right:21%;top:15%;bottom:15%;color:#8d2b22;fill:#8d2b22}
+  .card .court svg{width:100%;height:100%}
+  .card .joker-label{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);writing-mode:vertical-rl;font-family:var(--font-serif);font-weight:700;font-size:calc(var(--rank-font) * 1.25);letter-spacing:.08em}
+  .card.red .joker-label{color:#b53026}
+  .card.black .joker-label{color:#1d1712}
+  .card.sel{transform:translateY(-16px);box-shadow:0 8px 0 rgba(78,52,24,.5),0 16px 22px rgba(0,0,0,.4),inset 0 0 0 2px rgba(114,211,162,.7)}
+  .card.hinted{box-shadow:0 4px 0 rgba(78,52,24,.5),0 0 0 2px var(--sky),0 8px 14px rgba(0,0,0,.32)}
+  .card.back-card{background:linear-gradient(150deg,#7c2a24,#4c1614),var(--art-back) center/cover no-repeat;border-color:rgba(230,189,118,.55)}
+
+  /* bid + actions */
+  .bid-panel{margin-top:9px;padding:10px 11px;border-radius:15px;border:1px solid var(--line2);background:linear-gradient(160deg,rgba(230,189,118,.14),var(--panel));box-shadow:0 10px 22px rgba(0,0,0,.28)}
+  .bid-panel[hidden]{display:none}
+  .bid-title{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12.5px;color:var(--muted);font-weight:800;margin-bottom:7px}
+  .bid-title b{color:var(--gold2)}
+  .bid-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+  .bid-grid button{min-height:48px;border-radius:12px;border:1px solid var(--line);background:linear-gradient(160deg,var(--panel2),var(--panel));font-size:13.5px;font-weight:800;cursor:pointer;box-shadow:0 4px 0 rgba(0,0,0,.22);touch-action:manipulation;padding:0 4px}
+  .bid-grid button:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(0,0,0,.22)}
+  .bid-grid button.hot{background:linear-gradient(160deg,var(--gold2),#c9963f);color:#2a1608;border-color:transparent}
+  .bid-grid button:disabled{opacity:.4;cursor:default}
+
+  .controls{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:10px}
+  .controls button{min-height:52px;min-width:44px;border-radius:13px;border:1px solid var(--line);background:linear-gradient(160deg,var(--panel2),var(--panel));font-size:13.5px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 0 rgba(0,0,0,.22);touch-action:manipulation;padding:0 5px}
+  .controls button:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(0,0,0,.22)}
+  .controls button.primary{background:linear-gradient(160deg,var(--gold),#bd8f45);color:#2a1608;border-color:transparent}
+  .controls button:disabled{opacity:.42;cursor:default;transform:none}
+
+  .options{display:flex;flex-wrap:wrap;gap:8px;margin-top:9px;align-items:center}
+  .opt-label{font-size:12px;color:var(--muted);font-weight:800;margin-right:2px}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:11px;overflow:hidden;background:rgba(0,0,0,.16)}
+  .seg button{min-height:44px;min-width:44px;padding:0 12px;border:0;background:transparent;color:var(--muted);font-size:12.5px;font-weight:800;cursor:pointer}
+  .seg button[aria-pressed="true"]{background:var(--gold);color:#2a1608}
+
+  .lower{display:grid;grid-template-columns:1.06fr .94fr;gap:10px;margin-top:11px}
+  .card-box{border:1px solid var(--line);border-radius:15px;background:var(--panel);padding:10px 12px;min-width:0}
+  .card-box h2{margin:0 0 7px;font-size:12px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase}
+  .log{list-style:none;margin:0;padding:0;max-height:150px;overflow:auto;display:grid;gap:1px}
+  .log li{font-size:12.5px;color:var(--muted);padding:3px 0;border-bottom:1px dashed rgba(216,168,96,.16)}
+  .log li:last-child{color:var(--ink);border-bottom:0}
+  .log li::before{content:"›";color:var(--gold);margin-right:5px;font-weight:900}
+  .score-lines{display:grid;gap:4px}
+  .score-lines div{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;color:var(--muted);border-bottom:1px dashed rgba(216,168,96,.14);padding:2px 0}
+  .score-lines b{color:var(--ink);font-weight:800}
+  .score-formula{margin:7px 0 0;font-size:12.5px;line-height:1.55;color:var(--muted)}
+  .score-formula b{color:var(--gold2)}
+
+  .banner{margin-top:11px;padding:12px 14px;border-radius:16px;text-align:center;border:1px solid rgba(230,189,118,.42);background:linear-gradient(160deg,rgba(230,189,118,.16),rgba(43,28,24,.92))}
+  .banner[hidden]{display:none}
+  .banner h3{margin:0 0 3px;font-family:var(--font-serif);font-size:22px;letter-spacing:.08em}
+  .banner p{margin:0;font-size:13px;color:var(--muted);line-height:1.5}
+  .banner .row{display:flex;gap:8px;justify-content:center;margin-top:9px;flex-wrap:wrap}
+  .banner button{min-height:48px;min-width:44px;padding:0 16px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);font-weight:800;font-size:13.5px;cursor:pointer}
+
+  .foot{margin-top:14px;font-size:12.5px;color:var(--soft);text-align:center;line-height:1.7}
+  .foot a{display:inline-flex;align-items:center;min-height:44px;padding:0 8px;font-weight:700}
+
+  @media (prefers-reduced-motion: reduce){*{animation-duration:.01ms !important;transition-duration:.01ms !important}}
+  @media (max-width:420px){
+    .wrap{padding:8px 9px 30px}
+    .brand h1{font-size:19px}
+    .table{min-height:300px;padding:10px}
+    .seat{width:104px}
+    .seat-left{left:6px;top:10px}
+    .seat-right{right:6px;top:10px}
+    .avatar{width:40px;height:40px;font-size:17px}
+    .lower{grid-template-columns:1fr}
+  }
+  @media (max-width:350px){
+    .wrap{padding:7px 7px 26px}
+    .icon-btn{min-width:48px;padding:0 8px;font-size:12px}
+    .brand h1{font-size:17px;letter-spacing:.12em}
+    .brand p{font-size:12px}
+    .seat{width:94px}
+    .seat-name{font-size:12px}
+    .controls{gap:6px}
+    .controls button{font-size:12.5px}
+    .bid-grid{gap:6px}
+    .bid-grid button{font-size:12.5px}
+  }
+/* safe-area: keep the original bottom padding, clear the iOS home indicator */
+body{padding-bottom:env(safe-area-inset-bottom)}
+</style>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/doudizhu-premium/">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="icon-btn" href="../../index.html" aria-label="返回游戏大厅">← 大厅</a>
+    <div class="brand">
+      <h1>斗 地 主</h1>
+      <p>54 张 · 3 人 · 叫分抢地主</p>
+    </div>
+    <a class="icon-btn" href="online.html" aria-label="进入 3 人联机房间">联机</a>
+  </header>
+
+  <main>
+<div style="display:flex;justify-content:flex-end;margin:0 0 8px"><button class="primary" type="button" style="min-height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(255,255,255,.18);background:linear-gradient(160deg,#e8c07a,#bd8f45);color:#241708;font-weight:800;font-size:14px" onclick="var b=document.getElementById('newBtn');if(b)b.click();">新对局</button></div>
+
+    <section class="table" aria-label="斗地主牌桌">
+      <div class="seat seat-left" id="seat2">
+        <div class="avatar" aria-hidden="true">左</div>
+        <div class="seat-name" id="seat2Name">AI 左</div>
+        <div class="seat-meta"><span class="role" id="seat2Role">农民</span><span class="seat-count" id="seat2Count">17 张</span></div>
+        <div class="backstack" id="seat2Stack" aria-hidden="true"><i></i><i></i><i></i></div>
+      </div>
+      <div class="seat seat-right" id="seat1">
+        <div class="avatar" aria-hidden="true">右</div>
+        <div class="seat-name" id="seat1Name">AI 右</div>
+        <div class="seat-meta"><span class="role" id="seat1Role">农民</span><span class="seat-count" id="seat1Count">17 张</span></div>
+        <div class="backstack" id="seat1Stack" aria-hidden="true"><i></i><i></i><i></i></div>
+      </div>
+      <div class="bottom-row">
+        <span class="bottom-label">底 牌</span>
+        <div class="bottom-cards" id="bottomCards"></div>
+      </div>
+      <div class="center">
+        <div class="last-play" id="lastPlay"></div>
+        <div class="play-note" id="playNote"></div>
+      </div>
+    </section>
+
+    <div class="status" aria-live="polite"><i class="dot" id="turnDot"></i><span id="statusText">正在发牌…</span></div>
+
+    <section class="me-strip" id="meStrip" aria-label="我的状态">
+      <div class="avatar" aria-hidden="true">我</div>
+      <div class="who">
+        <strong id="meName">你</strong>
+        <span>手牌 <b id="meCount">17</b> 张 · 叫分 <b id="meBid">—</b></span>
+      </div>
+      <span class="role" id="meRole">农民</span>
+    </section>
+
+    <section class="hand-shell" aria-label="我的手牌">
+      <div class="hand" id="hand"></div>
+    </section>
+
+    <section class="bid-panel" id="bidPanel" hidden>
+      <div class="bid-title"><span>叫分抢地主</span><b id="bidHint">最高 0 分</b></div>
+      <div class="bid-grid">
+        <button type="button" data-bid="0">不叫</button>
+        <button type="button" data-bid="1">1 分</button>
+        <button type="button" data-bid="2">2 分</button>
+        <button type="button" data-bid="3" class="hot">3 分</button>
+      </div>
+    </section>
+
+    <section class="controls" aria-label="出牌操作">
+      <button id="playBtn" class="primary" type="button">出牌</button>
+      <button id="passBtn" type="button">不要</button>
+      <button id="hintBtn" type="button">提示</button>
+      <button id="newBtn" type="button">重开</button>
+    </section>
+
+    <div class="options">
+      <span class="opt-label">AI 难度</span>
+      <div class="seg" role="group" aria-label="AI 难度">
+        <button type="button" data-level="1" aria-pressed="false">入门</button>
+        <button type="button" data-level="2" aria-pressed="true">标准</button>
+        <button type="button" data-level="3" aria-pressed="false">高手</button>
+      </div>
+      <button id="soundBtn" type="button" class="icon-btn" aria-pressed="true" style="min-height:44px">音效 开</button>
+    </div>
+
+    <section class="lower">
+      <div class="card-box">
+        <h2>对局记录</h2>
+        <ul class="log" id="log"></ul>
+      </div>
+      <div class="card-box">
+        <h2>记分</h2>
+        <div class="score-lines" id="scoreLines"></div>
+        <p class="score-formula" id="scoreFormula"></p>
+      </div>
+    </section>
+
+    <div class="banner" id="banner" hidden>
+      <h3 id="bannerTitle">地主获胜</h3>
+      <p id="bannerText"></p>
+      <div class="row">
+        <button id="bannerNew" type="button">再来一局</button>
+        <a class="icon-btn" href="online.html" style="min-height:48px">去联机</a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="foot">
+    <a href="rules.html">完整规则与常见问题</a> · <a href="online.html">3 人联机</a><br>
+    纯前端本地素材 · 无外部请求 · 底牌与对手手牌不暴露给客户端
+  </footer>
+</div>
+
+<script src="../../shared/shuffle.js"></script>
+<script src="../../shared/sfx.js"></script>
+<script src="../../shared/store.js"></script>
+<script src="engine.js"></script>
+<script src="data.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var E = window.DoudizhuPremiumEngine;
+  var D = window.DoudizhuPremiumData;
+  var $ = function (id) { return document.getElementById(id); };
+
+  var SUIT_PATH = {
+    0: 'M12 2C9 6 4 8.5 4 12.5A4 4 0 0 0 11 15.5C10.6 17.5 9.5 19 8 20h8c-1.5-1-2.6-2.5-3-4.5A4 4 0 0 0 20 12.5C20 8.5 15 6 12 2z',
+    1: 'M12 21S3 14.5 3 8.5A4.6 4.6 0 0 1 12 6a4.6 4.6 0 0 1 9 2.5C21 14.5 12 21 12 21z',
+    2: 'M12 2a4 4 0 0 1 4 4c0 1.4-.7 2.6-1.8 3.3A4 4 0 1 1 13 16h-2a4 4 0 1 1-1.2-6.7A4 4 0 0 1 12 2zM11 16h2l1 6h-4z',
+    3: 'M12 2l7 10-7 10-7-10z'
+  };
+  var JOKER_CROWN = 'M4 17l2-8 4 4 2-7 2 7 4-4 2 8zM5 19h14v2H5z';
+
+  var state = null;
+  var level = 2;
+  var soundOn = true;
+  var selected = {};
+  var hintIds = {};
+  var aiTimer = null;
+  var lastSeed = 0;
+
+  function beep(name) {
+    if (!soundOn || !window.Sfx || typeof window.Sfx.play !== 'function') return;
+    try { window.Sfx.play(name); } catch (e) { /* audio unavailable */ }
+  }
+  function randomSeed() {
+    try {
+      var a = new Uint32Array(1);
+      window.crypto.getRandomValues(a);
+      return a[0] >>> 0;
+    } catch (e) { return (Date.now() ^ 0x9e3779b9) >>> 0; }
+  }
+  function escapeHtml(text) {
+    return String(text).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+  function suitSvg(s) {
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + SUIT_PATH[s] + '"/></svg>';
+  }
+  function suitKeyOf(card) {
+    if (card.r === E.SMALL_JOKER || card.r === E.BIG_JOKER) return -1;
+    return card.s;
+  }
+  function pipPositions(n) {
+    // Standard-ish pip columns: left/right at 22% and 78%, centre 50%.
+    var L = '22%', R = '78%', C = '50%';
+    var T = '10%', M = '50%', B = '90%', T2 = '30%', B2 = '70%';
+    var map = {
+      2: [[C, T], [C, B]],
+      3: [[C, T], [C, M], [C, B]],
+      4: [[L, T], [R, T], [L, B], [R, B]],
+      5: [[L, T], [R, T], [C, M], [L, B], [R, B]],
+      6: [[L, T], [R, T], [L, M], [R, M], [L, B], [R, B]],
+      7: [[L, T], [R, T], [C, T2], [L, M], [R, M], [L, B], [R, B]],
+      8: [[L, T], [R, T], [C, T2], [L, M], [R, M], [C, B2], [L, B], [R, B]],
+      9: [[L, T], [R, T], [L, T2], [R, T2], [C, M], [L, B2], [R, B2], [L, B], [R, B]],
+      10: [[L, T], [R, T], [C, T2], [L, T2], [R, T2], [L, B2], [R, B2], [C, B2], [L, B], [R, B]]
+    };
+    return map[n] || [];
+  }
+  function rankText(r) {
+    if (r === E.SMALL_JOKER) return '小';
+    if (r === E.BIG_JOKER) return '大';
+    return E.rankName(r);
+  }
+  function cardFaceHtml(card) {
+    var r = card.r;
+    var red = E.isRed(card);
+    var cls = 'card ' + (red ? 'red' : 'black');
+    var corner = function (pos) {
+      return '<span class="corner ' + pos + '"><b>' + escapeHtml(rankText(r)) + '</b>' +
+        (r >= 16 ? '<svg viewBox="0 0 24 24"><path d="' + JOKER_CROWN + '"/></svg>' : suitSvg(card.s)) + '</span>';
+    };
+    if (r >= 16) {
+      return '<div class="' + cls + ' joker" data-id="' + escapeHtml(card.id) + '" tabindex="0" aria-label="' +
+        (r === E.BIG_JOKER ? '大王' : '小王') + '"><span class="joker-label">' +
+        (r === E.BIG_JOKER ? '大王' : '小王') + '</span>' + corner('tl') + corner('br') + '</div>';
+    }
+    if (r >= 11) {
+      var letter = E.rankName(r);
+      return '<div class="' + cls + ' court-card" data-id="' + escapeHtml(card.id) + '" tabindex="0" aria-label="' +
+        escapeHtml(E.cardLabel(card)) + '">' + corner('tl') + corner('br') +
+        '<span class="court"><svg viewBox="0 0 60 80" aria-hidden="true">' +
+        '<rect x="4" y="4" width="52" height="72" rx="5" fill="none" stroke="currentColor" stroke-width="1.4"/>' +
+        '<path d="M30 16c5 0 8 3 8 7s-3 6-8 6-8-2-8-6 3-7 8-7zM16 62c0-9 6-15 14-15s14 6 14 15z" fill="currentColor" opacity=".9"/>' +
+        '<path d="M30 34c-7 0-12 5-12 12h24c0-7-5-12-12-12z" fill="currentColor" opacity=".55"/>' +
+        '<text x="30" y="44" text-anchor="middle" font-family="Songti SC,serif" font-size="18" font-weight="700" fill="#f6efdf">' + letter + '</text>' +
+        '</svg></span></div>';
+    }
+    if (r === 14) {
+      return '<div class="' + cls + '" data-id="' + escapeHtml(card.id) + '" tabindex="0" aria-label="' +
+        escapeHtml(E.cardLabel(card)) + '">' + corner('tl') + corner('br') +
+        '<svg class="bigpip" viewBox="0 0 24 24" aria-hidden="true"><path d="' + SUIT_PATH[card.s] + '"/></svg></div>';
+    }
+    var pips = pipPositions(r).map(function (pos) {
+      return '<svg style="left:' + pos[0] + ';top:' + pos[1] + ';transform:translate(-50%,-50%)" viewBox="0 0 24 24" aria-hidden="true"><path d="' + SUIT_PATH[card.s] + '"/></svg>';
+    }).join('');
+    return '<div class="' + cls + '" data-id="' + escapeHtml(card.id) + '" tabindex="0" aria-label="' +
+      escapeHtml(E.cardLabel(card)) + '">' + corner('tl') + corner('br') +
+      '<span class="pips">' + pips + '</span></div>';
+  }
+  function miniCardHtml(card) {
+    if (!card) return '';
+    var r = card.r;
+    if (r >= 16) {
+      return '<span class="mini-card joker ' + (E.isRed(card) ? 'red' : 'black') + '"><span class="mini-rank">' +
+        (r === E.BIG_JOKER ? '大王' : '小王') + '</span></span>';
+    }
+    return '<span class="mini-card ' + (E.isRed(card) ? 'red' : 'black') + '"><span class="mini-rank">' +
+      escapeHtml(E.rankName(r)) + '</span><svg class="mini-pip" viewBox="0 0 24 24" aria-hidden="true"><path d="' +
+      SUIT_PATH[card.s] + '"/></svg></span>';
+  }
+  function miniCardById(id) {
+    var all = E.makeDeck();
+    for (var i = 0; i < all.length; i++) if (all[i].id === id) return all[i];
+    return null;
+  }
+
+  function handCards() {
+    if (!state) return [];
+    return state.hands[0];
+  }
+
+  function layoutHand() {
+    var handEl = $('hand');
+    var cards = handEl.querySelectorAll('.card');
+    var n = cards.length;
+    if (!n) return;
+    var W = handEl.clientWidth || 320;
+    var cw = Math.floor(W / (n * 0.62 + 0.38));
+    cw = Math.max(30, Math.min(48, cw));
+    var step = n > 1 ? Math.min(cw * 0.72, (W - cw) / (n - 1)) : 0;
+    if (step < 12) step = Math.max(10, (W - cw) / (n - 1));
+    var total = cw + step * (n - 1);
+    var offset = Math.max(0, (W - total) / 2);
+    for (var i = 0; i < n; i++) {
+      var el = cards[i];
+      el.style.width = cw + 'px';
+      el.style.height = Math.round(cw * 1.42) + 'px';
+      el.style.left = Math.round(offset + i * step) + 'px';
+      el.style.setProperty('--rank-font', Math.max(12, Math.round(cw * 0.36)) + 'px');
+      el.style.setProperty('--pip-font', Math.max(10, Math.round(cw * 0.22)) + 'px');
+      el.style.zIndex = String(i + 1);
+    }
+    handEl.style.height = Math.round(cw * 1.42 + 22) + 'px';
+  }
+
+  function renderHand() {
+    var handEl = $('hand');
+    var cards = handCards();
+    var sorted = E.sortHand(cards);
+    selected = {};
+    handEl.innerHTML = '';
+    if (!sorted.length) {
+      var empty = document.createElement('div');
+      empty.className = 'hand-empty';
+      empty.textContent = state && state.phase === 'over' ? '手牌已出完' : '等待发牌';
+      handEl.appendChild(empty);
+      return;
+    }
+    for (var i = 0; i < sorted.length; i++) {
+      var html = cardFaceHtml(sorted[i]);
+      var holder = document.createElement('div');
+      holder.innerHTML = html;
+      var el = holder.firstChild;
+      if (hintIds[sorted[i].id]) el.classList.add('hinted');
+      handEl.appendChild(el);
+    }
+    layoutHand();
+  }
+
+  function toggleCard(el) {
+    if (!state || state.phase === 'over') return;
+    var id = el.getAttribute('data-id');
+    if (!id) return;
+    if (selected[id]) delete selected[id]; else selected[id] = 1;
+    el.classList.toggle('sel', !!selected[id]);
+    beep('click');
+  }
+
+  function clearSelection() {
+    selected = {};
+    var cards = $('hand').querySelectorAll('.card');
+    for (var i = 0; i < cards.length; i++) cards[i].classList.remove('sel');
+  }
+  function clearHint() {
+    hintIds = {};
+    var hinted = $('hand').querySelectorAll('.card.hinted');
+    for (var i = 0; i < hinted.length; i++) hinted[i].classList.remove('hinted');
+  }
+  function selectedIds() {
+    var out = [];
+    var cards = $('hand').querySelectorAll('.card.sel');
+    for (var i = 0; i < cards.length; i++) out.push(cards[i].getAttribute('data-id'));
+    return out;
+  }
+
+  function roleOf(seat) {
+    if (!state || state.landlord < 0) return '待定';
+    return seat === state.landlord ? '地主' : '农民';
+  }
+  function roleClass(seat) {
+    if (!state || state.landlord < 0) return 'role';
+    return 'role ' + (seat === state.landlord ? 'landlord' : 'farmer');
+  }
+  function seatOfPlayerName(seat) {
+    return state && state.players[seat] ? state.players[seat].name : '';
+  }
+
+  function setStatus(text, kind) {
+    $('statusText').textContent = text;
+    $('turnDot').className = 'dot' + (kind === 'over' ? ' over' : kind === 'wait' ? ' wait' : '');
+  }
+
+  function renderTable() {
+    var phase = state.phase;
+    for (var s = 1; s <= 2; s++) {
+      var nameEl = $('seat' + s + 'Name');
+      var roleEl = $('seat' + s + 'Role');
+      var countEl = $('seat' + s + 'Count');
+      var stripEl = $('seat' + s);
+      nameEl.textContent = seatOfPlayerName(s);
+      roleEl.textContent = roleOf(s);
+      roleEl.className = roleClass(s);
+      countEl.textContent = state.hands[s].length + ' 张';
+      stripEl.classList.toggle('is-turn', phase !== 'over' && E.currentSeat(state) === s);
+    }
+    $('meName').textContent = seatOfPlayerName(0) + '（你）';
+    $('meCount').textContent = String(state.hands[0].length);
+    $('meBid').textContent = state.bid ? String(state.bid) : '—';
+    $('meRole').textContent = roleOf(0);
+    $('meRole').className = roleClass(0);
+    $('meStrip').classList.toggle('is-turn', phase !== 'over' && E.currentSeat(state) === 0);
+
+    // Bottom cards: backs until the hand is over, then identities.
+    var bottom = $('bottomCards');
+    if (phase === 'over') {
+      bottom.innerHTML = state.bottom.map(miniCardHtml).join('');
+    } else {
+      bottom.innerHTML = '<span class="mini-card back"></span><span class="mini-card back"></span><span class="mini-card back"></span>';
+    }
+
+    var lp = $('lastPlay');
+    var note = $('playNote');
+    if (state.lastPlay) {
+      lp.innerHTML = state.lastPlay.cards.map(miniCardHtml).join('');
+      note.innerHTML = '<span class="play-label">' + escapeHtml(state.players[state.lastPlayer].name) + ' · ' +
+        escapeHtml(E.typeName(state.lastPlay.type)) + '</span>';
+    } else if (state.history.length) {
+      lp.innerHTML = '';
+      var last = state.history[state.history.length - 1];
+      note.innerHTML = '<span class="pass-note">' + escapeHtml(state.players[last.seat].name) +
+        ' 出完后两家不要，自由出牌</span>';
+    } else {
+      lp.innerHTML = '';
+      note.innerHTML = '<span class="pass-note">' + (phase === 'bid' ? '等待叫分' : '自由出牌') + '</span>';
+    }
+
+    if (phase === 'over') {
+      var side = state.winnerSide === 'landlord' ? '地主' : '农民';
+      setStatus(side + '获胜：' + seatOfPlayerName(state.winner) + ' 先出完手牌。', 'over');
+    } else if (phase === 'bid') {
+      var who = E.currentSeat(state);
+      setStatus(who === 0 ? '轮到你叫分：1 / 2 / 3 分，或选择不叫。' : seatOfPlayerName(who) + ' 正在叫分…', who === 0 ? '' : 'wait');
+    } else {
+      var turn = E.currentSeat(state);
+      if (turn === 0) {
+        setStatus(state.lastPlay ? '轮到你出牌：选牌压过 ' + E.typeName(state.lastPlay.type) + '，或不要。' : '轮到你出牌：自由出牌。', '');
+      } else {
+        setStatus(seatOfPlayerName(turn) + ' 出牌中…（' + levelName() + '）', 'wait');
+      }
+    }
+  }
+
+  function levelName() {
+    return level === 1 ? '入门' : level === 2 ? '标准' : '高手';
+  }
+
+  function renderScore() {
+    var sc = E.scoreOf(state);
+    $('scoreLines').innerHTML =
+      '<div><span>底分</span><b>' + sc.base + '</b></div>' +
+      '<div><span>叫分</span><b>' + (sc.bid || '—') + '</b></div>' +
+      '<div><span>炸弹 / 王炸</span><b>' + sc.bombs + '</b></div>' +
+      '<div><span>倍数</span><b>' + sc.multiplier + '×</b></div>' +
+      '<div><span>本局分值</span><b>' + sc.points + '</b></div>' +
+      (sc.deltas ? '<div><span>地主</span><b>' + (sc.deltas[sc.landlord] > 0 ? '+' : '') + sc.deltas[sc.landlord] + '</b></div>' : '');
+    $('scoreFormula').innerHTML = '公式：<b>底分 ' + sc.base + ' × 叫分 ' + (sc.bid || '—') + ' × 2^' + sc.bombs +
+      ' = ' + sc.points + ' 分</b>。地主一人对两名农民按 2 倍收付。';
+  }
+
+  function renderBid() {
+    var panel = $('bidPanel');
+    var canBid = state.phase === 'bid' && E.currentSeat(state) === 0;
+    panel.hidden = !canBid;
+    if (!canBid) return;
+    var high = state.bidding.highest;
+    $('bidHint').textContent = '当前最高 ' + high + ' 分';
+    var btns = panel.querySelectorAll('button[data-bid]');
+    for (var i = 0; i < btns.length; i++) {
+      var score = Number(btns[i].getAttribute('data-bid'));
+      btns[i].disabled = score !== 0 && score <= high;
+    }
+  }
+
+  function renderControls() {
+    var myTurn = state.phase === 'play' && E.currentSeat(state) === 0;
+    $('playBtn').disabled = !myTurn;
+    $('passBtn').disabled = !myTurn || !state.lastPlay;
+    $('hintBtn').disabled = state.phase === 'over' || (!myTurn && state.phase !== 'bid');
+    $('newBtn').disabled = false;
+  }
+
+  function renderLog() {
+    var lines = state.log.slice(-16).reverse();
+    $('log').innerHTML = lines.map(function (line) {
+      return '<li>' + escapeHtml(line) + '</li>';
+    }).join('');
+  }
+
+  function renderBanner() {
+    var banner = $('banner');
+    if (state.phase !== 'over') { banner.hidden = true; return; }
+    banner.hidden = false;
+    var landlordWon = state.winnerSide === 'landlord';
+    var youWon = (state.landlord === 0) === landlordWon;
+    $('bannerTitle').textContent = landlordWon ? '地主获胜' : '农民获胜';
+    var sc = E.scoreOf(state);
+    $('bannerText').textContent =
+      seatOfPlayerName(state.winner) + ' 先出完手牌。底分 ' + sc.base + ' × 叫分 ' + sc.bid +
+      ' × ' + sc.multiplier + ' 倍 = ' + sc.points + ' 分；' +
+      (youWon ? '你赢了' : '你输了') + '（' + (state.landlord === 0 ? '你是地主' : '你是农民') + '）。';
+    beep(youWon ? 'win' : 'lose');
+  }
+
+  function render() {
+    if (!state) return;
+    renderHand();
+    renderTable();
+    renderBid();
+    renderControls();
+    renderScore();
+    renderLog();
+    renderBanner();
+  }
+
+  function schedulePump(delay) {
+    if (aiTimer) clearTimeout(aiTimer);
+    aiTimer = setTimeout(pump, delay == null ? 480 : delay);
+  }
+
+  function pump() {
+    aiTimer = null;
+    if (!state || state.phase === 'over') return;
+    var who = E.currentSeat(state);
+    if (who === 0) return;
+    var action = E.aiChoose(state, who, level, function () { return E.nextRandom(state); });
+    if (!action) return;
+    var before = state.phase;
+    var res = E.applyAction(state, action, who);
+    if (!res.ok) { render(); return; }
+    if (action.k === 'bid') {
+      beep('click');
+    } else if (action.k === 'play') {
+      var p = res.play;
+      beep(p && (p.type === 'bomb' || p.type === 'rocket') ? 'capture' : 'move');
+    }
+    clearSelection();
+    clearHint();
+    render();
+    if (state.phase === 'over') { renderBanner(); return; }
+    if (before === 'bid' && state.phase === 'play') beep('deal');
+    schedulePump(520);
+  }
+
+  function afterHumanAction(res) {
+    clearSelection();
+    clearHint();
+    if (!res.ok) {
+      beep('error');
+      setStatus('不能这样出：' + (res.code === 'E_BEAT' ? '必须同牌型、同张数且更大，或用炸弹 / 王炸。' :
+        res.code === 'E_TYPE' ? '这几张牌不是合法牌型。' :
+          res.code === 'E_PASS' ? '自由出牌时不能不要。' : (res.error || '动作被拒绝')), '');
+      renderControls();
+      return;
+    }
+    render();
+    if (state.phase === 'play') schedulePump(420);
+  }
+
+  function humanBid(score) {
+    if (!state || state.phase !== 'bid') return;
+    var res = E.applyAction(state, { k: 'bid', score: score }, 0);
+    if (res.ok) beep('click');
+    afterHumanAction(res);
+  }
+
+  function humanPlay() {
+    if (!state || state.phase !== 'play' || E.currentSeat(state) !== 0) return;
+    var ids = selectedIds();
+    if (!ids.length) { setStatus('先点选要出的牌。', ''); beep('error'); return; }
+    var res = E.applyAction(state, { k: 'play', cards: ids }, 0);
+    if (res.ok) beep(res.play && (res.play.type === 'bomb' || res.play.type === 'rocket') ? 'capture' : 'move');
+    afterHumanAction(res);
+  }
+  function humanPass() {
+    if (!state || state.phase !== 'play' || E.currentSeat(state) !== 0) return;
+    var res = E.applyAction(state, { k: 'pass' }, 0);
+    if (res.ok) beep('click');
+    afterHumanAction(res);
+  }
+  function humanHint() {
+    if (!state || state.phase === 'over') return;
+    if (state.phase === 'bid') {
+      setStatus('提示：看双王、炸弹与长顺子决定叫几分。', '');
+      return;
+    }
+    if (E.currentSeat(state) !== 0) return;
+    var play = E.suggest(state.hands[0], state.lastPlay);
+    clearSelection();
+    clearHint();
+    if (!play) { setStatus('没有能压过上家的牌，只能不要。', ''); beep('error'); return; }
+    hintIds = {};
+    play.cards.forEach(function (c) { hintIds[c.id] = 1; });
+    var cards = $('hand').querySelectorAll('.card');
+    for (var i = 0; i < cards.length; i++) {
+      if (hintIds[cards[i].getAttribute('data-id')]) {
+        cards[i].classList.add('hinted');
+        selected[cards[i].getAttribute('data-id')] = 1;
+        cards[i].classList.add('sel');
+      }
+    }
+    setStatus('提示：' + E.typeName(play.type) + '（已选中，可直接出牌）。', '');
+    beep('click');
+  }
+
+  function newGame(seed) {
+    if (aiTimer) clearTimeout(aiTimer);
+    aiTimer = null;
+    lastSeed = seed == null ? randomSeed() : seed;
+    state = E.createGame({ seed: lastSeed, names: ['你', 'AI 右', 'AI 左'], human: [true, false, false] });
+    selected = {};
+    hintIds = {};
+    render();
+    beep('deal');
+    if (E.currentSeat(state) !== 0) schedulePump(650);
+  }
+
+  function setLevel(next) {
+    level = next;
+    var buttons = document.querySelectorAll('.seg button');
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].setAttribute('aria-pressed', String(Number(buttons[i].getAttribute('data-level')) === level));
+    }
+    if (window.Store) window.Store.set('doudizhu-premium:level', String(level));
+    renderTable();
+  }
+
+  function seatLabel(seat) {
+    return seat === 0 ? '你' : seatOfPlayerName(seat);
+  }
+
+  function wire() {
+    $('hand').addEventListener('click', function (e) {
+      var card = e.target.closest ? e.target.closest('.card') : null;
+      if (card) { clearHint(); toggleCard(card); }
+    });
+    $('hand').addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      var card = e.target.closest ? e.target.closest('.card') : null;
+      if (!card) return;
+      e.preventDefault();
+      clearHint();
+      toggleCard(card);
+    });
+    $('playBtn').addEventListener('click', humanPlay);
+    $('passBtn').addEventListener('click', humanPass);
+    $('hintBtn').addEventListener('click', humanHint);
+    $('newBtn').addEventListener('click', function () { newGame(); });
+    $('bannerNew').addEventListener('click', function () { newGame(); });
+    var bids = $('bidPanel').querySelectorAll('button[data-bid]');
+    for (var i = 0; i < bids.length; i++) {
+      bids[i].addEventListener('click', function () {
+        humanBid(Number(this.getAttribute('data-bid')));
+      });
+    }
+    var seg = document.querySelectorAll('.seg button');
+    for (var j = 0; j < seg.length; j++) {
+      seg[j].addEventListener('click', function () { setLevel(Number(this.getAttribute('data-level'))); });
+    }
+    $('soundBtn').addEventListener('click', function () {
+      soundOn = !soundOn;
+      this.textContent = '音效 ' + (soundOn ? '开' : '关');
+      this.setAttribute('aria-pressed', String(soundOn));
+      if (window.Store) window.Store.set('doudizhu-premium:sound', soundOn ? '1' : '0');
+      if (soundOn) beep('click');
+    });
+    window.addEventListener('resize', layoutHand);
+  }
+
+  var savedLevel = window.Store ? Number(window.Store.get('doudizhu-premium:level', '2')) : 2;
+  if (savedLevel >= 1 && savedLevel <= 3) level = savedLevel;
+  var savedSound = window.Store ? window.Store.get('doudizhu-premium:sound', '1') : '1';
+  soundOn = savedSound !== '0';
+
+  wire();
+  var segInit = document.querySelectorAll('.seg button');
+  for (var k = 0; k < segInit.length; k++) {
+    segInit[k].setAttribute('aria-pressed', String(Number(segInit[k].getAttribute('data-level')) === level));
+  }
+  $('soundBtn').textContent = '音效 ' + (soundOn ? '开' : '关');
+  $('soundBtn').setAttribute('aria-pressed', String(soundOn));
+  newGame();
+
+  // Read-only handle for the smoke check and browser E2E.
+  window.DoudizhuPremiumPage = {
+    getState: function () { return state ? E.publicView(state, 0) : null; },
+    getLevel: function () { return level; },
+    getSeed: function () { return lastSeed; },
+    newGame: newGame,
+    play: humanPlay,
+    pass: humanPass,
+    hint: humanHint,
+    bid: humanBid,
+    isOver: function () { return !!(state && state.phase === 'over'); }
+  };
+})();
+</script>
+</body>
+</html>

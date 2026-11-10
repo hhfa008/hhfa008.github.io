@@ -170,6 +170,17 @@ hr{border:0;border-top:1px solid var(--line);margin:16px 0}
   box-shadow:0 8px 24px rgb(0 0 0 / .22);opacity:0;pointer-events:none;transition:opacity .16s,transform .16s}
 #toast.on{opacity:1;transform:translate(-50%,0)}
 
+@media (prefers-color-scheme:dark){
+  :root{--paper:#101316;--paper-2:#171b1f;--ink:#f2efe7;--muted:#b7b3a8;--muted-2:#a8a397;
+    --line:#333a40;--line-strong:#4a535b;--accent:#f08a5d;--accent-soft:#3a241a;--danger:#ff8a7a}
+  .privacy{border-color:#5a3a2a}
+  input[type="text"],input[type="number"],input[type="search"],textarea{background:var(--paper-2);color:var(--ink)}
+  .btn{background:var(--paper-2)}
+  .btn.primary{color:#101316}
+  .cust{background:var(--paper-2)}
+  #reminder-text{background:var(--paper-2);color:var(--ink)}
+  .tx-amt.payment{color:#8fd19e}
+}
 @media (prefers-reduced-motion:reduce){
   *{animation:none!important;transition:none!important}
   .btn:active{transform:none}
@@ -187,6 +198,7 @@ hr{border:0;border-top:1px solid var(--line);margin:16px 0}
   <div class="wrap header-inner">
     <a class="brand" href="/"><span class="brand-mark" aria-hidden="true"></span>Devin</a>
     <nav class="langs" aria-label="Language">
+      <button type="button" data-lang="zh">中文</button>
       <button type="button" data-lang="en">EN</button>
       <button type="button" data-lang="id">ID</button>
       <button type="button" data-lang="fil">FIL</button>
@@ -371,6 +383,59 @@ hr{border:0;border-top:1px solid var(--line);margin:16px 0}
       creditLabel: 'Utang',
       paymentLabel: 'Payment'
     },
+    zh: {
+      appTitle: '杂货店赊账账本',
+      tagline: '几秒记下挂账，离线也能用。',
+      privacy: '数据只保存在你的设备上，不会上传。',
+      totalOwed: '欠款合计',
+      customersWord: '位客户',
+      customersWord1: '位客户',
+      currency: '货币',
+      addCustomer: '添加客户',
+      nameLabel: '客户姓名',
+      namePh: '例如：Nena 阿姨',
+      add: '添加',
+      customers: '客户',
+      noCustomers: '还没有客户，先在上面添加一位。',
+      paidUp: '已结清',
+      back: '返回',
+      owes: '余额',
+      addEntry: '记一笔',
+      amount: '金额',
+      note: '备注（可选）',
+      notePh: '例如：大米、2 罐沙丁鱼',
+      saveCredit: '记挂账',
+      savePayment: '记录还款',
+      history: '记录',
+      noHistory: '暂无记录。',
+      deleteCustomer: '删除此客户',
+      confirmDeleteCustomer: '删除此客户及其全部记录？',
+      deleteEntry: '删除记录',
+      confirmDeleteEntry: '删除这条记录？',
+      collection: '催款清单',
+      reminderHint: '生成一条包含所有未结余额的消息，可直接发到 WhatsApp 或短信。',
+      makeReminder: '生成催款清单',
+      copy: '复制清单',
+      close: '关闭',
+      copied: '已复制，可粘贴到 WhatsApp 或短信。',
+      copyFail: '无法自动复制，请手动选择上面的文本。',
+      nothingOwed: '目前没有欠款。',
+      export: '备份（JSON）',
+      import: '恢复备份',
+      importConfirm: '用这个备份替换当前全部数据？',
+      importBad: '这个文件不是有效的备份。',
+      imported: '备份已恢复。',
+      exported: '备份已保存。',
+      amountInvalid: '请输入大于零的金额。',
+      nameInvalid: '请输入客户姓名。',
+      storageFail: '无法保存。浏览器存储空间可能已满。',
+      reminderTitle: '杂货店账本',
+      reminderFooter: '谢谢！',
+      backupHint: '备份是一个 JSON 文件。请妥善保管，或迁移到新手机。',
+      more: '独立开发者制作——更多工具在这里',
+      creditLabel: '挂账',
+      paymentLabel: '还款'
+    },
     id: {
       appTitle: 'Buku utang warung (sari-sari)',
       tagline: 'Catat utang dalam hitungan detik. Bisa offline.',
@@ -479,6 +544,7 @@ hr{border:0;border-top:1px solid var(--line);margin:16px 0}
     }
   };
 
+  var LANG_TAG = { en: 'en', id: 'id', fil: 'fil', zh: 'zh-CN' };
   var ui = { lang: 'en', currency: 'PHP', openId: null };
   var data = { customers: [] };
 
@@ -498,7 +564,7 @@ hr{border:0;border-top:1px solid var(--line);margin:16px 0}
     return d[k] != null ? d[k] : (I18N.en[k] != null ? I18N.en[k] : k);
   };
   var locale = function () {
-    return ui.lang === 'id' ? 'id-ID' : ui.lang === 'fil' ? 'fil-PH' : 'en-PH';
+    return ui.lang === 'id' ? 'id-ID' : ui.lang === 'fil' ? 'fil-PH' : ui.lang === 'zh' ? 'zh-CN' : 'en-PH';
   };
   var fmt = function (n) {
     var c = CUR[ui.currency] || CUR.PHP;
@@ -550,6 +616,9 @@ hr{border:0;border-top:1px solid var(--line);margin:16px 0}
   }
 
   function loadSettings() {
+    var q = '';
+    try { q = new URLSearchParams(location.search).get('lang') || ''; } catch (e) {}
+    var qLang = (q === 'en' || q === 'id' || q === 'fil' || q === 'zh') ? q : '';
     var found = false;
     try {
       var raw = localStorage.getItem(SET_KEY);
@@ -557,10 +626,11 @@ hr{border:0;border-top:1px solid var(--line);margin:16px 0}
         found = true;
         var s = JSON.parse(raw) || {};
         if (s.currency && CUR[s.currency]) ui.currency = s.currency;
-        if (s.lang === 'en' || s.lang === 'id' || s.lang === 'fil') ui.lang = s.lang;
+        if (s.lang === 'en' || s.lang === 'id' || s.lang === 'fil' || s.lang === 'zh') ui.lang = s.lang;
       }
     } catch (e) {}
-    if (!found) ui.lang = detectLang();
+    if (qLang) ui.lang = qLang;
+    else if (!found) ui.lang = detectLang();
   }
 
   function detectLang() {
@@ -593,7 +663,7 @@ hr{border:0;border-top:1px solid var(--line);margin:16px 0}
   }
 
   function applyLang() {
-    document.documentElement.lang = ui.lang;
+    document.documentElement.lang = LANG_TAG[ui.lang] || 'en';
     var nodes = document.querySelectorAll('[data-i]');
     for (var i = 0; i < nodes.length; i++) {
       var k = nodes[i].getAttribute('data-i');

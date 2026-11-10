@@ -1,0 +1,924 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>接龙 · Solitaire 精品版 — 经典单人纸牌</title>
+<meta name="description" content="接龙 Klondike 精品单人版：52 张牌、七列翻牌、四色基础堆、翻 1 张或 3 张、撤销、提示、自动收牌与离线存档。">
+<meta name="theme-color" content="#07130c">
+<meta property="og:title" content="接龙 · Solitaire 精品版">
+<meta property="og:description" content="绿呢牌桌与酒红金纹牌背上的经典 Klondike：七列接龙、四色收牌、提示与撤销。">
+<meta property="og:image" content="assets/og.webp">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://hhfa008.github.io/games/boardgame/solitaire-premium/">
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/solitaire-premium/">
+<link rel="icon" href="assets/cover.webp">
+<style>
+:root{
+  --bg:#06110a; --panel:#0e1f14; --panel2:#152d1d; --panel3:#1d3b27;
+  --line:rgba(201,163,95,.28); --line-soft:rgba(201,163,95,.15);
+  --brass:#c9a35f; --brass2:#efd399; --brass-dark:#80602b;
+  --ink:#f0e7d2; --dim:#b9c6b2; --faint:#8fa08a;
+  --red:#c8564b; --black:#1d1a16; --green:#3f6b43;
+  --ok:#8fc48a; --danger:#d47765;
+  --font-display:"Songti SC","STSong","Noto Serif SC",Georgia,serif;
+  --font-body:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --felt:url("../../assets/art/premium/solitaire/felt.webp");
+  --card-back:url("../../assets/art/premium/solitaire/card-back.webp");
+  --card-paper:url("../../assets/art/premium/solitaire/card-paper.webp");
+  --slot:clamp(44px,12vw,86px);
+  --radius:12px;
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box}
+html{background:var(--bg);-webkit-text-size-adjust:100%}
+body{
+  margin:0;min-height:100dvh;overflow-x:hidden;color:var(--ink);
+  font-family:var(--font-body);font-size:14px;line-height:1.45;
+  background:
+    radial-gradient(900px 620px at 50% -12%,rgba(201,163,95,.18),transparent 62%),
+    radial-gradient(720px 640px at 104% 20%,rgba(60,105,67,.18),transparent 66%),
+    linear-gradient(180deg,rgba(5,13,8,.90),rgba(5,13,8,.96)),
+    var(--felt) center/cover fixed no-repeat;
+}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(ellipse at center,transparent 40%,rgba(0,0,0,.52) 100%)}
+button,a{font-family:inherit;color:inherit}
+button{border:0;background:none;cursor:pointer}
+button:focus-visible,a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brass2);outline-offset:2px}
+.sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+.app{position:relative;z-index:1;width:100%;max-width:1180px;margin:0 auto;
+  padding:calc(10px + var(--safe-top)) 12px calc(18px + var(--safe-bottom))}
+h1,h2,h3{font-family:var(--font-display);font-weight:700;margin:0;letter-spacing:.05em}
+
+/* ---------- top bar ---------- */
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.emblem{width:52px;height:52px;flex:0 0 52px;border-radius:50%;
+  border:1px solid rgba(201,163,95,.55);
+  background:
+    linear-gradient(rgba(6,16,10,.42),rgba(6,16,10,.42)),
+    var(--card-back) center 38%/132% no-repeat;
+  background-blend-mode:multiply,normal;
+  box-shadow:0 8px 20px rgba(0,0,0,.42),inset 0 0 0 3px rgba(201,163,95,.12)}
+.brand h1{font-size:clamp(24px,6vw,38px);line-height:1.04;color:#f7ecd6;text-shadow:0 3px 18px rgba(0,0,0,.6);white-space:nowrap}
+.brand h1 span{color:var(--brass2);font-size:.72em;letter-spacing:.02em}
+.brand p{margin:2px 0 0;font-size:12px;letter-spacing:.15em;color:var(--dim);white-space:nowrap}
+.top-actions{display:flex;align-items:center;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+.btn{min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:4px;
+  border:1px solid rgba(201,163,95,.34);border-radius:11px;padding:0 10px;
+  background:linear-gradient(180deg,rgba(30,55,37,.82),rgba(15,32,21,.86));
+  color:var(--ink);font-size:13px;letter-spacing:.04em;text-decoration:none;
+  box-shadow:0 4px 12px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.05)}
+.btn:hover{background:linear-gradient(180deg,rgba(43,74,50,.9),rgba(21,43,28,.9));border-color:rgba(201,163,95,.62)}
+.btn:active{transform:translateY(1px)}
+.btn[disabled]{opacity:.45;cursor:default}
+.btn.primary{background:linear-gradient(180deg,#9a763a,#6b4d20);border-color:rgba(239,211,153,.65);color:#fff6e2}
+.btn.primary:hover{background:linear-gradient(180deg,#b38a48,#7d5a27)}
+.badge{display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:44px;
+  padding:0 11px;border-radius:999px;border:1px solid rgba(239,211,153,.5);
+  background:rgba(201,163,95,.16);color:var(--brass2);font-size:13px;font-weight:600;letter-spacing:.12em}
+
+/* ---------- status strip ---------- */
+.modebar{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;
+  padding:7px 10px;border:1px solid var(--line-soft);border-radius:12px;
+  background:linear-gradient(90deg,rgba(24,48,31,.82),rgba(13,29,19,.72));font-size:12px;color:var(--dim)}
+.stats{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.stats span{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.stats b{color:var(--brass2);font-weight:700;font-variant-numeric:tabular-nums;font-size:14px}
+.select-wrap{display:inline-flex;align-items:center;gap:5px;min-height:44px}
+.select-wrap label{font-size:12px;color:var(--dim)}
+select{font-family:inherit;font-size:16px;color:var(--ink);background:rgba(10,24,15,.9);
+  border:1px solid rgba(201,163,95,.35);border-radius:9px;min-height:44px;padding:0 8px}
+.resume-note{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--ok)}
+
+/* ---------- board ---------- */
+main{display:flex;flex-direction:column;gap:8px;margin-top:9px}
+.board{border:1px solid var(--line);border-radius:16px;padding:9px 8px 12px;
+  background:
+    linear-gradient(180deg,rgba(17,38,24,.82),rgba(6,16,10,.9)),
+    var(--felt) center/cover no-repeat;
+  background-blend-mode:normal,normal;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 18px 40px rgba(0,0,0,.26)}
+.top-row{display:flex;align-items:flex-start;gap:2px;margin-bottom:10px}
+.slot{position:relative;width:var(--slot);min-width:var(--slot);height:calc(var(--slot) * 88 / 63);
+  border-radius:7px;border:1px solid rgba(201,163,95,.32);
+  background:rgba(4,14,8,.42);display:block;padding:0;overflow:hidden;
+  box-shadow:inset 0 2px 8px rgba(0,0,0,.42)}
+.slot.stock,.slot.waste{cursor:pointer}
+.slot.stock:hover,.slot.waste:hover{border-color:rgba(239,211,153,.6)}
+.spacer{flex:1 1 0;min-width:0}
+.foundation-row{display:flex;gap:2px}
+.foundation-slot{position:relative}
+.ghost-suit{position:absolute;inset:0;display:grid;place-items:center;color:rgba(201,163,95,.22)}
+.ghost-suit svg{width:56%;height:56%}
+.slot-count{position:absolute;right:2px;bottom:1px;z-index:4;font-size:12px;line-height:1;
+  padding:2px 4px;border-radius:6px;background:rgba(4,12,7,.82);color:var(--brass2);
+  font-variant-numeric:tabular-nums;pointer-events:none}
+.stock-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:12px;color:var(--dim);letter-spacing:.06em;text-align:center;padding:2px;line-height:1.2}
+.waste-fan{position:absolute;inset:0}
+.waste-fan .card{position:absolute;top:0;width:100%}
+
+/* ---------- tableau ---------- */
+.tableau{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;align-items:start}
+.column{position:relative;min-height:calc(var(--slot) * 88 / 63);border-radius:7px;min-width:0}
+.column.drop{box-shadow:0 0 0 2px rgba(239,211,153,.55);background:rgba(201,163,95,.08)}
+.empty-slot{width:100%;aspect-ratio:63/88;border-radius:7px;border:1px dashed rgba(201,163,95,.30);
+  background:rgba(3,12,6,.30);display:flex;align-items:center;justify-content:center;
+  color:rgba(201,163,95,.42);font-size:12px;letter-spacing:.08em}
+.column .card{width:100%;position:relative}
+.column .card + .card{margin-top:-116%}
+.column .card.face + .card.face{margin-top:-93%}
+.column .card.face-down + .card.face{margin-top:-102%}
+
+/* ---------- cards ---------- */
+.card{
+  position:relative;display:block;width:100%;aspect-ratio:63/88;border-radius:7px;
+  border:1px solid rgba(0,0,0,.42);overflow:hidden;user-select:none;-webkit-user-select:none;
+  box-shadow:0 3px 9px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.28);
+  transition:transform .12s ease,box-shadow .12s ease,filter .12s ease;
+  background:var(--card-paper) center/cover no-repeat;
+  cursor:pointer;-webkit-tap-highlight-color:transparent;
+}
+.card.face{color:var(--black);background:
+  linear-gradient(145deg,rgba(255,252,242,.16),rgba(98,76,37,.10)),
+  var(--card-paper) center/cover no-repeat;background-blend-mode:soft-light,normal}
+.card.face.red{color:#a42722}
+.card.face-down{background:
+  linear-gradient(145deg,rgba(255,246,224,.05),rgba(20,6,8,.14)),
+  var(--card-back) center/cover no-repeat;background-blend-mode:soft-light,normal;
+  border-color:rgba(239,211,153,.44)}
+.card.selected{transform:translateY(-3px) scale(1.015);box-shadow:0 0 0 2px var(--brass2),0 10px 20px rgba(0,0,0,.44);z-index:20}
+.card.hint-from{box-shadow:0 0 0 2px var(--ok),0 0 18px rgba(143,196,138,.45);z-index:19}
+.card.legal-target{border-color:rgba(239,211,153,.85);box-shadow:0 0 0 1px rgba(239,211,153,.55),0 0 16px rgba(201,163,95,.25)}
+.column.hint-to,.foundation-slot.hint-to{box-shadow:0 0 0 2px rgba(143,196,138,.75);background:rgba(80,130,85,.18)}
+.corner{position:absolute;display:flex;flex-direction:column;align-items:center;line-height:.9;
+  font-family:Georgia,"Songti SC",serif;font-weight:700;font-size:clamp(12px,3.4vw,20px);
+  z-index:2;pointer-events:none}
+.corner.tl{left:6%;top:4%}
+.corner.br{right:6%;bottom:4%;transform:rotate(180deg)}
+.corner .suit-ico{width:1em;height:1em;margin-top:1px}
+.suit-ico{display:inline-block;width:1em;height:1em;fill:currentColor}
+.pips{position:absolute;inset:13% 12% 13% 12%;pointer-events:none}
+.pip{position:absolute;width:23%;aspect-ratio:1;transform:translate(-50%,-50%);color:currentColor}
+.pip svg{width:100%;height:100%;fill:currentColor}
+.ace-art{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none}
+.ace-art .suit-ico{width:56%;height:56%;opacity:.92}
+.court{position:absolute;inset:9% 10%;border:1px solid currentColor;border-radius:4px;
+  display:grid;place-items:center;opacity:.92;overflow:hidden;
+  background:linear-gradient(135deg,rgba(201,163,95,.10),transparent 42%,rgba(201,163,95,.10))}
+.court::before,.court::after{content:"";position:absolute;inset:3px;border:1px solid currentColor;border-radius:2px;opacity:.45}
+.court .court-letter{font-family:Georgia,"Songti SC",serif;font-weight:700;font-size:clamp(14px,4.6vw,28px);line-height:1;z-index:1}
+.court .court-letter.flip{transform:rotate(180deg)}
+.court .suit-ico{width:34%;height:34%;z-index:1;opacity:.9}
+.court .court-split{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:8% 0}
+.back-pattern{position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(circle at 50% 50%,rgba(239,211,153,.16),transparent 62%),
+  repeating-linear-gradient(45deg,transparent 0 6px,rgba(239,211,153,.06) 6px 7px)}
+.slot .card{position:absolute;inset:0;width:100%;height:100%;aspect-ratio:auto;border-radius:6px}
+.slot .card + .card{position:absolute}
+
+/* ---------- lower bar ---------- */
+.tipbar{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;
+  padding:6px 9px;border-radius:10px;border:1px solid var(--line-soft);
+  background:rgba(6,17,10,.5);font-size:12px;color:var(--dim);text-align:center}
+.tipbar b{color:var(--brass2);font-weight:600}
+footer{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;
+  margin-top:10px;font-size:12px;color:var(--faint);text-align:center}
+footer a{color:var(--dim);text-decoration:none;min-height:44px;display:inline-flex;align-items:center;padding:0 6px}
+footer a:hover{color:var(--brass2)}
+
+/* ---------- toast / modal ---------- */
+.toast{position:fixed;left:50%;bottom:calc(18px + var(--safe-bottom));transform:translate(-50%,16px);
+  z-index:60;max-width:min(92vw,480px);padding:10px 14px;border-radius:11px;
+  border:1px solid rgba(201,163,95,.45);background:rgba(9,24,14,.96);color:var(--ink);
+  font-size:13px;box-shadow:0 12px 32px rgba(0,0,0,.5);opacity:0;pointer-events:none;
+  transition:opacity .2s ease,transform .2s ease}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.modal{position:fixed;inset:0;z-index:70;display:grid;place-items:center;padding:18px;
+  background:rgba(2,8,4,.72);backdrop-filter:blur(3px)}
+.modal[hidden]{display:none}
+.modal-card{width:min(92vw,420px);border:1px solid rgba(239,211,153,.5);border-radius:18px;
+  padding:20px 18px;text-align:center;color:var(--ink);
+  background:
+    linear-gradient(160deg,rgba(29,58,37,.98),rgba(8,21,13,.99)),
+    var(--felt) center/cover no-repeat;
+  box-shadow:0 24px 70px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)}
+.modal-card h2{font-size:26px;color:#f7ecd6;letter-spacing:.08em}
+.modal-card p{margin:8px 0 0;font-size:13px;color:var(--dim)}
+.modal-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}
+.modal-stats div{border:1px solid var(--line-soft);border-radius:10px;padding:8px 4px;background:rgba(3,12,6,.35)}
+.modal-stats b{display:block;font-size:20px;color:var(--brass2);font-variant-numeric:tabular-nums}
+.modal-stats span{font-size:12px;color:var(--dim)}
+.modal-actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:8px}
+.confetti{position:absolute;inset:0;overflow:hidden;pointer-events:none;border-radius:18px}
+.confetti i{position:absolute;top:-12px;width:7px;height:12px;border-radius:2px;opacity:.9;
+  animation:fall linear forwards}
+@keyframes fall{to{transform:translateY(560px) rotate(540deg);opacity:.15}}
+@media (prefers-reduced-motion: reduce){
+  *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+  .confetti{display:none}
+}
+
+/* ---------- desktop ---------- */
+@media (min-width:760px){
+  body{font-size:15px}
+  .top-row{gap:8px}
+  .foundation-row{gap:8px}
+  .app{padding-left:18px;padding-right:18px}
+  .board{padding:14px 14px 18px}
+  .top-row{gap:8px;margin-bottom:14px}
+  .foundation-row{gap:8px}
+  .tableau{gap:8px}
+  .column .card + .card{margin-top:-112%}
+  .column .card.face + .card.face{margin-top:-90%}
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="s-spade" viewBox="0 0 24 24"><path d="M12 1.4C9.1 5.5 3.4 8.4 3.4 13.3a4.5 4.5 0 0 0 7.5 3.3c-.1 2.2-1.2 4-2.9 5.2h10c-1.7-1.2-2.8-3-2.9-5.2a4.5 4.5 0 0 0 7.5-3.3C20.6 8.4 14.9 5.5 12 1.4z"/></symbol>
+    <symbol id="s-heart" viewBox="0 0 24 24"><path d="M12 21.4S2.6 15.4 2.6 9.1A5.3 5.3 0 0 1 12 5.4a5.3 5.3 0 0 1 9.4 3.7c0 6.3-9.4 12.3-9.4 12.3z"/></symbol>
+    <symbol id="s-diamond" viewBox="0 0 24 24"><path d="M12 1.6 21.2 12 12 22.4 2.8 12z"/></symbol>
+    <symbol id="s-club" viewBox="0 0 24 24"><path d="M12 2a4.4 4.4 0 0 0-3.3 7.3 4.4 4.4 0 1 0 2.3 7.7v3.4H8v2h8v-2h-3v-3.4a4.4 4.4 0 1 0 2.3-7.7A4.4 4.4 0 0 0 12 2z"/></symbol>
+  </defs>
+</svg>
+
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="emblem" aria-hidden="true"></div>
+      <div>
+        <h1>接龙 <span>Solitaire</span></h1>
+        <p>KLONDIKE · 经典单人纸牌</p>
+      </div>
+    </div>
+    <nav class="top-actions" aria-label="游戏操作">
+      <span class="badge" id="singleBadge">单人</span>
+      <button class="btn primary" id="newBtn" aria-label="开新局（N）">新局</button>
+      <button class="btn" id="undoBtn" aria-label="撤销（U）">撤销</button>
+      <button class="btn" id="hintBtn" aria-label="提示（H）">提示</button>
+      <button class="btn" id="autoBtn" aria-label="自动收牌（A）">收牌</button>
+      <button class="btn" id="soundBtn" aria-label="音效" aria-pressed="true">声</button>
+      <a class="btn" href="rules.html">规则</a>
+    </nav>
+  </header>
+
+  <div class="modebar">
+    <div class="stats" aria-live="polite">
+      <span>得分 <b id="score">0</b></span>
+      <span>步数 <b id="moves">0</b></span>
+      <span>时间 <b id="clock">00:00</b></span>
+      <span>牌堆 <b id="stockCount">24</b></span>
+      <span>回收 <b id="recycles">0</b></span>
+      <span>最佳 <b id="bestScore">0</b></span>
+    </div>
+    <div class="select-wrap">
+      <span class="resume-note" id="resumeNote" hidden>已恢复上局</span>
+      <label for="drawMode">翻牌</label>
+      <select id="drawMode" aria-label="每次翻牌张数">
+        <option value="1">1 张</option>
+        <option value="3">3 张</option>
+      </select>
+    </div>
+  </div>
+
+  <main>
+    <section class="board" aria-label="接龙牌桌">
+      <div class="top-row">
+        <button class="slot stock" id="stock" data-pile="stock" aria-label="牌堆">
+          <span class="stock-empty" id="stockEmpty" hidden>回收</span>
+        </button>
+        <div class="slot waste" id="waste" data-pile="waste" role="button" tabindex="0" aria-label="弃牌堆">
+          <div class="waste-fan" id="wasteFan"></div>
+        </div>
+        <div class="spacer" aria-hidden="true"></div>
+        <div class="foundation-row" id="foundations" aria-label="基础堆">
+          <button class="slot foundation-slot" data-foundation="0" aria-label="黑桃基础堆"></button>
+          <button class="slot foundation-slot" data-foundation="1" aria-label="红桃基础堆"></button>
+          <button class="slot foundation-slot" data-foundation="2" aria-label="方块基础堆"></button>
+          <button class="slot foundation-slot" data-foundation="3" aria-label="梅花基础堆"></button>
+        </div>
+      </div>
+      <div class="tableau" id="tableau" aria-label="七列牌"></div>
+    </section>
+    <div class="tipbar" id="tipbar">
+      <span>点击牌面选中，再点目标列；<b>双击</b>直接送上基础堆。</span>
+      <span>快捷键 <b>N</b> 新局 · <b>U</b> 撤销 · <b>H</b> 提示 · <b>A</b> 收牌</span>
+    </div>
+  </main>
+
+  <footer>
+    <span>52 张 · 七列 · 四色基础堆 · 完全离线</span>
+    <a href="rules.html">完整规则</a>
+    <a href="../">返回大厅</a>
+  </footer>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<div class="modal" id="winModal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="winTitle">
+    <div class="confetti" id="confetti" aria-hidden="true"></div>
+    <h2 id="winTitle">牌局完成</h2>
+    <p>四色基础堆全部收到 K，经典接龙通关。</p>
+    <div class="modal-stats">
+      <div><b id="winScore">0</b><span>得分</span></div>
+      <div><b id="winMoves">0</b><span>步数</span></div>
+      <div><b id="winTime">00:00</b><span>用时</span></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn primary" id="againBtn">再来一局</button>
+      <button class="btn" id="closeWinBtn">查看牌桌</button>
+    </div>
+  </div>
+</div>
+
+<script src="../../shared/shuffle.js"></script>
+<script src="../../shared/sfx.js"></script>
+<script src="../../shared/store.js"></script>
+<script src="data.js"></script>
+<script src="engine.js"></script>
+<script>
+(function(){
+  'use strict';
+  var E = window.SolitaireEngine;
+  var $ = function(id){ return document.getElementById(id); };
+  var SAVE_KEY = 'hhfa-solitaire-save-v1';
+  var BEST_KEY = 'hhfa-solitaire-best-v1';
+  var state = null;
+  var selected = null;
+  var elapsed = 0;
+  var timerStart = null;
+  var timerId = null;
+  var finalElapsed = 0;
+  var hintMove = null;
+  var soundOn = true;
+  var SUIT_KEY = ['spade', 'heart', 'diamond', 'club'];
+  var reducedMotion = false;
+  try { reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (err) {}
+
+  function toast(message){
+    var el = $('toast');
+    el.textContent = message;
+    el.classList.add('show');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(function(){ el.classList.remove('show'); }, 2200);
+  }
+  function sound(name){
+    if (!soundOn) return;
+    try { if (window.Sfx && Sfx.play) Sfx.play(name); } catch (err) {}
+  }
+  function fmtTime(seconds){
+    seconds = Math.max(0, Math.floor(seconds || 0));
+    var m = Math.floor(seconds / 60);
+    var s = seconds % 60;
+    return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+  }
+
+  /* ---------------------------------------------------------------- rendering */
+  function suitIcon(suitIndex, cls){
+    return '<svg class="suit-ico ' + (cls || '') + '" viewBox="0 0 24 24" aria-hidden="true"><use href="#s-' + SUIT_KEY[suitIndex] + '"></use></svg>';
+  }
+  var PIPS = {
+    2: [[50, 20, 0], [50, 80, 180]],
+    3: [[50, 20, 0], [50, 50, 0], [50, 80, 180]],
+    4: [[30, 20, 0], [70, 20, 0], [30, 80, 180], [70, 80, 180]],
+    5: [[30, 20, 0], [70, 20, 0], [50, 50, 0], [30, 80, 180], [70, 80, 180]],
+    6: [[30, 20, 0], [70, 20, 0], [30, 50, 0], [70, 50, 0], [30, 80, 180], [70, 80, 180]],
+    7: [[30, 20, 0], [70, 20, 0], [50, 35, 0], [30, 50, 0], [70, 50, 0], [30, 80, 180], [70, 80, 180]],
+    8: [[30, 20, 0], [70, 20, 0], [50, 35, 0], [30, 50, 0], [70, 50, 0], [50, 65, 180], [30, 80, 180], [70, 80, 180]],
+    9: [[30, 20, 0], [70, 20, 0], [30, 40, 0], [70, 40, 0], [50, 50, 0], [30, 60, 180], [70, 60, 180], [30, 80, 180], [70, 80, 180]],
+    10: [[30, 20, 0], [70, 20, 0], [30, 40, 0], [70, 40, 0], [50, 31, 0], [50, 69, 180], [30, 60, 180], [70, 60, 180], [30, 80, 180], [70, 80, 180]]
+  };
+  function faceMarkup(card){
+    var corner = '<span class="corner tl">' + card.rank + suitIcon(card.suitIndex) + '</span>' +
+      '<span class="corner br">' + card.rank + suitIcon(card.suitIndex) + '</span>';
+    if (card.value === 1) {
+      return corner + '<div class="ace-art">' + suitIcon(card.suitIndex) + '</div>';
+    }
+    if (card.value >= 11) {
+      return corner + '<div class="court"><div class="court-split">' +
+        '<span class="court-letter">' + card.rank + '</span>' + suitIcon(card.suitIndex) +
+        '<span class="court-letter flip">' + card.rank + '</span></div></div>';
+    }
+    var layout = PIPS[card.value] || [];
+    var pips = layout.map(function(p){
+      return '<span class="pip" style="left:' + p[0] + '%;top:' + p[1] + '%;transform:translate(-50%,-50%) rotate(' + p[2] + 'deg)">' +
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><use href="#s-' + SUIT_KEY[card.suitIndex] + '"></use></svg></span>';
+    }).join('');
+    return corner + '<div class="pips">' + pips + '</div>';
+  }
+  function cardEl(card, extra){
+    var el = document.createElement('div');
+    el.className = 'card ' + (card.faceUp ? 'face ' + (card.red ? 'red' : 'black') : 'face-down') + (extra ? ' ' + extra : '');
+    el.dataset.card = card.id;
+    el.setAttribute('role', 'img');
+    el.setAttribute('aria-label', card.faceUp ? (card.rank + E.SUITS[card.suitIndex].name) : '暗牌');
+    if (card.faceUp) {
+      el.innerHTML = faceMarkup(card);
+      el.tabIndex = 0;
+    } else {
+      el.innerHTML = '<span class="back-pattern"></span>';
+    }
+    return el;
+  }
+  function renderStock(){
+    var btn = $('stock');
+    btn.innerHTML = '';
+    var n = state.stock.length;
+    var shown = Math.min(3, n);
+    for (var i = 0; i < shown; i += 1) {
+      var back = document.createElement('div');
+      back.className = 'card face-down';
+      back.style.position = 'absolute';
+      back.style.inset = '0';
+      back.style.transform = 'translate(' + (i * 1.6) + 'px,' + (-i * 1.6) + 'px)';
+      back.innerHTML = '<span class="back-pattern"></span>';
+      btn.appendChild(back);
+    }
+    if (!n) {
+      var empty = document.createElement('span');
+      empty.className = 'stock-empty';
+      empty.textContent = state.waste.length ? '回收' : '空';
+      btn.appendChild(empty);
+    }
+    var count = document.createElement('span');
+    count.className = 'slot-count';
+    count.textContent = String(n);
+    btn.appendChild(count);
+    btn.setAttribute('aria-label', n ? '牌堆，还剩 ' + n + ' 张' : (state.waste.length ? '回收弃牌堆' : '牌堆已空'));
+  }
+  function renderWaste(){
+    var fan = $('wasteFan');
+    fan.innerHTML = '';
+    var n = state.waste.length;
+    var shown = state.waste.slice(Math.max(0, n - 3));
+    shown.forEach(function(card, i){
+      var el = cardEl(card, 'waste-card');
+      el.style.left = (i * 10) + '%';
+      el.style.zIndex = String(i + 1);
+      if (i === shown.length - 1) {
+        el.classList.add('waste-top');
+        if (selected && selected.pile === 'waste') el.classList.add('selected');
+      }
+      el.dataset.wasteIndex = String(n - shown.length + i);
+      fan.appendChild(el);
+    });
+    var slot = $('waste');
+    slot.setAttribute('aria-label', n ? '弃牌堆顶 ' + state.waste[n - 1].rank + E.SUITS[state.waste[n - 1].suitIndex].name : '空弃牌堆');
+  }
+  function renderFoundations(){
+    var slots = document.querySelectorAll('.foundation-slot');
+    for (var i = 0; i < slots.length; i += 1) {
+      var slot = slots[i];
+      slot.innerHTML = '';
+      var pile = state.foundations[i];
+      if (pile.length) {
+        var topEl = cardEl(pile[pile.length - 1], 'foundation-top');
+        if (selected && selected.pile === 'foundation' && selected.index === i) topEl.classList.add('selected');
+        slot.appendChild(topEl);
+      } else {
+        var ghost = document.createElement('span');
+        ghost.className = 'ghost-suit';
+        ghost.innerHTML = suitIcon(i);
+        slot.appendChild(ghost);
+      }
+      slot.classList.toggle('legal-target', !!(selected && !(selected.pile === 'foundation' && selected.index === i)));
+      slot.setAttribute('aria-label', E.SUITS[i].name + '基础堆，' + pile.length + ' 张');
+      slot.dataset.foundation = String(i);
+    }
+  }
+  function renderTableau(){
+    var board = $('tableau');
+    board.innerHTML = '';
+    for (var c = 0; c < 7; c += 1) {
+      var col = document.createElement('div');
+      col.className = 'column';
+      col.dataset.column = String(c);
+      col.setAttribute('aria-label', '第 ' + (c + 1) + ' 列');
+      var pile = state.tableau[c];
+      if (!pile.length) {
+        var empty = document.createElement('div');
+        empty.className = 'empty-slot';
+        empty.textContent = 'K';
+        col.appendChild(empty);
+      } else {
+        pile.forEach(function(card, idx){
+          var el = cardEl(card);
+          el.dataset.colIdx = String(c);
+          el.dataset.cardIdx = String(idx);
+          if (selected && selected.pile === 'tableau' && selected.index === c && idx >= selected.cardIndex) el.classList.add('selected');
+          col.appendChild(el);
+        });
+      }
+      if (selected && selected.pile !== 'tableau' || (selected && selected.pile === 'tableau' && selected.index !== c)) {
+        col.classList.add('legal-target');
+      }
+      board.appendChild(col);
+    }
+  }
+  function updateStats(){
+    $('score').textContent = String(state.score);
+    $('moves').textContent = String(state.moves);
+    $('recycles').textContent = String(state.recycles);
+    $('stockCount').textContent = String(state.stock.length);
+    $('clock').textContent = fmtTime(currentElapsed());
+    $('undoBtn').disabled = !state.history.length || state.status === 'won';
+    $('bestScore').textContent = String(Store.get(BEST_KEY, '0') || '0');
+  }
+  function render(){
+    if (!state) return;
+    renderStock();
+    renderWaste();
+    renderFoundations();
+    renderTableau();
+    updateStats();
+    if (hintMove) applyHintHighlight();
+  }
+  function applyHintHighlight(){
+    if (!hintMove) return;
+    var m = hintMove.move;
+    if (m.from) {
+      var fromCard = null;
+      if (m.from.pile === 'waste') fromCard = state.waste[state.waste.length - 1];
+      else if (m.from.pile === 'tableau') fromCard = state.tableau[m.from.index][m.cardIndex];
+      else if (m.from.pile === 'foundation') fromCard = state.foundations[m.from.index][state.foundations[m.from.index].length - 1];
+      if (fromCard) {
+        var el = document.querySelector('[data-card="' + fromCard.id + '"]');
+        if (el) el.classList.add('hint-from');
+      }
+    }
+    if (m.to && m.to.pile === 'tableau') {
+      var col = document.querySelector('.column[data-column="' + m.to.index + '"]');
+      if (col) col.classList.add('hint-to');
+    } else if (m.to && m.to.pile === 'foundation') {
+      var f = document.querySelector('.foundation-slot[data-foundation="' + m.to.index + '"]');
+      if (f) f.classList.add('hint-to');
+    }
+    if (m.type === 'draw' || m.type === 'recycle') $('stock').classList.add('hint-to');
+    clearTimeout(applyHintHighlight._t);
+    applyHintHighlight._t = setTimeout(function(){ hintMove = null; render(); }, 2600);
+  }
+
+  /* ---------------------------------------------------------------- timer / persistence */
+  function currentElapsed(){
+    var running = timerStart ? Math.round((Date.now() - timerStart) / 1000) : 0;
+    return elapsed + running;
+  }
+  function startTimer(){
+    stopTimer();
+    timerStart = Date.now();
+    timerId = setInterval(function(){ updateStats(); }, 1000);
+  }
+  function stopTimer(){
+    if (timerStart) {
+      elapsed += Math.round((Date.now() - timerStart) / 1000);
+      timerStart = null;
+    }
+    if (timerId) { clearInterval(timerId); timerId = null; }
+  }
+  function save(){
+    if (!state) return;
+    try {
+      Store.setJSON(SAVE_KEY, { state: E.snapshot(state), elapsed: currentElapsed(), ts: Date.now() });
+    } catch (err) {}
+  }
+  function clearSave(){ try { Store.set(SAVE_KEY, ''); } catch (err) {} }
+  function loadSave(){
+    var saved = null;
+    try { saved = Store.getJSON(SAVE_KEY, null); } catch (err) { saved = null; }
+    if (!saved || !saved.state) return null;
+    try {
+      var restored = E.deserialize(saved.state);
+      return { state: restored, elapsed: Number(saved.elapsed) || 0 };
+    } catch (err) { return null; }
+  }
+
+  /* ---------------------------------------------------------------- game flow */
+  function finishWin(){
+    if (!state || state.status !== 'won') return;
+    stopTimer();
+    finalElapsed = currentElapsed();
+    clearSave();
+    Store.best(BEST_KEY, state.score);
+    sound('win');
+    $('winScore').textContent = String(state.score);
+    $('winMoves').textContent = String(state.moves);
+    $('winTime').textContent = fmtTime(finalElapsed);
+    $('winModal').hidden = false;
+    if (!reducedMotion) {
+      var cont = $('confetti');
+      cont.innerHTML = '';
+      var colors = ['#efd399', '#c9a35f', '#8fc48a', '#c8564b', '#f0e7d2'];
+      for (var i = 0; i < 26; i += 1) {
+        var piece = document.createElement('i');
+        piece.style.left = (Math.random() * 100) + '%';
+        piece.style.background = colors[i % colors.length];
+        piece.style.animationDuration = (1.1 + Math.random() * 1.4) + 's';
+        piece.style.animationDelay = (Math.random() * 0.5) + 's';
+        cont.appendChild(piece);
+      }
+    }
+  }
+  function checkWin(){
+    if (state.status === 'won') finishWin();
+  }
+  function startNew(opts){
+    opts = opts || {};
+    var seed = opts.seed !== undefined ? opts.seed : (Date.now() % 1000000000);
+    var mode = Number($('drawMode').value) === 3 ? 3 : 1;
+    state = E.createGame({ seed: seed, drawMode: mode });
+    selected = null;
+    hintMove = null;
+    elapsed = 0;
+    finalElapsed = 0;
+    $('winModal').hidden = true;
+    $('resumeNote').hidden = true;
+    stopTimer();
+    startTimer();
+    save();
+    render();
+    sound('deal');
+  }
+  function attemptMove(from, to){
+    if (!from) return;
+    var move = {
+      type: 'move',
+      from: { pile: from.pile, index: from.index },
+      cardIndex: from.pile === 'tableau' ? from.cardIndex : 0,
+      to: { pile: to.pile, index: to.index }
+    };
+    try {
+      state = E.applyMove(state, move);
+      selected = null;
+      hintMove = null;
+      sound(move.to.pile === 'foundation' ? 'capture' : 'move');
+      save();
+      render();
+      checkWin();
+    } catch (err) {
+      sound('error');
+      toast(friendlyError(err.message));
+      render();
+    }
+  }
+  function friendlyError(msg){
+    if (/foundation/i.test(msg)) return '基础堆必须按同花色从 A 到 K 依次放置。';
+    if (/run cannot move/i.test(msg)) return '只能移动同色交替、点数连续且全部翻开的牌组。';
+    if (/illegal tableau/i.test(msg)) return '只能接在比它大一点且颜色相反的牌上；空列只能放 K。';
+    if (/empty/i.test(msg)) return '这里现在没有牌。';
+    return msg || '这一步不能走。';
+  }
+  function selectFrom(pile, index, cardIndex){
+    if (pile === 'tableau') {
+      var pileCards = state.tableau[index];
+      var run = pileCards.slice(cardIndex);
+      if (!E.isValidRun(run)) {
+        toast('这段牌不是同色交替的连续牌组，不能整体移动。');
+        selected = { pile: pile, index: index, cardIndex: pileCards.length - 1 };
+      } else {
+        selected = { pile: pile, index: index, cardIndex: cardIndex };
+      }
+    } else {
+      selected = { pile: pile, index: index, cardIndex: cardIndex };
+    }
+    sound('click');
+    render();
+  }
+  function onCardClick(pile, index, cardIndex){
+    if (!state || state.status === 'won') return;
+    var card = null;
+    if (pile === 'tableau') card = state.tableau[index] && state.tableau[index][cardIndex];
+    else if (pile === 'waste') card = state.waste[cardIndex];
+    else if (pile === 'foundation') card = state.foundations[index] && state.foundations[index][state.foundations[index].length - 1];
+    if (!card) return;
+    if (!card.faceUp) { toast('这张牌还没翻开。'); return; }
+    if (selected) {
+      if (selected.pile === pile && selected.index === index && selected.cardIndex === cardIndex) {
+        selected = null; render(); return;
+      }
+      if (pile === 'tableau') { attemptMove(selected, { pile: 'tableau', index: index }); return; }
+      if (pile === 'foundation') { attemptMove(selected, { pile: 'foundation', index: index }); return; }
+      selected = null;
+      selectFrom(pile, index, cardIndex);
+      return;
+    }
+    selectFrom(pile, index, cardIndex);
+  }
+  function onEmptyColumn(index){
+    if (!state || state.status === 'won') return;
+    if (selected) { attemptMove(selected, { pile: 'tableau', index: index }); return; }
+    toast('先选一张 K 或一段以 K 开头的牌组。');
+  }
+  function drawFromStock(){
+    if (!state || state.status === 'won') return;
+    var move = state.stock.length ? { type: 'draw' } : (state.waste.length ? { type: 'recycle' } : null);
+    if (!move) { toast('牌堆和弃牌堆都空了。'); return; }
+    try {
+      state = E.applyMove(state, move);
+      selected = null;
+      hintMove = null;
+      sound(move.type === 'draw' ? 'deal' : 'move');
+      save();
+      render();
+    } catch (err) {
+      toast(friendlyError(err.message));
+    }
+  }
+  function undo(){
+    if (!state || !state.history.length) { toast('没有可以撤销的步骤。'); return; }
+    try {
+      state = E.undo(state);
+      selected = null;
+      hintMove = null;
+      sound('click');
+      save();
+      render();
+    } catch (err) { toast('撤销失败。'); }
+  }
+  function showHint(){
+    if (!state || state.status === 'won') return;
+    var h = E.hint(state);
+    if (!h) { toast('当前没有可走的牌；试试回收弃牌堆。'); return; }
+    hintMove = h;
+    toast(h.reason);
+    render();
+  }
+  function autoPlay(){
+    if (!state || state.status === 'won') return;
+    var result = E.autoSend(state);
+    if (!result.count) { toast('没有可以直接送上基础堆的牌。'); return; }
+    state = result.state;
+    selected = null;
+    sound('capture');
+    save();
+    render();
+    checkWin();
+    if (result.count) toast('自动送上 ' + result.count + ' 张牌。');
+  }
+  function tryFoundationDouble(pile, index, cardIndex){
+    if (!state || state.status === 'won') return;
+    var card;
+    if (pile === 'waste') card = state.waste[state.waste.length - 1];
+    else if (pile === 'tableau') {
+      var p = state.tableau[index];
+      if (cardIndex !== p.length - 1) return;
+      card = p[p.length - 1];
+    } else return;
+    if (!card) return;
+    attemptMove({ pile: pile, index: index, cardIndex: cardIndex }, { pile: 'foundation', index: card.suitIndex });
+  }
+
+  /* ---------------------------------------------------------------- events */
+  document.addEventListener('click', function(event){
+    var stock = event.target.closest('#stock');
+    if (stock) { drawFromStock(); return; }
+    var cardEl = event.target.closest('.card');
+    if (cardEl) {
+      var col = cardEl.closest('.column');
+      if (col) { onCardClick('tableau', Number(col.dataset.column), Number(cardEl.dataset.cardIdx)); return; }
+      if (cardEl.classList.contains('waste-top')) {
+        onCardClick('waste', 0, state.waste.length - 1);
+        return;
+      }
+      var fslot = cardEl.closest('.foundation-slot');
+      if (fslot) {
+        var fi = Number(fslot.dataset.foundation);
+        if (selected) attemptMove(selected, { pile: 'foundation', index: fi });
+        else selectFrom('foundation', fi, 0);
+        return;
+      }
+    }
+    var foundation = event.target.closest('.foundation-slot');
+    if (foundation) {
+      var idx = Number(foundation.dataset.foundation);
+      if (selected) attemptMove(selected, { pile: 'foundation', index: idx });
+      else if (state.foundations[idx].length) selectFrom('foundation', idx, 0);
+      else toast('基础堆从 A 开始。');
+      return;
+    }
+    var column = event.target.closest('.column');
+    if (column) { onEmptyColumn(Number(column.dataset.column)); return; }
+    var waste = event.target.closest('#waste');
+    if (waste) {
+      if (!state.waste.length) { toast('弃牌堆是空的。'); return; }
+      if (selected) { selected = null; render(); }
+      else selectFrom('waste', 0, state.waste.length - 1);
+    }
+  });
+  document.addEventListener('dblclick', function(event){
+    var cardEl = event.target.closest('.card');
+    if (!cardEl) return;
+    var col = cardEl.closest('.column');
+    if (col) { tryFoundationDouble('tableau', Number(col.dataset.column), Number(cardEl.dataset.cardIdx)); return; }
+    if (cardEl.classList.contains('waste-top')) tryFoundationDouble('waste', 0, 0);
+  });
+  document.addEventListener('keydown', function(event){
+    if (event.target && /INPUT|SELECT|TEXTAREA/.test(event.target.tagName)) return;
+    if ((event.key === 'Enter' || event.key === ' ') && event.target && event.target.classList && event.target.classList.contains('card')) {
+      event.preventDefault();
+      event.target.click();
+      return;
+    }
+    var key = String(event.key || '').toLowerCase();
+    if (key === 'n') { event.preventDefault(); startNew(); }
+    else if (key === 'u') { event.preventDefault(); undo(); }
+    else if (key === 'h') { event.preventDefault(); showHint(); }
+    else if (key === 'a') { event.preventDefault(); autoPlay(); }
+    else if (event.key === 'Escape') { selected = null; hintMove = null; render(); }
+  });
+  $('newBtn').addEventListener('click', function(){ startNew(); });
+  $('againBtn').addEventListener('click', function(){ startNew(); });
+  $('undoBtn').addEventListener('click', undo);
+  $('hintBtn').addEventListener('click', showHint);
+  $('autoBtn').addEventListener('click', autoPlay);
+  $('closeWinBtn').addEventListener('click', function(){ $('winModal').hidden = true; });
+  $('drawMode').addEventListener('change', function(){
+    if (state && state.moves > 0) toast('已按新的翻牌张数开始新局。');
+    startNew();
+  });
+  $('soundBtn').addEventListener('click', function(){
+    soundOn = !soundOn;
+    try { if (window.Sfx) Sfx.mute(!soundOn); } catch (err) {}
+    $('soundBtn').textContent = soundOn ? '声' : '静';
+    $('soundBtn').setAttribute('aria-pressed', String(soundOn));
+    if (soundOn) sound('click');
+  });
+  window.addEventListener('beforeunload', save);
+
+  /* ---------------------------------------------------------------- test API */
+  window.__solitaire = {
+    newGame: function(opts){ startNew(opts || {}); return E.snapshot(state); },
+    getState: function(){ return E.snapshot(state); },
+    setState: function(next){
+      state = JSON.parse(JSON.stringify(next));
+      if (!state.version) state.version = E.VERSION;
+      if (!state.history) state.history = [];
+      selected = null;
+      hintMove = null;
+      $('winModal').hidden = true;
+      render();
+      return E.snapshot(state);
+    },
+    legalMoves: function(){ return E.getLegalMoves(state); },
+    playMove: function(move){
+      state = E.applyMove(state, move);
+      selected = null;
+      save();
+      render();
+      checkWin();
+      return E.snapshot(state);
+    },
+    undo: function(){ state = E.undo(state); render(); return E.snapshot(state); },
+    hint: function(){ return E.hint(state); },
+    autoSend: function(){ var r = E.autoSend(state); state = r.state; save(); render(); checkWin(); return r.count; },
+    autoFinish: function(){
+      var r = E.autoFinish(state);
+      state = r.state; selected = null; save(); render(); checkWin();
+      return { status: state.status, sent: r.sent, summary: E.scoreSummary(state) };
+    },
+    draw: function(){ drawFromStock(); return E.snapshot(state); },
+    result: function(){ return E.scoreSummary(state); },
+    elapsed: currentElapsed,
+    engine: E
+  };
+
+  /* ---------------------------------------------------------------- boot */
+  try {
+    var q = new URLSearchParams(location.search);
+    var forcedSeed = q.get('seed');
+    var forcedDraw = Number(q.get('draw'));
+    if (forcedDraw === 3) $('drawMode').value = '3';
+    if (forcedSeed !== null && forcedSeed !== '') {
+      startNew({ seed: Number(forcedSeed) || forcedSeed });
+    } else {
+      var saved = loadSave();
+      if (saved) {
+        state = saved.state;
+        elapsed = saved.elapsed;
+        $('drawMode').value = String(state.drawMode);
+        startTimer();
+        $('resumeNote').hidden = false;
+        render();
+        toast('已恢复上一局的进度。');
+      } else {
+        
+        startNew({ seed: Date.now() % 1000000000 });
+      }
+    }
+  } catch (err) {
+    
+        startNew({ seed: Date.now() % 1000000000 });
+  }
+
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+    navigator.serviceWorker.register('sw.js').catch(function(){});
+  }
+})();
+</script>
+</body>
+</html>

@@ -59,7 +59,7 @@ var I18N = {
     var status = CORE.status(S);
     if (status === 'won' || status === 'lost' || status === 'draw') {
       E.overlay.hidden = false;
-      E.overlayTitle.textContent = I18N[I18n.lang][status === 'won' ? 'overlayWin' : status === 'lost' ? 'overlayLose' : 'overlayDraw'];
+      E.overlayTitle.textContent = I18N[Arcade.lang()][status === 'won' ? 'overlayWin' : status === 'lost' ? 'overlayLose' : 'overlayDraw'];
       E.overlayText.textContent = status === 'won' ? 'Congratulations!' : status === 'lost' ? 'Game over!' : 'It\'s a draw!';
     } else {
       E.overlay.hidden = true;
@@ -87,7 +87,7 @@ var I18N = {
   E.btnNew.addEventListener('click', newGame);
   E.btnOverlay.addEventListener('click', newGame);
   E.btnHint.addEventListener('click', function () {
-    E.feedback.textContent = I18N[I18n.lang].hintText;
+    E.feedback.textContent = I18N[Arcade.lang()].hintText;
     setTimeout(function () { E.feedback.textContent = ''; }, 3000);
   });
   Arcade.onKeys(Arcade.KEYMAP, input);

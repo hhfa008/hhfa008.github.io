@@ -71,7 +71,7 @@ var I18N = {
     E.best.textContent = best;
     if (S.status !== 'playing') {
       E.overlay.hidden = false;
-      E.overlayTitle.textContent = I18N[Arcade.lang()][`overlay${S.status.charAt(0).toUpperCase() + S.status.slice(1)}`];
+      E.overlayTitle.textContent = I18N[Arcade.lang()][Arcade.overlayKey(S.status)];
       E.overlayText.textContent = S.status === 'won' ? '' : I18N[Arcade.lang()].hintText;
     } else {
       E.overlay.hidden = true;

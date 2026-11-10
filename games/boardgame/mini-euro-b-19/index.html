@@ -1,0 +1,75 @@
+
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>沙漠商队 · 人机对战</title><meta name="description" content="沙漠商队 中文极简德式桌游：驼队沿绿洲间古道运货，用银币抢占水源与香料节点，连通里程换算成声望。 纯前端离线，单机对 AI。"><meta name="theme-color" content="#121a18"><link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%23121a18'/><circle cx='16' cy='16' r='8' fill='%23e0b85c'/></svg>">
+<style>
+  :root{--bg:#121a18;--panel:#1d2a25;--panel2:#26362f;--line:#3a5046;--text:#eef4ef;--muted:#a7b9ad;--gold:#e0b85c;--accent:#7fc39a}
+  *{box-sizing:border-box}html,body{margin:0;padding:0}body{background:radial-gradient(circle at 20% 0%,#23352b,#121a18 60%) no-repeat,var(--bg);color:var(--text);font:15px/1.45 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;min-height:100vh;padding:10px 10px 28px}
+  .wrap{max-width:760px;margin:0 auto}header{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:4px 2px 10px}h1{font-size:19px;margin:0}h1 span{display:block;font-size:12px;color:var(--muted);letter-spacing:.09em;font-weight:500}.spacer{flex:1}.btn{min-height:44px;padding:8px 14px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font:inherit;font-weight:700;cursor:pointer}.btn:hover{border-color:var(--accent)}.scorebar{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;font-size:13px;margin-bottom:10px}.scorebar b{color:var(--gold);font-size:19px}h2{font-size:13px;color:var(--muted);margin:14px 0 6px;letter-spacing:.04em}
+  .chips{display:flex;flex-wrap:wrap;gap:5px}.chip{background:#101815;border:1px solid var(--line);border-radius:999px;padding:3px 8px;font-size:12px}
+  .shop{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.card{min-height:64px;text-align:left;border:1px solid var(--line);border-radius:10px;padding:8px;background:var(--panel);color:var(--text);font:inherit;cursor:pointer;display:flex;flex-direction:column;gap:2px}.card b{font-size:13px}.card span,.card em{font-size:12px;color:var(--muted);font-style:normal}.card em{color:var(--gold);margin-top:auto}.card[disabled]{opacity:.45}.card:hover{border-color:var(--accent)}
+  .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.log{background:#0d1512;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:12px;color:var(--muted);max-height:140px;overflow:auto}.log div:first-child{color:var(--text)}
+  .dice{display:flex;gap:8px}.die{width:52px;height:52px;border-radius:12px;border:2px solid var(--line);background:#101815;color:var(--text);font:800 22px/1 inherit;cursor:pointer;min-height:44px}.die.sel{border-color:var(--gold);background:#352b14}.die.used{opacity:.3}
+  .slots{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.slot{min-height:78px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--text);font:inherit;cursor:pointer;padding:6px;display:flex;flex-direction:column;gap:2px;align-items:center;justify-content:center}.slot b{font-size:12px}.slot span{font-size:12px;color:var(--muted)}.slot em{font-style:normal;color:var(--gold);font-size:12px}.slot.used{opacity:.35}.hint{font-size:12px;color:var(--muted)}
+  .tilesel{display:flex;gap:8px}.tile{width:56px;height:56px;border-radius:10px;border:2px solid var(--line);background:#101815;cursor:pointer;padding:5px}.tile span{display:block;width:100%;height:100%;border-radius:6px;background:var(--c)}.tile.sel{border-color:var(--gold)}
+  .board{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}.cell{aspect-ratio:1;border:1px solid var(--line);border-radius:9px;background:#0f1814;color:var(--text);font:inherit;cursor:pointer;min-height:52px;position:relative}.cell[style]{background:var(--c);border-color:#ffffff33}.cell:hover{border-color:var(--gold)}
+  .mapwrap{background:#0f1814;border:1px solid var(--line);border-radius:12px;padding:6px}svg{width:100%;height:auto;display:block}svg line{stroke:#53685d;stroke-width:5;stroke-linecap:round}svg line.open{stroke:#8fbfa4;cursor:pointer}svg line.open:hover{stroke:var(--gold)}svg circle{fill:#e0b85c}svg text{fill:#dfe8e2;font-size:12px;text-anchor:middle}
+  .edges{display:flex;flex-direction:column;gap:6px}.edgebtn{min-height:44px;text-align:left;border:1px solid var(--line);border-radius:9px;background:var(--panel);color:var(--text);font:inherit;font-size:12px;padding:7px 10px;cursor:pointer}.edgebtn:hover{border-color:var(--accent)}
+  .suit{border-left:5px solid var(--c)}.sets{display:flex;flex-direction:column;gap:6px}.setbtn{min-height:44px;text-align:left;border:1px solid var(--line);border-radius:9px;background:var(--panel);color:var(--text);font:inherit;font-size:12px;padding:7px 10px;cursor:pointer}.setbtn i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}.setbtn[disabled]{opacity:.4}
+  .over{text-align:center;padding:14px;border:1px solid var(--gold);border-radius:12px;background:#332b16;margin:10px 0}.over b{color:var(--gold);font-size:18px}
+  @media(max-width:430px){body{padding:8px 8px 24px}h1{font-size:17px}.shop{gap:5px}.card{padding:7px}.slots{grid-template-columns:repeat(2,1fr)}.scorebar{font-size:12px}.scorebar b{font-size:17px}}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+  
+/* mini-quality: safe-area */
+body { --mini-safe-bottom: 24px; padding-bottom: calc(var(--mini-safe-bottom) + env(safe-area-inset-bottom, 0px)); }
+</style><link rel="canonical" href="https://hhfa008.github.io/games/boardgame/mini-euro-b-19/">
+</head><body><div class="wrap"><header><h1>沙漠商队<span>DESERT CARAVANS</span></h1><div class="spacer"></div><a class="btn" href="rules.html" aria-label="查看规则">规则</a></header><main id="content"></main><div id="end"></div></div>
+<script>(function(root,factory){if(typeof module==='object'&&module.exports)module.exports=factory();else root.MiniEuroEngine=factory();})(typeof globalThis!=='undefined'?globalThis:this,function(){'use strict';
+  var CFG={"name":"沙漠商队","en":"DESERT CARAVANS","slug":"mini-euro-b-19","turns":12,"income":2,"startCoins":3,"networkBonus":2,"nodes":[{"name":"西门","x":40,"y":60},{"name":"沙井","x":140,"y":35},{"name":"盐湖","x":255,"y":55},{"name":"旧堡","x":50,"y":155},{"name":"集市","x":150,"y":120},{"name":"香料园","x":265,"y":145},{"name":"南关","x":150,"y":205}],"edges":[{"a":0,"b":1,"cost":2,"pts":2},{"a":1,"b":2,"cost":3,"pts":4},{"a":0,"b":3,"cost":2,"pts":3},{"a":1,"b":4,"cost":3,"pts":5},{"a":2,"b":5,"cost":4,"pts":5},{"a":3,"b":4,"cost":2,"pts":3},{"a":4,"b":5,"cost":3,"pts":5},{"a":3,"b":6,"cost":3,"pts":4},{"a":4,"b":6,"cost":2,"pts":3},{"a":5,"b":6,"cost":4,"pts":6}]};
+
+  function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+  function shuffle(list,rng){var out=list.slice();for(var i=out.length-1;i>0;i--){var j=Math.floor(rng()*(i+1));var t=out[i];out[i]=out[j];out[j]=t;}return out;}
+  function clone(x){return JSON.parse(JSON.stringify(x));}
+  function assertMove(ok,msg){if(!ok)throw new Error('非法动作: '+msg);}
+
+  function makePlayer(i){return{index:i,name:i===0?'你':'AI 领队',coins:CFG.startCoins,score:0,claimed:[]};}
+  function createGame(seed){var sd=(seed==null?1:Number(seed))>>>0;return{seed:sd,players:[makePlayer(0),makePlayer(1)],current:0,turn:1,over:false,winner:null,log:['新对局开始，你是先手。']};}
+  function edgeOpen(s,i){return s.players.every(function(p){return p.claimed.indexOf(i)<0;});}
+  function compSize(p){var adj={},seen={},best=0;CFG.edges.forEach(function(e,ei){if(p.claimed.indexOf(ei)<0)return;(adj[e.a]=adj[e.a]||[]).push(e.b);(adj[e.b]=adj[e.b]||[]).push(e.a);});CFG.nodes.forEach(function(_,n){if(seen[n])return;var q=[n],size=0;seen[n]=true;while(q.length){var x=q.pop();size++;(adj[x]||[]).forEach(function(y){if(!seen[y]){seen[y]=true;q.push(y);}});}if(size>best)best=size;});return best;}
+  function scoreOf(s,i){var p=s.players[i];return p.score+Math.max(0,compSize(p)-1)*CFG.networkBonus;}
+  function endCheck(s){var a=s.players[0],b=s.players[1];if(a.turns>=CFG.turns&&b.turns>=CFG.turns){s.over=true;var sa=scoreOf(s,0),sb=scoreOf(s,1);s.winner=sa>sb?0:(sb>sa?1:null);s.log.unshift('终局：'+(s.winner==null?'平局':s.winner===0?'你获胜':'AI 获胜'));}}
+  function applyMove(s,m){assertMove(s&&!s.over,'对局已结束');assertMove(m&&typeof m.type==='string','缺少动作类型');var n=clone(s);var p=n.players[n.current];if(p.turns==null)p.turns=0;
+    if(m.type==='claim'){assertMove(Number.isInteger(m.edge)&&m.edge>=0&&m.edge<CFG.edges.length,'路线索引无效');assertMove(edgeOpen(n,m.edge),'该路线已被占用');var e=CFG.edges[m.edge];assertMove(p.coins>=e.cost,'金币不足');p.coins-=e.cost;p.claimed.push(m.edge);p.score+=e.pts;p.turns++;n.log.unshift('你花费 '+e.cost+' 金币修筑路线，得 '+e.pts+' 分。');if(n.log.length>8)n.log.pop();n.current=1-n.current;n.players[n.current].coins+=CFG.income;n.turn++;endCheck(n);return n;}
+    if(m.type==='pass'){p.coins+=CFG.income;p.turns++;n.log.unshift('你积蓄 1 金币，跳过修筑。');if(n.log.length>8)n.log.pop();n.current=1-n.current;n.players[n.current].coins+=CFG.income;n.turn++;endCheck(n);return n;}
+    throw new Error('非法动作: 未知动作 '+m.type);}
+  function getLegalMoves(s){if(!s||s.over)return[];var p=s.players[s.current];var out=[{type:'pass'}];CFG.edges.forEach(function(e,i){if(edgeOpen(s,i)&&p.coins>=e.cost)out.push({type:'claim',edge:i});});return out;}
+  function chooseAIMove(s){var p=s.players[s.current];var best={type:'pass'},bv=-1;CFG.edges.forEach(function(e,i){if(!edgeOpen(s,i)||p.coins<e.cost)return;var v=e.pts/e.cost+compSize(p)*.1;if(v>bv){bv=v;best={type:'claim',edge:i};}});return best;}
+  return {CFG:CFG,createGame:createGame,applyMove:applyMove,getLegalMoves:getLegalMoves,chooseAIMove:chooseAIMove,scoreOf:scoreOf,compSize:compSize};
+});</script>
+<script>
+(function(){
+  
+  var E=window.MiniEuroEngine;var S=null;var sel=null;
+  var $=function(id){return document.getElementById(id);};
+  function render(){if(!S)return;var c=$('content');var h='';
+  
+    h+='<div class="scorebar"><div>你 <b>'+E.scoreOf(S,0)+'</b> 分</div><div>AI <b>'+E.scoreOf(S,1)+'</b> 分</div><div>金币 '+S.players[0].coins+'</div></div>';
+    h+='<h2>路网</h2><div class="mapwrap"><svg viewBox="0 0 310 230" role="img" aria-label="路线地图">';
+    E.CFG.edges.forEach(function(e,i){var a=E.CFG.nodes[e.a],b=E.CFG.nodes[e.b];var open=E.getLegalMoves(S).some(function(m){return m.type==='claim'&&m.edge===i;});h+='<line data-edge="'+i+'" x1="'+a.x+'" y1="'+a.y+'" x2="'+b.x+'" y2="'+b.y+'" class="'+(open?'open':'')+'"></line>';});
+    E.CFG.nodes.forEach(function(n){h+='<circle cx="'+n.x+'" cy="'+n.y+'" r="7"></circle><text x="'+n.x+'" y="'+(n.y-12)+'">'+n.name+'</text>';});
+    h+='</svg></div><div class="row"><button class="btn" id="pass" aria-label="积蓄金币">积蓄金币</button></div>';
+    h+='<h2>可选路段</h2><div class="edges">';E.CFG.edges.forEach(function(e,i){var open=E.getLegalMoves(S).some(function(m){return m.type==='claim'&&m.edge===i;});if(open)h+='<button class="edgebtn" data-edge="'+i+'" aria-label="修筑路段">'+E.CFG.nodes[e.a].name+'—'+E.CFG.nodes[e.b].name+' · '+e.cost+'币 / '+e.pts+'分</button>';});h+='</div>';
+    h+='<h2>日志</h2><div class="log">'+S.log.map(function(x){return '<div>'+x+'</div>';}).join('')+'</div>';
+  
+    document.addEventListener('click',function(ev){var t=ev.target.closest('[data-edge]');if(t&&S&&!S.over){var i=+t.dataset.edge;if(E.getLegalMoves(S).some(function(m){return m.type==='claim'&&m.edge===i;})){S=E.applyMove(S,{type:'claim',edge:i});render();}else{alert('金币不足或该路段已被占用');}return;}if(ev.target.closest('#pass')&&S&&!S.over){S=E.applyMove(S,{type:'pass'});render();}});
+  
+    c.innerHTML=h;
+    var end=$('end');
+    if(end){if(S.over){var a=E.scoreOf?E.scoreOf(S,0):S.players[0].score,b=E.scoreOf?E.scoreOf(S,1):S.players[1].score;end.innerHTML='<div class="over"><b>'+(a>b?'你获胜':a<b?'AI 获胜':'平局')+'</b><br>你 '+a+' 分 · AI '+b+' 分<br><button class="btn" id="again" aria-label="再来一局" style="margin-top:8px">再来一局</button></div>';}else{end.innerHTML='';}}
+    if(S&&!S.over&&S.current===1){setTimeout(function(){if(!S||S.over||S.current!==1)return;try{var m=E.chooseAIMove(S);if(m)S=E.applyMove(S,m);}catch(e){}render();},380);}
+  }
+
+  function boot(){S=E.createGame(1);render();}
+  document.addEventListener('click',function(){setTimeout(function(){if(S&&S.over){var e=document.getElementById('end');if(e&&!e.innerHTML){var a=E.scoreOf?E.scoreOf(S,0):S.players[0].score,b=E.scoreOf?E.scoreOf(S,1):S.players[1].score;e.innerHTML='<div class="over"><b>'+(a>b?'你获胜':a<b?'AI 获胜':'平局')+'</b><br>你 '+a+' 分 · AI '+b+' 分<br><button class="btn" id="again" aria-label="再来一局" style="margin-top:8px">再来一局</button></div>';}}},0);});
+  document.addEventListener('click',function(ev){if(ev.target.closest('#again')){S=E.createGame((Math.random()*1e9)|0);sel=null;document.getElementById('end').innerHTML='';render();}});
+  boot();
+})();
+</script></body></html>

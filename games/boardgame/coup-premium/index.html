@@ -1,0 +1,1637 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1a0509">
+<meta name="description" content="政变 Coup 高级版：2–6 人暗红权谋桌游，公爵、刺客、队长、大使、女伯爵，挑战、阻挡与诈称。支持单人 AI 与联机房间。">
+<title>政变 · COUP｜未来官僚权谋</title>
+<style>
+  :root {
+    --bg: #120306;
+    --bg-2: #1d070c;
+    --oxblood: #4a0f19;
+    --wine: #2a0810;
+    --velvet: #3a0a14;
+    --ink: #f4e8cd;
+    --ink-dim: #d9c6a2;
+    --muted: #ae9672;
+    --brass: #cda756;
+    --brass-deep: #8e6c2c;
+    --brass-soft: rgba(205, 167, 86, .28);
+    --line: rgba(205, 167, 86, .26);
+    --panel: rgba(26, 8, 13, .86);
+    --panel-2: rgba(39, 11, 18, .92);
+    --danger: #c9604f;
+    --danger-deep: #7c2a24;
+    --good: #8cbfa0;
+    --shadow: 0 18px 44px rgba(0, 0, 0, .48);
+    --serif: "Songti SC", "STSong", "Noto Serif SC", "Source Han Serif SC", serif;
+    --sans: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    min-height: 100dvh;
+    color: var(--ink);
+    font-family: var(--serif);
+    font-weight: 700;
+    overflow-x: hidden;
+    background:
+      radial-gradient(ellipse at 50% -10%, rgba(118, 28, 42, .55), transparent 58%),
+      radial-gradient(ellipse at 100% 100%, rgba(56, 10, 20, .8), transparent 60%),
+      linear-gradient(160deg, #160307 0%, #0d0205 55%, #1b050b 100%);
+  }
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image: url("../../assets/art/premium/coup/velvet.webp");
+    background-size: cover;
+    background-position: center;
+    opacity: .26;
+    mix-blend-mode: soft-light;
+    pointer-events: none;
+    z-index: 0;
+  }
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 45%, transparent 30%, rgba(0, 0, 0, .62) 100%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  a { color: inherit; }
+  button { font: inherit; color: inherit; }
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  }
+  .app {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: max(10px, env(safe-area-inset-top)) clamp(10px, 2.2vw, 26px) max(18px, env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 100dvh;
+  }
+
+  /* ---------------- top bar ---------------- */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px 16px;
+    flex-wrap: wrap;
+    padding: 8px 2px 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .brand-seal {
+    width: 52px; height: 52px; flex: none;
+    display: grid; place-items: center;
+    border: 1px solid var(--brass-soft);
+    border-radius: 50%;
+    color: var(--brass);
+    background: radial-gradient(circle at 35% 30%, rgba(205,167,86,.22), rgba(20,4,8,.9) 70%);
+    box-shadow: inset 0 0 0 4px rgba(205,167,86,.06), 0 6px 18px rgba(0,0,0,.45);
+  }
+  .brand-seal svg { width: 30px; height: 30px; }
+  .brand h1 {
+    margin: 0;
+    font-family: var(--serif);
+    font-size: clamp(23px, 3.2vw, 34px);
+    line-height: 1.05;
+    letter-spacing: .14em;
+    color: var(--brass);
+    text-shadow: 0 2px 0 rgba(0,0,0,.35), 0 0 22px rgba(205,167,86,.18);
+  }
+  .brand h1 small {
+    font-family: var(--sans);
+    font-size: 12px;
+    letter-spacing: .34em;
+    color: var(--ink-dim);
+    display: block;
+    margin-top: 5px;
+    font-weight: 700;
+  }
+  .brand p {
+    margin: 4px 0 0;
+    font-family: var(--sans);
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 400;
+    letter-spacing: .08em;
+  }
+  .topnav { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .nav-btn {
+    min-height: 44px; min-width: 44px;
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 0 14px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: linear-gradient(180deg, rgba(74,15,25,.62), rgba(24,6,11,.8));
+    color: var(--ink);
+    font-size: 14px;
+    letter-spacing: .1em;
+    text-decoration: none;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    transition: border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .nav-btn:hover, .nav-btn:focus-visible { border-color: var(--brass); background: linear-gradient(180deg, rgba(98,24,37,.75), rgba(30,8,14,.9)); }
+  .nav-btn:active { transform: translateY(1px); }
+  .nav-btn[aria-pressed="true"] { color: var(--muted); border-color: rgba(205,167,86,.14); }
+  .nav-btn.primary { border-color: var(--brass); color: #241106; background: linear-gradient(180deg, #d8b76b, #a67c31); }
+  :focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+
+  /* ---------------- layout ---------------- */
+  .table-wrap {
+    flex: 1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 322px;
+    gap: 14px;
+    align-items: start;
+  }
+  .board { min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+  .side { min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+
+  .panel {
+    position: relative;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background:
+      linear-gradient(180deg, rgba(69, 17, 28, .5), rgba(18, 5, 9, .9)),
+      var(--panel);
+    box-shadow: var(--shadow), inset 0 1px 0 rgba(244,232,205,.05);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  .panel::before, .panel::after {
+    content: "";
+    position: absolute;
+    width: 12px; height: 12px;
+    border-color: var(--brass);
+    opacity: .55;
+    pointer-events: none;
+  }
+  .panel::before { top: 5px; left: 5px; border-top: 1px solid; border-left: 1px solid; }
+  .panel::after { bottom: 5px; right: 5px; border-bottom: 1px solid; border-right: 1px solid; }
+
+  .online-bar {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    padding: 10px 12px;
+    border: 1px solid rgba(140,191,160,.3);
+    border-radius: 8px;
+    background: rgba(15, 38, 26, .42);
+    font-family: var(--sans);
+    font-size: 13px;
+  }
+  .online-bar[hidden] { display: none; }
+  .online-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--good); box-shadow: 0 0 10px var(--good); flex: none; }
+  .online-bar .grow { flex: 1 1 140px; min-width: 0; }
+  .room-code { color: var(--brass); letter-spacing: .14em; font-weight: 700; }
+  .online-bar .nav-btn { padding: 0 10px; font-size: 12px; }
+
+  /* ---------------- seats ---------------- */
+  .seats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .seat {
+    position: relative;
+    min-width: 0;
+    padding: 9px 9px 10px;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    background:
+      linear-gradient(180deg, rgba(58, 12, 21, .54), rgba(16, 4, 8, .88));
+    box-shadow: 0 8px 20px rgba(0,0,0,.32), inset 0 1px 0 rgba(244,232,205,.04);
+    transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+    overflow: hidden;
+  }
+  .seat::after {
+    content: "";
+    position: absolute; inset: 4px auto auto 4px;
+    width: 6px; height: 6px;
+    border-top: 1px solid var(--brass); border-left: 1px solid var(--brass);
+    opacity: .35;
+  }
+  .seat.current {
+    border-color: var(--brass);
+    box-shadow: 0 0 0 1px rgba(205,167,86,.18), 0 0 26px rgba(205,167,86,.14), 0 8px 20px rgba(0,0,0,.4);
+    animation: turnGlow 2.6s ease-in-out infinite;
+  }
+  .seat.you { background: linear-gradient(180deg, rgba(84, 22, 34, .66), rgba(21, 6, 11, .92)); }
+  .seat.eliminated { opacity: .6; filter: saturate(.55); }
+  .seat-head { display: flex; align-items: center; gap: 7px; min-width: 0; }
+  .seat-sigil {
+    width: 30px; height: 30px; flex: none;
+    display: grid; place-items: center;
+    border: 1px solid var(--brass-soft);
+    border-radius: 50%;
+    font-family: var(--serif);
+    font-size: 13px;
+    color: var(--brass);
+    background: rgba(12,3,6,.7);
+  }
+  .seat-name {
+    flex: 1 1 auto; min-width: 0;
+    font-size: 14px;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--ink);
+  }
+  .seat-meta { font-family: var(--sans); font-size: 12px; color: var(--muted); margin-top: 3px; font-weight: 400; }
+  .seat-coins {
+    display: inline-flex; align-items: center; gap: 3px; flex: none;
+    font-family: var(--sans);
+    font-size: 13px;
+    color: var(--brass);
+    min-height: 18px;
+  }
+  .coin { width: 16px; height: 16px; object-fit: contain; display: block; filter: drop-shadow(0 1px 1px rgba(0,0,0,.5)); }
+  .seat-cards { display: flex; gap: 5px; margin-top: 8px; min-height: 76px; }
+  .card {
+    position: relative;
+    flex: 1 1 0;
+    min-width: 0;
+    aspect-ratio: 63 / 88;
+    max-width: 74px;
+    border-radius: 5px;
+    border: 1px solid rgba(205,167,86,.35);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    overflow: hidden;
+    background: linear-gradient(160deg, #3b0c16, #1c050a 70%);
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.4), 0 3px 8px rgba(0,0,0,.35);
+  }
+  .card .emblem { width: 25px; height: 25px; color: var(--brass); }
+  .card .emblem svg { width: 100%; height: 100%; display: block; }
+  /* 身份牌图标：入库道具图（crown/dagger/mask/scroll），队长保留代码绘制 SVG。 */
+  .card .emblem, .card-btn .emblem { background-position: center; background-size: contain; background-repeat: no-repeat; }
+  .role-duke .emblem { background-image: url("../../assets/art/premium/coup/crown.webp"); }
+  .role-assassin .emblem { background-image: url("../../assets/art/premium/coup/dagger.webp"); }
+  .role-ambassador .emblem { background-image: url("../../assets/art/premium/coup/scroll.webp"); }
+  .role-contessa .emblem { background-image: url("../../assets/art/premium/coup/mask.webp"); }
+  .card-name {
+    font-family: var(--serif);
+    font-size: 12px;
+    line-height: 1;
+    letter-spacing: .02em;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+  .card.back { background: #1a0509; padding: 0; }
+  .card.back img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .card.back::after {
+    content: "";
+    position: absolute; inset: 0;
+    background: linear-gradient(160deg, rgba(255,255,255,.06), transparent 45%, rgba(0,0,0,.25));
+  }
+  .card.lost { opacity: .72; filter: saturate(.7); border-color: rgba(201,96,79,.45); }
+  .card.lost::after {
+    content: "失";
+    position: absolute; right: 3px; bottom: 2px;
+    font-family: var(--sans); font-size: 12px; color: var(--danger);
+  }
+  .role-duke { border-color: rgba(216,178,90,.7); }
+  .role-assassin { border-color: rgba(200,85,74,.7); }
+  .role-captain { border-color: rgba(95,163,160,.7); }
+  .role-ambassador { border-color: rgba(203,185,141,.7); }
+  .role-contessa { border-color: rgba(168,140,192,.7); }
+  .role-duke .emblem { color: #e2bf6d; }
+  .role-assassin .emblem { color: #d7695a; }
+  .role-captain .emblem { color: #74b4b0; }
+  .role-ambassador .emblem { color: #d3c298; }
+  .role-contessa .emblem { color: #b79bd2; }
+  .seat-badge {
+    display: inline-block;
+    font-family: var(--sans); font-size: 12px; letter-spacing: .06em;
+    padding: 1px 6px; border-radius: 3px;
+    color: #241106; background: var(--brass);
+    box-shadow: 0 1px 4px rgba(0,0,0,.4);
+  }
+  .seat-badge.elim { background: rgba(201,96,79,.85); color: #fff; }
+  .seat-foot {
+    display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px;
+    margin-top: 7px;
+    font-family: var(--sans); font-size: 12px; font-weight: 400; color: var(--muted);
+  }
+  .seat-foot b { color: var(--ink-dim); font-weight: 700; }
+
+  /* ---------------- center table ---------------- */
+  .table-center { padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+  .turnbar {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    font-family: var(--sans); font-size: 12px; color: var(--muted);
+  }
+  .phase-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    min-height: 26px; padding: 2px 9px;
+    border: 1px solid var(--brass-soft); border-radius: 999px;
+    color: var(--brass); font-size: 12px; letter-spacing: .06em;
+    background: rgba(205,167,86,.07);
+  }
+  .turn-text { flex: 1 1 150px; min-width: 0; font-size: 13px; color: var(--ink-dim); }
+  .counts { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .counts b { color: var(--brass); font-weight: 700; }
+  .action-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .action-btn {
+    position: relative;
+    min-height: 66px;
+    min-width: 44px;
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 9px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: linear-gradient(180deg, rgba(72,18,29,.52), rgba(22,6,11,.85));
+    color: var(--ink);
+    text-align: left;
+    cursor: pointer;
+    -webkit-appearance: none; appearance: none;
+    transition: border-color .16s ease, transform .16s ease, background .16s ease, opacity .16s ease;
+  }
+  .action-btn .a-ico { width: 27px; height: 27px; flex: none; color: var(--brass); }
+  .action-btn .a-ico svg { width: 100%; height: 100%; display: block; }
+  .action-btn .a-body { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .action-btn .a-name { font-family: var(--serif); font-size: 15px; letter-spacing: .06em; line-height: 1.15; }
+  .action-btn .a-meta { font-family: var(--sans); font-size: 12px; color: var(--muted); font-weight: 400; line-height: 1.25; }
+  .action-btn:not(:disabled):hover { border-color: var(--brass); background: linear-gradient(180deg, rgba(100,26,40,.7), rgba(30,8,14,.9)); }
+  .action-btn:not(:disabled):active { transform: translateY(1px); }
+  .action-btn:disabled { opacity: .34; cursor: not-allowed; filter: saturate(.6); }
+  .action-btn[data-claim]::after {
+    content: attr(data-claim);
+    position: absolute; right: 6px; top: 6px;
+    font-family: var(--sans); font-size: 12px; color: var(--muted);
+    letter-spacing: .04em;
+  }
+  .prompt {
+    min-height: 46px;
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    padding: 8px 10px;
+    border: 1px dashed rgba(205,167,86,.22);
+    border-radius: 7px;
+    background: rgba(10,2,5,.35);
+    font-family: var(--sans);
+    font-size: 13px;
+    color: var(--ink-dim);
+    font-weight: 400;
+  }
+  .prompt b { color: var(--brass); font-weight: 700; }
+  .prompt .spark { width: 7px; height: 7px; border-radius: 50%; background: var(--brass); box-shadow: 0 0 10px var(--brass); flex: none; }
+  .prompt.waiting .spark { background: var(--danger); box-shadow: 0 0 10px var(--danger); animation: blink 1.8s ease-in-out infinite; }
+
+  /* ---------------- side ---------------- */
+  .side h2 {
+    margin: 0;
+    padding: 11px 12px 8px;
+    font-size: 14px;
+    letter-spacing: .16em;
+    color: var(--brass);
+    border-bottom: 1px solid rgba(205,167,86,.16);
+  }
+  .log-panel { display: flex; flex-direction: column; min-height: 0; }
+  .log-list {
+    margin: 0; padding: 8px 12px 12px;
+    list-style: none;
+    max-height: 360px;
+    overflow-y: auto;
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.55;
+    color: var(--ink-dim);
+    scrollbar-width: thin;
+    scrollbar-color: rgba(205,167,86,.35) transparent;
+  }
+  .log-list li {
+    padding: 5px 0 5px 12px;
+    border-bottom: 1px solid rgba(205,167,86,.08);
+    position: relative;
+  }
+  .log-list li::before {
+    content: "";
+    position: absolute; left: 1px; top: 12px;
+    width: 4px; height: 4px; border-radius: 50%;
+    background: var(--brass-deep);
+  }
+  .log-list li:last-child { border-bottom: 0; }
+  .log-list li.hot { color: var(--ink); }
+  .info-panel { padding-bottom: 10px; }
+  .deck-info { display: flex; gap: 16px; padding: 10px 12px 4px; font-family: var(--sans); font-size: 13px; color: var(--ink-dim); }
+  .deck-info b { color: var(--brass); font-size: 16px; }
+  .fine { margin: 6px 12px 4px; font-family: var(--sans); font-size: 12px; font-weight: 400; color: var(--muted); line-height: 1.5; }
+
+  .foot {
+    display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap;
+    font-family: var(--sans); font-size: 12px; font-weight: 400; color: var(--muted);
+    border-top: 1px solid rgba(205,167,86,.14);
+    padding-top: 10px;
+  }
+
+  /* ---------------- overlays ---------------- */
+  .overlay {
+    position: fixed; inset: 0; z-index: 60;
+    display: flex; align-items: center; justify-content: center;
+    padding: max(14px, env(safe-area-inset-top)) 12px max(14px, env(safe-area-inset-bottom));
+    background: radial-gradient(ellipse at center, rgba(38,8,15,.72), rgba(5,1,3,.9));
+  }
+  .overlay[hidden] { display: none; }
+  .dialog {
+    position: relative;
+    width: min(520px, 100%);
+    max-height: 90dvh;
+    overflow-y: auto;
+    padding: 18px 16px 16px;
+    border: 1px solid var(--brass-soft);
+    border-radius: 11px;
+    background:
+      linear-gradient(180deg, rgba(66,15,26,.9), rgba(16,4,8,.97));
+    box-shadow: 0 30px 80px rgba(0,0,0,.7), inset 0 1px 0 rgba(244,232,205,.07);
+  }
+  .dialog::before {
+    content: ""; position: absolute; inset: 6px;
+    border: 1px solid rgba(205,167,86,.12);
+    border-radius: 6px; pointer-events: none;
+  }
+  .dialog h2 {
+    margin: 0 0 6px;
+    font-size: 21px;
+    letter-spacing: .12em;
+    color: var(--brass);
+    line-height: 1.25;
+  }
+  .dialog .sub {
+    margin: 0 0 12px;
+    font-family: var(--sans); font-size: 13px; font-weight: 400;
+    color: var(--muted); line-height: 1.5;
+  }
+  .dialog p { margin: 8px 0; font-family: var(--sans); font-size: 14px; line-height: 1.6; font-weight: 400; }
+  .dialog p strong { color: var(--brass); }
+  .dialog .hint {
+    font-size: 12px; color: var(--muted);
+    border-left: 2px solid var(--brass-soft);
+    padding-left: 9px; margin-top: 10px;
+  }
+  .dialog-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .btn {
+    min-height: 46px; min-width: 44px;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 0 16px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: linear-gradient(180deg, rgba(73,18,29,.7), rgba(24,6,11,.9));
+    color: var(--ink);
+    font-family: var(--serif); font-size: 15px; letter-spacing: .08em;
+    cursor: pointer;
+    -webkit-appearance: none; appearance: none;
+  }
+  .btn:hover, .btn:focus-visible { border-color: var(--brass); }
+  .btn.primary { border-color: var(--brass); color: #241106; background: linear-gradient(180deg, #d9b96d, #a87f34); }
+  .btn.danger { border-color: rgba(201,96,79,.7); color: #ffd8d0; background: linear-gradient(180deg, rgba(128,38,31,.9), rgba(64,16,15,.95)); }
+  .btn.ghost { background: transparent; color: var(--muted); }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+  .modal-cards { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 4px; }
+  .card-btn {
+    min-height: 96px; min-width: 68px;
+    width: 74px;
+    padding: 6px 4px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: linear-gradient(160deg, #3b0c16, #1c050a 70%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+    cursor: pointer;
+    -webkit-appearance: none; appearance: none;
+  }
+  .card-btn .emblem { width: 30px; height: 30px; }
+  .card-btn .emblem svg { width: 100%; height: 100%; }
+  .card-btn .card-name { font-size: 12px; color: var(--ink); }
+  .card-btn.sel { border-color: var(--brass); box-shadow: 0 0 0 2px rgba(205,167,86,.22); background: linear-gradient(160deg, #5c1523, #24070d 70%); }
+  .card-btn:disabled { opacity: .45; }
+  .target-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+  .target-btn {
+    min-height: 54px;
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 8px 12px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: linear-gradient(180deg, rgba(73,18,29,.55), rgba(22,6,11,.9));
+    color: var(--ink);
+    font-family: var(--sans); font-size: 14px;
+    cursor: pointer;
+    -webkit-appearance: none; appearance: none;
+  }
+  .target-btn:hover { border-color: var(--brass); }
+  .target-btn .t-coins { color: var(--brass); font-size: 13px; white-space: nowrap; }
+  .count-grid, .diff-grid { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 4px; }
+  .seg {
+    min-height: 46px; min-width: 46px;
+    padding: 0 14px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: rgba(20,5,9,.7);
+    color: var(--ink-dim);
+    font-family: var(--sans); font-size: 14px;
+    cursor: pointer;
+    -webkit-appearance: none; appearance: none;
+  }
+  .seg.sel { border-color: var(--brass); color: var(--brass); background: rgba(205,167,86,.12); }
+  .field-label { font-family: var(--sans); font-size: 12px; color: var(--muted); margin-top: 12px; letter-spacing: .08em; }
+
+  /* ---------------- result ---------------- */
+  .result-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-family: var(--sans); font-size: 13px; font-weight: 400; }
+  .result-table th, .result-table td { text-align: left; padding: 7px 6px; border-bottom: 1px solid rgba(205,167,86,.12); }
+  .result-table th { color: var(--muted); font-weight: 700; font-size: 12px; letter-spacing: .06em; }
+  .result-table tr.win td { color: var(--brass); }
+  .result-table td:last-child, .result-table th:last-child { text-align: right; }
+  .winner-title { color: var(--brass); }
+  .confetti { position: fixed; inset: 0; pointer-events: none; z-index: 70; overflow: hidden; }
+  .confetti i {
+    position: absolute; top: -12px;
+    width: 7px; height: 12px;
+    background: var(--brass);
+    opacity: .9;
+    animation: fall 1.9s linear forwards;
+  }
+  .toast {
+    position: fixed; left: 50%; bottom: max(18px, env(safe-area-inset-bottom));
+    transform: translateX(-50%) translateY(16px);
+    z-index: 80;
+    max-width: min(420px, calc(100vw - 24px));
+    padding: 10px 16px;
+    border: 1px solid var(--brass-soft);
+    border-radius: 7px;
+    background: rgba(28,7,13,.96);
+    color: var(--ink);
+    font-family: var(--sans); font-size: 13px;
+    box-shadow: 0 12px 30px rgba(0,0,0,.55);
+    opacity: 0; pointer-events: none;
+    transition: opacity .18s ease, transform .18s ease;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @keyframes turnGlow { 0%, 100% { box-shadow: 0 0 0 1px rgba(205,167,86,.14), 0 0 20px rgba(205,167,86,.10), 0 8px 20px rgba(0,0,0,.4); } 50% { box-shadow: 0 0 0 1px rgba(205,167,86,.34), 0 0 34px rgba(205,167,86,.2), 0 8px 20px rgba(0,0,0,.4); } }
+  @keyframes blink { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+  @keyframes fall { to { transform: translateY(110vh) rotate(540deg); opacity: .1; } }
+
+  /* ---------------- responsive ---------------- */
+  @media (max-width: 980px) {
+    .panel, .dialog { backdrop-filter: none; -webkit-backdrop-filter: none; }
+    .table-wrap { grid-template-columns: minmax(0, 1fr); }
+    .side { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); }
+    .log-list { max-height: 220px; }
+  }
+  @media (max-width: 700px) {
+    .panel, .dialog { backdrop-filter: none; -webkit-backdrop-filter: none; }
+    .seats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .action-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .action-btn { min-height: 62px; }
+    .side { grid-template-columns: minmax(0, 1fr); }
+    .brand-seal { width: 44px; height: 44px; }
+    .brand-seal svg { width: 25px; height: 25px; }
+    .topbar { align-items: flex-start; }
+    .topnav { gap: 6px; }
+    .nav-btn { padding: 0 10px; font-size: 13px; }
+  }
+  @media (max-width: 380px) {
+    .app { padding-left: 8px; padding-right: 8px; }
+    .seat-cards { min-height: 66px; }
+    .card .emblem { width: 21px; height: 21px; }
+    .action-btn { min-height: 58px; padding: 7px; gap: 6px; }
+    .action-btn .a-ico { width: 22px; height: 22px; }
+    .action-btn .a-name { font-size: 14px; }
+    .action-btn .a-meta { font-size: 12px; }
+    .dialog { padding: 16px 12px 14px; }
+  }
+  @media (hover: none) {
+    .panel, .dialog { backdrop-filter: none; -webkit-backdrop-filter: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
+    .seat.current { animation: none; }
+  }
+</style>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/coup-premium/">
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-seal" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 17h18l-1.6-8-4.4 3.4L12 5 9 12.4 4.6 9z"/>
+          <path d="M5 20h14"/>
+        </svg>
+      </span>
+      <div>
+        <h1>政变<small>COUP · PREMIUM</small></h1>
+        <p>未来官僚 · 暗红权谋 · 十五张身份</p>
+      </div>
+    </div>
+    <nav class="topnav" aria-label="主导航">
+      <button class="nav-btn" id="newBtn" type="button">新局</button>
+      <a class="nav-btn" href="rules.html">规则</a>
+      <a class="nav-btn" href="online.html">联机</a>
+      <button class="nav-btn" id="soundBtn" type="button" aria-pressed="false">音效</button>
+    </nav>
+  </header>
+
+  <main class="table-wrap">
+    <section class="board" aria-label="政变牌桌">
+      <div class="online-bar" id="onlineBar" hidden>
+        <span class="online-dot" aria-hidden="true"></span>
+        <span class="grow">联机房间 <span class="room-code" id="roomCode">—</span> · <span id="onlineStatus">同步中</span></span>
+        <button class="nav-btn" id="copyInviteBtn" type="button" hidden>复制邀请</button>
+        <button class="nav-btn primary" id="startOnlineBtn" type="button" hidden>开始对局</button>
+        <button class="nav-btn" id="restartOnlineBtn" type="button" hidden>再来一局</button>
+        <button class="nav-btn" id="closeOnlineBtn" type="button" hidden>关房</button>
+        <button class="nav-btn" id="leaveOnlineBtn" type="button">离开</button>
+      </div>
+
+      <div class="seats" id="seats" aria-label="玩家席位"></div>
+
+      <section class="panel table-center" aria-label="行动面板">
+        <div class="turnbar">
+          <span class="phase-pill" id="phasePill">行动</span>
+          <span class="turn-text" id="turnText" aria-live="polite">准备开局</span>
+          <span class="counts" id="counts">牌堆 <b>—</b> · 弃牌 <b>—</b></span>
+        </div>
+        <div class="action-grid" id="actionPanel"></div>
+        <div class="prompt" id="prompt" aria-live="polite">
+          <span class="spark" aria-hidden="true"></span>
+          <span>选择一项行动，或者观察对手的宣称。</span>
+        </div>
+      </section>
+    </section>
+
+    <aside class="side">
+      <section class="panel log-panel" aria-label="密档日志">
+        <h2>密档日志</h2>
+        <ol class="log-list" id="logList"></ol>
+      </section>
+      <section class="panel info-panel" aria-label="牌桌信息">
+        <h2>牌桌档案</h2>
+        <div class="deck-info">
+          <span>牌堆 <b id="deckCount">—</b></span>
+          <span>弃牌 <b id="discardCount">—</b></span>
+          <span>存活 <b id="aliveCount">—</b></span>
+        </div>
+        <p class="fine">15 张身份牌：公爵、刺客、队长、大使、女伯爵各 3 张。每人 2 张面朝下身份与 2 枚金币。</p>
+      </section>
+    </aside>
+  </main>
+
+  <footer class="foot">
+    <span>零外链 · 本地材质 · 服务端权威联机</span>
+    <span>2–6 人 · 单人与 AI 对战</span>
+  </footer>
+</div>
+
+<!-- 选择目标 -->
+<div class="overlay" id="targetModal" hidden>
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="targetTitle">
+    <h2 id="targetTitle">选择目标</h2>
+    <p class="sub" id="targetSub">选择一名存活的对手。</p>
+    <div class="target-grid" id="targetGrid"></div>
+    <div class="dialog-actions">
+      <button class="btn ghost" id="targetCancel" type="button">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- 挑战 / 阻挡 / 弃牌 / 交换 -->
+<div class="overlay" id="decisionModal" hidden>
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="decisionTitle">
+    <h2 id="decisionTitle">等待决定</h2>
+    <p class="sub" id="decisionSub"></p>
+    <div id="decisionBody"></div>
+    <div class="dialog-actions" id="decisionActions"></div>
+  </div>
+</div>
+
+<!-- 新局 -->
+<div class="overlay" id="newGameModal" hidden>
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="newGameTitle">
+    <h2 id="newGameTitle">新开一局</h2>
+    <p class="sub">选择人数与 AI 难度。身份牌与金币按 2–6 人规则发牌。</p>
+    <div class="field-label">玩家人数</div>
+    <div class="count-grid" id="countGrid">
+      <button class="seg" data-count="2" type="button">2 人</button>
+      <button class="seg" data-count="3" type="button">3 人</button>
+      <button class="seg sel" data-count="4" type="button">4 人</button>
+      <button class="seg" data-count="5" type="button">5 人</button>
+      <button class="seg" data-count="6" type="button">6 人</button>
+    </div>
+    <div class="field-label">AI 难度</div>
+    <div class="diff-grid" id="diffGrid">
+      <button class="seg" data-diff="easy" type="button">简单</button>
+      <button class="seg sel" data-diff="normal" type="button">普通</button>
+      <button class="seg" data-diff="hard" type="button">困难</button>
+    </div>
+    <p class="hint">AI 会诈称、挑战、阻挡和弃牌；困难 AI 更擅长保留女伯爵与公爵。</p>
+    <div class="dialog-actions">
+      <button class="btn primary" id="startNewBtn" type="button">开始对局</button>
+      <button class="btn ghost" id="cancelNewBtn" type="button">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- 结算 -->
+<div class="overlay" id="resultModal" hidden>
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="resultTitle">
+    <h2 class="winner-title" id="resultTitle">结算</h2>
+    <p class="sub" id="resultSub">最后存活者赢得政变。</p>
+    <table class="result-table">
+      <thead><tr><th>席位</th><th>金币</th><th>状态</th></tr></thead>
+      <tbody id="resultTable"></tbody>
+    </table>
+    <div class="dialog-actions">
+      <button class="btn primary" id="againBtn" type="button">再来一局</button>
+      <button class="btn ghost" id="closeResult" type="button">关闭</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="../../shared/shuffle.js"></script>
+<script src="../../shared/sfx.js"></script>
+<script src="engine.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var Engine = window.CoupEngine;
+  var $ = function (id) { return document.getElementById(id); };
+  var qsa = function (sel, root) {
+    return Array.prototype.slice.call((root || document).querySelectorAll(sel));
+  };
+  var reducedMotion = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
+
+  var state = null;
+  var mySeat = 0;
+  var busy = false;
+  var aiTimer = null;
+  var aiDelay = 460;
+  var modal = { kind: null, selected: [] };
+  var targetAction = null;
+  var resultDismissed = false;
+  var soundOn = readLocal('coup-premium-sound', 'on') !== 'off';
+  var lastView = null;
+  var online = null;
+  var onlineTimer = null;
+  var onlineBusy = false;
+  var booted = false;
+  var newGameChoice = { playerCount: 4, difficulty: 'normal' };
+
+  function readLocal(key, fallback) {
+    try { var value = localStorage.getItem(key); return value == null ? fallback : value; } catch (err) { return fallback; }
+  }
+  function writeLocal(key, value) {
+    try { localStorage.setItem(key, value); } catch (err) { /* private mode */ }
+  }
+  function esc(value) {
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+    });
+  }
+  function sfx(name) {
+    if (!soundOn || !window.Sfx) return;
+    try { window.Sfx.play(name, { volume: 0.55 }); } catch (err) { /* audio is optional */ }
+  }
+  function toast(text) {
+    var node = $('toast');
+    node.textContent = text;
+    node.classList.add('show');
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(function () { node.classList.remove('show'); }, 2200);
+  }
+
+  /* ---------- code-drawn role emblems (no AI faces) ---------- */
+  function emblemSVG(role) {
+    var common = 'fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"';
+    if (role === 'duke') {
+      return '<svg viewBox="0 0 24 24" ' + common + '><path d="M3 17.5h18l-1.7-8.4-4.3 3.3L12 4.6 9 12.4 4.7 9.1z"/><path d="M5.2 20.4h13.6"/><circle cx="12" cy="14.7" r="1.1"/></svg>';
+    }
+    if (role === 'assassin') {
+      return '<svg viewBox="0 0 24 24" ' + common + '><path d="M12.2 3.2 14 6.1 13 14.2h-2L10 6.1z"/><path d="M8.2 14.4h7.6"/><path d="M12 14.4v5.2"/><circle cx="12" cy="20.6" r="1.1"/></svg>';
+    }
+    if (role === 'captain') {
+      return '<svg viewBox="0 0 24 24" ' + common + '><circle cx="12" cy="5.4" r="2.1"/><path d="M12 7.5v12"/><path d="M6.6 11.2h10.8"/><path d="M5 15.2c.3 4 3.1 5.2 7 5.2s6.7-1.2 7-5.2"/><path d="m5 15.2 2.1 1.5M19 15.2l-2.1 1.5"/></svg>';
+    }
+    if (role === 'ambassador') {
+      return '<svg viewBox="0 0 24 24" ' + common + '><path d="M7 4.5h10v15H7z"/><path d="M5.2 4.5c0-1 .8-1.8 1.8-1.8h9.8c1 0 1.8.8 1.8 1.8v1H5.2z"/><path d="M5.2 19.5h13.6"/><path d="M9.5 8.2h5M9.5 11.2h5M9.5 14.2h3.4"/></svg>';
+    }
+    if (role === 'contessa') {
+      return '<svg viewBox="0 0 24 24" ' + common + '><path d="M4.2 8.3c2.6-1.7 5-2.1 7.8-2.1s5.2.4 7.8 2.1c.4 4.7-2.6 8.6-7.8 9.4-5.2-.8-8.2-4.7-7.8-9.4z"/><path d="M7.4 9.4c1.3.7 2.9.9 4.6.9s3.3-.2 4.6-.9"/><path d="M9.3 12.1h.1M14.6 12.1h.1"/><path d="M3.4 7.5 1.9 5.4M20.6 7.5l1.5-2.1"/></svg>';
+    }
+    return '<svg viewBox="0 0 24 24" ' + common + '><circle cx="12" cy="12" r="7.4"/><path d="M12 5v14M5 12h14"/></svg>';
+  }
+  /* 四张身份牌用入库道具图作图标；队长暂无入库素材，回退代码绘制 SVG。 */
+  function cardEmblem(role) {
+    if (role === 'duke' || role === 'assassin' || role === 'ambassador' || role === 'contessa') return '';
+    return emblemSVG(role);
+  }
+  function roleName(role) { return (Engine.ROLE_NAMES[role] || role); }
+  function actionName(action) { return Engine.ACTION_NAMES[action] || action; }
+  function actionIcon(action) {
+    if (action === 'income') return emblemSVG('ambassador');
+    if (action === 'foreign_aid') return emblemSVG('duke');
+    if (action === 'coup') return emblemSVG('duke');
+    if (action === 'tax') return emblemSVG('duke');
+    if (action === 'assassinate') return emblemSVG('assassin');
+    if (action === 'steal') return emblemSVG('captain');
+    return emblemSVG('ambassador');
+  }
+  function roman(n) { return ['I', 'II', 'III', 'IV', 'V', 'VI'][n] || String(n + 1); }
+
+  /* ---------- online detection & lobby ---------- */
+  function onlineParams() {
+    var params = new URLSearchParams(window.location.search);
+    if (!params.has('room') || !params.has('session') || !params.has('player')) return null;
+    return { roomId: params.get('room'), token: params.get('session'), playerId: params.get('player') };
+  }
+  function isOnlineMode() { return !!onlineParams(); }
+
+  function initOnline() {
+    var p = onlineParams();
+    online = {
+      roomId: p.roomId, token: p.token, playerId: p.playerId,
+      state: null, canAct: false, legalActions: [], view: null, error: null, pollDelay: 700
+    };
+    $('onlineBar').hidden = false;
+    $('roomCode').textContent = '…';
+    pollOnline(true);
+  }
+  function onlineRoute(suffix) {
+    return '/api/rooms/' + encodeURIComponent(online.roomId) + (suffix || '');
+  }
+  function pollOnline(immediate) {
+    if (!online) return;
+    clearTimeout(onlineTimer);
+    var run = function () {
+      fetch(onlineRoute('?session=' + encodeURIComponent(online.token) + '&playerId=' + encodeURIComponent(online.playerId)),
+        { headers: { accept: 'application/json' }, cache: 'no-store' })
+        .then(function (res) { return res.json().then(function (data) { return { status: res.status, data: data }; }); })
+        .then(function (out) {
+          if (out.status !== 200) {
+            online.error = (out.data && out.data.error && out.data.error.message) || '房间同步失败';
+            renderOnlineError();
+            return;
+          }
+          applyOnlineView(out.data);
+        })
+        .catch(function () {
+          online.error = '网络中断，正在重试';
+          renderOnlineError();
+        })
+        .then(function () {
+          if (online) onlineTimer = setTimeout(function () { pollOnline(false); }, online.pollDelay);
+        });
+    };
+    if (immediate) run();
+    else onlineTimer = setTimeout(run, online.pollDelay);
+  }
+  function renderOnlineError() {
+    $('onlineStatus').textContent = online && online.error ? online.error : '同步失败';
+    $('prompt').classList.add('waiting');
+    $('prompt').innerHTML = '<span class="spark" aria-hidden="true"></span><span id="promptText">' + esc((online && online.error) || '等待房间同步') + '</span>';
+  }
+  function applyOnlineView(data) {
+    if (!online) return;
+    online.view = data;
+    online.state = data.state || null;
+    online.canAct = !!data.canAct;
+    online.legalActions = data.legalActions || [];
+    if (data.you) mySeat = data.you.playerIndex;
+    $('roomCode').textContent = data.roomCode || '—';
+    $('onlineStatus').textContent = data.status === 'finished' ? '本局结束' : data.started ? '对局进行中' : '等待开始';
+    $('copyInviteBtn').hidden = !data.inviteToken;
+    $('startOnlineBtn').hidden = !data.canStart;
+    $('restartOnlineBtn').hidden = !data.canRestart;
+    $('closeOnlineBtn').hidden = !data.isHost;
+    $('againBtn').hidden = !data.canRestart;
+    if (data.status === 'finished' && data.result) {
+      online.result = data.result;
+    }
+    onlineBusy = !!data.currentControlledByAI;
+    render();
+  }
+  function onlineAction(action) {
+    if (!online) return Promise.resolve(false);
+    onlineBusy = true;
+    render();
+    return fetch(onlineRoute('/actions'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ session: online.token, playerId: online.playerId, type: 'action', action: action })
+    }).then(function (res) { return res.json().then(function (data) { return { status: res.status, data: data }; }); })
+      .then(function (out) {
+        onlineBusy = false;
+        if (out.status === 200) {
+          applyOnlineView(out.data);
+          onlineBusy = false;
+          render();
+          return true;
+        }
+        var message = out.data && out.data.error ? out.data.error.message : '行动被拒绝';
+        toast(message);
+        sfx('error');
+        pollOnline(true);
+        return false;
+      })
+      .catch(function () {
+        onlineBusy = false;
+        toast('网络错误，稍后重试');
+        render();
+        return false;
+      });
+  }
+  function onlineStart() {
+    if (!online) return;
+    fetch(onlineRoute('/start'), {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ session: online.token, playerId: online.playerId })
+    }).then(function (res) { return res.json(); }).then(function (data) {
+      if (data && data.error) toast(data.error.message || '无法开始');
+      else { applyOnlineView(data); pollOnline(false); }
+    }).catch(function () { toast('无法连接房间服务'); });
+  }
+  function onlineRestart() {
+    if (!online) return;
+    fetch(onlineRoute('/restart'), {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ session: online.token, playerId: online.playerId })
+    }).then(function (res) { return res.json(); }).then(function (data) {
+      if (data && data.error) toast(data.error.message || '无法重赛');
+      else { resultDismissed = false; applyOnlineView(data); pollOnline(false); }
+    }).catch(function () { toast('无法连接房间服务'); });
+  }
+  function onlineClose() {
+    if (!online) return;
+    fetch(onlineRoute('?session=' + encodeURIComponent(online.token) + '&playerId=' + encodeURIComponent(online.playerId)),
+      { method: 'DELETE' }).then(function () { location.href = 'online.html'; })
+      .catch(function () { toast('关房失败'); });
+  }
+  function onlineLeave() {
+    if (!online) return;
+    var info = online;
+    fetch(onlineRoute('/leave'), {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ session: info.token, playerId: info.playerId })
+    }).catch(function () {}).then(function () {
+      location.href = 'online.html';
+    });
+  }
+
+  /* ---------- local game ---------- */
+  function aiLevelsFor(difficulty, count) {
+    var out = [];
+    var pattern = difficulty === 'hard'
+      ? ['hard', 'hard', 'hard', 'hard', 'hard', 'hard']
+      : difficulty === 'easy'
+        ? ['easy', 'easy', 'easy', 'easy', 'easy', 'easy']
+        : ['normal', 'hard', 'normal', 'easy', 'normal', 'hard'];
+    for (var i = 0; i < count; i += 1) out.push(pattern[i % pattern.length]);
+    return out;
+  }
+  function newLocalGame(opts) {
+    opts = opts || {};
+    clearTimeout(aiTimer);
+    aiTimer = null;
+    busy = false;
+    modal = { kind: null, selected: [] };
+    targetAction = null;
+    resultDismissed = false;
+    hideResult();
+    hideOverlays();
+    var playerCount = Number(opts.playerCount || newGameChoice.playerCount) || 4;
+    if (playerCount < 2 || playerCount > 6) playerCount = 4;
+    var difficulty = opts.difficulty || newGameChoice.difficulty || 'normal';
+    newGameChoice.playerCount = playerCount;
+    newGameChoice.difficulty = difficulty;
+    var levels = opts.aiLevels || aiLevelsFor(difficulty, playerCount);
+    var names = opts.names || null;
+    var aiNames = ['你', 'AI · 铁幕', 'AI · 密探', 'AI · 黑账房', 'AI · 喉舌', 'AI · 夜莺'];
+    state = Engine.createGame({
+      playerCount: playerCount,
+      seed: opts.seed == null ? Date.now() : opts.seed,
+      humanSeat: 0,
+      aiLevels: levels,
+      names: names || aiNames.slice(0, playerCount),
+      firstPlayer: 0
+    });
+    mySeat = 0;
+    render();
+    scheduleAI();
+    return true;
+  }
+  function currentView() {
+    if (online) return online.state;
+    if (!state) return null;
+    return Engine.viewFor(state, mySeat);
+  }
+  function currentLegalActions() {
+    if (online) return online.legalActions || [];
+    if (!state || Engine.isOver(state)) return [];
+    return Engine.getLegalActions(state);
+  }
+  function currentActor() {
+    var view = currentView();
+    return view ? view.actorId : null;
+  }
+  function isMyAction(view) {
+    return !!view && !view.over && view.phase === 'action' && view.actorId === mySeat && (!online || online.canAct);
+  }
+  function isMyDecision(view) {
+    return !!view && !view.over && view.actorId === mySeat &&
+      ['challenge', 'block', 'blockChallenge', 'discard', 'exchange'].indexOf(view.phase) >= 0 &&
+      (!online || online.canAct);
+  }
+  function scheduleAI() {
+    clearTimeout(aiTimer);
+    aiTimer = null;
+    if (online || !state) { busy = false; return; }
+    if (Engine.isOver(state)) { busy = false; render(); maybeShowResult(); return; }
+    var actor = Engine.actorId(state);
+    if (actor === mySeat) {
+      busy = false;
+      render();
+      return;
+    }
+    busy = true;
+    render();
+    aiTimer = setTimeout(function () {
+      aiTimer = null;
+      if (!state || Engine.isOver(state)) { busy = false; render(); return; }
+      try {
+        var action = Engine.chooseAIAction(state);
+        if (!action) throw new Error('AI 无行动');
+        var result = Engine.applyAction(state, action);
+        if (!result.ok) throw new Error(result.error);
+      } catch (err) {
+        busy = false;
+        toast('AI 行动失败：' + (err && err.message ? err.message : err));
+        render();
+        return;
+      }
+      render();
+      if (Engine.isOver(state)) {
+        busy = false;
+        maybeShowResult();
+      } else {
+        scheduleAI();
+      }
+    }, aiDelay);
+  }
+
+  function perform(action) {
+    if (online) return onlineAction(action);
+    if (!state) return false;
+    if (Engine.isOver(state)) { toast('本局已结束'); return false; }
+    var actor = Engine.actorId(state);
+    if (actor !== mySeat) { toast('还轮不到你行动'); return false; }
+    var error = Engine.actionError(state, action);
+    if (error) { toast(error); sfx('error'); return false; }
+    var beforePhase = state.phase;
+    var result = Engine.applyAction(state, action);
+    if (!result.ok) { toast(result.error); sfx('error'); return false; }
+    if (action.type === 'coup') sfx('capture');
+    else if (action.type === 'assassinate') sfx('capture');
+    else if (action.type === 'challenge' || action.type === 'block' || action.type === 'blockChallenge') sfx('notify');
+    else if (beforePhase === 'discard') sfx('lose');
+    else if (beforePhase === 'exchange') sfx('deal');
+    else sfx('move');
+    modal = { kind: null, selected: [] };
+    targetAction = null;
+    $('targetModal').hidden = true;
+    render();
+    if (Engine.isOver(state)) {
+      sfx('win');
+      busy = false;
+      maybeShowResult();
+    } else {
+      scheduleAI();
+    }
+    return true;
+  }
+
+  function apiActionFor(type) {
+    var view = currentView();
+    if (!view) return null;
+    var actions = currentLegalActions();
+    var match = actions.filter(function (a) { return a.type === type; });
+    if (!match.length) return null;
+    if (type === 'coup' || type === 'assassinate' || type === 'steal') return { type: type, needsTarget: true, count: match.length };
+    return { type: type, needsTarget: false };
+  }
+
+  /* ---------- render ---------- */
+  function render() {
+    var view = currentView();
+    lastView = view;
+    renderSeats(view);
+    renderActions(view);
+    renderPrompt(view);
+    renderLog(view);
+    renderCounts(view);
+    renderDecision(view);
+    if (view) {
+      $('onlineBar').hidden = !online;
+      if (!online) {
+        $('onlineStatus').textContent = '';
+      }
+    }
+    if (view && view.over && !resultDismissed) maybeShowResult();
+  }
+
+  function renderSeats(view) {
+    var root = $('seats');
+    if (!view) { root.innerHTML = ''; return; }
+    var html = view.players.map(function (p, seat) {
+      var isYou = seat === mySeat;
+      var isCurrent = !view.over && view.actorId === seat;
+      var classes = ['seat'];
+      if (isYou) classes.push('you');
+      if (isCurrent) classes.push('current');
+      if (p.eliminated) classes.push('eliminated');
+      var cards = '';
+      p.lost.forEach(function (role) {
+        cards += '<div class="card face lost role-' + role + '" data-role="' + role + '" aria-label="已失去的' + esc(roleName(role)) + '">' +
+          '<span class="emblem">' + cardEmblem(role) + '</span><span class="card-name">' + esc(roleName(role)) + '</span></div>';
+      });
+      p.influence.forEach(function (card) {
+        if (isYou && card.role) {
+          cards += '<div class="card face role-' + card.role + '" data-role="' + card.role + '" aria-label="' + esc(roleName(card.role)) + '">' +
+            '<span class="emblem">' + cardEmblem(card.role) + '</span><span class="card-name">' + esc(roleName(card.role)) + '</span></div>';
+        } else {
+          cards += '<div class="card back" data-back="1" aria-label="面朝下的身份牌"><img src="../../assets/art/premium/coup/card-back.webp" alt=""></div>';
+        }
+      });
+      var badge = '';
+      if (p.eliminated) badge = '<span class="seat-badge elim">淘汰</span>';
+      else if (isCurrent) badge = '<span class="seat-badge">行动中</span>';
+      return '<article class="' + classes.join(' ') + '" data-seat="' + seat + '" aria-label="' + esc(p.name) + (isYou ? '，你的席位' : '') + '">' +
+        '<div class="seat-head">' +
+          '<span class="seat-sigil" aria-hidden="true">' + roman(seat) + '</span>' +
+          '<span class="seat-name" title="' + esc(p.name) + '">' + esc(p.name) + (isYou ? ' · 你' : '') + '</span>' +
+          '<span class="seat-coins" aria-label="' + p.coins + ' 枚金币"><img class="coin" src="../../assets/art/premium/coup/coin.webp" alt="金币">' + p.coins + '</span>' +
+        '</div>' +
+        '<div class="seat-meta">' + badge + ' ' + (p.isAI ? 'AI · ' + (p.aiLevel === 'hard' ? '困难' : p.aiLevel === 'easy' ? '简单' : '普通') : '玩家') + '</div>' +
+        '<div class="seat-cards">' + cards + '</div>' +
+        '<div class="seat-foot"><span>身份 <b>' + (p.influenceCount + p.lost.length) + '</b></span><span>' + (p.eliminated ? '已淘汰' : p.coins + ' 金币') + '</span></div>' +
+      '</article>';
+    }).join('');
+    root.innerHTML = html;
+  }
+
+  function renderActions(view) {
+    var root = $('actionPanel');
+    var specs = [
+      { type: 'income', name: '收入', meta: '+1 金币 · 不可阻挡', claim: '' },
+      { type: 'foreign_aid', name: '外援', meta: '+2 金币 · 公爵可挡', claim: '' },
+      { type: 'coup', name: '政变', meta: '−7 金币 · 不可阻挡', claim: '' },
+      { type: 'tax', name: '征税', meta: '+3 金币', claim: '公爵' },
+      { type: 'assassinate', name: '暗杀', meta: '−3 金币 · 目标失牌', claim: '刺客' },
+      { type: 'steal', name: '偷取', meta: '最多 2 金币', claim: '队长' },
+      { type: 'exchange', name: '交换', meta: '抽 2 留 2', claim: '大使' }
+    ];
+    var legal = currentLegalActions();
+    var myTurn = isMyAction(view);
+    var byType = {};
+    legal.forEach(function (a) { byType[a.type] = (byType[a.type] || 0) + 1; });
+    root.innerHTML = specs.map(function (spec) {
+      var available = myTurn && byType[spec.type] > 0;
+      return '<button class="action-btn" type="button" data-action="' + spec.type + '"' +
+        (spec.claim ? ' data-claim="' + spec.claim + '"' : '') +
+        ' aria-label="' + spec.name + '：' + spec.meta + '"' +
+        (available ? '' : ' disabled') + '>' +
+        '<span class="a-ico" aria-hidden="true">' + actionIcon(spec.type) + '</span>' +
+        '<span class="a-body"><span class="a-name">' + spec.name + '</span><span class="a-meta">' + spec.meta + '</span></span>' +
+      '</button>';
+    }).join('');
+  }
+
+  function renderPrompt(view) {
+    var node = $('prompt');
+    if (!view) {
+      node.classList.remove('waiting');
+      node.innerHTML = '<span class="spark" aria-hidden="true"></span><span id="promptText">准备开局。</span>';
+      return;
+    }
+    node.classList.toggle('waiting', view.actorId !== mySeat && !view.over);
+    var text = '';
+    if (view.over) {
+      var winner = view.winner;
+      text = winner != null && winner >= 0 ? '<b>' + esc(view.players[winner].name) + '</b> 存活到最后，赢得本局。' : '本局结束。';
+    } else if (view.phase === 'action') {
+      text = isMyAction(view) ? '轮到你行动：选择收入、外援、政变，或宣称一个角色。' : '等待 <b>' + esc(playerName(view, view.actorId)) + '</b> 行动…';
+    } else if (view.phase === 'challenge') {
+      text = '等待 <b>' + esc(playerName(view, view.actorId)) + '</b> 决定是否挑战。宣称：<b>' + esc(roleName(view.pending.claim)) + '</b>。';
+    } else if (view.phase === 'block') {
+      text = '等待 <b>' + esc(playerName(view, view.actorId)) + '</b> 阻挡 ' + esc(actionName(view.pending.action)) + '。';
+    } else if (view.phase === 'blockChallenge') {
+      text = '<b>' + esc(playerName(view, view.pending.blocker)) + '</b> 宣称 ' + esc(roleName(view.pending.blockClaim)) + ' 阻挡，等待 <b>' + esc(playerName(view, view.actorId)) + '</b> 决定是否挑战。';
+    } else if (view.phase === 'discard') {
+      text = '等待 <b>' + esc(playerName(view, view.actorId)) + '</b> 翻开一张身份牌（' + esc(view.pending.discardReason) + '）。';
+    } else if (view.phase === 'exchange') {
+      text = '等待 <b>' + esc(playerName(view, view.actorId)) + '</b> 从 4 张中保留 2 张。';
+    }
+    node.innerHTML = '<span class="spark" aria-hidden="true"></span><span id="promptText">' + text + '</span>';
+  }
+  function playerName(view, id) {
+    return view && view.players[id] ? view.players[id].name : '玩家' + id;
+  }
+  function phaseLabel(phase) {
+    return { action: '行动', challenge: '挑战', block: '阻挡', blockChallenge: '阻挡挑战', discard: '翻开身份', exchange: '交换身份', over: '结束' }[phase] || phase;
+  }
+  function renderCounts(view) {
+    if (!view) return;
+    $('phasePill').textContent = phaseLabel(view.phase);
+    $('turnText').textContent = view.over ? '本局结束' : '第 ' + (view.turns + 1) + ' 轮 · ' + playerName(view, view.actorId) + ' 行动';
+    $('counts').innerHTML = '牌堆 <b>' + view.deckCount + '</b> · 弃牌 <b>' + view.discardCount + '</b>';
+    $('deckCount').textContent = view.deckCount;
+    $('discardCount').textContent = view.discardCount;
+    $('aliveCount').textContent = view.players.filter(function (p) { return !p.eliminated; }).length;
+  }
+  function renderLog(view) {
+    var list = $('logList');
+    if (!view) { list.innerHTML = ''; return; }
+    var entries = view.log.slice(-26);
+    list.innerHTML = entries.map(function (line, i) {
+      return '<li' + (i >= entries.length - 2 ? ' class="hot"' : '') + '>' + esc(line) + '</li>';
+    }).join('');
+    list.scrollTop = list.scrollHeight;
+  }
+
+  /* ---------- decision modal ---------- */
+  function renderDecision(view) {
+    var overlay = $('decisionModal');
+    if (!isMyDecision(view)) {
+      overlay.hidden = true;
+      if (modal.kind) modal = { kind: null, selected: [] };
+      return;
+    }
+    var kind = view.phase;
+    if (modal.kind !== kind) modal = { kind: kind, selected: [] };
+    var title = $('decisionTitle');
+    var sub = $('decisionSub');
+    var body = $('decisionBody');
+    var actions = $('decisionActions');
+    var pending = view.pending || {};
+    if (kind === 'challenge') {
+      title.textContent = '要挑战这个宣称吗？';
+      sub.textContent = playerName(view, pending.actor) + ' 宣称 ' + roleName(pending.claim) +
+        (pending.target != null ? '，目标 ' + playerName(view, pending.target) : '') + '。';
+      body.innerHTML = '<p>如果 <strong>' + esc(playerName(view, pending.actor)) + '</strong> 真有 <strong>' + esc(roleName(pending.claim)) + '</strong>，挑战者将失去一张身份。若没有，宣称者失去一张身份，行动取消。</p>' +
+        '<p class="hint">一次行动最多一个挑战者。暗杀已支付的 3 枚金币不会退回。</p>';
+      actions.innerHTML = '<button class="btn danger" type="button" data-decision="challenge">挑战</button>' +
+        '<button class="btn ghost" type="button" data-decision="pass">放弃</button>';
+    } else if (kind === 'block') {
+      var roles = pending.blockRoles && pending.blockRoles.length ? pending.blockRoles : (Engine.BLOCK_BY_ACTION[pending.action] || []);
+      title.textContent = '要阻挡吗？';
+      sub.textContent = playerName(view, pending.actor) + ' 对你发动 ' + actionName(pending.action) + '。';
+      body.innerHTML = '<p>宣称以下角色之一来阻挡。阻挡也可能被行动者挑战。</p>' +
+        '<p class="hint">' + (pending.action === 'foreign_aid' ? '公爵可阻挡外援。' : pending.action === 'assassinate' ? '女伯爵可阻挡暗杀。' : '队长或大使可阻挡偷取。') + '</p>';
+      actions.innerHTML = roles.map(function (role) {
+        return '<button class="btn" type="button" data-block-role="' + role + '">以' + esc(roleName(role)) + '阻挡</button>';
+      }).join('') + '<button class="btn ghost" type="button" data-decision="pass">放弃</button>';
+    } else if (kind === 'blockChallenge') {
+      title.textContent = '要挑战阻挡吗？';
+      sub.textContent = playerName(view, pending.blocker) + ' 宣称 ' + roleName(pending.blockClaim) + ' 阻挡。';
+      body.innerHTML = '<p>挑战成功则阻挡者失去一张身份，行动继续；挑战失败则你失去一张身份，行动取消。</p>';
+      actions.innerHTML = '<button class="btn danger" type="button" data-decision="challenge">挑战阻挡</button>' +
+        '<button class="btn ghost" type="button" data-decision="pass">接受阻挡</button>';
+    } else if (kind === 'discard') {
+      title.textContent = '翻开一张身份牌';
+      sub.textContent = '原因：' + (pending.discardReason || '失去身份') + '。你选择保留另一张。';
+      var hand = view.hand || (view.players[mySeat] ? view.players[mySeat].influence.map(function (c) { return c.role; }) : []);
+      body.innerHTML = '<p>选择要失去的身份牌：</p><div class="modal-cards">' + hand.map(function (role, i) {
+        return '<button class="card-btn role-' + role + '" type="button" data-discard-index="' + i + '" aria-label="翻开' + esc(roleName(role)) + '">' +
+          '<span class="emblem">' + cardEmblem(role) + '</span><span class="card-name">' + esc(roleName(role)) + '</span></button>';
+      }).join('') + '</div>';
+      actions.innerHTML = '';
+    } else if (kind === 'exchange') {
+      title.textContent = '交换身份';
+      sub.textContent = '从 4 张身份牌中保留 2 张，其余洗回牌堆。';
+      var cards = pending.exchange && pending.exchange.cards ? pending.exchange.cards : [];
+      body.innerHTML = '<p>已选 <strong>' + modal.selected.length + ' / 2</strong> 张。</p><div class="modal-cards">' + cards.map(function (role, i) {
+        var sel = modal.selected.indexOf(i) >= 0;
+        return '<button class="card-btn role-' + role + (sel ? ' sel' : '') + '" type="button" data-exchange-index="' + i + '" aria-pressed="' + (sel ? 'true' : 'false') + '" aria-label="选择' + esc(roleName(role)) + '">' +
+          '<span class="emblem">' + cardEmblem(role) + '</span><span class="card-name">' + esc(roleName(role)) + '</span></button>';
+      }).join('') + '</div>';
+      actions.innerHTML = '<button class="btn primary" type="button" data-exchange-confirm ' + (modal.selected.length === 2 ? '' : 'disabled') + '>确认保留</button>';
+    }
+    overlay.hidden = false;
+  }
+
+  /* ---------- target modal ---------- */
+  function openTarget(type) {
+    var view = currentView();
+    if (!view) return;
+    var actions = currentLegalActions().filter(function (a) { return a.type === type; });
+    var targets = actions.map(function (a) { return a.target; }).filter(function (id, i, list) { return list.indexOf(id) === i; });
+    if (!targets.length) return;
+    targetAction = type;
+    $('targetTitle').textContent = actionName(type) + ' · 选择目标';
+    $('targetSub').textContent = type === 'coup' ? '支付 7 枚金币，目标直接失去一张身份。' :
+      type === 'assassinate' ? '支付 3 枚金币，宣称刺客；目标可宣称女伯爵阻挡。' :
+        '宣称队长，从目标处偷取最多 2 枚金币。';
+    $('targetGrid').innerHTML = targets.map(function (id) {
+      var p = view.players[id];
+      return '<button class="target-btn" type="button" data-target="' + id + '" aria-label="目标' + esc(p.name) + '，' + p.coins + ' 枚金币">' +
+        '<span>' + esc(p.name) + '</span><span class="t-coins">' + p.coins + ' 金币 · ' + p.influenceCount + ' 张</span></button>';
+    }).join('');
+    $('targetModal').hidden = false;
+  }
+  function closeTarget() {
+    $('targetModal').hidden = true;
+    targetAction = null;
+  }
+
+  /* ---------- result ---------- */
+  function maybeShowResult() {
+    var view = currentView();
+    if (!view || !view.over || resultDismissed) return;
+    var winner = view.winner;
+    var title = $('resultTitle');
+    var sub = $('resultSub');
+    if (winner != null && winner >= 0) {
+      title.textContent = view.players[winner].name + ' 获胜';
+      sub.textContent = '最后存活者赢得政变。' + (view.players.filter(function (p) { return !p.eliminated; }).length === 1 ? '其余席位均已翻开两张身份。' : '');
+    } else {
+      title.textContent = '本局结束';
+      sub.textContent = '牌桌上已无存活席位。';
+    }
+    var rows = view.players.map(function (p) {
+      return '<tr class="' + (p.id === winner ? 'win' : '') + '">' +
+        '<td>' + esc(p.name) + (p.id === mySeat ? ' · 你' : '') + '</td>' +
+        '<td>' + p.coins + '</td>' +
+        '<td>' + (p.eliminated ? '淘汰' : p.influenceCount + ' 张身份') + '</td></tr>';
+    }).join('');
+    $('resultTable').innerHTML = rows;
+    $('resultModal').hidden = false;
+    if (!reducedMotion.matches) confetti();
+  }
+  function hideResult() {
+    $('resultModal').hidden = true;
+  }
+  function confetti() {
+    var wrap = document.createElement('div');
+    wrap.className = 'confetti';
+    wrap.setAttribute('aria-hidden', 'true');
+    for (var i = 0; i < 22; i += 1) {
+      var bit = document.createElement('i');
+      bit.style.left = (Math.random() * 100) + '%';
+      bit.style.background = i % 3 === 0 ? '#c9604f' : (i % 3 === 1 ? '#cda756' : '#8cbfa0');
+      bit.style.animationDelay = (Math.random() * 0.5) + 's';
+      bit.style.animationDuration = (1.4 + Math.random()) + 's';
+      bit.style.transform = 'rotate(' + Math.random() * 360 + 'deg)';
+      wrap.appendChild(bit);
+    }
+    document.body.appendChild(wrap);
+    setTimeout(function () { if (wrap.parentNode) wrap.parentNode.removeChild(wrap); }, 2600);
+  }
+
+  function hideOverlays() {
+    $('targetModal').hidden = true;
+    $('decisionModal').hidden = true;
+    $('newGameModal').hidden = true;
+    $('resultModal').hidden = true;
+  }
+
+  /* ---------- controls ---------- */
+  function setSound(on) {
+    soundOn = !!on;
+    writeLocal('coup-premium-sound', soundOn ? 'on' : 'off');
+    var btn = $('soundBtn');
+    btn.setAttribute('aria-pressed', soundOn ? 'false' : 'true');
+    btn.textContent = soundOn ? '音效' : '静音';
+    if (soundOn) sfx('click');
+  }
+
+  function openNewGame() {
+    $('newGameModal').hidden = false;
+    qsa('#countGrid .seg').forEach(function (btn) {
+      btn.classList.toggle('sel', Number(btn.getAttribute('data-count')) === newGameChoice.playerCount);
+    });
+    qsa('#diffGrid .seg').forEach(function (btn) {
+      btn.classList.toggle('sel', btn.getAttribute('data-diff') === newGameChoice.difficulty);
+    });
+  }
+
+  function wire() {
+    $('newBtn').addEventListener('click', function () { sfx('click'); openNewGame(); });
+    $('soundBtn').addEventListener('click', function () { setSound(!soundOn); });
+    $('cancelNewBtn').addEventListener('click', function () { $('newGameModal').hidden = true; });
+    $('startNewBtn').addEventListener('click', function () {
+      $('newGameModal').hidden = true;
+      newLocalGame({ playerCount: newGameChoice.playerCount, difficulty: newGameChoice.difficulty, seed: Date.now() });
+      sfx('deal');
+    });
+    qsa('#countGrid .seg').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        newGameChoice.playerCount = Number(btn.getAttribute('data-count'));
+        qsa('#countGrid .seg').forEach(function (b) { b.classList.toggle('sel', b === btn); });
+      });
+    });
+    qsa('#diffGrid .seg').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        newGameChoice.difficulty = btn.getAttribute('data-diff');
+        qsa('#diffGrid .seg').forEach(function (b) { b.classList.toggle('sel', b === btn); });
+      });
+    });
+    $('actionPanel').addEventListener('click', function (event) {
+      var btn = event.target.closest('[data-action]');
+      if (!btn || btn.disabled) return;
+      var type = btn.getAttribute('data-action');
+      sfx('click');
+      var info = apiActionFor(type);
+      if (!info) return;
+      if (info.needsTarget) openTarget(type);
+      else perform({ type: type });
+    });
+    $('targetGrid').addEventListener('click', function (event) {
+      var btn = event.target.closest('[data-target]');
+      if (!btn) return;
+      var target = Number(btn.getAttribute('data-target'));
+      var type = targetAction;
+      closeTarget();
+      perform({ type: type, target: target });
+    });
+    $('targetCancel').addEventListener('click', closeTarget);
+    $('decisionActions').addEventListener('click', function (event) {
+      var btn = event.target.closest('button');
+      if (!btn || btn.disabled) return;
+      if (btn.hasAttribute('data-decision')) {
+        var kind = btn.getAttribute('data-decision');
+        var selected = modal.selected.slice();
+        var phase = currentView() ? currentView().phase : null;
+        if (phase === 'discard') return;
+        if (phase === 'exchange') {
+          if (kind === 'pass') perform({ type: 'keep', indices: selected });
+          return;
+        }
+        perform({ type: kind });
+      } else if (btn.hasAttribute('data-block-role')) {
+        perform({ type: 'block', role: btn.getAttribute('data-block-role') });
+      } else if (btn.hasAttribute('data-exchange-confirm')) {
+        var picked = modal.selected.slice();
+        if (picked.length === 2) perform({ type: 'keep', indices: picked });
+      }
+    });
+    $('decisionBody').addEventListener('click', function (event) {
+      var discard = event.target.closest('[data-discard-index]');
+      if (discard) {
+        perform({ type: 'discard', index: Number(discard.getAttribute('data-discard-index')) });
+        return;
+      }
+      var pick = event.target.closest('[data-exchange-index]');
+      if (!pick) return;
+      var index = Number(pick.getAttribute('data-exchange-index'));
+      var pos = modal.selected.indexOf(index);
+      if (pos >= 0) modal.selected.splice(pos, 1);
+      else if (modal.selected.length < 2) modal.selected.push(index);
+      renderDecision(currentView());
+    });
+    $('closeResult').addEventListener('click', function () { resultDismissed = true; hideResult(); });
+    $('againBtn').addEventListener('click', function () {
+      if (online) { onlineRestart(); return; }
+      resultDismissed = false;
+      newLocalGame({ playerCount: state ? state.playerCount : newGameChoice.playerCount, difficulty: newGameChoice.difficulty, seed: Date.now() });
+      sfx('deal');
+    });
+    $('startOnlineBtn').addEventListener('click', onlineStart);
+    $('restartOnlineBtn').addEventListener('click', onlineRestart);
+    $('leaveOnlineBtn').addEventListener('click', onlineLeave);
+    $('closeOnlineBtn').addEventListener('click', onlineClose);
+    $('copyInviteBtn').addEventListener('click', function () {
+      if (!online || !online.view || !online.view.inviteToken) return;
+      var link = location.origin + '/boardgame/coup-premium/online.html?room=' + encodeURIComponent(online.roomId) +
+        '&invite=' + encodeURIComponent(online.view.inviteToken);
+      var done = function () { toast('邀请链接已复制'); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(link).then(done).catch(function () { toast(link); });
+      else toast(link);
+    });
+    document.addEventListener('keydown', function (event) {
+      if (event.key !== 'Escape') return;
+      if (!$('targetModal').hidden) closeTarget();
+      else if (modal.kind === 'exchange' && modal.selected.length) {
+        modal.selected = [];
+        renderDecision(currentView());
+      }
+    });
+    window.addEventListener('resize', function () { /* CSS fluid layout; nothing to recompute */ });
+  }
+
+  /* ---------- boot & API ---------- */
+  function boot() {
+    if (booted) return;
+    booted = true;
+    wire();
+    setSound(soundOn);
+    if (isOnlineMode()) {
+      initOnline();
+    } else {
+      newLocalGame({ playerCount: 4, difficulty: 'normal', seed: Date.now() });
+    }
+    $('againBtn').hidden = false;
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('sw.js').catch(function () { /* offline cache optional */ });
+      });
+    }
+  }
+
+  window.__coup = {
+    newGame: function (opts) { return newLocalGame(opts || {}); },
+    getState: function () {
+      if (online) return online.state ? JSON.parse(JSON.stringify(online.state)) : null;
+      return state ? JSON.parse(JSON.stringify(state)) : null;
+    },
+    legalActions: function () { return currentLegalActions(); },
+    legalMoves: function () { return currentLegalActions(); },
+    playAction: function (action) { return perform(action); },
+    playMove: function (action) { return perform(action); },
+    applyAction: function (action) { return perform(action); },
+    isBusy: function () { return !!(busy || aiTimer || onlineBusy); },
+    winner: function () {
+      var view = currentView();
+      return view ? view.winner : null;
+    },
+    actorId: function () { return currentActor(); },
+    phase: function () {
+      var view = currentView();
+      return view ? view.phase : null;
+    },
+    setState: function (next) {
+      clearTimeout(aiTimer);
+      aiTimer = null;
+      busy = false;
+      resultDismissed = false;
+      hideResult();
+      modal = { kind: null, selected: [] };
+      state = JSON.parse(JSON.stringify(next));
+      if (state && state.rngState == null) state.rngState = 1;
+      if (state && state.shuffleCounter == null) state.shuffleCounter = 0;
+      render();
+      scheduleAI();
+      return true;
+    },
+    autoPlayToEnd: function (limit) {
+      clearTimeout(aiTimer);
+      aiTimer = null;
+      busy = false;
+      resultDismissed = false;
+      var steps = 0;
+      var max = limit || 800;
+      while (state && !Engine.isOver(state) && steps < max) {
+        var action = Engine.chooseAIAction(state, 'hard');
+        if (!action) break;
+        var result = Engine.applyAction(state, action);
+        if (!result.ok) throw new Error('autoPlay illegal: ' + result.error);
+        steps += 1;
+      }
+      render();
+      if (state && Engine.isOver(state)) maybeShowResult();
+      return state ? JSON.parse(JSON.stringify(state)) : null;
+    },
+    state: function () { return this.getState(); },
+    view: function () { return currentView(); },
+    online: function () {
+      return online ? {
+        roomId: online.roomId, playerId: online.playerId, canAct: online.canAct,
+        status: online.view ? online.view.status : null, roomCode: online.view ? online.view.roomCode : null
+      } : null;
+    },
+    audioUnlocked: function () { return !!(window.Sfx && window.Sfx.stats && window.Sfx.stats().unlocked); },
+    reducedMotion: function () { return !!reducedMotion.matches; },
+    modal: function () { return { kind: modal.kind, selected: modal.selected.slice() }; },
+    config: function () { return { playerCount: newGameChoice.playerCount, difficulty: newGameChoice.difficulty, soundOn: soundOn, online: !!online }; },
+    version: Engine.VERSION
+  };
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+}());
+</script>
+</body>
+</html>

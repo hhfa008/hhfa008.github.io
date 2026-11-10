@@ -123,6 +123,7 @@ var kit = require('../shared/arcade/kits/${family}.js');
 var run = require('../shared/arcade/tests/${family}.js');
 var params = ${JSON.stringify(params)};
 run(kit.create(params), params, s);
+require('../shared/arcade/tests/terminal.js').check('${slug}', s);
 s.done();
 `;
 fs.writeFileSync(path.join(outDir, 'test.js'), test);
@@ -152,6 +153,17 @@ function check(g, html) {
   if (ext.length) bad.push(`external subresources: ${ext.slice(0, 3).join(', ')}`);
   if (/\{\{[A-Z_0-9]+\}\}/.test(html)) bad.push('unfilled template placeholder');
   if (!html.includes(`arcade.${g.slug}.best`)) bad.push('best-score key not found');
+
+  // 共享缺陷的三条回归护栏（见 GAME_CONTRACT.md「硬约束」）
+  if (/\.overlay\.classList\.(add|remove)\(['"]hidden['"]\)/.test(html)) {
+    bad.push("classList cannot toggle the overlay's hidden attribute; use E.overlay.hidden = false/true");
+  }
+  if (/\+\s*['"]Overlay['"]|`overlay\$\{/.test(html)) {
+    bad.push('settlement key must use Arcade.overlayKey(status), not string concatenation');
+  }
+  if (/I18N\[I18n\./.test(html) || /I18N\[Arcade\.lang\]/.test(html)) {
+    bad.push('invalid I18N language accessor (use Arcade.lang())');
+  }
 
   const i18n = extractI18N(html);
   if (!i18n) {

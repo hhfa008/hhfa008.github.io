@@ -1,0 +1,48 @@
+# 飞行棋 · 双客户端联机 E2E 记录
+
+> 脚本：`test-online.js`（run-all 自动发现，因为文件名以 `test` 开头）
+> 服务：`online-server.mjs`（复用 `games/shared/online-room-server.mjs`）
+
+## 运行
+
+```bash
+node games/boardgame/aeroplane-premium/test-online.js
+# ONLINE_E2E_JSON: {"game":"aeroplane-premium","clients":2,"sameGame":true,
+#   "settlementConsistent":true,"reconnect":true,"timeoutTakeover":true,
+#   "leaderboard":true,"seatCount2to4":true,"aiFill":true,"serverDice":true,
+#   "runAll":true,...}
+# RESULT: N passed, 0 failed
+
+node games/boardgame/aeroplane-premium/test-online.js --control
+# RESULT: 0 passed, 1 failed  (exit 1，故意的失败对照)
+```
+
+## 覆盖
+
+| 环节 | 断言 |
+|---|---|
+| 建房 | 201、房主 session、单次邀请 token、房间容量 4 座 |
+| 加入 | 错误密码拒绝、邀请码加入、第二人落座 1、邀请重放拒绝 |
+| 开局 | 房主开始、2 位人类按 2 人桌、每人 4 架、全部在基地、52 格环、四色各 13 |
+| 服务端骰子 | 开局已有 1–6 点数与历史；publicView 不含 seed/rngState；附带 dice 的动作被 E_DICE 拒绝 |
+| 同步 | 双方同一回合、同一骰子、同一 stateVersion、同一 52 格环 |
+| 约束 | 非当前玩家无合法动作；越权动作 409 |
+| 幂等 | 同一 idempotencyKey 重放返回同一 stateVersion，且不重复掷骰 |
+| 完整对局 | 1600 步内结束；全程 stateVersion 一致 |
+| 结算 | 同一赢家、同一分数、同一排名、同一原因、双方 over=true、2 名玩家、赢家四架到终点、每条飞机位置完整 |
+| 榜单 | 至少 2 条、原始 playerId 不外泄 |
+| 重赛 | over=false、全部回基地、仍 2 人、服务端重新掷骰 |
+| 重连 | `reconnected=true` |
+| 托管 | 无请求超时后 takeover 含座位 0；重连后清除 |
+| 座位数 | 1 人补到 2 座且座位 1 为 AI；3 人按 3 人桌；4 人按 4 人桌；后两者无 AI 补位 |
+| 关房 | 200 `closed=true`；随后 GET 404 |
+
+## 契约字段
+
+`ONLINE_E2E_JSON` 同时输出 `clients=2`、`sameGame`、`settlementConsistent`、`reconnect`、`timeoutTakeover`、`leaderboard`、`runAll`，以及本作新增的 `seatCount2to4`、`aiFill`、`serverDice`，供 `games/boardgame/scripts/gate-online.js` 识别。`online-e2e.json` 是该次运行的落盘证据。
+
+## 环境
+
+- 只监听 127.0.0.1 的随机端口；无外部网络。
+- 服务端 `idleTimeoutMs=700`、`aiDelayMs=0`，用于在秒级内验证托管与 AI 落子。
+- 不启动浏览器；纯 HTTP 双客户端（另有两个短生命周期的 3/4 人房客户端用于座位数断言）。

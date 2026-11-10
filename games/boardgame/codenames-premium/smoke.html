@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="行动代号 Codenames Premium 持久 Chrome 冒烟测试页。">
+<title>Codenames Premium — persistent-Chrome smoke harness</title>
+<style>
+body{margin:0;background:#0d1220;color:#eef;font:14px/1.5 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;padding:16px}
+h1{font-size:16px;margin:0 0 8px}
+#status{white-space:pre-wrap;color:#9fb0d8}
+iframe{border:0;position:fixed;left:-10000px;top:0;opacity:0;pointer-events:none}
+</style>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/codenames-premium/smoke.html">
+</head>
+<body>
+<h1>Codenames Premium smoke harness</h1>
+<div id="status">starting…</div>
+<script>
+(function () {
+  'use strict';
+  var state = { done: false, current: 'boot', passed: 0, failed: 0, results: [], startedAt: Date.now() };
+  window.__smokeState = state;
+  var status = document.getElementById('status');
+  function update() {
+    status.textContent = (state.done ? 'DONE' : 'RUNNING') + ' · ' + state.current + '\n' +
+      state.passed + ' passed, ' + state.failed + ' failed';
+    state.results.slice(-6).forEach(function (r) {
+      status.textContent += '\n' + (r.ok ? 'PASS ' : 'FAIL ') + r.name + (r.detail ? ' — ' + r.detail : '');
+    });
+  }
+  function check(name, cond, detail) {
+    var ok = !!cond;
+    if (ok) state.passed += 1; else state.failed += 1;
+    state.results.push({ name: name, ok: ok, detail: detail === undefined ? '' : String(detail) });
+    update();
+    return ok;
+  }
+  var sleep = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
+  async function waitFor(fn, timeoutMs) {
+    var end = Date.now() + (timeoutMs || 2500);
+    while (Date.now() < end) {
+      try { if (fn()) return true; } catch (e) {}
+      await sleep(80);
+    }
+    return false;
+  }
+  function loadFrame(width, height, url) {
+    return new Promise(function (resolve) {
+      var f = document.createElement('iframe');
+      f.width = width; f.height = height;
+      f.style.width = width + 'px'; f.style.height = height + 'px';
+      f.onload = function () { setTimeout(function () { resolve(f); }, 800); };
+      f.src = url;
+      document.body.appendChild(f);
+    });
+  }
+  function tap(el, win) {
+    if (!el) return false;
+    try { el.dispatchEvent(new win.TouchEvent('touchstart', { bubbles: true, cancelable: true })); } catch (e) {}
+    try { el.dispatchEvent(new win.PointerEvent('pointerdown', { bubbles: true, cancelable: true, pointerType: 'touch' })); } catch (e) {}
+    el.click();
+    try { el.dispatchEvent(new win.PointerEvent('pointerup', { bubbles: true, cancelable: true, pointerType: 'touch' })); } catch (e) {}
+    try { el.dispatchEvent(new win.TouchEvent('touchend', { bubbles: true, cancelable: true })); } catch (e) {}
+    return true;
+  }
+  function externalResources(win) {
+    var origin = win.location.origin;
+    return win.performance.getEntriesByType('resource').map(function (e) { return e.name; })
+      .filter(function (name) {
+        if (!/^https?:\/\//.test(name)) return false;
+        return name.indexOf(origin) !== 0;
+      });
+  }
+  function layoutChecks(label, win, doc) {
+    var tiles = Array.prototype.slice.call(doc.querySelectorAll('.tile'));
+    var tileMin = 9999;
+    tiles.forEach(function (t) {
+      var r = t.getBoundingClientRect();
+      tileMin = Math.min(tileMin, r.width, r.height);
+    });
+    var badButtons = [];
+    doc.querySelectorAll('button, a.control-btn').forEach(function (el) {
+      if (el.offsetParent === null) return;
+      var r = el.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0 && r.height < 44) {
+        badButtons.push((el.id || el.className || el.textContent.trim()) + ':' + r.height.toFixed(1));
+      }
+    });
+    var tileFont = parseFloat(win.getComputedStyle(doc.querySelector('.tile-word')).fontSize);
+    var minHeight = parseFloat(win.getComputedStyle(doc.body).minHeight);
+    check(label + ' innerWidth≈目标', Math.abs(win.innerWidth - parseFloat(label.split('×')[0])) <= 22,
+      win.innerWidth + ' vs ' + label);
+    check(label + ' 无横向滚动',
+      doc.documentElement.scrollWidth <= win.innerWidth && doc.body.scrollWidth <= win.innerWidth,
+      JSON.stringify({ doc: doc.documentElement.scrollWidth, body: doc.body.scrollWidth, inner: win.innerWidth }));
+    check(label + ' 25 张词卡', tiles.length === 25, tiles.length);
+    check(label + ' 词卡 ≥44px', tileMin >= 44, tileMin);
+    check(label + ' 按钮 ≥44px', badButtons.length === 0, JSON.stringify(badButtons));
+    check(label + ' 词卡字号 ≥12px', tileFont >= 12, tileFont);
+    check(label + ' 100dvh', minHeight >= win.innerHeight - 1, JSON.stringify({ minHeight: minHeight, inner: win.innerHeight }));
+    check(label + ' 真实件数 9/8/7/1', win.__codenames.getRealism() === '25:9:8:7:1', win.__codenames.getRealism());
+    check(label + ' 页面无错误', win.__pageErrors.length === 0, JSON.stringify(win.__pageErrors));
+    var external = externalResources(win);
+    check(label + ' 零外部资源', external.length === 0, JSON.stringify(external.slice(0, 5)));
+    var css = doc.documentElement.innerHTML;
+    check(label + ' 本地纸面/卡背/绒布引用',
+      css.indexOf('card-paper.webp') >= 0 && css.indexOf('card-back.webp') >= 0 && css.indexOf('table-felt.webp') >= 0);
+    check(label + ' 词卡 Songti SC Bold', /Songti SC/.test(win.getComputedStyle(doc.querySelector('.tile-word')).fontFamily) &&
+      win.getComputedStyle(doc.querySelector('.tile-word')).fontWeight === '700');
+    var perf = win.__codenames.getPerf();
+    check(label + ' UI 性能预算', perf.board < 150 && perf.newGame < 350 && perf.renderMax < 120,
+      JSON.stringify(perf));
+    check(label + ' 320 断点生效', parseFloat(label.split('×')[0]) >= 320 &&
+      (parseFloat(label.split('×')[0]) <= 380) === win.matchMedia('(max-width:380px)').matches,
+      win.matchMedia('(max-width:380px)').matches);
+  }
+  async function touchFlow(label, win, doc) {
+    var audioBefore = win.__codenames.audioState();
+    tap(doc.getElementById('modeOperative'), win);
+    await waitFor(function () {
+      return win.__codenames.isHumanTurn() && win.__codenames.getState().phase === 'guess';
+    }, 3500);
+    var st = win.__codenames.getState();
+    check(label + ' 触屏切换队员模式', st.mode === 'operative', st.mode);
+    check(label + ' 触屏解锁 WebAudio', win.__codenames.audioState() !== 'none',
+      audioBefore + ' -> ' + win.__codenames.audioState());
+    check(label + ' AI 队长已给线索', !!st.clue && st.phase === 'guess',
+      JSON.stringify({ phase: st.phase, clue: st.clue }));
+    var idx = -1;
+    for (var i = 0; i < st.words.length; i++) {
+      if (!st.words[i].revealed && st.words[i].color !== 'red') { idx = i; break; }
+    }
+    var before = win.__codenames.getState().turnNo;
+    tap(doc.querySelector('.tile[data-index="' + idx + '"]'), win);
+    // DOM click dispatch is synchronous: read the turn number in the same
+    // task, before any scheduled AI timer can run.
+    var st2 = win.__codenames.getState();
+    check(label + ' 触屏可翻牌', st2.words[idx].revealed === true, idx);
+    check(label + ' 触屏推进回合', st2.turnNo > before || st2.phase === 'over',
+      JSON.stringify({ before: before, after: st2.turnNo, phase: st2.phase }));
+  }
+  async function run() {
+    try {
+      var viewports = [
+        { label: '390×844', w: 390, h: 844, touch: true },
+        { label: '320×568', w: 320, h: 568, touch: true },
+        { label: '844×390', w: 844, h: 390, touch: false },
+        { label: '1024×768', w: 1024, h: 768, touch: false }
+      ];
+      for (var i = 0; i < viewports.length; i++) {
+        var vp = viewports[i];
+        state.current = vp.label;
+        update();
+        var frame = await loadFrame(vp.w, vp.h, 'index.html?smoke=' + vp.w + 'x' + vp.h);
+        var win = frame.contentWindow;
+        var doc = frame.contentDocument;
+        layoutChecks(vp.label, win, doc);
+        if (vp.touch) await touchFlow(vp.label, win, doc);
+        frame.remove();
+      }
+
+      state.current = 'online.html';
+      update();
+      var online = await loadFrame(390, 844, 'online.html?smoke=1');
+      var ow = online.contentWindow;
+      var od = online.contentDocument;
+      check('联机大厅渲染', !!od.getElementById('createForm') && !!od.getElementById('joinForm'));
+      check('联机页无横向滚动', od.documentElement.scrollWidth <= ow.innerWidth,
+        JSON.stringify({ doc: od.documentElement.scrollWidth, inner: ow.innerWidth }));
+      check('联机页按钮 ≥44px', Array.prototype.every.call(od.querySelectorAll('button'), function (b) {
+        var r = b.getBoundingClientRect();
+        return b.offsetParent === null || r.height >= 44;
+      }));
+      check('联机页无页面错误', ow.__pageErrors.length === 0, JSON.stringify(ow.__pageErrors));
+      var created = await ow.__codenamesOnline.api('POST', '/api/rooms', { playerId: 'smoke-host' });
+      check('浏览器内创建联机房间', !!created.roomId, created.roomId);
+      check('联机房间 4 个座位', created.seats.length === 4, created.seats.length);
+      check('联机空位 AI 补足', created.seats.filter(function (s) { return s.ai; }).length === 3,
+        created.seats.filter(function (s) { return s.ai; }).length);
+      online.remove();
+
+      state.current = 'detail.html';
+      update();
+      var detail = await loadFrame(390, 844, 'detail.html');
+      var dw = detail.contentWindow;
+      var dd = detail.contentDocument;
+      await sleep(500);
+      var imgs = Array.prototype.slice.call(dd.querySelectorAll('img'));
+      check('详情页配图 ≥4', imgs.length >= 4, imgs.length);
+      check('详情页图片全部加载', imgs.every(function (img) { return img.complete && img.naturalWidth > 0; }),
+        JSON.stringify(imgs.map(function (img) { return img.getAttribute('src') + ':' + img.naturalWidth; })));
+      check('详情页无横向滚动', dd.documentElement.scrollWidth <= dw.innerWidth,
+        JSON.stringify({ doc: dd.documentElement.scrollWidth, inner: dw.innerWidth }));
+      check('详情页标注单人/联机', /单人/.test(dd.body.innerText) && /联机/.test(dd.body.innerText));
+      detail.remove();
+
+      state.current = 'rules.html';
+      update();
+      var rules = await loadFrame(390, 844, 'rules.html');
+      var rw = rules.contentWindow;
+      var rd = rules.contentDocument;
+      check('规则页 JSON-LD ≥2', rd.querySelectorAll('script[type="application/ld+json"]').length >= 2);
+      check('规则页 B 站来源 ≥5', rd.querySelectorAll('a[href*="bilibili.com"]').length >= 5);
+      check('规则页无横向滚动', rd.documentElement.scrollWidth <= rw.innerWidth,
+        JSON.stringify({ doc: rd.documentElement.scrollWidth, inner: rw.innerWidth }));
+      rules.remove();
+    } catch (err) {
+      check('冒烟脚本未抛异常', false, err && err.stack || err);
+    }
+    state.done = true;
+    state.finishedAt = Date.now();
+    state.current = 'complete';
+    update();
+  }
+  run();
+}());
+</script>
+</body>
+</html>

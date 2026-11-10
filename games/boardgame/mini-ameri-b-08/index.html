@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>洪水方舟 · 美式微桌游 · 美式微桌游</title>
+<meta name="description" content="洪水方舟是单人合作生存微桌游，AI 担任主持人。你要带领洪水方舟的营地撑过 8 天，任何一项资源归零或威胁达到 9 即失败。">
+<style>:root{--bg:#14100b;--panel:#211a12;--panel2:#33271a;--ink:#f7efe2;--muted:#c9b696;--gold:#f2c14e;--red:#ef6b5b;--green:#5fd39a;--line:#4d3b28}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(700px 420px at 50% -10%,#3a2b1a,#0d0a07 70%) fixed;color:var(--ink);font:16px/1.5 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;min-height:100vh}
+a{color:var(--gold)}
+.wrap{max-width:420px;margin:0 auto;padding:8px 12px 36px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 0 10px}
+.top h1{font-size:18px;margin:0;flex:1;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nav{display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:56px;padding:0 10px;border-radius:12px;background:var(--panel);border:1px solid var(--line);color:var(--ink);text-decoration:none;font-size:14px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px}
+button{font:inherit;color:var(--ink);background:var(--panel2);border:1px solid var(--line);border-radius:12px;min-height:48px;padding:10px 12px;cursor:pointer;touch-action:manipulation}
+button:active{transform:translateY(1px)}
+button:disabled{opacity:.42;cursor:default}
+button.primary{background:linear-gradient(160deg,#f3cd6b,#d99b2b);color:#2a1a00;font-weight:800;border:none}
+button.ghost{background:transparent}
+.grid{display:grid;gap:8px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.stat{display:flex;justify-content:space-between;gap:8px;font-size:15px;padding:3px 0}
+.stat b{color:var(--gold)}
+.bar{height:8px;background:#0e0a06;border-radius:99px;overflow:hidden;margin-top:4px}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,#e3b04b,#f2d78a)}
+.log{font-size:12.5px;color:var(--muted);max-height:140px;overflow:auto;margin-top:8px}
+.log div{padding:2px 0;border-bottom:1px dashed rgba(255,255,255,.06)}
+.turn{text-align:center;color:var(--gold);font-weight:800;margin:8px 0;font-size:14px}
+.big{font-size:19px;font-weight:900;text-align:center;margin:8px 0;line-height:1.35}
+.note{font-size:13px;color:var(--muted)}
+.end{text-align:center;padding:8px}
+.end h2{font-size:20px;margin:4px 0 6px}
+@media (max-width:360px){.g3{grid-template-columns:repeat(2,minmax(0,1fr))}.wrap{padding:8px 10px 30px}}
+/* mini-quality: safe-area */
+.wrap { --mini-safe-bottom: 30px; padding-bottom: calc(var(--mini-safe-bottom) + env(safe-area-inset-bottom, 0px)); }
+/* mini-quality: reduced-motion */
+@media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; scroll-behavior:auto !important; } }
+</style>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/mini-ameri-b-08/">
+</head>
+<body>
+<div class="wrap">
+<header class="top"><a class="nav" href="../index.html" aria-label="返回桌游目录">← 目录</a><h1>洪水方舟</h1><a class="nav" href="rules.html" aria-label="查看规则">规则</a></header>
+<main>
+<section class="panel">
+  <div class="stat"><span>天数</span><b id="day">1 / 8</b></div>
+  <div class="stat"><span>食物</span><b id="food">4</b></div>
+  <div class="bar"><i id="bfood"></i></div>
+  <div class="stat" style="margin-top:6px"><span>温暖</span><b id="warmth">5</b></div>
+  <div class="bar"><i id="bwarmth"></i></div>
+  <div class="stat" style="margin-top:6px"><span>士气</span><b id="morale">4</b></div>
+  <div class="bar"><i id="bmorale"></i></div>
+  <div class="stat" style="margin-top:6px"><span>威胁</span><b id="threat">5 / 9</b></div>
+  <div class="bar"><i id="bthreat"></i></div>
+</section>
+<section class="panel">
+  <div class="big" id="event">AI 主持人等待你的决定</div>
+  <div class="grid g2">
+    <button class="primary" id="gather">采集 +2 食物</button>
+    <button id="stoke">生火 +2 温暖 / -1 食物</button>
+    <button id="repair">加固 -2 威胁</button>
+    <button id="rally">鼓舞 +2 士气 / +1 威胁</button>
+  </div>
+  <button class="ghost" id="reset" style="width:100%;margin-top:8px">重开一局</button>
+</section>
+<section class="panel"><div class="note">营地日志</div><div class="log" id="log"></div></section>
+</main>
+</div>
+<script src="engine.js"></script>
+<script>
+(function () {
+  'use strict';
+  var E = window.MiniEngine, game;
+  function $(id) { return document.getElementById(id); }
+  function bar(id, v) { $(id).style.width = Math.max(0, Math.min(100, v / 9 * 100)) + '%'; }
+  function render() {
+    $('day').textContent = Math.min(game.day, game.maxDays) + ' / ' + game.maxDays;
+    $('food').textContent = game.res.food;
+    $('warmth').textContent = game.res.warmth;
+    $('morale').textContent = game.res.morale;
+    $('threat').textContent = game.threat + ' / 9';
+    bar('bfood', game.res.food);
+    bar('bwarmth', game.res.warmth);
+    bar('bmorale', game.res.morale);
+    bar('bthreat', game.threat);
+    $('event').textContent = game.over
+      ? (game.winner === 'win' ? '救援抵达：你赢了' : '营地失守：' + game.reason)
+      : (game.lastEvent ? '最近事件：' + game.lastEvent : 'AI 主持人等待你的决定');
+    $('log').innerHTML = game.log.slice(-12).map(function (t) {
+      return '<div>' + t.replace(/</g, '&lt;') + '</div>';
+    }).join('');
+    ['gather', 'stoke', 'repair', 'rally'].forEach(function (id) { $(id).disabled = game.over; });
+  }
+  function act(a) {
+    if (game.over) return;
+    E.applyAction(game, a);
+    render();
+  }
+  ['gather', 'stoke', 'repair', 'rally'].forEach(function (id) {
+    $(id).onclick = function () { act(id); };
+  });
+  $('reset').onclick = function () { game = E.createGame({ seed: (Date.now() % 900000) + 1 }); render(); };
+  game = E.createGame({ seed: (Date.now() % 900000) + 1 });
+  render();
+})();
+</script>
+</body>
+</html>

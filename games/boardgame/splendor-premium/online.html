@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Splendor 璀璨宝石 联机房间：创建/邀请/加入，空位 AI 补足，断线重连、超时托管与结果榜。">
+<meta name="color-scheme" content="dark light">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23191510'/%3E%3Crect x='12' y='12' width='40' height='40' rx='7' fill='%23c9a35e'/%3E%3Crect x='20' y='20' width='24' height='24' rx='5' fill='%23241d16'/%3E%3C/svg%3E">
+<title>Splendor 璀璨宝石 · 联机房间</title>
+<style>
+:root{
+  --serif:"Songti SC","Noto Serif SC",Georgia,"Times New Roman",serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --bg:#15120e;--bg-2:#1d1812;--panel:#221b13;--panel-2:#2b2117;
+  --ink:#f4ecdc;--ink-dim:#bdb2a0;--gold:#c9a35e;--gold-2:#e8cc92;--line:rgba(201,163,94,.3);
+  --ok:#8fd0ae;--danger:#e07a6b;--focus:#f7e2a8;
+  --art-wood:url("../../assets/art/premium/splendor/table-walnut.webp");
+  --art-linen:url("../../assets/art/premium/splendor/card-linen.webp");
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;min-height:100vh;min-height:100dvh;color:var(--ink);font:16px/1.55 var(--sans);
+  background:
+    radial-gradient(900px 620px at 12% -10%,rgba(201,163,94,.16),transparent 62%),
+    radial-gradient(760px 560px at 94% 4%,rgba(255,255,255,.06),transparent 60%),
+    linear-gradient(155deg,var(--bg),var(--bg-2) 72%,#0d0a07);
+  -webkit-font-smoothing:antialiased;text-size-adjust:100%;overflow-x:hidden;
+}
+body::before{content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;background:var(--art-wood) center/cover no-repeat;opacity:.22;filter:saturate(.7) contrast(1.06)}
+body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(ellipse at 50% 10%,transparent 35%,rgba(0,0,0,.55));}
+a{color:var(--gold-2);text-underline-offset:3px}
+button,input,select,a{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+button,input,select{font:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:3px;border-radius:8px}
+.topbar{max-width:1120px;margin:0 auto;padding:max(16px,env(safe-area-inset-top)) clamp(14px,4vw,28px) 8px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:12px;min-height:44px}
+.logo{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(145deg,#e8cc92,#8d6a33);color:#1b150e;font-family:var(--serif);font-weight:700;font-size:22px;transform:rotate(-3deg);box-shadow:0 8px 20px rgba(0,0,0,.35)}
+.brand h1{margin:0;font-family:var(--serif);font-weight:700;font-size:clamp(20px,3.4vw,28px);letter-spacing:.06em;line-height:1.1}
+.brand p{margin:2px 0 0;font-size:12px;letter-spacing:.16em;color:var(--ink-dim)}
+.top-actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;border-radius:11px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);font-size:14px;font-weight:650;cursor:pointer;text-decoration:none}
+.btn:hover{border-color:var(--gold);color:var(--gold-2)}
+.btn.primary{background:linear-gradient(150deg,#e8cc92,#b88a42);color:#211a10;border-color:#e8cc92}
+.btn.ghost{background:transparent}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+main{max-width:1120px;margin:0 auto;padding:6px clamp(14px,4vw,28px) 40px}
+.panel{background:linear-gradient(160deg,var(--panel),var(--panel-2));border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 18px 46px rgba(0,0,0,.32)}
+.panel + .panel{margin-top:14px}
+.panel h2{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-2);margin:0 0 12px}
+.field{display:grid;gap:6px;margin-bottom:12px}
+.field label{font-size:12px;color:var(--ink-dim);font-weight:650}
+.field input{min-height:46px;padding:0 12px;border-radius:11px;border:1px solid var(--line);background:#17120c;color:var(--ink);font-size:16px;min-width:0}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.row .field{flex:1 1 180px;margin-bottom:0}
+.hint{font-size:12.5px;color:var(--ink-dim);line-height:1.55}
+.err{color:var(--danger);font-size:12.5px;min-height:18px}
+.roombar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.code{font-family:var(--mono);font-size:16px;letter-spacing:.18em;color:var(--gold-2);background:#17120c;border:1px solid var(--line);border-radius:10px;padding:7px 11px}
+.status{font-size:13px;color:var(--ink-dim)}
+.seats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.seat{background:#19140e;border:1px solid var(--line);border-radius:13px;padding:10px 12px;min-width:0}
+.seat.active{border-color:var(--gold);box-shadow:inset 0 0 0 1px rgba(232,204,146,.3)}
+.seat .name{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.seat .meta{font-size:12px;color:var(--ink-dim);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.seat .badge{font-size:12px;color:var(--gold-2)}
+.board{display:grid;gap:10px}
+.section{background:#19140e;border:1px solid var(--line);border-radius:14px;padding:10px;min-width:0}
+.section h3{margin:0 0 8px;font-size:13px;color:var(--gold-2);font-weight:700;display:flex;justify-content:space-between;gap:8px}
+.section h3 span{font-family:var(--mono);font-size:12px;color:var(--ink-dim);font-weight:500}
+.gems,.moves,.cards,.tiles,.cubes{display:flex;flex-wrap:wrap;gap:6px}
+.token{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:48px;min-height:48px;border-radius:11px;border:1px solid rgba(255,255,255,.18);font-size:12px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.65)}
+.token small{font-family:var(--mono);font-size:12px;font-weight:700;opacity:.95}
+.card{position:relative;width:112px;min-height:132px;border-radius:11px;padding:7px;background-color:#f0e2c5;background-image:var(--art-linen),linear-gradient(145deg,#fff8e8,#e7d6b5);background-size:cover,auto;background-blend-mode:multiply,normal;color:#2a2117;border:1px solid #c2ac82;box-shadow:0 4px 10px rgba(0,0,0,.28);display:flex;flex-direction:column;gap:4px}
+.card .tier{font-family:var(--mono);font-size:12px;color:#7b5c24;font-weight:700}
+.card .points{font-family:var(--serif);font-size:24px;font-weight:700;line-height:1;color:#3d2a10}
+.card .bonus{font-size:12px;font-weight:700;color:#4b3517}
+.card .cost{display:flex;flex-wrap:wrap;gap:3px;margin-top:auto}
+.pip{display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;border-radius:7px;font-family:var(--mono);font-size:12px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6)}
+.nobles{display:flex;flex-wrap:wrap;gap:8px}
+.noble{width:96px;border-radius:11px;padding:8px;background:linear-gradient(145deg,#fbf4e3,#dccba8);border:1px solid #c2ac82;color:#302416;display:flex;flex-direction:column;gap:4px;font-size:12px}
+.noble b{font-family:var(--serif);font-size:20px;line-height:1}
+.draft-tile{width:96px;min-height:112px;border-radius:10px;padding:5px;background:var(--art-tile),linear-gradient(145deg,#efe3c8,#d9c499);background-size:cover,auto;background-blend-mode:multiply,normal;border:1px solid #b9a276;color:#2a2114;font-size:12px;font-weight:700;box-shadow:0 4px 9px rgba(0,0,0,.28)}
+.draft-tile .no{font-family:var(--mono);font-size:12px;color:#6b5324}
+.half{display:flex;align-items:center;justify-content:space-between;gap:4px;border-radius:6px;padding:3px 5px;margin-top:4px;font-size:12px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.55)}
+.kingdom{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:3px;background:#0f0c08;padding:4px;border-radius:9px}
+.cell{aspect-ratio:1;border-radius:4px;display:grid;place-items:center;font-size:12px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6);min-width:0;background:#2a241b}
+.cell.castle{background:linear-gradient(145deg,#d9c492,#8d6a33);color:#241a0c}
+.cell.empty{background:#211b13;border:1px dashed #3c3225}
+.cell.placeable{outline:2px solid var(--gold-2);outline-offset:-2px}
+.terrain-wheat{background:linear-gradient(145deg,#e0b64e,#a77c18)}
+.terrain-forest{background:linear-gradient(145deg,#4a8a5e,#1d4a2d)}
+.terrain-water{background:linear-gradient(145deg,#5b9bc8,#245273)}
+.terrain-grass{background:linear-gradient(145deg,#8fbe61,#4c742e)}
+.terrain-swamp{background:linear-gradient(145deg,#a1845a,#5a472b)}
+.terrain-mine{background:linear-gradient(145deg,#787884,#34343c)}
+.move{min-height:46px;padding:9px 13px;border-radius:11px;border:1px solid var(--line);background:#241d14;color:var(--ink);font-size:13px;font-weight:650;cursor:pointer;text-align:left;line-height:1.35;max-width:100%}
+.move:hover{border-color:var(--gold);color:var(--gold-2)}
+.move:disabled{opacity:.45;cursor:not-allowed}
+.result{margin-top:12px;padding:14px;border:1px solid var(--gold);border-radius:14px;background:linear-gradient(160deg,#2b2117,#1a140e)}
+.result h3{margin:0 0 8px;font-family:var(--serif);font-size:22px;color:var(--gold-2)}
+.result .score{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid rgba(201,163,94,.18);font-size:13px}
+.result .score:last-child{border-bottom:0}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#2b2117;border:1px solid var(--gold);color:var(--gold-2);padding:9px 16px;border-radius:999px;font-size:13px;box-shadow:0 10px 28px rgba(0,0,0,.4);z-index:50}
+[hidden]{display:none!important}
+@media (max-width:520px){
+  .seats{grid-template-columns:1fr}
+  .kingdom{grid-template-columns:1fr}
+  .card{width:104px}
+  .brand p{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+</style>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/splendor-premium/online.html">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="logo" aria-hidden="true">宝</div>
+    <div><h1>Splendor 璀璨宝石</h1><p>联机房间 · ONLINE</p></div>
+  </div>
+  <div class="top-actions">
+    <a class="btn ghost" href="index.html">单机对战</a>
+    <a class="btn ghost" href="rules.html">规则</a>
+  </div>
+</header>
+<main>
+  <section class="panel" id="lobby" aria-labelledby="lobbyTitle">
+    <h2 id="lobbyTitle">创建 / 加入房间</h2>
+    <div class="row">
+      <div class="field"><label for="nameInput">你的名字</label><input id="nameInput" maxlength="20" autocomplete="nickname" placeholder="玩家名"></div>
+    </div>
+    <div class="row">
+      <button class="btn primary" id="createBtn" type="button">创建新房间</button>
+      <button class="btn" id="startBtn" type="button" hidden>开始对局</button>
+      <button class="btn ghost" id="inviteBtn" type="button" hidden>复制邀请</button>
+    </div>
+    <p class="hint">房间为 2 个座位；对手未到场时由 AI 补位。创建后可把房间码或邀请链接发给朋友。</p>
+    <div class="row" style="margin-top:12px">
+      <div class="field"><label for="codeInput">房间码</label><input id="codeInput" autocapitalize="characters" placeholder="例如 ABC234"></div>
+      <div class="field"><label for="passInput">密码（可选）</label><input id="passInput" type="password" placeholder="房间密码"></div>
+      <button class="btn" id="joinBtn" type="button">加入房间</button>
+    </div>
+    <p class="err" id="lobbyErr" role="alert"></p>
+  </section>
+
+  <section id="room" hidden>
+    <div class="panel">
+      <div class="roombar">
+        <span class="code" id="roomCode">------</span>
+        <span class="status" id="roomStatus">等待开始</span>
+        <button class="btn ghost" id="copyBtn" type="button">复制邀请</button>
+        <button class="btn ghost" id="start2Btn" type="button" hidden>开始对局</button>
+        <button class="btn ghost" id="restartBtn" type="button" hidden>再来一局</button>
+      </div>
+      <div class="seats" id="seats"></div>
+      <p class="status" id="turnStatus" aria-live="polite"></p>
+      <div class="board" id="board"></div>
+      <div class="section" id="movesSection">
+        <h3>可选行动 <span id="movesHint"></span></h3>
+        <div class="moves" id="moves"></div>
+      </div>
+      <div class="result" id="result" hidden></div>
+    </div>
+  </section>
+</main>
+<div class="toast" id="toast" hidden></div>
+<script src="data.js"></script>
+<script src="engine.js"></script>
+<script>
+(function(){
+  'use strict';
+  var GAME='splendor';
+  var D=window.SplendorData || null;
+  var E=window.SplendorEngine;
+  var view=null, session=null, playerId=null, roomId=null, pollTimer=null, busy=false;
+  var $=function(id){return document.getElementById(id);};
+  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function toast(msg){var el=$('toast');el.textContent=msg;el.hidden=false;setTimeout(function(){el.hidden=true;},1800);}
+  function saved(key){try{return localStorage.getItem('bg-online-'+GAME+'-'+key);}catch(e){return null;}}
+  function save(key,val){try{if(val==null)localStorage.removeItem('bg-online-'+GAME+'-'+key);else localStorage.setItem('bg-online-'+GAME+'-'+key,val);}catch(e){}}
+  function randomName(){var n=['青玉','琥珀','朱砂','鎏金','墨玉','霜白'];return n[Math.floor(Math.random()*n.length)]+'玩家';}
+  function api(method,route,body){
+    return fetch(route,{method:method,headers:{'content-type':'application/json'},body:body?JSON.stringify(body):undefined})
+      .then(function(r){return r.text().then(function(t){var d=null;try{d=JSON.parse(t);}catch(e){}return {status:r.status,body:d,text:t};});});
+  }
+  function errText(res){return (res.body&&res.body.error&&res.body.error.message)||('请求失败 ('+res.status+')');}
+  function setSession(resp){
+    if(!resp||!resp.body)return;
+    if(resp.body.playerSession)session=resp.body.playerSession;
+    if(resp.body.roomId)roomId=resp.body.roomId;
+    save('session',session);save('room',roomId);save('player',playerId);
+  }
+  function showRoom(){ $('lobby').hidden=true; $('room').hidden=false; }
+  function showLobby(){ $('lobby').hidden=false; $('room').hidden=true; }
+  function createRoom(){
+    playerId=(playerId||$('nameInput').value.trim()||randomName());
+    $('nameInput').value=playerId;
+    api('POST','/api/rooms',{playerId:playerId,nickname:playerId,maxPlayers:2}).then(function(res){
+      if(res.status!==201)return ($('lobbyErr').textContent=errText(res));
+      setSession(res);showRoom();apply(res.body);startPolling();
+      toast('房间已创建');
+    }).catch(function(e){$('lobbyErr').textContent=String(e);});
+  }
+  function joinRoom(){
+    playerId=(playerId||$('nameInput').value.trim()||randomName());
+    $('nameInput').value=playerId;
+    var code=$('codeInput').value.trim().toUpperCase();
+    if(!code)return ($('lobbyErr').textContent='请输入房间码');
+    var body={playerId:playerId,nickname:playerId};
+    if($('passInput').value)body.password=$('passInput').value;
+    var route=/^room_/.test(code)?'/api/rooms/'+encodeURIComponent(code)+'/join':'/api/rooms/'+encodeURIComponent(code)+'/join';
+    api('POST',route,body).then(function(res){
+      if(res.status!==200)return ($('lobbyErr').textContent=errText(res));
+      setSession(res);showRoom();apply(res.body);startPolling();
+    }).catch(function(e){$('lobbyErr').textContent=String(e);});
+  }
+  function startGame(){
+    if(!roomId||!session)return;
+    api('POST','/api/rooms/'+encodeURIComponent(roomId)+'/start',{session:session,playerId:playerId}).then(function(res){
+      if(res.status!==200)return toast(errText(res));
+      apply(res.body);
+    });
+  }
+  function restartGame(){
+    api('POST','/api/rooms/'+encodeURIComponent(roomId)+'/restart',{session:session,playerId:playerId}).then(function(res){
+      if(res.status!==200)return toast(errText(res));
+      apply(res.body);
+    });
+  }
+  function sendMove(move){
+    if(busy)return;busy=true;
+    api('POST','/api/rooms/'+encodeURIComponent(roomId)+'/actions',{session:session,playerId:playerId,type:'move',move:move}).then(function(res){
+      busy=false;
+      if(res.status!==200)return toast(errText(res));
+      apply(res.body);
+    }).catch(function(e){busy=false;toast(String(e));});
+  }
+  function refresh(){
+    if(!roomId||!session)return;
+    api('GET','/api/rooms/'+encodeURIComponent(roomId)+'?session='+encodeURIComponent(session)+'&playerId='+encodeURIComponent(playerId)).then(function(res){
+      if(res.status===404){stopPolling();session=null;roomId=null;save('session',null);save('room',null);showLobby();toast('房间已关闭');return;}
+      if(res.status===200)apply(res.body);
+    }).catch(function(){});
+  }
+  function startPolling(){stopPolling();pollTimer=setInterval(refresh,1000);}
+  function stopPolling(){if(pollTimer){clearInterval(pollTimer);pollTimer=null;}}
+  function apply(v){
+    if(!v)return;view=v;
+    $('roomCode').textContent=v.roomCode||v.roomId||'------';
+    $('roomStatus').textContent=v.status==='playing'?'对局中':v.status==='finished'?'已结束':(v.seats&&v.seats.filter(function(s){return !s.ai;}).length>=2?'可以开始':'等待对手');
+    $('startBtn').hidden=!v.canStart;
+    $('start2Btn').hidden=!v.canStart;
+    $('inviteBtn').hidden=!v.isHost;
+    $('restartBtn').hidden=!v.canRestart;
+    var seats=(v.seats||[]).map(function(s,i){
+      return '<div class="seat'+(v.currentPlayerIndex===s.index?' active':'')+'">'+
+        '<div class="name">'+esc(s.nickname)+' <span class="badge">'+(s.playerId?'玩家':'AI')+(s.takeover?' · 托管':'')+'</span></div>'+
+        '<div class="meta">'+(s.controlledByAI?'AI 控制':'手动操作')+(v.you&&v.you.playerIndex===s.index?' · 你':'')+'</div></div>';
+    }).join('');
+    $('seats').innerHTML=seats;
+    $('turnStatus').textContent=v.started?(v.state&&v.state.over?'对局结束':(v.currentControlledByAI?'AI 正在行动…':'轮到 '+((v.seats[v.currentPlayerIndex]||{}).nickname||'玩家'))):'等待房主开始；空位将由 AI 补足。';
+    $('board').innerHTML=renderBoard(v);
+    renderMoves(v);
+    renderResult(v);
+  }
+  function renderMoves(v){
+    var box=$('moves'),hint=$('movesHint');
+    if(!v.started){box.innerHTML='';hint.textContent='等待开始';return;}
+    if(v.state&&v.state.over){box.innerHTML='';hint.textContent='对局已结束';return;}
+    if(!v.canMove){box.innerHTML='';hint.textContent='等待对手行动';return;}
+    hint.textContent='轮到你了';
+    box.innerHTML=(v.legalMoves||[]).map(function(m,i){return '<button class="move" type="button" data-i="'+i+'">'+esc(moveLabel(m,v.state))+'</button>';}).join('');
+    Array.prototype.forEach.call(box.querySelectorAll('.move'),function(btn){
+      btn.addEventListener('click',function(){var m=(view.legalMoves||[])[Number(btn.getAttribute('data-i'))];if(m)sendMove(m);});
+    });
+  }
+  function renderResult(v){
+    var el=$('result');
+    if(!(v.state&&v.state.over)){el.hidden=true;el.innerHTML='';return;}
+    var rows=(v.result&&v.result.scores)||(v.state.result&&v.state.result.scores)||[];
+    var winner=v.result?v.result.winner:(v.state.result?v.state.result.winner:null);
+    el.hidden=false;
+    el.innerHTML='<h3>'+(winner==null?'平局':esc((rows[winner]&&rows[winner].name)||'胜者')+' 获胜')+'</h3>'+
+      rows.map(function(r){return '<div class="score"><span>'+esc(r.name||('玩家 '+(r.index+1)))+'</span><b>'+esc(r.total==null?r.prestige==null?r.score:r.prestige:r.total)+'</b></div>';}).join('')+
+      '<p class="hint">结果已记入本地榜单。房主可再来一局。</p>';
+  }
+  function copyInvite(){
+    if(!view)return;
+    var link=location.origin+location.pathname+'?room='+encodeURIComponent(view.roomCode||view.roomId);
+    var text='房间 '+view.roomCode+' · '+link;
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(function(){toast('邀请已复制');});}
+    else{toast(text);}
+  }
+  
+  function colorMeta(k){return (D&&D.COLOR_BY_KEY&&D.COLOR_BY_KEY[k])||{label:k,face:'#888',ink:'#fff'};}
+  function pip(k,n){var c=colorMeta(k);return '<span class="pip" style="background:'+c.face+';color:'+c.ink+'">'+n+'</span>';}
+  function findCard(s,id){
+    for(var t=1;t<=3;t++){var row=s.faceUp[t]||[];for(var i=0;i<row.length;i++)if(row[i]&&row[i].id===id)return row[i];}
+    var me=(s.players||[]).filter(function(p){return view&&view.you&&p.index===view.you.playerIndex;})[0];
+    if(me)for(var j=0;j<(me.reserved||[]).length;j++)if(me.reserved[j]&&me.reserved[j].id===id)return me.reserved[j];
+    return null;
+  }
+  function cardHtml(c,t){
+    var cost=(D?D.COLORS:[]).map(function(col){var n=c.cost&&c.cost[col.key];return n?pip(col.key,n):'';}).join('');
+    var bonus=(D&&D.COLOR_BY_KEY[c.bonus])?D.COLOR_BY_KEY[c.bonus].label:c.bonus;
+    return '<div class="card"><div class="tier">'+t+' 级</div>'+(c.points?'<div class="points">'+c.points+'</div>':'')+
+      '<div class="bonus">'+esc(bonus)+'</div><div class="cost">'+cost+'</div></div>';
+  }
+  function moveLabel(m){
+    if(m.type==='take3')return '拿取 3 色各 1 枚：'+(m.colors||[]).map(function(k){return colorMeta(k).label;}).join('、');
+    if(m.type==='take2')return '拿取 2 枚同色：'+colorMeta(m.color).label;
+    if(m.type==='buy'){var card=findCard(view.state,m.cardId);return '购买'+(card?'「'+card.name+'」':(' #'+m.cardId))+(card?'（'+card.points+' 分）':'');}
+    if(m.type==='reserve')return m.source==='deck'?('盲抽预留 '+m.tier+' 级发展卡'):('预留 '+(findCard(view.state,m.cardId)||{}).name);
+    return JSON.stringify(m);
+  }
+  function renderBoard(v){
+    var s=v.state;if(!s)return '';
+    var gems='<div class="section"><h3>宝石银行 <span>黄金 '+s.gems.gold+'</span></h3><div class="gems">'+
+      (D?D.COLORS:[]).map(function(c){return '<div class="token" style="background:'+c.face+';color:'+c.ink+';border-color:'+c.edge+'">'+esc(c.label)+'<small>'+s.gems[c.key]+'</small></div>';}).join('')+'</div></div>';
+    var players=(s.players||[]).map(function(p){
+      var tokens=(D?D.COLORS:[]).map(function(c){return pip(c.key,p.tokens[c.key]||0);}).join('');
+      var bonuses=(D?D.COLORS:[]).map(function(c){var n=(p.bonuses&&p.bonuses[c.key])||0;return n?pip(c.key,n):'';}).join('');
+      var res=(p.reserved||[]).map(function(c){return c.hidden?'<span class="pip" style="background:#4a4032;color:#c9bfae">?</span>':'<span class="pip" style="background:#7a6a4a;color:#fff">'+esc(c.points||0)+'</span>';}).join('');
+      return '<div class="section"><h3>'+esc(p.name)+' <span>'+p.prestige+' 声望 · '+p.cards.length+' 卡 · '+p.nobles+' 贵族</span></h3>'+
+        '<div class="hint">筹码 '+tokens+'</div><div class="hint" style="margin-top:5px">永久加成 '+(bonuses||'暂无')+'</div>'+
+        '<div class="hint" style="margin-top:5px">预留 '+(res||'无')+'</div></div>';
+    }).join('');
+    var tiers=[3,2,1].map(function(t){
+      var cards=(s.faceUp[t]||[]).map(function(c){return c?cardHtml(c,t):'';}).join('');
+      return '<div class="section"><h3>'+t+' 级发展卡 <span>牌堆 '+s.deckCounts[t]+'</span></h3><div class="cards">'+cards+'</div></div>';
+    }).join('');
+    var nobles='<div class="section"><h3>贵族 <span>达标 +3 声望</span></h3><div class="nobles">'+
+      (s.nobles||[]).map(function(n){return '<div class="noble"><b>'+n.points+'</b><div>'+esc(n.name)+'</div><div class="cost">'+
+        Object.keys(n.need||{}).map(function(k){return n.need[k]?pip(k,n.need[k]):'';}).join('')+'</div></div>';}).join('')+'</div></div>';
+    return gems+players+tiers+nobles;
+  }
+  function boot(){
+    playerId=saved('player')||('');session=saved('session');roomId=saved('room');
+    $('nameInput').value=playerId||randomName();
+    $('createBtn').addEventListener('click',createRoom);
+    $('joinBtn').addEventListener('click',joinRoom);
+    $('startBtn').addEventListener('click',startGame);
+    $('start2Btn').addEventListener('click',startGame);
+    $('restartBtn').addEventListener('click',restartGame);
+    $('inviteBtn').addEventListener('click',copyInvite);
+    $('copyBtn').addEventListener('click',copyInvite);
+    var q=new URLSearchParams(location.search);
+    if(q.get('room')){$('codeInput').value=q.get('room');}
+    if(session&&roomId){
+      api('POST','/api/rooms/'+encodeURIComponent(roomId)+'/reconnect',{token:session,playerId:playerId}).then(function(res){
+        if(res.status===200){showRoom();apply(res.body);startPolling();}
+        else{session=null;roomId=null;save('session',null);save('room',null);}
+      }).catch(function(){});
+    }
+  }
+  boot();
+})();
+</script>
+</body>
+</html>

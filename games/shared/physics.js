@@ -55,7 +55,16 @@
    Physics.spring(card, {x: 100, y: 100}, {stiffness: 120, damping: 12})
    Physics.applyImpulse(card, {x: 250, y: -400})
    world.step(dt)                       // fixed-step accumulator
+   world.step(dt, render)               // optional render(world, alpha) hook
+   world.alpha                          // accumulator / fixedDt, in [0, 1)
    world.bodies                         // read-only copy of the body list
+
+   Render interpolation: `world.alpha` is the fraction of the next fixed step
+   already accumulated. Store the previous render transform and blend towards
+   the current one with `Physics.interpolate(prev, curr, world.alpha)` so a
+   120 Hz display does not show the same 60 Hz step twice. Interpolation is a
+   pure read: it never touches the simulation state, so step results are
+   bit-identical whether or not you use it.
 
    Optional body filters: group (default 1) and mask (default all bits). Two
    bodies collide only if (a.mask & b.group) and (b.mask & a.group) are both
@@ -264,6 +273,9 @@
     this.restitutionThreshold = Math.max(0, num(options.restitutionThreshold, 1));
     this.maxAccumulator = Math.max(this.fixedDt, num(options.maxAccumulator, 0.25));
     this.accumulator = 0;
+    // Fraction of the next fixed step already accumulated. Renderers read
+    // this to blend the previous frame's transform towards the current one.
+    this.alpha = 0;
     this.time = 0;
     this.steps = 0;
     this.contactCount = 0;
@@ -325,7 +337,13 @@
   // Advance by dt seconds through a fixed-step accumulator. Leftover time is
   // kept for the next call; a huge dt is capped so a stalled tab cannot make
   // the next frame spiral.
-  World.prototype.step = function (dt) {
+  //
+  // After stepping, `this.alpha` is the fraction of a fixed step still left
+  // in the accumulator: 0 means the simulation is exactly on a step boundary,
+  // values just under 1 mean the renderer is almost a whole step ahead.
+  // `render`, when provided, is called after the physics work as
+  // render(world, alpha); existing callers can keep passing only dt.
+  World.prototype.step = function (dt, render) {
     if (!(dt > 0) || !isFinite(dt)) return this;
     this.accumulator += dt;
     if (this.accumulator > this.maxAccumulator) this.accumulator = this.maxAccumulator;
@@ -338,6 +356,14 @@
       if (this.accumulator < 0) this.accumulator = 0;
       guard++;
     }
+    var alpha = this.accumulator / h;
+    // Guard the [0, 1) contract against a float edge or a hand-edited
+    // accumulator; interpolation clamps too, this just keeps world.alpha
+    // honest for callers that use it directly.
+    if (!(alpha >= 0)) alpha = 0;
+    else if (alpha >= 1) alpha = 0.9999999999999999;
+    this.alpha = alpha;
+    if (typeof render === 'function') render(this, alpha);
     return this;
   };
 
@@ -636,6 +662,47 @@
    * Public helpers                                                     *
    * ------------------------------------------------------------------ */
 
+  // Linear blend for render interpolation. `alpha` is clamped to [0, 1];
+  // alpha=0 returns prev's numeric values exactly and alpha=1 returns curr's,
+  // so the endpoints line up with the fixed-step states. Numbers and plain
+  // objects are supported; objects are never mutated and only top-level
+  // numeric fields are blended (objects such as body.userData are copied
+  // from the endpoint, which avoids walking live simulation graphs).
+  function interpolate(prev, curr, alpha) {
+    var t = num(alpha, 0);
+    if (t < 0) t = 0;
+    else if (t > 1) t = 1;
+
+    if (typeof prev === 'number' && typeof curr === 'number') {
+      return prev + (curr - prev) * t;
+    }
+    if (Array.isArray(prev) && Array.isArray(curr)) {
+      var outArray = [];
+      var len = Math.max(prev.length, curr.length);
+      for (var i = 0; i < len; i++) outArray[i] = interpolate(prev[i], curr[i], t);
+      return outArray;
+    }
+    if (prev && curr && typeof prev === 'object' && typeof curr === 'object') {
+      var out = {};
+      var k;
+      for (k in prev) {
+        if (Object.prototype.hasOwnProperty.call(prev, k)) out[k] = prev[k];
+      }
+      for (k in curr) {
+        if (!Object.prototype.hasOwnProperty.call(curr, k)) continue;
+        if (!Object.prototype.hasOwnProperty.call(prev, k)) {
+          out[k] = curr[k];
+        } else if (typeof prev[k] === 'number' && typeof curr[k] === 'number') {
+          out[k] = prev[k] + (curr[k] - prev[k]) * t;
+        } else {
+          out[k] = t >= 1 ? curr[k] : prev[k];
+        }
+      }
+      return out;
+    }
+    return t >= 1 ? curr : prev;
+  }
+
   function applyImpulse(body, impulse, at) {
     if (!body || !impulse) return body;
     var ix = num(impulse.x, 0);
@@ -715,6 +782,7 @@
     World: World,
     spring: spring,
     fixedPoint: fixedPoint,
-    applyImpulse: applyImpulse
+    applyImpulse: applyImpulse,
+    interpolate: interpolate
   };
 });

@@ -88,4 +88,10 @@ var I18N = {
   Arcade.onLang(render);
   Arcade.init({ strings: I18N, onLang: render });
   render();
+  // 固定步长推进：60 步/秒，标签页隐藏时由 ticker 暂停累积，回来不补帧。
+  var TICKER = ArcadeTick.create({
+    step: 1000 / 60,
+    onStep: function () { input('tick'); }
+  });
+  TICKER.start();
 })();

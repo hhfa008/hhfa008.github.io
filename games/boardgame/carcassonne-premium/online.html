@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="卡卡颂 Carcassonne 联机房间：创建/邀请/加入，空位 AI 补足，断线重连、超时托管与结果榜。">
+<meta name="color-scheme" content="dark light">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23223326'/%3E%3Cpath d='M8 52V26l10-10 10 10v10h8V26l10-10 10 10v26z' fill='%23d9b97c'/%3E%3Ccircle cx='32' cy='36' r='4' fill='%23b3452f'/%3E%3C/svg%3E">
+<title>卡卡颂 Carcassonne · 联机房间</title>
+<link rel="stylesheet" href="../app/online-lobby.css">
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/carcassonne-premium/online.html">
+</head>
+<body>
+<script>window.ONLINE_GAME = { id: 'carcassonne', cn: '卡卡颂', en: 'Carcassonne', maxPlayers: 2, accent: '#8fbc7c', art: '../../assets/art/premium/carcassonne/table-linen.webp', gameHref: 'index.html' };</script>
+<header class="topbar">
+  <div class="brand">
+    <div class="logo">卡</div>
+    <div>
+      <h1>卡卡颂 <span>CARCASSONNE</span></h1>
+      <p>瓦片拼城 · 双人联机</p>
+    </div>
+  </div>
+  <div class="top-actions">
+    <a class="btn ghost" href="index.html">单人牌桌</a>
+    <a class="btn ghost" href="rules.html">规则</a>
+  </div>
+</header>
+<main class="shell">
+  <div class="grid">
+    <section class="panel">
+      <h2>联机房间</h2>
+      <p class="lede">创建房间后把房间码或单次邀请码发给朋友。空位由 AI 补足，断线可重连，超时自动托管。</p>
+      <div id="lobbySection">
+        <div class="section">
+          <h3>创建房间</h3>
+          <div class="form-row">
+            <div class="field"><label for="hostName">你的昵称</label><input id="hostName" maxlength="24" autocomplete="nickname" placeholder="例如 米宝领主"></div>
+            <div class="field"><label for="maxPlayers">人数</label><select id="maxPlayers"></select></div>
+          </div>
+          <div class="form-row">
+            <div class="field"><label for="hostPassword">房间密码（可选）</label><input id="hostPassword" type="password" maxlength="64" autocomplete="new-password" placeholder="留空表示无密码"></div>
+            <div class="field" style="align-content:end"><label style="display:flex;gap:8px;align-items:center;min-height:44px"><input id="privateRoom" type="checkbox" aria-label="私密房（必须凭邀请）" style="width:44px;height:44px;min-height:44px;min-width:44px;margin:0;flex:none"> 私密房（必须凭邀请）</label></div>
+          </div>
+          <div class="form-actions"><button class="btn primary" id="createBtn" type="button">创建房间</button></div>
+        </div>
+        <div class="section">
+          <h3>加入房间</h3>
+          <div class="form-row">
+            <div class="field"><label for="joinCode">房间码</label><input id="joinCode" maxlength="12" autocomplete="off" placeholder="例如 AB3K9Q"></div>
+            <div class="field"><label for="joinName">昵称</label><input id="joinName" maxlength="24" autocomplete="nickname" placeholder="你的昵称"></div>
+          </div>
+          <div class="form-row">
+            <div class="field"><label for="joinPassword">密码（可选）</label><input id="joinPassword" type="password" maxlength="64" autocomplete="current-password" placeholder="有密码时填写"></div>
+            <div class="field"><label for="joinInvite">邀请码（可选）</label><input id="joinInvite" maxlength="96" autocomplete="off" placeholder="房主分享的单次邀请码"></div>
+          </div>
+          <div class="form-actions"><button class="btn" id="joinBtn" type="button">加入房间</button></div>
+        </div>
+      </div>
+      <div id="roomSection" hidden>
+        <div class="room-meta"><span class="room-code" id="roomCode" aria-label="房间码">——</span></div>
+        <div class="room-meta" id="roomMeta"></div>
+        <div class="seats" id="seatList" aria-label="座位"></div>
+        <div id="inviteBox" hidden>
+          <div class="field"><label for="inviteToken">单次邀请码（发给朋友）</label><input id="inviteToken" readonly autocomplete="off"></div>
+          <div class="form-actions"><button class="btn ghost" id="copyInvite" type="button">复制邀请码</button></div>
+        </div>
+        <div class="room-actions">
+          <button class="btn primary" id="startBtn" type="button" hidden>开始对局</button>
+          <button class="btn" id="inviteBtn" type="button" hidden>生成新邀请码</button>
+          <button class="btn ghost" id="leaveBtn" type="button">离开房间</button>
+          <button class="btn ghost" id="newRoomBtn" type="button">回到大厅</button>
+        </div>
+      </div>
+      <p class="status" id="status" role="status" aria-live="polite"></p>
+    </section>
+    <aside class="aside">
+      <div class="aside-card">
+        <h3>联机规则</h3>
+        <ul>
+          <li>双人房；单人开局空位由 AI 补足。</li>
+          <li>每回合：放瓦片 → 放米宝或跳过。</li>
+          <li>城市/道路/修道院完成即时计分，农田终局计分。</li>
+          <li>断线重连，超时 AI 托管，终局进入榜单。</li>
+        </ul>
+        <a class="btn" href="rules.html">查看完整规则</a>
+      </div>
+      <div class="aside-card">
+        <h3>最近对局</h3>
+        <div class="leaderboard" id="leaderboard"></div>
+      </div>
+    </aside>
+  </div>
+</main>
+<footer class="footer">
+  <span>卡卡颂 · Carcassonne · 本地权威房间，无外部请求</span>
+  <a href="index.html">返回牌桌</a>
+</footer>
+<script src="../app/online-lobby.js"></script>
+</body>
+</html>

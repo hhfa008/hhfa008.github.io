@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d1220">
+<title>斜行决斗 · 落子之间</title>
+<meta name="description" content="《斜行决斗》是一款在 5×5 棋盘上进行的单机抽象棋。你执蓝方先行，AI 执红方，双方轮流行动。5×5 · 八方向吃子">
+<style>
+  :root{--bg:#0d1220;--panel:#1b2440;--ink:#eef3ff;--muted:#9fb0d6;--line:#33436e;--blue:#5b9dff;--red:#ff7b7b;--gold:#ffd166}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;min-height:100vh;background:radial-gradient(700px 420px at 50% -12%,#23315f,#0d1220 62%) fixed;color:var(--ink);font:16px/1.5 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
+  .wrap{max-width:430px;margin:0 auto;padding:10px 12px 30px}
+  header{display:flex;align-items:center;gap:8px}
+  h1{flex:1;min-width:0;margin:0;font-size:18px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:52px;padding:0 12px;border-radius:12px;background:var(--panel);border:1px solid var(--line);color:var(--ink);text-decoration:none;font-size:14px;font-weight:600}
+  .sub{margin:8px 0 2px;text-align:center;color:var(--muted);font-size:13px}
+  .status{margin:10px auto 0;padding:10px 12px;border-radius:12px;background:var(--panel);border:1px solid var(--line);text-align:center;font-weight:700;min-height:44px;display:flex;align-items:center;justify-content:center}
+  .status.win{color:var(--gold)}
+  .board{display:grid;gap:4px;width:min(94vw,430px);margin:12px auto;padding:6px;border-radius:14px;background:#101a30;border:1px solid var(--line);aspect-ratio:1;touch-action:manipulation}
+  .cell{min-height:44px;min-width:44px;aspect-ratio:1;border:0;border-radius:8px;background:#22304f;color:#fff;font-size:clamp(15px,5.6vw,26px);line-height:1;display:flex;align-items:center;justify-content:center;padding:0;touch-action:manipulation;cursor:pointer;transition:background .12s,transform .08s}
+  .cell:active{transform:scale(.96)}
+  .cell.s0{background:linear-gradient(160deg,#7fb2ff,#3c74d6);box-shadow:inset 0 0 0 1px #a9ccff}
+  .cell.s1{background:linear-gradient(160deg,#ff9a9a,#d95353);box-shadow:inset 0 0 0 1px #ffbcbc}
+  .cell.sel{outline:3px solid var(--gold);outline-offset:-3px}
+  .cell.hint{background:#2a3c63}
+  .tip{min-height:40px;margin:4px auto;text-align:center;color:var(--muted);font-size:13px}
+  .reset{width:100%;margin-top:6px;background:linear-gradient(160deg,#7fb2ff,#4a86ef);color:#08172e;border:0;font-weight:800}
+  .foot{text-align:center;margin-top:14px;font-size:12px;color:#6f80a8}
+/* mini-quality: safe-area */
+.wrap { --mini-safe-bottom: 30px; padding-bottom: calc(var(--mini-safe-bottom) + env(safe-area-inset-bottom, 0px)); }
+/* mini-quality: reduced-motion */
+@media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; scroll-behavior:auto !important; } }
+</style>
+  <link rel="canonical" href="https://hhfa008.github.io/games/boardgame/mini-abstract-a-25/index.html">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="btn" href="../index.html" aria-label="返回桌游目录">← 目录</a>
+    <h1>斜行决斗</h1>
+    <a class="btn" href="rules.html">规则</a>
+  </header>
+  <p class="sub">5×5 · 八方向吃子</p>
+  <div class="status" id="status" role="status" aria-live="polite">轮到你行动</div>
+  <div class="board" id="board" aria-label="棋盘"></div>
+  <p class="tip" id="tip">先点自己的棋子，再点相邻目标格移动或吃子。</p>
+  <button class="btn reset" id="reset" type="button">重新开局</button>
+  <p class="foot">单机对战 AI · 无网络请求</p>
+</div>
+<script src="engine.js"></script>
+<script>
+(function () {
+  var E = window.MiniEngine;
+  var boardEl = document.getElementById('board');
+  var statusEl = document.getElementById('status');
+  var tipEl = document.getElementById('tip');
+  var g, selected = -1, busy = false;
+
+  function isDuel() { return E.CFG.mode === 'duel'; }
+
+  function statusText() {
+    if (g.over) {
+      if (g.result === 0) return '你赢了！';
+      if (g.result === 1) return 'AI 获胜';
+      return '平局';
+    }
+    if (g.turn === 0) return selected >= 0 ? '已选中，点相邻格移动' : '轮到你行动';
+    return 'AI 思考中…';
+  }
+
+  function render() {
+    boardEl.style.gridTemplateColumns = 'repeat(' + g.size + ', 1fr)';
+    boardEl.innerHTML = '';
+    for (var i = 0; i < g.board.length; i++) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'cell';
+      var v = g.board[i];
+      if (v === 0) { b.className += ' s0'; b.textContent = '●'; }
+      if (v === 1) { b.className += ' s1'; b.textContent = '●'; }
+      if (i === selected) b.className += ' sel';
+      b.setAttribute('aria-label', '第 ' + (Math.floor(i / g.size) + 1) + ' 行第 ' + (i % g.size + 1) + ' 列' + (v === -1 ? '空' : v === 0 ? '蓝子' : '红子'));
+      b.addEventListener('click', (function (pos) {
+        return function () { onCell(pos); };
+      })(i));
+      boardEl.appendChild(b);
+    }
+    statusEl.textContent = statusText();
+    statusEl.className = 'status' + (g.over ? ' win' : '');
+    tipEl.textContent = g.msg || (g.over ? '点“重新开局”再战一局。' : '蓝方是你，红方是 AI。');
+  }
+
+  function aiTurn() {
+    if (g.over || busy) return;
+    busy = true;
+    window.setTimeout(function () {
+      if (g.over) { busy = false; render(); return; }
+      var mv = E.aiMove(g);
+      if (mv !== null) {
+        try { E.applyMove(g, mv); } catch (e) { g.over = true; g.result = 'draw'; g.msg = 'AI 无合法走法'; }
+      }
+      busy = false;
+      selected = -1;
+      render();
+    }, 220);
+  }
+
+  function onCell(pos) {
+    if (g.over || busy || g.turn !== 0) return;
+    if (!isDuel()) {
+      try {
+        E.applyMove(g, pos);
+      } catch (e) {
+        tipEl.textContent = '这里不能落子：' + (E.CFG.mode === 'flip' ? '必须能夹住对手棋子。' : E.CFG.mode === 'go' ? '不能自杀。' : '请选空格。');
+        return;
+      }
+      selected = -1;
+      render();
+      if (!g.over) aiTurn();
+      return;
+    }
+    if (g.board[pos] === 0) {
+      selected = pos;
+      render();
+      return;
+    }
+    if (selected < 0) { tipEl.textContent = '先点自己的蓝色棋子。'; return; }
+    try {
+      E.applyMove(g, { from: selected, to: pos });
+    } catch (e) {
+      tipEl.textContent = '只能走到相邻空格或对手棋子。';
+      return;
+    }
+    selected = -1;
+    render();
+    if (!g.over) aiTurn();
+  }
+
+  function reset() {
+    g = E.createGame({ seed: (Date.now() % 100000) + 1 });
+    selected = -1;
+    busy = false;
+    render();
+  }
+
+  document.getElementById('reset').addEventListener('click', reset);
+  reset();
+})();
+</script>
+</body>
+</html>

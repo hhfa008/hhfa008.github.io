@@ -90,6 +90,12 @@ var I18N = {
 
   E.btnNew.addEventListener('click', newGame);
   E.btnOverlay.addEventListener('click', newGame);
+  E.board.addEventListener('click', function (e) {
+    if (e.target.classList.contains('cell')) {
+      var index = parseInt(e.target.dataset.index);
+      input(index);
+    }
+  });
   E.btnHint.addEventListener('click', function () {
     E.feedback.textContent = I18N[I18N.lang || 'en'].hintText;
     setTimeout(function () {

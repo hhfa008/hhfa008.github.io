@@ -160,11 +160,9 @@ export function drawCard(game, playerIndex) {
 
 export function playCard(game, playerIndex, cardId, options) {
   const opts = options || {};
-  if (opts.target === 'bench') {
-    fail('E_BENCH', '主线引擎只支持出战区，暂不支持备战区');
-  }
-  const result = unwrap(enginePlayCard(game.state, playerIndex, cardId));
-  pushLog(game, { type: 'play-card', player: playerIndex, cardId: cardId, target: 'active' });
+  const target = opts.target === 'bench' ? 'bench' : 'active';
+  const result = unwrap(enginePlayCard(game.state, playerIndex, cardId, { target: target }));
+  pushLog(game, { type: 'play-card', player: playerIndex, cardId: cardId, target: target });
   return result;
 }
 

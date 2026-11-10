@@ -105,6 +105,54 @@ games/boardgame/
 
 测试：`node games/boardgame/tests/run-all.mjs`（含 `tests/retention-integration.test.mjs`）与 `node games/boardgame/play/smoke.mjs`。
 
+## 联机（跨设备 · 房间 + AI 匹配）
+
+多人游戏按「联机 + AI 匹配」交付；单人游戏页明确标注「单人」。联机服务是零依赖的
+`app/server.mjs`，内存态，**仅内网自用，不要直接暴露公网**。
+
+```bash
+cd games/boardgame
+export PATH=$HOME/.local/node/bin:$PATH
+
+# 局域网跨设备：监听所有网卡；邀请 URL 用请求 Host，不写死 127.0.0.1
+node app/server.mjs --host 0.0.0.0 --port 8787
+# 等价：BOARDGAME_HOST=0.0.0.0 node app/server.mjs
+
+# 另一台设备打开（把 192.168.x.x 换成服务端局域网地址）
+#   http://192.168.x.x:8787/play/online.html
+```
+
+- **房间与邀请**：创建房间返回 `roomId`、6 位 `inviteCode`、单次 `inviteToken` 和按请求
+  Host 生成的 `inviteUrl`。两台设备用不同 playerId/session 加入同一 room 即共享同一局状态；
+  房间页可一键复制邀请链接。
+- **状态同步**：客户端每 700ms 轮询 `GET /api/rooms/:id?playerId=&session=`；响应带
+  `stateVersion` / `lastAction`，双方读到的 `turn/phase/currentPlayerId/zones/legalActions`
+  一致。每个动作带唯一 `idempotencyKey`，重复提交返回同一响应、不会重复落子。
+- **AI 补位**：创建房间时 `autoFill: true`（或页面勾选「AI 补位」），3 秒无人加入就补 AI；
+  卡牌补到 2 人、麻将补到 4 人后自动开局。AI 与托管共用 `cardgame.js` / `mahjong.js` 的
+  合法动作与 AI 决策，不简化规则，行动间隔 600–1200ms。
+- **断线重连 / 超时托管**：`POST /api/rooms/:id/reconnect` 用 session token 恢复；
+  某玩家超过默认 15 秒没有任何带 session 的请求，服务器用同一套引擎代打，并在
+  `autoPlayed` 中返回托管记录（`{playerId,type,reason:'timeout'}`），不会卡死回合。
+- **结算与排行榜**：终局自动写服务端内存排行榜（`GET /api/leaderboard?game=card-battle`），
+  只存 `sha256(playerId)` 摘要与座位/得分/AI 标记，不采集个人信息；AI 参与的结果同样有效。
+- **CORS**：只回显同源 / 回环 / 局域网 Origin（localhost、127.0.0.1、10/8、192.168/16、
+  172.16/12、169.254/16、`.local`、IPv6 ULA/link-local），绝不使用 `*`。
+
+可调环境变量（默认值即上面的产品值，测试可缩短）：
+
+| 变量 | 默认 | 说明 |
+|---|---|---|
+| `BOARDGAME_HOST` | `127.0.0.1` | 监听地址；`0.0.0.0` 开局域网 |
+| `BOARDGAME_AI_FILL_MS` | `3000` | 创建后多久无人加入就 AI 补位 |
+| `BOARDGAME_AI_MOVE_MIN_MS` / `MAX` | `600` / `1200` | AI / 托管行动节奏 |
+| `BOARDGAME_DISCONNECT_MS` | `15000` | 断线多久后托管 |
+| `BOARDGAME_TICK_MS` | `120` | 服务器托管检查间隔 |
+
+测试：`node tests/online-e2e.test.mjs`（双 HTTP 客户端 + AI 补位 + 重连 + 托管 + 排行榜），
+`node test-online.js` 是 `run-all.js` 自动发现的包装器；完整套件见
+`node games/boardgame/tests/run-all.mjs` 与 `node games/tests/run-all.js`。
+
 ## 麻将单机（demo/mahjong.html）
 
 四人单机麻将样板：玩家 1 号位，另外三家 AI。页面在 390×844 下无横向溢出，手牌/操作按钮触控高度 ≥44px，支持点按、方向键 + 回车出牌，以及 C/P/G/H/Esc 鸣牌快捷键。
@@ -134,3 +182,13 @@ games/boardgame/
 - 牌桌：`demo/mahjong.html`
 - 规则页：`demo/mahjong-rules.html`（Article + FAQPage JSON-LD）
 - 测试：`node games/boardgame/tests/run-all.mjs`；本游戏专项为 `tests/gameplay-mahjong.test.mjs`（覆盖起手、摸打、吃/碰/杠合法与非法、副露和牌、七对、自摸/点炮、流局、AI 决策、34 张牌图映射）。
+
+## 教程关键帧（Azul）
+
+`tutorial-frames/azul/` 保存 80 张 B 站教程关键帧与 `manifest.tsv`：
+
+- `frames/BV1aPxx6dEHL/`：40 张 I 帧
+- `frames/BV1fK9zYSEo6/`：40 张 I 帧
+- `manifest.tsv`：时间点、来源 BV 号、抽帧命令与文件清单
+
+抽帧只用于规则核对与美术参考，页面不加载这些图片（保持零外部请求）。

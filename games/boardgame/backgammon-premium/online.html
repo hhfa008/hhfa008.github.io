@@ -1,0 +1,574 @@
+<!doctype html>
+<!--
+  Backgammon / 双陆棋 premium — online lobby and room board.
+  Server-authoritative HTTP/JSON polling. No external requests, no CDN.
+  Room/invite/reconnect/timeout/leaderboard come from games/shared/online-room-server.mjs.
+-->
+<html lang="zh-CN" data-theme="dark">
+<head>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/backgammon-premium/online.html">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#120d09">
+<meta name="description" content="双陆棋 Backgammon 联机房间：创建/加入房间、邀请码、双人同局、AI 补位、断线重连与超时托管，含倍数方块的接受与放弃。">
+<title>双陆棋 BACKGAMMON · 联机房间</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231d120b'/%3E%3Ccircle cx='22' cy='22' r='9' fill='%23f4ead2'/%3E%3Ccircle cx='42' cy='42' r='9' fill='%23311d12' stroke='%23c99a4e'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="ui.css">
+<style>
+  :root{
+    --art-felt:url("../../assets/art/premium/backgammon/leather.webp");
+    --art-walnut:url("../../assets/art/premium/backgammon/walnut.webp");
+    --font-serif:"Songti SC","Iowan Old Style","Palatino Linotype",Georgia,serif;
+    --font-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    --bg:#100b08;--bg2:#1c130d;--panel:rgba(38,26,18,.93);--panel2:rgba(54,37,24,.76);
+    --line:rgba(201,164,104,.34);--ink:#f6eddc;--muted:#c6b39a;--gold:#e7c281;--gold2:#f6dda6;
+    --green:#7fd9a6;--coral:#e3694f;--sky:#87c9ef;--danger:#ff9c8d;
+    --shadow:0 20px 48px rgba(0,0,0,.46);--radius:18px;--tap:48px;
+  }
+  html[data-theme="light"]{
+    --bg:#efe4d1;--bg2:#f8efdf;--panel:rgba(255,250,240,.95);--panel2:rgba(246,236,220,.82);
+    --line:rgba(150,113,70,.36);--ink:#2b2118;--muted:#6c5b48;--gold:#9c6c14;--gold2:#7c5310;
+    --green:#1f8f61;--coral:#c9523c;--sky:#2c75ad;--danger:#b33f35;
+    --shadow:0 18px 40px rgba(91,68,42,.2);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;color:var(--ink);font:16px/1.5 var(--font-sans);
+    background:radial-gradient(1000px 620px at 50% -18%,rgba(98,58,32,.76),transparent 64%),var(--art-felt) center/cover no-repeat fixed,linear-gradient(168deg,var(--bg2),var(--bg) 62%);background-color:var(--bg)}
+  a{color:var(--gold)}
+  .wrap{max-width:900px;margin:0 auto;padding:10px 12px 40px;padding-bottom:calc(40px + env(safe-area-inset-bottom))}
+  .top{display:flex;align-items:center;gap:8px;padding:4px 0 12px}
+  .top h1{margin:0;font-family:var(--font-serif);font-weight:700;font-size:19px;letter-spacing:.4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;text-align:center}
+  .icon-btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:52px;padding:0 12px;border-radius:12px;background:var(--panel);border:1px solid var(--line);color:var(--ink);text-decoration:none;font-size:13px;font-weight:700;cursor:pointer}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow);backdrop-filter:blur(6px)}
+  .panel + .panel{margin-top:12px}
+  h2{margin:0 0 10px;font-size:13px;letter-spacing:1.6px;text-transform:uppercase;color:var(--muted)}
+  .field{display:grid;gap:5px;margin-bottom:10px}
+  .field label{font-size:12px;color:var(--muted);font-weight:700}
+  input{font:inherit;font-size:16px;min-height:48px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:rgba(0,0,0,.22);color:var(--ink);width:100%}
+  button{font:inherit;font-size:15px;font-weight:800;min-height:var(--tap);padding:10px 16px;border-radius:13px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);cursor:pointer;touch-action:manipulation}
+  button:active{transform:translateY(1px)}
+  button:disabled{opacity:.4;cursor:default}
+  button.primary{background:linear-gradient(160deg,var(--green),#2fa77c);color:#062019;border:0}
+  button.coral{background:linear-gradient(160deg,var(--coral),#a23927);color:#2a0d08;border:0}
+  button.gold{background:linear-gradient(160deg,var(--gold),#a97824);color:#241506;border:0}
+  button.ghost{background:transparent}
+  .row{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+  .row > button{flex:1;min-width:130px}
+  .muted{color:var(--muted);font-size:12.5px}
+  .err{color:var(--danger);font-size:13px;font-weight:700;min-height:18px;margin-top:6px}
+  .roombar{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+  .roomeyebrow{font-size:12px;letter-spacing:2px;color:var(--muted);text-transform:uppercase}
+  .chip{display:inline-flex;align-items:center;min-height:30px;padding:2px 12px;border-radius:999px;background:rgba(0,0,0,.22);border:1px solid var(--line);font-size:12.5px;font-weight:800;color:var(--gold)}
+  .seats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+  .seat{position:relative;border:1px solid var(--line);border-radius:14px;padding:9px 10px;background:var(--panel2);min-width:0}
+  .seat.you{border-color:var(--gold)}
+  .seat.active{box-shadow:0 0 0 2px var(--gold) inset}
+  .seat .name{font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .seat .meta{display:flex;justify-content:space-between;gap:4px;margin-top:3px;font-size:12px;color:var(--muted)}
+  .seat .pip{font-family:var(--font-serif);font-size:23px;font-weight:700;color:var(--gold);line-height:1.1;margin-top:1px}
+  .seat .side{font-size:12px;color:var(--muted);font-weight:700}
+  .table{position:relative;border-radius:20px;padding:8px;border:1px solid var(--line);background:linear-gradient(160deg,rgba(70,42,24,.64),rgba(24,14,8,.9)),var(--art-walnut) center/cover no-repeat;box-shadow:var(--shadow);overflow:hidden}
+  .table-top{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:rgba(255,255,255,.82);font-weight:700;position:relative;z-index:1;margin-bottom:7px;padding:0 2px}
+  .board{position:relative;z-index:1;border-radius:14px;overflow:hidden;background:#1b2d23}
+  .control{margin-top:10px}
+  .dice-line{display:flex;align-items:center;justify-content:center;gap:9px;min-height:50px;flex-wrap:wrap}
+  .dice-label{font-size:12px;color:var(--muted);font-weight:800;letter-spacing:1px;text-transform:uppercase}
+  .ghost-die{width:42px;height:42px;border-radius:9px;border:1px dashed var(--line);background:rgba(0,0,0,.14);display:grid;place-items:center;color:var(--muted);font-weight:800}
+  .msg{text-align:center;font-size:13px;font-weight:800;color:var(--gold2);padding:6px 4px;min-height:20px}
+  .waiting{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:13px;border:1px solid var(--line);background:var(--panel2);font-size:13px;font-weight:700}
+  .waiting .dot{width:10px;height:10px;border-radius:50%;background:var(--gold);animation:pulse 1.6s ease-in-out infinite}
+  .cube-row{display:flex;align-items:center;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:4px}
+  .cube-badge{width:38px;height:38px;border-radius:7px;display:grid;place-items:center;font:900 20px/1 var(--font-serif);color:#2a1a0c;background:radial-gradient(circle at 28% 20%,#fff3d0,#d4a95c 58%,#8d5c23);border:1px solid #f0d9a8;box-shadow:0 4px 0 #6e4518,0 7px 12px rgba(0,0,0,.34)}
+  .cube-note{font-size:12px;color:var(--muted);font-weight:700}
+  .log{margin-top:12px;border:1px solid var(--line);border-radius:15px;background:var(--panel);padding:9px 12px;max-height:170px;overflow:auto}
+  .log ul{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+  .log li{font-size:12.5px;color:var(--muted);border-bottom:1px dashed rgba(128,110,88,.2);padding:3px 0}
+  .log li:last-child{color:var(--ink)}
+  .log li::before{content:"›";color:var(--gold);margin-right:6px;font-weight:900}
+  .finale{margin-top:12px;border:1px solid rgba(127,217,166,.4);background:rgba(127,217,166,.12);border-radius:15px;padding:12px;text-align:center}
+  .finale h3{margin:0 0 4px;font-size:20px;font-family:var(--font-serif)}
+  .leadrow{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:5px 7px;border-radius:8px;background:rgba(0,0,0,.12)}
+  .leadrow b{color:var(--gold)}
+  .leaderboard{display:grid;gap:4px}
+  .lbrow{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:6px 8px;border-radius:8px;background:rgba(0,0,0,.12)}
+  .lbrow b{color:var(--gold)}
+  .room-panel{display:none}
+  .room-panel.on{display:block}
+  .fade{animation:fadeIn .25s ease both}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  @keyframes pulse{0%,100%{opacity:.55}50%{opacity:1}}
+  @media (prefers-reduced-motion: reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+  @media (max-width:400px){
+    .wrap{padding:8px 9px 30px}
+    .top h1{font-size:17px}
+    .seats{gap:6px}
+    .seat{padding:7px 8px}
+    .table{padding:6px}
+    .row > button{min-width:110px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="icon-btn" href="index.html">← 单机</a>
+    <h1>双陆棋 BACKGAMMON · 联机</h1>
+    <a class="icon-btn" href="rules.html">规则</a>
+  </header>
+
+  <main>
+    <section class="panel" id="lobby" aria-label="联机大厅">
+      <h2>创建或加入房间</h2>
+      <div class="field">
+        <label for="nickname">昵称</label>
+        <input id="nickname" maxlength="16" placeholder="房主 / 玩家" autocomplete="nickname">
+      </div>
+      <div class="row">
+        <button class="primary" id="createBtn" type="button">创建房间</button>
+        <button id="joinBtn" type="button">加入房间</button>
+      </div>
+      <div class="field" id="joinFields" hidden style="margin-top:10px">
+        <label for="roomCode">房间号 / 邀请码</label>
+        <input id="roomCode" maxlength="64" placeholder="粘贴房间号或邀请码" autocomplete="off">
+        <label for="joinPassword">房间密码（可选）</label>
+        <input id="joinPassword" type="password" maxlength="64" placeholder="无密码可留空" autocomplete="off">
+      </div>
+      <div class="err" id="lobbyErr" role="alert"></div>
+      <p class="muted">服务端权威判定；双人同局，空位由 AI 补齐；掉线 15 秒后自动托管，重连即恢复。白方先手，倍数方块只在掷骰前使用。</p>
+    </section>
+
+    <section class="panel room-panel" id="boardPanel" aria-label="房间棋盘">
+      <div class="roombar">
+        <div>
+          <div class="roomeyebrow">Room</div>
+          <div class="chip" id="roomChip">—</div>
+        </div>
+        <div class="row" style="flex:0 1 auto">
+          <button class="ghost" id="inviteBtn" type="button">复制邀请</button>
+          <button class="ghost" id="startBtn" type="button">开始 / AI 补位</button>
+        </div>
+      </div>
+      <div class="err" id="boardErr" role="alert"></div>
+      <div class="seats" id="seats"></div>
+
+      <div class="table">
+        <div class="table-top">
+          <span id="turnLabel">等待开始</span>
+          <span id="statusLabel">—</span>
+        </div>
+        <div class="board" id="board"></div>
+      </div>
+
+      <div class="control" aria-label="操作区">
+        <div class="dice-line" id="diceLine"></div>
+        <div class="msg" id="msg" aria-live="polite"></div>
+        <div class="cube-row" id="cubeRow"></div>
+        <div class="row" id="actionRow" style="margin-top:7px"></div>
+      </div>
+
+      <div class="finale" id="finale" hidden>
+        <h3 id="finaleTitle">结算</h3>
+        <p class="muted" id="finaleSub"></p>
+        <div id="finaleRows" class="leaderboard"></div>
+        <div class="row" style="margin-top:10px">
+          <button class="primary" id="restartBtn" type="button">再来一局</button>
+        </div>
+      </div>
+
+      <div class="log" aria-label="对局记录"><ul id="logList"></ul></div>
+      <div class="row" style="margin-top:10px">
+        <button class="ghost" id="leaveBtn" type="button">离开房间</button>
+        <a class="icon-btn" href="index.html" style="flex:0 0 auto">返回单机</a>
+      </div>
+    </section>
+
+    <section class="panel" aria-label="排行榜">
+      <h2>结算榜</h2>
+      <div class="leaderboard" id="leaderboard"><p class="muted">还没有结算记录。</p></div>
+    </section>
+  </main>
+</div>
+
+<script src="ui.js"></script>
+<script>
+(function () {
+  'use strict';
+  var UI = window.BGPremiumUI;
+  var $ = function (id) { return document.getElementById(id); };
+  var params = new URLSearchParams(location.search);
+  var roomKey = params.get('room') || '';
+  var invite = params.get('code') || '';
+  var session = params.get('session') || '';
+  var playerId = params.get('player') || '';
+  var nickname = '';
+  var timer = null;
+  var lastVersion = -1;
+  var lastView = null;
+  var selected = null;
+
+  try {
+    if (!session) session = sessionStorage.getItem('bgp-online-session') || '';
+    if (!playerId) playerId = sessionStorage.getItem('bgp-online-player') || '';
+  } catch (e) {}
+
+  function remember(nextRoom, nextSession, nextPlayer) {
+    roomKey = nextRoom || roomKey;
+    session = nextSession || session;
+    playerId = nextPlayer || playerId;
+    try {
+      sessionStorage.setItem('bgp-online-session', session);
+      sessionStorage.setItem('bgp-online-player', playerId);
+    } catch (e) {}
+    var url = location.pathname + '?room=' + encodeURIComponent(roomKey) + '&session=' + encodeURIComponent(session) + '&player=' + encodeURIComponent(playerId);
+    try { history.replaceState(null, '', url); } catch (e) {}
+  }
+
+  function api(method, route, body) {
+    return fetch(route, {
+      method: method,
+      headers: { 'content-type': 'application/json' },
+      body: body == null ? undefined : JSON.stringify(body)
+    }).then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (data) {
+        return { status: res.status, body: data };
+      });
+    });
+  }
+  function errText(r) { return (r.body && r.body.error && r.body.error.message) || ('HTTP ' + r.status); }
+  function toast(msg) { $('boardErr').textContent = msg || ''; }
+  function esc(v) {
+    return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+    });
+  }
+  function saveNick() {
+    nickname = ($('nickname').value || '').trim() || ('玩家-' + Math.random().toString(36).slice(2, 6));
+    try { sessionStorage.setItem('bgp-online-nick', nickname); } catch (e) {}
+    return nickname;
+  }
+  try { $('nickname').value = sessionStorage.getItem('bgp-online-nick') || ''; } catch (e) {}
+
+  function showBoard(on) {
+    $('lobby').hidden = on;
+    $('boardPanel').classList.toggle('on', on);
+  }
+
+  function createRoom() {
+    saveNick();
+    $('lobbyErr').textContent = '';
+    api('POST', '/api/rooms', { playerId: 'bgp-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6), nickname: nickname })
+      .then(function (r) {
+        if (!r.body || !r.body.roomId) throw new Error(errText(r));
+        remember(r.body.roomId, r.body.session, r.body.playerId);
+        invite = r.body.inviteToken || '';
+        showBoard(true);
+        poll();
+      })
+      .catch(function (e) { $('lobbyErr').textContent = e.message; });
+  }
+
+  function joinRoom() {
+    saveNick();
+    var key = ($('roomCode').value || '').trim();
+    if (!key) { $('lobbyErr').textContent = '请填写房间号或邀请码。'; return; }
+    $('lobbyErr').textContent = '';
+    var payload = { playerId: 'bgp-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6), nickname: nickname };
+    if (key.indexOf('room_') !== 0 && !/^[A-Z0-9]{6}$/i.test(key)) payload.inviteCode = key;
+    if ($('joinPassword').value) payload.password = $('joinPassword').value;
+    api('POST', '/api/rooms/' + encodeURIComponent(key) + '/join', payload)
+      .then(function (r) {
+        if (!r.body || !r.body.session) throw new Error(errText(r));
+        remember(r.body.roomId, r.body.session, r.body.playerId);
+        showBoard(true);
+        poll();
+      })
+      .catch(function (e) { $('lobbyErr').textContent = e.message; });
+  }
+
+  function seatHtml(seat, state, you) {
+    var side = seat.index; // seat 0 is White, seat 1 is Black
+    var mine = seat.index === you;
+    var active = state && state.turn === side && state.phase !== 'over';
+    var cls = 'seat' + (mine ? ' you' : '') + (active ? ' active' : '');
+    var off = state ? state.off[side] : 0;
+    var bar = state ? state.bar[side] : 0;
+    var pip = state ? state.pip[side] : 167;
+    return '<div class="' + cls + '">' +
+      '<div class="name">' + esc(seat.name) + (seat.ai ? ' · AI' : '') + (mine ? ' · 你' : '') + '</div>' +
+      '<div class="side">' + (side === 0 ? '白方 · 24 → 1' : '黑方 · 1 → 24') + '</div>' +
+      '<div class="pip">' + pip + '<small style="font-size:12px;color:var(--muted)"> pip</small></div>' +
+      '<div class="meta"><span>离盘 ' + off + '/15 · bar ' + bar + '</span><span>' +
+      (seat.isHost ? '房主' : '') + (seat.connected ? '' : ' · 离线') + '</span></div>' +
+      '</div>';
+  }
+
+  function actionButton(label, cls, action) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = cls || '';
+    b.textContent = label;
+    b.addEventListener('click', function () { act(action); });
+    return b;
+  }
+
+  function renderActions(r) {
+    var actions = r.legalActions || [];
+    var row = $('actionRow');
+    row.innerHTML = '';
+    if (r.over) return;
+    if (!actions.length) {
+      var wait = document.createElement('div');
+      wait.className = 'waiting';
+      wait.innerHTML = '<span class="dot"></span><span>等待对手行动…</span>';
+      row.appendChild(wait);
+      return;
+    }
+    actions.forEach(function (a) {
+      if (a.type === 'roll') row.appendChild(actionButton('掷骰', 'primary', a));
+      else if (a.type === 'double') row.appendChild(actionButton('加倍到 ' + a.value, 'gold', a));
+      else if (a.type === 'take') row.appendChild(actionButton('接受加倍', 'primary', a));
+      else if (a.type === 'pass') row.appendChild(actionButton('放弃', 'coral', a));
+      else if (a.type === 'endTurn') row.appendChild(actionButton('结束回合', '', a));
+      // move actions are played by tapping the board, not by a button
+    });
+    if (actions.some(function (a) { return a.type === 'move'; })) {
+      var tip = document.createElement('span');
+      tip.className = 'muted';
+      tip.textContent = '点自己的棋子，再点绿色目标；离盘点 OFF 区。';
+      row.appendChild(tip);
+    }
+  }
+
+  function renderCube(r) {
+    var state = r.state;
+    var box = $('cubeRow');
+    box.innerHTML = '';
+    if (!state) return;
+    var badge = document.createElement('span');
+    badge.className = 'cube-badge';
+    badge.textContent = state.cube.value;
+    badge.setAttribute('aria-label', '倍数方块 ' + state.cube.value);
+    box.appendChild(badge);
+    var note = document.createElement('span');
+    note.className = 'cube-note';
+    if (state.cube.pending) note.textContent = (state.cube.pending.by === r.you ? '你要求加倍到 ' + state.cube.pending.to + '，等待回应' : '对手要求加倍到 ' + state.cube.pending.to + '：接受或放弃');
+    else if (state.cube.owner == null) note.textContent = '倍数方块居中 · 当前 ' + state.cube.value;
+    else note.textContent = '倍数方块归 ' + (state.cube.owner === r.you ? '你' : '对手') + ' · 当前 ' + state.cube.value;
+    box.appendChild(note);
+  }
+
+  function render(r) {
+    var state = r.state;
+    lastView = r;
+    $('roomChip').textContent = '房间 ' + (r.code || r.roomId) + ' · ' + (r.started ? (r.over ? '已结束' : '进行中') : '等待玩家') + ' · ' + r.playerCount + ' 人';
+    $('seats').innerHTML = r.seats.map(function (seat) { return seatHtml(seat, state, r.you); }).join('');
+    $('startBtn').hidden = r.started;
+    $('startBtn').disabled = !r.seats.some(function (s) { return s.isYou && s.isHost; });
+    $('inviteBtn').disabled = !r.seats.some(function (s) { return s.isYou && s.isHost; });
+
+    if (state) {
+      $('turnLabel').textContent = state.phase === 'over' ? '对局结束' : (state.turnName + '回合');
+      $('statusLabel').textContent = state.status === 'over' ? '结束' : state.status === 'cube' ? '加倍回应' : state.status === 'roll' ? '待掷骰' : state.status === 'no-moves' ? '无合法走法' : '走子中';
+      var interactive = !r.over && state.turn === r.you && !state.cube.pending && (state.legalMoves || []).length > 0;
+      UI.renderBoard($('board'), state, {
+        prefix: 'online',
+        interactive: interactive,
+        selected: selected,
+        onTap: interactive ? onBoardTap : null
+      });
+      // Dice
+      var diceLine = $('diceLine');
+      diceLine.innerHTML = '<span class="dice-label">骰子</span>';
+      var dice = state.dice.length ? state.dice : state.rolled;
+      if (!dice.length) {
+        diceLine.insertAdjacentHTML('beforeend', '<span class="ghost-die">–</span><span class="ghost-die">–</span>');
+      } else {
+        dice.forEach(function (d) { diceLine.insertAdjacentHTML('beforeend', UI.dieMarkup(d)); });
+      }
+      // Message
+      var msg = $('msg');
+      if (r.over) msg.textContent = '本局结束。';
+      else if (state.cube.pending) msg.textContent = '倍数方块待回应：接受后本局价值翻倍，放弃则输掉当前赌注。';
+      else if (state.turn === r.you) {
+        if (state.phase === 'roll') msg.textContent = '轮到你：先掷骰，或在使用骰子前要求加倍。';
+        else if (state.status === 'no-moves') msg.textContent = '没有合法走法，请结束回合。';
+        else msg.textContent = '轮到你：点棋子，再点绿色目标；也可以点 OFF 区离盘。';
+      } else msg.textContent = '等待 ' + state.turnName + ' 行动…';
+      $('logList').innerHTML = (state.log || []).slice(-14).map(function (line) { return '<li>' + esc(line) + '</li>'; }).join('');
+      renderCube(r);
+    } else {
+      $('turnLabel').textContent = '等待房主开始';
+      $('statusLabel').textContent = '未开局';
+      $('board').innerHTML = '';
+      $('diceLine').innerHTML = '';
+      $('msg').textContent = '房主开始后，空位由 AI 补齐。';
+      $('logList').innerHTML = '';
+      $('cubeRow').innerHTML = '';
+    }
+
+    renderActions(r);
+
+    var fin = $('finale');
+    if (r.over && r.result) {
+      fin.hidden = false;
+      var result = r.result;
+      $('finaleTitle').textContent = result.winnerName ? result.winnerName + ' 获胜' : '结算';
+      var typeText = result.type === 'backgammon' ? 'backgammon ×3' : result.type === 'gammon' ? 'gammon ×2' : '单局 ×1';
+      $('finaleSub').textContent = typeText + ' · 倍数方块 ' + result.cubeValue + ' · 本局 ' + result.points + ' 分 · ' + (result.turns || 0) + ' 回合';
+      $('finaleRows').innerHTML = (result.losers || []).map(function (row) {
+        return '<div class="lbrow"><span>' + esc(row.name) + '</span><b>' + (row.score > 0 ? '+' : '') + row.score + ' 分</b></div>';
+      }).join('');
+      $('restartBtn').hidden = !r.canRestart;
+    } else {
+      fin.hidden = true;
+    }
+    $('leaveBtn').hidden = !r.started;
+  }
+
+  function legalMoveTo(from, to) {
+    if (!lastView || !lastView.state) return null;
+    var list = lastView.state.legalMoves || [];
+    for (var i = 0; i < list.length; i++) {
+      if (String(list[i].from) === String(from) && String(list[i].to) === String(to)) return list[i];
+    }
+    return null;
+  }
+  function onBoardTap(tap) {
+    if (!lastView || !lastView.state) return;
+    var list = lastView.state.legalMoves || [];
+    if (tap.type === 'off') {
+      if (selected != null) {
+        var offMove = legalMoveTo(selected, 'off');
+        if (offMove) { selected = null; act({ type: 'move', from: offMove.from, to: 'off', die: offMove.die }); return; }
+      }
+      return;
+    }
+    if (tap.type === 'bar') {
+      if (tap.side !== lastView.you) return;
+      if ((lastView.state.bar[tap.side] || 0) <= 0) return;
+      selected = selected === 'bar' ? null : 'bar';
+      render(lastView);
+      return;
+    }
+    var point = tap.point;
+    if (selected != null) {
+      var move = legalMoveTo(selected, point);
+      if (move) { selected = null; act({ type: 'move', from: move.from, to: move.to, die: move.die }); return; }
+      if (String(selected) === String(point)) { selected = null; render(lastView); return; }
+    }
+    if (list.some(function (m) { return String(m.from) === String(point); })) {
+      selected = point;
+      render(lastView);
+      return;
+    }
+    var candidates = list.filter(function (m) { return String(m.to) === String(point); });
+    if (candidates.length === 1) { selected = null; act({ type: 'move', from: candidates[0].from, to: candidates[0].to, die: candidates[0].die }); return; }
+    selected = null;
+    render(lastView);
+  }
+
+  function fetchRoom() {
+    if (!roomKey || !session) { showBoard(false); return Promise.resolve(null); }
+    return api('GET', '/api/rooms/' + encodeURIComponent(roomKey) + '?session=' + encodeURIComponent(session) + '&playerId=' + encodeURIComponent(playerId))
+      .then(function (r) {
+        if (r.status === 401) {
+          return api('POST', '/api/rooms/' + encodeURIComponent(roomKey) + '/reconnect', { session: session, playerId: playerId })
+            .then(function (rr) {
+              if (!rr.body || !rr.body.ok) throw new Error('房间已失效，请重新创建。');
+              return rr;
+            });
+        }
+        if (r.status >= 400) throw new Error(errText(r));
+        return r;
+      })
+      .then(function (r) {
+        if (!r) return;
+        var view = r.body || {};
+        showBoard(true);
+        if (view.stateVersion !== lastVersion) {
+          lastVersion = view.stateVersion;
+          selected = null;
+          render(view);
+        } else {
+          render(view);
+        }
+        if (view.inviteCode) invite = view.inviteCode;
+      })
+      .catch(function (e) { toast(e.message); });
+  }
+
+  function poll() {
+    if (timer) clearInterval(timer);
+    fetchRoom();
+    timer = setInterval(fetchRoom, 700);
+  }
+
+  function act(action) {
+    if (!session) return;
+    toast('');
+    selected = null;
+    api('POST', '/api/rooms/' + encodeURIComponent(roomKey) + '/actions', {
+      session: session, playerId: playerId, action: action
+    }).then(function (r) {
+      if (r.status >= 400) throw new Error(errText(r));
+      lastVersion = -1;
+      return fetchRoom();
+    }).catch(function (e) { toast(e.message); });
+  }
+
+  $('createBtn').addEventListener('click', createRoom);
+  $('joinBtn').addEventListener('click', function () {
+    $('joinFields').hidden = false;
+    joinRoom();
+  });
+  $('startBtn').addEventListener('click', function () {
+    api('POST', '/api/rooms/' + encodeURIComponent(roomKey) + '/start', { session: session, playerId: playerId })
+      .then(function (r) { if (r.status >= 400) throw new Error(errText(r)); lastVersion = -1; return fetchRoom(); })
+      .catch(function (e) { toast(e.message); });
+  });
+  $('restartBtn').addEventListener('click', function () {
+    api('POST', '/api/rooms/' + encodeURIComponent(roomKey) + '/restart', { session: session, playerId: playerId })
+      .then(function (r) { if (r.status >= 400) throw new Error(errText(r)); lastVersion = -1; return fetchRoom(); })
+      .catch(function (e) { toast(e.message); });
+  });
+  $('leaveBtn').addEventListener('click', function () {
+    api('POST', '/api/rooms/' + encodeURIComponent(roomKey) + '/leave', { session: session, playerId: playerId })
+      .then(function () { showBoard(false); if (timer) clearInterval(timer); })
+      .catch(function () { showBoard(false); });
+  });
+  $('inviteBtn').addEventListener('click', function () {
+    var url = location.origin + '/boardgame/backgammon-premium/online.html?room=' + encodeURIComponent(roomKey) + '&code=' + encodeURIComponent(invite || '');
+    var done = function () { toast('邀请链接已复制：' + url); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done).catch(done);
+    else done();
+  });
+
+  function loadLeaderboard() {
+    if (location.pathname.indexOf('/games/') === 0) return; // static site: no room API
+    api('GET', '/api/leaderboard?game=backgammon-premium').then(function (r) {
+      var entries = (r.body && r.body.entries) || [];
+      $('leaderboard').innerHTML = entries.length
+        ? entries.slice(0, 12).map(function (e) {
+          return '<div class="lbrow"><span>' + esc(e.name) + (e.ai ? ' · AI' : '') + '</span><b>' + (e.winner ? '胜' : (e.score == null ? '' : e.score)) + '</b></div>';
+        }).join('')
+        : '<p class="muted">还没有结算记录。</p>';
+    }).catch(function () {});
+  }
+  loadLeaderboard();
+  setInterval(loadLeaderboard, 5000);
+
+  // Public test hook: the last server view and the action/refresh helpers. No
+  // private data exists beyond what the server already returned to this seat.
+  window.__online = {
+    view: function () { return lastView; },
+    refresh: fetchRoom,
+    act: act,
+    selected: function () { return selected; }
+  };
+
+  if (roomKey && session) { showBoard(true); poll(); }
+  else if (roomKey && invite) { showBoard(false); $('joinFields').hidden = false; $('roomCode').value = invite; }
+})();
+</script>
+</body>
+</html>

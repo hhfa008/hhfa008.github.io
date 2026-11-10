@@ -1,0 +1,178 @@
+{
+  "slug": "six-nimmt-premium",
+  "name": {
+    "zh": "谁是牛头王",
+    "en": "6 Nimmt!"
+  },
+  "type": "boardgame",
+  "status": "shipped",
+  "statusReason": "五项门禁全过：run-all 0 失败；单测覆盖 104 张牌、牛头分、升序结算、选行、第六张吃行、2–10 人自对弈、公共视图与页面静态检查；双客户端联机 E2E 58/0、浏览器 E2E 126/0，两者 --control exit 1；封面 1200×1200 + OG 1200×630 + 两张详情图 1200×800 本地合成；realism 六类校验通过；390×844 与 320×568 真机冒烟无溢出、触控 ≥44px、字号 ≥12px。",
+  "entry": "index.html",
+  "rules": "rules.html",
+  "design": "DESIGN.md",
+  "acceptance": "ACCEPTANCE.md",
+  "e2e": {
+    "script": "e2e.mjs",
+    "record": "E2E.md",
+    "command": "node games/boardgame/six-nimmt-premium/e2e.mjs",
+    "control": "node games/boardgame/six-nimmt-premium/e2e.mjs --control  # exit 1, intentional failure",
+    "environment": "dedicated resident audit Chrome via CDP 9333 (persistent profile, reused across runs); chrome-ensure reuse; one tab opened and closed; no temp Chrome/profile",
+    "online": {
+      "script": "test-online.js",
+      "command": "node games/boardgame/six-nimmt-premium/test-online.js",
+      "runAll": "auto-discovered by node games/tests/run-all.js",
+      "control": "node games/boardgame/six-nimmt-premium/test-online.js --control  # exit 1",
+      "assertions": 58,
+      "evidence": "online-e2e.json"
+    },
+    "assertions": 126
+  },
+  "singlePlayer": false,
+  "modeLabel": "2–10 人 · 联机 + AI 补位 / 3–5 人单人 AI",
+  "players": {
+    "min": 2,
+    "max": 10,
+    "best": [
+      3,
+      4,
+      5
+    ]
+  },
+  "playTime": {
+    "min": 20,
+    "max": 30
+  },
+  "age": 8,
+  "designer": "Wolfgang Kramer",
+  "year": 1994,
+  "awards": [
+    "Spiel des Jahres 1994 — Auswahlliste"
+  ],
+  "online": {
+    "status": "ready",
+    "required": [
+      "online-rooms",
+      "invite-flow",
+      "state-sync",
+      "reconnect",
+      "timeout-ai-takeover",
+      "leaderboard",
+      "dual-client-e2e-in-run-all"
+    ],
+    "entry": "online.html",
+    "server": "online-server.mjs",
+    "sharedServer": "../../shared/online-room-server.mjs",
+    "transport": "HTTP/JSON + 700ms polling; server-authoritative; LAN-only by default",
+    "features": {
+      "rooms": "2–10 seats; room id + invite token + optional password",
+      "invite": "inviteUrl uses the request Host; opens /boardgame/six-nimmt-premium/online.html?room=&code=",
+      "stateSync": "stateVersion + lastAction; every viewer receives the same public view",
+      "simultaneousPicks": "each human submits one hidden card; opponents only see picked:true, never the card; AI seats fill server-side",
+      "aiFill": "empty seats fill to 3 players (up to 10) with the same engine and pure AI decision function",
+      "reconnect": "session token + POST /api/rooms/:id/reconnect; reconnect clears timeout takeover",
+      "timeoutTakeover": "no session request for 15s → server AI plays the seat; reconnect restores it",
+      "leaderboard": "GET /api/leaderboard?game=six-nimmt-premium; AI participants included; raw playerId hashed",
+      "idempotency": "per-player idempotencyKey cached before the action guard"
+    },
+    "evidence": {
+      "http": "node games/boardgame/six-nimmt-premium/test-online.js — 58 assertions",
+      "browser": "node games/boardgame/six-nimmt-premium/e2e.mjs online section",
+      "runAll": "test-online.js is auto-discovered by node games/tests/run-all.js"
+    }
+  },
+  "shared": {
+    "shuffle": "games/shared/shuffle.js — engine.js require + index.html script tag; seeded Fisher-Yates",
+    "sfx": "games/shared/sfx.js — index.html script tag; no per-game AudioContext",
+    "rules": "N/A — 6 Nimmt rules live in engine.js",
+    "physics": "N/A — no physics simulation",
+    "leaderboard": "shared room server keeps an anonymous in-memory board; no leaderboard copy"
+  },
+  "assets": {
+    "cover": "assets/cover.webp",
+    "coverMaster": "assets/cover.png",
+    "og": "assets/og.webp",
+    "ogMaster": "assets/og.png",
+    "detailImages": [
+      "assets/detail-1.webp",
+      "assets/detail-2.webp"
+    ],
+    "detailMasters": [
+      "assets/detail-1.png",
+      "assets/detail-2.png"
+    ],
+    "singleObject": [
+      "../../assets/art/premium/six-nimmt/felt-table.webp",
+      "../../assets/art/premium/six-nimmt/card-paper.webp",
+      "../../assets/art/premium/six-nimmt/card-back.webp",
+      "../../assets/art/premium/six-nimmt/bull-token.webp",
+      "../../assets/art/premium/six-nimmt/wood-rail.webp",
+      "../../assets/art/premium/six-nimmt/row-ribbon.webp"
+    ],
+    "compositionSource": "art-render.html",
+    "compositionScript": "render-art.mjs",
+    "localOnly": true
+  },
+  "realism": {
+    "rules": {
+      "cards": 104,
+      "cardRange": [
+        1,
+        104
+      ],
+      "handSize": 10,
+      "rows": 4,
+      "rounds": 10,
+      "players": [
+        2,
+        10
+      ],
+      "bullHeads": "55=7; multiples of 11=5; multiples of 10=3; multiples of 5=2; else 1",
+      "resolution": "simultaneous picks, ascending reveal; highest lower row end; below all rows = choose a row; sixth card takes five",
+      "scoring": "sum bull heads of taken cards; lowest total wins; ties share the win",
+      "hidden": [
+        "other players' hands",
+        "pending picks of other players",
+        "cards out of play"
+      ]
+    },
+    "dimensions": {
+      "cardMm": [
+        56,
+        87
+      ],
+      "cardGsm": 300,
+      "boxMm": [
+        190,
+        130,
+        40
+      ]
+    },
+    "sources": [
+      "Bilibili BV1neA2z4ENU — 谁是牛头王｜规则讲解+试玩演示",
+      "Bilibili BV1BfchzTEjB — 牛头王规则",
+      "Bilibili BV1q7411s732 — 谁是牛头王，规则教学，6 nimmt"
+    ]
+  },
+  "performanceBudgets": {
+    "fcpMs": 2500,
+    "loadEventEndMs": 4000,
+    "domNodes": 2500,
+    "fps": 30,
+    "newGameRenderMs": 200,
+    "materialBytes": 2097152,
+    "externalRequests": 0
+  },
+  "mobile": {
+    "viewports": [
+      "390x844",
+      "320x568",
+      "844x390",
+      "568x320"
+    ],
+    "touchTargetPx": 44,
+    "safeArea": true,
+    "dvh": true,
+    "offline": true,
+    "hoverDependent": false
+  }
+}

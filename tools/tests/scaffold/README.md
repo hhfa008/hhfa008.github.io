@@ -332,12 +332,13 @@ var ToolEngine = (function () {
 - 检查：无 console error / 异常 / 外部请求；390/320 无横向滚动；触控 ≥44×44px；深色/浅色背景亮度；`data-i` 全翻译；标题变化；`aria-pressed`。
 - 自测 demo 时，browser-check 需要目录名 = slug：
   ```bash
-  mkdir -p /tmp/tools-scaffold-check/example-tool
+  mkdir -p /Users/fa/games/tools/tests/scaffold/check-run/example-tool
   cp /Users/fa/games/tools/tests/scaffold/examples/demo.html \
-     /tmp/tools-scaffold-check/example-tool/index.html
+     /Users/fa/games/tools/tests/scaffold/check-run/example-tool/index.html
   cd /Users/fa/games
-  TOOLS_CHECK_ROOT=/tmp/tools-scaffold-check \
+  TOOLS_CHECK_ROOT=/Users/fa/games/tools/tests/scaffold/check-run \
     node games/tests/browser-check.js example-tool --langs zh,en,id
+  rm -rf /Users/fa/games/tools/tests/scaffold/check-run
   ```
   真实工具直接在 `tools/<slug>/index.html`，不需要复制。
 

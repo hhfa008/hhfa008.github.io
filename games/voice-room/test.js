@@ -1,708 +1,840 @@
-#!/usr/bin/env node
 'use strict';
 
 /*
- * Offline self-checks for the voice-room Worker Durable Object.
+ * voice-room (语音房) test.
  *
- * RoomDO is imported directly (no wrangler, no network): Node's WebCrypto,
- * atob/btoa and TextEncoder provide everything the module needs. Only two
- * Cloudflare globals are stubbed — Response and WebSocketPair — so the real
- * handleJoin / fetch / handleMove / webSocketMessage code paths run unchanged.
+ * Two layers, no network and no real Worker:
  *
- * Covered:
- *   1. Reconnect token: HMAC generation, expiry, tamper and wrong-pid rejection.
- *   2. Password room: SHA-256(salt||password) derivation, constant-time
- *      comparison, 5 failures -> 60 s lock, lock expiry, password format.
- *   3. Join outcomes: need_password, room_exists, passwordless rooms.
- *   4. Capacity: 4 members max, reconnect takeover keeps the seat.
- *   5. Move legality: tic-tac-toe, gomoku and connect four illegal moves.
- *   6. Host-only reset/select.
- *   7. Message envelope validation.
+ *   1. Page contract — index.html / guide.html / rules.html / registry.json are
+ *      read as text. index.html has one large IIFE inline script with no
+ *      __TEST_CORE_* or <script id="..."> extraction marker, and it touches
+ *      location / DOM / WebRTC at load time, so per the repo convention the
+ *      page side is covered with static assertions only (markup contract,
+ *      three-language dictionary parity, a11y, endpoints, limits).
  *
- * The Worker keeps its constants private. The test reads them from the source
- * file and asserts they match the values observed through behaviour, so a
- * future edit cannot silently desynchronise the mirrored expectations.
- *
- * Run: node games/voice-room/test.js
+ *   2. Worker logic — worker/src/room.js is an ES module with one side-effect
+ *      import and only `RoomDO` exported; the pure helpers are module-private
+ *      and Node cannot `require()` an ESM file from this CJS test. We load a
+ *      derived in-memory copy through a data: URL ESM import: the side-effect
+ *      import is replaced by a normal `require('../shared/rules.js')` (which
+ *      publishes globalThis.GameRules, exactly like the browser/Worker), and
+ *      the module-private helpers are re-exported for testing. Product files
+ *      are never written.
  */
 
 var fs = require('fs');
 var path = require('path');
-var { pathToFileURL } = require('url');
-var lib = require('../tests/lib');
-
-var ROOM_PATH = path.join(__dirname, 'worker', 'src', 'room.js');
-var SRC = fs.readFileSync(ROOM_PATH, 'utf8');
+var nodeCrypto = require('crypto');
+var lib = require('../tests/lib.js');
 
 var s = lib.suite('voice-room');
 
-function A(label, cond, detail) {
-  return [label, !!cond, detail];
+var DIR = __dirname;
+var INDEX_HTML = path.join(DIR, 'index.html');
+var GUIDE_HTML = path.join(DIR, 'guide.html');
+var RULES_HTML = path.join(DIR, 'rules.html');
+var ROOM_JS = path.join(DIR, 'worker', 'src', 'room.js');
+var WORKER_JS = path.join(DIR, 'worker', 'src', 'index.js');
+var REGISTRY = path.join(DIR, '..', 'registry.json');
+
+var html = lib.page(DIR);
+var guide = fs.readFileSync(GUIDE_HTML, 'utf8');
+var rulesPage = fs.readFileSync(RULES_HTML, 'utf8');
+var roomSource = fs.readFileSync(ROOM_JS, 'utf8');
+var workerSource = fs.readFileSync(WORKER_JS, 'utf8');
+var registry = JSON.parse(fs.readFileSync(REGISTRY, 'utf8'));
+
+// ---------------------------------------------------------------------------
+// Static parsing helpers
+// ---------------------------------------------------------------------------
+
+function matchAll(text, re) {
+  var out = [];
+  var m;
+  re.lastIndex = 0;
+  while ((m = re.exec(text))) out.push(m[1]);
+  return out;
 }
 
-function sourceConst(name) {
-  var re = new RegExp('\\b' + name + '\\s*=\\s*([^;]+);');
-  var m = SRC.match(re);
-  if (!m) throw new Error('constant not found in room.js: ' + name);
-  return Function('return (' + m[1].trim() + ');')();
-}
-
-var CONST = {
-  MAX_MEMBERS: sourceConst('MAX_MEMBERS'),
-  RECONNECT_GRACE_MS: sourceConst('RECONNECT_GRACE_MS'),
-  PASSWORD_MIN: sourceConst('PASSWORD_MIN'),
-  PASSWORD_MAX: sourceConst('PASSWORD_MAX'),
-  MAX_PASSWORD_FAILS: sourceConst('MAX_PASSWORD_FAILS'),
-  PASSWORD_LOCK_MS: sourceConst('PASSWORD_LOCK_MS'),
-  JOIN_TOKEN_TTL_MS: sourceConst('JOIN_TOKEN_TTL_MS')
-};
-
-var BOARD_SIZE = { ttt: 9, gomoku: 225, connect4: 42 };
-
-/* ------------------------------------------------------------------ *
- * Fake Durable Object environment                                     *
- * ------------------------------------------------------------------ */
-
-function makeStorage(init) {
-  var map = new Map(Object.entries(init || {}));
-  return {
-    _map: map,
-    get: async function (k) { return map.get(k); },
-    put: async function (k, v) { map.set(k, v); },
-    delete: async function (k) { map.delete(k); },
-    deleteAll: async function () { map.clear(); },
-    setAlarm: async function () {},
-    deleteAlarm: async function () {}
-  };
-}
-
-function makeSocket() {
-  var att = null;
-  var sock = {
-    sent: [],
-    closed: null,
-    send: function (raw) { sock.sent.push(JSON.parse(raw)); },
-    close: function (code, reason) { sock.closed = { code: code, reason: reason }; },
-    serializeAttachment: function (a) { att = a; },
-    deserializeAttachment: function () { return att; }
-  };
-  return sock;
-}
-
-function makeState(init) {
-  var sockets = [];
-  return {
-    _sockets: sockets,
-    storage: makeStorage(init || {}),
-    getWebSockets: function () { return sockets.slice(); },
-    acceptWebSocket: function (ws) { sockets.push(ws); }
-  };
-}
-
-function member(id, pid, joinedAt) {
-  return { id: id, pid: pid, name: pid, mic: false, joinedAt: joinedAt, leftAt: null };
-}
-
-function joinRequest(body, ip) {
-  return {
-    json: async function () { return body; },
-    headers: {
-      get: function (k) { return k === 'CF-Connecting-IP' ? (ip || '10.0.0.1') : null; }
+// Slice out a balanced {...} starting at `open`, ignoring braces inside
+// strings so interpolations like {room} do not disturb the depth count.
+function extractObjectAt(text, open) {
+  var depth = 0, quote = null, esc = false;
+  for (var i = open; i < text.length; i++) {
+    var c = text[i];
+    if (quote) {
+      if (esc) { esc = false; continue; }
+      if (c === '\\') { esc = true; continue; }
+      if (c === quote) quote = null;
+      continue;
     }
-  };
-}
-
-function wsRequest(pid, token, name) {
-  return {
-    url: 'https://worker.test/ws?room=1234&pid=' + encodeURIComponent(pid || '') +
-      '&name=' + encodeURIComponent(name || 'p') +
-      '&token=' + encodeURIComponent(token || ''),
-    headers: {
-      get: function (k) { return k === 'Upgrade' ? 'websocket' : null; }
+    if (c === "'" || c === '"' || c === '`') { quote = c; continue; }
+    if (c === '{') depth++;
+    else if (c === '}') {
+      depth--;
+      if (depth === 0) return text.slice(open, i + 1);
     }
-  };
-}
-
-async function join(room, body, ip) {
-  var res = await room.handleJoin(joinRequest(body, ip), '1234');
-  return await res.json();
-}
-
-function b64urlEncode(bytes) {
-  return Buffer.from(bytes).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-function b64urlDecode(str) {
-  return new Uint8Array(Buffer.from(String(str), 'base64url'));
-}
-
-async function passwordDigest(saltBytes, password) {
-  var pw = new TextEncoder().encode(String(password));
-  var buf = new Uint8Array(saltBytes.length + pw.length);
-  buf.set(saltBytes, 0);
-  buf.set(pw, saltBytes.length);
-  return new Uint8Array(await crypto.subtle.digest('SHA-256', buf));
-}
-
-function lastError(sock) {
-  var errs = sock.sent.filter(function (m) { return m.type === 'error'; });
-  return errs[errs.length - 1] || null;
-}
-function hasType(sock, type) {
-  return sock.sent.some(function (m) { return m.type === type; });
-}
-
-/* ------------------------------------------------------------------ *
- * Test groups (each returns assertion tuples)                         *
- * ------------------------------------------------------------------ */
-
-async function tokenTests(RoomDO) {
-  var out = [];
-  var room = new RoomDO(makeState(), {});
-  var token = await room.makeJoinToken('1234', 'p1');
-  var exp = Number(String(token).split('.')[0]);
-  var sig = String(token).split('.')[1];
-
-  out.push(A('token 形如 exp.base64url(sig)', /^\d+\.[A-Za-z0-9_-]+$/.test(token), String(token).slice(0, 28)));
-  out.push(A('有效期约为 24 小时', Math.abs(exp - (Date.now() + CONST.JOIN_TOKEN_TTL_MS)) < 5000,
-    'exp-now=' + (exp - Date.now())));
-  out.push(A('正确 room + pid 校验通过', (await room.verifyJoinToken('1234', 'p1', token)) === true));
-  out.push(A('换 pid 校验失败', (await room.verifyJoinToken('1234', 'p2', token)) === false));
-  out.push(A('换 room 校验失败', (await room.verifyJoinToken('9999', 'p1', token)) === false));
-
-  var swapped = sig.charAt(0) === 'A' ? 'B' : 'A';
-  var tampered = exp + '.' + swapped + sig.slice(1);
-  out.push(A('篡改签名校验失败', (await room.verifyJoinToken('1234', 'p1', tampered)) === false));
-  out.push(A('截短签名校验失败', (await room.verifyJoinToken('1234', 'p1', exp + '.' + sig.slice(0, -2))) === false));
-  out.push(A('缺少点号的 token 被拒绝', (await room.verifyJoinToken('1234', 'p1', String(exp))) === false));
-  out.push(A('空 token 被拒绝', (await room.verifyJoinToken('1234', 'p1', '')) === false));
-
-  var past = Date.now() - 1000;
-  var pastSig = b64urlEncode(await room.signPayload('1234|p1|' + past));
-  out.push(A('已过期 token 校验失败', (await room.verifyJoinToken('1234', 'p1', past + '.' + pastSig)) === false));
-
-  var future = Date.now() + 60000;
-  var futureSig = b64urlEncode(await room.signPayload('1234|p1|' + future));
-  out.push(A('未过期且签名正确校验通过',
-    (await room.verifyJoinToken('1234', 'p1', future + '.' + futureSig)) === true));
-
-  out.push(A('不同 pid 的签名不可互换',
-    (await room.verifyJoinToken('1234', 'p2', future + '.' + futureSig)) === false));
-  return out;
-}
-
-async function passwordTests(RoomDO) {
-  var assertions = [];
-  var state = makeState();
-  var room = new RoomDO(state, {});
-  var IP = '10.9.0.1';
-
-  var created = await join(room, { pid: 'p1', password: 'abcd', create: true }, IP);
-  assertions.push(A('创建密码房成功并返回 hasPassword', created.ok === true && created.hasPassword === true,
-    JSON.stringify(created).slice(0, 80)));
-
-  var meta = await state.storage.get('meta');
-  var auth = meta && meta.auth;
-  assertions.push(A('auth.algo 为 sha256', !!auth && auth.algo === 'sha256', auth && auth.algo));
-  assertions.push(A('auth.length 记录密码长度', !!auth && auth.length === 4, String(auth && auth.length)));
-
-  var salt = b64urlDecode(auth.salt);
-  var hash = b64urlDecode(auth.hash);
-  assertions.push(A('salt 为 16 字节', salt.length === 16, String(salt.length)));
-  assertions.push(A('hash 为 32 字节（SHA-256）', hash.length === 32, String(hash.length)));
-
-  var derived = await passwordDigest(salt, 'abcd');
-  assertions.push(A('hash === SHA-256(salt||password)',
-    Buffer.compare(Buffer.from(derived), Buffer.from(hash)) === 0));
-
-  assertions.push(A('verifyPassword 接受正确密码', (await room.verifyPassword('abcd', auth)) === true));
-  assertions.push(A('verifyPassword 拒绝错误密码', (await room.verifyPassword('abce', auth)) === false));
-
-  var flipped = b64urlDecode(auth.hash);
-  flipped[0] ^= 0x01;
-  assertions.push(A('同长度篡改 hash 仍返回 false',
-    (await room.verifyPassword('abcd', { salt: auth.salt, hash: b64urlEncode(flipped) })) === false));
-  assertions.push(A('截短 hash（长度不同）返回 false',
-    (await room.verifyPassword('abcd', { salt: auth.salt, hash: auth.hash.slice(0, -2) })) === false));
-  assertions.push(A('损坏的 salt 不抛错、返回 false',
-    (await room.verifyPassword('abcd', { salt: '!!!', hash: auth.hash })) === false));
-
-  for (var i = 1; i <= 4; i++) {
-    var r = await join(room, { pid: 'p1', password: 'wrong' + i }, IP);
-    assertions.push(A('第 ' + i + ' 次错误密码返回 bad_password', r.code === 'bad_password', String(r.code)));
   }
-  var rate4 = await state.storage.get('rate:' + IP);
-  assertions.push(A('前 4 次错误累计 fails=4 且未锁定',
-    !!rate4 && rate4.fails === 4 && !rate4.until, JSON.stringify(rate4)));
+  throw new Error('unbalanced object starting at ' + open);
+}
 
-  var fifth = await join(room, { pid: 'p1', password: 'wrong5' }, IP);
-  var rate5 = await state.storage.get('rate:' + IP);
-  assertions.push(A('第 5 次错误仍返回 bad_password', fifth.code === 'bad_password', String(fifth.code)));
-  assertions.push(A('第 5 次错误触发锁定并清零 fails',
-    !!rate5 && rate5.fails === 0 && rate5.until > 0, JSON.stringify(rate5)));
-  assertions.push(A('锁定时长约 60 秒',
-    !!rate5 && Math.abs(rate5.until - (Date.now() + CONST.PASSWORD_LOCK_MS)) < 5000,
-    rate5 ? String(rate5.until - Date.now()) : 'no rate'));
-
-  var locked = await join(room, { pid: 'p1', password: 'abcd' }, IP);
-  assertions.push(A('锁定期间即使密码正确也返回 rate_limited', locked.code === 'rate_limited', String(locked.code)));
-  assertions.push(A('锁定期 retryAfter 在 1..60 秒之间',
-    locked.retryAfter >= 1 && locked.retryAfter <= 60, String(locked.retryAfter)));
-
-  var realNow = Date.now;
-  var unlocked;
-  try {
-    Date.now = function () { return realNow() + CONST.PASSWORD_LOCK_MS + 2000; };
-    unlocked = await join(room, { pid: 'p1', password: 'abcd' }, IP);
-  } finally {
-    Date.now = realNow;
+// Parse `key: 'value', key2: "value2"` entries of a flat object literal.
+function parseStringEntries(objectText) {
+  var out = Object.create(null);
+  var i = 1, end = objectText.length - 1;
+  while (i < end) {
+    while (i < end && /[\s,]/.test(objectText[i])) i++;
+    if (i >= end) break;
+    var m = /^([A-Za-z0-9_]+)\s*:\s*/.exec(objectText.slice(i));
+    if (!m) throw new Error('bad i18n entry near ' + JSON.stringify(objectText.slice(i, i + 40)));
+    var key = m[1];
+    i += m[0].length;
+    var q = objectText[i];
+    if (q !== "'" && q !== '"') throw new Error('non-string i18n value: ' + key);
+    i++;
+    var value = '';
+    while (i < end) {
+      var c = objectText[i++];
+      if (c === '\\') { value += objectText[i++]; continue; }
+      if (c === q) break;
+      value += c;
+    }
+    out[key] = value;
   }
-  assertions.push(A('锁定期满后正确密码可加入', unlocked.ok === true, JSON.stringify(unlocked).slice(0, 60)));
-  assertions.push(A('成功加入后限流记录被删除', (await state.storage.get('rate:' + IP)) === undefined));
-
-  return { assertions: assertions, lockAfter: 5 };
-}
-
-async function passwordFormatTests(RoomDO) {
-  var out = [];
-  var r1 = await join(new RoomDO(makeState(), {}), { pid: 'p', password: 'abc', create: true }, '10.1.0.1');
-  out.push(A('3 位密码创建被拒绝', r1.code === 'bad_password_format', String(r1.code)));
-
-  var r2 = await join(new RoomDO(makeState(), {}), { pid: 'p', password: 'a'.repeat(33), create: true }, '10.1.0.2');
-  out.push(A('33 位密码创建被拒绝', r2.code === 'bad_password_format', String(r2.code)));
-
-  var r3 = await join(new RoomDO(makeState(), {}), { pid: 'p', password: 'abcd', create: true }, '10.1.0.3');
-  out.push(A('4 位密码可创建（下界）', r3.ok === true, JSON.stringify(r3).slice(0, 50)));
-
-  var r4 = await join(new RoomDO(makeState(), {}), { pid: 'p', password: 'a'.repeat(32), create: true }, '10.1.0.4');
-  out.push(A('32 位密码可创建（上界）', r4.ok === true, JSON.stringify(r4).slice(0, 50)));
-
   return out;
 }
 
-async function joinOutcomeTests(RoomDO) {
-  var out = [];
-  var state = makeState();
-  var room = new RoomDO(state, {});
-  var IP = '10.2.0.1';
-  await join(room, { pid: 'p1', password: 'abcd', create: true }, IP);
-
-  var noPw = await join(room, { pid: 'p2' }, IP);
-  out.push(A('已有密码房不带密码 → need_password', noPw.code === 'need_password', String(noPw.code)));
-
-  var again = await join(room, { pid: 'p2', password: 'abcd', create: true }, IP);
-  out.push(A('已有密码房再次 create → room_exists', again.code === 'room_exists', String(again.code)));
-
-  var rosterState = makeState({ members: [member('m1', 'p1', 1)] });
-  var rosterRoom = new RoomDO(rosterState, {});
-  var occupied = await join(rosterRoom, { pid: 'p2', password: 'wxyz', create: true }, '10.2.0.2');
-  out.push(A('非空房间不能被后来者加密码占用', occupied.code === 'room_exists', String(occupied.code)));
-
-  var openState = makeState();
-  var openRoom = new RoomDO(openState, {});
-  var opened = await join(openRoom, { pid: 'p3', create: true }, '10.2.0.3');
-  out.push(A('无密码房可创建且 hasPassword=false', opened.ok === true && opened.hasPassword === false));
-  var openMeta = await openState.storage.get('meta');
-  out.push(A('无密码房不写入 auth', !!openMeta && openMeta.auth === undefined));
-
-  var ignored = await join(openRoom, { pid: 'p4', password: 'ignored' }, '10.2.0.4');
-  var ignoredMeta = await openState.storage.get('meta');
-  out.push(A('无密码房提交的密码被忽略', ignored.ok === true && ignoredMeta.auth === undefined));
-
-  return out;
+function i18nDicts(source) {
+  var start = source.indexOf('const I18N =');
+  if (start < 0) throw new Error('const I18N not found');
+  var outer = extractObjectAt(source, source.indexOf('{', start));
+  var langs = {};
+  ['zh', 'en', 'id'].forEach(function (lang) {
+    var m = new RegExp('\\b' + lang + '\\s*:\\s*\\{').exec(outer);
+    if (!m) throw new Error(lang + ' dictionary not found');
+    langs[lang] = parseStringEntries(extractObjectAt(outer, outer.indexOf('{', m.index)));
+  });
+  return langs;
 }
 
-async function capacityTests(RoomDO) {
-  var assertions = [];
-  var members4 = [
-    member('m1', 'p1', 1), member('m2', 'p2', 2),
-    member('m3', 'p3', 3), member('m4', 'p4', 4)
+function placeholders(value) {
+  var out = [];
+  var m;
+  var re = /\{([A-Za-z0-9_]+)\}/g;
+  while ((m = re.exec(value))) if (out.indexOf(m[1]) === -1) out.push(m[1]);
+  return out.sort();
+}
+
+function keysOf(dict) { return Object.keys(dict).sort(); }
+
+var I18N = i18nDicts(html);
+
+// The client keeps the Worker wire protocol as { code, message } and localizes
+// known error codes before the toast. Parse that table so mapped keys count as
+// referenced i18n entries.
+function errorKeyMap(source) {
+  var start = source.indexOf('const SERVER_ERR_KEYS =');
+  if (start < 0) return null;
+  return parseStringEntries(extractObjectAt(source, source.indexOf('{', start)));
+}
+
+var ERR_KEYS = errorKeyMap(html);
+var WORKER_ERR_CODES = [
+  'room_full', 'bad_json', 'room_mismatch', 'not_member', 'unknown_type',
+  'bad_signal', 'signal_too_large', 'no_peer', 'host_only', 'bad_game',
+  'waiting_peer', 'game_over', 'not_your_turn', 'bad_move', 'cell_taken',
+  'column_full'
+];
+
+// Load room.js as a real ES module, without touching the product file.
+function loadRoomCore() {
+  require('../shared/rules.js'); // UMD: publishes globalThis.GameRules
+  var imports = roomSource.match(/^import .*$/gm) || [];
+  var body = roomSource.replace(/^import .*$/gm, '');
+  var extra = [
+    'MAX_MEMBERS', 'RECONNECT_GRACE_MS', 'PASSWORD_MIN', 'PASSWORD_MAX',
+    'MAX_PASSWORD_FAILS', 'PASSWORD_LOCK_MS', 'JOIN_TOKEN_TTL_MS',
+    'KINDS', 'DEFAULT_KIND', 'TTT_WIN_LINES',
+    'cleanName', 'cleanPid', 'isIntIn', 'sortMembers', 'hostIdOf',
+    'hostIdWithGrace', 'hostOfflineOf', 'seatsOf', 'publicMembers', 'kindOf',
+    'emptyGame', 'scoreNum', 'normalizeGameShape', 'isEmptyBoard', 'tttWinnerOf',
+    'toNumericBoard', 'fromNumericBoard', 'stoneCount', 'alignGame', 'roomState',
+    'bytesToBase64Url', 'base64UrlToBytes', 'constantTimeEqual', 'passwordDigest'
   ];
-
-  // 4 active members -> 5th rejected.
-  var fullState = makeState({ members: members4 });
-  var fullRoom = new RoomDO(fullState, {});
-  fullRoom.roomCode = '1234';
-  members4.forEach(function (m) {
-    var sock = makeSocket();
-    sock.serializeAttachment({ id: m.id, name: m.name, room: '1234', pid: m.pid });
-    fullState.acceptWebSocket(sock);
+  body += '\nexport { ' + extra.join(', ') + ' };\n';
+  var dataUrl = 'data:text/javascript;base64,' +
+    Buffer.from(body, 'utf8').toString('base64');
+  return import(dataUrl).then(function (mod) {
+    return { mod: mod, imports: imports };
   });
-  var fifthToken = await fullRoom.makeJoinToken('1234', 'p5');
-  var fullRes = await fullRoom.fetch(wsRequest('p5', fifthToken, 'e'));
-  var rejected = fullState._sockets[fullState._sockets.length - 1];
-  assertions.push(A('4 人之后第 5 人被满员拒绝',
-    fullRes.status === 101 && !!lastError(rejected) && lastError(rejected).code === 'room_full',
-    JSON.stringify(lastError(rejected))));
-  assertions.push(A('满员连接以 4001 关闭', !!rejected.closed && rejected.closed.code === 4001,
-    JSON.stringify(rejected.closed)));
-  assertions.push(A('满员拒绝不写成员表（仍为 4）',
-    (await fullState.storage.get('members')).length === 4));
-
-  // 3 active -> 4th accepted.
-  var acceptState = makeState({ members: members4.slice(0, 3) });
-  var acceptRoom = new RoomDO(acceptState, {});
-  acceptRoom.roomCode = '1234';
-  members4.slice(0, 3).forEach(function (m) {
-    var sock = makeSocket();
-    sock.serializeAttachment({ id: m.id, name: m.name, room: '1234', pid: m.pid });
-    acceptState.acceptWebSocket(sock);
-  });
-  var fourthToken = await acceptRoom.makeJoinToken('1234', 'p4');
-  var fourthRes = await acceptRoom.fetch(wsRequest('p4', fourthToken, 'd'));
-  var fourthSock = acceptState._sockets[acceptState._sockets.length - 1];
-  var welcome = fourthSock.sent.filter(function (m) { return m.type === 'welcome'; })[0];
-  assertions.push(A('第 4 人可以加入', fourthRes.status === 101 && !!welcome, String(fourthRes.status)));
-  assertions.push(A('成员表增加到 4', (await acceptState.storage.get('members')).length === 4));
-
-  // Same pid reconnects while 4 active -> takeover, not a 5th seat.
-  var takeState = makeState({ members: members4 });
-  var takeRoom = new RoomDO(takeState, {});
-  takeRoom.roomCode = '1234';
-  members4.forEach(function (m) {
-    var sock = makeSocket();
-    sock.serializeAttachment({ id: m.id, name: m.name, room: '1234', pid: m.pid });
-    takeState.acceptWebSocket(sock);
-  });
-  var oldSock = takeState._sockets[0];
-  var reconnectToken = await takeRoom.makeJoinToken('1234', 'p1');
-  var reconnectRes = await takeRoom.fetch(wsRequest('p1', reconnectToken, 'again'));
-  var newSock = takeState._sockets[takeState._sockets.length - 1];
-  var reWelcome = newSock.sent.filter(function (m) { return m.type === 'welcome'; })[0];
-  assertions.push(A('满员时同一 pid 重连被允许（接管座位）', reconnectRes.status === 101));
-  assertions.push(A('旧连接以 4003 replaced 关闭',
-    !!oldSock.closed && oldSock.closed.code === 4003, JSON.stringify(oldSock.closed)));
-  assertions.push(A('重连沿用原 id，不新增第 5 个成员',
-    !!reWelcome && reWelcome.selfId === 'm1' &&
-    (await takeState.storage.get('members')).length === 4,
-    reWelcome ? reWelcome.selfId : 'no welcome'));
-
-  // Same pid while its member is offline within the grace window.
-  var offState = makeState({ members: [member('m1', 'p1', 1)] });
-  offState.storage._map.get('members')[0].leftAt = Date.now() - 1000;
-  var offRoom = new RoomDO(offState, {});
-  offRoom.roomCode = '1234';
-  var offToken = await offRoom.makeJoinToken('1234', 'p1');
-  var offRes = await offRoom.fetch(wsRequest('p1', offToken, 'back'));
-  var offSock = offState._sockets[offState._sockets.length - 1];
-  var offWelcome = offSock.sent.filter(function (m) { return m.type === 'welcome'; })[0];
-  assertions.push(A('宽限期内同一 pid 重连恢复原座位',
-    offRes.status === 101 && !!offWelcome && offWelcome.selfId === 'm1' &&
-    (await offState.storage.get('members')).length === 1,
-    offWelcome ? offWelcome.selfId : 'no welcome'));
-
-  // Missing token never reaches the socket.
-  var guardRoom = new RoomDO(makeState(), {});
-  var guardRes = await guardRoom.fetch(wsRequest('p9', ''));
-  assertions.push(A('缺少 token 的升级请求被 403 拒绝', guardRes.status === 403, String(guardRes.status)));
-
-  return { assertions: assertions, maxMembers: 4 };
 }
 
-async function moveRoom(RoomDO, kind, overrides) {
-  var members = [member('m1', 'p1', 1), member('m2', 'p2', 2)];
-  var game = Object.assign({
-    kind: kind,
-    board: new Array(BOARD_SIZE[kind]).fill(null),
-    turn: 'X',
-    winner: null,
-    line: null,
-    xId: 'm1',
-    oId: 'm2',
-    scores: { X: 0, O: 0 },
-    round: 1,
-    updatedAt: 1
-  }, overrides || {});
-  var state = makeState({ members: members, game: game });
-  var room = new RoomDO(state, {});
+function fakeWs(attachment) {
+  return {
+    attachment: attachment,
+    sent: [],
+    deserializeAttachment: function () { return this.attachment; },
+    serializeAttachment: function (a) { this.attachment = a; },
+    send: function (raw) { this.sent.push(JSON.parse(raw)); },
+    close: function () {}
+  };
+}
+
+function mockStorage(initial) {
+  var data = new Map(Object.entries(initial || {}));
+  var storage = {
+    data: data,
+    alarm: null,
+    get: function (key) { return Promise.resolve(data.get(key)); },
+    put: function (key, value) { data.set(key, value); return Promise.resolve(); },
+    delete: function (key) { data.delete(key); return Promise.resolve(); },
+    deleteAll: function () { data.clear(); return Promise.resolve(); },
+    setAlarm: function (at) { storage.alarm = at; return Promise.resolve(); },
+    deleteAlarm: function () { storage.alarm = null; return Promise.resolve(); }
+  };
+  return storage;
+}
+
+function mockState(storage, sockets) {
+  return {
+    storage: storage,
+    getWebSockets: function () { return sockets.slice(); },
+    acceptWebSocket: function () {}
+  };
+}
+
+function newRoom(RoomDO, storage, sockets) {
+  var room = new RoomDO(mockState(storage, sockets), {});
   room.roomCode = '1234';
-  var s1 = makeSocket();
-  var s2 = makeSocket();
-  s1.serializeAttachment({ id: 'm1', name: 'a', room: '1234', pid: 'p1' });
-  s2.serializeAttachment({ id: 'm2', name: 'b', room: '1234', pid: 'p2' });
-  state.acceptWebSocket(s1);
-  state.acceptWebSocket(s2);
-  return { room: room, state: state, members: members, s1: s1, s2: s2 };
+  return room;
 }
 
-async function moveTests(RoomDO) {
+// ---------------------------------------------------------------------------
+// Entry page: static contract
+// ---------------------------------------------------------------------------
+
+s.group('页面静态契约', function () {
+  s.ok('doctype html', /^\s*<!doctype html>/i.test(html));
+  s.ok('html lang=zh-CN', /<html[^>]*\blang="zh-CN"/i.test(html));
+  s.ok('charset utf-8', /<meta[^>]*charset="utf-8"/i.test(html));
+  s.ok('viewport 含 width=device-width', /<meta[^>]*name="viewport"[^>]*content="[^"]*width=device-width/i.test(html));
+  s.ok('viewport 含 initial-scale=1', /<meta[^>]*name="viewport"[^>]*content="[^"]*initial-scale=1/i.test(html));
+  s.ok('viewport 含 viewport-fit=cover', /viewport-fit=cover/i.test(html));
+  s.ok('title 有内容', /<title[^>]*>[^<]*语音房[^<]*<\/title>/.test(html));
+  s.ok('theme-color 已设置', /<meta[^>]*name="theme-color"/i.test(html));
+
+  var styles = matchAll(html, /<link\b[^>]*\brel="stylesheet"[^>]*\bhref="([^"]+)"/gi);
+  s.eq('只有 1 个样式表', styles.length, 1);
+  s.eq('样式表为站内共享样式', styles, ['/games/shared/arcade/legacy-mobile.css']);
+
+  var scripts = matchAll(html, /<script\b[^>]*\bsrc="([^"]+)"/gi);
+  s.eq('3 个外链脚本', scripts, ['../shared/store.js', '../shared/i18n.js', '/games/shared/share.js']);
+  s.eq('无协议/外站脚本', scripts.filter(function (src) {
+    return /^(?:https?:)?\/\//i.test(src);
+  }), []);
+  s.ok('无 document.write', html.indexOf('document.write') === -1);
+  s.ok('无 eval(', html.indexOf('eval(') === -1);
+  s.ok('无 new Function(', html.indexOf('new Function(') === -1);
+
+  s.ok('链接到 guide.html', /href="guide\.html"/.test(html));
+  s.ok('链接到 rules.html', /href="rules\.html"/.test(html));
+  s.ok('隐私说明写明不录音', /不录音/.test(html) && /不存储任何音频/.test(html));
+  s.ok('房号输入限 4 位数字', /id="code"[^>]*inputmode="numeric"[^>]*pattern="\[0-9\]\*"[^>]*maxlength="4"/.test(html));
+  s.ok('昵称限 12 字符', /id="name"[^>]*maxlength="12"/.test(html));
+  s.ok('密码输入限 32 字符', /id="createPw"[^>]*maxlength="32"/.test(html));
+
+  s.ok('客户端人数上限 4', /const MAX_MEMBERS = 4;/.test(html));
+  s.ok('随机房号为 1000–9999', /Math\.floor\(1000 \+ Math\.random\(\) \* 9000\)/.test(html));
+  s.eq('客户端 4 位房号校验出现 2 次', (html.match(/\^\\d\{4\}\$/g) || []).length, 2);
+  s.ok('默认 Worker 地址', html.indexOf('https://voice-room.superapp-devin.workers.dev') !== -1);
+  s.ok('邀请基址为站点地址', html.indexOf("https://hhfa008.github.io/games/voice-room/") !== -1);
+  s.ok('邀请链接对房号做 encodeURIComponent', /INVITE_BASE \+ '\?room=' \+ encodeURIComponent\(room\)/.test(html));
+
+  s.ok('暴露 __vrDebug 测试面板', /window\.__vrDebug = \{/.test(html));
+  ['get room', 'get selfId', 'get hostId', 'get game', 'get micInfo',
+    'get wsState', 'async quality', 'async stats', 'disconnect']
+    .forEach(function (member) {
+      s.ok('__vrDebug 提供 ' + member, html.indexOf(member) !== -1);
+    });
+});
+
+s.group('无障碍与三语标记', function () {
+  var dataKeys = matchAll(html, /data-i="([^"]+)"/g);
+  var phKeys = matchAll(html, /data-ip="([^"]+)"/g);
+  s.ok('data-i 文本标记不少于 20 个', dataKeys.length >= 20, 'got ' + dataKeys.length);
+  s.ok('data-ip 占位符标记不少于 3 个', phKeys.length >= 3, 'got ' + phKeys.length);
+
+  s.ok('Lobby 状态区 role=status', /id="inviteHint"[^>]*role="status"/.test(html));
+  s.ok('房内横幅 role=status', /id="banner"[^>]*role="status"/.test(html));
+  s.ok('错误提示 role=alert', /id="lobbyErr"[^>]*role="alert"/.test(html));
+  s.ok('游戏选择 role=group', /id="gamePicker"[^>]*role="group"/.test(html));
+  s.ok('房号输入有 aria-label', /id="code"[^>]*aria-label="4 位房号"/.test(html));
+  s.ok('分享按钮有 aria-label', /data-share-btn[^>]*aria-label="分享本页"/.test(html));
+  s.ok('棋盘有 aria-label', /id="board"[^>]*aria-label="多人棋局棋盘"/.test(html));
+  s.ok('密码显示按钮 aria-pressed', (html.match(/class="pw-toggle"[^>]*aria-pressed="false"/g) || []).length === 2);
+  s.ok('密码显示按钮 aria-controls 指向输入框', /aria-controls="createPw"/.test(html) && /aria-controls="joinPw"/.test(html));
+  s.ok('密码按钮 type=button', /id="createPwToggle"[^>]*type="button"/.test(html) && /id="joinPwToggle"[^>]*type="button"/.test(html));
+  s.ok('装饰性 SVG aria-hidden', /<svg[^>]*aria-hidden="true"/.test(html));
+  s.ok('电平条 aria-hidden', /class="q-bar" aria-hidden="true"/.test(html));
+  s.ok('质量面板 summary aria-controls', /<summary aria-controls="qualityBody">/.test(html));
+  s.ok('语言识别支持 ?lang=en', /indexOf\('en'\) === 0/.test(html));
+  s.ok('语言识别支持 ?lang=id 与旧写法 in', /q\.indexOf\('id'\) === 0 \|\| q === 'in'/.test(html));
+  s.ok('I18n 使用 data-i / data-ip / data-i-aria', /attrs: \{ text: 'data-i', ph: 'data-ip', aria: 'data-i-aria' \}/.test(html));
+});
+
+// Walk the body markup and report Chinese text that is not already bound to a
+// translation hook. Script/style bodies and comments are dropped first, then
+// any element carrying data-i / data-ip / data-i-aria (and its subtree) is
+// treated as an i18n fallback rather than a residual literal.
+function staticChineseResidue(bodyHtml) {
+  var text = bodyHtml
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<!--[\s\S]*?-->/g, ' ');
+  var voidTags = /^(?:br|hr|img|input|meta|link|source|area|base|col|embed|param|track|wbr)$/;
+  var re = /<\/?([a-zA-Z][\w-]*)\b[^>]*>/g;
+  var stack = [];
   var out = [];
-
-  // ---- tic-tac-toe ----
-  var ttt = await moveRoom(RoomDO, 'ttt');
-  await ttt.room.handleMove(ttt.members, ttt.members[0], { x: 3, y: 0 });
-  out.push(A('井字棋 x=3 越界被拒绝', !!lastError(ttt.s1) && lastError(ttt.s1).code === 'bad_move'));
-  var tttGame = await ttt.state.storage.get('game');
-  out.push(A('越界落子不改变棋盘', tttGame.board.every(function (v) { return v === null; })));
-
-  await ttt.room.handleMove(ttt.members, ttt.members[0], { x: 0, y: 0 });
-  tttGame = await ttt.state.storage.get('game');
-  out.push(A('合法落子写入 X 并轮到 O', tttGame.board[0] === 'X' && tttGame.turn === 'O',
-    JSON.stringify(tttGame.board.slice(0, 3))));
-  out.push(A('game_state 广播给双方', hasType(ttt.s1, 'game_state') && hasType(ttt.s2, 'game_state')));
-
-  await ttt.room.handleMove(ttt.members, ttt.members[0], { x: 1, y: 0 });
-  out.push(A('非当前回合落子被拒绝', !!lastError(ttt.s1) && lastError(ttt.s1).code === 'not_your_turn'));
-
-  await ttt.room.handleMove(ttt.members, ttt.members[1], { x: 1, y: 0 });
-  tttGame = await ttt.state.storage.get('game');
-  out.push(A('对手回合可正常落 O', tttGame.board[1] === 'O' && tttGame.turn === 'X'));
-
-  await ttt.room.handleMove(ttt.members, ttt.members[0], { x: 1, y: 0 });
-  out.push(A('已占用的格子被拒绝', !!lastError(ttt.s1) && lastError(ttt.s1).code === 'cell_taken'));
-
-  await ttt.room.handleMove(ttt.members, ttt.members[0], { index: 8 });
-  tttGame = await ttt.state.storage.get('game');
-  out.push(A('兼容旧版 {index} 落子', tttGame.board[8] === 'X', JSON.stringify(tttGame.board)));
-
-  var tttWin = await moveRoom(RoomDO, 'ttt', {
-    board: ['X', 'X', null, 'O', 'O', null, null, null, null], turn: 'X'
-  });
-  await tttWin.room.handleMove(tttWin.members, tttWin.members[0], { x: 2, y: 0 });
-  tttGame = await tttWin.state.storage.get('game');
-  out.push(A('井字棋连成三子判胜',
-    tttGame.winner === 'X' && JSON.stringify(tttGame.line) === '[0,1,2]' && tttGame.scores.X === 1,
-    JSON.stringify({ winner: tttGame.winner, line: tttGame.line, scores: tttGame.scores })));
-
-  var tttDraw = await moveRoom(RoomDO, 'ttt', {
-    board: ['X', 'O', 'X', 'X', 'O', 'O', 'O', 'X', null], turn: 'X'
-  });
-  await tttDraw.room.handleMove(tttDraw.members, tttDraw.members[0], { x: 2, y: 2 });
-  tttGame = await tttDraw.state.storage.get('game');
-  out.push(A('井字棋棋盘填满无胜者判和', tttGame.winner === 'draw', String(tttGame.winner)));
-
-  var tttWaitingMember = member('m1', 'p1', 1);
-  var tttWaitingState = makeState({
-    members: [tttWaitingMember],
-    game: {
-      kind: 'ttt', board: new Array(9).fill(null), turn: 'X', winner: null, line: null,
-      xId: 'm1', oId: null, scores: { X: 0, O: 0 }, round: 1, updatedAt: 1
+  var last = 0;
+  var m;
+  while ((m = re.exec(text))) {
+    var between = text.slice(last, m.index);
+    if (!(stack.length && stack[stack.length - 1]) && /[一-鿿]/.test(between)) {
+      out.push(between.trim());
     }
-  });
-  var tttWaitingRoom = new RoomDO(tttWaitingState, {});
-  tttWaitingRoom.roomCode = '1234';
-  var tttWaitingSock = makeSocket();
-  tttWaitingSock.serializeAttachment({ id: 'm1', name: 'a', room: '1234', pid: 'p1' });
-  tttWaitingState.acceptWebSocket(tttWaitingSock);
-  await tttWaitingRoom.handleMove([tttWaitingMember], tttWaitingMember, { x: 0, y: 0 });
-  out.push(A('缺少第二位玩家时拒绝落子',
-    !!lastError(tttWaitingSock) && lastError(tttWaitingSock).code === 'waiting_peer'));
-
-  var tttOver = await moveRoom(RoomDO, 'ttt', { winner: 'X' });
-  await tttOver.room.handleMove(tttOver.members, tttOver.members[0], { x: 0, y: 0 });
-  out.push(A('终局后继续落子被拒绝',
-    !!lastError(tttOver.s1) && lastError(tttOver.s1).code === 'game_over'));
-
-  // ---- gomoku ----
-  var g5 = await moveRoom(RoomDO, 'gomoku');
-  await g5.room.handleMove(g5.members, g5.members[0], { x: 15, y: 0 });
-  out.push(A('五子棋 x=15 越界被拒绝', !!lastError(g5.s1) && lastError(g5.s1).code === 'bad_move'));
-  await g5.room.handleMove(g5.members, g5.members[0], { x: 0, y: -1 });
-  out.push(A('五子棋 y=-1 越界被拒绝', !!lastError(g5.s1) && lastError(g5.s1).code === 'bad_move'));
-
-  await g5.room.handleMove(g5.members, g5.members[0], { x: 0, y: 0 });
-  var g5Game = await g5.state.storage.get('game');
-  out.push(A('五子棋按 y*15+x 落子', g5Game.board[0] === 'X' && g5Game.turn === 'O'));
-
-  await g5.room.handleMove(g5.members, g5.members[1], { x: 1, y: 0 });
-  await g5.room.handleMove(g5.members, g5.members[0], { x: 1, y: 0 });
-  out.push(A('五子棋已占位被拒绝', !!lastError(g5.s1) && lastError(g5.s1).code === 'cell_taken'));
-
-  var g5Board = new Array(225).fill(null);
-  for (var gx = 0; gx < 4; gx++) g5Board[5 * 15 + gx] = 'X';
-  var g5Win = await moveRoom(RoomDO, 'gomoku', { board: g5Board, turn: 'X' });
-  await g5Win.room.handleMove(g5Win.members, g5Win.members[0], { x: 4, y: 5 });
-  g5Game = await g5Win.state.storage.get('game');
-  out.push(A('五子棋连成五子判胜并给出连线',
-    g5Game.winner === 'X' && Array.isArray(g5Game.line) && g5Game.line.length === 5 &&
-    g5Game.line.indexOf(75) >= 0 && g5Game.scores.X === 1,
-    JSON.stringify({ winner: g5Game.winner, line: g5Game.line })));
-
-  // ---- connect four ----
-  var c4 = await moveRoom(RoomDO, 'connect4');
-  await c4.room.handleMove(c4.members, c4.members[0], { x: 7 });
-  out.push(A('四子棋 x=7 越界被拒绝', !!lastError(c4.s1) && lastError(c4.s1).code === 'bad_move'));
-  await c4.room.handleMove(c4.members, c4.members[0], { x: -1 });
-  out.push(A('四子棋 x=-1 越界被拒绝', !!lastError(c4.s1) && lastError(c4.s1).code === 'bad_move'));
-
-  var fullCol = new Array(42).fill(null);
-  for (var cr = 0; cr < 6; cr++) fullCol[cr * 7] = cr % 2 ? 'O' : 'X';
-  var c4Full = await moveRoom(RoomDO, 'connect4', { board: fullCol });
-  await c4Full.room.handleMove(c4Full.members, c4Full.members[0], { x: 0 });
-  out.push(A('四子棋满列被拒绝',
-    !!lastError(c4Full.s1) && lastError(c4Full.s1).code === 'column_full'));
-
-  await c4.room.handleMove(c4.members, c4.members[0], { x: 3 });
-  var c4Game = await c4.state.storage.get('game');
-  out.push(A('四子棋落子受重力影响（落到最底行）',
-    c4Game.board[5 * 7 + 3] === 'X' && c4Game.turn === 'O', String(c4Game.board[38])));
-  await c4.room.handleMove(c4.members, c4.members[1], { x: 3 });
-  c4Game = await c4.state.storage.get('game');
-  out.push(A('同列第二子叠在上一子之上', c4Game.board[4 * 7 + 3] === 'O'));
-
-  var c4WinBoard = new Array(42).fill(null);
-  c4WinBoard[5 * 7 + 0] = 'X';
-  c4WinBoard[5 * 7 + 1] = 'X';
-  c4WinBoard[5 * 7 + 2] = 'X';
-  var c4Win = await moveRoom(RoomDO, 'connect4', { board: c4WinBoard, turn: 'X' });
-  await c4Win.room.handleMove(c4Win.members, c4Win.members[0], { x: 3 });
-  c4Game = await c4Win.state.storage.get('game');
-  out.push(A('四子棋横向连成四子判胜',
-    c4Game.winner === 'X' && Array.isArray(c4Game.line) && c4Game.line.length === 4 &&
-    c4Game.scores.X === 1,
-    JSON.stringify({ winner: c4Game.winner, line: c4Game.line })));
-
-  return out;
-}
-
-async function hostTests(RoomDO) {
-  var out = [];
-  var h = await moveRoom(RoomDO, 'ttt');
-
-  await h.room.handleReset(h.members, h.members[1], {});
-  out.push(A('非房主开新局被拒绝', !!lastError(h.s2) && lastError(h.s2).code === 'host_only'));
-  await h.room.handleSelect(h.members, h.members[1], { kind: 'gomoku' });
-  out.push(A('非房主换游戏被拒绝', !!lastError(h.s2) && lastError(h.s2).code === 'host_only'));
-
-  await h.room.handleSelect(h.members, h.members[0], { kind: 'chess' });
-  out.push(A('不支持的游戏类型被拒绝', !!lastError(h.s1) && lastError(h.s1).code === 'bad_game'));
-
-  await h.room.handleSelect(h.members, h.members[0], { kind: 'gomoku' });
-  var game = await h.state.storage.get('game');
-  out.push(A('房主换游戏生效',
-    game.kind === 'gomoku' && game.board.length === 225 && game.round === 2,
-    JSON.stringify({ kind: game.kind, size: game.board.length, round: game.round })));
-
-  var scored = await moveRoom(RoomDO, 'ttt', { scores: { X: 2, O: 1 } });
-  await scored.room.handleReset(scored.members, scored.members[0], {});
-  game = await scored.state.storage.get('game');
-  out.push(A('房主开新局：清盘、轮次 +1、比分保留',
-    game.board.every(function (v) { return v === null; }) &&
-    game.round === 2 && game.scores.X === 2 && game.scores.O === 1,
-    JSON.stringify({ round: game.round, scores: game.scores })));
-
-  return out;
-}
-
-async function messageTests(RoomDO) {
-  var out = [];
-  var m = await moveRoom(RoomDO, 'ttt');
-
-  await m.room.webSocketMessage(m.s1, '{oops');
-  out.push(A('非法 JSON 返回 bad_json', !!lastError(m.s1) && lastError(m.s1).code === 'bad_json'));
-
-  var before = m.s1.sent.length;
-  await m.room.webSocketMessage(m.s1, new Uint8Array([1, 2, 3]));
-  out.push(A('二进制帧被忽略', m.s1.sent.length === before));
-
-  await m.room.webSocketMessage(m.s1, JSON.stringify({ type: 'ping', room: '9999' }));
-  out.push(A('跨房间消息被拒绝', !!lastError(m.s1) && lastError(m.s1).code === 'room_mismatch'));
-
-  await m.room.webSocketMessage(m.s1, JSON.stringify({ type: 'wat', room: '1234' }));
-  out.push(A('未知消息类型被拒绝', !!lastError(m.s1) && lastError(m.s1).code === 'unknown_type'));
-
-  var beforeLong = m.s1.sent.length;
-  await m.room.webSocketMessage(m.s1, 'x'.repeat(40001));
-  out.push(A('超长消息被直接忽略', m.s1.sent.length === beforeLong));
-
-  await m.room.webSocketMessage(m.s1, JSON.stringify({ type: 'ping', room: '1234', t: 123 }));
-  var pong = m.s1.sent.filter(function (x) { return x.type === 'pong'; })[0];
-  out.push(A('ping 返回 pong 并回显时间戳', !!pong && pong.t === 123, JSON.stringify(pong)));
-
-  var ghost = makeSocket();
-  ghost.serializeAttachment({ id: 'ghost', name: 'g', room: '1234', pid: 'pg' });
-  m.state.acceptWebSocket(ghost);
-  await m.room.webSocketMessage(ghost, JSON.stringify({ type: 'ping', room: '1234' }));
-  out.push(A('不在成员表的连接被拒绝', !!lastError(ghost) && lastError(ghost).code === 'not_member'));
-
-  return out;
-}
-
-/* ------------------------------------------------------------------ *
- * Main                                                               *
- * ------------------------------------------------------------------ */
-
-async function main() {
-  // Cloudflare globals the Worker expects. Response with status 101 is not
-  // legal in undici, and WebSocketPair does not exist outside Workers.
-  globalThis.Response = class FakeResponse {
-    constructor(body, init) {
-      this.body = body;
-      this.status = (init && init.status) || 200;
-      this.headers = (init && init.headers) || {};
-      this.webSocket = init && init.webSocket;
+    last = re.lastIndex;
+    var tag = m[0];
+    var name = m[1].toLowerCase();
+    if (/^<\//.test(tag)) {
+      stack.pop();
+      continue;
     }
-    async json() { return JSON.parse(this.body); }
-  };
-  globalThis.WebSocketPair = function () {
-    this[0] = makeSocket();
-    this[1] = makeSocket();
-  };
-
-  var mod = await import(pathToFileURL(ROOM_PATH).href);
-  var RoomDO = mod.RoomDO;
-  if (typeof RoomDO !== 'function') throw new Error('RoomDO export not found');
-
-  var tokens = await tokenTests(RoomDO);
-  var passwords = await passwordTests(RoomDO);
-  var formats = await passwordFormatTests(RoomDO);
-  var outcomes = await joinOutcomeTests(RoomDO);
-  var capacity = await capacityTests(RoomDO);
-  var moves = await moveTests(RoomDO);
-  var host = await hostTests(RoomDO);
-  var messages = await messageTests(RoomDO);
-
-  s.group('1. 重连 token：生成、24h 有效期、篡改/过期/换 pid 拒绝', function () {
-    tokens.forEach(function (a) { s.ok(a[0], a[1], a[2]); });
-    return tokens.length + ' 项';
-  });
-
-  s.group('2. 密码房：SHA-256(salt||password)、常量时间比较、5 次失败锁 60s', function () {
-    passwords.assertions.forEach(function (a) { s.ok(a[0], a[1], a[2]); });
-    return '5 次失败触发锁定';
-  });
-
-  s.group('3. 密码长度边界 4–32 与加入结果', function () {
-    formats.forEach(function (a) { s.ok(a[0], a[1], a[2]); });
-    outcomes.forEach(function (a) { s.ok(a[0], a[1], a[2]); });
-    return (formats.length + outcomes.length) + ' 项';
-  });
-
-  s.group('4. 房间容量：4 人上限、重连接管、缺 token 拒绝', function () {
-    capacity.assertions.forEach(function (a) { s.ok(a[0], a[1], a[2]); });
-    return '实测上限 ' + capacity.maxMembers + ' 人';
-  });
-
-  s.group('5. 落子合法性：井字棋/五子棋/四子棋非法落子均被服务端拒绝', function () {
-    moves.forEach(function (a) { s.ok(a[0], a[1], a[2]); });
-    return moves.length + ' 项';
-  });
-
-  s.group('6. 房主权限：仅房主可开新局/换游戏', function () {
-    host.forEach(function (a) { s.ok(a[0], a[1], a[2]); });
-    return host.length + ' 项';
-  });
-
-  s.group('7. 消息封套校验：JSON/房间号/类型/超长/非成员', function () {
-    messages.forEach(function (a) { s.ok(a[0], a[1], a[2]); });
-    return messages.length + ' 项';
-  });
-
-  s.group('8. 源文件常量镜像与实测行为一致', function () {
-    s.eq('MAX_MEMBERS 与实测上限一致', CONST.MAX_MEMBERS, capacity.maxMembers);
-    s.eq('MAX_PASSWORD_FAILS 与实测锁定阈值一致', CONST.MAX_PASSWORD_FAILS, passwords.lockAfter);
-    s.eq('PASSWORD_LOCK_MS = 60s', CONST.PASSWORD_LOCK_MS, 60000);
-    s.eq('PASSWORD_MIN/PASSWORD_MAX = 4/32', [CONST.PASSWORD_MIN, CONST.PASSWORD_MAX], [4, 32]);
-    s.eq('JOIN_TOKEN_TTL_MS = 24h', CONST.JOIN_TOKEN_TTL_MS, 86400000);
-    s.eq('RECONNECT_GRACE_MS = 60s', CONST.RECONNECT_GRACE_MS, 60000);
-    return '常量读取自 worker/src/room.js';
-  });
-
-  s.done();
+    var selfClosing = /\/>\s*$/.test(tag) || voidTags.test(name);
+    if (!selfClosing) {
+      var marked = /\bdata-i(?:-aria|-ip)?\s*=/.test(tag);
+      stack.push(marked || (stack.length > 0 && stack[stack.length - 1] === true));
+    }
+  }
+  var tail = text.slice(last);
+  if (!(stack.length && stack[stack.length - 1]) && /[一-鿿]/.test(tail)) out.push(tail.trim());
+  return out;
 }
 
-main().catch(function (err) {
+s.group('静态 HTML 无中文残留（i18n 兜底除外）', function () {
+  var bodyStart = html.indexOf('<body>');
+  var bodyEnd = html.indexOf('</body>');
+  s.ok('可定位 <body> 范围', bodyStart >= 0 && bodyEnd > bodyStart);
+  var body = html.slice(bodyStart + 6, bodyEnd);
+  // Only allowed residue: none. share.js keeps its localized game name in
+  // data-name-zh (an attribute, not a text node) so it is out of this scan.
+  s.eq('body 文本节点中文均挂在 data-i/data-ip/data-i-aria 上', staticChineseResidue(body), []);
+});
+
+s.group('三语词条一致性（静态解析）', function () {
+  var zh = keysOf(I18N.zh), en = keysOf(I18N.en), id = keysOf(I18N.id);
+  s.ok('zh 词条不少于 50 条', zh.length >= 50, 'got ' + zh.length);
+  s.eq('en 键集合与 zh 一致', en, zh);
+  s.eq('id 键集合与 zh 一致', id, zh);
+
+  var empty = [];
+  zh.forEach(function (key) {
+    ['zh', 'en', 'id'].forEach(function (lang) {
+      var v = I18N[lang][key];
+      if (typeof v !== 'string' || !v.trim()) empty.push(lang + '.' + key);
+    });
+  });
+  s.eq('所有词条均为非空字符串', empty, []);
+
+  var badPlaceholders = [];
+  zh.forEach(function (key) {
+    var base = placeholders(I18N.zh[key]);
+    ['en', 'id'].forEach(function (lang) {
+      var other = placeholders(I18N[lang][key]);
+      if (JSON.stringify(base) !== JSON.stringify(other)) {
+        badPlaceholders.push(key + ':' + lang + '=' + JSON.stringify(other) + ' want ' + JSON.stringify(base));
+      }
+    });
+  });
+  s.eq('三语占位符完全一致', badPlaceholders, []);
+
+  s.eq('邀请文案占位符 {room}{link}', placeholders(I18N.zh.inviteText), ['link', 'room']);
+  s.eq('重连提示占位符 {n}', placeholders(I18N.zh.connReconnecting), ['n']);
+  s.eq('连接失败提示占位符 {max}', placeholders(I18N.zh.connFailedBanner), ['max']);
+  s.eq('重连横幅占位符 {n}{max}', placeholders(I18N.zh.reconnectingBanner), ['max', 'n']);
+
+  var dataKeys = matchAll(html, /data-i="([^"]+)"/g);
+  var ariaKeys = matchAll(html, /data-i-aria="([^"]+)"/g);
+  var phKeys = matchAll(html, /data-ip="([^"]+)"/g);
+  var tKeys = matchAll(html, /T\('([A-Za-z0-9_]+)'/g);
+  var mappedKeys = Object.keys(ERR_KEYS || {}).map(function (code) { return ERR_KEYS[code]; });
+  var referenced = dataKeys.concat(ariaKeys, phKeys, tKeys, mappedKeys);
+  var seen = Object.create(null);
+  var missing = [];
+  referenced.forEach(function (key) {
+    if (seen[key]) return;
+    seen[key] = true;
+    if (!(key in I18N.zh)) missing.push(key);
+  });
+  s.eq('标记与 T() 引用的键都有 zh 词条', missing, []);
+
+  var unused = zh.filter(function (key) { return !seen[key]; });
+  s.eq('所有词条均被引用', unused, []);
+  s.ok('connTagIdle 用于未连接标签', /T\('connTagIdle'\)/.test(html));
+  s.ok('copyFailed 用于复制失败提示', /toast\(T\('copyFailed'\)\)/.test(html));
+
+  s.ok('定义服务端错误码→i18n 映射', !!ERR_KEYS);
+  s.eq('错误码映射覆盖全部 Worker 错误码', Object.keys(ERR_KEYS || {}).sort(), WORKER_ERR_CODES.slice().sort());
+  var missingMapped = [];
+  ['zh', 'en', 'id'].forEach(function (lang) {
+    mappedKeys.forEach(function (key) {
+      if (!(key in I18N[lang])) missingMapped.push(lang + '.' + key);
+    });
+  });
+  s.eq('错误码映射键三语齐全', missingMapped, []);
+  s.ok('错误 toast 先按错误码本地化', /toast\(errorText\(msg\.code, msg\.message\)\)/.test(html));
+  s.ok('未映射错误码回退服务端消息', /if \(key\) return T\(key\);/.test(html) &&
+    /return message \|\| T\('opFailed'\);/.test(html));
+});
+
+s.group('客户端脚本契约（静态）', function () {
+  s.ok('断线最多重试 4 次', /const MAX_RECONNECT_ATTEMPTS = 4;/.test(html));
+  s.ok('重连退避 1/2/4/8 秒', /1000 \* Math\.pow\(2, n - 1\)/.test(html));
+  s.ok('心跳每 20 秒', /20000/.test(html) && /type:'ping'/.test(html));
+  s.ok('质量采样每 2 秒', /const QUALITY_INTERVAL_MS = 2000;/.test(html));
+  s.ok('WS 连接携带 room/name/pid/token', /\/ws\?room=' \+ encodeURIComponent\(S\.room\)/.test(html) &&
+    /&name=' \+ encodeURIComponent\(S\.name\)/.test(html) &&
+    /&pid=' \+ encodeURIComponent\(PID\)/.test(html) &&
+    /&token=' \+ encodeURIComponent\(S\.joinToken\)/.test(html));
+  s.ok('客户端消费 welcome/room_state/game_state/signal/error', ['welcome', 'room_state', 'game_state', 'signal', 'error'].every(function (t) {
+    return html.indexOf("msg.type === '" + t + "'") !== -1;
+  }));
+  s.ok('客户端发送 ping/mic/signal/game_move/game_reset/game_select', ['ping', 'mic', 'signal', 'game_move', 'game_reset', 'game_select'].every(function (t) {
+    return html.indexOf("type:'" + t + "'") !== -1 || html.indexOf("type: '" + t + "'") !== -1;
+  }));
+  s.ok('客户端密码长度 4–32', /pw\.length < 4 \|\| pw\.length > 32/.test(html));
+  s.ok('房号输入即时过滤非数字', /replace\(\/\\D\/g,''\)\.slice\(0,4\)/.test(html));
+  s.ok('客户端拒绝跨房间消息', /msg\.room && msg\.room !== S\.room/.test(html));
+  s.ok('客户端三种棋局规格与服务端一致', /ttt: \{ labelKey: 'kindTtt', cols: 3, rows: 3, size: 9 \}/.test(html) &&
+    /gomoku: \{ labelKey: 'kindGomoku', cols: 15, rows: 15, size: 225 \}/.test(html) &&
+    /connect4: \{ labelKey: 'kindConnect4', cols: 7, rows: 6, size: 42 \}/.test(html));
+  s.ok('客户端处理 4001 room_full / 4003 replaced', /ev\.code === 4001/.test(html) && /ev\.code === 4003/.test(html));
+});
+
+s.group('注册表、引导页与规则页', function () {
+  var entry = (registry.games || []).filter(function (g) { return g.slug === 'voice-room'; })[0];
+  s.ok('registry 有 voice-room 条目', !!entry);
+  if (!entry) return;
+  s.eq('registry 状态 live', entry.status, 'live');
+  s.eq('分类 online', entry.category, 'online');
+  s.eq('三语名称齐全', Object.keys(entry.names || {}).sort(), ['en', 'id', 'zh']);
+  s.eq('人数 2-4', entry.players, '2-4');
+  s.eq('无 AI 对手', entry.ai, []);
+  s.eq('中文规则指向 guide.html', entry.rules && entry.rules.zh, 'guide.html');
+  s.ok('图标文件存在', fs.existsSync(path.join(DIR, '..', 'assets', 'icons', 'voice-room.svg')));
+  s.ok('index.html 存在', fs.existsSync(INDEX_HTML));
+  s.ok('guide.html 存在', fs.existsSync(GUIDE_HTML));
+  s.ok('rules.html 存在', fs.existsSync(RULES_HTML));
+
+  [['guide.html', guide], ['rules.html', rulesPage]].forEach(function (pair) {
+    var name = pair[0], page = pair[1];
+    s.ok(name + ' 有 viewport', /<meta[^>]*name="viewport"[^>]*width=device-width/i.test(page));
+    s.ok(name + ' 有 canonical', new RegExp('<link rel="canonical" href="https://hhfa008\\.github\\.io/games/voice-room/' +
+      name.replace('.', '\\.') + '"').test(page));
+    s.eq(name + ' 无外站脚本', matchAll(page, /<script\b[^>]*\bsrc="([^"]+)"/gi).filter(function (src) {
+      return /^(?:https?:)?\/\//i.test(src);
+    }), []);
+  });
+
+  s.ok('规则写明 4 位数字房号', /4 位数字/.test(rulesPage));
+  s.ok('规则写明最多 4 人', /最多 4 人/.test(rulesPage));
+  s.ok('规则写明密码 4–32 位', /4–32 位密码/.test(rulesPage));
+  s.ok('规则写明连错 5 次限流 60 秒', /连续输错 5 次/.test(rulesPage) && /60 秒/.test(rulesPage));
+  s.ok('规则写明 WebRTC 点对点与 TURN 中继', /WebRTC/.test(rulesPage) && /点对点/.test(rulesPage) && /TURN/.test(rulesPage));
+  s.ok('规则写明服务器不录制', /不录制/.test(rulesPage) && /不存储/.test(rulesPage));
+  s.ok('规则声明与单机版共用 shared/rules.js', /shared\/rules\.js/.test(rulesPage));
+  s.ok('规则页回链首页/教程', /href="guide\.html"/.test(rulesPage) && /href="\.\/"/.test(rulesPage));
+
+  var lds = [];
+  try {
+    lds = lib.jsonLd(guide);
+    s.ok('guide JSON-LD 可解析', true);
+  } catch (e) {
+    s.ok('guide JSON-LD 可解析', false, e.message);
+  }
+  var types = lds.map(function (d) { return d && d['@type']; });
+  s.ok('guide 含 Article 结构化数据', types.indexOf('Article') !== -1);
+  s.ok('guide 含 FAQPage 结构化数据', types.indexOf('FAQPage') !== -1);
+  var faq = lds.filter(function (d) { return d && d['@type'] === 'FAQPage'; })[0];
+  s.eq('guide FAQ 有 3 个问题', faq && faq.mainEntity ? faq.mainEntity.length : -1, 3);
+  s.ok('guide 写明 1000–9999 房号范围', /1000–9999/.test(guide));
+  s.ok('guide 写明 iOS Safari 需点击解锁音频', /iOS Safari/.test(guide) && /点击/.test(guide));
+  s.ok('guide 写明密码只存加盐 SHA-256', /SHA-256\(salt \+ password\)/.test(guide));
+});
+
+// ---------------------------------------------------------------------------
+// Worker source: static contract
+// ---------------------------------------------------------------------------
+
+s.group('Worker 源码静态契约', function () {
+  s.ok('room.js 仅一个依赖：shared/rules.js', /^import '\.\.\/\.\.\/\.\.\/shared\/rules\.js';$/m.test(roomSource));
+  s.ok('room.js 导出 RoomDO', /export class RoomDO/.test(roomSource));
+  s.ok('index.js 导出默认 fetch 与 RoomDO', /import \{ RoomDO \} from '\.\/room\.js';/.test(workerSource) &&
+    /export default \{/.test(workerSource) && /export \{ RoomDO \};/.test(workerSource));
+
+  s.ok('房间人数上限常量 4', /const MAX_MEMBERS = 4;/.test(roomSource));
+  s.ok('密码长度 4–32', /const PASSWORD_MIN = 4;/.test(roomSource) && /const PASSWORD_MAX = 32;/.test(roomSource));
+  s.ok('密码连错 5 次', /const MAX_PASSWORD_FAILS = 5;/.test(roomSource));
+  s.ok('密码锁定 60 秒', /const PASSWORD_LOCK_MS = 60 \* 1000;/.test(roomSource));
+  s.ok('断线保留席位 60 秒', /const RECONNECT_GRACE_MS = 60 \* 1000;/.test(roomSource));
+  s.ok('加入令牌 24 小时', /const JOIN_TOKEN_TTL_MS = 24 \* 60 \* 60 \* 1000;/.test(roomSource));
+  s.ok('三种棋局规格', /ttt: \{ label: '井字棋', size: 9, cols: 3, rows: 3 \}/.test(roomSource) &&
+    /gomoku: \{ label: '五子棋', size: 225, cols: 15, rows: 15 \}/.test(roomSource) &&
+    /connect4: \{ label: '四子棋', size: 42, cols: 7, rows: 6 \}/.test(roomSource));
+
+  ['/health', '/api/ice', '/api/join', '/ws'].forEach(function (route) {
+    s.ok('index.js 路由 ' + route, workerSource.indexOf("'" + route + "'") !== -1);
+  });
+  s.ok('TURN 失败不回传上游错误', /turn_unavailable/.test(workerSource) && workerSource.indexOf('err.message') === -1);
+  s.ok('CORS 白名单含 github.io/pages.dev/localhost', ['hhfa008.github.io', 'hhfa008-pages.pages.dev', 'localhost', '127.0.0.1'].every(function (host) {
+    return workerSource.indexOf(host) !== -1;
+  }));
+  s.ok('index.js 预校验 4 位房号', /\^\\d\{4\}\$/.test(workerSource));
+
+  ['ping', 'signal', 'mic', 'game_move', 'game_reset', 'game_select'].forEach(function (type) {
+    s.ok('room.js 处理 ' + type, roomSource.indexOf("case '" + type + "'") !== -1);
+  });
+  ['room_full', 'bad_json', 'room_mismatch', 'not_member', 'unknown_type',
+    'host_only', 'bad_game', 'waiting_peer', 'game_over', 'not_your_turn',
+    'bad_move', 'cell_taken', 'column_full'].forEach(function (code) {
+    s.ok('room.js 错误码 ' + code, roomSource.indexOf("'" + code + "'") !== -1);
+  });
+  s.ok('WS 升级校验', /Upgrade.*websocket/.test(roomSource));
+  s.ok('落子由服务端校验轮次', /if \(sender\.id !== turnId\)/.test(roomSource));
+  s.ok('房间满/被顶替关闭码 4001/4003', /close\(4001, 'room_full'\)/.test(roomSource) &&
+    /close\(4003, 'replaced'\)/.test(roomSource));
+});
+
+// ---------------------------------------------------------------------------
+// Worker runtime
+// ---------------------------------------------------------------------------
+
+loadRoomCore().then(function (loaded) {
+  var M = loaded.mod;
+  s.group('room.js 可加载性与导出（运行时）', function () {
+    s.eq('仅剥离 1 个 ESM 依赖', loaded.imports, ["import '../../../shared/rules.js';"]);
+    s.eq('RoomDO 是构造函数', typeof M.RoomDO, 'function');
+    ['cleanName', 'cleanPid', 'isIntIn', 'sortMembers', 'hostIdOf', 'hostIdWithGrace',
+      'seatsOf', 'publicMembers', 'kindOf', 'emptyGame', 'normalizeGameShape',
+      'tttWinnerOf', 'alignGame', 'roomState', 'passwordDigest']
+      .forEach(function (name) {
+        s.ok('导出可测试函数 ' + name, typeof M[name] === 'function');
+      });
+    s.ok('房间状态可从 globalThis.GameRules 取得棋规', !!globalThis.GameRules &&
+      typeof globalThis.GameRules.gomoku.lineAt === 'function' &&
+      typeof globalThis.GameRules.connect4.applyMove === 'function');
+  });
+
+  s.group('房间常量与游戏规格', function () {
+    s.eq('最多 4 人', M.MAX_MEMBERS, 4);
+    s.eq('密码最短 4', M.PASSWORD_MIN, 4);
+    s.eq('密码最长 32', M.PASSWORD_MAX, 32);
+    s.eq('连错 5 次锁定', M.MAX_PASSWORD_FAILS, 5);
+    s.eq('锁定 60 秒', M.PASSWORD_LOCK_MS, 60000);
+    s.eq('断线宽限 60 秒', M.RECONNECT_GRACE_MS, 60000);
+    s.eq('井字棋 9 格', M.KINDS.ttt.size, 9);
+    s.eq('五子棋 15×15', [M.KINDS.gomoku.cols, M.KINDS.gomoku.rows, M.KINDS.gomoku.size], [15, 15, 225]);
+    s.eq('四子棋 7×6', [M.KINDS.connect4.cols, M.KINDS.connect4.rows, M.KINDS.connect4.size], [7, 6, 42]);
+    s.eq('井字棋 8 条获胜线', M.TTT_WIN_LINES.length, 8);
+    s.ok('获胜线索引均合法且去重', (function () {
+      var seen = {};
+      for (var i = 0; i < M.TTT_WIN_LINES.length; i++) {
+        var line = M.TTT_WIN_LINES[i];
+        if (line.length !== 3) return false;
+        var k = line.slice().sort().join(',');
+        if (seen[k]) return false;
+        seen[k] = true;
+        for (var j = 0; j < line.length; j++) {
+          if (!Number.isInteger(line[j]) || line[j] < 0 || line[j] > 8) return false;
+        }
+      }
+      return true;
+    })());
+  });
+
+  s.group('身份、座位与输入清洗', function () {
+    s.eq('cleanName 去除控制字符与首尾空白', M.cleanName('  a\u0001b\u007f  '), 'ab');
+    s.eq('cleanName 截断到 12 字符', M.cleanName('abcdefghijklmnopqrst'), 'abcdefghijkl');
+    s.eq('cleanName 空值回退玩家', M.cleanName(''), '玩家');
+    s.eq('cleanName undefined 回退玩家', M.cleanName(undefined), '玩家');
+    s.eq('cleanPid 只保留字母数字下划线横线', M.cleanPid('ab$%^cd--_X'), 'abcd--_X');
+    s.eq('cleanPid 截断到 64 字符', M.cleanPid(new Array(101).join('a')).length, 64);
+
+    s.ok('isIntIn 接受边界值', M.isIntIn(0, 0, 2) && M.isIntIn(2, 0, 2));
+    s.ok('isIntIn 拒绝越界/小数/字符串', !M.isIntIn(3, 0, 2) && !M.isIntIn(1.5, 0, 2) && !M.isIntIn('1', 0, 2));
+
+    var members = [
+      { id: 'b', joinedAt: 2 },
+      { id: 'a', joinedAt: 1 },
+      { id: 'c', joinedAt: 2 }
+    ];
+    s.eq('座位按 joinedAt 再按 id 排序', M.sortMembers(members).map(function (m) { return m.id; }), ['a', 'b', 'c']);
+    s.eq('房主是最早加入者', M.hostIdOf(members), 'a');
+    s.eq('空房间无房主', M.hostIdOf([]), null);
+    s.eq('宽限期内断线房主仍保留', M.hostIdWithGrace(members, [members[2]]), 'a');
+    s.eq('名册清空后才移交', M.hostIdWithGrace([], [{ id: 'z', joinedAt: 9 }]), 'z');
+    s.ok('房主离线可识别', M.hostOfflineOf('a', members.filter(function (m) { return m.id !== 'a'; })) === true);
+    s.ok('房主在线不误报', M.hostOfflineOf('a', members) === false);
+    s.ok('无房主不算离线', M.hostOfflineOf(null, members) === false);
+
+    s.eq('两人对局分 X/O 座位', M.seatsOf(members), { xId: 'a', oId: 'b' });
+    s.eq('一人时只有 X', M.seatsOf([members[0]]), { xId: 'b', oId: null });
+    s.eq('空名册无座位', M.seatsOf([]), { xId: null, oId: null });
+
+    var pub = M.publicMembers([
+      { id: 'a', name: 'A', mic: 1, joinedAt: 1 },
+      { id: 'b', name: 'B', mic: 0, joinedAt: 2 }
+    ]);
+    s.eq('公开成员按座位顺序', pub.map(function (m) { return m.id; }), ['a', 'b']);
+    s.eq('公开成员标记房主', pub.map(function (m) { return m.host; }), [true, false]);
+    s.eq('公开成员话筒状态布尔化', pub.map(function (m) { return m.mic; }), [true, false]);
+  });
+
+  s.group('棋局形状、落子与胜负纯函数', function () {
+    var g = M.emptyGame('ttt', { xId: 'a', oId: 'b' }, 3);
+    s.eq('空棋局默认井字棋', [g.kind, g.turn, g.round], ['ttt', 'X', 3]);
+    s.eq('空棋局棋盘长度', g.board.length, 9);
+    s.ok('空棋局无胜者', g.winner === null && g.line === null);
+    s.eq('空棋局比分归零', g.scores, { X: 0, O: 0 });
+    s.eq('未知棋种回退井字棋', M.emptyGame('chess', {}, 0).kind, 'ttt');
+    s.eq('round 0 回退第 1 局', M.emptyGame('ttt', {}, 0).round, 1);
+
+    s.eq('TTT 一行三子获胜', M.tttWinnerOf(['X', 'X', 'X', null, null, null, null, null, null]),
+      { winner: 'X', line: [0, 1, 2] });
+    s.eq('TTT 主对角线获胜', M.tttWinnerOf(['O', null, null, null, 'O', null, null, null, 'O']),
+      { winner: 'O', line: [0, 4, 8] });
+    s.eq('TTT 未成线', M.tttWinnerOf(['X', 'X', null, null, null, null, null, null, null]),
+      { winner: null, line: null });
+
+    var board = ['X', null, 'O', null, 'X', null, null, null, 'O'];
+    s.eq('棋盘数字编码', Array.from(M.toNumericBoard(board)), [1, 0, 2, 0, 1, 0, 0, 0, 2]);
+    s.eq('数字编码还原棋盘', M.fromNumericBoard(M.toNumericBoard(board)), board);
+    s.eq('棋子计数', M.stoneCount(board), 4);
+    s.ok('空棋盘判定', M.isEmptyBoard(Array(9).fill(null)) && !M.isEmptyBoard(board));
+
+    s.eq('非法棋局返回 null（数组）', M.normalizeGameShape([]), null);
+    s.eq('非法棋局返回 null（棋盘长度不符）', M.normalizeGameShape({ kind: 'ttt', board: [null] }), null);
+    var dirty = M.normalizeGameShape({
+      kind: 'chess',
+      board: Array(9).fill('Z'),
+      turn: 'O',
+      winner: 'Y',
+      line: [0, 99],
+      scores: { X: -1, O: 2.7 },
+      round: 0,
+      xId: 7,
+      oId: 'b'
+    });
+    s.eq('未知棋种归一为 ttt', dirty.kind, 'ttt');
+    s.ok('非法棋格归一为空', dirty.board.every(function (v) { return v === null; }));
+    s.eq('非法胜者归一为空', dirty.winner, null);
+    s.eq('越界获胜线被过滤', dirty.line, [0]);
+    s.eq('比分取整且负数归零', dirty.scores, { X: 0, O: 2 });
+    s.eq('非法 round 归一为 1', dirty.round, 1);
+    s.eq('非字符串座位置空', [dirty.xId, dirty.oId], [null, 'b']);
+  });
+
+  s.group('座位对齐与房间状态', function () {
+    var roster = [{ id: 'a', name: 'A', joinedAt: 1 }, { id: 'b', name: 'B', joinedAt: 2 }];
+    var game = M.emptyGame('ttt', { xId: 'a', oId: 'b' }, 1);
+    game.board[0] = 'X';
+    s.eq('座位仍在时棋盘保留', M.alignGame(game, roster, roster).board[0], 'X');
+
+    var departed = M.alignGame(game, [roster[1]], [roster[1]]);
+    s.eq('X 已离开时重开棋局', [departed.kind, departed.xId, departed.oId, departed.round],
+      ['ttt', 'b', null, 1]);
+    s.ok('重开后棋盘为空', departed.board.every(function (v) { return v === null; }));
+
+    var emptySeat = M.emptyGame('ttt', { xId: 'a', oId: null }, 2);
+    var seated = M.alignGame(emptySeat, roster, roster);
+    s.eq('空棋盘自动补齐第二座位', [seated.xId, seated.oId], ['a', 'b']);
+    s.eq('补座位不重置局数', seated.round, 2);
+
+    var noGame = M.alignGame(null, roster, roster);
+    s.eq('无棋局时按名册开新局', [noGame.kind, noGame.xId, noGame.oId], ['ttt', 'a', 'b']);
+
+    var state = M.roomState('1234', roster, [roster[1]]);
+    s.eq('房间状态类型', state.type, 'room_state');
+    s.eq('房间号回传', state.room, '1234');
+    s.eq('房主保留但标记离线', [state.hostId, state.hostOffline], ['a', true]);
+    s.eq('成员列表只含在线玩家', state.members.map(function (m) { return m.id; }), ['b']);
+  });
+
+  // ---- RoomDO state transitions (mock Durable Object state) ----------------
+
+  var normalize = null;
+  var mic = null;
+  var reset = null;
+
+  var now = Date.now();
+  var graceMembers = [
+    { id: 'a', name: 'A', joinedAt: 1 },
+    { id: 'b', name: 'B', joinedAt: 2 },
+    { id: 'c', name: 'C', joinedAt: 3, leftAt: now - 61000 },
+    { id: 'd', name: 'D', joinedAt: 4, leftAt: now - 10000 }
+  ];
+  var graceStorage = mockStorage({ members: graceMembers });
+  var graceSockets = [fakeWs({ id: 'a' })];
+  var graceRoom = newRoom(M.RoomDO, graceStorage, graceSockets);
+
+  var base = { graceMembers: graceMembers, storage: graceStorage };
+
+  var micRoster = [
+    { id: 'a', name: 'A', joinedAt: 1, mic: false },
+    { id: 'b', name: 'B', joinedAt: 2, mic: false }
+  ];
+  var micA = fakeWs({ id: 'a' });
+  var micB = fakeWs({ id: 'b' });
+  var micRoom = newRoom(M.RoomDO, mockStorage({ members: micRoster.slice() }), [micA, micB]);
+
+  var resetRoster = [
+    { id: 'a', name: 'A', joinedAt: 1 },
+    { id: 'b', name: 'B', joinedAt: 2 }
+  ];
+  var resetGame = M.emptyGame('ttt', { xId: 'a', oId: 'b' }, 3);
+  resetGame.board[0] = 'X';
+  resetGame.turn = 'O';
+  resetGame.scores = { X: 2, O: 1 };
+  var resetStorage = mockStorage({ game: resetGame, members: resetRoster.slice() });
+  var resetA = fakeWs({ id: 'a' });
+  var resetB = fakeWs({ id: 'b' });
+  var resetRoom = newRoom(M.RoomDO, resetStorage, [resetA, resetB]);
+
+  Promise.all([
+    graceRoom.normalizeRoster().then(function (roster1) {
+      var saved1 = graceStorage.data.get('members');
+      var alarm1 = graceStorage.alarm;
+      graceSockets.push(fakeWs({ id: 'b' }));
+      return graceRoom.normalizeRoster().then(function (roster2) {
+        normalize = { roster1: roster1, saved1: saved1, alarm1: alarm1, roster2: roster2, storage: graceStorage };
+      });
+    }),
+    micRoom.handleMic(micRoster, micRoster[0], { on: true }).then(function () {
+      var afterFirst = micA.sent.slice();
+      return micRoom.handleMic(micRoster, micRoster[0], { on: true }).then(function () {
+        mic = { roster: micRoster, a: micA, b: micB, afterFirst: afterFirst, afterSecond: micA.sent.slice() };
+      });
+    }),
+    resetRoom.handleReset(resetRoster, resetRoster[0], {}).then(function () {
+      var afterReset = resetA.sent.slice();
+      var stored = resetStorage.data.get('game');
+      return resetRoom.handleReset(resetRoster, resetRoster[1], {}).then(function () {
+        var hostError = resetB.sent[resetB.sent.length - 1];
+        var aSentAfterNonHostReset = resetA.sent.length;
+        return resetRoom.handleSelect(resetRoster, resetRoster[0], { kind: 'gomoku' }).then(function () {
+          var selectMsg = resetA.sent[resetA.sent.length - 1];
+          return resetRoom.handleSelect(resetRoster, resetRoster[0], { kind: 'chess' }).then(function () {
+            reset = {
+              afterReset: afterReset,
+              stored: stored,
+              hostError: hostError,
+              selectMsg: selectMsg,
+              badGame: resetA.sent[resetA.sent.length - 1],
+              aSentAfterNonHostReset: aSentAfterNonHostReset
+            };
+          });
+        });
+      });
+    }),
+    // password digest runs in parallel with the state transitions
+    (function () {
+      var salt = new Uint8Array(16);
+      for (var i = 0; i < salt.length; i++) salt[i] = i;
+      return M.passwordDigest(salt, 'abcd').then(function (digest) {
+        var want = nodeCrypto.createHash('sha256')
+          .update(Buffer.concat([Buffer.from(salt), Buffer.from('abcd')]))
+          .digest();
+        return M.passwordDigest(salt, 'abcde').then(function (other) {
+          return { digest: digest, want: want, other: other, salt: salt };
+        });
+      });
+    })()
+  ]).then(function (all) {
+    s.group('RoomDO 断线宽限期状态迁移', function () {
+      var n = normalize;
+      s.eq('过期成员被移除', n.roster1.map(function (m) { return m.id; }), ['a', 'b', 'd']);
+      s.ok('在线成员保持在线', n.roster1[0].leftAt == null);
+      s.ok('离线成员记录 leftAt', Number.isInteger(n.roster1[1].leftAt) && n.roster1[1].leftAt <= Date.now());
+      s.eq('宽限期内的 leftAt 不被重写', n.roster1[2].leftAt, base.graceMembers[3].leftAt);
+      s.eq('清理结果写回存储', n.saved1.map(function (m) { return m.id; }), ['a', 'b', 'd']);
+      s.eq('按最早到期成员设置 alarm', n.alarm1, base.graceMembers[3].leftAt + M.RECONNECT_GRACE_MS + 50);
+      s.eq('重连后清除 leftAt', n.roster2[1].leftAt, null);
+      s.eq('重连后成员数不变', n.roster2.length, 3);
+    });
+
+    s.group('RoomDO 麦克风广播状态迁移', function () {
+      s.eq('发送者话筒状态更新', mic.roster[0].mic, true);
+      s.eq('房内广播 room_state', mic.afterFirst.map(function (m) { return m.type; }), ['room_state']);
+      s.eq('双方都收到广播', [mic.a.sent.length, mic.b.sent.length], [1, 1]);
+      s.eq('广播中带麦克风状态', mic.afterFirst[0].members.filter(function (m) { return m.id === 'a'; })[0].mic, true);
+      s.eq('状态相同不重复广播', mic.afterSecond.length, 1);
+    });
+
+    s.group('RoomDO 开新局/换游戏状态迁移', function () {
+      var msg = reset.afterReset[0];
+      s.eq('房主开新局广播 game_state', msg.type, 'game_state');
+      s.eq('局数加一', msg.game.round, 4);
+      s.eq('保留比分', msg.game.scores, { X: 2, O: 1 });
+      s.ok('清空棋盘', msg.game.board.every(function (v) { return v === null; }));
+      s.eq('保留棋种与座位', [msg.game.kind, msg.game.xId, msg.game.oId], ['ttt', 'a', 'b']);
+      s.eq('新局写入存储', reset.stored.round, 4);
+      s.eq('非房主被拒绝', [reset.hostError.type, reset.hostError.code], ['error', 'host_only']);
+      s.eq('房主换五子棋', [reset.selectMsg.game.kind, reset.selectMsg.game.board.length, reset.selectMsg.game.round],
+        ['gomoku', 225, 5]);
+      s.eq('换游戏重置比分', reset.selectMsg.game.scores, { X: 0, O: 0 });
+      s.eq('非法棋种被拒绝', [reset.badGame.type, reset.badGame.code], ['error', 'bad_game']);
+      s.eq('非房主开新局不向房主广播', reset.aSentAfterNonHostReset, 1);
+    });
+
+    var pw = all[3];
+    s.group('口令摘要与令牌工具', function () {
+      s.eq('passwordDigest 等于 SHA-256(salt+password)', Array.from(pw.digest), Array.from(pw.want));
+      s.ok('不同密码摘要不同', Buffer.compare(Buffer.from(pw.digest), Buffer.from(pw.other)) !== 0);
+      s.ok('摘要 32 字节', pw.digest.length === 32);
+
+      var bytes = new Uint8Array([251, 255, 190, 0, 1]);
+      var b64 = M.bytesToBase64Url(bytes);
+      s.ok('Base64URL 不含 + / =', !/[+/=]/.test(b64), b64);
+      s.eq('Base64URL 可逆', Array.from(M.base64UrlToBytes(b64)), Array.from(bytes));
+      s.ok('constantTimeEqual 相等为真', M.constantTimeEqual(new Uint8Array([1, 2, 3]), new Uint8Array([1, 2, 3])));
+      s.ok('constantTimeEqual 不同为假', !M.constantTimeEqual(new Uint8Array([1, 2, 3]), new Uint8Array([1, 2, 4])));
+      s.ok('constantTimeEqual 长度不同为假', !M.constantTimeEqual(new Uint8Array([1]), new Uint8Array([1, 0])));
+      s.ok('constantTimeEqual 空值为假', !M.constantTimeEqual(null, new Uint8Array([1])));
+    });
+
+    s.group('共享棋规（Worker 依赖）', function () {
+      var R = globalThis.GameRules;
+      var gb = new Int8Array(225);
+      for (var c = 3; c <= 7; c++) gb[7 * 15 + c] = 1;
+      s.ok('五子棋五连判定', R.gomoku.checkWinAt(gb, 7, 5, 1));
+      s.eq('五子棋返回获胜线', R.gomoku.lineAt(gb, 7, 5, 1), [7 * 15 + 3, 7 * 15 + 4, 7 * 15 + 5, 7 * 15 + 6, 7 * 15 + 7]);
+      var gState = R.gomoku.setup();
+      var gAfter = R.gomoku.applyMove(gState, 7 * 15 + 7);
+      s.eq('五子棋落子后换手', gAfter.turn, 2);
+      s.eq('五子棋状态继续', R.gomoku.status(gAfter), 'playing');
+
+      var cState = R.connect4.setup();
+      var applied = R.connect4.applyMove(cState, 3);
+      s.eq('四子棋落子受重力约束', applied.b[5 * 7 + 3], 1);
+      s.eq('四子棋落子后换手', applied.turn, 2);
+      s.eq('四子棋状态继续', R.connect4.status(applied).over, false);
+      var full = R.connect4.setup();
+      for (var i = 0; i < 6; i++) full = R.connect4.applyMove(full, 3);
+      s.eq('落满一列后该列不可落子', R.connect4.applyMove(full, 3), null);
+    });
+
+    s.done();
+  });
+}).catch(function (err) {
   console.error(err && err.stack ? err.stack : err);
-  s.ok('测试脚本整体执行未抛错', false, String(err && err.message));
-  s.done();
-  process.exitCode = 1;
+  process.exit(1);
 });

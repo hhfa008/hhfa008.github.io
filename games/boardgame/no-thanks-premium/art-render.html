@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2312171c'/%3E%3Crect x='14' y='10' width='36' height='44' rx='6' fill='%23fff6e8'/%3E%3Ctext x='32' y='41' font-family='Georgia,serif' font-size='24' font-weight='700' text-anchor='middle' fill='%23d8503f'%3E29%3C/text%3E%3C/svg%3E">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="No Thanks! 不谢精品桌游：33 张数字牌移除 9 张，收牌或付筹码跳过，连续数字只算最小一张，低分者胜。3–5 人 AI 对战与双人联机，纯前端本地素材。">
+<title>NO THANKS art composition</title>
+<style>
+:root{
+  --art-felt:url("../../assets/art/premium/no-thanks/table-felt.webp");
+  --art-paper:url("../../assets/art/premium/no-thanks/card-paper.webp");
+  --art-back:url("../../assets/art/premium/no-thanks/card-back.webp");
+  --art-chip:url("../../assets/art/premium/no-thanks/chip-coral.webp");
+  --art-brass:url("../../assets/art/premium/no-thanks/chip-brass.webp");
+  --serif:"Songti SC","Iowan Old Style","Palatino Linotype",Georgia,serif;
+  --sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB",sans-serif;
+  --ink:#f7ead6; --dim:#c9b6a3; --gold:#e4bd76; --gold2:#f7dfa8;
+  --coral:#e9604e; --coral2:#a93527; --mint:#63c9a3; --paper:#fff6e8; --paperink:#2a1d14;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:#0b1417}
+body{width:1200px;height:1200px;overflow:hidden;color:var(--ink);font-family:var(--sans)}
+.stage{position:relative;width:1200px;height:1200px;overflow:hidden;
+  background:
+    radial-gradient(900px 720px at 10% -8%,rgba(80,190,160,.18),transparent 62%),
+    radial-gradient(820px 680px at 96% 4%,rgba(228,189,118,.16),transparent 60%),
+    linear-gradient(150deg,#10252a,#080f12 72%);
+}
+.stage::before{content:"";position:absolute;inset:0;background:var(--art-felt) center/cover no-repeat;opacity:.42;filter:saturate(.8) contrast(1.05)}
+.stage::after{content:"";position:absolute;inset:0;background:
+  radial-gradient(circle at 50% 45%,transparent 0 19%,rgba(228,189,118,.10) 20% 20.6%,transparent 21% 37%,rgba(228,189,118,.07) 38% 38.5%,transparent 39%);opacity:.5}
+.frame{position:absolute;inset:26px;border:1px solid rgba(228,189,118,.42);border-radius:28px;box-shadow:inset 0 0 0 7px rgba(228,189,118,.05),0 40px 110px rgba(0,0,0,.55);z-index:1}
+.content{position:absolute;inset:66px;z-index:2;display:flex;flex-direction:column}
+.topline{display:flex;align-items:flex-start;justify-content:space-between;gap:24px}
+.brand{display:flex;align-items:center;gap:18px}
+.seal{width:76px;height:76px;border-radius:18px;border:1px solid rgba(228,189,118,.6);display:grid;place-items:center;
+  background:linear-gradient(150deg,rgba(228,189,118,.22),rgba(228,189,118,.04));font:700 34px/1 var(--serif);color:var(--gold2)}
+.kicker{font-size:14px;letter-spacing:5px;color:var(--dim);text-transform:uppercase}
+.title{font:700 74px/1.05 var(--serif);letter-spacing:1px;margin:6px 0 0}
+.title em{font-style:normal;color:var(--gold2)}
+.sub{font-size:20px;color:var(--dim);margin-top:8px;letter-spacing:1px}
+.stats{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;max-width:420px}
+.pill{border:1px solid rgba(228,189,118,.34);border-radius:999px;padding:9px 15px;background:rgba(0,0,0,.24);font-size:15px;color:var(--gold2);font-weight:700;white-space:nowrap}
+.hero{flex:1;display:flex;align-items:center;justify-content:center;position:relative;min-height:0}
+.table-shadow{position:absolute;width:780px;height:320px;border-radius:50%;background:radial-gradient(ellipse,rgba(0,0,0,.55),transparent 70%);filter:blur(14px);transform:translateY(190px)}
+.fan{position:relative;display:flex;align-items:flex-end;justify-content:center;gap:0;transform:translateY(-6px)}
+.card{position:relative;width:210px;height:294px;border-radius:20px;margin:0 -16px;border:2px solid rgba(190,152,102,.9);
+  background:radial-gradient(circle at 26% 18%,rgba(255,255,255,.95),transparent 36%),linear-gradient(152deg,rgba(255,253,246,.94),rgba(255,246,232,.92) 56%,rgba(239,223,199,.95)),var(--art-paper) center/cover no-repeat;
+  box-shadow:0 34px 60px rgba(0,0,0,.45),inset 0 0 0 7px rgba(255,255,255,.6),inset 0 0 0 8px rgba(126,92,54,.22);color:var(--paperink);
+  display:flex;align-items:center;justify-content:center;transform-origin:50% 90%}
+.card:nth-child(1){transform:rotate(-13deg) translateY(26px)}
+.card:nth-child(2){transform:rotate(-6deg) translateY(8px);z-index:2}
+.card:nth-child(3){transform:rotate(1deg);z-index:3}
+.card:nth-child(4){transform:rotate(8deg) translateY(8px);z-index:2}
+.card:nth-child(5){transform:rotate(15deg) translateY(26px)}
+.card .num{font:900 118px/1 var(--serif);letter-spacing:-6px;text-shadow:0 1px 0 #fff,0 4px 0 rgba(126,92,54,.16)}
+.card .corner{position:absolute;font:900 22px/1 var(--serif);color:var(--coral2)}
+.card .corner.tl{top:16px;left:18px}.card .corner.br{bottom:16px;right:18px;transform:rotate(180deg)}
+.card .rule{position:absolute;inset:14px;border:1px solid rgba(126,92,54,.28);border-radius:12px;pointer-events:none}
+.card.back{background:radial-gradient(circle at 30% 20%,rgba(255,255,255,.4),transparent 36%),var(--art-back) center/cover no-repeat}
+.chiprow{position:absolute;display:flex;gap:-6px;z-index:5;filter:drop-shadow(0 10px 14px rgba(0,0,0,.5))}
+.chip{width:64px;height:64px;border-radius:50%;margin:0 -6px;background:var(--art-chip) center/cover no-repeat;border:2px solid rgba(255,232,190,.7)}
+.chip.brass{background-image:var(--art-brass)}
+.chip.c1{transform:translate(-170px,150px) rotate(-8deg)}
+.chip.c2{transform:translate(-112px,164px) rotate(6deg)}
+.chip.c3{transform:translate(-54px,172px) rotate(-4deg)}
+.chip.c4{transform:translate(4px,176px) rotate(9deg)}
+.chip.c5{transform:translate(62px,172px) rotate(-6deg)}
+.chip.c6{transform:translate(120px,164px) rotate(7deg)}
+.chip.c7{transform:translate(178px,150px) rotate(-9deg)}
+.bottom{display:flex;align-items:flex-end;justify-content:space-between;gap:28px}
+.caption{max-width:560px;font-size:17px;line-height:1.7;color:var(--dim)}
+.caption b{color:var(--gold2)}
+.scorebox{border:1px solid rgba(228,189,118,.32);background:rgba(7,18,20,.72);border-radius:18px;padding:16px 20px;min-width:360px}
+.scorebox h3{margin:0 0 8px;font:700 15px/1 var(--sans);letter-spacing:2px;color:var(--gold);text-transform:uppercase}
+.srow{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:7px 0;border-bottom:1px dashed rgba(228,189,118,.16);font-size:17px}
+.srow:last-child{border-bottom:0}
+.srow .run{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.mini{width:44px;height:62px;border-radius:7px;border:1px solid rgba(190,152,102,.9);display:grid;place-items:center;font:900 20px/1 var(--serif);color:var(--paperink);
+  background:linear-gradient(152deg,rgba(255,253,246,.96),rgba(246,234,214,.96)),var(--art-paper) center/cover no-repeat;box-shadow:0 5px 10px rgba(0,0,0,.28)}
+.mini.gap{background:rgba(0,0,0,.18);border-style:dashed;color:var(--dim);box-shadow:none}
+.mini.neg{background:rgba(169,53,39,.18);border-color:rgba(233,96,78,.6);color:#ffb3a6}
+.srow b{font:700 26px/1 var(--serif);color:var(--gold2)}
+.footnote{font-size:13px;color:rgba(201,182,163,.75);letter-spacing:.6px;margin-top:10px}
+
+/* OG */
+body[data-shot="og"]{height:630px}
+body[data-shot="og"] .stage{height:630px}
+body[data-shot="og"] .content{inset:44px 58px}
+body[data-shot="og"] .title{font-size:56px}
+body[data-shot="og"] .sub{font-size:17px}
+body[data-shot="og"] .hero{position:absolute;right:56px;top:190px;width:520px;height:380px;flex:none}
+body[data-shot="og"] .card{width:150px;height:210px;margin:0 -12px}
+body[data-shot="og"] .card .num{font-size:82px}
+body[data-shot="og"] .bottom{position:absolute;left:58px;right:58px;bottom:42px}
+body[data-shot="og"] .scorebox{display:none}
+body[data-shot="og"] .caption{max-width:520px;font-size:15px}
+body[data-shot="og"] .chip{width:44px;height:44px}
+body[data-shot="og"] .chiprow{display:none}
+
+/* Detail layouts */
+body[data-shot="detail1"] .stage,body[data-shot="detail2"] .stage{width:1200px;height:800px}
+body[data-shot="detail1"],body[data-shot="detail2"]{height:800px}
+body[data-shot="detail1"] .content,body[data-shot="detail2"] .content{inset:48px 56px}
+body[data-shot="detail1"] .hero,body[data-shot="detail2"] .hero{display:none}
+body[data-shot="detail1"] .bottom,body[data-shot="detail2"] .bottom{flex:1;align-items:center}
+body[data-shot="detail1"] .title,body[data-shot="detail2"] .title{font-size:52px}
+body[data-shot="detail1"] .scorebox{min-width:520px}
+body[data-shot="detail1"] .caption,body[data-shot="detail2"] .caption{max-width:480px;font-size:16px}
+body[data-shot="detail1"] .mini{width:54px;height:76px;font-size:24px}
+.detail-art{display:none;flex:1;align-items:center;justify-content:center;gap:26px;min-height:0}
+body[data-shot="detail1"] .detail-art,body[data-shot="detail2"] .detail-art{display:flex}
+.spread{display:flex;align-items:center;gap:10px;flex-wrap:wrap;max-width:560px}
+.spread .card{width:130px;height:182px;margin:0 -6px}
+.spread .card .num{font-size:68px}
+.seatrow{display:flex;gap:12px;flex-wrap:wrap}
+.seatmini{border:1px solid rgba(228,189,118,.3);border-radius:14px;padding:10px 12px;background:rgba(0,0,0,.24);min-width:150px}
+.seatmini .n{font-weight:800;font-size:16px;color:var(--gold2)}
+.seatmini .s{font:700 30px/1 var(--serif);margin-top:4px}
+.seatmini .c{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}
+.seatmini .c .mini{width:30px;height:42px;font-size:14px}
+</style>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/no-thanks-premium/art-render.html">
+</head>
+<body data-shot="cover">
+<div class="stage"><div class="frame"></div>
+  <div class="content">
+    <div class="topline">
+      <div class="brand">
+        <div class="seal">不</div>
+        <div>
+          <div class="kicker">No Thanks · 不谢</div>
+          <div class="title">一枚筹码，<em>一次拒绝</em></div>
+          <div class="sub">收下麻烦，或者把麻烦推给下家</div>
+        </div>
+      </div>
+      <div class="stats">
+        <span class="pill">3–5 人</span>
+        <span class="pill">15–20 分钟</span>
+        <span class="pill">33 张牌 · 移除 9 张</span>
+        <span class="pill">每人 11 枚筹码</span>
+      </div>
+    </div>
+
+    <div class="hero">
+      <div class="table-shadow"></div>
+      <div class="fan">
+        <div class="card"><span class="corner tl">7</span><span class="num">7</span><span class="corner br">7</span><span class="rule"></span></div>
+        <div class="card"><span class="corner tl">8</span><span class="num">8</span><span class="corner br">8</span><span class="rule"></span></div>
+        <div class="card"><span class="corner tl">29</span><span class="num">29</span><span class="corner br">29</span><span class="rule"></span></div>
+        <div class="card"><span class="corner tl">20</span><span class="num">20</span><span class="corner br">20</span><span class="rule"></span></div>
+        <div class="card back"></div>
+      </div>
+      <div class="chiprow">
+        <span class="chip c1"></span><span class="chip brass c2"></span><span class="chip c3"></span>
+        <span class="chip brass c4"></span><span class="chip c5"></span><span class="chip brass c6"></span><span class="chip c7"></span>
+      </div>
+    </div>
+
+    <div class="bottom">
+      <div class="caption">
+        <b>连续数字只算最小一张。</b>7·8·9 只记 7 分；孤张按面值计入。<br>
+        牌面筹码随收牌一起拿走；最终 <b>总分最低</b> 的玩家获胜。
+      </div>
+      <div class="scorebox">
+        <h3>计分示例</h3>
+        <div class="srow"><span class="run"><span class="mini">7</span><span class="mini">8</span><span class="mini">9</span></span><span>连续段计 7</span><b>7</b></div>
+        <div class="srow"><span class="run"><span class="mini">20</span><span class="mini">21</span><span class="mini gap">—</span></span><span>连续段计 20</span><b>20</b></div>
+        <div class="srow"><span class="run"><span class="mini neg">筹码</span><span class="mini neg">×11</span></span><span>筹码抵扣</span><b>−11</b></div>
+      </div>
+    </div>
+    <div class="footnote">官网规则口径 · 本地 img-gen 材质 + 代码合成 · 零外链</div>
+
+    <div class="detail-art">
+      <div class="spread">
+        <div class="card"><span class="corner tl">3</span><span class="num">3</span><span class="corner br">3</span></div>
+        <div class="card"><span class="corner tl">4</span><span class="num">4</span><span class="corner br">4</span></div>
+        <div class="card"><span class="corner tl">5</span><span class="num">5</span><span class="corner br">5</span></div>
+        <div class="card"><span class="corner tl">17</span><span class="num">17</span><span class="corner br">17</span></div>
+      </div>
+      <div class="seatrow">
+        <div class="seatmini"><div class="n">你</div><div class="s">4</div><div class="c"><span class="mini">3</span><span class="mini">4</span><span class="mini">5</span></div></div>
+        <div class="seatmini"><div class="n">不谢达人</div><div class="s">19</div><div class="c"><span class="mini">11</span><span class="mini">12</span><span class="mini">19</span></div></div>
+        <div class="seatmini"><div class="n">守财奴</div><div class="s">-2</div><div class="c"><span class="mini">22</span><span class="mini">23</span><span class="mini neg">筹码</span></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+  'use strict';
+  var shot = new URLSearchParams(location.search).get('shot') || 'cover';
+  document.body.setAttribute('data-shot', shot === 'detail-1' ? 'detail1' : shot === 'detail-2' ? 'detail2' : shot);
+  if (shot === 'detail1' || shot === 'detail-1') {
+    document.querySelector('.kicker').textContent = '规则 · 连续段计分';
+    document.querySelector('.title').innerHTML = '连续段，<em>只算最小</em>';
+    document.querySelector('.sub').textContent = '3·4·5 记 3 分；17 单独记 17 分。筹码从总分中扣除。';
+    document.querySelector('.caption').innerHTML = '<b>为什么只算最小：</b>一套连续牌只代表一段麻烦，牌越大越难接到一起。<br>整理手牌时先排序，再按连续段累加每段首张。';
+  } else if (shot === 'detail2' || shot === 'detail-2') {
+    document.querySelector('.kicker').textContent = '局面 · 三人牌桌';
+    document.querySelector('.title').innerHTML = '收牌，还是<em>付筹码</em>';
+    document.querySelector('.sub').textContent = '牌上的筹码越堆越高，但下一位可能直接收走。';
+    document.querySelector('.caption').innerHTML = '<b>没有筹码时不能跳过</b>，必须收下当前牌。<br>24 张牌全部被拿走后结算，最低分获胜。';
+    var art = document.querySelector('.detail-art');
+    art.innerHTML = '';
+    var table = document.createElement('div');
+    table.className = 'spread';
+    var nums = [29, 20, 8];
+    nums.forEach(function (n) {
+      var card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = '<span class="corner tl">' + n + '</span><span class="num">' + n + '</span><span class="corner br">' + n + '</span>';
+      table.appendChild(card);
+    });
+    var chips = document.createElement('div');
+    chips.className = 'chiprow';
+    chips.style.position = 'relative';
+    chips.style.marginTop = '-30px';
+    chips.innerHTML = '<span class="chip" style="width:52px;height:52px"></span><span class="chip brass" style="width:52px;height:52px"></span><span class="chip" style="width:52px;height:52px"></span>';
+    table.appendChild(chips);
+    art.appendChild(table);
+    var seats = document.createElement('div');
+    seats.className = 'seatrow';
+    seats.innerHTML = '<div class="seatmini"><div class="n">你 · 12 分</div><div class="s">12</div><div class="c"><span class="mini">8</span><span class="mini">9</span><span class="mini">20</span></div></div>' +
+      '<div class="seatmini"><div class="n">不谢达人 · 7 分</div><div class="s">7</div><div class="c"><span class="mini">7</span><span class="mini">8</span><span class="mini neg">−4</span></div></div>' +
+      '<div class="seatmini"><div class="n">守财奴 · 26 分</div><div class="s">26</div><div class="c"><span class="mini">26</span><span class="mini neg">−5</span></div></div>';
+    art.appendChild(seats);
+  }
+  document.addEventListener('DOMContentLoaded', function () {});
+})();
+</script>
+</body>
+</html>

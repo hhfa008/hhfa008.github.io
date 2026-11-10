@@ -1,0 +1,200 @@
+{
+  "slug": "avalon-premium",
+  "name": {
+    "zh": "阿瓦隆",
+    "en": "Avalon"
+  },
+  "type": "boardgame",
+  "status": "shipped",
+  "statusReason": "五项门禁全过：官方 5 人规则引擎 + 单测；本地 img-gen 材质合成封面/OG/详情图；realism 六类校验；390×844 与 320×568 移动端冒烟；双客户端联机 E2E（隐藏身份、AI 补齐到 5 人、重连、超时托管、排行榜）纳入 run-all。",
+  "entry": "index.html",
+  "rules": "rules.html",
+  "design": "DESIGN.md",
+  "acceptance": "ACCEPTANCE.md",
+  "e2e": {
+    "script": "e2e.mjs",
+    "record": "E2E.md",
+    "command": "node games/boardgame/avalon-premium/e2e.mjs",
+    "control": "node games/boardgame/avalon-premium/e2e.mjs --control  # exit 1, intentional failure",
+    "environment": "dedicated resident audit Chrome via CDP 9333 (persistent profile, reused across runs); chrome-ensure reuse; one tab opened and closed; no temp Chrome/profile",
+    "online": {
+      "script": "test-online.js",
+      "command": "node games/boardgame/avalon-premium/test-online.js",
+      "runAll": "auto-discovered by node games/tests/run-all.js",
+      "control": "node games/boardgame/avalon-premium/test-online.js --control  # exit 1",
+      "assertions": 62,
+      "evidence": "online-e2e.json"
+    },
+    "assertions": 115
+  },
+  "singlePlayer": false,
+  "modeLabel": "5 人 · 联机 + AI 补位 / 单人 AI",
+  "players": {
+    "min": 5,
+    "max": 5,
+    "best": [
+      5
+    ]
+  },
+  "playTime": {
+    "min": 20,
+    "max": 30
+  },
+  "age": 10,
+  "designer": "Don Eskridge",
+  "year": 2012,
+  "awards": [
+    "2012 Golden Geek Best Party Board Game nominee",
+    "2012 BoardGameGeek Best Thematic Board Game nominee"
+  ],
+  "online": {
+    "status": "ready",
+    "required": [
+      "online-rooms",
+      "invite-flow",
+      "state-sync",
+      "hidden-roles",
+      "ai-fill-to-5",
+      "reconnect",
+      "timeout-ai-takeover",
+      "leaderboard",
+      "dual-client-e2e-in-run-all"
+    ],
+    "entry": "online.html",
+    "server": "online-server.mjs",
+    "sharedServer": "../../shared/online-room-server.mjs",
+    "transport": "HTTP/JSON + 700ms polling; server-authoritative; LAN-only by default",
+    "features": {
+      "rooms": "exactly 5 seats; room id + 6-char code + single-use invite token",
+      "invite": "inviteUrl uses the request Host; opens /boardgame/avalon-premium/online.html?room=&code=",
+      "stateSync": "stateVersion + lastAction; every viewer receives the same public state with a per-seat hidden-role projection",
+      "aiFill": "empty seats fill to exactly 5 players with the same engine and AI decision function",
+      "hiddenRoles": "publicView(viewer) returns only the viewer's role plus allowed knowledge tokens; all roles revealed only after the match",
+      "reconnect": "session token + POST /api/rooms/:id/reconnect; reconnect clears timeout takeover",
+      "timeoutTakeover": "no session request for 15s → server AI plays the seat; reconnect restores it",
+      "leaderboard": "GET /api/leaderboard?game=avalon-premium; AI participants included; raw playerId hashed",
+      "idempotency": "per-player idempotencyKey cached before the turn guard"
+    },
+    "evidence": {
+      "http": "node games/boardgame/avalon-premium/test-online.js — 62 assertions",
+      "browser": "node games/boardgame/avalon-premium/e2e.mjs online section",
+      "runAll": "test-online.js is auto-discovered by node games/tests/run-all.js"
+    }
+  },
+  "shared": {
+    "shuffle": "games/shared/shuffle.js — engine.js require + index.html script tag; seeded Fisher-Yates for roles",
+    "sfx": "games/shared/sfx.js — index.html / online.html script tag; no per-game AudioContext",
+    "rules": "N/A — Avalon rules live in engine.js",
+    "physics": "N/A — no physics simulation",
+    "leaderboard": "shared room server keeps an anonymous in-memory board; no leaderboard copy"
+  },
+  "assets": {
+    "cover": "assets/cover.webp",
+    "coverMaster": "assets/cover.png",
+    "og": "assets/og.webp",
+    "ogMaster": "assets/og.png",
+    "detailImages": [
+      "assets/detail-1.webp",
+      "assets/detail-2.webp"
+    ],
+    "detailMasters": [
+      "assets/detail-1.png",
+      "assets/detail-2.png"
+    ],
+    "singleObject": [
+      "../../assets/art/premium/avalon/round-table-felt.webp",
+      "../../assets/art/premium/avalon/parchment.webp",
+      "../../assets/art/premium/avalon/quest-stone.webp",
+      "../../assets/art/premium/avalon/sword.webp",
+      "../../assets/art/premium/avalon/shield.webp",
+      "../../assets/art/premium/avalon/crown.webp"
+    ],
+    "compositionSource": "art-render.html",
+    "compositionScript": "render-art.mjs",
+    "localOnly": true
+  },
+  "realism": {
+    "rules": {
+      "players": 5,
+      "roles": {
+        "merlin": 1,
+        "percival": 1,
+        "loyal": 1,
+        "morgana": 1,
+        "assassin": 1
+      },
+      "good": 3,
+      "evil": 2,
+      "questSizes": [
+        2,
+        3,
+        2,
+        3,
+        3
+      ],
+      "failsRequired": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "questsToWin": 3,
+      "maxConsecutiveRejects": 5,
+      "voteMajority": "strictly more than half (3 of 5); ties rejected",
+      "assassination": "after good wins 3 quests the Assassin picks any other seat; hitting Merlin makes evil win",
+      "hidden": [
+        "other players' roles until the match ends",
+        "individual approval votes while a vote is open",
+        "who submitted which mission card"
+      ]
+    },
+    "dimensions": {
+      "roleCardMm": [
+        63,
+        88
+      ],
+      "questCardMm": [
+        63,
+        88
+      ],
+      "voteCardMm": [
+        45,
+        70
+      ],
+      "teamTokenMm": 25,
+      "boxMm": [
+        270,
+        270,
+        60
+      ]
+    },
+    "sources": [
+      "Bilibili BV1Ym4y1Q7Gq — 【桌游规则】阿瓦隆AVALON基础规则讲解",
+      "Bilibili BV16CYPzLE7p — 阿瓦隆完整规则",
+      "Bilibili BV1JZtZetESQ — 《阿瓦隆》桌游教学"
+    ]
+  },
+  "performanceBudgets": {
+    "fcpMs": 2500,
+    "loadEventEndMs": 4000,
+    "domNodes": 2500,
+    "fps": 30,
+    "newGameRenderMs": 200,
+    "materialBytes": 2097152,
+    "externalRequests": 0
+  },
+  "mobile": {
+    "viewports": [
+      "390x844",
+      "320x568",
+      "844x390",
+      "568x320"
+    ],
+    "touchTargetPx": 44,
+    "safeArea": true,
+    "dvh": true,
+    "offline": true,
+    "hoverDependent": false
+  }
+}

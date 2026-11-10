@@ -1,0 +1,237 @@
+{
+  "slug": "connect4-premium",
+  "name": {
+    "zh": "四子棋",
+    "en": "Connect 4"
+  },
+  "type": "boardgame",
+  "status": "shipped",
+  "statusReason": "五项门禁全过：单测 124/0（42 格、重力、先手交替、21+21 枚、四方向连线、满盘平局、AI 合法性）；双客户端联机 E2E 83/0 并输出 ONLINE_E2E_JSON；浏览器 E2E 150/0 并写入 perf.json（FCP 0ms、DCL 32ms、DOM 207、FPS 61、新局 0.2ms、materialBytes 400553、外部请求 0）；封面 1200×1200、OG 1200×630、两张详情图 1200×800 由本地材质代码合成，四图+四材质合计 625456 bytes；realism 七类校验通过；390×844 与 320×568 冒烟 PASS（19 项检查/档，零 console error、零外部请求、零溢出、主控件 ≥44px、字号 ≥12px、320 档棋盘列宽 44px）。",
+  "entry": "index.html",
+  "rules": "rules.html",
+  "design": "DESIGN.md",
+  "acceptance": "ACCEPTANCE.md",
+  "e2e": {
+    "script": "e2e.mjs",
+    "record": "E2E.md",
+    "command": "node games/boardgame/connect4-premium/e2e.mjs",
+    "control": "node games/boardgame/connect4-premium/e2e.mjs --control  # exit 1, intentional failure",
+    "environment": "dedicated resident headless Chrome via CDP 9332 (persistent profile, reused across runs); chrome-ensure reuse; one tab opened and closed; no temp Chrome/profile",
+    "online": {
+      "script": "test-online.js",
+      "command": "node games/boardgame/connect4-premium/test-online.js",
+      "runAll": "auto-discovered by node games/tests/run-all.js",
+      "control": "node games/boardgame/connect4-premium/test-online.js --control  # exit 1",
+      "assertions": 83,
+      "evidence": "online-e2e.json"
+    },
+    "assertions": 150
+  },
+  "singlePlayer": false,
+  "modeLabel": "2 人联机（AI 补位）· 单人红方 vs 简单 / 普通 / 困难 AI",
+  "players": {
+    "min": 2,
+    "max": 2,
+    "best": [
+      2
+    ]
+  },
+  "playTime": {
+    "min": 5,
+    "max": 15
+  },
+  "age": 6,
+  "designer": "Ned Strongin / Howard Wexler",
+  "year": 1974,
+  "awards": [
+    "National Toy Hall of Fame 2015"
+  ],
+  "online": {
+    "status": "ready",
+    "required": [
+      "online-rooms",
+      "invite-flow",
+      "state-sync",
+      "reconnect",
+      "timeout-ai-takeover",
+      "leaderboard",
+      "dual-client-e2e-in-run-all"
+    ],
+    "entry": "online.html",
+    "server": "online-server.mjs",
+    "sharedServer": "../../shared/online-room-server.mjs",
+    "transport": "HTTP/JSON + 700ms polling; server-authoritative; LAN-only by default",
+    "features": {
+      "rooms": "2 seats; room id + single-use invite token + optional password",
+      "invite": "inviteUrl uses the request Host; opens /boardgame/connect4-premium/online.html?room=&code=",
+      "stateSync": "stateVersion + lastAction; every viewer receives the same public board, turn and winning line",
+      "aiFill": "an empty seat is filled by the same engine's hard AI; the server applies its pure action",
+      "reconnect": "session token + POST /api/rooms/:id/reconnect; reconnect clears timeout takeover",
+      "timeoutTakeover": "no session request for 15s → server AI plays the seat; reconnect restores the human",
+      "leaderboard": "GET /api/leaderboard?game=connect4-premium; AI participants included; raw playerId hashed",
+      "idempotency": "per-player idempotencyKey cached before the action guard",
+      "rematch": "host restart swaps the first player: seat 1 becomes red, seat 0 becomes yellow"
+    },
+    "evidence": {
+      "http": "node games/boardgame/connect4-premium/test-online.js — 83 assertions",
+      "browser": "node games/boardgame/connect4-premium/e2e.mjs online section",
+      "runAll": "test-online.js is auto-discovered by node games/tests/run-all.js"
+    }
+  },
+  "shared": {
+    "shuffle": "games/shared/shuffle.js — loaded by index.html; Connect 4 needs no shuffling, so only the shared module is present",
+    "sfx": "games/shared/sfx.js — index.html script tag; no per-game AudioContext",
+    "rules": "N/A — Connect 4 rules live in engine.js (the single implementation used by UI, AI and server)",
+    "physics": "Gravity is deterministic (lowest empty cell); no physics engine",
+    "leaderboard": "shared room server keeps an anonymous in-memory board; no leaderboard copy"
+  },
+  "assets": {
+    "cover": "assets/cover.webp",
+    "og": "assets/og.webp",
+    "detailImages": [
+      "assets/detail-1.webp",
+      "assets/detail-2.webp"
+    ],
+    "singleObject": [
+      "../../assets/art/premium/connect4/disc-red.webp",
+      "../../assets/art/premium/connect4/disc-yellow.webp",
+      "../../assets/art/premium/connect4/frame-blue.webp",
+      "../../assets/art/premium/connect4/table-felt.webp"
+    ],
+    "compositionSource": "art-render.html",
+    "compositionScript": "render-art.mjs",
+    "localOnly": true
+  },
+  "realism": {
+    "dimensions": {
+      "rows": 6,
+      "cols": 7,
+      "cells": 42,
+      "discDiameterMm": 32,
+      "discThicknessMm": 4,
+      "boardMm": [
+        250,
+        220,
+        30
+      ],
+      "cellPitchMm": 32,
+      "discs": {
+        "red": 21,
+        "yellow": 21,
+        "total": 42
+      }
+    },
+    "colors": {
+      "red": "#d7263d",
+      "yellow": "#f6c445",
+      "frame": "#1f5fbf"
+    },
+    "materials": {
+      "discs": "ABS plastic",
+      "frame": "injection-molded blue ABS",
+      "table": "navy wool felt"
+    },
+    "rules": {
+      "first": "red",
+      "turn": "alternate",
+      "gravity": "lowest empty cell of the chosen column",
+      "win": "4 connected horizontally, vertically or on either diagonal",
+      "draw": "42 cells full with no four connected",
+      "terminal": "no legal moves after a win or a draw"
+    },
+    "checks": 7,
+    "sources": [
+      "Bilibili BV1VH4y127ku — 游戏规则-四子棋",
+      "Bilibili BV1ap4y1Q7km — 孙老师四子棋规则讲解",
+      "Bilibili BV1sr4y1D7oe — 【Superduck 桌游介绍】四子棋 Connect Four"
+    ]
+  },
+  "performanceBudgets": {
+    "fcpMs": 2500,
+    "domContentLoadedMs": 4000,
+    "loadEventEndMs": 4000,
+    "domNodes": 2500,
+    "fps": 30,
+    "newGameRenderMs": 200,
+    "materialBytes": 2097152,
+    "externalRequests": 0
+  },
+  "mobile": {
+    "viewports": [
+      "390x844",
+      "320x568"
+    ],
+    "touchTargetPx": 44,
+    "safeArea": true,
+    "dvh": true,
+    "offline": true,
+    "hoverDependent": false,
+    "fontMinPx": 12,
+    "measured": {
+      "390x844": {
+        "overflow": false,
+        "minControl": 44,
+        "minFont": 12,
+        "columnWidth": 48.6,
+        "scrollWidth": 390,
+        "clientWidth": 390
+      },
+      "320x568": {
+        "overflow": false,
+        "minControl": 44,
+        "minFont": 12,
+        "columnWidth": 44,
+        "scrollWidth": 320,
+        "clientWidth": 320
+      }
+    }
+  },
+  "bilibili": {
+    "sources": [
+      {
+        "bv": "BV1VH4y127ku",
+        "title": "游戏规则-四子棋",
+        "up": "Pipity熊猫乐乐",
+        "url": "https://www.bilibili.com/video/BV1VH4y127ku"
+      },
+      {
+        "bv": "BV1ap4y1Q7km",
+        "title": "孙老师四子棋规则讲解",
+        "up": "枫之月下",
+        "url": "https://www.bilibili.com/video/BV1ap4y1Q7km"
+      },
+      {
+        "bv": "BV1sr4y1D7oe",
+        "title": "【Superduck 桌游介绍】四子棋 Connect Four",
+        "up": "SuperduckH",
+        "url": "https://www.bilibili.com/video/BV1sr4y1D7oe"
+      }
+    ]
+  },
+  "gates": {
+    "tests": true,
+    "art": true,
+    "realism": true,
+    "mobile": true,
+    "online": true
+  },
+  "serviceWorker": {
+    "precacheIncludes": [
+      "index.html",
+      "rules.html",
+      "online.html",
+      "engine.js",
+      "data.js",
+      "meta.json",
+      "realism.json",
+      "assets/cover.webp",
+      "assets/og.webp",
+      "assets/detail-1.webp",
+      "assets/detail-2.webp",
+      "../../assets/art/premium/connect4/disc-red.webp",
+      "../../assets/art/premium/connect4/disc-yellow.webp",
+      "../../assets/art/premium/connect4/frame-blue.webp",
+      "../../assets/art/premium/connect4/table-felt.webp"
+    ]
+  }
+}

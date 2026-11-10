@@ -45,7 +45,7 @@ var I18N = {
       E.board.appendChild(tile);
     }
     if (status !== 'playing') {
-      E.overlayTitle.textContent = I18N[Arcade.lang()][status + 'Overlay'];
+      E.overlayTitle.textContent = I18N[Arcade.lang()][Arcade.overlayKey(status)];
       E.overlayText.textContent = status === 'won' ? '' : I18N[Arcade.lang()].hintText;
       E.overlay.hidden = false;
     } else {

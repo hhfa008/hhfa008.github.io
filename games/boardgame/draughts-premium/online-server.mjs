@@ -1,0 +1,27 @@
+#!/usr/bin/env node
+/*
+ * International Draughts Premium online server.
+ *   node games/boardgame/draughts-premium/online-server.mjs --port 8787
+ */
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { startGameServer } from '../../shared/boardgame-room-server.mjs';
+import { draughtsAdapter } from './online-adapter.mjs';
+
+export function startOnlineServer(options) {
+  return startGameServer(Object.assign({}, options || {}, { adapter: draughtsAdapter }));
+}
+
+const isMain = process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url;
+if (isMain) {
+  const portArg = process.argv.indexOf('--port');
+  const port = portArg !== -1 ? Number(process.argv[portArg + 1]) : 8787;
+  startOnlineServer({ port }).then((handle) => {
+    const a = handle.address;
+    console.log('[draughts-online] http://' + a.address + ':' + a.port + '/boardgame/draughts-premium/online.html');
+    console.log('[draughts-online] http://' + a.address + ':' + a.port + '/boardgame/draughts-premium/index.html');
+  }).catch((err) => {
+    console.error(err && err.stack ? err.stack : String(err));
+    process.exitCode = 1;
+  });
+}

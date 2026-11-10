@@ -6,4 +6,5 @@ var kit = require('../shared/arcade/kits/memory-pairs.js');
 var run = require('../shared/arcade/tests/memory-pairs.js');
 var params = {"rows":3,"cols":4};
 run(kit.create(params), params, s);
+require('../shared/arcade/tests/terminal.js').check("memory-3x4", s);
 s.done();

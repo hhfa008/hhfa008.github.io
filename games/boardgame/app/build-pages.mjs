@@ -15,7 +15,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { renderIndex, renderDetail } from '../build.mjs';
+import { renderIndex, renderDetail, loadShippedStatus } from '../build.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
@@ -121,8 +121,11 @@ function assertPages(outDir, games) {
 function main() {
   const dataDir = path.resolve(ROOT, arg('data', path.join(ROOT, 'data')));
   const outDir = path.resolve(ROOT, arg('out', path.join(ROOT, 'pages')));
+  const statusFile = path.resolve(ROOT, arg('status', path.join(ROOT, 'catalog-status.json')));
   const categories = JSON.parse(fs.readFileSync(path.join(dataDir, 'categories.json'), 'utf8'));
   const games = JSON.parse(fs.readFileSync(path.join(dataDir, 'boardgames.json'), 'utf8'));
+  // 与根 build.mjs 共用同一份 shipped 状态源：draft 条目不得渲染大厅入口。
+  const shipped = loadShippedStatus(statusFile).shipped;
 
   // 复用根构建的校验与排序（不写根目录）。build() 会写 ROOT，这里不能直接调用；
   // 只借用 render*，排序与校验逻辑由 build.mjs 内部函数承担（渲染时已排序输入）。
@@ -142,7 +145,7 @@ function main() {
 
   fs.mkdirSync(outDir, { recursive: true });
 
-  const indexHtml = injectJsonLd(flattenIndex(renderIndex(categories, sorted)), indexJsonLd(sorted));
+  const indexHtml = injectJsonLd(flattenIndex(renderIndex(categories, sorted, null, shipped)), indexJsonLd(sorted));
   assertClean('index.html', indexHtml);
   fs.writeFileSync(path.join(outDir, 'index.html'), indexHtml);
 

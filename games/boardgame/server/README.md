@@ -1,7 +1,8 @@
 # 桌游 HTTP/JSON API（机器可调用）
 
-`app/server.mjs` 是零第三方依赖的 Node HTTP 服务，给本地 AI agent、dsh 插件和自动化测试用。
-只监听 `127.0.0.1`，内存态，不写盘、不发外网请求、不收集个人信息。
+`app/server.mjs` 是零第三方依赖的 Node HTTP 服务，给本地 AI agent、dsh 插件和自动化测试用，
+同时也能在局域网内提供跨设备房间页（`/play/online.html`）。内存态，不写盘、不发外网请求、
+不收集个人信息。**仅限内网自用，不要直接暴露公网。**
 
 ## 启动
 
@@ -15,19 +16,29 @@ node app/server.mjs
 # 指定端口（优先级：--port > BOARDGAME_AI_PORT > 8787）
 node app/server.mjs --port 8787
 BOARDGAME_AI_PORT=8788 node app/server.mjs
+
+# 跨设备联机：监听所有网卡；邀请 URL 用请求 Host
+node app/server.mjs --host 0.0.0.0 --port 8787
+BOARDGAME_HOST=0.0.0.0 node app/server.mjs
 ```
 
 环境变量：
 
 | 变量 | 作用 |
 |---|---|
+| `BOARDGAME_HOST` | 监听地址，默认 `127.0.0.1`；`0.0.0.0` 允许局域网访问 |
 | `BOARDGAME_AI_PORT` | `app/server.mjs` 未带 `--port` 时的监听端口，默认 `8787` |
-| `BOARDGAME_API_TOKEN` | 可选。设置后所有请求都要带 `Authorization: Bearer <token>`；不设置则不鉴权 |
+| `BOARDGAME_API_TOKEN` | 可选。设置后 `/api/*` 要求 `Authorization: Bearer <token>`；`/health` 与静态页保持可读 |
+| `BOARDGAME_AI_FILL_MS` | 创建房间后多久无人加入就 AI 补位，默认 `3000` |
+| `BOARDGAME_AI_MOVE_MIN_MS` / `BOARDGAME_AI_MOVE_MAX_MS` | AI / 托管行动节奏，默认 `600` / `1200` |
+| `BOARDGAME_DISCONNECT_MS` | 断线多久后托管，默认 `15000` |
+| `BOARDGAME_TICK_MS` | 托管检查间隔，默认 `120` |
 | `BOARDGAME_AI_BASE_URL` | `server/ai-eval.mjs` 的默认 `--base-url`，默认 `http://127.0.0.1:8787` |
 
-> **部署边界**：这套服务是 loopback / 内网自用接口。若要对内网其他机器开放，必须先加
-> Bearer token（`BOARDGAME_API_TOKEN`）和反向代理限流；**不要直接暴露公网**。
-> 生产化路径见 `../DEPLOYMENT.md`（Cloudflare Workers / Durable Objects）。
+> **部署边界**：这套服务是 loopback / 内网自用接口。`--host 0.0.0.0` 只用于同一局域网内
+> 的设备联机，CORS 只回显同源 / 回环 / 局域网 Origin，绝不使用 `*`。若要对内网其他机器开放，
+> 建议同时设置 Bearer token；**不要直接暴露公网**。生产化路径见 `../DEPLOYMENT.md`
+> （Cloudflare Workers / Durable Objects）。
 
 ## 端点
 
@@ -39,15 +50,16 @@ BOARDGAME_AI_PORT=8788 node app/server.mjs
 | GET | `/api/matches/:id/actions` | 当前合法动作 |
 | POST | `/api/matches/:id/actions` | 提交动作（支持 `idempotencyKey`） |
 | POST | `/api/ai/evaluate` | 对给定动作列表给出推荐动作/分值 |
-| POST | `/api/rooms` | 创建房间（可选密码/可见性/seed） |
+| POST | `/api/rooms` | 创建房间（可选密码/可见性/seed；`autoFill:true` 3 秒后 AI 补位） |
 | POST | `/api/rooms/:id/join` | 加入房间（密码或邀请码） |
-| GET | `/api/rooms/:id` | 查询房间状态、zones、合法动作 |
-| POST | `/api/rooms/:id/actions` | 在房间内落子/执行动作（复用引擎动作） |
+| GET | `/api/rooms/:id` | 查询房间状态、zones、合法动作、`stateVersion`、`autoPlayed`（客户端 500–1000ms 轮询） |
+| POST | `/api/rooms/:id/actions` | 在房间内落子/执行动作（复用引擎动作；`idempotencyKey` 幂等） |
 | POST | `/api/rooms/:id/start` | 房主开始对局（卡牌 2 人，麻将 4 人） |
-| POST | `/api/rooms/:id/reconnect` | 用 `playerSession` 重连 |
+| POST | `/api/rooms/:id/reconnect` | 用 `playerSession` 重连（恢复被托管的玩家） |
 | POST | `/api/rooms/:id/leave` | 离开房间 |
 | DELETE | `/api/rooms/:id` | 房主关闭房间 |
 | POST | `/api/rooms/:id/voice/token` | 语音接口位，只做成员鉴权，不做媒体传输 |
+| GET | `/api/leaderboard?game=<id>` | 服务端内存排行榜（匿名 hash，无个人信息；AI 结果同样有效） |
 
 游戏类型：`card-battle`（默认，宝可梦式 2 人卡牌）和 `mahjong`（4 人麻将）。
 动作形状沿用引擎：
@@ -108,6 +120,27 @@ curl -s -X DELETE "$BASE/api/rooms/<roomId>?playerId=p1&session=<playerSession>"
 - `visibility=private` 的房间，读状态和动作都必须带成员 `playerId` + `session`。
 - 所有状态都在内存里；进程重启即清空，没有数据库、没有上传、没有个人信息字段。
   创建房间时传 `email`/`phone` 会被 **422 E_PII** 拒绝。
+
+## 跨设备、AI 补位、重连与托管
+
+- **邀请 URL**：创建/读取房间时返回 `inviteUrl`，由请求的 `Host`（或 `x-forwarded-host`）
+  生成，例如 `http://192.168.1.8:8787/play/online.html?room=...&code=...`。服务同时提供
+  静态页，所以另一台设备打开链接即可加入；不需要单独再起 `play/serve.mjs`。
+- **状态同步**：`GET /api/rooms/:id` 返回 `stateVersion`（每次 join/start/动作/托管自增）
+  和 `lastAction`；客户端按 500–1000ms 轮询即可。动作响应同样带版本，提交时传
+  `idempotencyKey`，重复请求返回同一份缓存响应，不会重复落子。
+- **AI 补位**：`POST /api/rooms` 传 `autoFill:true`；超过 `BOARDGAME_AI_FILL_MS`（默认 3s）
+  仍缺人时，用 `ai_<n>` 补到 2 人（卡牌）或 4 人（麻将）并自动开局。AI 与服务器托管都从
+  `cardgame.js` / `mahjong.js` 的 `legalActions` 里选动作，按 `BOARDGAME_AI_MOVE_*` 的节奏
+  （默认 600–1200ms）执行，不简化规则。
+- **断线重连**：`POST /api/rooms/:id/reconnect` 带 `{token, playerId}` 恢复；成功后清除该玩家的
+  托管状态，并在响应里带回当前 `autoPlayed`。
+- **超时托管**：某玩家超过 `BOARDGAME_DISCONNECT_MS`（默认 15s）没有任何带 session 的请求，
+  服务器代打合法动作；房间视图的 `autoPlayed` 数组返回
+  `{playerId,type,reason:'timeout',at}`，`autoPlay.players` 列出当前托管玩家。
+- **排行榜**：终局自动写内存榜单，`GET /api/leaderboard?game=card-battle` 读取。条目只含
+  `sha256(playerId)`、座位、分数、回合、时长与 `ai` 标记；AI 参与的结果同样计入。
+- **隐私**：昵称/玩家 ID 由用户自填，榜单不落原文；不接收姓名、邮箱、手机号。
 
 ## 错误码
 
@@ -197,3 +230,8 @@ node ../../games/tests/run-all.js      # 全站测试（会自动发现 test-ai.
 `tests/ai-e2e.test.mjs` 与 `tests/ai-errors.test.mjs` 会在空闲端口自起 `app/server.mjs`，
 跑完房间/动作/AI eval 与错误路径后杀掉服务，不依赖开发者手动开服务。
 `test-ai.js` 直接复用 `tests/ai-errors.test.mjs` 的断言，保证两个入口覆盖同一份错误契约。
+
+Note: the unrelated `tests/network-rooms.test.mjs` share the same service discovery.
+When `BOARDGAME_AI_BASE_URL` points at this service, that contract will also probe it
+and expect `/api/rooms`. Use `run-all.mjs --filter=ai` / `--filter=dsh` as the gate for
+this module, or run the full suite without the env var.

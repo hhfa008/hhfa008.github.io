@@ -6,4 +6,5 @@ var kit = require('../shared/arcade/kits/hanoi.js');
 var run = require('../shared/arcade/tests/hanoi.js');
 var params = {"disks":4};
 run(kit.create(params), params, s);
+require('../shared/arcade/tests/terminal.js').check("hanoi-4", s);
 s.done();

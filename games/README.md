@@ -1,10 +1,8 @@
 # 游戏集合维护说明
 
-28 款纯静态网页桌游/棋牌：免费、免登录、单文件，打开即玩。
+21 款纯静态网页桌游/棋牌：免费、免登录、单文件，打开即玩。
 
 ## 游戏清单
-
-**权威数据源是 `games/registry.json`**（当前 33 条，其中 28 条 live；`profile`、`leaderboard`、`ai-eval`、`agents` 四个工具页与 `turtle-soup` 登记为 draft，不进三语大厅）：三语大厅的卡片区、分类计数与 ItemList 都由 `scripts/gen-hubs.js` 从它生成，并由 `scripts/check-registry.js` 校验。下表是人工摘要，自检项数来自测试输出；改名、改人数、改 AI 档位、增删游戏一律先改 registry，不要再手改三语大厅的卡片。
 
 自检项数＝对应 node 单元测试通过的检查/断言条数；Tap Match、语音房无纯逻辑，记为浏览器 E2E 检查项。
 
@@ -25,26 +23,19 @@
 | 蜘蛛纸牌 | Spider | /games/spider/ | 纸牌 | 1 | — | rules.html | 60 |
 | 24 点 | 24 Game | /games/24game/ | 纸牌 | 1 | — | rules.html | 51 |
 | 斗地主 | Dou Dizhu | /games/doudizhu/ | 卡牌 | 3 | 单档·规则式 | rules.html | 110 |
-| 德州扑克 | Texas Hold'em | /games/texas-holdem/ | 卡牌 | 4 | 三档 | rules.html | 156 |
-| 麻将 | Mahjong | /games/mahjong/ | 麻将 | 4 | 三档 | rules.html | 77 |
-| 余烬牌组工坊 | Ember Deck Forge | /games/tcg-deck/ | 卡牌 | 1 | — | rules.html | —（无自动化测试） |
-| 灯语者：余烬对决 | Lamptongue: Duel of Embers | /games/tcg-sample/ | 卡牌 | 2 | 两档 | rules.html | 46 |
 | 拓荒者：九岛 | Pioneers of Nine Isles | /games/pioneers/ | 德式 | 2–4 | 单档·贪心 | rules.html | 52 |
 | 谁是卧底 | Undercover | /games/undercover/ | 聚会 | 4–12 | — | rules.html | 50 |
 | 飞行棋 | Aeroplane | /games/aeroplane/ | 聚会 | 2–4 | 单档·简单 | rules.html | 36 |
+| 海龟汤 | Turtle Soup | /games/turtle-soup/ | 聚会 | 1 | 规则裁判+本地 AI | rules.html | 389 |
 | Tap Match | Tap Match | /games/tap-match/ | 小游戏 | 1 | — | rules.html | 9（E2E） |
 | 语音房 | Voice Room | /games/voice-room/ | 在线联机 · 井字棋/五子棋/四子棋 | 2–4 | — | guide.html | 14（E2E） |
-| 2048 | 2048 | /games/2048/ | 数字 | 1 | — | rules.html | 24 |
-| 2048 3×3 | 2048 3×3 | /games/2048-3/ | 数字 | 1 | — | rules.html | 24 |
-| 2048 5×5 | 2048 5×5 | /games/2048-5/ | 数字 | 1 | — | rules.html | 24 |
-| 关灯 3×3 | Lights Out 3×3 | /games/lights-3/ | 小游戏 | 1 | — | rules.html | 16 |
-| 海龟汤 | Turtle Soup | /games/turtle-soup/ | 聚会 | 1 | — | rules.html | 395 |
 
 ## 技术约定
 
 - 单文件：CSS/JS 内联在 `index.html`；例外是 `pioneers/engine.js`、`shared/rules.js`（五子棋/四子棋单机版与语音房服务端共用规则）、`shared/share.js`（全站分享按钮：原生分享优先，不支持时复制链接）和 `shared/hand-eval.js`（德州扑克/麻将共用验牌引擎），均同目录同源加载，仍无外部依赖。
 - 分享：每个游戏页与三个大厅底部都有分享按钮，链接不带用户标识、不带追踪参数；语音房另提供「复制邀请链接」「复制邀请文案」，邀请链接形如 `/games/voice-room/?room=1234`。
 - 无外部依赖：不引 CDN、字体、图标库；棋盘与棋子用内联 SVG/CSS 自绘。
+- 本地 AI 例外：`turtle-soup` 可选启用浏览器内 WebLLM 本地模型，仅在用户主动点击后从 jsdelivr 与 HuggingFace（失败走 hf-mirror）加载权重；这是全站唯一例外，默认不加载、无外部请求，其余游戏仍严格无外部依赖。
 - 无追踪：不接 analytics、不上报；最高分与战绩只写 `localStorage`。
 - 三语：15 款走 EN／简中／ID 字典与切换；Tap Match 为 EN／ID／FIL；中国象棋、语音房暂为中文单语，改版时应优先补齐。
 - 触控优先：以手机竖屏为基准，点按目标不小于 32px，棋盘随视口缩放。
@@ -127,16 +118,6 @@
 - 飞行棋：起飞、踩敌机、跳格、精确终点、胜负。
 - Tap Match／语音房：计时、计分、三语切换与房间信令走浏览器 E2E。
 
-## 新增游戏的标准流程（唯一数据源）
-
-`games/registry.json` 是三语大厅的唯一数据源。**不要再手改 `games/index.html`、`games/en/index.html`、`games/id/index.html` 里的卡片和分类计数**；下半节「新增一个游戏」保留为页面实现要求，其中第 3 步（手改三语大厅）已废弃，改由下面的流程完成。
-
-1. 先改 `games/registry.json`：在 `games` 数组加一条，写全 `slug`、`category`、三语 `names` / `blurb`（每语言 ≤30 字）、`players`、`ai`、`rules`、`icon`、`status`。没有规则页或图标时把 `rules` / `icon` 置为 `null`，并在评审里说明。
-2. 跑 `node scripts/gen-hubs.js --write`：只替换 `<!-- HUBS:AUTO-START/END -->` 与 `<!-- HUBS:ITEMLIST-START/END -->` 标记块，重新生成三语分类跳转、卡片区和 ItemList；`--check` 只校验不写入。
-3. 跑 `node scripts/check-registry.js`：目录、`index.html`、`rules.zh`、`icon`、三语字段必须全部对上实际文件，任何一项不满足都 exit 1。
-4. 跑 `node games/tests/run-all.js`：测试全绿；把新的自检项数补进上表。
-5. 更新 `sitemap-pages.xml`，收录游戏页与规则页；再按下面的发布流程部署。
-
 ## 新增一个游戏
 
 1. 建 `games/<slug>/index.html`：单文件、三语字典、触控优先、无外部依赖与追踪。
@@ -151,14 +132,12 @@
 任何发布都必须按顺序过三道闸门，前一道不过不得进入下一道；每一步失败都会打印具体是哪一项失败，不静默跳过。
 
 1. **测试**：`node games/tests/run-all.js` 必须 0 失败。CI（`.github/workflows/games-test.yml`）在每次 push / PR 上用 Node 22 跑同一命令，失败即红。
-2. **预发布闸门**：`scripts/predeploy.sh`，七项依次检查并在最后汇总：
+2. **预发布闸门**：`scripts/predeploy.sh`，五项依次检查并在最后汇总：
    - 单元测试 0 失败；
    - `games/`、`tools/` 下所有 HTML 不引用外部域名资源（脚本唯一明确允许的站外「导航链接」是 screen-share-calc 的 Gumroad 购买链接，每次运行会打印 INFO）；
    - 三语大厅（`/games/`、`/games/en/`、`/games/id/`）卡片数一致，且每张卡片链接在本地文件系统里存在；
    - `games/sw.js` 的 `CACHE_VERSION` 可解析；有页面文件比 sw.js 新时打印 WARN（改了页面就要升版本，WARN 不阻断但发布前应处理）；
-   - `sitemap-pages.xml` 的 URL 数 ≥ 实际可收录页面数，且 `games/`、`tools/` 页面无漏收录；
-   - `games/registry.json` 与实际目录、`rules.zh`、`icon`、三语字段一致（`check-registry.js`）；
-   - 三语大厅卡片区与 ItemList 与 registry 的生成结果一致（`gen-hubs.js --check`）。
+   - `sitemap-pages.xml` 的 URL 数 ≥ 实际可收录页面数，且 `games/`、`tools/` 页面无漏收录。
    任一项 FAIL 即 exit 1，禁止部署。
 3. **部署**：`scripts/deploy.sh`（`--dry-run` 只跑到快照安全检查）。默认流程：
    - `git archive HEAD | tar -x -C /tmp/cf-deploy-$$` 打干净快照；

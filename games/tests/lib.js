@@ -117,7 +117,7 @@ function mulberry32(a) {
 }
 
 // ---------------------------------------------------------------------------
-// Tool-page helpers (tools/tests/*.test.js) and i18n/markup checks.
+// Tool-page helpers (tools/tests/*.test.js)
 // ---------------------------------------------------------------------------
 
 // Every key referenced from markup: data-i / data-i-ph / data-i-aria.

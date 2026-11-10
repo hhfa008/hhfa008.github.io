@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2b3038">
+<meta name="description" content="战争宝箱 War Chest 高级版：7×7 棋盘、6 个据点、4 种单位币、抽币部署与双人联机。">
+<meta property="og:title" content="战争宝箱 · War Chest Premium">
+<meta property="og:description" content="抽币、部署、行军、夺点：先控制 4 个据点者胜。">
+<meta property="og:type" content="website">
+<meta property="og:image" content="assets/og.webp">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="assets/og.webp">
+<link rel="icon" href="../../assets/icons/solitaire.svg">
+<title>战争宝箱 · War Chest Premium</title>
+<style>
+:root{
+  --ink:#1e2228; --ink-2:#3c434d; --muted:#6c7480;
+  --paper:#f0ece2; --card:#fbf8f0; --steel:#2b3038; --steel-2:#1b1f25;
+  --brass:#b68a45; --brass-l:#e4c78d; --p0:#3f8ea8; --p1:#b4513f;
+  --line:rgba(30,34,40,.22); --line-2:rgba(30,34,40,.10);
+  --shadow:0 14px 38px rgba(18,22,28,.20), 0 2px 6px rgba(18,22,28,.10);
+  --radius:14px; --touch:44px;
+  --mat:url('../../assets/art/premium/war-chest/playmat.webp');
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{min-height:100dvh;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;background:
+  radial-gradient(1100px 600px at 14% -10%,rgba(182,138,69,.18),transparent 60%),
+  radial-gradient(900px 500px at 100% 0%,rgba(63,142,168,.15),transparent 55%),
+  linear-gradient(160deg,#f4f0e6,#e7e1d4 55%,#dcd4c4)}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.10;background:var(--mat) center/720px;mix-blend-mode:multiply}
+h1,h2,h3,.serif{font-family:"Songti SC","STSong","Noto Serif SC",serif;font-weight:700;letter-spacing:.02em}
+button{font:inherit;color:inherit} a{color:inherit}
+.wrap{position:relative;max-width:1160px;margin:0 auto;padding:0 14px calc(28px + env(safe-area-inset-bottom))}
+.top{display:flex;align-items:center;gap:12px;padding:16px 0 12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:11px;min-width:0}
+.mark{width:46px;height:46px;border-radius:50%;flex:none;background:radial-gradient(circle at 34% 30%,#d9c08f,#a97b36 55%,#6d4b1d);box-shadow:var(--shadow),inset 0 0 0 3px rgba(255,255,255,.18);display:grid;place-items:center;color:#2a1c0b;font-weight:900;font-size:19px}
+.brand h1{margin:0;font-size:clamp(21px,4.4vw,30px);line-height:1.08}
+.brand p{margin:3px 0 0;font-size:12px;color:var(--muted);letter-spacing:.13em;text-transform:uppercase}
+.nav{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.nav a,.nav button{min-height:46px;min-width:44px;padding:0 14px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:999px;background:rgba(251,248,240,.8);text-decoration:none;font-size:13px;font-weight:700;cursor:pointer}
+.nav .online{background:var(--steel);border-color:var(--steel-2);color:#f4ead6}
+.scores{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:4px 0 14px}
+.player{position:relative;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius);background:linear-gradient(180deg,rgba(251,248,240,.96),rgba(242,237,226,.96));border:1px solid var(--line);box-shadow:var(--shadow);overflow:hidden}
+.player::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--p0)}
+.player.ai::before{background:var(--p1)}
+.player.active{outline:2px solid var(--brass);outline-offset:2px}
+.player .who strong{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.player .who span{font-size:12px;color:var(--muted)}
+.player .stats{margin-left:auto;display:flex;gap:9px;align-items:center}
+.stat{text-align:center;min-width:42px}
+.stat b{display:block;font-size:17px;font-variant-numeric:tabular-nums;line-height:1.15}
+.stat i{font-style:normal;font-size:12px;color:var(--muted)}
+.stat.control b{color:var(--brass)}
+.coin-ico{width:44px;height:44px;flex:none;background:url('../../assets/art/premium/war-chest/silver-coin.webp') center/contain no-repeat;filter:drop-shadow(0 4px 4px rgba(20,16,10,.24))}
+.bronze-coin{display:inline-block;width:15px;height:15px;vertical-align:-3px;margin-right:2px;background:url('../../assets/art/premium/war-chest/bronze-coin.webp') center/contain no-repeat;filter:drop-shadow(0 1px 1px rgba(20,16,10,.3))}
+.cmd-token{display:none;width:13px;height:13px;vertical-align:-2px;margin-right:2px;background:url('../../assets/art/premium/war-chest/command-token.webp') center/contain no-repeat;filter:drop-shadow(0 1px 1px rgba(20,16,10,.35))}
+.player.active .cmd-token{display:inline-block}
+.layout{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:16px;align-items:start}
+.panel{min-width:0;background:linear-gradient(180deg,rgba(251,248,240,.96),rgba(243,238,227,.96));border:1px solid var(--line);border-radius:calc(var(--radius) + 4px);box-shadow:var(--shadow);padding:13px}
+.hand-panel{background-image:linear-gradient(180deg,rgba(251,248,240,.88),rgba(243,238,227,.88)),url('../../assets/art/premium/war-chest/canvas-bag.webp');background-size:auto,cover;background-position:center,center;background-repeat:no-repeat}
+.panel-head{display:flex;align-items:baseline;gap:9px;margin-bottom:9px;flex-wrap:wrap}
+.panel-head h2{margin:0;font-size:18px}
+.panel-head .sub{font-size:12px;color:var(--muted)}
+.board-frame{padding:9px;border-radius:12px;background:linear-gradient(150deg,#343b44,#20252c);box-shadow:inset 0 0 0 1px rgba(228,199,141,.18),inset 0 10px 30px rgba(0,0,0,.36)}
+.board{display:grid;grid-template-columns:repeat(7,1fr);grid-template-rows:repeat(7,1fr);gap:4px;aspect-ratio:1/1;width:100%}
+.cell{position:relative;border-radius:5px;background:rgba(244,238,222,.09);border:1px solid rgba(255,255,255,.07);cursor:pointer;min-width:0;min-height:0;display:grid;place-items:center;transition:background .12s ease,box-shadow .12s ease}
+.cell:hover{background:rgba(244,238,222,.17)}
+.cell.stronghold{background:rgba(182,138,69,.16);box-shadow:inset 0 0 0 1px rgba(228,199,141,.32)}
+.cell.owned-0{box-shadow:inset 0 0 0 2px rgba(63,142,168,.85);background:rgba(63,142,168,.14)}
+.cell.owned-1{box-shadow:inset 0 0 0 2px rgba(180,81,63,.85);background:rgba(180,81,63,.14)}
+.cell.legal{outline:2px solid var(--brass-l);outline-offset:-2px;background:rgba(228,199,141,.28)}
+.cell.target{outline:2px solid #d66a55;outline-offset:-2px;background:rgba(214,106,85,.28)}
+.cell .tower{width:70%;height:70%;background:url('../../assets/art/premium/war-chest/stronghold.webp') center/contain no-repeat;opacity:.95;filter:drop-shadow(0 2px 2px rgba(0,0,0,.4))}
+.unit{width:78%;height:78%;border-radius:50%;display:grid;place-items:center;font-weight:900;font-size:15px;color:#f8f1df;box-shadow:0 2px 4px rgba(0,0,0,.45),inset 0 0 0 2px rgba(255,255,255,.22);z-index:2}
+.unit.p0{background:radial-gradient(circle at 34% 30%,#7bc0d2,#3f8ea8 55%,#225d73)}
+.unit.p1{background:radial-gradient(circle at 34% 30%,#df9a83,#b4513f 55%,#7a3024)}
+.wound{position:absolute;right:3px;bottom:3px;width:9px;height:9px;border-radius:50%;background:#e6b04b;box-shadow:0 0 0 1px rgba(0,0,0,.4);z-index:3}
+.cell .coord{position:absolute;left:3px;top:2px;font-size:12px;color:rgba(255,255,255,.42);font-weight:700}
+.board-foot{display:flex;gap:10px;flex-wrap:wrap;margin-top:9px;font-size:12px;color:var(--muted)}
+.legend-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:4px;vertical-align:-1px}
+.side{display:flex;flex-direction:column;gap:14px;min-width:0}
+.hand{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.coin-btn{min-height:74px;border-radius:50% / 42%;border:1px solid #7a5a25;background:radial-gradient(circle at 34% 28%,#e5cc96,#bd924f 52%,#8a6429);color:#2a1c0b;font-weight:900;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;box-shadow:0 5px 10px rgba(40,28,12,.25),inset 0 0 0 2px rgba(255,255,255,.18)}
+.coin-btn b{font-size:20px;line-height:1}.coin-btn span{font-size:12px}.coin-btn em{font-style:normal;font-size:12px;opacity:.75}
+.coin-btn[aria-pressed="true"]{outline:3px solid var(--p0);outline-offset:2px}
+.coin-btn:disabled{opacity:.42;cursor:not-allowed}
+.reserves{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:9px}
+.res{border:1px solid var(--line);border-radius:9px;background:#fffdf7;padding:6px;text-align:center;font-size:12px;color:var(--muted)}
+.res b{display:block;font-size:15px;color:var(--ink)}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.btn{min-height:46px;min-width:44px;padding:8px 12px;border-radius:11px;border:1px solid var(--line);background:#fffdf7;font-weight:700;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn.primary{background:linear-gradient(180deg,#3f5866,#2d414c);border-color:#22323a;color:#f5ecd8}
+.btn.brass{background:linear-gradient(180deg,#c79a50,#a37631);border-color:#7e5a22;color:#241a0c}
+.btn:disabled{opacity:.44;cursor:not-allowed}
+.btn.wide{width:100%}
+.log{list-style:none;margin:0;padding:0;font-size:13px;line-height:1.55;max-height:180px;overflow:auto}
+.log li{padding:5px 0;border-bottom:1px dashed var(--line-2);color:var(--ink-2)}
+.hint{margin:9px 0 0;font-size:13px;color:var(--muted);min-height:20px}
+.overlay{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:18px;background:rgba(18,22,28,.60);backdrop-filter:blur(4px)}
+.overlay[hidden]{display:none}
+.modal{width:min(450px,100%);border-radius:18px;padding:20px;background:linear-gradient(180deg,#fbf8f0,#f0e9da);border:1px solid var(--line);box-shadow:0 30px 80px rgba(14,18,24,.4)}
+.modal h2{margin:0 0 6px;font-size:23px}.modal p{margin:0 0 12px;color:var(--ink-2);font-size:14px;line-height:1.6}
+.result-rows{display:grid;gap:8px;margin:10px 0 14px}
+.result-row{display:flex;gap:9px;align-items:center;padding:9px 11px;border-radius:10px;background:rgba(63,142,168,.08);font-size:14px}.result-row b{margin-left:auto}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media (max-width:860px){.layout{grid-template-columns:1fr}}
+@media (max-width:430px){
+  .wrap{padding-left:9px;padding-right:9px}
+  .brand h1{font-size:22px}.mark{width:40px;height:40px}
+  .nav a,.nav button{padding:0 10px;font-size:12px}
+  .player{padding:9px;gap:7px}.player .stats{gap:5px}.stat{min-width:34px}.stat b{font-size:15px}
+  .coin-ico{display:none}
+  .panel{padding:10px;border-radius:14px}
+  .board-frame{padding:5px}.board{gap:3px}
+  .coin-btn{min-height:68px}.coin-btn b{font-size:18px}
+  .btn{padding:7px;font-size:12px}
+  .hand{gap:6px}
+}
+@media (max-width:350px){.brand p{display:none}.player .who span{display:none}.stat.minor{display:none}.coin-btn{min-height:62px}.coin-btn b{font-size:17px}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important;scroll-behavior:auto!important}}
+</style>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/war-chest-premium/">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="mark" aria-hidden="true">W</div>
+      <div><h1>战争宝箱</h1><p>WAR CHEST · 2 PLAYERS</p></div>
+    </div>
+    <nav class="nav" aria-label="页面导航"><a href="rules.html">玩法</a><a class="online" href="online.html">联机</a><button class="sfx-toggle" type="button" aria-pressed="false">声音</button></nav>
+  </header>
+
+  <section class="scores" aria-label="比分">
+    <div class="player active" id="player0"><div class="who"><strong>你</strong><span id="p0meta">袋 13 · 手牌 3 · 弃币 0</span></div>
+      <div class="stats"><div class="stat control"><b id="p0control">2</b><i><span class="cmd-token" aria-hidden="true"></span>/4 据点</i></div><div class="stat"><b id="p0units">0</b><i>场上</i></div><div class="stat minor"><b id="p0coins">16</b><i><span class="bronze-coin" aria-hidden="true"></span>总币</i></div></div><div class="coin-ico" aria-hidden="true"></div></div>
+    <div class="player ai" id="player1"><div class="who"><strong id="p1name">AI · 铁腕领主</strong><span id="p1meta">袋 13 · 手牌 3 · 弃币 0</span></div>
+      <div class="stats"><div class="stat control"><b id="p1control">2</b><i><span class="cmd-token" aria-hidden="true"></span>/4 据点</i></div><div class="stat"><b id="p1units">0</b><i>场上</i></div><div class="stat minor"><b id="p1coins">16</b><i><span class="bronze-coin" aria-hidden="true"></span>总币</i></div></div><div class="coin-ico" aria-hidden="true"></div></div>
+  </section>
+
+  <main>
+    <div class="layout">
+      <section class="panel" aria-labelledby="boardTitle">
+        <div class="panel-head"><h2 id="boardTitle">战场</h2><span class="sub">7×7 · 6 据点</span><span class="sub" style="margin-left:auto">先控制 4 个据点获胜</span></div>
+        <div class="board-frame"><div class="board" id="board" role="grid" aria-label="7×7 战场"></div></div>
+        <div class="board-foot"><span><i class="legend-dot" style="background:var(--p0)"></i>你的单位 / 据点</span><span><i class="legend-dot" style="background:var(--p1)"></i>AI 单位 / 据点</span><span><i class="legend-dot" style="background:var(--brass)"></i>中立据点</span></div>
+        <p class="hint" id="hint" role="status" aria-live="polite">选择一枚手牌单位币，再点高亮空格部署。</p>
+      </section>
+
+      <aside class="side">
+        <section class="panel hand-panel" aria-labelledby="handTitle">
+          <div class="panel-head"><h2 id="handTitle">你的手牌</h2><span class="sub" id="handSub">每枚币 = 1 个行动</span><button class="btn ghost" type="button" id="restart" style="margin-left:auto">重开</button></div>
+          <div class="hand" id="hand"></div>
+          <div class="reserves" id="reserves"></div>
+          <div class="controls">
+            <button class="btn primary" type="button" id="endTurn">结束回合</button>
+            <button class="btn" type="button" id="cancel">取消选择</button>
+          </div>
+        </section>
+
+        <section class="panel" aria-labelledby="logTitle"><div class="panel-head"><h2 id="logTitle">战报</h2><span class="sub" id="turnLabel">第 1 回合</span></div><ol class="log" id="log" aria-label="战报"></ol></section>
+      </aside>
+    </div>
+  </main>
+</div>
+
+<div class="overlay" id="resultOverlay" role="dialog" aria-modal="true" aria-labelledby="resultTitle" hidden><div class="modal">
+  <h2 id="resultTitle">对局结束</h2><p id="resultText"></p><div class="result-rows" id="resultRows"></div>
+  <div class="controls"><button class="btn primary" type="button" id="again">再来一局</button><button class="btn" type="button" id="closeResult">查看战场</button></div>
+</div></div>
+
+<script src="../../shared/sfx.js"></script>
+<script src="data.js"></script>
+<script src="engine.js"></script>
+<script>
+(function () {
+  'use strict';
+  var E = window.WarChestEngine, D = window.WarChestData;
+  var $ = function (id) { return document.getElementById(id); };
+  var boardEl = $('board'), handEl = $('hand'), logEl = $('log');
+  var state = null, aiTimer = null, selection = null;
+  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]})}
+  function sound(n){try{if(window.Sfx&&!reduced)window.Sfx.play(n,{volume:.55})}catch(e){}}
+  function player() { return state.players[state.current]; }
+  function isHumanTurn() { return state && !state.over && state.current === 0; }
+  function hint(t) { $('hint').textContent = t; }
+  function unitAt(r, c) { return E.unitAt(state, r, c); }
+  function legalForSelection() {
+    if (!state || !selection) return [];
+    return E.legalActions(state, 0).filter(function (a) {
+      if (selection.kind === 'coin') return a.type === 'deploy' && a.unitType === selection.unitType;
+      return a.unitId === selection.unitId;
+    });
+  }
+  function newGame(seed) {
+    if (aiTimer) { clearTimeout(aiTimer); aiTimer = null; }
+    var s = seed == null ? ((Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0) || 1 : seed;
+    state = E.createGame({ seed: s, aiPlayer: 1 });
+    state.players[0].name = '你';
+    state.players[1].name = 'AI · 铁腕领主';
+    selection = null;
+    $('resultOverlay').hidden = true;
+    hint('新开一局：双方各 2 个据点、16 枚单位币；先控制 4 个据点获胜。');
+    render();
+  }
+  function selectCoin(type) {
+    if (!isHumanTurn()) return;
+    if (player().hand.indexOf(type) === -1) return;
+    selection = { kind: 'coin', unitType: type };
+    sound('click'); render();
+    var cells = legalForSelection().length;
+    hint(cells ? '「' + D.UNITS[type].name + '」：点高亮空格部署。' : '「' + D.UNITS[type].name + '」没有可部署位置，可先移动其他单位或结束回合。');
+  }
+  function selectUnit(unit) {
+    if (!isHumanTurn() || unit.owner !== 0) return;
+    if (player().hand.indexOf(unit.type) === -1) { hint('手里没有' + D.UNITS[unit.type].name + '币，无法操作这个单位。'); return; }
+    selection = { kind: 'unit', unitId: unit.id, unitType: unit.type };
+    sound('click'); render();
+    hint('「' + D.UNITS[unit.type].name + '」：点高亮格移动，或点红框敌人攻击。');
+  }
+  function clearSelection() { selection = null; render(); hint('已取消选择。'); }
+  function doAction(action) {
+    try {
+      state = E.applyAction(state, action);
+      selection = null;
+      sound(action.type === 'attack' ? 'capture' : 'move');
+      render();
+      if (state.over) { showResult(); return; }
+      if (state.current === 1) scheduleAI();
+    } catch (err) { sound('error'); hint('行动无效：' + (err && err.message ? err.message : err)); }
+  }
+  function onCell(r, c) {
+    if (!isHumanTurn()) return;
+    var unit = unitAt(r, c);
+    if (!selection) {
+      if (unit && unit.owner === 0) selectUnit(unit);
+      else if (unit) hint('那是敌方单位；先选择己方单位攻击。');
+      else hint('先选择一枚手牌单位币，或点己方单位。');
+      return;
+    }
+    var acts = legalForSelection();
+    var hit = null;
+    if (selection.kind === 'coin') {
+      hit = acts.filter(function (a) { return a.type === 'deploy' && a.r === r && a.c === c; })[0];
+    } else {
+      hit = acts.filter(function (a) {
+        if (a.type === 'move') return a.to.r === r && a.to.c === c;
+        if (a.type === 'attack') { var t = E.findUnit(state, a.targetUnitId); return t && t.r === r && t.c === c; }
+        return false;
+      })[0];
+    }
+    if (!hit) {
+      if (unit && unit.owner === 0) { selectUnit(unit); return; }
+      hint('这个格子不是当前选择的合法目标。');
+      return;
+    }
+    doAction(hit);
+  }
+  function endTurn() {
+    if (!state || state.over || state.current !== 0) return;
+    doAction({ type: 'end', player: 0 });
+  }
+  function scheduleAI() {
+    if (aiTimer) clearTimeout(aiTimer);
+    if (!state || state.over || state.current !== 1) return;
+    aiTimer = setTimeout(function () {
+      aiTimer = null;
+      if (!state || state.over || state.current !== 1) return;
+      try {
+        var action = E.chooseAIAction(state, 1);
+        state = E.applyAction(state, action);
+        sound(action.type === 'attack' ? 'capture' : 'move');
+        render();
+        if (state.over) { showResult(); return; }
+        if (state.current === 1) scheduleAI();
+        else hint('AI 结束了回合，轮到你行动。');
+      } catch (err) {
+        try { state = E.endTurn(state); render(); } catch (e) { hint('AI 行动失败：' + err.message); }
+        if (state.current === 0) hint('AI 结束了回合，轮到你行动。');
+      }
+    }, reduced ? 25 : 520);
+  }
+
+  function renderScores() {
+    state.players.forEach(function (p, i) {
+      $('p' + i + 'meta').textContent = '袋 ' + p.bag.length + ' · 手牌 ' + p.hand.length + ' · 弃币 ' + p.discard.length;
+      $('p' + i + 'control').textContent = E.controlCount(state, i);
+      $('p' + i + 'units').textContent = E.unitsOf(state, i).length;
+      $('p' + i + 'coins').textContent = E.coinTotal(p);
+      $('player' + i).classList.toggle('active', !state.over && state.current === i);
+    });
+    $('p1name').textContent = state.players[1].name;
+    $('turnLabel').textContent = '第 ' + state.turn + ' 回合 · ' + (state.current === 0 ? '你行动' : 'AI 行动');
+  }
+  function renderBoard() {
+    var legal = legalForSelection();
+    var deploySet = {}, moveSet = {}, attackSet = {};
+    legal.forEach(function (a) {
+      if (a.type === 'deploy') deploySet[a.r + ',' + a.c] = true;
+      if (a.type === 'move') moveSet[a.to.r + ',' + a.to.c] = true;
+      if (a.type === 'attack') { var t = E.findUnit(state, a.targetUnitId); if (t) attackSet[t.r + ',' + t.c] = true; }
+    });
+    var html = '';
+    for (var r = 0; r < 7; r++) for (var c = 0; c < 7; c++) {
+      var sh = E.strongholdAt(state, r, c);
+      var unit = unitAt(r, c);
+      var cls = 'cell';
+      if (sh) cls += ' stronghold';
+      if (sh && sh.owner != null) cls += ' owned-' + sh.owner;
+      if (deploySet[r + ',' + c] || moveSet[r + ',' + c]) cls += ' legal';
+      if (attackSet[r + ',' + c]) cls += ' target';
+      html += '<div class="' + cls + '" data-r="' + r + '" data-c="' + c + '" role="gridcell" aria-label="第' + (r + 1) + '行第' + (c + 1) + '列' + (sh ? '，据点' + (sh.owner == null ? '中立' : sh.owner === 0 ? '你的' : 'AI 的') : '') + (unit ? '，' + D.UNITS[unit.type].name : '') + '">' +
+        '<span class="coord">' + (r + 1) + ',' + (c + 1) + '</span>' +
+        (sh ? '<span class="tower" aria-hidden="true"></span>' : '') +
+        (unit ? '<span class="unit p' + unit.owner + '">' + D.UNITS[unit.type].glyph + '</span>' : '') + (unit && unit.hp != null && unit.maxHp != null && unit.hp < unit.maxHp ? '<span class="wound" title="已受伤"></span>' : '') + '</div>';
+    }
+    boardEl.innerHTML = html;
+  }
+  function renderHand() {
+    var p = state.players[0];
+    handEl.innerHTML = D.UNIT_ORDER.map(function (type) {
+      var n = p.hand.filter(function (t) { return t === type; }).length;
+      var selected = selection && selection.kind === 'coin' && selection.unitType === type;
+      return '<button class="coin-btn" type="button" data-unit="' + type + '" aria-pressed="' + (selected ? 'true' : 'false') + '" ' + (isHumanTurn() && n > 0 ? '' : 'disabled') + ' aria-label="选择' + D.UNITS[type].name + '币，手里 ' + n + ' 枚"><b>' + n + '</b><span>' + D.UNITS[type].name + '</span><em>' + D.UNITS[type].move + '步/' + (D.UNITS[type].range ? D.UNITS[type].range + '射' : '无攻') + '</em></button>';
+    }).join('');
+    $('reserves').innerHTML = D.UNIT_ORDER.map(function (type) {
+      return '<div class="res"><b>' + p.reserves[type] + '</b>' + D.UNITS[type].name + '</div>';
+    }).join('');
+    $('handSub').textContent = '手牌 ' + p.hand.length + ' 枚 · 每枚 = 1 个行动';
+    $('endTurn').disabled = !isHumanTurn();
+    $('cancel').disabled = !selection;
+  }
+  function renderLog() {
+    logEl.innerHTML = state.log.slice(-16).reverse().map(function (row) {
+      return '<li>' + esc(row.text) + '</li>';
+    }).join('');
+  }
+  function render() {
+    if (!state) return;
+    renderScores(); renderBoard(); renderHand(); renderLog();
+    $('restart').disabled = false;
+  }
+  function showResult() {
+    if (!state || !state.over || !state.result) return;
+    var res = state.result;
+    $('resultTitle').textContent = res.winner === 0 ? '你赢了' : res.winner === 1 ? 'AI 获胜' : '平局';
+    $('resultText').textContent = res.reason;
+    $('resultRows').innerHTML = state.players.map(function (p) {
+      return '<div class="result-row"><span>' + esc(p.name) + '</span><span>据点 ' + E.controlCount(state, p.index) + ' · 场上 ' + E.unitsOf(state, p.index).length + '</span></div>';
+    }).join('');
+    $('resultOverlay').hidden = false;
+    $('again').focus();
+    sound(res.winner === 0 ? 'win' : res.winner === 1 ? 'lose' : 'notify');
+  }
+
+  handEl.addEventListener('click', function (e) { var b = e.target.closest('[data-unit]'); if (b) selectCoin(b.getAttribute('data-unit')); });
+  boardEl.addEventListener('click', function (e) { var cell = e.target.closest('[data-r]'); if (cell) onCell(Number(cell.getAttribute('data-r')), Number(cell.getAttribute('data-c'))); });
+  $('endTurn').addEventListener('click', endTurn);
+  $('cancel').addEventListener('click', clearSelection);
+  $('restart').addEventListener('click', function () { newGame(); });
+  $('again').addEventListener('click', function () { newGame(); });
+  $('closeResult').addEventListener('click', function () { $('resultOverlay').hidden = true; });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { if (!$('resultOverlay').hidden) $('resultOverlay').hidden = true; else clearSelection(); } });
+  if (!E || !D) { hint('引擎加载失败。'); return; }
+
+  window.__war = {
+    engine: E, data: D,
+    newGame: function (seed) { newGame(seed); return this.getState(); },
+    getState: function () { return state; },
+    legalActions: function () { return state && !state.over ? E.legalActions(state, 0) : []; },
+    applyAction: function (action) { doAction(action); return state; },
+    setState: function (next) { state = next; selection = null; $('resultOverlay').hidden = true; render(); return state; },
+    isBusy: function () { return !!aiTimer; },
+    winner: function () { return state && state.result ? state.result.winner : null; },
+    result: function () { return state ? state.result : null; },
+    autoPlayToEnd: function (maxActions) {
+      var guard = 0, limit = maxActions || 5000;
+      while (state && !state.over && guard < limit) {
+        var action = E.chooseAIAction(state, state.current);
+        state = E.applyAction(state, action);
+        guard++;
+      }
+      render();
+      if (state.over) showResult();
+      return { actions: guard, over: state.over, result: state.result };
+    },
+    reducedMotion: reduced
+  };
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('../../sw.js', { scope: '../../' }).catch(function () {});
+  newGame();
+})();
+</script>
+</body>
+</html>

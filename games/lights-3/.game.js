@@ -109,9 +109,9 @@ var I18N = {
     if (kind === 'win' || kind === 'lose') {
       E.overlayTitle.textContent = I18N[Arcade.lang()][kind === 'win' ? 'overlayWin' : 'overlayLose'];
       E.overlayText.innerHTML = I18N[Arcade.lang()].note;
-      E.overlay.classList.remove('hidden');
+      E.overlay.hidden = false;
     } else {
-      E.overlay.classList.add('hidden');
+      E.overlay.hidden = true;
     }
   }
 

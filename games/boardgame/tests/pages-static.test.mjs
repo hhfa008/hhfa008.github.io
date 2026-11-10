@@ -167,8 +167,22 @@ await s.run(async () => {
     s.includes('结果计数节点', indexHtml, 'id="count"');
     s.includes('空状态节点', indexHtml, 'id="empty"');
     s.eq('卡片数 = 数据条数', (indexHtml.match(/class="card"/g) || []).length, games.length);
-    s.matches('列表页含卡牌对战入口', indexHtml, /href="\.\/card-battle\/"/);
-    s.matches('列表页含拼布入口', indexHtml, /href="\.\/patchwork\/"/);
+    // draft 不进入大厅：入口是否渲染必须与 catalog-status.json 的 shipped 状态一致。
+    const statusFile = path.join(ROOT, 'catalog-status.json');
+    const statusData = fs.existsSync(statusFile) ? readJson(statusFile) : null;
+    const shippedSlugs = statusData
+      ? new Set((statusData.games || []).concat(statusData.extras || [])
+        .filter(function (game) { return game.status === 'shipped'; })
+        .map(function (game) { return game.slug; }))
+      : null;
+    for (const slug of ['card-battle', 'patchwork']) {
+      const linked = new RegExp('href="\\./' + slug + '/"').test(indexHtml);
+      if (shippedSlugs) {
+        s.eq('列表页 ' + slug + ' 入口与 shipped 状态一致', linked, shippedSlugs.has(slug));
+      } else {
+        s.ok('列表页含 ' + slug + ' 入口', linked);
+      }
+    }
     s.matches('移动端媒体查询', indexHtml, /@media \(max-width:520px\)/);
     s.matches('触控目标 >=44px', indexHtml, /min-height:44px/);
     s.matches('深色模式 CSS', indexHtml, /prefers-color-scheme\s*:\s*dark/);

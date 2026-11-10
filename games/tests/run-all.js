@@ -30,9 +30,21 @@ var NON_GAME_DIRS = { en: 1, id: 1 };
 // the walk), so their tests are listed explicitly here. Boardgame's
 // card-battle test uses the *.test.js suffix and is likewise listed explicitly.
 var EXTRA_TESTS = [
+  path.join(GAMES_DIR, 'shared', 'dom.test.js'),
   path.join(GAMES_DIR, 'shared', 'hand-eval.test.js'),
+  path.join(GAMES_DIR, 'shared', 'i18n.test.js'),
   path.join(GAMES_DIR, 'shared', 'physics.test.js'),
-  path.join(GAMES_DIR, 'boardgame', 'tests', 'card-battle.test.js')
+  path.join(GAMES_DIR, 'tests', 'art-realism.test.js'),
+  path.join(GAMES_DIR, 'shared', 'rules.test.js'),
+  path.join(GAMES_DIR, 'shared', 'search.test.js'),
+  path.join(GAMES_DIR, 'shared', 'sfx.test.js'),
+  path.join(GAMES_DIR, 'shared', 'shuffle.test.js'),
+  path.join(GAMES_DIR, 'shared', 'store.test.js'),
+  path.join(GAMES_DIR, 'shared', 'tcg.test.js'),
+  path.join(GAMES_DIR, 'tests', 'rewards.test.js'),
+  path.join(GAMES_DIR, 'boardgame', 'tests', 'card-battle.test.js'),
+  path.join(GAMES_DIR, 'boardgame', 'play', 'e2e.mjs'),
+  path.join(GAMES_DIR, 'tests', 'site-quality.test.js')
 ];
 
 function walkTestFiles(dir, out) {
@@ -113,10 +125,14 @@ function pad(s, width) {
 function runOne(file, kind) {
   var start = Date.now();
   var isTool = kind === 'tool';
+  // site-quality 全站扫描与双客户端 E2E 需要更长预算。
+  var base = path.basename(file);
+  var timeoutMs = base === 'site-quality.test.js' ? 600000
+    : (base === 'e2e.mjs' ? 240000 : TIMEOUT_MS);
   var res = child.spawnSync(process.execPath, [file], {
     cwd: isTool ? ROOT : GAMES_DIR,
     encoding: 'utf8',
-    timeout: TIMEOUT_MS,
+    timeout: timeoutMs,
     maxBuffer: 20 * 1024 * 1024,
     env: Object.assign({}, process.env, { NO_COLOR: '1' })
   });

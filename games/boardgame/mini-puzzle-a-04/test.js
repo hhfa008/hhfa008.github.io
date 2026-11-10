@@ -1,0 +1,41 @@
+'use strict';
+
+// 字母滑块 引擎测试：直接 require 同源 engine.js，覆盖生成、合法性、求解与通关。
+var lib = require('../../tests/lib.js');
+var s = lib.suite('mini-puzzle-a-04');
+var E = require('./engine.js');
+
+s.group('基础契约', function () {
+  var a = E.create(7), b = E.create(7);
+  s.ok('导出 create 函数', typeof E.create === 'function');
+  s.eq('同 seed 生成相同状态', JSON.stringify(a), JSON.stringify(b));
+  s.ok('初始状态尚未完成', !E.solved(a));
+  var v = E.view(a);
+  s.ok('view 返回 cells 数组', Array.isArray(v.cells));
+  s.ok('view 返回 actions 数组', Array.isArray(v.actions));
+  s.ok('view 提供提示文案', typeof v.prompt === 'string' && v.prompt.length > 0);
+  s.ok('存在可操作元素', v.cells.length + v.actions.length > 0);
+  var threw = false;
+  try { E.act(a, { type: 'unknown-action' }); } catch (e) { threw = true; }
+  s.ok('非法动作不会抛错', !threw);
+});
+
+s.group('玩法与解法', function () {
+var st = E.create(5);
+var sol = E.solve(st);
+s.ok("BFS 找到解法", sol.length > 0);
+sol.forEach(function (id) { E.act(st, { type: "cell", id: id }); });
+s.ok("按解滑动后完成", E.solved(st));
+s.eq("步数等于解法长度", st.moves, sol.length);
+var st2 = E.create(5);
+var blank = st2.tiles.indexOf(0);
+var far = blank < 4 ? st2.tiles.length - 1 : 0;
+var before2 = JSON.stringify(st2.tiles);
+E.act(st2, { type: "cell", id: far });
+s.eq("拒绝滑动非相邻块", JSON.stringify(st2.tiles), before2);
+var sorted = st2.tiles.slice().sort(function (a, b) { return a - b; }).join(",");
+var want = []; for (var wi = 0; wi < st2.tiles.length; wi++) want.push(wi);
+s.eq("盘面包含全部滑块", sorted, want.join(","));
+});
+
+s.done();

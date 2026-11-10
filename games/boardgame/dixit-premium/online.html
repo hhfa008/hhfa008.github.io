@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="妙语说书人 Dixit 联机房间：3–6 人创建/邀请/密码加入，空位 AI 补足，断线重连、超时托管与结果榜。">
+<meta name="color-scheme" content="dark light">
+<meta property="og:title" content="妙语说书人 DIXIT · 联机房间">
+<meta property="og:image" content="assets/og.webp">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230d2230'/%3E%3Ccircle cx='32' cy='27' r='15' fill='%23e8c98d'/%3E%3Ccircle cx='39' cy='22' r='13' fill='%230d2230'/%3E%3Cpath d='M14 50 Q32 38 50 50' fill='none' stroke='%23bfe5e0' stroke-width='3'/%3E%3C/svg%3E">
+<title>妙语说书人 DIXIT · 联机房间</title>
+<style>
+:root { --font-serif: "Iowan Old Style", "Palatino Linotype", "Songti SC", "Noto Serif SC", Georgia, serif; --font-sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; --art-back: url("../../assets/art/premium/dixit/card-cream.webp"); --art-table: url("../../assets/art/premium/dixit/table-teal.webp"); --bg: #07141c; --bg-2: #0c1f2b; --panel: rgba(13,35,47,.9); --ink: #f2eadb; --ink-soft: #d7e2e3; --ink-dim: #93aeb3; --gold: #d8bd7c; --gold-2: #f2dfae; --line: rgba(216,189,124,.26); --line-soft: rgba(216,189,124,.12); --teal: #3f7d85; --danger: #e07a6b; --gold-2b: #2a2416; }
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; min-height: 100dvh; color: var(--ink); font-family: var(--font-sans); font-size: 16px; background: radial-gradient(1000px 720px at 10% -8%, rgba(63,125,133,.3), transparent 60%), linear-gradient(158deg, var(--bg), var(--bg-2) 68%, #050e13); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+body::before { content: ""; position: fixed; inset: 0; z-index: -1; background: var(--art-table) center / cover no-repeat; opacity: .4; }
+a { color: var(--gold-2); }
+button, input, select, a { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+button, input, select { font: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--gold-2); outline-offset: 3px; border-radius: 8px; }
+.wrap { max-width: 1000px; margin: 0 auto; padding: 18px 14px 40px; }
+.top { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+.top h1 { margin: 0; font-family: var(--font-serif); font-size: clamp(20px, 4.6vw, 27px); letter-spacing: .06em; }
+.top h1 small { display: block; font-size: 12px; letter-spacing: .24em; color: var(--gold); margin-top: 3px; }
+.btn { min-height: 44px; min-width: 44px; padding: 10px 15px; border-radius: 11px; border: 1px solid var(--line); background: rgba(9,26,35,.72); color: var(--ink); font-size: 13px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+.btn.primary { background: linear-gradient(160deg, #4f8a8f, #295a63); border-color: rgba(242,223,174,.5); color: #f7fbf8; }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin-top: 18px; }
+.panel { border: 1px solid var(--line); border-radius: 16px; background: linear-gradient(180deg, var(--panel), rgba(7,19,26,.92)); box-shadow: 0 18px 50px rgba(0,0,0,.42); padding: 16px; }
+.panel h2 { margin: 0 0 10px; font-family: var(--font-serif); font-size: 17px; letter-spacing: .05em; color: var(--gold-2); }
+.panel p { margin: 0 0 10px; font-size: 12px; line-height: 1.65; color: var(--ink-dim); }
+label { display: block; font-size: 12px; color: var(--ink-dim); margin: 10px 0 4px; }
+input, select { width: 100%; min-height: 44px; border-radius: 9px; border: 1px solid var(--line); background: rgba(4,12,16,.72); color: var(--ink); padding: 9px 11px; font-size: 16px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.row > * { min-width: 0; }
+.grow { flex: 1 1 140px; }
+.room-code { font-family: var(--font-serif); font-size: 24px; letter-spacing: .18em; color: var(--gold-2); }
+.status { padding: 9px 12px; border-radius: 9px; border: 1px solid var(--line-soft); background: rgba(255,255,255,.04); font-size: 12px; color: var(--ink-soft); margin-bottom: 10px; }
+.status.err { color: var(--danger); border-color: rgba(224,122,107,.4); }
+.seat { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px; border: 1px solid var(--line-soft); border-radius: 10px; background: rgba(255,255,255,.03); margin-bottom: 7px; font-size: 13px; }
+.seat .tag { font-size: 12px; padding: 3px 7px; border-radius: 99px; border: 1px solid var(--line); color: var(--ink-dim); }
+.seat .tag.ai { color: var(--gold-2); border-color: rgba(242,223,174,.4); }
+.seat .tag.takeover { color: var(--danger); border-color: rgba(224,122,107,.4); }
+.lobby, .game { display: none; margin-top: 16px; }
+.lobby.on, .game.on { display: block; }
+.scoreboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 7px; margin: 10px 0; }
+.pbox { border: 1px solid var(--line-soft); border-radius: 11px; padding: 9px; background: rgba(5,14,19,.55); min-width: 0; }
+.pbox .nm { font-family: var(--font-serif); font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pbox .sub { font-size: 12px; color: var(--ink-dim); margin-top: 3px; }
+.pbox .sc { font-size: 19px; font-family: var(--font-serif); font-weight: 700; color: var(--gold-2); margin-top: 3px; }
+.clue { border: 1px solid var(--line); border-radius: 12px; background: rgba(24,55,66,.55); padding: 12px; margin: 10px 0; }
+.clue .lbl { font-size: 12px; letter-spacing: .16em; color: var(--gold); }
+.clue .txt { margin-top: 5px; font-family: var(--font-serif); font-size: 20px; line-height: 1.45; }
+.cardrow { display: flex; gap: 7px; flex-wrap: wrap; justify-content: center; margin: 10px 0; }
+.dcard { position: relative; width: 92px; aspect-ratio: 2/3; border: 0; padding: 0; border-radius: 8px; background: transparent; color: var(--ink); }
+.dcard .art { position: absolute; inset: 0; border-radius: 8px; overflow: hidden; border: 1px solid rgba(242,223,174,.35); box-shadow: 0 8px 18px rgba(0,0,0,.4); }
+.dcard .art svg { width: 100%; height: 100%; display: block; }
+.dcard.sel { transform: translateY(-5px); }
+.dcard.sel .art { box-shadow: 0 0 0 3px var(--gold-2); }
+.dcard:disabled { opacity: .45; }
+.dcard .num { position: absolute; left: 4px; top: 4px; z-index: 2; min-width: 20px; height: 20px; padding: 0 4px; border-radius: 999px; display: grid; place-items: center; font-size: 12px; font-weight: 700; background: rgba(8,20,27,.86); color: var(--gold-2); border: 1px solid var(--line); }
+.log { max-height: 110px; overflow-y: auto; border: 1px solid var(--line-soft); border-radius: 9px; background: rgba(4,11,15,.45); padding: 8px 10px; font-size: 12px; line-height: 1.6; color: var(--ink-soft); margin: 10px 0; }
+.log p { margin: 0 0 4px; }
+.result .line { display: flex; justify-content: space-between; padding: 7px 9px; border-radius: 8px; border: 1px solid var(--line-soft); margin-bottom: 5px; font-size: 13px; }
+.result .line.win { border-color: rgba(242,223,174,.5); background: rgba(63,125,133,.3); }
+@media (max-width: 480px) { .wrap { padding: 12px 10px 30px; } .panel { padding: 12px; } .dcard { width: 82px; } }
+/* safe-area: keep the original bottom padding, clear the iOS home indicator */
+body{padding-bottom:env(safe-area-inset-bottom)}
+</style>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/dixit-premium/online.html">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>妙语说书人 <small>DIXIT · ONLINE</small></h1>
+    <div class="row"><a class="btn" href="index.html">单人牌桌</a><a class="btn" href="rules.html">规则</a><button class="btn sfx-toggle" type="button" aria-label="音效开关"></button></div>
+  </header>
+
+  <div class="grid" id="launcher">
+    <section class="panel">
+      <h2>创建房间</h2>
+      <p>3–6 人。空位由 AI 补足，房主点「开始对局」后发牌。</p>
+      <label for="hostName">你的名字</label><input id="hostName" maxlength="16" placeholder="例如：潮汐说书人" autocomplete="nickname">
+      <label for="hostMax">人数</label><select id="hostMax"><option value="4">4 人</option><option value="3">3 人</option><option value="5">5 人</option><option value="6">6 人</option></select>
+      <label for="hostPw">房间密码（可选）</label><input id="hostPw" maxlength="24" placeholder="留空则公开房间" autocomplete="off">
+      <div class="row" style="margin-top:12px"><button class="btn primary grow" id="createBtn" type="button">创建房间</button></div>
+    </section>
+    <section class="panel">
+      <h2>加入房间</h2>
+      <p>输入房间码或邀请码，也可以从邀请链接直接进入。</p>
+      <label for="joinName">你的名字</label><input id="joinName" maxlength="16" placeholder="例如：纸月说书人" autocomplete="nickname">
+      <label for="joinCode">房间码 / 邀请码</label><input id="joinCode" maxlength="64" placeholder="例如：MOON-42" autocomplete="off">
+      <label for="joinPw">房间密码（如需要）</label><input id="joinPw" maxlength="24" placeholder="可选" autocomplete="off">
+      <div class="row" style="margin-top:12px"><button class="btn primary grow" id="joinBtn" type="button">加入房间</button></div>
+    </section>
+  </div>
+
+  <div class="lobby" id="lobby">
+    <section class="panel">
+      <h2>房间大厅</h2>
+      <div class="status" id="lobbyStatus">等待连接…</div>
+      <div class="row" style="margin-bottom:10px">
+        <div class="grow"><div style="font-size:12px;color:var(--ink-dim)">房间码</div><div class="room-code" id="roomCode">—</div></div>
+        <div class="grow"><div style="font-size:12px;color:var(--ink-dim)">邀请码</div><div id="inviteCode" style="font-size:13px;word-break:break-all">—</div></div>
+      </div>
+      <div id="seatList"></div>
+      <div class="row" style="margin-top:12px"><button class="btn primary" id="startBtn" type="button" disabled>开始对局</button><button class="btn" id="copyBtn" type="button">复制邀请</button><button class="btn" id="leaveBtn" type="button">离开</button></div>
+    </section>
+  </div>
+
+  <div class="game" id="game">
+    <section class="panel">
+      <div class="row" style="justify-content:space-between;margin-bottom:8px">
+        <div><span style="font-size:12px;color:var(--ink-dim)">房间</span> <b id="gameRoom" class="room-code" style="font-size:18px">—</b></div>
+        <div class="row"><span class="status" id="gameStatus" style="margin:0">—</span><button class="btn" id="refreshBtn" type="button">刷新</button></div>
+      </div>
+      <div class="scoreboard" id="gamePlayers"></div>
+      <div class="clue"><div class="lbl">说书人的线索</div><div class="txt" id="gameClue">—</div></div>
+      <div class="status" id="gameTurn">—</div>
+      <div class="cardrow" id="gamePublic"></div>
+      <div class="cardrow" id="gameHand"></div>
+      <div class="row" id="clueRow" style="display:none"><input class="grow" id="gameClueInput" maxlength="60" placeholder="给一个词、短语或声音…" aria-label="线索文字"><button class="btn primary" id="clueBtn" type="button">说出线索</button></div>
+      <div class="row" style="margin-top:8px"><button class="btn primary" id="playBtn" type="button" disabled>确认</button><button class="btn" id="rematchBtn" type="button" style="display:none">再来一局</button></div>
+      <div class="log" id="gameLog" aria-live="polite"></div>
+      <div class="result" id="gameResult"></div>
+    </section>
+  </div>
+</div>
+
+<script src="../../shared/sfx.js"></script>
+<script src="data.js"></script>
+<script src="cards.js"></script>
+<script>
+(function () {
+  'use strict';
+  var C = window.DixitCards;
+  var LS = 'hhfa-dixit-online-v1';
+  var session = null, playerId = null, roomId = null, view = null;
+  var selected = null, pollTimer = null, pollBusy = false, uid = 0;
+  function $(id) { return document.getElementById(id); }
+  function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function sfx(n) { try { window.Sfx && window.Sfx.play && window.Sfx.play(n); } catch (e) {} }
+  function setStatus(node, t, err) { node.textContent = t; node.classList.toggle('err', !!err); }
+  function save() { try { localStorage.setItem(LS, JSON.stringify({ session: session, playerId: playerId, roomId: roomId })); } catch (e) {} }
+  function clearSave() { try { localStorage.removeItem(LS); } catch (e) {} }
+  async function api(method, route, body) {
+    var r = await fetch(route, { method: method, headers: { 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+    var text = await r.text(), data = null;
+    try { data = JSON.parse(text); } catch (e) {}
+    return { status: r.status, body: data };
+  }
+  function roomUrl(s) { return '/api/rooms/' + encodeURIComponent(roomId) + (s || ''); }
+  function viewUrl() { return roomUrl() + '?session=' + encodeURIComponent(session) + '&playerId=' + encodeURIComponent(playerId); }
+  async function refresh() {
+    if (!roomId || !session || pollBusy) return;
+    pollBusy = true;
+    try {
+      var res = await api('GET', viewUrl());
+      if (res.status === 200 && res.body) { view = res.body; render(); }
+      else if (res.status === 404) { setStatus($('lobbyStatus'), '房间已关闭。', true); stopPolling(); }
+    } catch (e) {}
+    pollBusy = false;
+  }
+  function startPolling() { stopPolling(); pollTimer = setInterval(refresh, 1100); }
+  function stopPolling() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
+
+  function cardEl(cardId, opts) {
+    opts = opts || {};
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'dcard' + (opts.sel ? ' sel' : '');
+    b.setAttribute('aria-label', '抽象卡 ' + (cardId + 1));
+    b.disabled = !!opts.disabled;
+    var art = document.createElement('div'); art.className = 'art';
+    art.innerHTML = C.render(cardId, { uid: 'o' + (++uid) });
+    b.appendChild(art);
+    if (opts.num != null) { var n = document.createElement('span'); n.className = 'num'; n.textContent = opts.num; b.appendChild(n); }
+    if (opts.onClick) b.addEventListener('click', opts.onClick);
+    return b;
+  }
+
+  function renderSeats() {
+    if (!view) return;
+    var host = $('seatList'); host.innerHTML = '';
+    view.seats.forEach(function (s) {
+      var row = document.createElement('div'); row.className = 'seat';
+      var left = document.createElement('div'); left.textContent = s.nickname;
+      var tag = document.createElement('span'); tag.className = 'tag' + (s.ai ? ' ai' : '') + (s.takeover ? ' takeover' : '');
+      tag.textContent = s.ai ? 'AI' : (s.takeover ? '已托管' : (s.playerId === view.hostId ? '房主' : '玩家'));
+      row.appendChild(left); row.appendChild(tag); host.appendChild(row);
+    });
+    $('roomCode').textContent = view.roomCode || '—';
+    $('inviteCode').textContent = view.inviteToken || view.inviteCode || '—';
+    $('startBtn').disabled = !view.canStart;
+    setStatus($('lobbyStatus'), view.started ? '对局已开始。' : '等待玩家与房主开始。');
+  }
+
+  function render() {
+    if (!view) return;
+    if (!view.started) {
+      $('game').classList.remove('on'); $('lobby').classList.add('on'); $('launcher').style.display = 'grid'; renderSeats(); return;
+    }
+    $('game').classList.add('on'); $('lobby').classList.remove('on'); $('launcher').style.display = 'none';
+    $('gameRoom').textContent = view.roomCode || '—';
+    $('rematchBtn').style.display = view.canRestart ? '' : 'none';
+    var s = view.state;
+    setStatus($('gameStatus'), s.over ? '对局结束' : (view.canMove ? '轮到你' : '等待其他人…'));
+
+    var board = $('gamePlayers'); board.innerHTML = '';
+    s.players.forEach(function (p) {
+      var box = document.createElement('div'); box.className = 'pbox';
+      box.innerHTML = '<div class="nm">' + esc(p.name) + (p.index === (view.you && view.you.playerIndex) ? '（你）' : '') + '</div>' +
+        '<div class="sub">' + (p.isStoryteller ? '说书人 · ' : '') + (p.isAI ? 'AI' : '玩家') + ' · 手牌 ' + p.handCount + '</div>' +
+        '<div class="sc">' + p.score + ' 分</div>';
+      board.appendChild(box);
+    });
+
+    $('gameClue').textContent = s.clue ? '「' + s.clue + '」' : '—';
+    var turn = '';
+    if (s.over) turn = '对局结束。';
+    else if (s.phase === 'clue') turn = s.storyteller === (view.you && view.you.playerIndex) ? '轮到你当说书人：选一张牌并给出线索。' : '等待 ' + s.players[s.storyteller].name + ' 给出线索。';
+    else if (s.phase === 'submit') turn = view.canMove ? '轮到你出牌：选一张最贴合线索的牌。' : '等待 ' + s.players[s.current].name + ' 出牌。';
+    else if (s.phase === 'vote') turn = view.canMove ? '轮到你投票：选出说书人的牌。' : '等待 ' + s.players[s.current].name + ' 投票。';
+    $('gameTurn').textContent = turn;
+
+    var pub = $('gamePublic'); pub.innerHTML = '';
+    if (s.phase === 'vote') {
+      (s.voteCards || []).forEach(function (card, i) {
+        var own = card === s.ownSubmission;
+        pub.appendChild(cardEl(card, {
+          num: i + 1,
+          sel: selected === card,
+          disabled: own || !view.canMove,
+          onClick: function () { if (!own) { selected = selected === card ? null : card; render(); } }
+        }));
+      });
+    }
+    var hand = $('gameHand'); hand.innerHTML = '';
+    var me = s.players[view.you ? view.you.playerIndex : 0];
+    if (me) {
+      me.hand.forEach(function (card) {
+        var hidden = card === 'hidden';
+        if (hidden) return;
+        var canPlay = view.canMove && (s.phase === 'clue' || s.phase === 'submit');
+        hand.appendChild(cardEl(card, {
+          sel: selected === card,
+          disabled: !canPlay,
+          onClick: function () { if (canPlay) { selected = selected === card ? null : card; render(); } }
+        }));
+      });
+    }
+
+    var clueRow = $('clueRow');
+    var canClue = view.canMove && s.phase === 'clue';
+    clueRow.style.display = canClue ? '' : 'none';
+    $('clueBtn').disabled = !canClue || selected == null || !$('gameClueInput').value.trim();
+    $('gameClueInput').oninput = function () { $('clueBtn').disabled = !canClue || selected == null || !$('gameClueInput').value.trim(); };
+    $('clueBtn').onclick = function () { send({ type: 'clue', card: selected, text: $('gameClueInput').value.trim() }); };
+    var playBtn = $('playBtn');
+    playBtn.disabled = true; playBtn.textContent = '确认';
+    if (view.canMove && s.phase === 'submit' && selected != null) { playBtn.disabled = false; playBtn.textContent = '提交这张'; playBtn.onclick = function () { send({ type: 'submit', card: selected }); }; }
+    if (view.canMove && s.phase === 'vote' && selected != null) { playBtn.disabled = false; playBtn.textContent = '投这一票'; playBtn.onclick = function () { send({ type: 'vote', card: selected }); }; }
+
+    var log = $('gameLog'); log.innerHTML = '';
+    (s.log || []).slice(-10).reverse().forEach(function (e) { var p = document.createElement('p'); p.textContent = e.text; log.appendChild(p); });
+    var result = $('gameResult'); result.innerHTML = '';
+    if (s.over && s.result) {
+      s.result.scores.forEach(function (p) {
+        var line = document.createElement('div'); line.className = 'line' + (s.result.winners.indexOf(p.index) >= 0 ? ' win' : '');
+        line.innerHTML = '<span>' + esc(p.name) + '</span><b>' + p.score + ' / ' + s.result.targetScore + ' 分</b>';
+        result.appendChild(line);
+      });
+    }
+  }
+
+  async function send(move) {
+    if (!view || !view.canMove) return;
+    if ((move.type === 'clue') && (!move.card || !move.text)) { setStatus($('gameStatus'), '先选牌并写线索。', true); return; }
+    var res = await api('POST', roomUrl('/actions'), { session: session, playerId: playerId, type: 'move', move: move });
+    if (res.status === 200 && res.body) { view = res.body; selected = null; sfx('move'); render(); }
+    else { setStatus($('gameStatus'), '行动失败：' + ((res.body && res.body.error && res.body.error.message) || res.status), true); refresh(); }
+  }
+
+  async function createRoom() {
+    var name = ($('hostName').value || '').trim() || ('玩家' + Math.floor(Math.random() * 900 + 100));
+    var res = await api('POST', '/api/rooms', { playerId: name, maxPlayers: Number($('hostMax').value), password: ($('hostPw').value || undefined) });
+    if (res.status !== 201) { setStatus($('lobbyStatus'), '创建失败：' + res.status, true); return; }
+    roomId = res.body.roomId; session = res.body.playerSession; playerId = name; view = res.body;
+    save(); $('launcher').style.display = 'none'; $('lobby').classList.add('on'); renderSeats(); startPolling(); sfx('notify');
+  }
+  async function joinRoom() {
+    var name = ($('joinName').value || '').trim() || ('玩家' + Math.floor(Math.random() * 900 + 100));
+    var code = ($('joinCode').value || '').trim();
+    if (!code) { $('joinCode').focus(); return; }
+    var room = await api('GET', '/api/rooms/' + encodeURIComponent(code));
+    if (room.status !== 200) { setStatus($('lobbyStatus'), '找不到房间：' + code, true); return; }
+    roomId = room.body.roomId;
+    var res = await api('POST', roomUrl('/join'), { playerId: name, inviteCode: code, password: ($('joinPw').value || undefined) });
+    if (res.status !== 200) { setStatus($('lobbyStatus'), '加入失败：' + ((res.body && res.body.error && res.body.error.message) || res.status), true); return; }
+    session = res.body.playerSession; playerId = name; view = res.body;
+    save(); $('launcher').style.display = 'none'; $('lobby').classList.add('on'); renderSeats(); startPolling(); sfx('notify');
+  }
+  async function startMatch() {
+    var res = await api('POST', roomUrl('/start'), { session: session, playerId: playerId });
+    if (res.status !== 200) { setStatus($('lobbyStatus'), '无法开始：' + ((res.body && res.body.error && res.body.error.message) || res.status), true); return; }
+    view = res.body; render(); sfx('win');
+  }
+  async function reconnectSaved() {
+    try {
+      var saved = JSON.parse(localStorage.getItem(LS) || 'null');
+      if (!saved || !saved.session || !saved.roomId) return false;
+      roomId = saved.roomId; session = saved.session; playerId = saved.playerId;
+      var res = await api('POST', roomUrl('/reconnect'), { session: session, playerId: playerId });
+      if (res.status !== 200) { clearSave(); return false; }
+      view = res.body; $('launcher').style.display = 'none'; render(); startPolling(); return true;
+    } catch (e) { return false; }
+  }
+
+  $('createBtn').addEventListener('click', createRoom);
+  $('joinBtn').addEventListener('click', joinRoom);
+  $('startBtn').addEventListener('click', startMatch);
+  $('refreshBtn').addEventListener('click', refresh);
+  $('rematchBtn').addEventListener('click', async function () {
+    var res = await api('POST', roomUrl('/restart'), { session: session, playerId: playerId });
+    if (res.status === 200) { view = res.body; render(); }
+  });
+  $('leaveBtn').addEventListener('click', async function () {
+    try { await api('POST', roomUrl('/leave'), { session: session, playerId: playerId }); } catch (e) {}
+    clearSave(); stopPolling(); location.reload();
+  });
+  $('copyBtn').addEventListener('click', function () {
+    var text = location.origin + location.pathname + '?room=' + encodeURIComponent(view.roomCode || '');
+    try { navigator.clipboard.writeText(text); $('copyBtn').textContent = '已复制'; } catch (e) { $('copyBtn').textContent = text; }
+  });
+  var params = new URLSearchParams(location.search);
+  if (params.get('room')) $('joinCode').value = params.get('room');
+  reconnectSaved().then(function (ok) { if (!ok) setStatus($('lobbyStatus'), '创建或加入一个房间。'); });
+})();
+</script>
+</body>
+</html>

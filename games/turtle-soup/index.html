@@ -8,6 +8,7 @@
 <meta name="robots" content="index,follow,max-image-preview:large">
 <meta name="author" content="Devin">
 <meta name="theme-color" content="#142724">
+<link rel="canonical" href="https://hhfa008.github.io/games/turtle-soup/">
 <link rel="icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABBUlEQVR4nGNkwAJE1FX+M9AAvLl5hxFdjJEeFuNzCBO9LUe3i4nelqM7golhgAHjQPgeGTANpOWjDhgNgdEQGBQhwEKOpqO9FjjlrItP0KYkPIpmaeYZAQw1000+kOwYJmpZjk0cX0gR7YCjRFpOriOYsAk+OHEAjrEB9KAmJI7PPCa8zmNgYJC27sBqCbpluMTR9ZPsAFyGgIIaZBkMY4saQpaDAM5cgCv4QeDp0QqccvgsVbBwoE45IE2Ez4gFTKS4lhKAyzwmcjRRy3KCDqCGIwjpZ6KGIZToYwQRpLaM8eUQUhwL6iGRlQuomUCZYC5hoDOA2cmELkBPy0EAq6X07J4DAFcfa9FM9NhDAAAAAElFTkSuQmCC">
 <style>
 :root{
@@ -377,6 +378,8 @@ a{color:inherit}
 </div>
 
 <script src="soups.js"></script>
+<script src="../shared/store.js"></script>
+<script src="../shared/i18n.js"></script>
 
 <script id="engine">
 (function (root, factory) {
@@ -1022,26 +1025,27 @@ var ai = {
   token: 0
 };
 
+var i18n = I18n.create({
+  strings: I18N,
+  defaultLang: detectLang(),
+  storageKey: LANG_KEY,
+  attrs: { text: 'data-i', ph: 'data-i-ph', aria: 'data-i-aria' },
+  buttons: '.langs button'
+});
+S.lang = i18n.lang();
+
 function $(id) { return document.getElementById(id); }
 
 function storeGet(key, fallback) {
-  try {
-    var value = localStorage.getItem(key);
-    return value == null ? fallback : value;
-  } catch (e) {
-    return fallback;
-  }
+  return Store.get(key, fallback);
 }
 
 function storeSet(key, value) {
-  try { localStorage.setItem(key, value); } catch (e) {}
+  Store.set(key, value);
 }
 
 function t(key) {
-  var dict = I18N[S.lang] || I18N.zh;
-  if (dict[key] != null) return dict[key];
-  if (I18N.zh[key] != null) return I18N.zh[key];
-  return key;
+  return i18n.t(key);
 }
 
 function f(key, vars) {
@@ -1068,18 +1072,14 @@ function readDifficulty() {
 }
 
 function readProgress() {
-  var raw = storeGet(PROGRESS_KEY, '');
-  if (!raw) return E.newProgress();
-  try {
-    return E.sanitizeProgress(JSON.parse(raw));
-  } catch (e) {
-    return E.newProgress();
-  }
+  var data = Store.getJSON(PROGRESS_KEY, null);
+  if (data == null) return E.newProgress();
+  return E.sanitizeProgress(data);
 }
 
 function saveProgress() {
   try {
-    storeSet(PROGRESS_KEY, JSON.stringify(E.sanitizeProgress(S.progress)));
+    Store.setJSON(PROGRESS_KEY, E.sanitizeProgress(S.progress));
   } catch (e) {}
 }
 
@@ -1087,52 +1087,12 @@ function currentBank() {
   return E.soupsForLang(BANK, S.lang);
 }
 
-function langTag() {
-  return S.lang === 'zh' ? 'zh-CN' : S.lang;
-}
-
-function applyLang() {
-  document.documentElement.lang = langTag();
-  document.title = t('docTitle');
-
-  var textNodes = document.querySelectorAll('[data-i]');
-  for (var i = 0; i < textNodes.length; i++) {
-    var key = textNodes[i].getAttribute('data-i');
-    var value = t(key);
-    if (value != null) textNodes[i].textContent = value;
-  }
-
-  var ariaNodes = document.querySelectorAll('[data-i-aria]');
-  for (var j = 0; j < ariaNodes.length; j++) {
-    var ariaKey = ariaNodes[j].getAttribute('data-i-aria');
-    ariaNodes[j].setAttribute('aria-label', t(ariaKey));
-  }
-
-  var phNodes = document.querySelectorAll('[data-i-ph]');
-  for (var k = 0; k < phNodes.length; k++) {
-    var phKey = phNodes[k].getAttribute('data-i-ph');
-    phNodes[k].setAttribute('placeholder', t(phKey));
-  }
-
-  var langButtons = document.querySelectorAll('.langs button');
-  for (var b = 0; b < langButtons.length; b++) {
-    langButtons[b].setAttribute('aria-pressed',
-      langButtons[b].getAttribute('data-lang') === S.lang ? 'true' : 'false');
-  }
-
-  buildQuickBar();
-  renderHome();
-  if (S.phase === 'game') renderGame();
-  if (S.phase === 'result') renderResult();
-  updateAIUI();
-}
-
-function setLang(lang) {
-  if (lang !== 'zh' && lang !== 'en' && lang !== 'id') return;
-  if (lang === S.lang) return;
-  S.lang = lang;
-  storeSet(LANG_KEY, lang);
-  if (S.phase !== 'home') {
+var lastLang = i18n.lang();
+i18n.onLang(function (next) {
+  var changed = next !== lastLang;
+  lastLang = next;
+  S.lang = next;
+  if (changed && S.phase !== 'home') {
     S.gameToken++;
     S.phase = 'home';
     S.soup = null;
@@ -1141,8 +1101,13 @@ function setLang(lang) {
     S.result = null;
     showView('home');
   }
-  applyLang();
-}
+  document.title = t('docTitle');
+  buildQuickBar();
+  renderHome();
+  if (S.phase === 'game') renderGame();
+  if (S.phase === 'result') renderResult();
+  updateAIUI();
+});
 
 function showView(name) {
   var views = ['home', 'game', 'result'];
@@ -1922,13 +1887,6 @@ function bind() {
     });
   }
 
-  var langButtons = document.querySelectorAll('.langs button');
-  for (var j = 0; j < langButtons.length; j++) {
-    langButtons[j].addEventListener('click', function () {
-      setLang(this.getAttribute('data-lang'));
-    });
-  }
-
   $('ai-toggle').addEventListener('change', onAIToggle);
   $('ai-accurate').addEventListener('change', onAccurateToggle);
   $('ai-enable').addEventListener('click', startAI);
@@ -1938,14 +1896,14 @@ function bind() {
 
 function init() {
   if (!E) return;
-  S.lang = detectLang();
+  S.lang = i18n.lang();
   S.difficulty = readDifficulty();
   S.progress = readProgress();
   ai.wanted = storeGet(AI_KEY, '0') === '1';
   ai.accurate = storeGet(ACCURATE_KEY, '0') === '1';
   ai.status = ai.wanted ? 'idle' : 'off';
   bind();
-  applyLang();
+  i18n.apply();
   showView('home');
   renderHome();
   updateAIUI();

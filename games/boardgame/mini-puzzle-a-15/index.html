@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>四盘塔 · 原创单人微解谜</title>
+<meta name="description" content="四盘汉诺塔：用最少步数把四层圆盘搬到最右柱。中文、移动端、离线可玩的原创单人解谜微游戏。">
+<meta name="theme-color" content="#0f1720">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f1720'/%3E%3Cpath d='M8 22l5-12h6l5 12h-4l-1-3h-6l-1 3z' fill='%238fd4ff'/%3E%3C/svg%3E">
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:#0f1720;color:#eef3f8;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;min-height:100vh;display:flex;justify-content:center;padding:16px 16px 28px}
+.app{width:100%;max-width:390px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.top h1{font-size:20px;line-height:1.25;margin:0;letter-spacing:.5px}
+.top a{color:#8fd4ff;font-size:13px;text-decoration:none;padding:10px 8px;border-radius:8px}
+.lead{color:#9fb0c0;font-size:13px;line-height:1.6;margin:0 0 12px}
+.panel{background:#16222e;border:1px solid #26384a;border-radius:14px;padding:14px}
+.prompt{font-size:15px;line-height:1.55;margin:0 0 12px;color:#f2f7fc}
+.grid{display:grid;gap:7px;margin:0 0 12px}
+.grid.square .cell{aspect-ratio:1}
+.cell{min-height:48px;border:1px solid #33495e;background:#1d2d3d;color:#eef3f8;border-radius:10px;font-size:18px;font-weight:600;line-height:1.2;white-space:pre-line;display:flex;align-items:center;justify-content:center;text-align:center;padding:4px;cursor:pointer;touch-action:manipulation;user-select:none}
+.cell:disabled{cursor:default;opacity:.92}
+.cell.sel{outline:3px solid #ffd166;outline-offset:1px;background:#2a3f52}
+.cell.ok{background:#1d4034;border-color:#3d7a5c;color:#c7f5da}
+.cell.bad{background:#4a2428;border-color:#7d3b42;color:#ffd0d5}
+.cell.wall{background:#0c141d;border-color:#1b2a38;color:#8fa8c4;font-size:14px}
+.cell.blank{background:#101b26;border-color:#223547;color:transparent}
+.cell.player{background:#234b63;border-color:#4c8aab;color:#e6f7ff;font-size:15px}
+.cell.goal{background:#3c3418;border-color:#7c6a2a;color:#ffe9a6;font-size:15px}
+.cell.key{background:#3a2f1a;border-color:#7c632e;color:#ffdd93}
+.cell.done{background:#1b3a2e;border-color:#376b53;color:#b8e9cc}
+.cell.on{background:#4b3a12;border-color:#a8862c;color:#ffe08a}
+.cell.off{background:#182532;border-color:#2c4054;color:#6f8499}
+.cell.jug{background:#163345;border-color:#2f5c78;color:#bfe9ff}
+.cell.tube{min-height:96px;background:#14212d;border-color:#2f465c;font-size:15px;letter-spacing:2px}
+.cell.person{min-height:68px;font-size:14px;font-weight:500;background:#1b2b3a}
+.cell.num{font-size:22px}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.actions button{flex:1 1 88px;min-height:48px;border-radius:10px;border:1px solid #3d6784;background:#1d3d52;color:#e9f6ff;font-size:15px;font-weight:600;cursor:pointer;touch-action:manipulation;padding:6px 8px}
+.actions button:disabled{opacity:.4;cursor:default}
+.actions button:active{transform:translateY(1px)}
+.notes{margin:0;padding:0;list-style:none;color:#9fb3c4;font-size:13px;line-height:1.7;white-space:pre-line}
+.status{margin:12px 0 0;padding:10px 12px;border-radius:10px;background:#173246;color:#cfeaff;font-size:14px;text-align:center}
+.status.win{background:#16392b;color:#c8f7d9}
+.status.lose{background:#3d2428;color:#ffd3d8}
+.foot{display:flex;justify-content:space-between;gap:10px;margin-top:14px}
+.foot button,.foot a{flex:1;min-height:48px;display:flex;align-items:center;justify-content:center;border-radius:12px;border:1px solid #34526b;background:#16222e;color:#bcd7ea;font-size:14px;text-decoration:none;cursor:pointer}
+.brand{color:#61788b;font-size:12px;text-align:center;margin-top:14px}
+@media(max-width:360px){.cell{font-size:16px}.cell.tube{min-height:84px}}
+/* mini-quality: safe-area */
+body { --mini-safe-bottom: 28px; padding-bottom: calc(var(--mini-safe-bottom) + env(safe-area-inset-bottom, 0px)); }
+/* mini-quality: reduced-motion */
+@media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; scroll-behavior:auto !important; } }
+</style>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/mini-puzzle-a-15/">
+</head>
+<body>
+<main class="app">
+<header class="top"><h1>四盘塔</h1> <span class="single-badge" style="display:inline-flex;align-items:center;min-height:24px;padding:0 8px;margin-left:8px;border:1px solid currentColor;border-radius:999px;font-size:12px;font-weight:650;vertical-align:middle">单人</span><a href="rules.html">规则与 FAQ</a></header>
+<p class="lead">四盘汉诺塔：用最少步数把四层圆盘搬到最右柱。</p>
+<section class="panel">
+<p class="prompt" id="prompt" aria-live="polite"></p>
+<div class="grid" id="grid"></div>
+<div class="actions" id="actions"></div>
+<ul class="notes" id="notes"></ul>
+<p class="status" id="status" aria-live="polite">进行中</p>
+</section>
+<div class="foot"><button type="button" id="restart">重新开始</button><a href="rules.html">查看玩法</a></div>
+<p class="brand">原创单人微解谜 · 离线可玩 · 无外部请求</p>
+</main>
+<script src="engine.js"></script>
+<script>
+(function(){
+  var E = window.MiniEngine;
+  var params = new URLSearchParams(location.search);
+  var seed = Number(params.get("seed")) || 3;
+  var state = E.create(seed);
+  var promptEl = document.getElementById("prompt");
+  var gridEl = document.getElementById("grid");
+  var actionsEl = document.getElementById("actions");
+  var notesEl = document.getElementById("notes");
+  var statusEl = document.getElementById("status");
+  function render(){
+    var v = E.view(state);
+    promptEl.textContent = v.prompt;
+    gridEl.innerHTML = "";
+    gridEl.className = "grid" + (v.cells.length >= 9 ? " square" : "");
+    gridEl.style.gridTemplateColumns = "repeat(" + (v.cols || 4) + ", minmax(0, 1fr))";
+    v.cells.forEach(function(c){
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "cell " + (c.tone || "") + (c.state === "sel" ? " sel" : "");
+      b.textContent = c.label;
+      b.disabled = !!c.disabled;
+      b.addEventListener("click", function(){
+        state = E.act(state, { type: "cell", id: c.id });
+        render();
+      });
+      gridEl.appendChild(b);
+    });
+    actionsEl.innerHTML = "";
+    (v.actions || []).forEach(function(a){
+      var b = document.createElement("button");
+      b.type = "button";
+      b.textContent = a.label;
+      b.disabled = !!a.disabled;
+      b.addEventListener("click", function(){
+        var msg;
+        if (a.d !== undefined) msg = { type: "digit", d: a.d };
+        else msg = { type: "action", id: a.id };
+        state = E.act(state, msg);
+        render();
+      });
+      actionsEl.appendChild(b);
+    });
+    notesEl.innerHTML = "";
+    (v.notes || []).forEach(function(n){
+      var li = document.createElement("li");
+      li.textContent = n;
+      notesEl.appendChild(li);
+    });
+    var st = v.status || (E.solved(state) ? "win" : "playing");
+    statusEl.className = "status " + st;
+    if (st === "win") statusEl.textContent = "完成！点击下方按钮挑战新一局。";
+    else if (st === "lose") statusEl.textContent = "本局结束，点击重新开始再来一次。";
+    else statusEl.textContent = E.solved(state) ? "完成！" : "进行中";
+  }
+  document.getElementById("restart").addEventListener("click", function(){
+    seed += 1;
+    state = E.create(seed);
+    render();
+  });
+  render();
+})();
+</script>
+</body>
+</html>

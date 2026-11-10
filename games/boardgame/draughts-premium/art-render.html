@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta name="description" content="西洋跳棋 premium 内部美术合成页：真实棋盘、材质与局面的渲染源。">
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/draughts-premium/art-render.html">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Draughts 美术合成页：本地生成的素材在浏览器中的渲染预览。">
+<title>Draughts art render</title>
+<style>
+:root{--felt:url("../../assets/art/premium/shared/table-felt.webp");--gold:#d8b26a;--ivory:#f2e7d2;--serif:"Songti SC","STSong","Noto Serif SC",serif;--sans:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0c110d}
+body{font-family:var(--sans);color:var(--ivory)}
+.scene{position:relative;width:100vw;height:100vh;overflow:hidden;background:
+  radial-gradient(900px 700px at 16% 0%,rgba(74,47,27,.4),transparent 62%),
+  radial-gradient(1000px 760px at 92% 8%,rgba(216,178,106,.14),transparent 60%),
+  linear-gradient(155deg,#18201a,#0e1410 62%,#080b09)}
+.scene::before{content:"";position:absolute;inset:0;background:var(--felt) center/cover no-repeat;opacity:.4;filter:saturate(.72) contrast(1.06)}
+.vignette{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 46%,transparent 34%,rgba(4,7,5,.64) 100%);pointer-events:none}
+.grain{position:absolute;inset:0;opacity:.06;mix-blend-mode:overlay;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");pointer-events:none}
+.stage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+.board3d{position:relative;transform-style:preserve-3d;filter:drop-shadow(0 54px 60px rgba(0,0,0,.66)) drop-shadow(0 10px 18px rgba(0,0,0,.5))}
+.board3d svg{display:block;width:100%;height:auto}
+.cover .board3d{width:70%;transform:perspective(1600px) rotateX(50deg) rotateZ(-12deg) translateY(2%)}
+.og .board3d{width:55%;transform:perspective(1600px) rotateX(52deg) rotateZ(-14deg);margin-left:auto}
+.detail1 .board3d{width:62%;transform:perspective(1700px) rotateX(36deg) rotateZ(-7deg)}
+.title{position:absolute;z-index:3;pointer-events:none}
+.cover .title{left:6.5%;top:8%;max-width:46%}
+.og .title{left:6.5%;top:17%;width:38%}
+.title .eyebrow{font-size:clamp(12px,1.1vw,15px);letter-spacing:.42em;color:var(--gold);margin:0 0 10px;font-weight:600}
+.title h1{margin:0;font-family:var(--serif);font-weight:700;font-size:clamp(52px,7vw,90px);letter-spacing:.12em;line-height:1.04;text-shadow:0 4px 26px rgba(0,0,0,.62)}
+.title h1 em{display:block;font-style:normal;font-size:.42em;letter-spacing:.36em;color:#e9cfa0;margin-top:14px}
+.title .rule{width:118px;height:2px;background:linear-gradient(90deg,var(--gold),transparent);margin:18px 0 14px}
+.title p{margin:0;max-width:430px;font-size:clamp(13px,1.25vw,17px);line-height:1.8;color:#d9c3a2;letter-spacing:.03em}
+.macro{position:relative;width:68%;display:flex;align-items:center;justify-content:center;gap:2.4%}
+.bigpiece{position:relative;border-radius:50%;background:radial-gradient(circle at 34% 26%,rgba(255,244,216,.55),transparent 44%),url("../../assets/art/premium/draughts/man-light.webp") center/cover;border:3px solid rgba(110,70,36,.55);box-shadow:0 26px 44px rgba(0,0,0,.58),inset 0 0 0 12px rgba(120,82,42,.12);display:grid;place-items:center}
+.bigpiece::before{content:"";position:absolute;inset:11%;border-radius:50%;border:2px solid rgba(120,82,42,.4);box-shadow:inset 0 0 0 14px rgba(120,82,42,.08)}
+.bigpiece::after{content:"";position:absolute;inset:27%;border-radius:50%;border:1.5px solid rgba(120,82,42,.28)}
+.bigpiece.dark{background:radial-gradient(circle at 34% 26%,rgba(180,120,70,.4),transparent 44%),url("../../assets/art/premium/draughts/man-dark.webp") center/cover;border-color:rgba(18,10,5,.8);box-shadow:0 26px 44px rgba(0,0,0,.62),inset 0 0 0 12px rgba(20,12,6,.2)}
+.bigpiece.dark::before{border-color:rgba(226,199,155,.24);box-shadow:inset 0 0 0 14px rgba(20,12,6,.16)}
+.bigpiece.dark::after{border-color:rgba(226,199,155,.18)}
+.bigpiece.king::marker{content:""}
+.bigpiece .crown{position:relative;z-index:2;width:34%;height:34%;display:grid;place-items:center}
+.bigpiece .crown svg{width:100%;height:100%;filter:drop-shadow(0 2px 3px rgba(0,0,0,.4))}
+.macro .bigpiece:nth-child(1){width:26%;aspect-ratio:1;transform:rotate(-8deg)}
+.macro .bigpiece:nth-child(2){width:38%;aspect-ratio:1;transform:translateY(-4%) rotate(4deg)}
+.macro .bigpiece:nth-child(3){width:26%;aspect-ratio:1;transform:rotate(10deg)}
+.macro .halo{position:absolute;width:70%;height:16%;bottom:-7%;border-radius:50%;background:radial-gradient(ellipse,rgba(0,0,0,.58),transparent 70%);filter:blur(14px)}
+.detail2 .caption{position:absolute;left:7%;bottom:8%;z-index:4;max-width:46%}
+.detail2 .caption h2{font-family:var(--serif);font-size:clamp(24px,2.6vw,36px);margin:0 0 8px;letter-spacing:.1em}
+.detail2 .caption p{margin:0;color:#c9b190;font-size:clamp(12px,1.1vw,15px);line-height:1.8}
+</style>
+</head>
+<body>
+<div class="scene" id="scene">
+  <div class="vignette"></div>
+  <div class="grain"></div>
+  <div class="stage" id="stage"></div>
+  <div class="title" id="title" hidden>
+    <p class="eyebrow">INTERNATIONAL DRAUGHTS · 10×10</p>
+    <h1>国际跳棋<em>十路 · 飞王</em></h1>
+    <div class="rule"></div>
+    <p>每方 20 子，必吃与最大吃子；兵可退吃，王可远程飞吃。木质棋子与织纹绒桌由代码逐格合成。</p>
+  </div>
+</div>
+<script>
+(function () {
+  'use strict';
+  var q = new URLSearchParams(location.search);
+  var shot = q.get('shot') || 'cover';
+  document.body.className = shot;
+  var scene = document.getElementById('scene');
+  var stage = document.getElementById('stage');
+  var title = document.getElementById('title');
+  var SIZE = 10, M = 44, CELL = 55.2;
+
+  function px(sq) { return M + (sq % SIZE) * CELL; }
+  function py(sq) { return M + Math.floor(sq / SIZE) * CELL; }
+  function isDark(r, c) { return ((r + c) & 1) === 1; }
+
+  function openingBoard() {
+    var b = new Array(100).fill(0);
+    for (var r = 0; r < SIZE; r++) {
+      for (var c = 0; c < SIZE; c++) {
+        if (!isDark(r, c)) continue;
+        if (r < 4) b[r * 10 + c] = -1;
+        else if (r > 5) b[r * 10 + c] = 1;
+      }
+    }
+    return b;
+  }
+
+  function boardSvg(board, uid) {
+    var out = '<svg viewBox="0 0 640 660" xmlns="http://www.w3.org/2000/svg">';
+    out += '<defs>' +
+      '<pattern id="bd' + uid + '" patternUnits="userSpaceOnUse" width="552" height="552"><image href="../../assets/art/premium/draughts/board-walnut.webp" width="552" height="552" preserveAspectRatio="xMidYMid slice"/></pattern>' +
+      '<pattern id="bl' + uid + '" patternUnits="userSpaceOnUse" width="552" height="552"><image href="../../assets/art/premium/xiangqi/board-wood.webp" width="552" height="552" preserveAspectRatio="xMidYMid slice"/></pattern>' +
+      '<pattern id="md' + uid + '" patternUnits="userSpaceOnUse" width="42" height="42"><image href="../../assets/art/premium/draughts/man-dark.webp" width="42" height="42" preserveAspectRatio="xMidYMid slice"/></pattern>' +
+      '<pattern id="ml' + uid + '" patternUnits="userSpaceOnUse" width="42" height="42"><image href="../../assets/art/premium/draughts/man-light.webp" width="42" height="42" preserveAspectRatio="xMidYMid slice"/></pattern>' +
+      '<filter id="ps' + uid + '" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="1.2" dy="2.4" stdDeviation="1.9" flood-color="#0d0803" flood-opacity=".58"/></filter>' +
+      '</defs>';
+    out += '<rect x="16" y="16" width="608" height="608" rx="14" fill="url(#bd' + uid + ')" stroke="#22150d" stroke-width="2.5"/>';
+    out += '<rect x="28" y="28" width="584" height="584" rx="5" fill="none" stroke="rgba(216,178,106,.24)" stroke-width="1.2"/>';
+    for (var r = 0; r < SIZE; r++) {
+      for (var c = 0; c < SIZE; c++) {
+        var dark = isDark(r, c), x = M + c * CELL, y = M + r * CELL;
+        out += '<rect x="' + x.toFixed(2) + '" y="' + y.toFixed(2) + '" width="' + CELL.toFixed(2) + '" height="' + CELL.toFixed(2) + '" fill="url(#' + (dark ? 'bd' : 'bl') + uid + ')"/>';
+        out += '<rect x="' + x.toFixed(2) + '" y="' + y.toFixed(2) + '" width="' + CELL.toFixed(2) + '" height="' + CELL.toFixed(2) + '" fill="' + (dark ? 'rgba(18,10,5,.16)' : 'rgba(255,248,228,.1)') + '"/>';
+      }
+    }
+    for (var sq = 0; sq < 100; sq++) {
+      var p = board[sq];
+      if (!p) continue;
+      var side = p > 0 ? 1 : -1, king = p === 2 || p === -2;
+      out += '<g transform="translate(' + px(sq) + ',' + py(sq) + ')">' +
+        '<ellipse cx="0" cy="4" rx="15.5" ry="4.2" fill="rgba(14,8,3,.42)"/>' +
+        '<circle r="17.8" fill="url(#' + (side === 1 ? 'ml' : 'md') + uid + ')" stroke="' + (side === 1 ? 'rgba(120,82,42,.75)' : 'rgba(20,12,6,.8)') + '" stroke-width="1.4" filter="url(#ps' + uid + ')"/>' +
+        '<circle r="14.1" fill="none" stroke="' + (side === 1 ? 'rgba(120,82,42,.45)' : 'rgba(226,199,155,.28)') + '" stroke-width="1.1"/>' +
+        '<circle r="10.2" fill="none" stroke="' + (side === 1 ? 'rgba(120,82,42,.32)' : 'rgba(226,199,155,.2)') + '" stroke-width="1"/>';
+      if (king) {
+        out += '<circle r="15.7" fill="none" stroke="#e8c47c" stroke-width="1.5" opacity=".9"/>' +
+          '<path d="M -7 3.5 L -7 -1.7 L -3 1.4 L 0 -4.8 L 3 1.4 L 7 -1.7 L 7 3.5 Z" fill="rgba(232,196,124,.92)" stroke="rgba(90,58,22,.5)" stroke-width=".7"/>';
+      }
+      out += '</g>';
+    }
+    out += '</svg>';
+    return out;
+  }
+
+  var board = openingBoard();
+  if (shot === 'cover' || shot === 'og' || shot === 'detail1') {
+    if (shot !== 'detail1') title.hidden = false;
+    var wrap = document.createElement('div');
+    wrap.className = 'board3d';
+    wrap.innerHTML = boardSvg(board, shot.charAt(0));
+    stage.appendChild(wrap);
+  } else if (shot === 'detail2') {
+    var macro = document.createElement('div');
+    macro.className = 'macro';
+    var crown = '<svg viewBox="0 0 40 40"><path d="M6 27 L6 13 L14 19 L20 8 L26 19 L34 13 L34 27 Z" fill="#e8c47c" stroke="rgba(90,58,22,.6)" stroke-width="1.4"/><rect x="6" y="27" width="28" height="4" rx="1.5" fill="#e8c47c" stroke="rgba(90,58,22,.6)" stroke-width="1"/></svg>';
+    ['light', 'dark king', 'light'].forEach(function (kind) {
+      var d = document.createElement('div');
+      d.className = 'bigpiece' + (kind.indexOf('dark') >= 0 ? ' dark' : '');
+      if (kind.indexOf('king') >= 0) {
+        var c = document.createElement('div');
+        c.className = 'crown';
+        c.innerHTML = crown;
+        d.appendChild(c);
+      }
+      macro.appendChild(d);
+    });
+    var halo = document.createElement('div');
+    halo.className = 'halo';
+    macro.appendChild(halo);
+    stage.appendChild(macro);
+    var caption = document.createElement('div');
+    caption.className = 'caption';
+    caption.innerHTML = '<h2>木质 · 三十二毫米</h2><p>棋子直径 32mm，车削同心环；浅色黄杨、深色胡桃，升王后加金环与王冠。棋盘与四十枚开局棋子由代码合成。</p>';
+    scene.appendChild(caption);
+  }
+})();
+</script>
+</body>
+</html>

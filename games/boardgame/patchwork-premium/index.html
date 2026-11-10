@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2f3b32">
+<meta name="description" content="拼布艺术 Patchwork 高级版：9×9 拼布棋盘、时间轴、扣子经济与 7×7 奖励，支持单人 AI 与双人联机。">
+<meta property="og:title" content="拼布艺术 · Patchwork Premium">
+<meta property="og:description" content="把碎布拼成完整的拼布：时间轴、扣子与 7×7 奖励。">
+<meta property="og:type" content="website">
+<meta property="og:image" content="assets/og.webp">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="assets/og.webp">
+<title>拼布艺术 · Patchwork Premium</title>
+<link rel="icon" href="../../assets/icons/xiangqi.svg">
+<style>
+:root{
+  --ink:#29251f; --ink-2:#4c453a; --muted:#766c5c;
+  --paper:#f4ecdc; --paper-2:#eadfc9; --card:#fffaf0;
+  --rust:#a64b36; --rust-d:#7e3728; --sage:#5a7259; --sage-d:#3f5541;
+  --gold:#be954b; --gold-l:#e4c78d; --blue:#3d5b70;
+  --line:rgba(53,43,30,.20); --line-2:rgba(53,43,30,.10);
+  --shadow:0 12px 34px rgba(46,35,20,.16), 0 2px 6px rgba(46,35,20,.10);
+  --radius:14px; --touch:44px;
+  --felt:url('../../assets/art/premium/patchwork/felt.webp');
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  min-height:100dvh; color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  background:
+    radial-gradient(1200px 600px at 15% -10%, rgba(190,149,75,.22), transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, rgba(90,114,89,.20), transparent 55%),
+    linear-gradient(160deg,#f7f0e1 0%, #efe4cf 55%, #e8dcc4 100%);
+  -webkit-text-size-adjust:100%;
+}
+body::before{
+  content:""; position:fixed; inset:0; pointer-events:none; opacity:.16;
+  background-image:var(--felt); background-size:520px; mix-blend-mode:multiply;
+}
+h1,h2,h3,.serif{font-family:"Songti SC","STSong","Noto Serif SC",serif;font-weight:700;letter-spacing:.02em}
+button{font:inherit;color:inherit}
+a{color:inherit}
+.wrap{position:relative;max-width:1180px;margin:0 auto;padding:0 16px calc(28px + env(safe-area-inset-bottom))}
+.top{display:flex;align-items:center;gap:14px;padding:18px 0 12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.mark{width:48px;height:48px;border-radius:12px;flex:none;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:2px;padding:4px;background:#2f3b32;box-shadow:var(--shadow)}
+.mark i{display:block;border-radius:2px;background:#cfa24f}
+.mark i:nth-child(2){background:#a64b36}
+.mark i:nth-child(3){background:#5a7259}
+.mark i:nth-child(4){background:#e6d4ae}
+.brand h1{margin:0;font-size:clamp(22px,4.6vw,32px);line-height:1.1}
+.brand p{margin:3px 0 0;font-size:12px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase}
+.nav{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.nav a,.nav button{
+  min-height:var(--touch);padding:0 14px;display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  border:1px solid var(--line);border-radius:999px;background:rgba(255,250,240,.72);text-decoration:none;
+  font-size:13px;font-weight:600;box-shadow:0 1px 0 rgba(255,255,255,.7) inset;cursor:pointer;
+}
+.nav a:active,.nav button:active{transform:translateY(1px)}
+.nav .online{background:var(--sage);border-color:var(--sage-d);color:#fff8e8}
+.scores{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:6px 0 14px}
+.player{
+  position:relative;display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:var(--radius);
+  background:linear-gradient(180deg,rgba(255,251,242,.94),rgba(249,241,225,.94));
+  border:1px solid var(--line);box-shadow:var(--shadow);overflow:hidden;
+}
+.player::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--sage)}
+.player.ai::before{background:var(--rust)}
+.player.active{outline:2px solid var(--gold);outline-offset:2px}
+.player .who{min-width:0}
+.player .who strong{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.player .who span{font-size:12px;color:var(--muted)}
+.player .stats{margin-left:auto;display:flex;gap:10px;align-items:center}
+.stat{text-align:center;min-width:44px}
+.stat b{display:block;font-size:18px;font-variant-numeric:tabular-nums;line-height:1.15}
+.stat i{font-style:normal;font-size:12px;color:var(--muted)}
+.stat.score b{color:var(--rust-d)}
+.player .button-ico{width:46px;height:46px;flex:none;background:url('../../assets/art/premium/patchwork/button.webp') center/contain no-repeat;filter:drop-shadow(0 4px 4px rgba(60,40,20,.2))}
+.table{display:grid;min-width:0;grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr);gap:16px;align-items:start}
+.panel{min-width:0;
+  background:linear-gradient(180deg,rgba(255,251,243,.95),rgba(250,242,228,.95));
+  border:1px solid var(--line);border-radius:calc(var(--radius) + 4px);box-shadow:var(--shadow);padding:14px;
+}
+.panel-head{display:flex;align-items:baseline;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.panel-head h2{margin:0;font-size:19px}
+.panel-head .sub{font-size:12px;color:var(--muted)}
+.panel-head .right{margin-left:auto;font-size:12px;color:var(--muted)}
+.board-frame{
+  padding:10px;border-radius:12px;background:
+    linear-gradient(180deg,rgba(54,72,55,.94),rgba(39,54,42,.96));
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.08), inset 0 10px 30px rgba(0,0,0,.22);
+}
+.board{display:grid;grid-template-columns:repeat(9,1fr);grid-template-rows:repeat(9,1fr);gap:3px;aspect-ratio:1/1;width:100%;user-select:none;-webkit-user-select:none;background:url('../../assets/art/premium/patchwork/leather-patch.webp') center/cover no-repeat}
+.cell{
+  position:relative;border-radius:4px;background:rgba(244,236,220,.14);border:1px solid rgba(255,255,255,.09);
+  cursor:pointer;transition:background .15s ease, box-shadow .15s ease;min-width:0;min-height:0;
+}
+.cell:hover{background:rgba(244,236,220,.24)}
+.cell.filled{border-color:rgba(30,24,16,.25);box-shadow:inset 0 0 0 1px rgba(255,255,255,.12), 0 1px 2px rgba(0,0,0,.25);background-image:url('../../assets/art/premium/patchwork/quilt-tile.webp');background-size:100% 100%;background-position:center;background-repeat:no-repeat;background-blend-mode:multiply}
+.cell.filled::after{
+  content:"";position:absolute;inset:0;border-radius:4px;opacity:.5;mix-blend-mode:multiply;
+  background-image:var(--felt);background-size:180px;
+}
+.cell .patch-tint{position:absolute;inset:0;border-radius:4px;opacity:.62}
+.cell .button-dot{position:absolute;inset:26%;border-radius:50%;background:url('../../assets/art/premium/patchwork/button.webp') center/contain no-repeat;filter:drop-shadow(0 1px 1px rgba(0,0,0,.35));z-index:2}
+.cell.ghost{outline:3px solid var(--gold-l);outline-offset:-3px;background:rgba(228,199,141,.5);z-index:2}
+.cell.ghost.bad{outline-color:#d66a55;background:rgba(214,106,85,.35)}
+.cell:focus-visible{outline:3px solid #fff;outline-offset:-3px}
+.board-foot{display:flex;gap:10px;align-items:center;margin-top:10px;font-size:12px;color:var(--muted);flex-wrap:wrap}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;background:var(--gold)}
+.side{display:flex;flex-direction:column;gap:14px;min-width:0}
+.market{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:8px;border-radius:12px;background:url('../../assets/art/premium/patchwork/button-tray.webp') center/cover no-repeat}
+.patch-card{
+  position:relative;min-height:142px;padding:8px;border-radius:12px;border:1px solid var(--line);
+  background:linear-gradient(180deg,#fffdf6,#f6ecd8);display:flex;flex-direction:column;gap:6px;cursor:pointer;
+  text-align:left;box-shadow:0 4px 12px rgba(60,42,24,.10);transition:transform .15s ease, box-shadow .15s ease;
+}
+.patch-card:hover{transform:translateY(-2px);box-shadow:0 8px 18px rgba(60,42,24,.16)}
+.patch-card[aria-pressed="true"]{outline:3px solid var(--rust);outline-offset:2px}
+.patch-card.unaffordable{opacity:.72}
+.patch-mini{width:100%;flex:1;display:grid;gap:2px;place-content:center;min-height:64px}
+.patch-mini i{display:block;border-radius:2px;background:var(--rust);box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)}
+.patch-mini i.has-button{background:var(--rust) url('../../assets/art/premium/patchwork/button.webp') center/70% no-repeat}
+.patch-name{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.patch-meta{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--ink-2);flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:3px;padding:1px 6px;border-radius:999px;background:rgba(90,114,89,.14);color:var(--sage-d);font-weight:700}
+.chip.time{background:rgba(61,91,112,.13);color:var(--blue)}
+.chip.cost{background:rgba(190,149,75,.20);color:#7a5a1e}
+.chip.income{background:rgba(166,75,54,.13);color:var(--rust-d)}
+.controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.btn{
+  min-height:var(--touch);padding:9px 12px;border-radius:11px;border:1px solid var(--line);background:#fffaf0;
+  font-weight:700;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  box-shadow:0 2px 0 rgba(70,52,30,.10);
+}
+.btn:disabled{opacity:.44;cursor:not-allowed;box-shadow:none}
+.btn.primary{background:linear-gradient(180deg,#b85a42,#9a422f);border-color:#7e3728;color:#fff7e9}
+.btn.ghost{background:rgba(255,250,240,.55)}
+.btn.skip{background:linear-gradient(180deg,#6f856d,#556b54);border-color:#425a43;color:#fff8ea}
+.btn.wide{grid-column:1/-1}
+.preview{display:flex;gap:12px;align-items:center;padding:10px 12px;border-radius:12px;background:rgba(190,149,75,.12);border:1px dashed rgba(190,149,75,.55);font-size:13px;min-height:56px}
+.preview .pv-mini{width:54px;height:54px;flex:none;display:grid;gap:2px}
+.preview .pv-mini i{background:var(--rust);border-radius:2px}
+.preview strong{display:block;font-size:13px}
+.preview span{color:var(--ink-2);font-size:12px}
+.timeline{margin-top:2px}
+.timeline-head{display:flex;align-items:baseline;gap:8px;margin-bottom:7px}
+.timeline-head h3{margin:0;font-size:14px}
+.timeline-head span{font-size:12px;color:var(--muted);margin-left:auto}
+.timeline-scroll{min-width:0;max-width:100%;overflow-x:auto;overflow-y:hidden;padding:4px 0 8px;border-radius:10px;background:rgba(90,114,89,.07) url('../../assets/art/premium/patchwork/time-strip.webp') center/cover no-repeat;border:1px solid var(--line-2);-webkit-overflow-scrolling:touch}
+.track{display:grid;grid-auto-flow:column;grid-auto-columns:27px;gap:2px;padding:4px 7px;min-width:max-content;align-items:end}
+.slot{position:relative;height:58px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:2px}
+.slot .num{font-size:12px;color:var(--muted);line-height:1}
+.slot .peg{width:20px;height:20px;border-radius:5px;background:#ded0b4;border:1px solid rgba(60,45,25,.18);display:grid;place-items:center;font-size:12px;font-weight:700}
+.slot.income .peg{box-shadow:0 0 0 2px var(--gold-l) inset}
+.slot .tok{position:absolute;bottom:2px;width:10px;height:10px;border-radius:50%;border:1px solid rgba(255,255,255,.8);box-shadow:0 1px 2px rgba(0,0,0,.3)}
+.slot .tok.p0{left:2px;background:#d9b45c}
+.slot .tok.p1{right:2px;background:#b4513f}
+.log-panel{margin-top:16px}
+.log{list-style:none;margin:0;padding:0;max-height:170px;overflow:auto;font-size:13px;line-height:1.55}
+.log li{padding:6px 2px;border-bottom:1px dashed var(--line-2);color:var(--ink-2)}
+.log li:last-child{border-bottom:0}
+.log b{color:var(--ink)}
+.hint{margin:10px 0 0;font-size:13px;color:var(--muted);min-height:20px}
+.overlay{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:18px;background:rgba(28,24,18,.55);backdrop-filter:blur(4px)}
+.overlay[hidden]{display:none}
+.modal{width:min(440px,100%);border-radius:18px;padding:22px;background:linear-gradient(180deg,#fffaf0,#f3e8d2);border:1px solid var(--line);box-shadow:0 30px 80px rgba(20,14,8,.35)}
+.modal h2{margin:0 0 6px;font-size:24px}
+.modal p{margin:0 0 14px;color:var(--ink-2);font-size:14px;line-height:1.6}
+.result-rows{display:grid;gap:8px;margin:12px 0 16px}
+.result-row{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;background:rgba(90,114,89,.09);font-size:14px}
+.result-row b{margin-left:auto;font-variant-numeric:tabular-nums}
+.modal .actions{display:flex;gap:8px;flex-wrap:wrap}
+.modal .actions .btn{flex:1}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media (max-width:860px){
+  .table{grid-template-columns:1fr}
+  .scores{gap:8px}
+  .player{padding:10px;gap:8px}
+  .player .button-ico{width:38px;height:38px}
+  .stat b{font-size:16px}
+}
+@media (max-width:430px){
+  .wrap{padding-left:10px;padding-right:10px}
+  .brand h1{font-size:23px}
+  .mark{width:42px;height:42px}
+  .nav a,.nav button{padding:0 11px;font-size:12px}
+  .scores{grid-template-columns:1fr 1fr}
+  .player .stats{gap:6px}
+  .stat{min-width:36px}
+  .stat b{font-size:15px}
+  .panel{padding:10px;border-radius:14px}
+  .board-frame{padding:6px}
+  .board{gap:2px}
+  .market{gap:6px}
+  .patch-card{min-height:126px;padding:6px}
+  .patch-name{font-size:12px}
+  .controls{gap:7px}
+  .btn{padding:8px;font-size:12px}
+  .track{grid-auto-columns:25px}
+}
+@media (max-width:350px){
+  .brand h1{font-size:20px}
+  .brand p{display:none}
+  .player .who span{display:none}
+  .stat.minor{display:none}
+  .patch-card{min-height:116px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important;scroll-behavior:auto!important}
+}
+</style>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/patchwork-premium/">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="mark" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <div>
+        <h1>拼布艺术</h1>
+        <p>PATCHWORK · 2 PLAYERS</p>
+      </div>
+    </div>
+    <nav class="nav" aria-label="页面导航">
+      <a href="rules.html">玩法</a>
+      <a class="online" href="online.html">联机</a>
+      <button class="sfx-toggle" type="button" aria-pressed="false">声音</button>
+    </nav>
+  </header>
+
+  <section class="scores" aria-label="比分">
+    <div class="player active" id="player0">
+      <div class="who"><strong>你</strong><span id="p0meta">扣子 5 · 时间 0</span></div>
+      <div class="stats">
+        <div class="stat"><b id="p0buttons">5</b><i>扣子</i></div>
+        <div class="stat minor"><b id="p0income">0</b><i>收益</i></div>
+        <div class="stat minor"><b id="p0empty">81</b><i>空格</i></div>
+        <div class="stat score"><b id="p0score">5</b><i>得分</i></div>
+      </div>
+      <div class="button-ico" aria-hidden="true"></div>
+    </div>
+    <div class="player ai" id="player1">
+      <div class="who"><strong id="p1name">AI 对手</strong><span id="p1meta">扣子 5 · 时间 0</span></div>
+      <div class="stats">
+        <div class="stat"><b id="p1buttons">5</b><i>扣子</i></div>
+        <div class="stat minor"><b id="p1income">0</b><i>收益</i></div>
+        <div class="stat minor"><b id="p1empty">81</b><i>空格</i></div>
+        <div class="stat score"><b id="p1score">5</b><i>得分</i></div>
+      </div>
+      <div class="button-ico" aria-hidden="true"></div>
+    </div>
+  </section>
+
+  <main>
+    <div class="table">
+      <section class="panel" aria-labelledby="boardTitle">
+        <div class="panel-head">
+          <h2 id="boardTitle">你的拼布板</h2>
+          <span class="sub" id="boardSub">时间标记 0 / 53</span>
+          <span class="right" id="boardRight">空格扣 2 分</span>
+        </div>
+        <div class="board-frame">
+          <div class="board" id="board" role="grid" aria-label="你的 9×9 拼布棋盘"></div>
+        </div>
+        <div class="board-foot">
+          <span><span class="dot"></span> 圆点格在购买时收入 1 枚扣子</span>
+          <span id="sevenBadge" hidden>7×7 奖励已领取</span>
+        </div>
+        <p class="hint" id="hint" role="status" aria-live="polite">选择一块拼布，再点棋盘放置。</p>
+      </section>
+
+      <aside class="side">
+        <section class="panel" aria-labelledby="marketTitle">
+          <div class="panel-head">
+            <h2 id="marketTitle">前方三块</h2>
+            <span class="sub" id="marketHint">按时间标记顺位</span>
+            <button class="btn ghost" type="button" id="restart" style="margin-left:auto;min-height:44px;padding:0 12px">重开</button>
+          </div>
+          <div class="market" id="market"></div>
+        </section>
+
+        <section class="panel" aria-labelledby="actionTitle">
+          <div class="panel-head"><h2 id="actionTitle">行动</h2><span class="sub" id="actionSub">选中拼布后可旋转</span></div>
+          <div class="preview" id="preview">
+            <div class="pv-mini" id="previewMini" aria-hidden="true"></div>
+            <div><strong id="previewName">未选择拼布</strong><span id="previewMeta">点一张拼布卡开始</span></div>
+          </div>
+          <div class="controls" style="margin-top:10px">
+            <button class="btn" type="button" id="rotateL" disabled>左转</button>
+            <button class="btn" type="button" id="rotateR" disabled>右转</button>
+            <button class="btn" type="button" id="flip" disabled>翻转</button>
+            <button class="btn ghost" type="button" id="clear" disabled>取消</button>
+            <button class="btn primary wide" type="button" id="confirm" disabled>确认放置</button>
+            <button class="btn skip wide" type="button" id="skip">跳过 · 前进并拿扣子</button>
+          </div>
+        </section>
+
+        <section class="panel timeline" aria-labelledby="timelineTitle">
+          <div class="timeline-head"><h3 id="timelineTitle">时间轴</h3><span>同一条轨道上竞争</span></div>
+          <div class="timeline-scroll" tabindex="0" aria-label="时间轴，可左右滚动">
+            <div class="track" id="timeline"></div>
+          </div>
+        </section>
+      </aside>
+    </div>
+
+    <section class="panel log-panel" aria-labelledby="logTitle">
+      <div class="panel-head"><h2 id="logTitle">对局记录</h2><span class="sub">最近 18 条</span></div>
+      <ol class="log" id="log" aria-label="对局记录"></ol>
+    </section>
+  </main>
+</div>
+
+<div class="overlay" id="resultOverlay" role="dialog" aria-modal="true" aria-labelledby="resultTitle" hidden>
+  <div class="modal">
+    <h2 id="resultTitle">对局结束</h2>
+    <p id="resultReason"></p>
+    <div class="result-rows" id="resultRows"></div>
+    <div class="actions">
+      <button class="btn primary" type="button" id="again">再来一局</button>
+      <button class="btn ghost" type="button" id="closeResult">查看棋盘</button>
+    </div>
+  </div>
+</div>
+
+<script src="../../shared/sfx.js"></script>
+<script src="data.js"></script>
+<script src="engine.js"></script>
+<script>
+(function () {
+  'use strict';
+  var E = window.PatchworkEngine;
+  var D = window.PatchworkData;
+  var $ = function (id) { return document.getElementById(id); };
+  var boardEl = $('board'), marketEl = $('market'), timelineEl = $('timeline'), logEl = $('log');
+  var roving = { r: 0, c: 0 };
+  var hintEl = $('hint'), previewMini = $('previewMini');
+  var overlay = $('resultOverlay');
+  var state = null;
+  var selection = null;
+  var aiTimer = null;
+  var lastRender = 0;
+  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function esc(v) {
+    return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+    });
+  }
+  function sound(name) {
+    try { if (window.Sfx && !reduced) window.Sfx.play(name, { volume: .55 }); } catch (e) {}
+  }
+  function locked() { return !state || state.over || state.current !== 0; }
+  function currentPatch() { return selection && E.patchById(selection.patchId); }
+  function currentOrientation() {
+    if (!selection) return null;
+    var list = E.orientationsFor(selection.patchId);
+    return list && list[selection.orientationIndex] || null;
+  }
+
+  function newGame(seed) {
+    if (aiTimer) { clearTimeout(aiTimer); aiTimer = null; }
+    var s = seed == null ? ((Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0) || 1 : seed;
+    state = E.createGame({ seed: s, aiPlayer: 1, names: ['你', 'AI · 拼布匠'] });
+    selection = null;
+    overlay.hidden = true;
+    render();
+    hint('新开一局：双方 5 枚扣子，33 块拼布沿时间轴排开。');
+  }
+
+  function hint(text) { hintEl.textContent = text; }
+
+  function selectPatch(patchId) {
+    if (locked()) return;
+    var patch = E.patchById(patchId);
+    if (!patch) return;
+    selection = { patchId: patchId, orientationIndex: 0, row: null, col: null };
+    sound('click');
+    render();
+    hint('「' + patch.name + '」已选中：点棋盘格预览位置，可旋转 / 翻转。');
+  }
+
+  function clearSelection() {
+    selection = null;
+    render();
+    hint('已取消选择。');
+  }
+
+  function rotateSelection(dir) {
+    if (!selection) return;
+    selection.orientationIndex = E.rotateIndex(selection.patchId, selection.orientationIndex, dir);
+    sound('move');
+    render();
+  }
+  function flipSelection() {
+    if (!selection) return;
+    selection.orientationIndex = E.flipIndex(selection.patchId, selection.orientationIndex);
+    sound('move');
+    render();
+  }
+
+  function checkAt(row, col) {
+    if (!selection || row == null || col == null) return { ok: false, reason: '先选位置', cells: [] };
+    return E.canPlaceFor(state, 0, selection.patchId, selection.orientationIndex, row, col);
+  }
+
+  function placeAt(row, col) {
+    if (locked()) return;
+    if (!selection) { hint('先在右侧选一块拼布。'); return; }
+    var check = E.canPlaceFor(state, 0, selection.patchId, selection.orientationIndex, row, col);
+    if (!check.ok) { sound('error'); hint(check.reason || '这里放不下。'); return; }
+    doMove({ type: 'buy', player: 0, patchId: selection.patchId, orientationIndex: selection.orientationIndex, row: row, col: col });
+  }
+
+  function confirmPlacement() {
+    if (!selection) { hint('先选一块拼布。'); return; }
+    if (selection.row == null) { hint('先在棋盘上点一个落点。'); return; }
+    placeAt(selection.row, selection.col);
+  }
+
+  function doMove(move) {
+    try {
+      state = E.applyMove(state, move);
+      selection = null;
+      sound(move.type === 'buy' ? 'capture' : 'move');
+      render();
+      if (state.over) { showResult(); return; }
+      if (state.current === 1) scheduleAI();
+    } catch (err) {
+      sound('error');
+      hint('动作无效：' + (err && err.message ? err.message : err));
+    }
+  }
+
+  function skipTurn() {
+    if (locked()) return;
+    doMove({ type: 'skip', player: 0 });
+  }
+
+  function scheduleAI() {
+    if (aiTimer) clearTimeout(aiTimer);
+    if (!state || state.over || state.current !== 1) return;
+    aiTimer = setTimeout(function () {
+      aiTimer = null;
+      if (!state || state.over || state.current !== 1) return;
+      try {
+        var move = E.chooseAIMove(state);
+        state = E.applyMove(state, move);
+        sound('move');
+        render();
+        if (state.over) { showResult(); return; }
+        hint('AI 完成行动，轮到你了。');
+      } catch (err) {
+        hint('AI 行动失败：' + (err && err.message ? err.message : err));
+      }
+    }, reduced ? 30 : 620);
+  }
+
+  function renderScores() {
+    state.players.forEach(function (p, i) {
+      $('p' + i + 'buttons').textContent = p.buttons;
+      $('p' + i + 'income').textContent = E.playerIncome(p);
+      $('p' + i + 'empty').textContent = E.emptyCells(p);
+      $('p' + i + 'score').textContent = E.playerScore(p);
+      $('p' + i + 'meta').textContent = '扣子 ' + p.buttons + ' · 时间 ' + p.time + ' / ' + E.LAST_SPACE;
+      $('player' + i).classList.toggle('active', !state.over && state.current === i);
+    });
+    $('p1name').textContent = state.players[1].name;
+    $('sevenBadge').hidden = state.bonusAwardedTo === null;
+    if (state.bonusAwardedTo !== null) $('sevenBadge').textContent = state.players[state.bonusAwardedTo].name + ' 已领取 7×7 奖励';
+  }
+
+  function renderBoard() {
+    var player = state.players[0];
+    var cells = [];
+    for (var r = 0; r < E.BOARD_SIZE; r++) {
+      for (var c = 0; c < E.BOARD_SIZE; c++) {
+        var v = player.board[r][c];
+        var cls = 'cell';
+        var style = '';
+        var inner = '';
+        if (v) {
+          cls += ' filled';
+          style = 'background-color:' + v.color + ';';
+          if (v.button) inner = '<span class="button-dot" aria-hidden="true"></span>';
+        } else if (selection && selection.row != null) {
+          var rel0 = r - selection.row, rel1 = c - selection.col;
+          var ori = currentOrientation();
+          var isGhost = ori && ori.cells.some(function (cell) { return cell[0] === rel0 && cell[1] === rel1; });
+          if (isGhost) {
+            var chk = checkAt(selection.row, selection.col);
+            cls += ' ghost' + (chk.ok ? '' : ' bad');
+          }
+        }
+        cells.push('<div class="' + cls + '" data-r="' + r + '" data-c="' + c + '" role="gridcell" tabindex="' + (r === roving.r && c === roving.c ? '0' : '-1') + '" aria-label="第 ' + (r + 1) + ' 行第 ' + (c + 1) + ' 列' + (v ? '，已放置 ' + esc(v.name) : '，空') + '" style="' + style + '">' + (v ? '<span class="patch-tint" style="background:' + v.color + '"></span>' : '') + inner + '</div>');
+      }
+    }
+    boardEl.innerHTML = cells.join('');
+    $('boardSub').textContent = '时间标记 ' + player.time + ' / ' + E.LAST_SPACE;
+    $('boardRight').textContent = '空格 ' + E.emptyCells(player) + ' · 扣 ' + (E.emptyCells(player) * E.EMPTY_PENALTY) + ' 分';
+  }
+
+  function renderMarket() {
+    var list = E.getAvailablePatches(state, 0);
+    marketEl.innerHTML = list.map(function (patch) {
+      var ori = E.orientationsFor(patch.id)[0];
+      var minR = 0, minC = 0, maxR = 0, maxC = 0;
+      ori.cells.forEach(function (cell) { maxR = Math.max(maxR, cell[0]); maxC = Math.max(maxC, cell[1]); });
+      var mini = '';
+      for (var r = 0; r <= maxR; r++) {
+        for (var c = 0; c <= maxC; c++) {
+          var on = ori.cells.some(function (cell) { return cell[0] === r && cell[1] === c; });
+          var buttonCell = false;
+          if (on) {
+            var idx = ori.cells.findIndex(function (cell) { return cell[0] === r && cell[1] === c; });
+            buttonCell = idx < patch.income;
+          }
+          mini += '<i style="grid-column:' + (c + 1) + ';grid-row:' + (r + 1) + ';' + (on ? '' : 'visibility:hidden;') + (buttonCell ? 'background:var(--rust) url(../../assets/art/premium/patchwork/button.webp) center/70% no-repeat;' : '') + '"></i>';
+        }
+      }
+      var selected = selection && selection.patchId === patch.id;
+      var afford = state.players[0].buttons >= patch.buttons;
+      return '<button class="patch-card' + (selected ? '' : '') + (afford ? '' : ' unaffordable') + '" type="button" data-patch-id="' + patch.id + '" aria-pressed="' + (selected ? 'true' : 'false') + '" aria-label="' + esc(patch.name) + '，花费 ' + patch.buttons + ' 扣子，时间 ' + patch.time + '，收益 ' + patch.income + '">' +
+        '<span class="patch-mini" style="grid-template-columns:repeat(' + (maxC + 1) + ',1fr);grid-template-rows:repeat(' + (maxR + 1) + ',1fr)">' + mini + '</span>' +
+        '<span class="patch-name">' + esc(patch.name) + '</span>' +
+        '<span class="patch-meta"><span class="chip cost">' + patch.buttons + ' 扣</span><span class="chip time">' + patch.time + ' 时</span><span class="chip income">+' + patch.income + '</span></span>' +
+        '</button>';
+    }).join('');
+    $('marketHint').textContent = list.length ? '仅显示你时间标记前方最近 3 块' : '没有可购买拼布';
+  }
+
+  function renderPreview() {
+    var patch = currentPatch();
+    var ori = currentOrientation();
+    if (!patch || !ori) {
+      previewMini.innerHTML = '';
+      previewMini.style.gridTemplateColumns = '1fr';
+      $('previewName').textContent = '未选择拼布';
+      $('previewMeta').textContent = '点一张拼布卡开始';
+      $('rotateL').disabled = $('rotateR').disabled = $('flip').disabled = $('clear').disabled = $('confirm').disabled = true;
+      return;
+    }
+    var maxR = 0, maxC = 0;
+    ori.cells.forEach(function (cell) { maxR = Math.max(maxR, cell[0]); maxC = Math.max(maxC, cell[1]); });
+    var out = '';
+    for (var r = 0; r <= maxR; r++) {
+      for (var c = 0; c <= maxC; c++) {
+        var on = ori.cells.some(function (cell) { return cell[0] === r && cell[1] === c; });
+        out += '<i style="grid-column:' + (c + 1) + ';grid-row:' + (r + 1) + ';' + (on ? '' : 'visibility:hidden;') + '"></i>';
+      }
+    }
+    previewMini.style.gridTemplateColumns = 'repeat(' + (maxC + 1) + ',1fr)';
+    previewMini.style.gridTemplateRows = 'repeat(' + (maxR + 1) + ',1fr)';
+    previewMini.innerHTML = out;
+    $('previewName').textContent = patch.name;
+    var chk = checkAt(selection.row, selection.col);
+    var pos = selection.row == null ? '点棋盘选落点' : (chk.ok ? '可放置：第 ' + (selection.row + 1) + ' 行第 ' + (selection.col + 1) + ' 列' : chk.reason);
+    $('previewMeta').textContent = '花费 ' + patch.buttons + ' 扣 · 时间 ' + patch.time + ' · 收益 ' + patch.income + ' · ' + pos;
+    $('rotateL').disabled = $('rotateR').disabled = $('flip').disabled = $('clear').disabled = false;
+    $('confirm').disabled = !(selection.row != null && chk.ok);
+  }
+
+  function renderTimeline() {
+    var bySlot = {};
+    state.pieces.forEach(function (piece) { bySlot[piece.slot] = piece; });
+    var html = '';
+    for (var i = 1; i <= E.LAST_SPACE; i++) {
+      var income = E.INCOME_SPACES.indexOf(i) !== -1;
+      var piece = bySlot[i];
+      var peg = piece ? '<span class="peg" style="background:' + E.colorForPatch(piece.id) + '" title="' + esc(E.patchById(piece.id).name) + '">' + (piece.owner == null ? '' : '') + '</span>' : '<span class="peg" style="opacity:.28"></span>';
+      var toks = '';
+      state.players.forEach(function (p) {
+        if (p.time === i) toks += '<span class="tok p' + p.index + '" title="' + esc(p.name) + ' 时间标记"></span>';
+      });
+      html += '<div class="slot' + (income ? ' income' : '') + '" title="第 ' + i + ' 格' + (income ? ' · 扣子收入格' : '') + '"><span class="num">' + i + '</span>' + peg + toks + '</div>';
+    }
+    timelineEl.innerHTML = html;
+    var active = timelineEl.querySelector('.slot:nth-child(' + Math.min(E.LAST_SPACE, state.players[0].time + 1) + ')');
+    if (active && active.scrollIntoView && state.turn <= 2) {
+      try { active.scrollIntoView({ block: 'nearest', inline: 'center' }); } catch (e) {}
+    }
+  }
+
+  function renderLog() {
+    logEl.innerHTML = state.log.slice(-18).map(function (row) {
+      return '<li><b>' + (row.player == null ? '系统' : esc(state.players[row.player].name)) + '</b> · ' + esc(row.text) + '</li>';
+    }).join('');
+  }
+
+  function render() {
+    if (!state) return;
+    lastRender = Date.now();
+    renderScores();
+    renderBoard();
+    renderMarket();
+    renderPreview();
+    renderTimeline();
+    renderLog();
+    $('skip').disabled = locked();
+    $('restart').disabled = false;
+    $('actionSub').textContent = state.over ? '对局已结束' : (state.current === 0 ? '轮到你行动' : 'AI 正在思考');
+  }
+
+  function showResult() {
+    if (!state || !state.over || !state.result) return;
+    var res = state.result;
+    var title = res.winner === 0 ? '你赢了' : res.winner === 1 ? 'AI 获胜' : '平局';
+    $('resultTitle').textContent = title;
+    $('resultReason').textContent = res.reason + '。得分 = 扣子 + 奖励 − 2 × 空格。';
+    $('resultRows').innerHTML = res.scores.map(function (sc) {
+      return '<div class="result-row"><span>' + esc(sc.name) + '</span><span>' + sc.buttons + ' 扣 + ' + sc.bonus + ' 奖励 − ' + sc.penalty + ' 空格</span><b>' + sc.score + '</b></div>';
+    }).join('');
+    overlay.hidden = false;
+    $('again').focus();
+    sound(res.winner === 0 ? 'win' : res.winner === 1 ? 'lose' : 'notify');
+  }
+
+  boardEl.addEventListener('click', function (event) {
+    var cell = event.target.closest('[data-r]');
+    if (!cell || locked()) return;
+    var r = Number(cell.getAttribute('data-r'));
+    var c = Number(cell.getAttribute('data-c'));
+    if (!selection) { hint('先在右侧选择一块拼布。'); return; }
+    selection.row = r; selection.col = c;
+    render();
+    var check = checkAt(r, c);
+    hint(check.ok ? '位置可用，点「确认放置」。' : check.reason);
+  });
+
+  // site-quality: roving tabindex + arrow keys for the 9x9 board grid.
+  boardEl.addEventListener('focusin', function (event) {
+    var cell = event.target.closest('[data-r]');
+    if (!cell) return;
+    roving.r = Number(cell.getAttribute('data-r'));
+    roving.c = Number(cell.getAttribute('data-c'));
+    var prev = boardEl.querySelector('[role="gridcell"][tabindex="0"]');
+    if (prev && prev !== cell) prev.setAttribute('tabindex', '-1');
+    cell.setAttribute('tabindex', '0');
+  });
+  boardEl.addEventListener('keydown', function (event) {
+    var cell = event.target.closest('[data-r]');
+    if (!cell) return;
+    var r = Number(cell.getAttribute('data-r'));
+    var c = Number(cell.getAttribute('data-c'));
+    var dr = event.key === 'ArrowUp' ? -1 : event.key === 'ArrowDown' ? 1 : 0;
+    var dc = event.key === 'ArrowLeft' ? -1 : event.key === 'ArrowRight' ? 1 : 0;
+    if (dr || dc) {
+      event.preventDefault();
+      var nr = Math.max(0, Math.min(E.BOARD_SIZE - 1, r + dr));
+      var nc = Math.max(0, Math.min(E.BOARD_SIZE - 1, c + dc));
+      var next = boardEl.querySelector('[data-r="' + nr + '"][data-c="' + nc + '"]');
+      if (next) { cell.setAttribute('tabindex', '-1'); next.setAttribute('tabindex', '0'); next.focus(); }
+      return;
+    }
+    if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); cell.click(); }
+  });
+
+  marketEl.addEventListener('click', function (event) {
+    var card = event.target.closest('[data-patch-id]');
+    if (!card || locked()) return;
+    selectPatch(card.getAttribute('data-patch-id'));
+  });
+
+  $('rotateL').addEventListener('click', function () { rotateSelection('ccw'); });
+  $('rotateR').addEventListener('click', function () { rotateSelection('cw'); });
+  $('flip').addEventListener('click', flipSelection);
+  $('clear').addEventListener('click', clearSelection);
+  $('confirm').addEventListener('click', confirmPlacement);
+  $('skip').addEventListener('click', skipTurn);
+  $('restart').addEventListener('click', function () { newGame(); });
+  $('again').addEventListener('click', function () { newGame(); });
+  $('closeResult').addEventListener('click', function () { overlay.hidden = true; });
+  document.addEventListener('keydown', function (event) {
+    if (!overlay.hidden && event.key === 'Escape') { overlay.hidden = true; return; }
+    if (event.key === 'Escape' && selection) { clearSelection(); return; }
+    if (event.key === 'r' && selection) rotateSelection('cw');
+    if (event.key === 'f' && selection) flipSelection();
+  });
+
+  if (!E || !D) { hint('引擎加载失败：请确认 data.js 与 engine.js 同目录。'); return; }
+
+  window.__patchwork = {
+    engine: E,
+    data: D,
+    newGame: function (seed) { newGame(seed); return this.getState(); },
+    getState: function () { return state; },
+    summary: function () { return E.summary(state); },
+    legalMoves: function () { return state && !state.over ? E.getLegalMoves(state) : []; },
+    playMove: function (move) { doMove(move); return state; },
+    setState: function (next) { state = next; selection = null; overlay.hidden = true; render(); return state; },
+    isBusy: function () { return !!aiTimer; },
+    winner: function () { return state && state.result ? state.result.winner : null; },
+    result: function () { return state ? state.result : null; },
+    selection: function () { return selection ? JSON.parse(JSON.stringify(selection)) : null; },
+    autoPlayToEnd: function (maxMoves) {
+      var guard = 0, limit = maxMoves || 4000;
+      while (state && !state.over && guard < limit) {
+        state = E.applyMove(state, E.chooseAIMove(state));
+        guard += 1;
+      }
+      selection = null;
+      render();
+      if (state.over) showResult();
+      return { moves: guard, over: state.over, result: state.result };
+    },
+    reducedMotion: reduced,
+    lastRender: function () { return lastRender; }
+  };
+
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+    navigator.serviceWorker.register('../../sw.js', { scope: '../../' }).catch(function () {});
+  }
+  newGame();
+})();
+</script>
+</body>
+</html>

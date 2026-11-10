@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2f3b32">
+<meta name="description" content="拼布艺术 Patchwork 双人联机：房间码、邀请、空位 AI、断线重连与超时托管。">
+<link rel="icon" href="../../assets/icons/xiangqi.svg">
+<title>拼布艺术 · 联机</title>
+<style>
+:root{--ink:#29251f;--ink2:#4c453a;--muted:#766c5c;--paper:#f4ecdc;--card:#fffaf0;--rust:#a64b36;--sage:#5a7259;--sage-d:#3f5541;--gold:#be954b;--line:rgba(53,43,30,.2);--line2:rgba(53,43,30,.1);--radius:14px;--touch:44px}
+*{box-sizing:border-box}
+body{margin:0;min-height:100dvh;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;background:radial-gradient(1000px 500px at 10% 0,rgba(190,149,75,.22),transparent 60%),radial-gradient(800px 500px at 100% 0,rgba(90,114,89,.2),transparent 55%),linear-gradient(160deg,#f7f0e1,#e9ddc6)}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.14;background:url('../../assets/art/premium/patchwork/felt.webp') center/520px;mix-blend-mode:multiply}
+.wrap{position:relative;max-width:1100px;margin:0 auto;padding:0 14px calc(28px + env(safe-area-inset-bottom))}
+h1,h2,h3{font-family:"Songti SC","STSong",serif;font-weight:700}
+.top{display:flex;align-items:center;gap:12px;padding:16px 0 12px;flex-wrap:wrap}
+.mark{width:44px;height:44px;border-radius:11px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:2px;padding:4px;background:#2f3b32}
+.mark i{background:var(--gold);border-radius:2px}.mark i:nth-child(2){background:var(--rust)}.mark i:nth-child(3){background:var(--sage)}.mark i:nth-child(4){background:#e6d4ae}
+.title h1{margin:0;font-size:clamp(21px,4.5vw,29px)}
+.title p{margin:2px 0 0;font-size:12px;color:var(--muted);letter-spacing:.1em}
+.nav{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.nav a,.nav button{min-height:var(--touch);padding:0 14px;display:inline-flex;align-items:center;justify-content:center;border-radius:999px;border:1px solid var(--line);background:rgba(255,250,240,.8);text-decoration:none;font-size:13px;font-weight:700;cursor:pointer}
+.panel{background:rgba(255,251,243,.95);border:1px solid var(--line);border-radius:18px;box-shadow:0 14px 36px rgba(46,35,20,.14);padding:16px;margin-bottom:14px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+h2{font-size:19px;margin:0 0 10px}
+h3{font-size:15px;margin:0 0 8px}
+label{display:block;font-size:12px;color:var(--muted);font-weight:700;margin:10px 0 4px}
+input,select{width:100%;min-height:46px;border:1px solid var(--line);border-radius:10px;background:#fffdf7;padding:0 12px;font:inherit;font-size:16px;color:var(--ink)}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.btn{min-height:var(--touch);padding:0 16px;border-radius:11px;border:1px solid var(--line);background:#fffaf0;font-weight:700;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn.primary{background:linear-gradient(180deg,#b85a42,#9a422f);border-color:#7e3728;color:#fff7e9}
+.btn.green{background:linear-gradient(180deg,#6f856d,#556b54);border-color:#425a43;color:#fff8ea}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.wide{width:100%}
+.muted{font-size:12px;color:var(--muted);line-height:1.5}
+.code{font-family:ui-monospace,Menlo,monospace;font-size:19px;letter-spacing:.18em;font-weight:700;background:rgba(90,114,89,.12);border-radius:8px;padding:4px 10px}
+.status{min-height:22px;font-size:13px;color:var(--rust);margin:8px 0 0}
+.seats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+.seat{padding:10px;border-radius:10px;border:1px solid var(--line2);background:rgba(190,149,75,.08);font-size:13px}
+.seat b{display:block;font-size:14px}
+.seat .tag{display:inline-block;margin-top:4px;font-size:11px;padding:1px 7px;border-radius:999px;background:rgba(90,114,89,.16);color:var(--sage-d);font-weight:700}
+.seat.ai .tag{background:rgba(166,75,54,.13);color:var(--rust)}
+.board-wrap{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:14px;align-items:start}
+.board{display:grid;grid-template-columns:repeat(9,1fr);grid-template-rows:repeat(9,1fr);gap:2px;aspect-ratio:1/1;width:100%;background:#314235;padding:6px;border-radius:10px;box-shadow:inset 0 8px 24px rgba(0,0,0,.28)}
+.cell{position:relative;border-radius:3px;background:rgba(244,236,220,.14);border:1px solid rgba(255,255,255,.08);cursor:pointer;min-width:0;min-height:0}
+.cell.filled{box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
+.cell.ghost{outline:3px solid #e4c78d;outline-offset:-3px;background:rgba(228,199,141,.4)}
+.cell.ghost.bad{outline-color:#d66a55;background:rgba(214,106,85,.3)}
+.cell .button-dot{position:absolute;inset:28%;border-radius:50%;background:url('../../assets/art/premium/patchwork/button.webp') center/contain no-repeat}
+.scorebar{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.scorecard{padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:linear-gradient(180deg,#fffdf6,#f6ecd8)}
+.scorecard.active{outline:2px solid var(--gold);outline-offset:2px}
+.scorecard b{font-size:18px;font-variant-numeric:tabular-nums}
+.scorecard span{display:block;font-size:12px;color:var(--muted)}
+.market{display:grid;gap:8px;grid-template-columns:repeat(3,minmax(0,1fr))}
+.patch{border:1px solid var(--line);border-radius:10px;background:#fffdf7;padding:7px;min-height:104px;display:flex;flex-direction:column;gap:5px;cursor:pointer;text-align:left}
+.patch[aria-pressed="true"]{outline:3px solid var(--rust);outline-offset:2px}
+.patch .mini{flex:1;display:grid;gap:2px;place-content:center;min-height:52px}
+.patch .mini i{background:var(--rust);border-radius:2px;min-height:6px}
+.patch .name{font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.patch .meta{font-size:12px;color:var(--muted)}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.log{list-style:none;margin:8px 0 0;padding:0;font-size:13px;max-height:150px;overflow:auto;color:var(--ink2)}
+.log li{padding:5px 0;border-bottom:1px dashed var(--line2)}
+.overlay{position:fixed;inset:0;z-index:40;display:grid;place-items:center;padding:18px;background:rgba(28,24,18,.55)}
+.overlay[hidden]{display:none}
+.modal{width:min(430px,100%);border-radius:18px;padding:20px;background:linear-gradient(180deg,#fffaf0,#f3e8d2);border:1px solid var(--line)}
+.modal h2{margin:0 0 8px;font-size:23px}
+.modal p{font-size:14px;color:var(--ink2);line-height:1.6}
+.leaderboard{list-style:none;margin:0;padding:0;font-size:13px}
+.leaderboard li{display:flex;gap:8px;padding:8px 0;border-bottom:1px dashed var(--line2)}
+.leaderboard b{margin-left:auto}
+.hidden{display:none!important}
+@media(max-width:760px){.board-wrap{grid-template-columns:1fr}.grid2{grid-template-columns:1fr}.market{gap:6px}.patch{min-height:96px;padding:5px}.wrap{padding-left:10px;padding-right:10px}.panel{padding:12px}}
+@media(max-width:350px){.title p{display:none}.nav a,.nav button{padding:0 10px;font-size:12px}.patch .name{font-size:11px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/patchwork-premium/online.html">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="mark" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+    <div class="title"><h1>拼布艺术 · 联机</h1><p>PATCHWORK ONLINE · 2 SEATS</p></div>
+    <nav class="nav"><a href="index.html">单人</a><a href="rules.html">玩法</a><button type="button" id="sound" class="sfx-toggle">声音</button></nav>
+  </header>
+
+  <section id="lobby">
+    <div class="grid2">
+      <div class="panel">
+        <h2>创建房间</h2>
+        <label for="createName">你的昵称</label>
+        <input id="createName" maxlength="18" autocomplete="nickname" placeholder="例如：拼布匠">
+        <label for="createPass">房间密码（可选，4–64 位）</label>
+        <input id="createPass" type="password" maxlength="64" autocomplete="new-password" placeholder="留空即公开房">
+        <div class="row" style="margin-top:12px"><button class="btn primary wide" type="button" id="createBtn">创建并进入</button></div>
+        <p class="status" id="createStatus" role="status"></p>
+      </div>
+      <div class="panel">
+        <h2>加入房间</h2>
+        <label for="joinName">你的昵称</label>
+        <input id="joinName" maxlength="18" autocomplete="nickname" placeholder="例如：织布师">
+        <label for="joinCode">房间码 / 邀请码</label>
+        <input id="joinCode" maxlength="40" autocapitalize="characters" placeholder="例如 ABC234">
+        <label for="joinPass">房间密码（如有）</label>
+        <input id="joinPass" type="password" maxlength="64" autocomplete="current-password" placeholder="公开房留空">
+        <div class="row" style="margin-top:12px"><button class="btn green wide" type="button" id="joinBtn">加入房间</button></div>
+        <p class="status" id="joinStatus" role="status"></p>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>最近战绩</h2>
+      <ul class="leaderboard" id="leaderboard"><li class="muted">还没有完成的联机对局。</li></ul>
+      <p class="muted">断线后用同一浏览器打开本页会自动重连；超时座位由 AI 托管，回到页面即可收回。</p>
+    </div>
+  </section>
+
+  <section id="room" class="hidden">
+    <div class="panel">
+      <div class="row" style="align-items:center">
+        <div><span class="muted">房间码</span><br><span class="code" id="roomCode">------</span></div>
+        <div style="margin-left:auto" class="row">
+          <button class="btn" type="button" id="copyBtn">复制邀请</button>
+          <button class="btn" type="button" id="leaveBtn">离开</button>
+          <button class="btn primary" type="button" id="startBtn" hidden>开始对局</button>
+          <button class="btn" type="button" id="restartBtn" hidden>再来一局</button>
+        </div>
+      </div>
+      <div class="seats" id="seats"></div>
+      <p class="status" id="roomStatus" role="status" aria-live="polite"></p>
+      <p class="muted" id="roomHint">把房间码发给朋友；空位会由 AI 补足，一个人也能开局。</p>
+    </div>
+
+    <div id="game" class="hidden">
+      <div class="scorebar" id="scorebar"></div>
+      <div class="board-wrap">
+        <div class="panel">
+          <h2 id="boardTitle">你的拼布板</h2>
+          <div class="board" id="board"></div>
+          <p class="muted" id="boardMeta" style="margin-top:8px"></p>
+        </div>
+        <div class="panel">
+          <h2>前方三块</h2>
+          <div class="market" id="market"></div>
+          <div class="controls">
+            <button class="btn" type="button" id="rotL" disabled>左转</button>
+            <button class="btn" type="button" id="rotR" disabled>右转</button>
+            <button class="btn" type="button" id="flipBtn" disabled>翻转</button>
+            <button class="btn" type="button" id="clearBtn" disabled>取消</button>
+            <button class="btn primary" type="button" id="sendBtn" disabled style="grid-column:1/-1">确认放置</button>
+            <button class="btn" type="button" id="skipBtn" disabled style="grid-column:1/-1">跳过</button>
+          </div>
+          <h3 style="margin-top:14px">对手拼布板</h3>
+          <div class="board" id="rivalBoard" style="max-width:280px"></div>
+        </div>
+      </div>
+      <div class="panel"><h2>对局记录</h2><ol class="log" id="log"></ol></div>
+    </div>
+  </section>
+</div>
+
+<div class="overlay" id="resultOverlay" hidden><div class="modal">
+  <h2 id="resultTitle">对局结束</h2>
+  <p id="resultText"></p>
+  <div class="row"><button class="btn primary wide" type="button" id="againBtn">再来一局</button><button class="btn wide" type="button" id="closeBtn">查看棋盘</button></div>
+</div></div>
+
+<script src="../../shared/sfx.js"></script>
+<script src="data.js"></script>
+<script src="engine.js"></script>
+<script>
+(function () {
+  'use strict';
+  var E = window.PatchworkEngine;
+  var $ = function (id) { return document.getElementById(id); };
+  var st = {
+    session: null, playerId: null, roomId: null, view: null,
+    selection: null, orientation: 0, row: null, col: null,
+    poll: null, busy: false, lastVersion: -1
+  };
+  var KEY = 'hhfa-patchwork-online-v1';
+  function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify({ session: st.session, playerId: st.playerId, roomId: st.roomId })); } catch (e) {} }
+  function load() { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { return null; } }
+  function clearSave() { try { localStorage.removeItem(KEY); } catch (e) {} }
+  function sound(n) { try { if (window.Sfx) window.Sfx.play(n, { volume: .5 }); } catch (e) {} }
+  function setStatus(id, text, bad) { var el = $(id); if (!el) return; el.textContent = text || ''; el.style.color = bad ? '#a64b36' : '#4c453a'; }
+
+  async function api(method, route, body) {
+    var res = await fetch(route, {
+      method: method,
+      headers: { 'content-type': 'application/json' },
+      body: body ? JSON.stringify(body) : undefined
+    });
+    var data = null;
+    try { data = await res.json(); } catch (e) {}
+    if (!res.ok || !data || data.ok === false) {
+      var msg = data && data.error && data.error.message ? data.error.message : ('HTTP ' + res.status);
+      throw new Error(msg);
+    }
+    return data;
+  }
+  function nick(inputId, fallback) {
+    var el = $(inputId);
+    return (el && el.value.trim()) || fallback || ('玩家' + Math.floor(Math.random() * 900 + 100));
+  }
+
+  async function createRoom() {
+    var playerId = nick('createName', '织布师');
+    setStatus('createStatus', '正在创建…');
+    try {
+      var data = await api('POST', '/api/rooms', { playerId: playerId, password: $('createPass').value || undefined });
+      enter(data, data.playerSession);
+      sound('notify');
+    } catch (err) { setStatus('createStatus', err.message, true); }
+  }
+  async function joinRoom() {
+    var playerId = nick('joinName', '拼布匠');
+    var code = $('joinCode').value.trim().toUpperCase();
+    if (!code) { setStatus('joinStatus', '请填房间码。', true); return; }
+    setStatus('joinStatus', '正在加入…');
+    try {
+      var data = await api('POST', '/api/rooms/' + encodeURIComponent(code) + '/join', { playerId: playerId, password: $('joinPass').value || undefined });
+      enter(data, data.playerSession);
+      sound('notify');
+    } catch (err) { setStatus('joinStatus', err.message, true); }
+  }
+  function enter(data, session) {
+    st.session = session; st.playerId = data.playerId || (data.you && data.you.playerId) || st.playerId;
+    st.roomId = data.roomId; st.view = data; st.selection = null; st.orientation = 0; st.row = null; st.col = null;
+    save();
+    $('lobby').classList.add('hidden'); $('room').classList.remove('hidden');
+    try { history.replaceState({}, '', '?room=' + encodeURIComponent(data.roomCode || data.roomId)); } catch (e) {}
+    renderRoom();
+    startPolling();
+  }
+  function startPolling() {
+    stopPolling();
+    st.poll = setInterval(poll, 900);
+    poll();
+  }
+  function stopPolling() { if (st.poll) { clearInterval(st.poll); st.poll = null; } }
+  async function poll() {
+    if (!st.roomId || !st.session) return;
+    try {
+      var v = await api('GET', '/api/rooms/' + encodeURIComponent(st.roomId) +
+        '?session=' + encodeURIComponent(st.session) + '&playerId=' + encodeURIComponent(st.playerId));
+      applyView(v);
+    } catch (err) {
+      if (/not found|invalid session|not a member/i.test(err.message)) {
+        clearSave(); stopPolling();
+        $('room').classList.add('hidden'); $('lobby').classList.remove('hidden');
+        setStatus('joinStatus', '房间已关闭，请重新加入。', true);
+      }
+    }
+  }
+  function applyView(v) {
+    st.view = v;
+    renderRoom();
+    if (v.started && v.state) renderGame();
+    if (v.state && v.state.over && v.result) showResult(v.result);
+  }
+
+  function renderRoom() {
+    var v = st.view; if (!v) return;
+    $('roomCode').textContent = v.roomCode || v.roomId.slice(-6).toUpperCase();
+    $('seats').innerHTML = (v.seats || []).map(function (s) {
+      return '<div class="seat' + (s.ai ? ' ai' : '') + '"><b>' + esc(s.nickname) + '</b>' +
+        (s.playerId === st.playerId ? '你' : (s.ai ? 'AI 补位' : '玩家')) +
+        '<span class="tag">' + (s.ai ? 'AI' : s.takeover ? '托管中' : (v.currentPlayerIndex === s.index && v.started ? '行动中' : '在线')) + '</span></div>';
+    }).join('');
+    $('startBtn').hidden = !v.canStart;
+    $('restartBtn').hidden = !v.canRestart;
+    $('game').classList.toggle('hidden', !v.started || !v.state);
+    $('roomStatus').textContent = v.lastAiError ? ('AI 提示：' + v.lastAiError) : '';
+    $('roomHint').textContent = v.started
+      ? (v.state && v.state.over ? '对局结束。' : (v.canMove ? '轮到你行动。' : (v.currentControlledByAI ? '对方由 AI 行动中…' : '等待对方行动…')))
+      : '把房间码发给朋友；空位会由 AI 补足，一个人也能开局。';
+  }
+
+  function patchLegal(move) {
+    return st.view && st.view.legalMoves && st.view.legalMoves.some(function (m) {
+      return m.type === move.type && (m.type === 'skip' || (m.patchId === move.patchId));
+    });
+  }
+  function renderGame() {
+    var v = st.view, state = v.state;
+    var me = v.youIndex;
+    var mine = state.players[me], rival = state.players[1 - me];
+    $('scorebar').innerHTML = state.players.map(function (p) {
+      var empty = 0; p.board.forEach(function (row) { row.forEach(function (c) { if (!c) empty++; }); });
+      return '<div class="scorecard' + (state.current === p.index && !state.over ? ' active' : '') + '"><b>' + esc(p.name) + '</b>' +
+        '<span>扣子 ' + p.buttons + ' · 时间 ' + p.time + ' · 空格 ' + empty + '</span>' +
+        '<span>当前得分 ' + (p.buttons + p.bonus - 2 * empty) + '</span></div>';
+    }).join('');
+    renderBoard($('board'), mine.board, me);
+    renderBoard($('rivalBoard'), rival.board, 1 - me, true);
+    $('boardMeta').textContent = '时间 ' + mine.time + ' / ' + E.LAST_SPACE + ' · 空格扣 ' + (mine.board.reduce(function (a, row) { return a + row.filter(function (c) { return !c; }).length; }, 0) * 2) + ' 分';
+    renderMarket();
+    var can = v.canMove && !state.over;
+    $('skipBtn').disabled = !can;
+    $('rotL').disabled = $('rotR').disabled = $('flipBtn').disabled = !can || !st.selection;
+    $('clearBtn').disabled = !can || !st.selection;
+    $('sendBtn').disabled = !can || !st.selection || st.row == null;
+    var lastLog = (state.log || []).slice(-12).map(function (row) {
+      return '<li>' + esc(row.text) + '</li>';
+    }).join('');
+    $('log').innerHTML = lastLog || '<li class="muted">等待第一步。</li>';
+  }
+  function renderBoard(el, board, owner, small) {
+    var html = '';
+    for (var r = 0; r < 9; r++) for (var c = 0; c < 9; c++) {
+      var v = board[r][c];
+      var ghost = false;
+      if (!small && owner === st.view.youIndex && st.selection && st.row != null) {
+        var ori = E.orientationsFor(st.selection.patchId)[st.orientation];
+        ghost = ori && ori.cells.some(function (cell) { return cell[0] === r - st.row && cell[1] === c - st.col; });
+      }
+      html += '<div class="cell' + (v ? ' filled' : '') + (ghost ? ' ghost' : '') + '" data-r="' + r + '" data-c="' + c + '"' +
+        (v ? ' style="background:' + v.color + '"' : '') + ' role="gridcell" aria-label="第' + (r + 1) + '行第' + (c + 1) + '列' + (v ? '已放置' : '空') + '">' +
+        (v && v.button ? '<span class="button-dot"></span>' : '') + '</div>';
+    }
+    el.innerHTML = html;
+  }
+  function renderMarket() {
+    var v = st.view, state = v.state, me = state.players[v.youIndex];
+    var visible = state.pieces.filter(function (p) { return p.owner == null && p.slot > me.time; })
+      .sort(function (a, b) { return a.slot - b.slot; }).slice(0, 3);
+    $('market').innerHTML = visible.map(function (piece) {
+      var patch = E.patchById(piece.id);
+      var ori = E.orientationsFor(patch.id)[0];
+      var maxR = 0, maxC = 0;
+      ori.cells.forEach(function (c) { maxR = Math.max(maxR, c[0]); maxC = Math.max(maxC, c[1]); });
+      var mini = '';
+      for (var r = 0; r <= maxR; r++) for (var c = 0; c <= maxC; c++) {
+        var on = ori.cells.some(function (x) { return x[0] === r && x[1] === c; });
+        mini += '<i style="grid-column:' + (c + 1) + ';grid-row:' + (r + 1) + ';' + (on ? '' : 'visibility:hidden;') + '"></i>';
+      }
+      var selected = st.selection && st.selection.patchId === patch.id;
+      return '<button class="patch" type="button" data-patch-id="' + patch.id + '" aria-pressed="' + (selected ? 'true' : 'false') + '">' +
+        '<span class="mini" style="grid-template-columns:repeat(' + (maxC + 1) + ',1fr);grid-template-rows:repeat(' + (maxR + 1) + ',1fr)">' + mini + '</span>' +
+        '<span class="name">' + esc(patch.name) + '</span><span class="meta">' + patch.buttons + ' 扣 · ' + patch.time + ' 时 · +' + patch.income + '</span></button>';
+    }).join('');
+  }
+
+  function selectPatch(id) {
+    if (!st.view || !st.view.canMove) return;
+    st.selection = { patchId: id }; st.orientation = 0; st.row = null; st.col = null;
+    renderGame();
+  }
+  function rotate(d) {
+    if (!st.selection) return;
+    st.orientation = d === 'ccw' ? E.rotateIndex(st.selection.patchId, st.orientation, 'ccw') : E.rotateIndex(st.selection.patchId, st.orientation, 'cw');
+    renderGame();
+  }
+  function flip() { if (!st.selection) return; st.orientation = E.flipIndex(st.selection.patchId, st.orientation); renderGame(); }
+  async function sendMove(move) {
+    if (st.busy) return;
+    st.busy = true;
+    try {
+      var data = await api('POST', '/api/rooms/' + encodeURIComponent(st.roomId) + '/actions',
+        { session: st.session, playerId: st.playerId, move: move });
+      st.selection = null; st.row = null; st.col = null;
+      applyView(data); sound('capture');
+    } catch (err) { setStatus('roomStatus', '动作被拒绝：' + err.message, true); }
+    st.busy = false;
+  }
+  function sendPlacement() {
+    if (!st.selection || st.row == null) return;
+    sendMove({ type: 'buy', patchId: st.selection.patchId, orientationIndex: st.orientation, row: st.row, col: st.col });
+  }
+  function boardClick(event) {
+    var cell = event.target.closest('[data-r]');
+    if (!cell || !st.selection || !st.view || !st.view.canMove) return;
+    st.row = Number(cell.getAttribute('data-r')); st.col = Number(cell.getAttribute('data-c'));
+    renderGame();
+  }
+  function showResult(result) {
+    if (!result || !$('resultOverlay').hidden) return;
+    var meSeat = result.seats && result.seats.find(function (s) { return s.playerId === st.playerId; });
+    var title = result.winner == null ? '平局' : (!meSeat ? '对局结束' : (result.winner === meSeat.index ? '你赢了' : '对手获胜'));
+    $('resultTitle').textContent = title;
+    $('resultText').textContent = (result.scores || []).map(function (s) { return s.name + '：' + s.score + ' 分'; }).join(' · ') + '。';
+    $('resultOverlay').hidden = false;
+    sound(title === '你赢了' ? 'win' : title === '对手获胜' ? 'lose' : 'notify');
+  }
+
+  async function copyInvite() {
+    var url = location.origin + location.pathname + '?room=' + encodeURIComponent(st.view.roomCode || st.roomId);
+    try { await navigator.clipboard.writeText(url); setStatus('roomStatus', '邀请链接已复制：' + url); }
+    catch (e) { setStatus('roomStatus', '邀请链接：' + url); }
+  }
+  async function start() {
+    try { var d = await api('POST', '/api/rooms/' + encodeURIComponent(st.roomId) + '/start', { session: st.session, playerId: st.playerId }); applyView(d); sound('deal'); }
+    catch (e) { setStatus('roomStatus', e.message, true); }
+  }
+  async function restart() {
+    try { var d = await api('POST', '/api/rooms/' + encodeURIComponent(st.roomId) + '/restart', { session: st.session, playerId: st.playerId }); $('resultOverlay').hidden = true; applyView(d); }
+    catch (e) { setStatus('roomStatus', e.message, true); }
+  }
+  async function leave() {
+    try { await api('POST', '/api/rooms/' + encodeURIComponent(st.roomId) + '/leave', { session: st.session, playerId: st.playerId }); } catch (e) {}
+    clearSave(); stopPolling(); st.roomId = null; st.view = null;
+    $('room').classList.add('hidden'); $('lobby').classList.remove('hidden');
+  }
+
+  $('createBtn').addEventListener('click', createRoom);
+  $('joinBtn').addEventListener('click', joinRoom);
+  $('copyBtn').addEventListener('click', copyInvite);
+  $('leaveBtn').addEventListener('click', leave);
+  $('startBtn').addEventListener('click', start);
+  $('restartBtn').addEventListener('click', restart);
+  $('againBtn').addEventListener('click', restart);
+  $('closeBtn').addEventListener('click', function () { $('resultOverlay').hidden = true; });
+  $('skipBtn').addEventListener('click', function () { sendMove({ type: 'skip' }); });
+  $('sendBtn').addEventListener('click', sendPlacement);
+  $('rotL').addEventListener('click', function () { rotate('ccw'); });
+  $('rotR').addEventListener('click', function () { rotate('cw'); });
+  $('flipBtn').addEventListener('click', flip);
+  $('clearBtn').addEventListener('click', function () { st.selection = null; st.row = null; st.col = null; renderGame(); });
+  $('market').addEventListener('click', function (e) { var b = e.target.closest('[data-patch-id]'); if (b) selectPatch(b.getAttribute('data-patch-id')); });
+  $('board').addEventListener('click', boardClick);
+
+  (async function boot() {
+    try {
+      if (location.pathname.indexOf('/games/') !== 0) { // static site: no room API
+      var lb = await api('GET', '/api/leaderboard?limit=5');
+      if (lb.entries && lb.entries.length) {
+        $('leaderboard').innerHTML = lb.entries.map(function (e) {
+          return '<li><span>' + esc(e.winnerName || '平局') + ' · ' + (e.turns || 0) + ' 回合</span><b>' + (e.scores || []).map(function (s) { return s.score; }).join(' : ') + '</b></li>';
+        }).join('');
+      }
+      }
+    } catch (e) {}
+    var saved = load();
+    var q = new URLSearchParams(location.search);
+    var room = q.get('room');
+    if (saved && saved.roomId && saved.session) {
+      st.roomId = saved.roomId; st.session = saved.session; st.playerId = saved.playerId;
+      try {
+        var d = await api('POST', '/api/rooms/' + encodeURIComponent(st.roomId) + '/reconnect', { token: saved.session, playerId: saved.playerId });
+        enter(d, saved.session);
+        return;
+      } catch (e) { clearSave(); }
+    }
+    if (room) { $('joinCode').value = room; }
+  })();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="政变 美术合成页：本地生成的素材在浏览器中的渲染预览。">
+<title>政变 · 美术合成</title>
+<style>
+  :root {
+    --ink: #f4e8cd; --dim: #d9c6a2; --muted: #ae9672;
+    --brass: #cda756; --brass-2: #8e6c2c;
+    --oxblood: #4a0f19; --wine: #2a0810;
+    --serif: "Songti SC", "STSong", "Noto Serif SC", serif;
+    --sans: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    --w: 1200px; --h: 1200px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #120306; overflow: hidden; }
+  body { width: var(--w); height: var(--h); }
+  .canvas {
+    position: relative; width: var(--w); height: var(--h); overflow: hidden;
+    color: var(--ink); font-family: var(--serif); font-weight: 700;
+    background:
+      radial-gradient(ellipse at 50% -8%, rgba(126,30,45,.55), transparent 60%),
+      radial-gradient(ellipse at 100% 100%, rgba(52,9,18,.9), transparent 62%),
+      url("../../assets/art/premium/coup/velvet.webp") center / cover,
+      linear-gradient(160deg, #170307, #0c0204 62%, #1c050b);
+  }
+  .canvas::before {
+    content: ""; position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 50% 45%, transparent 26%, rgba(0,0,0,.68) 100%);
+    z-index: 1; pointer-events: none;
+  }
+  .canvas::after {
+    content: ""; position: absolute; inset: 22px; border: 1px solid rgba(205,167,86,.35);
+    box-shadow: inset 0 0 0 6px rgba(205,167,86,.05), inset 0 0 80px rgba(0,0,0,.55);
+    z-index: 6; pointer-events: none;
+  }
+  .content { position: absolute; inset: 22px; z-index: 3; padding: 38px 46px; display: flex; flex-direction: column; }
+  .eyebrow { font-family: var(--sans); font-size: 13px; letter-spacing: .44em; color: var(--muted); font-weight: 400; }
+  h1 { margin: 6px 0 0; font-size: 116px; line-height: .96; letter-spacing: .12em; color: var(--brass); text-shadow: 0 3px 0 rgba(0,0,0,.4), 0 0 30px rgba(205,167,86,.22); }
+  .latin { font-family: var(--sans); font-size: 22px; letter-spacing: .52em; color: var(--dim); margin-top: 12px; font-weight: 700; }
+  .tagline { font-family: var(--sans); font-size: 17px; letter-spacing: .14em; color: var(--muted); font-weight: 400; margin-top: 12px; }
+  .gold-line { height: 1px; background: linear-gradient(90deg, transparent, var(--brass), transparent); opacity: .65; margin: 18px 0; }
+
+  .deck15 { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 15px; margin-top: 6px; }
+  .rolecol { min-width: 0; }
+  .rolelabel { display: flex; align-items: center; gap: 7px; justify-content: center; font-size: 15px; color: var(--brass); letter-spacing: .12em; margin-bottom: 7px; }
+  .rolelabel svg { width: 22px; height: 22px; }
+  .colcards { display: flex; flex-direction: column; gap: 7px; }
+  .card {
+    position: relative; aspect-ratio: 63 / 88; border-radius: 7px;
+    border: 1px solid rgba(205,167,86,.45);
+    background: linear-gradient(160deg, rgba(58,11,20,.92), rgba(22,5,10,.97));
+    box-shadow: inset 0 0 0 2px rgba(0,0,0,.22), 0 8px 18px rgba(0,0,0,.45);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+    overflow: hidden;
+  }
+  .card img.back { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .5; mix-blend-mode: luminosity; }
+  .card .emblem { position: relative; z-index: 2; width: 46%; aspect-ratio: 1; color: var(--brass); filter: drop-shadow(0 2px 4px rgba(0,0,0,.6)); }
+  .card .emblem svg { width: 100%; height: 100%; display: block; }
+  .card b { position: relative; z-index: 2; font-size: 15px; letter-spacing: .06em; color: var(--ink); }
+  .card i { position: absolute; z-index: 2; right: 6px; bottom: 5px; font-family: var(--sans); font-style: normal; font-size: 11px; color: var(--muted); }
+  .card.role-duke { border-color: rgba(226,191,109,.7); }
+  .card.role-assassin { border-color: rgba(215,105,90,.7); }
+  .card.role-captain { border-color: rgba(116,180,176,.7); }
+  .card.role-ambassador { border-color: rgba(211,194,152,.7); }
+  .card.role-contessa { border-color: rgba(183,155,210,.7); }
+  .card.role-duke .emblem { color: #e2bf6d; }
+  .card.role-assassin .emblem { color: #d7695a; }
+  .card.role-captain .emblem { color: #74b4b0; }
+  .card.role-ambassador .emblem { color: #d3c298; }
+  .card.role-contessa .emblem { color: #b79bd2; }
+
+  .seats6 { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 11px; margin-top: 16px; }
+  .seat {
+    position: relative; padding: 10px 9px; border: 1px solid rgba(205,167,86,.28); border-radius: 8px;
+    background: linear-gradient(180deg, rgba(62,14,24,.72), rgba(18,4,9,.9));
+    display: flex; flex-direction: column; gap: 5px; min-width: 0;
+  }
+  .seat.current { border-color: var(--brass); box-shadow: 0 0 0 1px rgba(205,167,86,.2), 0 0 24px rgba(205,167,86,.14); }
+  .seat-top { display: flex; align-items: center; gap: 6px; }
+  .seat-roman { width: 24px; height: 24px; flex: none; display: grid; place-items: center; border: 1px solid rgba(205,167,86,.42); border-radius: 50%; font-size: 11px; color: var(--brass); }
+  .seat-name { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .seat-coins { display: flex; align-items: center; gap: 2px; font-family: var(--sans); font-size: 12px; color: var(--brass); }
+  .seat-coins img { width: 15px; height: 15px; object-fit: contain; }
+  .mini-cards { display: flex; gap: 4px; }
+  .mini-card { flex: 1; aspect-ratio: 63/88; border: 1px solid rgba(205,167,86,.35); border-radius: 3px; overflow: hidden; background: #1a0509; }
+  .mini-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .seat-note { font-family: var(--sans); font-size: 10px; color: var(--muted); font-weight: 400; }
+
+  .footer { margin-top: auto; display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; font-family: var(--sans); font-size: 13px; color: var(--muted); font-weight: 400; letter-spacing: .12em; }
+  .footer b { color: var(--brass); font-weight: 700; }
+  .seal { width: 54px; height: 54px; border: 1px solid rgba(205,167,86,.42); border-radius: 50%; display: grid; place-items: center; color: var(--brass); flex: none; }
+
+  /* OG */
+  body[data-shot="og"] { --w: 1200px; --h: 630px; }
+  body[data-shot="og"] .content { padding: 28px 40px; }
+  body[data-shot="og"] h1 { font-size: 82px; }
+  body[data-shot="og"] .latin { font-size: 16px; margin-top: 7px; }
+  body[data-shot="og"] .tagline { font-size: 14px; margin-top: 8px; }
+  body[data-shot="og"] .og-grid { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 34px; align-items: center; flex: 1; }
+  body[data-shot="og"] .deck15 { grid-template-columns: repeat(5, minmax(0,1fr)); gap: 9px; }
+  body[data-shot="og"] .rolelabel { font-size: 12px; margin-bottom: 4px; }
+  body[data-shot="og"] .rolelabel svg { width: 16px; height: 16px; }
+  body[data-shot="og"] .colcards { gap: 5px; }
+  body[data-shot="og"] .card b { font-size: 11px; }
+  body[data-shot="og"] .card i { font-size: 9px; }
+  body[data-shot="og"] .seats6 { grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; margin-top: 14px; }
+  body[data-shot="og"] .seat { padding: 7px; }
+  body[data-shot="og"] .seat-name { font-size: 11px; }
+  body[data-shot="og"] .footer { font-size: 11px; }
+
+  /* detail */
+  body[data-shot="detail1"], body[data-shot="detail2"] { --w: 1200px; --h: 800px; }
+  body[data-shot="detail1"] .content, body[data-shot="detail2"] .content { padding: 30px 42px; }
+  body[data-shot="detail1"] h1, body[data-shot="detail2"] h1 { font-size: 58px; }
+  .detail-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; }
+  .detail-kicker { font-family: var(--sans); font-size: 13px; letter-spacing: .34em; color: var(--muted); font-weight: 400; }
+  .detail-sub { font-family: var(--sans); font-size: 14px; color: var(--dim); font-weight: 400; max-width: 430px; line-height: 1.6; margin-top: 8px; }
+  .props { display: flex; gap: 14px; align-items: flex-end; }
+  .prop { width: 132px; text-align: center; }
+  .prop img { width: 112px; height: 112px; object-fit: contain; display: block; margin: 0 auto; filter: drop-shadow(0 10px 18px rgba(0,0,0,.5)); }
+  .prop span { display: block; font-family: var(--sans); font-size: 11px; color: var(--muted); font-weight: 400; margin-top: 3px; }
+  .strip15 { display: grid; grid-template-columns: repeat(15, minmax(0, 1fr)); gap: 7px; margin-top: auto; }
+  .strip15 .card { border-radius: 4px; }
+  .strip15 .card .emblem { width: 54%; }
+  .strip15 .card b { font-size: 10px; }
+  .strip15 .card i { display: none; }
+  .seat-grid-6 { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; margin-top: 12px; }
+  .seat-grid-6 .seat { flex-direction: row; align-items: center; gap: 10px; padding: 10px 12px; }
+  .seat-grid-6 .seat .mini-cards { width: 76px; flex: none; }
+  .seat-grid-6 .seat-body { min-width: 0; flex: 1; }
+  .seat-grid-6 .seat-name { font-size: 15px; }
+  .seat-grid-6 .seat-coins { font-size: 13px; margin-top: 3px; }
+  .seat-grid-6 .seat-note { font-size: 11px; margin-top: 2px; }
+  .coins-pile { display: flex; align-items: center; gap: 4px; margin-top: 8px; }
+  .coins-pile img { width: 26px; height: 26px; object-fit: contain; }
+  .registry { margin-top: 12px; }
+  .registry-label { font-family: var(--sans); font-size: 11px; letter-spacing: .16em; color: var(--muted); font-weight: 400; margin-bottom: 6px; }
+</style>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/coup-premium/art-render.html">
+<style>
+/* site-quality: fixed-size art composition must not create page overflow */
+html{overflow-x:hidden}
+body{width:100%!important;max-width:100vw!important;overflow-x:hidden}
+.stage,#stage,.canvas{max-width:100vw;overflow:hidden}
+</style>
+</head>
+<body data-shot="cover">
+<div class="canvas" id="canvas"></div>
+<script>
+(function () {
+  'use strict';
+  var params = new URLSearchParams(location.search);
+  var shot = params.get('shot') || 'cover';
+  document.body.setAttribute('data-shot', shot);
+  var ART = '../../assets/art/premium/coup/';
+  var ROLES = ['duke', 'assassin', 'captain', 'ambassador', 'contessa'];
+  var NAMES = { duke: '公爵', assassin: '刺客', captain: '队长', ambassador: '大使', contessa: '女伯爵' };
+  var GLYPH = { duke: '王冠', assassin: '匕首', captain: '船锚', ambassador: '卷轴', contessa: '面具' };
+  var SEATS = [
+    { name: '你', note: '玩家 · 先手' },
+    { name: 'AI · 铁幕', note: 'AI · 普通' },
+    { name: 'AI · 密探', note: 'AI · 困难' },
+    { name: 'AI · 黑账房', note: 'AI · 普通' },
+    { name: 'AI · 喉舌', note: 'AI · 简单' },
+    { name: 'AI · 夜莺', note: 'AI · 困难' }
+  ];
+
+  function emblem(role) {
+    var c = 'fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"';
+    if (role === 'duke') return '<svg viewBox="0 0 24 24" ' + c + '><path d="M3 17.5h18l-1.7-8.4-4.3 3.3L12 4.6 9 12.4 4.7 9.1z"/><path d="M5.2 20.4h13.6"/><circle cx="12" cy="14.7" r="1.1"/></svg>';
+    if (role === 'assassin') return '<svg viewBox="0 0 24 24" ' + c + '><path d="M12.2 3.2 14 6.1 13 14.2h-2L10 6.1z"/><path d="M8.2 14.4h7.6"/><path d="M12 14.4v5.2"/><circle cx="12" cy="20.6" r="1.1"/></svg>';
+    if (role === 'captain') return '<svg viewBox="0 0 24 24" ' + c + '><circle cx="12" cy="5.4" r="2.1"/><path d="M12 7.5v12"/><path d="M6.6 11.2h10.8"/><path d="M5 15.2c.3 4 3.1 5.2 7 5.2s6.7-1.2 7-5.2"/><path d="m5 15.2 2.1 1.5M19 15.2l-2.1 1.5"/></svg>';
+    if (role === 'ambassador') return '<svg viewBox="0 0 24 24" ' + c + '><path d="M7 4.5h10v15H7z"/><path d="M5.2 4.5c0-1 .8-1.8 1.8-1.8h9.8c1 0 1.8.8 1.8 1.8v1H5.2z"/><path d="M5.2 19.5h13.6"/><path d="M9.5 8.2h5M9.5 11.2h5M9.5 14.2h3.4"/></svg>';
+    if (role === 'contessa') return '<svg viewBox="0 0 24 24" ' + c + '><path d="M4.2 8.3c2.6-1.7 5-2.1 7.8-2.1s5.2.4 7.8 2.1c.4 4.7-2.6 8.6-7.8 9.4-5.2-.8-8.2-4.7-7.8-9.4z"/><path d="M7.4 9.4c1.3.7 2.9.9 4.6.9s3.3-.2 4.6-.9"/><path d="M9.3 12.1h.1M14.6 12.1h.1"/><path d="M3.4 7.5 1.9 5.4M20.6 7.5l1.5-2.1"/></svg>';
+    return '';
+  }
+  function card(role, copy) {
+    return '<div class="card role-' + role + '" data-card="' + role + '">' +
+      '<img class="back" src="' + ART + 'card-back.webp" alt="">' +
+      '<span class="emblem">' + emblem(role) + '</span>' +
+      '<b>' + NAMES[role] + '</b><i>' + copy + '</i></div>';
+  }
+  function deck15() {
+    return '<div class="deck15">' + ROLES.map(function (role) {
+      return '<div class="rolecol"><div class="rolelabel"><span>' + emblem(role) + '</span>' + NAMES[role] + '</div><div class="colcards">' +
+        card(role, '01') + card(role, '02') + card(role, '03') + '</div></div>';
+    }).join('') + '</div>';
+  }
+  function seatHTML(seat, i) {
+    return '<div class="seat' + (i === 0 ? ' current' : '') + '" data-seat="' + i + '">' +
+      '<div class="seat-top"><span class="seat-roman">' + ['I', 'II', 'III', 'IV', 'V', 'VI'][i] + '</span>' +
+      '<span class="seat-name">' + seat.name + '</span></div>' +
+      '<div class="seat-coins"><img src="' + ART + 'coin.webp" alt="" data-coin="' + i + '"><img src="' + ART + 'coin.webp" alt="" data-coin="' + i + '"> 2</div>' +
+      '<div class="mini-cards"><span class="mini-card"><img src="' + ART + 'card-back.webp" alt=""></span><span class="mini-card"><img src="' + ART + 'card-back.webp" alt=""></span></div>' +
+      '<div class="seat-note">' + seat.note + '</div></div>';
+  }
+  function seats6() {
+    return '<div class="seats6">' + SEATS.map(seatHTML).join('') + '</div>';
+  }
+  function seal() {
+    return '<span class="seal">' + emblem('duke') + '</span>';
+  }
+
+  var html = '';
+  if (shot === 'cover') {
+    html = '<div class="content">' +
+      '<div class="eyebrow">FUTURE BUREAUCRACY · 暗红权谋</div>' +
+      '<h1>政变</h1><div class="latin">COUP · PREMIUM</div>' +
+      '<div class="tagline">十五张身份 · 六个席位 · 一场没有盟友的晚宴</div>' +
+      '<div class="gold-line"></div>' +
+      deck15() + seats6() +
+      '<div class="footer"><span>五角色 · 每人 2 张身份 · 2 枚金币 · 15 张身份牌守恒</span>' + seal() + '</div>' +
+    '</div>';
+  } else if (shot === 'og') {
+    html = '<div class="content">' +
+      '<div class="og-grid">' +
+        '<div><div class="eyebrow">COUP · PREMIUM</div><h1>政变</h1><div class="latin">暗红权谋</div>' +
+        '<div class="tagline">2–6 人 · 15 张身份 · 挑战与诈称</div><div class="gold-line"></div>' + seats6() + '</div>' +
+        '<div>' + deck15() + '</div>' +
+      '</div>' +
+      '<div class="footer"><span>公爵 / 刺客 / 队长 / 大使 / 女伯爵 · 各 3 张</span><span>2–6 PLAYERS · 15 HONOURS</span></div>' +
+    '</div>';
+  } else if (shot === 'detail1') {
+    html = '<div class="content">' +
+      '<div class="detail-head"><div><div class="detail-kicker">CHALLENGE · BLOCK · BLUFF</div><h1>挑战与诈称</h1>' +
+        '<div class="detail-sub">宣称公爵征税、刺客暗杀、队长偷取、大使交换。任一对手可以挑战；亮出真牌则挑战者失牌，诈称则宣称者失牌。</div></div>' +
+        '<div class="props">' +
+          '<div class="prop"><img src="' + ART + 'crown.webp" alt=""><span>公爵 · 王冠</span></div>' +
+          '<div class="prop"><img src="' + ART + 'dagger.webp" alt=""><span>刺客 · 匕首</span></div>' +
+          '<div class="prop"><img src="' + ART + 'mask.webp" alt=""><span>女伯爵 · 面具</span></div>' +
+        '</div></div>' +
+      '<div class="gold-line"></div>' +
+      seats6() +
+      '<div class="registry"><div class="registry-label">15 张身份牌 · 5 角色 × 3</div><div class="strip15">' +
+        ROLES.map(function (r) { return card(r, '') + card(r, '') + card(r, ''); }).join('') +
+      '</div></div>' +
+    '</div>';
+  } else {
+    html = '<div class="content">' +
+      '<div class="detail-head"><div><div class="detail-kicker">SIX SEATS · TWO HONOURS EACH</div><h1>六席牌桌</h1>' +
+        '<div class="detail-sub">2–6 人同局。每人两张面朝下身份与两枚金币；最后存活者获胜。空位由 AI 补足，断线超时自动托管。</div></div>' +
+        '<div class="props"><div class="prop"><img src="' + ART + 'scroll.webp" alt=""><span>大使 · 卷轴</span></div>' +
+        '<div class="prop"><img src="' + ART + 'coin.webp" alt=""><span>黄铜金币 · Ø39mm</span></div></div></div>' +
+      '<div class="gold-line"></div>' +
+      '<div class="seat-grid-6">' + SEATS.map(function (seat, i) {
+        return '<div class="seat' + (i === 0 ? ' current' : '') + '" data-seat="' + i + '">' +
+          '<span class="seat-roman">' + ['I', 'II', 'III', 'IV', 'V', 'VI'][i] + '</span>' +
+          '<div class="seat-body"><div class="seat-name">' + seat.name + '</div>' +
+          '<div class="seat-coins"><img src="' + ART + 'coin.webp" alt="" data-coin="' + i + '"><img src="' + ART + 'coin.webp" alt="" data-coin="' + i + '"> 2 金币</div>' +
+          '<div class="seat-note">' + seat.note + ' · 2 张身份</div></div>' +
+          '<div class="mini-cards"><span class="mini-card"><img src="' + ART + 'card-back.webp" alt=""></span><span class="mini-card"><img src="' + ART + 'card-back.webp" alt=""></span></div></div>';
+      }).join('') + '</div>' +
+      '<div class="registry"><div class="registry-label">15 张身份牌 · 牌堆耗尽时弃牌洗回</div><div class="strip15">' +
+        ROLES.map(function (r) { return card(r, '') + card(r, '') + card(r, ''); }).join('') +
+      '</div></div>' +
+    '</div>';
+  }
+  document.getElementById('canvas').innerHTML = html;
+  document.title = '政变 · ' + shot;
+  window.__artReady = true;
+  window.__artCounts = {
+    shot: shot,
+    cards: document.querySelectorAll('[data-card]').length,
+    seats: document.querySelectorAll('[data-seat]').length,
+    coins: document.querySelectorAll('[data-coin]').length,
+    roles: ROLES.length
+  };
+}());
+</script>
+</body>
+</html>

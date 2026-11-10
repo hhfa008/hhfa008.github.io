@@ -1,0 +1,446 @@
+<!doctype html>
+<!--
+  No Thanks! premium — online lobby and room board.
+  Server-authoritative HTTP/JSON polling. No external requests, no CDN.
+  Room/invite/reconnect/timeout/leaderboard come from games/shared/online-room-server.mjs.
+-->
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#141a1f">
+<meta name="description" content="No Thanks! 不谢联机房间：创建/加入房间、邀请码、AI 补位、断线重连与超时托管。3–5 人同局，低分者胜。">
+<title>NO THANKS! 不谢 · 联机房间</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2312171c'/%3E%3Crect x='14' y='10' width='36' height='44' rx='6' fill='%23fff6e8'/%3E%3Ctext x='32' y='41' font-family='Georgia,serif' font-size='24' font-weight='700' text-anchor='middle' fill='%23d8503f'%3E29%3C/text%3E%3C/svg%3E">
+<style>
+  :root{
+    --art-felt:url("../../assets/art/premium/no-thanks/table-felt.webp");
+    --art-paper:url("../../assets/art/premium/no-thanks/card-paper.webp");
+    --art-back:url("../../assets/art/premium/no-thanks/card-back.webp");
+    --art-chip:url("../../assets/art/premium/no-thanks/chip-coral.webp");
+    --art-brass:url("../../assets/art/premium/no-thanks/chip-brass.webp");
+    --font-serif:"Songti SC","Iowan Old Style","Palatino Linotype",Georgia,serif;
+    --font-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    --bg:#0f1519;--bg2:#16232a;--panel:rgba(27,40,48,.92);--panel2:rgba(38,56,66,.7);
+    --line:rgba(120,160,170,.24);--ink:#f2fbf7;--muted:#a7bcc5;--mint:#58d6a8;
+    --gold:#ffd36e;--coral:#ff7d6b;--coral2:#c94736;--sky:#79c8ff;--danger:#ff8b7d;
+    --card-face:#fff6e8;--card-ink:#241b15;--card-edge:#e7cfae;
+    --shadow:0 20px 48px rgba(0,0,0,.44);--radius:18px;--tap:48px;
+  }
+  html[data-theme="light"]{
+    --bg:#efe6d7;--bg2:#f8f1e5;--panel:rgba(255,251,244,.94);--panel2:rgba(246,238,224,.8);
+    --line:rgba(160,132,96,.34);--ink:#2a2119;--muted:#6d6254;--mint:#1f8d68;
+    --gold:#a87413;--coral:#d95645;--coral2:#a93a2c;--sky:#2f78b7;--danger:#b33f35;
+    --card-face:#fffdf5;--card-ink:#2a2119;--card-edge:#d8c3a0;--shadow:0 18px 40px rgba(91,68,42,.2);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;min-height:100vh;color:var(--ink);font:16px/1.5 var(--font-sans);
+    background:
+      radial-gradient(1000px 620px at 50% -18%,rgba(25,74,68,.85),transparent 64%),
+      var(--art-felt) center/cover no-repeat fixed,
+      linear-gradient(168deg,var(--bg2),var(--bg) 62%);
+    background-color:var(--bg);
+  }
+  a{color:var(--gold)}
+  .wrap{max-width:860px;margin:0 auto;padding:10px 12px 40px}
+  .top{display:flex;align-items:center;gap:8px;padding:4px 0 12px}
+  .top h1{margin:0;font-family:var(--font-serif);font-weight:700;font-size:19px;letter-spacing:.4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;text-align:center}
+  .icon-btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:52px;padding:0 12px;border-radius:12px;background:var(--panel);border:1px solid var(--line);color:var(--ink);text-decoration:none;font-size:13px;font-weight:700;cursor:pointer}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow);backdrop-filter:blur(6px)}
+  .panel + .panel{margin-top:12px}
+  h2{margin:0 0 10px;font-size:13px;letter-spacing:1.6px;text-transform:uppercase;color:var(--muted)}
+  .field{display:grid;gap:5px;margin-bottom:10px}
+  .field label{font-size:12px;color:var(--muted);font-weight:700}
+  input{font:inherit;font-size:16px;min-height:48px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:rgba(0,0,0,.22);color:var(--ink);width:100%}
+  button{font:inherit;font-size:15px;font-weight:800;min-height:var(--tap);padding:10px 16px;border-radius:13px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);cursor:pointer;touch-action:manipulation}
+  button:active{transform:translateY(1px)}
+  button:disabled{opacity:.4;cursor:default}
+  button.primary{background:linear-gradient(160deg,var(--mint),#2fa77c);color:#062019;border:0}
+  button.coral{background:linear-gradient(160deg,var(--coral),var(--coral2));color:#2a0d08;border:0}
+  button.ghost{background:transparent}
+  .row{display:flex;gap:9px;flex-wrap:wrap}
+  .row > button{flex:1;min-width:130px}
+  .muted{color:var(--muted);font-size:12.5px}
+  .err{color:var(--danger);font-size:13px;font-weight:700;min-height:18px;margin-top:6px}
+  .roombar{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+  .roomeyebrow{font-size:12px;letter-spacing:2px;color:var(--muted);text-transform:uppercase}
+  .chip{display:inline-flex;align-items:center;min-height:30px;padding:2px 12px;border-radius:999px;background:rgba(0,0,0,.22);border:1px solid var(--line);font-size:12.5px;font-weight:800;color:var(--gold)}
+  .seats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:10px}
+  .seat{position:relative;border:1px solid var(--line);border-radius:14px;padding:9px 10px;background:var(--panel2);min-width:0}
+  .seat.turn{border-color:var(--mint);box-shadow:0 0 0 1px var(--mint) inset}
+  .seat.you{border-color:var(--gold)}
+  .seat .name{font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .seat .meta{display:flex;justify-content:space-between;gap:4px;margin-top:3px;font-size:12px;color:var(--muted)}
+  .seat .score{font-family:var(--font-serif);font-size:22px;font-weight:700;color:var(--gold);line-height:1.1;margin-top:2px}
+  .seat .cards{display:flex;flex-wrap:wrap;gap:2px;margin-top:4px;min-height:18px}
+  .mini{font-size:12px;line-height:18px;min-width:21px;text-align:center;padding:0 3px;border-radius:4px;background:var(--card-face);color:var(--card-ink);border:1px solid var(--card-edge);font-weight:800}
+  .table{
+    position:relative;border-radius:20px;padding:14px 12px 16px;border:1px solid var(--line);
+    background:linear-gradient(160deg,rgba(18,58,54,.8),rgba(10,32,31,.92)),var(--art-felt) center/cover no-repeat;
+    box-shadow:var(--shadow);overflow:hidden;text-align:center;
+  }
+  .tabletop{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:rgba(255,255,255,.8);font-weight:700;position:relative;z-index:1}
+  .deckstack{display:inline-flex;align-items:center;gap:7px}
+  .deckback{width:22px;height:30px;border-radius:4px;background:var(--art-back) center/cover no-repeat;border:1px solid rgba(255,240,205,.5)}
+  .stage{display:flex;flex-direction:column;align-items:center;padding:8px 0 0;position:relative;z-index:1}
+  .card-slot{position:relative;width:132px;height:182px;margin:6px auto 0}
+  .numcard{position:absolute;inset:0;border-radius:15px;border:1px solid var(--card-edge);color:var(--card-ink);
+    display:flex;align-items:center;justify-content:center;font-size:72px;font-weight:900;letter-spacing:-4px;
+    background:radial-gradient(circle at 24% 18%,rgba(255,255,255,.9),transparent 38%),linear-gradient(152deg,rgba(255,253,246,.9),rgba(255,246,232,.88) 55%,rgba(239,223,199,.92)),var(--art-paper) center/cover no-repeat;
+    box-shadow:0 18px 30px rgba(0,0,0,.34),inset 0 0 0 5px rgba(255,255,255,.66),inset 0 0 0 6px rgba(126,92,54,.2);
+    animation:dealIn .45s cubic-bezier(.2,.9,.25,1.2) both}
+  .numcard.empty{font-size:15px;font-weight:700;letter-spacing:0;color:rgba(255,255,255,.7);background:transparent;border:1px dashed rgba(255,255,255,.3);box-shadow:none}
+  .chipcount{display:inline-flex;align-items:center;gap:6px;margin-top:11px;padding:3px 11px;border-radius:999px;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.2);font-size:12.5px;font-weight:800;color:#fff3cb}
+  .chipdot{width:22px;height:22px;border-radius:50%;background:var(--art-chip) center/cover no-repeat;border:1px solid rgba(255,226,160,.7)}
+  .note{min-height:22px;margin-top:8px;font-size:13px;font-weight:700;color:rgba(255,255,255,.86);position:relative;z-index:1}
+  .actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
+  .actions button{min-height:56px}
+  .log{margin-top:12px;border:1px solid var(--line);border-radius:15px;background:var(--panel);padding:9px 12px;max-height:180px;overflow:auto}
+  .log ul{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+  .log li{font-size:12.5px;color:var(--muted);border-bottom:1px dashed rgba(128,150,160,.18);padding:3px 0}
+  .log li:last-child{color:var(--ink)}
+  .log li::before{content:"›";color:var(--mint);margin-right:6px;font-weight:900}
+  .finale{margin-top:12px;border:1px solid rgba(88,214,168,.4);background:rgba(88,214,168,.12);border-radius:15px;padding:12px;text-align:center}
+  .finale h3{margin:0 0 4px;font-size:20px}
+  .board{display:none}
+  .board.on{display:block}
+  .leaderboard{display:grid;gap:4px}
+  .lbrow{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:6px 8px;border-radius:8px;background:rgba(0,0,0,.12)}
+  .lbrow b{color:var(--gold)}
+  @keyframes dealIn{0%{transform:translateY(-22px) rotate(-4deg) scale(.9);opacity:0}100%{transform:none;opacity:1}}
+  @media (prefers-reduced-motion: reduce){*{animation-duration:.01ms !important;transition-duration:.01ms !important}}
+  @media (max-width:380px){.wrap{padding:8px 9px 30px}.top h1{font-size:17px}.actions{grid-template-columns:1fr}.card-slot{width:118px;height:164px}.numcard{font-size:64px}}
+/* safe-area: keep the original bottom padding, clear the iOS home indicator */
+body{padding-bottom:env(safe-area-inset-bottom)}
+</style>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/no-thanks-premium/online.html">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="icon-btn" href="index.html">← 单机</a>
+    <h1>NO THANKS! 联机</h1>
+    <a class="icon-btn" href="rules.html">规则</a>
+  </header>
+
+  <main>
+    <section class="panel" id="lobby" aria-label="联机大厅">
+      <h2>创建或加入房间</h2>
+      <div class="field">
+        <label for="nickname">昵称</label>
+        <input id="nickname" maxlength="16" placeholder="房主 / 玩家" autocomplete="nickname">
+      </div>
+      <div class="row">
+        <button class="primary" id="createBtn" type="button">创建房间</button>
+        <button id="joinBtn" type="button">加入房间</button>
+      </div>
+      <div class="field" id="joinFields" hidden style="margin-top:10px">
+        <label for="roomCode">房间号 / 邀请码</label>
+        <input id="roomCode" maxlength="64" placeholder="粘贴房间号或邀请码" autocomplete="off">
+        <label for="joinPassword">房间密码（可选）</label>
+        <input id="joinPassword" type="password" maxlength="64" placeholder="无密码可留空" autocomplete="off">
+      </div>
+      <div class="err" id="lobbyErr" role="alert"></div>
+      <p class="muted">服务端权威判定；空位由 AI 补齐；掉线 15 秒后自动托管，重连即恢复。邀请链接可复制给朋友。</p>
+    </section>
+
+    <section class="panel board" id="board" aria-label="房间牌桌">
+      <div class="roombar">
+        <div>
+          <div class="roomeyebrow">Room</div>
+          <div class="chip" id="roomChip">—</div>
+        </div>
+        <div class="row" style="flex:0 1 auto">
+          <button class="ghost" id="inviteBtn" type="button">复制邀请</button>
+          <button class="ghost" id="startBtn" type="button">开始 / AI 补位</button>
+        </div>
+      </div>
+      <div class="err" id="boardErr" role="alert"></div>
+      <div class="seats" id="seats"></div>
+
+      <div class="table">
+        <div class="tabletop">
+          <span>No Thanks · 低分者胜</span>
+          <span class="deckstack"><span class="deckback" aria-hidden="true"></span><span id="deckCount">牌堆 —</span></span>
+        </div>
+        <div class="stage">
+          <div id="cardSlot" class="card-slot" aria-live="polite"></div>
+          <div class="chipcount"><span class="chipdot" aria-hidden="true"></span><span id="chipCount">牌上筹码 · 0</span></div>
+        </div>
+        <div class="note" id="note"></div>
+        <div class="actions">
+          <button class="coral" id="takeBtn" type="button">收下这张牌</button>
+          <button class="primary" id="passBtn" type="button">付 1 筹码跳过</button>
+        </div>
+      </div>
+
+      <div class="finale" id="finale" hidden>
+        <h3 id="finaleTitle">结算</h3>
+        <p class="muted" id="finaleSub"></p>
+        <div id="finaleRows"></div>
+        <div class="row" style="margin-top:10px">
+          <button class="primary" id="restartBtn" type="button">再来一局</button>
+        </div>
+      </div>
+
+      <div class="log" aria-label="对局记录"><ul id="logList"></ul></div>
+      <div class="row" style="margin-top:10px">
+        <button class="ghost" id="leaveBtn" type="button">离开房间</button>
+        <a class="icon-btn" href="index.html" style="flex:0 0 auto">返回单机</a>
+      </div>
+    </section>
+
+    <section class="panel" aria-label="排行榜">
+      <h2>结算榜</h2>
+      <div class="leaderboard" id="leaderboard"><p class="muted">还没有结算记录。</p></div>
+    </section>
+  </main>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  var params = new URLSearchParams(location.search);
+  var roomKey = params.get('room') || params.get('code') || '';
+  var invite = params.get('code') || '';
+  var session = params.get('session') || '';
+  var playerId = params.get('player') || '';
+  var nickname = '';
+  var timer = null;
+  var lastVersion = -1;
+  var online = false;
+
+  try {
+    if (!session) session = sessionStorage.getItem('nt-online-session') || '';
+    if (!playerId) playerId = sessionStorage.getItem('nt-online-player') || '';
+  } catch (e) {}
+
+  function remember(nextRoom, nextSession, nextPlayer) {
+    roomKey = nextRoom || roomKey;
+    session = nextSession || session;
+    playerId = nextPlayer || playerId;
+    try {
+      sessionStorage.setItem('nt-online-session', session);
+      sessionStorage.setItem('nt-online-player', playerId);
+    } catch (e) {}
+    var url = location.pathname + '?room=' + encodeURIComponent(roomKey) + '&session=' + encodeURIComponent(session) + '&player=' + encodeURIComponent(playerId);
+    try { history.replaceState(null, '', url); } catch (e) {}
+  }
+
+  function api(method, route, body) {
+    return fetch(route, {
+      method: method,
+      headers: { 'content-type': 'application/json' },
+      body: body == null ? undefined : JSON.stringify(body)
+    }).then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (data) {
+        return { status: res.status, body: data };
+      });
+    });
+  }
+  function errText(r) {
+    return (r.body && r.body.error && r.body.error.message) || ('HTTP ' + r.status);
+  }
+  function toast(msg) { $('boardErr').textContent = msg || ''; }
+
+  function saveNick() {
+    nickname = ($('nickname').value || '').trim() || ('玩家-' + Math.random().toString(36).slice(2, 6));
+    try { sessionStorage.setItem('nt-online-nick', nickname); } catch (e) {}
+    return nickname;
+  }
+  try { $('nickname').value = sessionStorage.getItem('nt-online-nick') || ''; } catch (e) {}
+
+  function showBoard(on) {
+    online = on;
+    $('lobby').hidden = on;
+    $('board').classList.toggle('on', on);
+  }
+
+  function createRoom() {
+    saveNick();
+    $('lobbyErr').textContent = '';
+    api('POST', '/api/rooms', { playerId: 'nt-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6), nickname: nickname })
+      .then(function (r) {
+        if (!r.body || !r.body.roomId) throw new Error(errText(r));
+        remember(r.body.roomId, r.body.session, r.body.playerId);
+        invite = r.body.inviteToken || '';
+        showBoard(true);
+        poll();
+      })
+      .catch(function (e) { $('lobbyErr').textContent = e.message; });
+  }
+
+  function joinRoom() {
+    saveNick();
+    var key = ($('roomCode').value || '').trim();
+    if (!key) { $('lobbyErr').textContent = '请填写房间号或邀请码。'; return; }
+    $('lobbyErr').textContent = '';
+    var payload = { playerId: 'nt-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6), nickname: nickname };
+    if (/^[A-Za-z0-9]+$/.test(key) && key.length > 30) payload.inviteCode = key;
+    else payload.inviteCode = key;
+    if ($('joinPassword').value) payload.password = $('joinPassword').value;
+    api('POST', '/api/rooms/' + encodeURIComponent(key) + '/join', payload)
+      .then(function (r) {
+        if (!r.body || !r.body.session) throw new Error(errText(r));
+        remember(r.body.roomId, r.body.session, r.body.playerId);
+        showBoard(true);
+        poll();
+      })
+      .catch(function (e) { $('lobbyErr').textContent = e.message; });
+  }
+
+  function seatHtml(seat, state) {
+    var isTurn = state && state.phase !== 'over' && state.turnSeat === seat.index;
+    var cards = state && state.players && state.players[seat.index] ? state.players[seat.index].cards : [];
+    var score = state && state.players && state.players[seat.index] ? state.players[seat.index].score : null;
+    var chips = state && state.players && state.players[seat.index] ? state.players[seat.index].chips : null;
+    var mine = state && state.players && state.players[seat.index] ? state.players[seat.index].human : false;
+    var cls = 'seat' + (isTurn ? ' turn' : '') + (mine ? ' you' : '');
+    return '<div class="' + cls + '">' +
+      '<div class="name">' + esc(seat.name) + (seat.ai ? ' · AI' : '') + (mine ? ' · 你' : '') + '</div>' +
+      '<div class="score">' + (score == null ? '—' : score) + '<small style="font-size:12px;color:var(--muted)"> 分</small></div>' +
+      '<div class="meta"><span>' + (chips == null ? '' : '筹码 ' + chips) + '</span><span>' + (seat.isHost ? '房主' : '') + (seat.connected ? '' : ' · 离线') + '</span></div>' +
+      '<div class="cards">' + cards.map(function (c) { return '<span class="mini">' + c + '</span>'; }).join('') + '</div>' +
+      '</div>';
+  }
+  function esc(v) {
+    return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+    });
+  }
+
+  function render(r) {
+    var state = r.state;
+    $('roomChip').textContent = '房间 ' + (r.code || r.roomId) + ' · ' + (r.started ? (r.over ? '已结束' : '进行中') : '等待玩家') + ' · ' + r.playerCount + ' 人';
+    $('seats').innerHTML = r.seats.map(function (seat) { return seatHtml(seat, state); }).join('');
+    $('startBtn').hidden = r.started;
+    $('startBtn').disabled = !r.seats.some(function (s) { return s.isYou && s.isHost; });
+    $('inviteBtn').disabled = !r.seats.some(function (s) { return s.isYou && s.isHost; });
+    $('takeBtn').disabled = !r.started || r.over || !(r.legalActions || []).some(function (a) { return a.type === 'take'; });
+    $('passBtn').disabled = !r.started || r.over || !(r.legalActions || []).some(function (a) { return a.type === 'pass'; });
+    if (state) {
+      $('deckCount').textContent = '牌堆 ' + state.deckCount;
+      $('chipCount').textContent = '牌上筹码 · ' + state.chipsOnCard;
+      $('cardSlot').innerHTML = state.current == null
+        ? '<div class="numcard empty">牌堆已空</div>'
+        : '<div class="numcard">' + state.current + '</div>';
+      $('note').innerHTML = state.phase === 'over'
+        ? '本局结束，最低分获胜。'
+        : (state.turnSeat === r.you ? '轮到你：收牌或付筹码跳过。' : '等待 ' + esc(state.turnName || '下一位') + ' 行动…');
+      $('logList').innerHTML = (state.log || []).slice(-14).map(function (line) { return '<li>' + esc(line) + '</li>'; }).join('');
+    }
+    var fin = $('finale');
+    if (r.over && r.result) {
+      fin.hidden = false;
+      var result = r.result;
+      $('finaleTitle').textContent = result.tied ? '并列最低分' : (result.winnerName ? result.winnerName + ' 获胜' : '结算');
+      $('finaleSub').textContent = '低分者胜 · ' + (result.turns == null ? '' : result.turns + ' 次行动') + ' · 移除牌 ' + (result.removed || []).join(' ');
+      $('finaleRows').innerHTML = (result.losers || []).slice().sort(function (a, b) { return a.score - b.score; }).map(function (row) {
+        return '<div class="lbrow"><span>' + esc(row.name) + '</span><b>' + row.score + '</b></div>';
+      }).join('');
+      $('restartBtn').hidden = !r.canRestart;
+    } else {
+      fin.hidden = true;
+    }
+    $('leaveBtn').hidden = !r.started;
+  }
+
+  function fetchRoom() {
+    if (!roomKey || !session) { showBoard(false); return Promise.resolve(null); }
+    return api('GET', '/api/rooms/' + encodeURIComponent(roomKey) + '?session=' + encodeURIComponent(session) + '&playerId=' + encodeURIComponent(playerId))
+      .then(function (r) {
+        if (r.status === 401) {
+          return api('POST', '/api/rooms/' + encodeURIComponent(roomKey) + '/reconnect', { session: session, playerId: playerId })
+            .then(function (rr) {
+              if (!rr.body || !rr.body.ok) throw new Error('房间已失效，请重新创建。');
+              return rr;
+            });
+        }
+        if (r.status >= 400) throw new Error(errText(r));
+        return r;
+      })
+      .then(function (r) {
+        if (!r) return;
+        var view = r.body || {};
+        showBoard(true);
+        if (view.stateVersion !== lastVersion) {
+          lastVersion = view.stateVersion;
+          render(view);
+        } else {
+          // keep seat/offline state fresh without re-rendering the card
+          $('seats').innerHTML = (view.seats || []).map(function (seat) { return seatHtml(seat, view.state); }).join('');
+        }
+        if (view.inviteCode) invite = view.inviteCode;
+      })
+      .catch(function (e) { toast(e.message); });
+  }
+
+  function poll() {
+    if (timer) clearInterval(timer);
+    fetchRoom();
+    timer = setInterval(fetchRoom, 700);
+  }
+
+  function act(type) {
+    if (!session) return;
+    toast('');
+    api('POST', '/api/rooms/' + encodeURIComponent(roomKey) + '/actions', {
+      session: session, playerId: playerId, action: { type: type }
+    }).then(function (r) {
+      if (r.status >= 400) throw new Error(errText(r));
+      lastVersion = -1;
+      return fetchRoom();
+    }).catch(function (e) { toast(e.message); });
+  }
+
+  $('createBtn').addEventListener('click', createRoom);
+  $('joinBtn').addEventListener('click', function () {
+    $('joinFields').hidden = false;
+    joinRoom();
+  });
+  $('takeBtn').addEventListener('click', function () { act('take'); });
+  $('passBtn').addEventListener('click', function () { act('pass'); });
+  $('startBtn').addEventListener('click', function () {
+    api('POST', '/api/rooms/' + encodeURIComponent(roomKey) + '/start', { session: session, playerId: playerId })
+      .then(function (r) { if (r.status >= 400) throw new Error(errText(r)); lastVersion = -1; return fetchRoom(); })
+      .catch(function (e) { toast(e.message); });
+  });
+  $('restartBtn').addEventListener('click', function () {
+    api('POST', '/api/rooms/' + encodeURIComponent(roomKey) + '/restart', { session: session, playerId: playerId })
+      .then(function (r) { if (r.status >= 400) throw new Error(errText(r)); lastVersion = -1; return fetchRoom(); })
+      .catch(function (e) { toast(e.message); });
+  });
+  $('leaveBtn').addEventListener('click', function () {
+    api('POST', '/api/rooms/' + encodeURIComponent(roomKey) + '/leave', { session: session, playerId: playerId })
+      .then(function () { showBoard(false); if (timer) clearInterval(timer); })
+      .catch(function () { showBoard(false); });
+  });
+  $('inviteBtn').addEventListener('click', function () {
+    var url = location.origin + '/boardgame/no-thanks-premium/online.html?room=' + encodeURIComponent(roomKey) + '&code=' + encodeURIComponent(invite || '');
+    var done = function () { toast('邀请链接已复制：' + url); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done).catch(done);
+    else done();
+  });
+
+  function loadLeaderboard() {
+    api('GET', '/api/leaderboard?game=no-thanks-premium').then(function (r) {
+      var entries = (r.body && r.body.entries) || [];
+      $('leaderboard').innerHTML = entries.length
+        ? entries.slice(0, 12).map(function (e) {
+          return '<div class="lbrow"><span>' + esc(e.name) + (e.ai ? ' · AI' : '') + '</span><b>' + (e.winner ? '胜' : (e.score == null ? '' : e.score)) + '</b></div>';
+        }).join('')
+        : '<p class="muted">还没有结算记录。</p>';
+    }).catch(function () {});
+  }
+  loadLeaderboard();
+  setInterval(loadLeaderboard, 5000);
+
+  if (roomKey && session) { showBoard(true); poll(); }
+  else if (roomKey && invite) { showBoard(false); $('joinFields').hidden = false; $('roomCode').value = invite; }
+})();
+</script>
+</body>
+</html>

@@ -425,7 +425,7 @@ s.group('页面契约', function () {
   s.ok('index.html 存在且非空', html.length > 2000);
   s.ok('加载本地 data.js', /<script[^>]+src="data\.js"/.test(html));
   s.ok('加载本地 engine.js', /<script[^>]+src="engine\.js"/.test(html));
-  s.ok('不引用远程脚本/样式', !/(?:src|href)\s*=\s*["']https?:/i.test(html));
+  s.ok('不引用远程脚本/样式', !/(?:src|href)\s*=\s*["']https?:/i.test(html.replace(/<link[^>]*rel=["']canonical["'][^>]*>/gi, '')));
   s.ok('不使用 fetch/XHR', !/\bfetch\s*\(/.test(html) && !/XMLHttpRequest/.test(html));
   s.ok('包含 viewport 元信息', /name="viewport"/.test(html));
   s.ok('包含多个 aria-label', (html.match(/aria-label=/g) || []).length >= 5);
@@ -438,7 +438,7 @@ s.group('页面契约', function () {
   s.ok('rules.html 存在且非空', rules.length > 1000);
   s.ok('规则页写明 50 点生命', /50/.test(rules));
   s.ok('规则页返回游戏', /href="index\.html"/.test(rules));
-  s.ok('规则页无远程依赖', !/(?:src|href)\s*=\s*["']https?:/i.test(rules));
+  s.ok('规则页无远程依赖', !/(?:src|href)\s*=\s*["']https?:/i.test(rules.replace(/<link[^>]*rel=["']canonical["'][^>]*>/gi, '')));
 });
 
 s.done();

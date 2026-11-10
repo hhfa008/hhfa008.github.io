@@ -1,0 +1,163 @@
+{
+  "slug": "banqi-premium",
+  "name": {
+    "zh": "暗棋 · 翻棋",
+    "en": "Banqi (Dark Chess)"
+  },
+  "type": "boardgame",
+  "status": "shipped",
+  "statusReason": "五项门禁全过：run-all 0 失败；单测覆盖 32 枚开局、等级吃子、炮隔子、胜负与和棋、公开视图遮罩、AI 与性能；双客户端联机 E2E 全过且 --control exit 1；封面 + OG 1200×630 + 两张详情图由本地代码合成；realism 六类校验通过；390×844 与 320×568 真浏览器冒烟无横向溢出、主触控 ≥44px、可见字号 ≥12px。",
+  "entry": "index.html",
+  "rules": "rules.html",
+  "design": "DESIGN.md",
+  "acceptance": "ACCEPTANCE.md",
+  "e2e": {
+    "script": "test-online.js",
+    "record": "E2E.md",
+    "command": "node games/boardgame/banqi-premium/test-online.js",
+    "control": "node games/boardgame/banqi-premium/test-online.js --control  # exit 1, intentional failure",
+    "runAll": "auto-discovered by node games/tests/run-all.js",
+    "evidence": "online-e2e.json"
+  },
+  "singlePlayer": false,
+  "modeLabel": "2 人 · 单机 AI / 联机 + AI 补位",
+  "players": {
+    "min": 2,
+    "max": 2,
+    "best": [
+      2
+    ]
+  },
+  "playTime": {
+    "min": 8,
+    "max": 20
+  },
+  "age": 8,
+  "designer": "中国传统民间棋",
+  "year": "20th century",
+  "online": {
+    "status": "ready",
+    "entry": "online.html",
+    "server": "online-server.mjs",
+    "client": "online.html",
+    "sharedRoomStore": "../../shared/online-room-server.mjs",
+    "seats": {
+      "min": 2,
+      "max": 2
+    },
+    "invite": true,
+    "passwordRooms": true,
+    "stateSync": "HTTP polling, server-authoritative; hidden identities never leave the server",
+    "aiFillEmptySeats": true,
+    "rulesSimplified": false,
+    "reconnect": true,
+    "timeoutTakeover": true,
+    "leaderboard": true,
+    "rematch": true,
+    "twoClientE2E": "test-online.js",
+    "evidence": "online-e2e.json",
+    "recognizedByGate": true,
+    "features": {
+      "rooms": "2 seats; room id + 6-char code + single-use invite token",
+      "invite": "inviteUrl uses the request Host; opens /boardgame/banqi-premium/online.html?room=&code=",
+      "sync": "stateVersion + lastAction; both clients receive the same public view",
+      "aiFill": "empty seats are AI-filled from the same engine/AI",
+      "reconnect": "session token + POST /api/rooms/:id/reconnect; reconnect clears takeover",
+      "timeoutTakeover": "no session request for the idle timeout → server AI plays that seat",
+      "leaderboard": "GET /api/leaderboard?game=banqi-premium; AI participants included; raw playerId hashed",
+      "idempotency": "per-player idempotencyKey cached before the turn guard"
+    },
+    "assessment": "复用 games/shared/online-room-server.mjs 的房间/邀请/密码/TTL/托管/榜单能力；本目录只提供 2 人 Banqi adapter，暗子身份仅在服务端状态中存在。"
+  },
+  "shared": {
+    "shuffle": "games/shared/shuffle.js — engine.js require + index.html/online.html script tag; seeded Fisher–Yates",
+    "sfx": "games/shared/sfx.js — index.html script tag; no per-game AudioContext",
+    "store": "games/shared/store.js available; page uses a try/catch localStorage wrapper for level/sound",
+    "rules": "N/A — Banqi rules live in engine.js",
+    "physics": "N/A — no physics simulation",
+    "leaderboard": "shared room server keeps an anonymous in-memory board; no copy"
+  },
+  "assets": {
+    "cover": "assets/cover.webp",
+    "coverMaster": "assets/cover.png",
+    "og": "assets/og.webp",
+    "ogMaster": "assets/og.png",
+    "detailImages": [
+      "assets/detail-1.webp",
+      "assets/detail-2.webp"
+    ],
+    "detailMasters": [
+      "assets/detail-1.png",
+      "assets/detail-2.png"
+    ],
+    "singleObject": [
+      "../../assets/art/premium/banqi/board-wood.webp",
+      "../../assets/art/premium/banqi/piece-face.webp",
+      "../../assets/art/premium/banqi/piece-back.webp",
+      "../../assets/art/premium/banqi/table-cloth.webp"
+    ],
+    "compositionSource": "art-render.html",
+    "compositionScript": "render-art.mjs",
+    "localOnly": true
+  },
+  "realism": {
+    "status": "pass",
+    "board": {
+      "rows": 4,
+      "cols": 8,
+      "cells": 32
+    },
+    "piecesPerSide": 16,
+    "totalPieces": 32,
+    "ranks": 7,
+    "roster": {
+      "K": 1,
+      "A": 2,
+      "B": 2,
+      "R": 2,
+      "N": 2,
+      "C": 2,
+      "P": 5
+    },
+    "drawPlies": 120,
+    "font": "Songti SC Bold(700)",
+    "lighting": "top-left softbox key + right fill",
+    "materials": [
+      "ivory boxwood pieces",
+      "walnut folding board",
+      "indigo linen cloth"
+    ],
+    "rulesChecked": [
+      "flip or move, one action per turn",
+      "higher rank captures lower, equal rank refused",
+      "soldier/pawn may capture king/general",
+      "cannon must jump exactly one screen and capture a revealed enemy",
+      "hidden pieces neither capture nor be captured",
+      "120 plies without capture is a draw; no legal action loses"
+    ],
+    "sources": [
+      "https://www.bilibili.com/video/BV1MZtgzaE7n",
+      "https://www.bilibili.com/video/BV1ZfxS6KEuN",
+      "https://www.bilibili.com/video/BV1yk4y1D7Q7",
+      "games/ART-GUIDE.md"
+    ],
+    "pass": true,
+    "checks": 6,
+    "kinds": [
+      "count",
+      "dimension",
+      "proportion",
+      "color",
+      "material",
+      "rule"
+    ]
+  },
+  "performance": {
+    "engineCreateGame500Ms": 3,
+    "engineLegalActions300Ms": 1,
+    "engineAiDecision30Ms": 2,
+    "singleAiDecisionMs": 0.07,
+    "browserLoadMs": 420,
+    "engineBytes": 17620
+  }
+}

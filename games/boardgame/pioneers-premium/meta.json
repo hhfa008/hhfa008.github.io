@@ -1,0 +1,184 @@
+{
+  "slug": "pioneers-premium",
+  "name": {
+    "zh": "拓荒者 · 九岛",
+    "en": "Pioneers of Nine Isles"
+  },
+  "type": "boardgame",
+  "status": "shipped",
+  "statusReason": "五项门禁全过：test.js（426 断言，0 失败）覆盖 19 六边形/6-6-6-1 地形/点数无 7/54 交点/72 边/蛇形摆放/产出/建造上限/港口 2:1/8 分与 12 回合/三档 AI/公开视图/性能/静态页；test-online.js（70 断言，0 失败）双 HTTP 客户端 + AI 补位完整对局、结算一致、重连、托管、榜单、重赛全过且 --control exit 1；封面/OG/两张详情由 art-render.html 代码合成真实 19 六边形局面；realism 六类校验通过；390×844 与 320×568 真浏览器冒烟无横向溢出、主触控 ≥44px、可见字号 ≥12px。",
+  "entry": "index.html",
+  "rules": "rules.html",
+  "design": "DESIGN.md",
+  "acceptance": "ACCEPTANCE.md",
+  "e2e": {
+    "script": "test-online.js",
+    "record": "E2E.md",
+    "command": "node games/boardgame/pioneers-premium/test-online.js",
+    "control": "node games/boardgame/pioneers-premium/test-online.js --control  # exit 1, intentional failure",
+    "runAll": "auto-discovered by node games/tests/run-all.js",
+    "evidence": "online-e2e.json"
+  },
+  "singlePlayer": false,
+  "modeLabel": "2–4 人 · 单机三档 AI / 联机 + AI 补位",
+  "players": {
+    "min": 2,
+    "max": 4,
+    "best": [
+      3,
+      4
+    ]
+  },
+  "playTime": {
+    "min": 25,
+    "max": 55
+  },
+  "age": 10,
+  "designer": "Devin",
+  "year": "2026",
+  "online": {
+    "status": "ready",
+    "entry": "online.html",
+    "server": "online-server.mjs",
+    "client": "online.html",
+    "sharedRoomStore": "../../shared/online-room-server.mjs",
+    "seats": {
+      "min": 2,
+      "max": 4,
+      "default": 2
+    },
+    "invite": true,
+    "passwordRooms": true,
+    "stateSync": "HTTP polling, server-authoritative; dice drawn from server rngState, future random numbers never sent",
+    "aiFillEmptySeats": true,
+    "rulesSimplified": false,
+    "reconnect": true,
+    "timeoutTakeover": true,
+    "leaderboard": true,
+    "rematch": true,
+    "twoClientE2E": "test-online.js",
+    "evidence": "online-e2e.json",
+    "recognizedByGate": true,
+    "features": {
+      "rooms": "2–4 seats; room id + one-time invite token + password",
+      "invite": "inviteUrl uses the request Host; opens /boardgame/pioneers-premium/online.html?room=&code=",
+      "sync": "stateVersion + lastAction; both clients receive the same public view",
+      "aiFill": "empty seats become AI and play through the same engine/AI",
+      "dice": "server generates both dice in engine.roll(); only the result is public",
+      "reconnect": "session token + POST /api/rooms/:id/reconnect; reconnect clears takeover",
+      "timeoutTakeover": "no session request for the idle timeout → server AI plays that seat",
+      "leaderboard": "GET /api/leaderboard?game=pioneers-premium; AI participants included; raw playerId hashed",
+      "idempotency": "per-player idempotencyKey cached before the turn guard"
+    },
+    "assessment": "复用 games/shared/online-room-server.mjs 的房间/邀请/密码/TTL/托管/榜单能力；本目录只提供 2–4 人 Pioneers adapter，骰子流只存在于服务端状态。"
+  },
+  "shared": {
+    "shuffle": "games/shared/shuffle.js — engine.js require + index.html/online.html/art-render.html script tag; seeded Fisher–Yates for terrain/tokens",
+    "sfx": "games/shared/sfx.js — index.html script tag; no per-game AudioContext",
+    "store": "games/shared/store.js available; page uses a try/catch localStorage wrapper for level/player count",
+    "rules": "N/A — Pioneers rules live in engine.js",
+    "physics": "N/A — no physics simulation",
+    "leaderboard": "shared room server keeps an anonymous in-memory board; no copy"
+  },
+  "assets": {
+    "cover": "assets/cover.webp",
+    "coverMaster": "assets/cover.png",
+    "og": "assets/og.webp",
+    "ogMaster": "assets/og.png",
+    "detailImages": [
+      "assets/detail-1.webp",
+      "assets/detail-2.webp"
+    ],
+    "detailMasters": [
+      "assets/detail-1.png",
+      "assets/detail-2.png"
+    ],
+    "singleObject": [
+      "../../assets/art/premium/pioneers/hex-tile.webp",
+      "../../assets/art/premium/pioneers/resource-wheat.webp",
+      "../../assets/art/premium/pioneers/resource-stone.webp",
+      "../../assets/art/premium/pioneers/resource-wood.webp",
+      "../../assets/art/premium/pioneers/table-felt.webp",
+      "../../assets/art/premium/pioneers/road-stick.webp",
+      "../../assets/art/premium/pioneers/settlement-house.webp"
+    ],
+    "compositionSource": "art-render.html",
+    "compositionScript": "render-art.mjs",
+    "localOnly": true
+  },
+  "realism": {
+    "status": "pass",
+    "orientation": "pointy-top",
+    "hexes": 19,
+    "rows": [
+      3,
+      4,
+      5,
+      4,
+      3
+    ],
+    "terrain": {
+      "wheat": 6,
+      "stone": 6,
+      "wood": 6,
+      "neutral": 1
+    },
+    "vertices": 54,
+    "edges": 72,
+    "ports": 4,
+    "portRate": 2,
+    "bankRate": 3,
+    "tokens": 18,
+    "noToken": 7,
+    "limits": {
+      "settlements": 5,
+      "cities": 3,
+      "roads": 10
+    },
+    "winPoints": 8,
+    "maxRounds": 12,
+    "font": "Songti SC Bold(700)",
+    "lighting": "top-left softbox key + right fill",
+    "materials": [
+      "2.4mm grey-beige pressed cardboard tiles",
+      "light maple road sticks and settlement houses",
+      "deep teal-green wool felt table"
+    ],
+    "rulesChecked": [
+      "19 pointy-top hexes in 3-4-5-4-3 rows; 6 wheat / 6 stone / 6 wood / 1 neutral frost hollow",
+      "18 number tokens 2-12 without 7; 6/8 are never adjacent",
+      "snake setup: village+road, then reverse order a second village+road; the second village grants resources",
+      "roads wood+stone; villages wheat+stone+wood; cities 2 wheat+3 stone",
+      "5 villages / 3 cities / 10 roads; distance rule and own-network road rule",
+      "4 coastal 2:1 tidegates; bank trades 3:1",
+      "a roll of 7 produces nothing; this game has no robber and no discard",
+      "first to 8 points, otherwise highest score after 12 rounds; ties draw",
+      "no development cards and no longest-road bonus"
+    ],
+    "sources": [
+      "https://www.bilibili.com/video/BV18J4P6FEEt",
+      "https://www.bilibili.com/video/BV1JzgtzdESt",
+      "https://www.bilibili.com/video/BV1Rb411679e",
+      "https://www.bilibili.com/video/BV1pDsszQEL1",
+      "games/ART-GUIDE.md"
+    ],
+    "pass": true,
+    "checks": 6,
+    "kinds": [
+      "count",
+      "dimension",
+      "proportion",
+      "color",
+      "material",
+      "rule"
+    ]
+  },
+  "performance": {
+    "engineCreateGame500Ms": 1500,
+    "engineLegalActions300Ms": 800,
+    "engineAiDecision30Ms": 2500,
+    "singleAiDecisionMs": 150,
+    "uiBoardMs": 200,
+    "browserLoadMs": 5000
+  }
+}

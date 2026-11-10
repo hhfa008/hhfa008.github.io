@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>石器时代 · Stone Age 规则</title>
+<meta name="description" content="石器时代 Stone Age 完整规则：工人放置、骰子采集、文明卡、28 座建筑、喂食与终局计分。">
+<style>
+:root{--bg:#17120c;--panel:#241b12;--panel2:#2e2216;--ink:#f5ecd9;--muted:#c0ad8f;--gold:#d9b06a;--gold2:#f3d9a0;--line:#5a462f;--green:#9bbf72;--serif:"Palatino Linotype","Songti SC",Georgia,serif;--sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(160deg,#17120c,#211912);color:var(--ink);font-family:var(--sans);line-height:1.75}
+a{color:var(--gold2)}
+.wrap{max-width:860px;margin:0 auto;padding:26px 18px 70px}
+header{display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+h1{font-family:var(--serif);margin:0;font-size:30px;letter-spacing:.06em}
+h1 span{display:block;font-family:var(--sans);font-size:10px;letter-spacing:.3em;color:var(--muted);margin-top:3px}
+.back{margin-left:auto;display:inline-flex;min-height:44px;align-items:center;padding:0 15px;border:1px solid var(--line);border-radius:11px;text-decoration:none;color:var(--ink);background:var(--panel2);font-size:13px}
+.panel{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:16px;padding:18px 20px;margin-bottom:14px}
+h2{font-family:var(--serif);color:var(--gold2);font-size:20px;margin:0 0 8px}
+h3{font-size:14px;color:var(--gold);margin:14px 0 4px}
+p,li{font-size:13.5px;color:#e4d8c2}
+.muted{color:var(--muted);font-size:12px}
+table{width:100%;border-collapse:collapse;margin:8px 0;font-size:12.5px}
+th,td{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+th{color:var(--gold2);background:rgba(217,176,106,.08)}
+code{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--gold2);background:rgba(255,255,255,.05);padding:1px 4px;border-radius:4px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:640px){.grid{grid-template-columns:1fr}h1{font-size:24px}}
+.src li{margin:6px 0}
+.tag{display:inline-block;font-size:11px;border:1px solid var(--line);border-radius:999px;padding:1px 8px;color:var(--muted);margin-right:5px}
+</style>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/stone-age-premium/rules.html">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>石器时代<span>STONE AGE · RULES</span></h1>
+    <a class="back" href="index.html">返回棋盘</a>
+  </header>
+
+  <section class="panel">
+    <h2>一、组件与人数</h2>
+    <p>2–4 人。每人起始 <b>5 个工人</b>、<b>12 个食物</b>、0 分、农业 0、工具 0、资源 0。工人总数上限 10；农业上限 10；单件工具上限 4，但可以拥有多件工具。</p>
+    <p>基础版组件口径：<b>28 张建筑</b>（4 叠 ×7，2 人用 2 叠、3 人 3 叠、4 人 4 叠）、<b>36 张文明卡</b>、4 个文明卡展示位、7 颗骰子、18 个工具、53 个食物。本实现保留 28 建筑 / 36 文明卡 / 4 展示位。</p>
+    <p>轮数不固定：任意一叠建筑耗尽，或文明卡不足以填满 4 个展示位，都会在当轮喂食后提前结束。2 人局只用 2 叠建筑，因此 14 张建筑被买完就会触发终局。</p>
+  </section>
+
+  <section class="panel">
+    <h2>二、每轮三阶段</h2>
+    <div class="grid">
+      <div>
+        <h3>1. 放置工人</h3>
+        <p>从先手开始，每回合把 <b>1 个或更多工人</b>放到 <b>恰好一个</b>地点；一个玩家可以在自己的多次放置中把工人分散到不同地点，但每次行动只能选一个地点。手里还有工人且存在合法位置时就必须放，不能主动跳过。所有玩家的工人放完后进入结算。</p>
+        <p>2–3 人局：工具坊 / 成长小屋 / 农田三个村庄点，每轮最多占用其中 <b>2 个</b>，第三个封锁。3 人局资源点最多允许 2 名不同玩家；2 人局每个资源点只允许 1 名玩家；4 人局不限玩家数。资源点合计最多 7 个工人，猎场不限人数。</p>
+        <p>工具坊、农田必须恰好 1 个工人；成长小屋必须恰好 2 个工人；文明卡展示位和每叠建筑各恰好 1 个工人。放置位置不合法会被引擎拒绝。</p>
+      </div>
+      <div>
+        <h3>2. 结算工人</h3>
+        <p>从先手开始，按顺序逐个玩家结算；结算不改变本轮已放置记录，工人于下一轮开始时全部回手（工人剩余数重置为工人总数）。</p>
+        <p>结算顺序固定为：森林 → 砖坑 → 采石场 → 河流 → 猎场 → 工具坊 → 成长小屋 → 农田 → 文明卡展示位 0–3 → 建筑叠 0–N。玩家不能自行调整采集顺序。</p>
+        <p>资源/狩猎每名工人掷 1 骰；工具会在结算时自动投入，只有能让“总点数 ÷ 除数”的商变大时才会用掉。每件永久工具每轮只能用一次；一次性工具只在当轮有效，轮末清空。</p>
+        <h3>3. 喂食</h3>
+        <p>每名工人需要 1 食物；农业等级提供等量免费食物。不足部分用任意资源 1:1 补；仍不足则 <b>−10 分</b>，且只扣一次。详细边界见第六节。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>三、地点与收益</h2>
+    <table>
+      <tr><th>地点</th><th>人数</th><th>收益</th></tr>
+      <tr><td>工具坊</td><td>恰好 1</td><td>获得 1 个工具或升级现有工具（1→2→3→4）</td></tr>
+      <tr><td>成长小屋</td><td>恰好 2（同族）</td><td>获得 1 个新工人，下轮可用（上限 10）</td></tr>
+      <tr><td>农田</td><td>恰好 1</td><td>农业 +1（上限 10）</td></tr>
+      <tr><td>猎场</td><td>不限</td><td>总点数 ÷2，向下取整，得食物</td></tr>
+      <tr><td>森林</td><td>合计 ≤7</td><td>总点数 ÷3，向下取整，得木</td></tr>
+      <tr><td>砖坑</td><td>合计 ≤7</td><td>总点数 ÷4，向下取整，得砖</td></tr>
+      <tr><td>采石场</td><td>合计 ≤7</td><td>总点数 ÷5，向下取整，得石</td></tr>
+      <tr><td>河流</td><td>合计 ≤7</td><td>总点数 ÷6，向下取整，得金</td></tr>
+      <tr><td>文明卡</td><td>每个展示位 1</td><td>支付 1–4 个任意资源（食物除外），获得该卡</td></tr>
+      <tr><td>建筑</td><td>每叠 1</td><td>支付资源购买该叠顶部建筑，立即得分并翻出下一张</td></tr>
+    </table>
+    <ul>
+      <li>采集的除数是固定的：食物 2、木 3、砖 4、石 5、金 6。工具点数加在总点数上，不会改变除数。</li>
+      <li>工具坊的 addTool 优先升级现有未满 4 的工具，只有在没有可升级工具时才新增 1 件工具。</li>
+      <li>成长小屋带来的是工人总数 +1，新工人不在当轮使用，而是下一轮开始时进入可用工人。</li>
+      <li>文明卡费用 = 4 − 展示位下标：最左 4 个资源，最右 1 个资源。只能用木/砖/石/金支付，食物不能付。</li>
+      <li>建筑费用同样只用木/砖/石/金；结算时只要资源足够就自动购买，不能主动放弃；资源不足则什么也不发生，工人照样回手。</li>
+      <li>同一名玩家可以在一轮里占用多个不同的文明卡展示位或多个不同建筑叠，但每个展示位 / 每叠各自只能有 1 个工人。</li>
+    </ul>
+  </section>
+
+  <section class="panel">
+    <h2>四、文明卡与建筑</h2>
+    <p><b>36 张文明卡</b>按上半部分分为：10 张即时收益卡（木/砖/石/金 +1、工具 +1、农业 +1 循环）、7 张固定食物（1、2、3、4、5、7、1）、5 张固定资源包（石 1、石 2、金 1、砖 1、木 2）、3 张骰点资源（木/石/金，掷 2 骰后按对应除数结算）、3 张立即 3 分、3 张一次性工具 +2/+3/+4、2 张永久工具 +1、2 张永久农业 +1、1 张秘藏（上半无即时效果）。</p>
+    <p>每张卡下半是终局计分：8 种文化符号（书写、陶艺、医疗、织造、音乐、艺术、运输、日晷）或 4 种乘数（农夫、工具匠、建房者、萨满）。重复符号可以组成第二、第三套。</p>
+    <p>文明卡购买费用 = 展示位从右往左 1–4 个资源。买走后展示位留空，轮末补满；若剩余文明卡不足以填满 4 个展示位，对局在当轮喂食后立即结束。文明卡结算按展示位 0–3 的顺序执行，同一玩家在同一轮可以购买多张不同展示位的卡。</p>
+    <p><b>28 张建筑</b>按 4 叠 ×7 摆放。2/3/4 人分别使用 2/3/4 叠。任一叠耗尽时，本轮喂食后结束。每叠只能购买顶部建筑，买走后立即得分并翻出下一张；建筑分 6–18 分不等，费用全部是木/砖/石/金。2 人局只有 2 叠，因此 14 张建筑被买完就会终局。</p>
+  </section>
+
+  <section class="panel">
+    <h2>五、终局计分</h2>
+    <div class="formula">总分 = 建筑/即时分 + 文化符号分 + 乘数分 + 资源分</div>
+    <ul>
+      <li><b>建筑/即时分</b>：购买建筑与 +3 分卡时已实时计入记分板，终局不重复计算。</li>
+      <li><b>文化符号</b>：每套不同符号 n 个得 n² 分；重复符号组成第二、第三套。例：5 个不同符号一套 + 另外 2 个不同符号一套 = 25 + 4 = 29。</li>
+      <li><b>农夫</b>：数量 × 农业等级。</li>
+      <li><b>工具匠</b>：数量 × 全部永久工具点数总和；一次性工具不计入。</li>
+      <li><b>建房者</b>：数量 × 已建建筑数。</li>
+      <li><b>萨满</b>：数量 × 当前工人总数。</li>
+      <li><b>剩余资源</b>：每个木/砖/石/金 1 分；食物 0 分。</li>
+    </ul>
+    <p>示例：农业 4、工人 7、永久工具合计 5、已建建筑 3 张、剩余资源 6 个；乘数卡为农夫 2、工具匠 1、建房者 1、萨满 1。乘数分 = 2×4 + 1×5 + 1×3 + 1×7 = 23；再叠加建筑分、文化符号分与资源分 6。</p>
+    <p>总分最高者胜。平局比较：农业等级 + 工具点数 + 工人总数，高者胜；仍平则共享胜利。</p>
+  </section>
+
+  <section class="panel">
+    <h2>六、喂食与资源边界</h2>
+    <ul>
+      <li>需要食物 = max(0, 工人总数 − 农业等级)。农业是“免费食物”，不是食物库存；农业提升后当轮喂食立即生效。</li>
+      <li>先吃食物；不足部分用任意木/砖/石/金 1:1 补，引擎自动从数量最多的资源开始扣，玩家不能指定扣哪种。</li>
+      <li>仍不足：扣 10 分，且只扣一次，不按缺口食物数重复扣；分数最低为 0，不会变成负数。</li>
+      <li>剩余食物没有终局分数；食物只用于喂食。剩余的木/砖/石/金每个 1 分。</li>
+      <li>喂食结束后才检查建筑叠与文明卡是否触发终局；因此最后一轮仍能正常采集、购买与建造。</li>
+    </ul>
+  </section>
+
+  <section class="panel">
+    <h2>七、常见误判与易错点</h2>
+    <ol>
+      <li>放置阶段不能主动跳过：只要还有工人且存在合法位置，就必须继续放置。</li>
+      <li>成长小屋必须一次放恰好 2 个工人；工具坊、农田必须恰好 1 个；资源点可以一次放多个，但受合计 7 个工人的容量限制。</li>
+      <li>2 人局资源点不能与对手共用；3 人局最多 2 名玩家；4 人局才完全不限玩家数。</li>
+      <li>工具不是手动挑掷骰：结算按固定顺序自动投入，只有能提高商时才会用掉；每件永久工具每轮一次。</li>
+      <li>文明卡费用从右往左是 1–4，不是固定 1 个；食物不能用来付卡费。</li>
+      <li>建筑只要资源够就自动购买，不能主动放弃；资源不够则工人白放，不会退款。</li>
+      <li>喂食不足只罚 10 分一次，且分数不会低于 0；剩余食物不加分。</li>
+      <li>终局可能由“建筑叠耗尽”或“文明卡不足 4 张”提前触发，不一定是固定轮数。</li>
+      <li>工具匠乘数只算永久工具；一次性工具不加分。文化符号按套计分，不成套的重复符号不能单独算分。</li>
+    </ol>
+  </section>
+
+  <section class="panel">
+    <h2>八、B 站教程来源</h2>
+    <p class="muted">以下为公开视频页文字信息（标题/简介），本实现只读取文字，不截图、不做 OCR。</p>
+    <ul class="src">
+      <li><a href="https://www.bilibili.com/video/BV1v6gh6kESo" target="_blank" rel="noopener">石器时代｜规则讲解+试玩演示</a> — 零门槛桌游（2–4 人德式工放）</li>
+      <li><a href="https://www.bilibili.com/video/BV1kt411P7Px" target="_blank" rel="noopener">逸马的桌遊小教室-石器時代 Stone Age-桌遊教學#138(上)</a> — 南风丶小草</li>
+      <li><a href="https://www.bilibili.com/video/BV1y64y1m7nF" target="_blank" rel="noopener">【桌游】石器时代十周年纪念版-教学（二）游戏流程</a> — 湖南株洲Battle俱乐部</li>
+      <li><a href="https://www.bilibili.com/video/BV1r54y1j77X" target="_blank" rel="noopener">【汤米酱】桌游教学133 Stone Age 石器时代</a> — TommyJiang</li>
+    </ul>
+  </section>
+
+  <section class="panel">
+    <h2>九、实现口径</h2>
+    <p><span class="tag">权威引擎</span>页面、单测、联机服务器共用同一份 <code>engine.js</code>，非法动作抛错，AI 只从合法动作中选择。</p>
+    <p><span class="tag">可复现</span>洗牌复用 <code>games/shared/shuffle.js</code> 的 seeded Fisher-Yates；同一 seed 的牌序与骰序可复现。</p>
+    <p><span class="tag">结算辅助</span>为缩短回合，工具升级与“资源足够时购买顶部建筑”由引擎自动执行；喂食扣资源也自动从最大资源堆开始扣。玩家仍完全掌控工人分配、采集与文明卡购买时机。喂食、终局计分、建筑叠/文明卡结束条件均按基础版规则执行。</p>
+    <p><span class="tag">顺序固定</span>采集顺序、文明卡槽位顺序与建筑叠顺序都由引擎固定，玩家不能调整；这会影响工具在哪个采集点被自动用掉。</p>
+    <p><span class="tag">安全上限</span>引擎保留 5000 回合的安全上限；正常对局由建筑叠耗尽或文明卡不足 4 张终止。</p>
+  </section>
+</div>
+</body>
+</html>

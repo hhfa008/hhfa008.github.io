@@ -1,0 +1,796 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d1520">
+<meta name="description" content="飞行棋精品版：真实 52 格四色环形跑道、每色 13 格、4 座基地、4 条 6 格归航跑道与中心终点。掷 6 起飞、同色跳 4、虚线捷径 +12、撞机回基地、同格叠放、精确终点，三档 AI 与 2–4 人联机。">
+<meta property="og:title" content="飞行棋 · 52 格彩环 · 4 色 16 架">
+<meta property="og:description" content="真实 52 格彩环、4 基地、4 条 6 格归航道；掷 6 起飞、同色跳 4、撞机回基地、精确终点。三档 AI 与 2–4 人联机。">
+<meta property="og:type" content="website">
+<meta property="og:image" content="assets/og.webp">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<title>飞行棋 · 精品桌游 · 52 格彩环</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230d1520'/%3E%3Ccircle cx='32' cy='32' r='24' fill='none' stroke='%23e8c07a' stroke-width='3'/%3E%3Cpath d='M32 13l5 13 13 6v4l-11-3-2 10 5 5v3l-10-3-10 3v-3l5-5-2-10-11 3v-4l13-6z' fill='%23e8c07a'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --art-board:url("../../assets/art/premium/aeroplane/board-gloss.webp");
+    --art-felt:url("../../assets/art/premium/aeroplane/table-felt.webp");
+    --art-dice:url("../../assets/art/premium/aeroplane/dice.webp");
+    --art-red:url("../../assets/art/premium/aeroplane/plane-token-red.webp");
+    --art-yellow:url("../../assets/art/premium/aeroplane/plane-token-yellow.webp");
+    --art-blue:url("../../assets/art/premium/aeroplane/plane-token-blue.webp");
+    --art-green:url("../../assets/art/premium/aeroplane/plane-token-green.webp");
+    --font-serif:"Songti SC","Iowan Old Style","Palatino Linotype",Georgia,serif;
+    --font-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    --bg:#0b111a;--bg2:#121d2b;--panel:rgba(18,29,42,.94);--panel2:rgba(28,43,60,.8);
+    --line:rgba(232,192,122,.28);--line2:rgba(232,192,122,.55);
+    --ink:#f4ecdc;--muted:#b9c4cf;--soft:#8494a4;
+    --gold:#e8c07a;--gold2:#f6dfae;--red:#d5443c;--yellow:#e8b33c;--blue:#3e78c8;--green:#3d9b68;
+    --sky:#8cc6ff;--danger:#ff9b88;--win:#7be0b0;
+    --radius:18px;--tap:48px;
+    --shadow:0 22px 50px rgba(0,0,0,.5);
+  }
+  *{box-sizing:border-box}
+  html,body{min-height:100%}
+  body{
+    margin:0;color:var(--ink);font:16px/1.5 var(--font-sans);
+    background:
+      radial-gradient(900px 520px at 50% -16%,rgba(50,92,122,.38),transparent 62%),
+      radial-gradient(700px 460px at 4% 106%,rgba(48,38,22,.5),transparent 64%),
+      linear-gradient(168deg,var(--bg2),var(--bg) 66%);
+    background-color:var(--bg);background-attachment:fixed;
+    -webkit-tap-highlight-color:transparent;
+  }
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.14;
+    background:var(--art-felt) center/cover no-repeat;mix-blend-mode:soft-light;
+  }
+  a{color:var(--gold);text-decoration:none}
+  button{font:inherit;color:inherit}
+  .wrap{position:relative;z-index:1;max-width:760px;margin:0 auto;padding:10px 12px 38px}
+  .top{display:flex;align-items:center;gap:8px;padding:2px 0 10px}
+  .top .brand{flex:1;min-width:0;text-align:center}
+  .brand h1{margin:0;font-family:var(--font-serif);font-weight:700;font-size:21px;letter-spacing:.16em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .brand p{margin:1px 0 0;font-size:12px;color:var(--muted);letter-spacing:.07em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .nav-pill{
+    display:inline-flex;align-items:center;justify-content:center;min-width:var(--tap);min-height:var(--tap);
+    padding:0 12px;border-radius:13px;border:1px solid var(--line);background:var(--panel);
+    color:var(--ink);font-size:13.5px;font-weight:700;white-space:nowrap;
+  }
+  .nav-pill:active{transform:translateY(1px)}
+  .nav-pill:focus-visible,button:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--sky);outline-offset:2px}
+
+  .players{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:0 0 8px}
+  .pchip{
+    min-width:0;padding:6px 7px;border-radius:12px;border:1px solid rgba(255,255,255,.09);
+    background:linear-gradient(160deg,rgba(28,43,60,.82),rgba(12,20,30,.9));
+    display:flex;flex-direction:column;gap:1px;
+  }
+  .pchip.turn{border-color:var(--gold);box-shadow:inset 0 0 0 1px rgba(232,192,122,.55),0 4px 12px rgba(0,0,0,.24)}
+  .pchip.out{opacity:.55}
+  .pchip .nm{display:flex;align-items:center;gap:5px;min-width:0;font-size:12.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pchip .dot{width:10px;height:10px;border-radius:50%;flex:none;box-shadow:0 0 0 2px rgba(255,255,255,.14)}
+  .pchip .dot.c0{background:var(--red)}.pchip .dot.c1{background:var(--yellow)}.pchip .dot.c2{background:var(--blue)}.pchip .dot.c3{background:var(--green)}
+  .pchip .st{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  .board-shell{
+    position:relative;border-radius:24px;padding:10px;border:1px solid rgba(232,192,122,.36);
+    background:
+      linear-gradient(155deg,rgba(24,40,56,.32),rgba(8,14,22,.72)),
+      var(--art-board) center/cover no-repeat;
+    box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,.14),inset 0 -2px 0 rgba(0,0,0,.42);
+    overflow:hidden;
+  }
+  .board-shell::before{content:"";position:absolute;inset:6px;border:1px solid rgba(232,192,122,.16);border-radius:19px;pointer-events:none;z-index:8}
+  .board{position:relative;width:100%;aspect-ratio:1/1;isolation:isolate;border-radius:18px;overflow:hidden;background:radial-gradient(circle at 50% 46%,rgba(26,44,60,.34),rgba(7,12,19,.5))}
+  .cell{position:absolute;border-radius:22%;border:1px solid rgba(255,255,255,.13);box-shadow:inset 0 1px 0 rgba(255,255,255,.18),inset 0 -1px 0 rgba(0,0,0,.3);z-index:2}
+  .ring::before,.lane::before{content:"";position:absolute;inset:0;border-radius:inherit;background:var(--art-board) center/cover;opacity:.20;mix-blend-mode:soft-light;pointer-events:none}
+  .ring,.lane{box-shadow:inset 0 2px 0 rgba(255,255,255,.24),inset 0 -3px 4px rgba(0,0,0,.34),0 1px 2px rgba(0,0,0,.24)}
+  .ring.c0{background:linear-gradient(150deg,#e05a50,#a92a23)}
+  .ring.c1{background:linear-gradient(150deg,#f0c85a,#b88718)}
+  .ring.c2{background:linear-gradient(150deg,#5f97e2,#24539b)}
+  .ring.c3{background:linear-gradient(150deg,#5fbe8a,#1f7047)}
+  .ring.start{box-shadow:inset 0 0 0 2px rgba(255,248,225,.78),inset 0 2px 0 rgba(255,255,255,.24),inset 0 -3px 4px rgba(0,0,0,.34)}
+  .cell.target{box-shadow:inset 0 0 0 3px #8bf0c0,0 0 12px rgba(123,224,176,.55);z-index:7}
+  .cell.target::after{content:"";position:absolute;inset:32%;border-radius:50%;background:rgba(255,255,255,.92);box-shadow:0 0 8px rgba(255,255,255,.8)}
+  .lane{opacity:.9;border-style:dashed;border-color:rgba(255,255,255,.34)}
+  .lane.l0{background:linear-gradient(150deg,rgba(213,68,60,.82),rgba(120,26,22,.72))}
+  .lane.l1{background:linear-gradient(150deg,rgba(232,179,60,.82),rgba(128,88,8,.72))}
+  .lane.l2{background:linear-gradient(150deg,rgba(62,120,200,.82),rgba(20,52,104,.72))}
+  .lane.l3{background:linear-gradient(150deg,rgba(61,155,104,.82),rgba(16,72,45,.72))}
+  .base{position:absolute;border-radius:16%;border:1px dashed rgba(255,255,255,.20);background:rgba(8,16,26,.30);z-index:1;display:flex;align-items:flex-start;justify-content:center;padding-top:2px;overflow:hidden}
+  .base::before{content:"";position:absolute;inset:0;background:var(--art-board) center/cover;opacity:.20;mix-blend-mode:soft-light;pointer-events:none}
+  .base.b0{background:radial-gradient(circle at 30% 24%,rgba(213,68,60,.17),rgba(80,20,18,.05) 64%,transparent)}
+  .base.b1{background:radial-gradient(circle at 70% 24%,rgba(232,179,60,.17),rgba(92,62,6,.05) 64%,transparent)}
+  .base.b2{background:radial-gradient(circle at 70% 76%,rgba(62,120,200,.17),rgba(14,38,80,.05) 64%,transparent)}
+  .base.b3{background:radial-gradient(circle at 30% 76%,rgba(61,155,104,.17),rgba(10,56,34,.05) 64%,transparent)}
+  .base .bl{position:relative;margin-top:3px;font-size:12px;font-weight:800;letter-spacing:.06em;color:rgba(255,255,255,.72);text-shadow:0 1px 2px rgba(0,0,0,.55);pointer-events:none;white-space:nowrap}
+  .finish-zone{position:absolute;z-index:3;border-radius:18%;border:1px solid rgba(246,223,174,.72);background:radial-gradient(circle at 50% 44%,rgba(246,223,174,.32),rgba(90,70,30,.22) 70%,rgba(8,14,22,.4));box-shadow:inset 0 0 18px rgba(246,223,174,.24);display:grid;place-items:center;pointer-events:none}
+  .finish-zone span{font-family:var(--font-serif);font-size:12px;font-weight:700;letter-spacing:.08em;color:var(--gold2);text-shadow:0 1px 3px rgba(0,0,0,.7)}
+  .plane-layer{position:absolute;inset:0;z-index:6;pointer-events:none}
+  .plane{
+    position:absolute;border-radius:0;background-size:contain;background-position:center;background-repeat:no-repeat;
+    border:0;box-shadow:none;filter:drop-shadow(0 2px 2px rgba(0,0,0,.58));
+    pointer-events:auto;cursor:default;transition:transform .16s ease,filter .16s ease;z-index:6;
+  }
+  .plane.p0{color:var(--red)}
+  .plane.p1{color:var(--yellow)}
+  .plane.p2{color:var(--blue)}
+  .plane.p3{color:var(--green)}
+  .plane svg{width:100%;height:100%;display:block}
+  .plane.movable{cursor:pointer;filter:drop-shadow(0 0 4px rgba(123,224,176,.95)) drop-shadow(0 2px 3px rgba(0,0,0,.62));z-index:9}
+  .plane.hint{filter:drop-shadow(0 0 5px rgba(140,198,255,.95)) drop-shadow(0 2px 3px rgba(0,0,0,.6));z-index:10}
+  .plane.done{opacity:.94;filter:drop-shadow(0 0 3px rgba(246,223,174,.92))}
+  .plane:active{transform:scale(.94)}
+
+  .status{display:flex;align-items:center;gap:9px;min-height:54px;margin:9px 0 0;padding:7px 10px;border-radius:14px;border:1px solid var(--line);background:var(--panel)}
+  .die{position:relative;width:44px;height:44px;flex:none;border-radius:10px;background:linear-gradient(145deg,#fffdf7,#dfe6ea),var(--art-dice) center/cover no-repeat;border:1px solid rgba(255,255,255,.5);box-shadow:0 4px 0 rgba(0,0,0,.28),inset 0 1px 0 #fff}
+  .die i{position:absolute;width:7px;height:7px;border-radius:50%;background:#17202a;transform:translate(-50%,-50%)}
+  .die.empty{opacity:.45}
+  .status .txt{min-width:0;flex:1;font-size:13px;font-weight:700;line-height:1.35}
+  .status .txt b{color:var(--gold)}
+  .status .sub{display:block;font-size:12px;color:var(--muted);font-weight:600;margin-top:1px}
+  .streak{flex:none;font-size:12px;font-weight:800;color:var(--gold);border:1px solid var(--line);border-radius:999px;padding:2px 8px;background:rgba(0,0,0,.2)}
+
+  .controls{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:10px}
+  .controls button{
+    min-height:52px;border-radius:13px;border:1px solid var(--line);
+    background:linear-gradient(160deg,var(--panel2),var(--panel));font-size:13.5px;font-weight:800;
+    cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0 6px;touch-action:manipulation;
+    box-shadow:0 4px 0 rgba(0,0,0,.26);
+  }
+  .controls button:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(0,0,0,.26)}
+  .controls button.primary{background:linear-gradient(160deg,var(--gold2),#c8993f);color:#241708;border-color:transparent}
+  .controls button:disabled{opacity:.42;cursor:default;transform:none}
+
+  .options{display:flex;flex-wrap:wrap;gap:8px;margin-top:9px;align-items:center}
+  .opt-label{font-size:12px;color:var(--muted);font-weight:800;margin-right:1px}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:11px;overflow:hidden;background:rgba(0,0,0,.18)}
+  .seg button{min-height:44px;padding:0 11px;border:0;background:transparent;color:var(--muted);font-size:12.5px;font-weight:800;cursor:pointer}
+  .seg button[aria-pressed="true"]{background:var(--gold);color:#241708}
+
+  .lower{display:grid;grid-template-columns:1.05fr .95fr;gap:10px;margin-top:11px}
+  .card{border:1px solid var(--line);border-radius:15px;background:var(--panel);padding:10px 12px;min-width:0}
+  .card h2{margin:0 0 7px;font-size:12px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase}
+  .log{list-style:none;margin:0;padding:0;max-height:148px;overflow:auto;display:grid;gap:1px}
+  .log li{font-size:12.5px;color:var(--muted);padding:3px 0;border-bottom:1px dashed rgba(232,192,122,.14);line-height:1.4}
+  .log li:last-child{color:var(--ink);border-bottom:0}
+  .log li::before{content:"›";color:var(--gold);margin-right:5px;font-weight:900}
+  .tips{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+  .tips li{font-size:12.5px;color:var(--muted);padding-left:15px;position:relative;line-height:1.45}
+  .tips li::before{content:"·";position:absolute;left:3px;top:-1px;color:var(--gold);font-size:19px;line-height:1}
+
+  .banner{margin-top:11px;padding:13px 14px;border-radius:16px;text-align:center;border:1px solid rgba(232,192,122,.44);background:linear-gradient(160deg,rgba(232,192,122,.16),rgba(18,29,42,.94))}
+  .banner[hidden]{display:none}
+  .banner h3{margin:0 0 4px;font-family:var(--font-serif);font-size:22px;letter-spacing:.08em}
+  .banner p{margin:0;font-size:12.5px;color:var(--muted);line-height:1.5}
+  .banner .row{display:flex;gap:8px;justify-content:center;margin-top:9px;flex-wrap:wrap}
+  .banner button{min-height:46px;padding:0 16px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);font-weight:800;font-size:13.5px;cursor:pointer}
+
+  .foot{margin-top:14px;font-size:12px;color:var(--soft);text-align:center;line-height:1.8}
+  .foot a{display:inline-flex;align-items:center;min-height:44px;padding:0 7px;font-weight:700}
+
+  @media (prefers-reduced-motion: reduce){*{animation-duration:.01ms !important;transition-duration:.01ms !important}}
+  @media (max-width:420px){
+    .wrap{padding:8px 9px 30px}
+    .brand h1{font-size:19px}
+    .board-shell{padding:7px;border-radius:20px}
+    .board-shell::before{inset:4px;border-radius:16px}
+    .lower{grid-template-columns:1fr}
+    .players{grid-template-columns:repeat(2,minmax(0,1fr))}
+  }
+  @media (max-width:350px){
+    .controls{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .nav-pill{min-width:46px;padding:0 8px;font-size:12.5px}
+    .brand h1{font-size:17px}
+    .brand p{font-size:12px}
+    .status .txt{font-size:12.5px}
+  }
+/* safe-area: keep the original bottom padding, clear the iOS home indicator */
+body{padding-bottom:env(safe-area-inset-bottom)}
+</style>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/aeroplane-premium/">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="nav-pill" href="../../index.html" aria-label="返回游戏大厅">← 大厅</a>
+    <div class="brand">
+      <h1>飞 行 棋</h1>
+      <p>52 格彩环 · 4 基地 · 16 架飞机</p>
+    </div>
+    <a class="nav-pill" href="online.html" aria-label="进入联机房间">联机</a>
+  </header>
+
+  <main>
+<div style="display:flex;justify-content:flex-end;margin:0 0 8px"><button class="primary" type="button" style="min-height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(255,255,255,.18);background:linear-gradient(160deg,#e8c07a,#bd8f45);color:#241708;font-weight:800;font-size:14px" onclick="var b=document.getElementById('newBtn');if(b)b.click();">新对局</button></div>
+
+    <section class="players" id="players" aria-label="玩家进度"></section>
+
+    <section class="board-shell" aria-label="飞行棋棋盘">
+      <div class="board" id="board" role="grid" aria-label="14×14 棋盘：52 格环形跑道、4 座基地、4 条 6 格归航跑道与中心终点区">
+        <div class="plane-layer" id="planeLayer"></div>
+      </div>
+    </section>
+
+    <div class="status" aria-live="polite">
+      <div class="die empty" id="die" aria-label="骰子"></div>
+      <div class="txt" id="statusText">红方先行：点击“掷骰”开始。
+        <span class="sub" id="subText">掷出 6 才能起飞；落在本色格跳 4 格。</span>
+      </div>
+      <span class="streak" id="streak" hidden>连 6 ×0</span>
+    </div>
+
+    <section class="controls" aria-label="对局操作">
+      <button id="rollBtn" class="primary" type="button">掷骰</button>
+      <button id="hintBtn" type="button">提示</button>
+      <button id="soundBtn" type="button" aria-pressed="true">音效 开</button>
+      <button id="newBtn" type="button">新对局</button>
+    </section>
+
+    <div class="options">
+      <span class="opt-label">人数</span>
+      <div class="seg" role="group" aria-label="玩家人数">
+        <button type="button" data-players="2" aria-pressed="false">2 人</button>
+        <button type="button" data-players="3" aria-pressed="false">3 人</button>
+        <button type="button" data-players="4" aria-pressed="true">4 人</button>
+      </div>
+      <span class="opt-label">AI 难度</span>
+      <div class="seg" role="group" aria-label="AI 难度">
+        <button type="button" data-level="1" aria-pressed="false">入门</button>
+        <button type="button" data-level="2" aria-pressed="true">标准</button>
+        <button type="button" data-level="3" aria-pressed="false">高手</button>
+      </div>
+    </div>
+
+    <section class="lower">
+      <div class="card">
+        <h2>对局记录</h2>
+        <ul class="log" id="log"></ul>
+      </div>
+      <div class="card">
+        <h2>三条实战原则</h2>
+        <ul class="tips" id="tips"></ul>
+      </div>
+    </section>
+
+    <div class="banner" id="banner" hidden>
+      <h3 id="bannerTitle">红方获胜</h3>
+      <p id="bannerText"></p>
+      <div class="row">
+        <button id="bannerNew" type="button">再来一局</button>
+        <a class="nav-pill" href="online.html">去联机</a>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:11px">
+      <h2>规则速览</h2>
+      <ul class="tips" id="rules"></ul>
+    </div>
+  </main>
+
+  <footer class="foot">
+    <a href="rules.html">完整规则与常见问题</a> · <a href="online.html">2–4 人联机</a><br>
+    纯前端本地素材 · 无外部请求 · 进度只存本机
+  </footer>
+</div>
+
+<script src="../../shared/store.js"></script>
+<script src="../../shared/sfx.js"></script>
+<script src="engine.js"></script>
+<script src="data.js"></script>
+<script>
+(function () {
+  'use strict';
+  var E = window.AeroplanePremiumEngine;
+  var D = window.AeroplanePremiumData;
+  var $ = function (id) { return document.getElementById(id); };
+  var board = $('board');
+  var planeLayer = $('planeLayer');
+  var state = null;
+  var players = 4;
+  var level = 2;
+  var soundOn = true;
+  var busy = false;
+  var aiTimer = null;
+  var hintPlane = null;
+  var lastActionKey = '';
+
+  function storeGet(key, fallback) {
+    try { return window.Store ? window.Store.get(key, fallback) : fallback; } catch (e) { return fallback; }
+  }
+  function storeSet(key, value) {
+    try { if (window.Store) window.Store.set(key, value); } catch (e) { /* private mode */ }
+  }
+  function beep(name) {
+    if (!soundOn || !window.Sfx || typeof window.Sfx.play !== 'function') return;
+    try { window.Sfx.play(name, { volume: 0.36 }); } catch (e) { /* audio unavailable */ }
+  }
+  function randomSeed() {
+    try {
+      var a = new Uint32Array(1);
+      window.crypto.getRandomValues(a);
+      return a[0] >>> 0;
+    } catch (e) { return (Date.now() ^ 0x9e3779b9) >>> 0; }
+  }
+  function escapeHtml(text) {
+    return String(text).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+  function pct(v) { return (v / 14 * 100).toFixed(4) + '%'; }
+  function place(el, c, r, w, h) {
+    el.style.left = pct(c); el.style.top = pct(r);
+    el.style.width = pct(w); el.style.height = pct(h);
+  }
+  function colorName(seat) { return D.COLORS[seat % 4].zh + '方'; }
+
+  function buildStaticBoard() {
+    var i, j;
+    var fragment = document.createDocumentFragment();
+    for (i = 0; i < D.RING_CELLS.length; i++) {
+      var ring = document.createElement('div');
+      var cell = D.RING_CELLS[i];
+      ring.className = 'cell ring c' + D.RING_COLORS[i] + (D.START_RING.indexOf(i) >= 0 ? ' start' : '');
+      ring.setAttribute('role', 'gridcell');
+      ring.removeAttribute('tabindex');
+      ring.setAttribute('data-ring', String(i));
+      ring.setAttribute('aria-label', '环形跑道第 ' + (i + 1) + ' 格，' + D.COLORS[D.RING_COLORS[i]].zh + '色');
+      place(ring, cell[0], cell[1], 1, 1);
+      fragment.appendChild(ring);
+    }
+    for (i = 0; i < 4; i++) {
+      for (j = 0; j < 6; j++) {
+        var lane = document.createElement('div');
+        var lc = D.LANES[i][j];
+        lane.className = 'cell lane l' + i;
+        lane.setAttribute('role', 'gridcell');
+        lane.removeAttribute('tabindex');
+        lane.setAttribute('data-lane', i + '-' + j);
+        lane.setAttribute('aria-label', D.COLORS[i].zh + '方归航跑道第 ' + (j + 1) + ' 格');
+        place(lane, lc[0], lc[1], 1, 1);
+        fragment.appendChild(lane);
+      }
+      var base = document.createElement('div');
+      var b = D.BASES[i];
+      base.className = 'base b' + i;
+      base.setAttribute('data-base', String(i));
+      place(base, b.c0, b.r0, b.c1 - b.c0 + 1, b.r1 - b.r0 + 1);
+      var label = document.createElement('span');
+      label.className = 'bl';
+      label.textContent = D.COLORS[i].zh + '方基地';
+      base.appendChild(label);
+      fragment.appendChild(base);
+    }
+    var fz = document.createElement('div');
+    fz.className = 'finish-zone';
+    fz.id = 'finishZone';
+    place(fz, 6, 6, 2, 2);
+    fz.setAttribute('aria-label', '中心终点区');
+    var fspan = document.createElement('span');
+    fspan.textContent = '终点';
+    fz.appendChild(fspan);
+    fragment.appendChild(fz);
+    board.insertBefore(fragment, planeLayer);
+    board.addEventListener('click', onBoardClick);
+    board.addEventListener('keydown', onBoardKey);
+  }
+
+  function legalActions() {
+    if (!state || state.phase !== 'playing' || state.turn !== 0) return [];
+    if (state.awaitRoll) return [];
+    return E.planeActions(state).filter(function (a) { return a.k === 'move'; });
+  }
+
+  function clearTargets() {
+    var marked = board.querySelectorAll('.target');
+    for (var i = 0; i < marked.length; i++) marked[i].classList.remove('target');
+  }
+
+  function markTargets(actions) {
+    clearTargets();
+    for (var i = 0; i < actions.length; i++) {
+      var cell = actions[i].toCell;
+      var el = null;
+      if (!cell) continue;
+      if (cell.kind === 'ring') el = board.querySelector('[data-ring="' + cell.index + '"]');
+      else if (cell.kind === 'lane') el = board.querySelector('[data-lane="' + (state.turn % 4) + '-' + cell.index + '"]');
+      else if (cell.kind === 'finish') el = $('finishZone');
+      if (el) el.classList.add('target');
+    }
+  }
+
+  function groupOffsets(entries) {
+    var groups = {};
+    entries.forEach(function (entry) {
+      if (entry.key == null) return;
+      if (!groups[entry.key]) groups[entry.key] = [];
+      groups[entry.key].push(entry);
+    });
+    Object.keys(groups).forEach(function (key) {
+      var list = groups[key];
+      for (var i = 0; i < list.length; i++) {
+        list[i].dx = (i - (list.length - 1) / 2) * 0.16;
+        list[i].dy = (i % 2 === 0 ? -1 : 1) * (list.length > 1 ? 0.08 : 0);
+      }
+    });
+  }
+
+  function renderPlanes() {
+    planeLayer.innerHTML = '';
+    if (!state) return;
+    var actions = legalActions();
+    var movable = {};
+    actions.forEach(function (a) { movable[a.plane] = true; });
+    var entries = [];
+    state.players.forEach(function (player) {
+      for (var p = 0; p < 4; p++) {
+        var pos = player.planes[p];
+        var entry = { seat: player.seat, plane: p, pos: pos, key: null, c: 0, r: 0, w: 0.78, h: 0.78, done: false };
+        if (pos === E.HANGAR || pos < 0) {
+          var slot = D.BASES[player.seat].slots[p];
+          entry.c = slot[0] + 0.11; entry.r = slot[1] + 0.11; entry.w = 0.78; entry.h = 0.78;
+        } else if (pos <= 51) {
+          var ring = D.RING_CELLS[E.globalRing(player.seat, pos)];
+          entry.c = ring[0] + 0.11; entry.r = ring[1] + 0.11; entry.w = 0.78; entry.h = 0.78;
+          entry.key = 'r' + ring[0] + ',' + ring[1];
+        } else if (pos <= 56) {
+          var lane = D.LANES[player.seat % 4][pos - 52];
+          entry.c = lane[0] + 0.11; entry.r = lane[1] + 0.11; entry.w = 0.78; entry.h = 0.78;
+          entry.key = 'l' + player.seat + ',' + lane[0] + ',' + lane[1];
+        } else {
+          var quad = D.CENTER.cells[player.seat % 4];
+          var sub = p % 4;
+          entry.c = quad[0] + (sub % 2) * 0.27 + 0.1;
+          entry.r = quad[1] + Math.floor(sub / 2) * 0.27 + 0.1;
+          entry.w = 0.22; entry.h = 0.22;
+          entry.done = true;
+        }
+        entries.push(entry);
+      }
+    });
+    groupOffsets(entries);
+    entries.forEach(function (entry) {
+      var el = document.createElement('div');
+      el.className = 'plane p' + (entry.seat % 4) + (entry.done ? ' done' : '');
+      if (entry.seat === 0 && movable[entry.plane] && state.phase === 'playing') {
+        el.className += ' movable';
+        el.setAttribute('tabindex', '0');
+      } else {
+        el.removeAttribute('tabindex');
+      }
+      if (hintPlane === entry.plane && entry.seat === 0) el.className += ' hint';
+      el.setAttribute('data-seat', String(entry.seat));
+      el.setAttribute('data-plane', String(entry.plane));
+      el.setAttribute('role', 'gridcell');
+      el.setAttribute('aria-label', colorName(entry.seat) + ' ' + (entry.plane + 1) + ' 号飞机' + (entry.done ? '，已到终点' : '，位置 ' + entry.pos));
+      el.title = colorName(entry.seat) + ' ' + (entry.plane + 1) + ' 号机';
+      el.innerHTML = '<svg viewBox="' + D.PLANE_VIEWBOX + '" aria-hidden="true" focusable="false">' +
+        '<path d="' + D.PLANE_PATH + '" fill="currentColor" stroke="rgba(0,0,0,.32)" stroke-width="2"/>' +
+        '<ellipse cx="50" cy="38" rx="5.5" ry="9.5" fill="rgba(255,255,255,.55)"/>' +
+        '<path d="M50 18 L50 70" stroke="rgba(255,255,255,.18)" stroke-width="2"/></svg>';
+      place(el, entry.c + (entry.dx || 0), entry.r + (entry.dy || 0), entry.w, entry.h);
+      planeLayer.appendChild(el);
+    });
+    markTargets(actions);
+  }
+
+  function pips(value) {
+    var die = $('die');
+    die.innerHTML = '';
+    die.className = 'die' + (value >= 1 ? '' : ' empty');
+    die.setAttribute('aria-label', value >= 1 ? ('骰子 ' + value + ' 点') : '骰子未掷');
+    if (!value) return;
+    var layouts = {
+      1: [[50, 50]],
+      2: [[30, 30], [70, 70]],
+      3: [[30, 30], [50, 50], [70, 70]],
+      4: [[30, 30], [70, 30], [30, 70], [70, 70]],
+      5: [[30, 30], [70, 30], [50, 50], [30, 70], [70, 70]],
+      6: [[30, 28], [70, 28], [30, 50], [70, 50], [30, 72], [70, 72]]
+    };
+    (layouts[value] || layouts[1]).forEach(function (xy) {
+      var dot = document.createElement('i');
+      dot.style.left = xy[0] + '%';
+      dot.style.top = xy[1] + '%';
+      die.appendChild(dot);
+    });
+  }
+
+  function renderPlayers() {
+    if (!state) return;
+    var html = state.players.map(function (p) {
+      var turn = state.phase === 'playing' && state.turn === p.seat;
+      var out = p.seat !== 0 && state.phase === 'playing' && false;
+      return '<div class="pchip' + (turn ? ' turn' : '') + (out ? ' out' : '') + '">' +
+        '<span class="nm"><i class="dot c' + p.seat + '"></i>' + escapeHtml(p.name) + '</span>' +
+        '<span class="st">终点 ' + E.finishedCount(p) + '/4 · 进度 ' + E.playerProgress(p) + '</span>' +
+        '</div>';
+    }).join('');
+    $('players').innerHTML = html;
+  }
+
+  function render() {
+    if (!state) return;
+    var humanTurn = state.phase === 'playing' && state.turn === 0;
+    var actions = legalActions();
+    pips(state.dice);
+    renderPlayers();
+
+    var title = '';
+    var sub = '';
+    if (state.phase === 'over') {
+      title = state.winner >= 0 ? (colorName(state.winner) + '获胜') : '对局结束';
+      sub = '四架飞机全部到达终点；其余玩家按到达架数与总进度排名。';
+    } else if (state.turn === 0) {
+      if (state.awaitRoll) {
+        title = '轮到你：点击“掷骰”。';
+        sub = '掷出 6 才能起飞；落在本色格跳 4 格，虚线捷径 +12。';
+      } else {
+        title = '点数 ' + state.dice + '：点击高亮飞机移动。';
+        sub = actions.length ? ('有 ' + actions.length + ' 架飞机可走；' + (state.dice === 6 ? '走完再掷一次。' : '走完轮到下一位。')) : '没有合法移动，将自动跳过。';
+      }
+    } else {
+      title = colorName(state.turn) + '（AI）思考中…';
+      sub = '难度：' + (level === 1 ? '入门' : level === 2 ? '标准' : '高手') + '；掷出 6 可再掷。';
+    }
+    $('statusText').firstChild.nodeValue = title;
+    $('subText').textContent = sub;
+
+    $('streak').hidden = !(state.sixStreak > 0 && state.phase === 'playing');
+    $('streak').textContent = '连 6 ×' + state.sixStreak;
+    $('rollBtn').disabled = !(humanTurn && state.awaitRoll) || busy;
+    $('hintBtn').disabled = !humanTurn || busy;
+    $('banner').hidden = state.phase !== 'over';
+    if (state.phase === 'over') {
+      $('bannerTitle').textContent = state.winner >= 0 ? (colorName(state.winner) + '获胜') : '对局结束';
+      $('bannerText').textContent = '排名：' + state.ranking.map(function (seat, i) {
+        return (i + 1) + '. ' + colorName(seat) + '（' + E.finishedCount(state.players[seat]) + '/4）';
+      }).join(' · ');
+    }
+    var logs = state.log.slice(-16).reverse();
+    $('log').innerHTML = logs.map(function (line) { return '<li>' + escapeHtml(line) + '</li>'; }).join('');
+    renderPlanes();
+  }
+
+  function actionForKey(seat, plane) {
+    var actions = legalActions();
+    for (var i = 0; i < actions.length; i++) {
+      if (actions[i].plane === plane) return actions[i];
+    }
+    return null;
+  }
+
+  function actionForCell(el) {
+    if (!el || !state) return null;
+    var actions = legalActions();
+    for (var i = 0; i < actions.length; i++) {
+      var cell = actions[i].toCell;
+      if (!cell) continue;
+      if (cell.kind === 'ring' && el.getAttribute('data-ring') === String(cell.index)) return actions[i];
+      if (cell.kind === 'lane' && el.getAttribute('data-lane') === ((state.turn % 4) + '-' + cell.index)) return actions[i];
+      if (cell.kind === 'finish' && el.id === 'finishZone') return actions[i];
+    }
+    return null;
+  }
+
+  function actionForPlaneCell(seat, plane) {
+    if (!state) return null;
+    var pos = state.players[seat].planes[plane];
+    if (pos == null || pos < 0) return null;
+    var cell = E.cellOfProgress(seat, pos);
+    var actions = legalActions();
+    for (var i = 0; i < actions.length; i++) {
+      var tc = actions[i].toCell;
+      if (tc && tc.c === cell.c && tc.r === cell.r && tc.kind === cell.kind) return actions[i];
+    }
+    return null;
+  }
+
+  function onBoardClick(event) {
+    var target = event.target;
+    var planeEl = target.closest ? target.closest('.plane') : null;
+    if (planeEl) {
+      var seat = Number(planeEl.getAttribute('data-seat'));
+      var plane = Number(planeEl.getAttribute('data-plane'));
+      if (seat === 0) {
+        var action = actionForKey(0, plane);
+        if (action) { play(action); return; }
+      }
+      var land = actionForPlaneCell(seat, plane);
+      if (land) { play(land); return; }
+      if (seat === 0) beep('error');
+      return;
+    }
+    var cell = target.closest ? target.closest('.cell, .finish-zone') : null;
+    if (cell) {
+      var a = actionForCell(cell);
+      if (a) { play(a); return; }
+    }
+    beep('click');
+  }
+
+  function onBoardKey(event) {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    var planeEl = event.target.closest ? event.target.closest('.plane.movable') : null;
+    if (!planeEl) return;
+    event.preventDefault();
+    onBoardClick({ target: planeEl });
+  }
+
+  function play(action) {
+    if (!state || busy) return;
+    busy = true;
+    var res = E.applyAction(state, action);
+    if (!res.ok) { busy = false; beep('error'); return; }
+    hintPlane = null;
+    if (res.captured && res.captured.length) beep('capture');
+    else if (res.kind === 'launch') beep('move');
+    else if (res.jump || res.shortcut) beep('move');
+    else beep('move');
+    if (res.over) beep(state.winner === 0 ? 'win' : 'lose');
+    busy = false;
+    render();
+    if (state.phase === 'playing' && state.turn !== 0) scheduleAi();
+  }
+
+  function doRoll() {
+    if (!state || state.phase !== 'playing' || state.turn !== 0 || !state.awaitRoll) return;
+    var res = E.roll(state);
+    if (!res.ok) { beep('error'); return; }
+    beep('dice');
+    if (res.penalty) beep('lose');
+    if (res.over) beep(state.winner === 0 ? 'win' : 'lose');
+    render();
+    if (state.phase === 'playing' && state.turn !== 0) scheduleAi();
+  }
+
+  function aiRollCurrent() {
+    var guard = 0;
+    while (state && state.phase === 'playing' && state.turn !== 0 && state.awaitRoll && guard < 24) {
+      guard += 1;
+      var res = E.roll(state);
+      if (!res.ok) break;
+      if (res.penalty) beep('lose');
+      if (state.phase !== 'playing') return;
+    }
+  }
+
+  function scheduleAi() {
+    if (aiTimer) return;
+    aiTimer = setTimeout(function () {
+      aiTimer = null;
+      if (!state || state.phase !== 'playing' || state.turn === 0) { render(); return; }
+      aiRollCurrent();
+      render();
+      if (!state || state.phase !== 'playing' || state.turn === 0) return;
+      var action = E.aiAction(state, level, function () { return E.nextRandom(state); });
+      if (!action) { render(); return; }
+      var res = E.applyAction(state, action);
+      if (res.ok) {
+        if (res.captured && res.captured.length) beep('capture');
+        else beep('move');
+        if (res.over) beep(state.winner === 0 ? 'win' : 'lose');
+      }
+      render();
+      if (state.phase === 'playing' && state.turn !== 0) scheduleAi();
+    }, 460);
+  }
+
+  function newGame() {
+    if (aiTimer) { clearTimeout(aiTimer); aiTimer = null; }
+    busy = false;
+    hintPlane = null;
+    var names = ['你（红方）', '黄方 AI', '蓝方 AI', '绿方 AI'].slice(0, players);
+    state = E.createGame({ seed: randomSeed(), players: players, names: names });
+    for (var i = 1; i < state.players.length; i++) state.players[i].human = false;
+    render();
+    beep('deal');
+  }
+
+  function showHint() {
+    if (!state || state.phase !== 'playing' || state.turn !== 0) return;
+    if (state.awaitRoll) {
+      $('subText').textContent = '先点“掷骰”，再根据点数选择飞机。';
+      beep('click');
+      return;
+    }
+    var action = E.aiAction(state, 3, function () { return E.nextRandom(state); });
+    if (!action || action.k !== 'move') return;
+    hintPlane = action.plane;
+    render();
+    beep('click');
+  }
+
+  function setPlayers(next) {
+    players = next;
+    var buttons = document.querySelectorAll('[data-players]');
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].setAttribute('aria-pressed', String(Number(buttons[i].getAttribute('data-players')) === players));
+    }
+    storeSet('aeroplane-premium:players', String(players));
+    newGame();
+  }
+
+  function setLevel(next) {
+    level = next;
+    var buttons = document.querySelectorAll('[data-level]');
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].setAttribute('aria-pressed', String(Number(buttons[i].getAttribute('data-level')) === level));
+    }
+    storeSet('aeroplane-premium:level', String(level));
+    render();
+  }
+
+  function wire() {
+    $('rollBtn').addEventListener('click', doRoll);
+    $('newBtn').addEventListener('click', newGame);
+    $('bannerNew').addEventListener('click', newGame);
+    $('hintBtn').addEventListener('click', showHint);
+    $('soundBtn').addEventListener('click', function () {
+      soundOn = !soundOn;
+      this.textContent = '音效 ' + (soundOn ? '开' : '关');
+      this.setAttribute('aria-pressed', String(soundOn));
+      storeSet('aeroplane-premium:sound', soundOn ? '1' : '0');
+      if (window.Sfx && window.Sfx.mute) { try { window.Sfx.mute(!soundOn); } catch (e) {} }
+      if (soundOn) beep('click');
+    });
+    var pbuttons = document.querySelectorAll('[data-players]');
+    for (var i = 0; i < pbuttons.length; i++) {
+      pbuttons[i].addEventListener('click', function () {
+        setPlayers(Number(this.getAttribute('data-players')));
+      });
+    }
+    var lbuttons = document.querySelectorAll('[data-level]');
+    for (var j = 0; j < lbuttons.length; j++) {
+      lbuttons[j].addEventListener('click', function () {
+        setLevel(Number(this.getAttribute('data-level')));
+      });
+    }
+    $('tips').innerHTML = D.TIPS.slice(0, 3).map(function (t) { return '<li>' + escapeHtml(t) + '</li>'; }).join('');
+    $('rules').innerHTML = D.RULES.slice(0, 6).map(function (r) {
+      return '<li><b>' + escapeHtml(r.title) + '</b>：' + escapeHtml(r.text) + '</li>';
+    }).join('');
+  }
+
+  function boot() {
+    var savedSound = storeGet('aeroplane-premium:sound', '1');
+    soundOn = savedSound !== '0';
+    $('soundBtn').textContent = '音效 ' + (soundOn ? '开' : '关');
+    $('soundBtn').setAttribute('aria-pressed', String(soundOn));
+    if (window.Sfx && window.Sfx.mute) { try { window.Sfx.mute(!soundOn); } catch (e) {} }
+    var savedPlayers = Number(storeGet('aeroplane-premium:players', '4'));
+    if (savedPlayers >= 2 && savedPlayers <= 4) players = savedPlayers;
+    var savedLevel = Number(storeGet('aeroplane-premium:level', '2'));
+    if (savedLevel >= 1 && savedLevel <= 3) level = savedLevel;
+    var pbuttons = document.querySelectorAll('[data-players]');
+    for (var i = 0; i < pbuttons.length; i++) {
+      pbuttons[i].setAttribute('aria-pressed', String(Number(pbuttons[i].getAttribute('data-players')) === players));
+    }
+    var lbuttons = document.querySelectorAll('[data-level]');
+    for (var j = 0; j < lbuttons.length; j++) {
+      lbuttons[j].setAttribute('aria-pressed', String(Number(lbuttons[j].getAttribute('data-level')) === level));
+    }
+    buildStaticBoard();
+    wire();
+    newGame();
+  }
+
+  // Read-only handle for browser E2E / smoke checks.
+  window.AeroplanePremiumPage = {
+    getState: function () { return state ? E.publicView(state, 0) : null; },
+    getLevel: function () { return level; },
+    getPlayers: function () { return players; },
+    newGame: newGame,
+    roll: doRoll,
+    isOver: function () { return !!(state && state.phase === 'over'); }
+  };
+
+  boot();
+})();
+</script>
+</body>
+</html>

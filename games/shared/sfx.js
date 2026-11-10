@@ -12,11 +12,17 @@
  *   Sfx.setVolume(0..1)
  *   Sfx.mute(true|false)
  *   Sfx.isMuted()
+ *   Sfx.dropped()            // how many queued sounds overflowed MAX_PENDING
  *   Sfx.list()
  *
  * First playback happens inside a user gesture (browser autoplay policy).
  * Calls made before that are queued silently, then flushed once the context
- * resumes. Volume and mute live in localStorage under hhfa-sfx-*.
+ * resumes. The context's `statechange` event also flushes the queue, so an
+ * engine that unlocks asynchronously is handled without another play() call.
+ * When the queue is full the oldest sound is dropped; that is no longer
+ * silent: Sfx.dropped() counts it and a `sfxdrop` CustomEvent is dispatched on
+ * document (only when a document exists, so Node stays quiet).
+ * Volume and mute live in localStorage under hhfa-sfx-*.
  *
  * Every page that includes this file gets any <button class="sfx-toggle">
  * wired up automatically, with the SVG icon and CSS injected once.
@@ -61,6 +67,10 @@
   var master = null;
   var pending = [];
   var listenersArmed = false;
+  // Context already wired to statechange, so repeated ensureContext calls do
+  // not stack listeners. Cleared whenever the context is replaced.
+  var stateCtx = null;
+  var droppedCount = 0;
 
   var stats = { created: 0, disconnected: 0, active: 0 };
 
@@ -68,10 +78,50 @@
     return !!ctx && ctx.state === 'running';
   }
 
+  // Flush queued sounds when the context transitions from suspended to
+  // running. If it is already running there is nothing to unlock, so skip the
+  // subscription entirely. Node/mocked contexts without addEventListener fall
+  // back to the onstatechange property.
+  function armStateChange(c) {
+    if (!c || stateCtx === c) return;
+    stateCtx = c;
+    if (c.state === 'running') return;
+    var onState = function () {
+      if (c.state === 'running') flushPending();
+    };
+    if (typeof c.addEventListener === 'function') {
+      c.addEventListener('statechange', onState);
+    } else {
+      c.onstatechange = onState;
+    }
+  }
+
+  // Count a dropped sound and make it observable. A document is required to
+  // dispatch (there is none in Node), and every step is guarded so a hostile
+  // or partial DOM can never make playback throw.
+  function notifyDrop(name) {
+    droppedCount++;
+    if (!root.document || typeof root.document.dispatchEvent !== 'function') return;
+    var detail = { name: name, dropped: droppedCount, pending: pending.length, max: MAX_PENDING };
+    try {
+      var ev = null;
+      if (typeof root.CustomEvent === 'function') {
+        ev = new root.CustomEvent('sfxdrop', { detail: detail });
+      } else if (typeof root.document.createEvent === 'function') {
+        ev = root.document.createEvent('CustomEvent');
+        if (ev && typeof ev.initCustomEvent === 'function') {
+          ev.initCustomEvent('sfxdrop', false, false, detail);
+        }
+      }
+      if (ev) root.document.dispatchEvent(ev);
+    } catch (e) {}
+  }
+
   function ensureContext() {
     if (ctx && ctx.state === 'closed') {
       ctx = null;
       master = null;
+      stateCtx = null;
     }
     if (ctx) return ctx;
     var AC = root.AudioContext || root.webkitAudioContext;
@@ -81,10 +131,12 @@
       master = ctx.createGain();
       master.gain.value = muted ? 0 : volume;
       master.connect(ctx.destination);
+      armStateChange(ctx);
       if (ctx.state === 'running') flushPending();
     } catch (e) {
       ctx = null;
       master = null;
+      stateCtx = null;
       return null;
     }
     return ctx;
@@ -520,11 +572,14 @@
     var c = ensureContext();
     if (!c) return false;
     if (!contextRunning()) {
+      if (pending.length >= MAX_PENDING) {
+        var lost = pending.shift();
+        notifyDrop(lost && lost.name);
+      }
       pending.push({ name: name, opts: opts });
-      if (pending.length > MAX_PENDING) pending.shift();
       armUnlock();
       tryResume();
-      return true; // queued; will play after the first gesture
+      return true; // queued; will play after the first gesture / statechange
     }
     return buildVoice(c, master, name, opts, true);
   }
@@ -553,6 +608,10 @@
 
   function isMuted() {
     return muted;
+  }
+
+  function dropped() {
+    return droppedCount;
   }
 
   function list() {
@@ -651,6 +710,7 @@
       disconnected: stats.disconnected,
       active: stats.active,
       pending: pending.length,
+      dropped: droppedCount,
       unlocked: contextRunning(),
       contextState: ctx ? ctx.state : 'none',
       muted: muted,
@@ -663,6 +723,7 @@
     setVolume: setVolume,
     mute: mute,
     isMuted: isMuted,
+    dropped: dropped,
     list: list,
     syncButtons: syncButtons,
     version: '1.0.0',

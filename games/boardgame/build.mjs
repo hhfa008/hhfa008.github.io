@@ -29,7 +29,7 @@ const BASE = 'https://hhfa008.github.io/games/boardgame/';
 
 // 可玩游戏入口（31 款：11 德式 + 9 毛线 + 11 附加）。
 // 目录 slug 必须与 games/boardgame/<slug>/ 实际目录一致。
-const PLAYABLE_GAMES = [
+export const PLAYABLE_GAMES = [
   { slug: 'splendor', mark: '璀', name: '璀璨宝石 Splendor', blurb: '五色宝石筹码买发展卡与贵族，先到 15 声望获胜 · 人机对战' },
   { slug: 'azul', mark: '花', name: '花砖物语 Azul', blurb: '选圆盘拿同色砖，铺满 5×5 花砖墙抢分数 · 人机对战' },
   { slug: 'kingdomino', mark: '多', name: '多米诺王国 Kingdomino', blurb: '每轮 1-2-1 选瓦片，拼 5×5 王国，连通地形乘皇冠计分' },
@@ -71,6 +71,248 @@ function playEntry(game) {
     </a>`;
 }
 
+// 精美版单独成区，不计入上面的 31 款经典可玩入口。
+export const PREMIUM_GAMES = [
+  { slug: 'codenames-premium', mark: '精', name: '行动代号 · 精美版', blurb: '豪华单机重制：275 词、AI 队长与队员、翻牌动画与合成音效，完全离线。' },
+  { slug: 'azul-premium', mark: '花', name: '花砖物语 · 精美版', blurb: '5 色花砖、圆盘取砖、模式线与瓷砖墙、连片计分与 AI 对手，纯前端零外部请求。' },
+  { slug: 'kot-premium', mark: '王', name: '东京之王 · 精美版', blurb: '6 颗骰子三掷、东京城与东京湾、能力卡市场，单机 2–4 人 AI 对战，完全离线。' },
+  { slug: 'splendor-premium', mark: '璀', name: '璀璨宝石 · 精美版', blurb: '五色宝石筹码、90 张发展卡与 10 位贵族，深色木桌与丝绒材质，人机 / 双人联机。' },
+  { slug: 'kingdomino-premium', mark: '多', name: '多米诺王国 · 精美版', blurb: '48 张地形瓦片拼 5×5 王国，六种俯拍材质与皇冠计分，人机 / 双人联机。' },
+  { slug: 'century-spice-road-premium', mark: '香', name: '香料之路 · 精美版', blurb: '四种香料采集转换、商人卡与得分卡，金色金币与胡桃木桌面，人机 / 双人联机。' },
+  { slug: 'lost-cities-premium', mark: '城', name: '失落之城 · 精美版', blurb: '五色探险与石版桌面，下注封蜡、三局累计，人机 / 双人联机，完全离线。' },
+  { slug: 'coup-premium', mark: '政', name: '政变 · 精美版', blurb: '身份隐藏与虚张声势，公爵、刺客、队长、大使、女伯爵，2–6 人 AI 或联机。' },
+  { slug: 'jaipur-premium', mark: '斋', name: '斋普尔 · 精美版', blurb: '骆驼与香料交易，市场拿牌、卖出成组、银币金币计分，人机 / 双人联机。' },
+  { slug: 'dominion-premium', mark: '领', name: '领土 · 精美版', blurb: '牌库构筑经典：行动牌、财宝与胜利卡，和 AI 或朋友打完整对局，完全离线。' },
+  { slug: 'carcassonne-premium', mark: '颂', name: '卡卡颂 · 精美版', blurb: '抽瓦片拼城市与道路、放米宝占分，人机 / 双人联机，完全离线。' },
+  { slug: 'stone-age-premium', mark: '石', name: '石器时代 · 精美版', blurb: '工人放置采集木砖石金、狩猎喂食、建造建筑与文明卡，2–4 人 AI 或联机。' },
+  { slug: 'gomoku-premium', mark: '五', name: '五子棋 · 精美版', blurb: '15×15 榧木棋盘与黑白云子，三档 AI、悔棋与双人联机，先连五子者胜。' },
+  { slug: 'reversi-premium', mark: '黑', name: '黑白棋 · 精美版', blurb: '8×8 绿呢棋盘，夹击翻面、行动力 AI 与双人联机，终局子多者胜。' },
+  { slug: 'undercover-premium', mark: '卧', name: '谁是卧底 · 精美版', blurb: '120+ 词对、白板身份与保密卡轮流看词，4–12 人同乐，支持 4–6 人联机。' },
+  { slug: 'love-letter-premium', mark: '情', name: '情书 · 精美版', blurb: '16 张角色牌抽一打一，绯红丝绒桌面与火漆封蜡，2–4 人 AI 或联机。' },
+  { slug: 'skull-premium', mark: '骷', name: '骷髅 · 精美版', blurb: '3 花 1 骷髅暗放下注翻片，橡木酒吧与杯垫质感，3–6 人 AI 或联机。' },
+  { slug: 'dixit-premium', mark: '只', name: '只言片语 · 精美版', blurb: '84 张原创抽象牌，讲述者给线索投票计分，3–6 人 AI 或联机。' },
+  { slug: 'for-sale-premium', mark: '拍', name: '拍卖 · 精美版', blurb: '两阶段竞价抢房产再换支票，绿呢桌面与房产卡面，3–6 人 AI 或联机。' },
+  { slug: 'no-thanks-premium', mark: '谢', name: '不谢 · 精美版', blurb: '传牌跳过或收下，筹码与连续牌计分，3–5 人联机或 AI 补位。' },
+  { slug: 'six-nimmt-premium', mark: '牛', name: '谁是牛头王 · 精美版', blurb: '104 张牌十轮同时出牌，接行收牛头，2–10 人联机或 3–5 人 AI。' },
+  { slug: 'avalon-premium', mark: '亚', name: '阿瓦隆 · 精美版', blurb: '5 人隐藏身份、组队任务与投票，联机或 AI 补位，完全离线。' },
+  { slug: 'hero-realms-premium', mark: '勇', name: '英雄领域 · 精美版', blurb: '牌库构筑与角色对战，50 血攻防、市场购买，2 人联机或 AI。' },
+  { slug: 'patchwork-premium', mark: '布', name: '拼布艺术 · 精美版', blurb: '9×9 拼布棋盘、时间轴与扣子经济，拼块竞速，人机 / 双人联机。' },
+  { slug: 'ticket-to-ride-premium', mark: '车', name: '车票之旅 · 精美版', blurb: '36 城铁路网与 110 张车厢卡，接任务、铺路线，人机 / 双人联机。' },
+  { slug: 'war-chest-premium', mark: '战', name: '战争宝箱 · 精美版', blurb: '7×7 棋盘、6 据点与 4 种单位币，抽币部署攻防，人机 / 双人联机。' },
+  { slug: 'chess-premium', mark: '棋', name: '国际象棋 · 精美版', blurb: '8×8 木纹棋盘与 32 枚立体棋子，完整王车易位、吃过路兵、升变与将死判定，人机 / 双人联机。' },
+  { slug: 'connect4-premium', mark: '四', name: '四子棋 · 精美版', blurb: '7×6 蓝框棋盘与红黄塑料圆片，重力落子、四连与和棋判定，人机 / 双人联机。' },
+  { slug: 'backgammon-premium', mark: '陆', name: '双陆棋 · 精美版', blurb: '24 点、30 枚棋子与两颗骰子，撞子、入栏、离盘与倍数骰，人机 / 双人联机。' },
+  { slug: 'xiangqi-premium', mark: '象', name: '中国象棋 · 精美版', blurb: '9×10 棋盘与 32 枚木纹棋子，马走日象走田，将帅照面与将军判定，人机 / 双人联机。' },
+  { slug: 'draughts-premium', mark: '跳', name: '国际跳棋 · 精美版', blurb: '10×10 深色棋盘与 20 枚跳子，强制吃子、连吃与升王，人机 / 双人联机。' },
+  { slug: 'checkers-jump-premium', mark: '珠', name: '中国跳棋 · 精美版', blurb: '121 孔六角星棋盘与弹珠跳子，连续跳跃与占营判定，人机 / 多人与联机。' },
+  { slug: 'solitaire-premium', mark: '接', name: '接龙 · 精美版', blurb: '经典 Klondike：七列红黑接牌、四色基础堆，翻 1/3 张、提示、撤销与本地续局。' },
+  { slug: 'freecell-premium', mark: '空', name: '空当接龙 · 精美版', blurb: '52 张全明牌、四个空当与八列牌，微软牌局编号、整串搬运、提示与撤销。' },
+  { slug: 'spider-premium', mark: '蛛', name: '蜘蛛纸牌 · 精美版', blurb: '104 张双副牌、十列与五次发牌，单/双/四花色，同花降序成组自动收走。' },
+  { slug: '24game-premium', mark: '廿', name: '24 点 · 精美版', blurb: '四张牌用加减乘除凑 24，精确分数求解器出题，提示、计时、连胜与每日挑战。' },
+  { slug: 'doudizhu-premium', mark: '斗', name: '斗地主 · 精品版', blurb: '54 张牌、三人叫分抢地主，完整牌型与压牌规则，三档 AI、提示与 3 人联机房间。' },
+  { slug: 'aeroplane-premium', mark: '飞', name: '飞行棋 · 52 格彩环', blurb: '真实 52 格四色跑道与 4 条归航跑道，掷 6 起飞、同色跳 4、撞机回基地，三档 AI 与 2–4 人联机。' },
+  { slug: 'pioneers-premium', mark: '拓', name: '拓荒者 · 九岛', blurb: '19 块六边形、资源产出与港口贸易，铺路建村庄与城市，先到 8 分或 12 回合结算，2–4 人联机。' },
+  { slug: 'banqi-premium', mark: '暗', name: '暗棋 · 翻棋', blurb: '4×8 棋盘、32 枚扣放棋子，翻棋或走子二选一，等级吃子、炮隔子、三档 AI 与双人联机。' }
+];
+
+function premiumEntry(game) {
+  // Only games present in catalog-status.json as shipped reach this renderer.
+  return `    <a class="play-entry play-entry-premium" data-status="shipped" href="./${esc(game.slug)}/">
+      <span class="play-mark" aria-hidden="true">${esc(game.mark)}</span>
+      <span class="play-body"><strong>${esc(game.name)}</strong><span>${esc(game.blurb)}</span></span>
+      <span class="play-cta" aria-hidden="true">进入 →</span>
+    </a>`;
+}
+
+// 微游戏库：10 组 × 25 款 = 250 款 mini-<group>-<nn> 目录。
+// 入口卡不逐张平铺，250 款统一收进 ./mini/ 独立页面。
+const MINI_GROUPS = [
+  { key: 'euro-a', label: '德式策略 A', note: '资源转换 · 订单交付' },
+  { key: 'euro-b', label: '德式策略 B', note: '牌库构筑 · 版图连通' },
+  { key: 'party-a', label: '毛线派对 A', note: '线索猜测 · 五轮对决' },
+  { key: 'party-b', label: '毛线派对 B', note: '反应抢拍 · 记忆干扰' },
+  { key: 'card-a', label: '纸牌游戏 A', note: '接龙 · 钓鱼 · 手牌管理' },
+  { key: 'dice-a', label: '骰子游戏 A', note: '爆点 · 押注 · 收手' },
+  { key: 'abstract-a', label: '抽象棋 A', note: '落子 · 连线 · 围地' },
+  { key: 'puzzle-a', label: '单人解谜 A', note: '滑块 · 推理 · 排序' },
+  { key: 'ameri-a', label: '美式冒险 A', note: '掷骰战斗 · 夺旗' },
+  { key: 'ameri-b', label: '美式冒险 B', note: '探索 · 生存 · 暗标' }
+];
+const MINI_PER_GROUP = 25;
+
+function miniSlug(groupKey, n) {
+  return 'mini-' + groupKey + '-' + String(n).padStart(2, '0');
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function stripTags(html) {
+  return String(html)
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/<[^>]*>/g, '');
+}
+
+function splitSentences(text) {
+  return String(text)
+    .split(/(?<=[。！？])/)
+    .map(function (part) { return part.trim(); })
+    .filter(Boolean);
+}
+
+const MINI_GENERIC_META = /原创|纯前端|离线|零联网|零外部|无需联网|单机对|单机对战|人机对战|中文、/;
+
+// 从 meta description 取一句玩法：去掉「名字：/名字 中文极简…：」前缀，
+// 取前两句，遇到「原创极简…/中文、离线…」这类元信息句就停止。
+function miniBlurbFromDescription(description, name) {
+  let text = String(description || '').trim();
+  text = text.replace(new RegExp('^' + escapeRegExp(name) + '[^：:]{0,24}[：:]\\s*'), '');
+  const sentences = splitSentences(text);
+  let out = '';
+  for (const sentence of sentences) {
+    if (MINI_GENERIC_META.test(sentence)) continue;
+    out += sentence;
+    if (splitSentences(out).length >= 2) break;
+  }
+  return out.trim();
+}
+
+// 读取 rules.html 的首段玩法介绍（跳过导航、标题与纯英文装饰行）。
+function miniRulesIntro(dir) {
+  const html = fs.readFileSync(path.join(dir, 'rules.html'), 'utf8');
+  const lines = html
+    .replace(/<style[\s\S]*?<\/style>/gi, '\n')
+    .replace(/<script[\s\S]*?<\/script>/gi, '\n')
+    .replace(/<[^>]*>/g, '\n')
+    .split('\n')
+    .map(function (line) { return stripTags(line).trim(); })
+    .filter(Boolean);
+  const heading = lines.findIndex(function (line) { return line.length < 80 && /规则/.test(line); });
+  for (let i = heading + 1; i < lines.length; i += 1) {
+    const line = lines[i];
+    if (line.indexOf('←') === 0) continue;
+    if (line.length >= 20 && !/^[A-Z0-9 .,·—-]+$/.test(line)) return line;
+  }
+  return '';
+}
+
+// 没有 description / tag 的组：从规则首段里挑最像「怎么玩」的一句。
+function miniBlurbFromRules(intro, name) {
+  const sentences = splitSentences(intro);
+  let best = '';
+  let bestScore = -Infinity;
+  sentences.forEach(function (sentence, index) {
+    let score = 0;
+    if (/你(执|与|要|可以|先|来|将)/.test(sentence)) score += 3;
+    if (/点击|选择|选出|轮流|掷|拍|落子|移动|出牌|交换|回答|猜|判断|行动|购买|放置|排列|连接|收手|加注/.test(sentence)) score += 2;
+    if (/获胜|得分|先到/.test(sentence)) score += 1;
+    if (/^(这是|《)|是一款(单机|双人|原创)|是一场/.test(sentence)) score -= 3;
+    if (sentence.length > 70) score -= 2;
+    if (sentence.length < 10) score -= 1;
+    score -= index * 0.1;
+    if (score > bestScore) {
+      bestScore = score;
+      best = sentence;
+    }
+  });
+  let out = best.replace(/^《[^》]*》/, '').replace(/^是/, '').trim();
+  // 同组规则句容易完全一样，用开头的棋盘尺寸 / 骰子规格补一个区分点。
+  const variant = (intro.match(/\d+×\d+/) || intro.match(/\d+ 面骰/) || intro.match(/\d+ 枚筹码/) || [])[0];
+  if (variant && !/\d/.test(out)) out = variant + ' · ' + out;
+  if (out.length > 80) out = out.slice(0, 78).replace(/[，、；：\s]+$/, '') + '…';
+  return out;
+}
+
+function readMiniGame(group, n) {
+  const slug = miniSlug(group.key, n);
+  const dir = path.join(HERE, slug);
+  const indexFile = path.join(dir, 'index.html');
+  if (!fs.existsSync(indexFile)) {
+    throw new Error('mini game page missing: ' + slug + '/index.html');
+  }
+  const html = fs.readFileSync(indexFile, 'utf8');
+  const h1 = (html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/) || [])[1] || '';
+  const name = stripTags(h1.split('<')[0]).trim();
+  if (!name) throw new Error('mini game has no h1 name: ' + slug);
+  const description = (html.match(/<meta name="description" content="([^"]*)"/) || [])[1] || '';
+  const tag = (html.match(/class="tag"[^>]*>([^<]*)</) || [])[1] || '';
+  let blurb = '';
+  if (description) blurb = miniBlurbFromDescription(description, name);
+  if (!blurb && tag.trim().length >= 8) blurb = tag.trim();
+  if (!blurb) blurb = miniBlurbFromRules(miniRulesIntro(dir), name);
+  if (!blurb) throw new Error('mini game has no blurb: ' + slug);
+  return {
+    slug: slug,
+    group: group.key,
+    groupLabel: group.label,
+    number: String(n).padStart(2, '0'),
+    name: name,
+    blurb: blurb
+  };
+}
+
+function scanMiniGames(shipped) {
+  const games = [];
+  MINI_GROUPS.forEach(function (group) {
+    for (let n = 1; n <= MINI_PER_GROUP; n += 1) {
+      games.push(readMiniGame(group, n));
+    }
+  });
+  return shipped ? games.filter(function (game) { return shipped.has(game.slug); }) : games;
+}
+
+// Shipped gate (AGENTS.md 2026-11-10): only entries whose five evidence gates
+// pass are rendered. catalog-status.json is the single source of truth and is
+// produced by scripts/verify-shipped.mjs.
+//
+// A missing status file is a build error, not a reason to fall back to
+// "render everything": silently rendering draft games puts entries into the
+// hub that have not passed acceptance, and makes build output depend on
+// whether the file happens to exist.
+export function loadShippedStatus(file) {
+  const resolved = path.resolve(file || path.join(HERE, 'catalog-status.json'));
+  if (!fs.existsSync(resolved)) {
+    throw new Error(
+      'missing shipped status source: ' + resolved + '\n' +
+      'run node games/boardgame/scripts/verify-shipped.mjs or pass --status <file>'
+    );
+  }
+  const raw = JSON.parse(fs.readFileSync(resolved, 'utf8'));
+  const shipped = new Set();
+  (raw.games || []).concat(raw.extras || []).forEach(function (game) {
+    if (game.status === 'shipped') shipped.add(game.slug);
+  });
+  return { raw: raw, shipped: shipped };
+}
+
+// Every hub entry that is gated by shipped status. Kept next to the renderer so
+// tests and alternate generators consume the same authoritative list instead of
+// hard-coding slugs.
+export const PLAY_ENTRY_SLUGS = PLAYABLE_GAMES.map(function (game) { return game.slug; })
+  .concat(PREMIUM_GAMES.map(function (game) { return game.slug; }), ['card-battle']);
+
+// 只注入列表页，避免改动 43 个详情页共享的 CSS 输出。
+const MINI_ENTRY_CSS = `.play-entry-mini{background:linear-gradient(135deg,#7a5c3e,#b98a5a);border-color:#e6cba5;box-shadow:0 12px 30px rgb(122 92 62 / .28)}
+.play-entry-mini:hover{background:linear-gradient(135deg,#8c6a48,#c99a68)}
+.play-entry-mini .play-mark{background:var(--dark-3);color:var(--brass-2);font-size:19px}
+.play-entry-mini .play-body strong{font-size:15.5px}
+.play-entry-mini .play-body span{color:#f6ead8}
+.play-entry-mini .play-cta{color:#fff6e8}`;
+
+function miniEntry(count) {
+  return `    <a class="play-entry play-entry-mini" href="./mini/">
+      <span class="play-mark" aria-hidden="true">微</span>
+      <span class="play-body"><strong>微游戏库 · ${count} 款</strong><span>10 组原创微桌游：德式、派对、纸牌、骰子、抽象、解谜、美式。分组浏览与搜索，1–10 分钟一局。</span></span>
+      <span class="play-cta" aria-hidden="true">进入 →</span>
+    </a>`;
+}
+
 function arg(name, fallback) {
   const i = process.argv.indexOf('--' + name);
   if (i < 0) return fallback;
@@ -92,9 +334,9 @@ a{color:inherit}
 .header-inner{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .brand{min-height:44px;display:flex;align-items:center;gap:9px;font-weight:650;text-decoration:none;font-size:15px}
 .brand-mark{width:22px;height:22px;border-radius:6px;background:var(--brass);box-shadow:inset 0 0 0 2px var(--dark-3);flex:none}
-.header-note{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--on-dark-muted)}
+.header-note{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--on-dark-muted)}
 .hero{padding:22px 0 4px}
-.eyebrow{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--red);margin:0 0 8px}
+.eyebrow{font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--red);margin:0 0 8px}
 .hero h1{font-size:clamp(1.8rem,7vw,2.35rem);line-height:1.12;letter-spacing:-.02em;margin:0 0 6px}
 .lede{color:var(--muted);font-size:15.5px;margin:0}
 .play-entries{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:16px}
@@ -107,6 +349,13 @@ a{color:inherit}
 .play-body span{font-size:12px;color:var(--on-dark-muted);line-height:1.4}
 .play-cta{flex:none;font-size:12.5px;font-weight:650;color:var(--brass-2)}
 @media (max-width:430px){.play-entry{gap:10px;padding:11px 12px}.play-cta{display:none}}
+.premium-block{margin-top:22px}
+.premium-block h2{font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--brass-2);margin:0 0 8px}
+.play-entry-premium{background:linear-gradient(135deg,#3b2a1b,#72522b);border-color:#e6cba5;box-shadow:0 12px 30px rgb(122 92 62 / .28)}
+.play-entry-premium:hover{background:linear-gradient(135deg,#4b3622,#87643a)}
+.play-entry-premium .play-mark{background:linear-gradient(135deg,#f2d59f,#b98a5a);color:var(--dark-3);font-size:18px}
+.play-entry-premium .play-body span{color:#f6ead8}
+.play-entry-premium .play-cta{color:#fff6e8}
 .filters{background:var(--paper-2);border:1px solid var(--line);border-radius:16px;padding:14px;margin-top:16px;box-shadow:0 6px 18px rgb(35 38 43 / .05)}
 .filter-row{display:flex;align-items:flex-start;gap:10px;padding:6px 0;border-bottom:1px dashed var(--line)}
 .filter-row:last-of-type{border-bottom:0}
@@ -134,7 +383,8 @@ a{color:inherit}
 .card-title{margin:0;font-size:16.5px;line-height:1.25;letter-spacing:-.01em;overflow-wrap:anywhere}
 .card-en{margin:0;font-size:12.5px;color:var(--muted);line-height:1.35;overflow-wrap:anywhere}
 .meta{display:flex;flex-wrap:wrap;gap:5px 8px;align-items:center;margin-top:3px;font-size:12.5px;color:var(--muted-2)}
-.badge{display:inline-flex;align-items:center;min-height:22px;padding:0 8px;border-radius:999px;font-size:11.5px;font-weight:650;background:var(--card);color:var(--ink)}
+.badge{display:inline-flex;align-items:center;min-height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:650;background:var(--card);color:var(--ink)}
+.mode-badge{display:inline-flex;align-items:center;min-height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:650;background:var(--dark);color:var(--on-dark)}
 .score-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:auto;padding-top:5px;font-size:12.5px;color:var(--muted)}
 .rating{display:inline-flex;align-items:center;gap:3px;font-weight:700;color:var(--red);font-variant-numeric:tabular-nums}
 .rating b{font-size:15px}
@@ -154,7 +404,7 @@ a{color:inherit}
 .hero-score span{font-size:12px;color:var(--muted)}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
 .stat{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:10px 12px;min-width:0}
-.stat span{display:block;font-size:11.5px;color:var(--muted);margin-bottom:2px}
+.stat span{display:block;font-size:12px;color:var(--muted);margin-bottom:2px}
 .stat strong{display:block;font-size:15px;line-height:1.2;overflow-wrap:anywhere}
 .panel{background:var(--paper-2);border:1px solid var(--line);border-radius:16px;padding:16px;margin-top:14px}
 .panel h2{font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:650;margin:0 0 10px}
@@ -170,7 +420,7 @@ a{color:inherit}
 .rec-thumb{width:44px;height:44px;border-radius:9px;flex:none;display:grid;place-items:center;color:#fff8ee;font-family:var(--serif);font-size:22px;font-weight:700}
 .rec-body{min-width:0}
 .rec-body strong{display:block;font-size:13.5px;line-height:1.25;overflow-wrap:anywhere}
-.rec-body span{font-size:11.5px;color:var(--muted)}
+.rec-body span{font-size:12px;color:var(--muted)}
 @media (max-width:520px){
 .filter-label{width:100%;padding-top:2px}
 .filter-row{flex-direction:column;gap:6px}
@@ -186,6 +436,14 @@ a{color:inherit}
 }
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
 `;
+
+// 详情页专属：规则与开局区。大厅不渲染这段，保持列表页 CSS 不变。
+const CSS_DETAIL = CSS.replace(
+  '.rec-grid{display:grid;',
+  '.action-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}\n' +
+  '.rules-pending{margin:10px 0 0;font-size:13.5px;color:var(--muted);line-height:1.6}\n' +
+  '.rec-grid{display:grid;'
+);
 
 const FILTER_JS = `
 (function(){
@@ -247,18 +505,197 @@ const FILTER_JS = `
 })();
 `;
 
-function head(title, description, canonical, brandHref) {
+const MINI_CSS = `
+:root{--paper:#f3ead9;--paper-2:#fbf5e9;--card:#efe2c8;--ink:#23262b;--muted:#6b6257;--muted-2:#70685c;--dark:#2b2f36;--dark-2:#23272d;--dark-3:#1b1e23;--on-dark:#f3ead9;--on-dark-muted:#b9b2a4;--brass:#b98a5a;--brass-2:#d3ae82;--red:#c0392b;--green:#3f7d5b;--line:#d8cbb2;--line-strong:#c3b18f;--input:#fffdf8;--sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;--serif:"Songti SC","Noto Serif SC",Georgia,"Times New Roman",serif;--mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.55 var(--sans);padding-bottom:calc(22px + env(safe-area-inset-bottom));-webkit-font-smoothing:antialiased;overflow-x:hidden}
+h1,h2,p{margin:0}
+a{color:inherit}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.wrap{max-width:920px;margin:0 auto;padding:0 16px}
+.site-header{background:var(--dark);color:var(--on-dark);padding:10px 0}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{min-height:44px;display:flex;align-items:center;gap:9px;font-weight:650;text-decoration:none;font-size:15px}
+.brand-mark{width:22px;height:22px;border-radius:6px;background:var(--brass);box-shadow:inset 0 0 0 2px var(--dark-3);flex:none}
+.header-note{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--on-dark-muted)}
+.hero{padding:22px 0 4px}
+.eyebrow{font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--red);margin:0 0 8px}
+.hero h1{font-size:clamp(1.8rem,7vw,2.35rem);line-height:1.12;letter-spacing:-.02em;margin:0 0 6px}
+.lede{color:var(--muted);font-size:15px;margin:0}
+.toolbar{position:sticky;top:0;z-index:20;background:var(--paper);padding:10px 0 6px;margin-top:14px;border-bottom:1px solid var(--line)}
+.search-row{display:flex;gap:10px;align-items:center}
+.search{flex:1;min-width:0;min-height:44px;padding:0 14px;border:1px solid var(--line-strong);border-radius:11px;background:var(--input);color:var(--ink);font:inherit;font-size:16px}
+.search:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+.count{flex:none;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.group-nav{display:flex;gap:6px;overflow-x:auto;padding:8px 0 2px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.group-nav::-webkit-scrollbar{display:none}
+.group-nav a{flex:none;display:inline-flex;align-items:center;gap:5px;min-height:44px;padding:0 12px;border:1px solid var(--line-strong);border-radius:999px;text-decoration:none;font-size:13.5px;font-weight:650;color:var(--ink);background:var(--paper-2);touch-action:manipulation}
+.group-nav a:hover{background:var(--card)}
+.group-nav a:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+.group-nav a span{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.group{margin-top:20px;scroll-margin-top:138px}
+.group-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+.group-head h2{font-family:var(--serif);font-size:19px;letter-spacing:-.01em;margin:0}
+.group-head span{font-size:12px;color:var(--muted)}
+.mini-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px}
+.mini-card{display:flex;align-items:center;gap:11px;min-height:64px;padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:var(--paper-2);text-decoration:none;min-width:0;box-shadow:0 4px 12px rgb(35 38 43 / .05);touch-action:manipulation}
+.mini-card:hover{background:var(--card);border-color:var(--line-strong)}
+.mini-card:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+.num{flex:none;width:34px;height:34px;display:grid;place-items:center;border-radius:9px;background:var(--dark);color:var(--brass-2);font-family:var(--mono);font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
+.mini-body{min-width:0;flex:1;display:flex;flex-direction:column;gap:2px}
+.mini-body strong{font-size:14.5px;line-height:1.3;overflow-wrap:anywhere}
+.mini-body span{font-size:12px;color:var(--muted);line-height:1.45;overflow-wrap:anywhere}
+.arrow{flex:none;color:var(--muted);font-size:14px}
+.empty{margin:20px 0;padding:18px;border:1px dashed var(--line-strong);border-radius:14px;text-align:center;color:var(--muted)}
+.site-footer{max-width:920px;margin:26px auto 0;padding:16px;font-size:12px;color:var(--muted-2);border-top:1px solid var(--line);line-height:1.6}
+.site-footer p{margin:0 0 4px}
+@media (max-width:520px){.mini-grid{grid-template-columns:1fr}.group-head h2{font-size:18px}.lede{font-size:14px}}
+@media (prefers-color-scheme:dark){
+:root{--paper:#1b1e23;--paper-2:#23272d;--card:#2b3138;--ink:#f3ead9;--muted:#b9b2a4;--muted-2:#a59e91;--dark:#2b2f36;--dark-2:#23272d;--dark-3:#1b1e23;--on-dark:#f3ead9;--on-dark-muted:#b9b2a4;--brass:#d3ae82;--brass-2:#e6cba5;--red:#e0705f;--green:#7fbf9b;--line:#3a414a;--line-strong:#4a525c;--input:#1b1e23}
+.search{color-scheme:dark}
+}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+`;
+
+const MINI_JS = `
+(function(){
+  var input=document.getElementById('q');
+  var cards=Array.prototype.slice.call(document.querySelectorAll('.mini-card'));
+  var groups=Array.prototype.slice.call(document.querySelectorAll('.group'));
+  var count=document.getElementById('count');
+  var empty=document.getElementById('empty');
+  function apply(){
+    var q=input.value.trim().toLowerCase();
+    var visible=0;
+    cards.forEach(function(card){
+      var ok=!q||card.getAttribute('data-search').indexOf(q)!==-1;
+      card.hidden=!ok;
+      if(ok)visible++;
+    });
+    groups.forEach(function(group){
+      group.hidden=group.querySelectorAll('.mini-card:not([hidden])').length===0;
+    });
+    count.textContent=visible+' / '+cards.length+' 款';
+    empty.hidden=visible!==0;
+  }
+  input.addEventListener('input',apply);
+  apply();
+})();
+`;
+
+function miniCard(game) {
+  const search = [game.name, game.blurb, game.slug, game.groupLabel].join(' ').toLowerCase();
+  return `      <a class="mini-card" href="../${esc(game.slug)}/" data-search="${esc(search)}">
+        <span class="num" aria-hidden="true">${esc(game.number)}</span>
+        <span class="mini-body"><strong>${esc(game.name)}</strong><span>${esc(game.blurb)}</span></span>
+        <span class="arrow" aria-hidden="true">→</span>
+      </a>`;
+}
+
+export function renderMiniIndex(miniGames) {
+  const games = miniGames || scanMiniGames();
+  const countFor = function (key) {
+    return games.filter(function (game) { return game.group === key; }).length;
+  };
+  const nav = MINI_GROUPS.map(function (group) {
+    return `<a href="#${esc(group.key)}">${esc(group.label)}<span>${countFor(group.key)}</span></a>`;
+  }).join('\n    ');
+  const sections = MINI_GROUPS.map(function (group) {
+    const list = games.filter(function (game) { return game.group === group.key; });
+    if (!list.length) return '';
+    return `  <section class="group" id="${esc(group.key)}" aria-labelledby="${esc(group.key)}-title">
+    <div class="group-head"><h2 id="${esc(group.key)}-title">${esc(group.label)}</h2><span>${list.length} 款 · ${esc(group.note)}</span></div>
+    <div class="mini-grid">
+${list.map(miniCard).join('\n')}
+    </div>
+  </section>`;
+  }).filter(Boolean).join('\n\n');
+
   return `<!doctype html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#2b2f36">
+<title>微游戏库 · ${games.length} 款原创微桌游 (Mini Games Library)</title>
+<meta name="description" content="微游戏库：${games.length} 款纯前端离线微桌游，按德式、毛线派对、纸牌、骰子、抽象、解谜、美式 10 组分区。搜索游戏名或玩法，点开即玩。">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<link rel="canonical" href="${esc(BASE)}mini/">
+<style>${MINI_CSS}</style>
+</head>
+<body>
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span><span>桌游目录</span></a>
+    <span class="header-note">Mini Games</span>
+  </div>
+</header>
+<main class="wrap">
+  <section class="hero">
+    <p class="eyebrow">MINI LIBRARY · ${games.length} 款</p>
+    <h1>微游戏库</h1>
+    <p class="lede">${games.length} 款原创微桌游，10 组分区。每局 1–10 分钟，纯前端离线、单机对 AI，点卡片直接开局。</p>
+  </section>
+
+  <div class="toolbar">
+    <div class="search-row">
+      <label class="sr-only" for="q">搜索微游戏</label>
+      <input class="search" id="q" type="search" inputmode="search" autocomplete="off" placeholder="搜索游戏名或玩法…">
+      <span class="count" id="count" aria-live="polite">${games.length} / ${games.length} 款</span>
+    </div>
+    <nav class="group-nav" aria-label="分组跳转">
+    ${nav}
+    </nav>
+  </div>
+
+  <p class="empty" id="empty" hidden>没有匹配的微游戏，换个关键词试试。</p>
+${games.length === 0 ? '  <p class="lede">当前没有通过五项验收的微游戏；250 款均为 draft，不会进入本库。缺口见 <a href="../PROCESS-AUDIT.md">PROCESS-AUDIT.md</a>。</p>' : ''}
+
+${sections}
+</main>
+<footer class="site-footer">
+  <div class="wrap">
+    <p>${games.length} 款原创微桌游 · 10 组分区 · 全部为纯前端单机游戏。</p>
+    <p>静态页面，无追踪、无外部资源请求。</p>
+  </div>
+</footer>
+<script>${MINI_JS}</script>
+</body>
+</html>
+`;
+}
+
+function head(title, description, canonical, brandHref, options) {
+  const opts = options || {};
+  const ogImage = opts.ogImage;
+  const ogMeta = `<meta property="og:title" content="${esc(title)}">
+<meta property="og:description" content="${esc(description)}">
+<meta property="og:type" content="${esc(opts.ogType || 'article')}">
+<meta property="og:url" content="${esc(canonical)}">
+<meta property="og:site_name" content="桌游目录">
+${ogImage ? `<meta property="og:image" content="${esc(ogImage)}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="${esc(opts.ogImageAlt || '')}">
+` : ''}<meta name="twitter:card" content="${ogImage ? 'summary_large_image' : 'summary'}">
+<meta name="twitter:title" content="${esc(title)}">
+<meta name="twitter:description" content="${esc(description)}">
+${ogImage ? `<meta name="twitter:image" content="${esc(ogImage)}">
+` : ''}`;
+  return `<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:,">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2b2f36">
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(description)}">
 <meta name="robots" content="index,follow,max-image-preview:large">
 <link rel="canonical" href="${esc(canonical)}">
-<style>${CSS}</style>
+${opts.og ? ogMeta : ''}<style>${opts.detailCss ? CSS_DETAIL : CSS}</style>
 </head>
 <body>
 <header class="site-header">
@@ -269,11 +706,11 @@ function head(title, description, canonical, brandHref) {
 </header>`;
 }
 
-function footer() {
+function footer(disclaimer) {
   return `<footer class="site-footer">
   <div class="wrap">
     <p>数据采集自集石桌游公开详情页 · 评分与人数以原始页面为准 · 封面仅存数据，不加载外链。</p>
-    <p>静态页面，无追踪、无外部资源请求。</p>
+${disclaimer ? '    <p>本页为非官方资料页，与各游戏版权方无关联；游戏名称、规则与相关商标、版权归各自权利人所有。</p>\n' : ''}    <p>静态页面，无追踪、无外部资源请求。</p>
   </div>
 </footer>
 </body>
@@ -358,6 +795,17 @@ function detailJsonLd(game, catName) {
   return [article, breadcrumb];
 }
 
+function modeLabel(game) {
+  // 多人游戏统一标注「联机 + AI 匹配」；单人游戏明确标注「单人」。
+  return game.players.max <= 1 ? '单人' : '联机 + AI 匹配';
+}
+
+// 详情页按数据标注真实可玩状态：只有 playable 字段才代表站内可开局。
+function detailModeLabel(game) {
+  if (!game.playable) return '目录收录（暂未提供在线版）';
+  return game.playable.online ? '可联机 · AI 补位' : '可开局 · 同屏/AI';
+}
+
 function card(game, categories) {
   const catName = categoryName(categories, game.category);
   const search = [
@@ -373,7 +821,7 @@ function card(game, categories) {
     <div class="card-body">
       <h2 class="card-title">${esc(game.name.zh)}</h2>
       <p class="card-en">${esc(game.name.en)}</p>
-      <div class="meta"><span class="badge">${esc(catName)}</span><span>${esc(formatRange(game.players.min, game.players.max, '人'))}</span><span>${esc(formatRange(game.playTime.min, game.playTime.max, '分钟'))}</span></div>
+      <div class="meta"><span class="badge">${esc(catName)}</span><span>${esc(formatRange(game.players.min, game.players.max, '人'))}</span><span>${esc(formatRange(game.playTime.min, game.playTime.max, '分钟'))}</span><span class="mode-badge">${esc(modeLabel(game))}</span></div>
       <div class="score-row"><span class="rating">★ <b>${game.rating.toFixed(1)}</b></span><span>重度 ${game.weight.toFixed(1)}</span><span>${game.year}</span></div>
     </div>
   </a>
@@ -384,7 +832,16 @@ function chip(field, value, label, pressed) {
   return `<button class="chip" type="button" data-filter="${field}" data-value="${value}" aria-pressed="${pressed ? 'true' : 'false'}">${label}</button>`;
 }
 
-export function renderIndex(categories, games) {
+export function renderIndex(categories, games, miniGames, shipped) {
+  // shipped is the only gate for hub entries. Refuse to render without it so a
+  // caller cannot accidentally publish draft games by omitting the argument.
+  if (!(shipped instanceof Set)) {
+    throw new Error('renderIndex requires the shipped set from catalog-status.json');
+  }
+  const minis = miniGames || scanMiniGames(shipped);
+  const playable = PLAYABLE_GAMES.filter(function (game) { return shipped.has(game.slug); });
+  const premium = PREMIUM_GAMES.filter(function (game) { return shipped.has(game.slug); });
+  const cardBattle = shipped.has('card-battle');
   const sorted = sortGames(games);
   const counts = categoryCounts(sorted);
   const catChips = [chip('category', 'all', '全部', true)].concat(
@@ -422,13 +879,22 @@ export function renderIndex(categories, games) {
   </section>
 
   <section class="play-entries" aria-label="可玩桌游入口">
-    <a class="play-entry" href="./card-battle/">
+${minis.length ? miniEntry(minis.length) : ''}
+${cardBattle ? `    <a class="play-entry" href="./card-battle/">
       <span class="play-mark" aria-hidden="true">卡</span>
       <span class="play-body"><strong>卡牌对战 · 20 张 / 起手 5 / 3 分制</strong><span>宝可梦式能量附着与弱点双倍伤害，先得 3 分获胜 · 立即开局</span></span>
       <span class="play-cta" aria-hidden="true">开始 →</span>
-    </a>
-${PLAYABLE_GAMES.map(playEntry).join('\n')}
+    </a>` : ''}
+${playable.map(playEntry).join('\n')}
+${playable.length === 0 && !cardBattle && minis.length === 0 ? `    <p class="lede play-empty">当前没有通过五项验收的可玩游戏；284 款处于 draft，不会进入大厅。缺口见 <a href="PROCESS-AUDIT.md">PROCESS-AUDIT.md</a>。</p>` : ''}
   </section>
+
+  ${premium.length ? `<section class="premium-block" aria-labelledby="premium-title">
+    <h2 id="premium-title">精美版</h2>
+    <div class="play-entries">
+${premium.map(premiumEntry).join('\n')}
+    </div>
+  </section>` : ''}
 
   <section class="filters" aria-label="筛选与搜索">
     <div class="filter-row"><span class="filter-label">品类</span><div class="chips" role="group" aria-label="按品类筛选">
@@ -456,7 +922,10 @@ ${cards}
   <p class="empty" id="empty" hidden>没有符合条件的桌游，试试放宽筛选。</p>
 </main>
 ${footer()}<script>${FILTER_JS}</script>`;
-  return injectJsonLd(html, [indexJsonLd(sorted, categories)]);
+  const htmlWithMiniCss = minis.length
+    ? html.replace('</head>', `<style>${MINI_ENTRY_CSS}</style></head>`)
+    : html;
+  return injectJsonLd(htmlWithMiniCss, [indexJsonLd(sorted, categories)]);
 }
 
 function recommendationCard(rec, categories) {
@@ -475,15 +944,36 @@ export function renderDetail(game, categories, games) {
   const publishers = game.publishers.length ? game.publishers.join(' / ') : '未收录';
   const tags = game.tags && game.tags.length ? game.tags.join(' · ') : '—';
   const best = game.bestPlayers.length ? game.bestPlayers.join(' / ') + ' 人' : '暂无';
+  const description = '《' + game.name.zh + '》（' + game.name.en + '）桌游详情：支持 ' +
+    formatRange(game.players.min, game.players.max, '人') + '，' +
+    formatRange(game.playTime.min, game.playTime.max, '分钟') + '，重度 ' +
+    game.weight.toFixed(1) + '，评分 ' + game.rating.toFixed(1) + '。';
+  const canonical = BASE + 'board/' + game.slug + '.html';
+  const ogImage = fs.existsSync(path.join(HERE, '..', 'assets', 'og', game.slug + '.jpg'))
+    ? 'https://hhfa008.github.io/games/assets/og/' + game.slug + '.jpg'
+    : null;
+  const hasRules = !!(game.rules && fs.existsSync(path.join(HERE, game.rules)));
+  const rulesIntro = game.playable
+    ? (game.playable.online
+      ? '本目录提供可玩的在线版本，支持跨设备联机，可用 AI 补位。'
+      : '本目录提供可玩的本地版本，支持同屏或与 AI 开局，无需联网。')
+    : '本目录仅收录资料，暂未提供可玩的在线或本地版本。';
+  const playLink = game.playable
+    ? `      <a class="source-link" href="../${esc(game.playable.href)}">开始游戏 →</a>\n`
+    : '      \n';
+  const rulesLink = hasRules
+    ? `      <a class="source-link" href="../${esc(game.rules)}">查看规则 →</a>\n`
+    : '      \n';
+  const rulesTail = hasRules
+    ? '    '
+    : '    <p class="rules-pending">规则待补：本页暂未收录可读的本地规则，完整规则请参考下方的来源页。</p>';
 
   const html = head(
     game.name.zh + ' · 桌游详情',
-    '《' + game.name.zh + '》（' + game.name.en + '）桌游详情：支持 ' +
-      formatRange(game.players.min, game.players.max, '人') + '，' +
-      formatRange(game.playTime.min, game.playTime.max, '分钟') + '，重度 ' +
-      game.weight.toFixed(1) + '，评分 ' + game.rating.toFixed(1) + '。',
-    BASE + 'board/' + game.slug + '.html',
-    '../index.html'
+    description,
+    canonical,
+    '../index.html',
+    { og: true, detailCss: true, ogImage: ogImage, ogImageAlt: game.name.zh + '（' + game.name.en + '）桌游分享图' }
   ) + `
 <main class="wrap">
   <nav class="crumbs" aria-label="面包屑"><a href="../index.html">← 返回桌游目录</a></nav>
@@ -500,6 +990,7 @@ export function renderDetail(game, categories, games) {
 
   <section class="stats" aria-label="关键数据">
     <div class="stat"><span>支持人数</span><strong>${esc(formatRange(game.players.min, game.players.max, '人'))}</strong></div>
+    <div class="stat"><span>模式</span><strong>${esc(detailModeLabel(game))}</strong></div>
     <div class="stat"><span>最佳人数</span><strong>${esc(best)}</strong></div>
     <div class="stat"><span>单局时长</span><strong>${esc(formatRange(game.playTime.min, game.playTime.max, '分钟'))}</strong></div>
     <div class="stat"><span>重度</span><strong>${game.weight.toFixed(1)} / 5</strong></div>
@@ -519,6 +1010,14 @@ export function renderDetail(game, categories, games) {
     </dl>
   </section>
 
+  <section class="panel">
+    <h2>规则与开局</h2>
+    <p>${esc(rulesIntro)}</p>
+    <div class="action-row">
+${playLink}${rulesLink}    </div>
+${rulesTail}
+  </section>
+
   <section class="panel source">
     <h2>数据来源</h2>
     <p>评分、支持人数、推荐人数、人均时长、上手难度、设计师与出版社取自集石公开详情页，抓取时间 ${esc(game.source.fetchedAt)}。重度与单局时长由原始字段换算，规则见模块 README。</p>
@@ -532,7 +1031,7 @@ export function renderDetail(game, categories, games) {
     </div>
   </section>
 </main>
-${footer()}`;
+${footer(true)}`;
   return injectJsonLd(html, detailJsonLd(game, catName));
 }
 
@@ -577,8 +1076,15 @@ export function build(options) {
   }
 
   const sorted = sortGames(games);
+  const status = loadShippedStatus(opts.status || path.join(HERE, 'catalog-status.json'));
+  const shipped = status.shipped;
+  const miniGames = scanMiniGames(shipped);
   fs.mkdirSync(outDir, { recursive: true });
-  fs.writeFileSync(path.join(outDir, 'index.html'), renderIndex(categories, sorted));
+  fs.writeFileSync(path.join(outDir, 'index.html'), renderIndex(categories, sorted, miniGames, shipped));
+
+  const miniDir = path.join(outDir, 'mini');
+  fs.mkdirSync(miniDir, { recursive: true });
+  fs.writeFileSync(path.join(miniDir, 'index.html'), renderMiniIndex(miniGames));
 
   const boardDir = path.join(outDir, 'board');
   fs.rmSync(boardDir, { recursive: true, force: true });
@@ -598,7 +1104,8 @@ if (isMain) {
   try {
     const result = build({
       out: arg('out', HERE),
-      data: arg('data', path.join(HERE, 'data'))
+      data: arg('data', path.join(HERE, 'data')),
+      status: arg('status', path.join(HERE, 'catalog-status.json'))
     });
     console.log('built ' + result.pages + ' pages (' + result.games + ' games) → ' + result.outDir);
   } catch (err) {

@@ -30,8 +30,8 @@ export const SAMPLE_RULES = {
   deckSize: 60,
   handSize: 7,
   prizeCards: 6,
-  // 主线引擎只支持出战区；保留字段让旧 UI 的备战区渲染成 0 个空位。
-  benchSize: 0
+  // 与 app/cardgame.js 的 RULES_META.benchSize 一致：5 个备战位。
+  benchSize: 5
 };
 
 export const SAMPLE_CARDS = CARD_POOL.map(function (card) {
@@ -42,12 +42,11 @@ export const CARD_BY_ID = new Map(SAMPLE_CARDS.map(function (card) { return [car
 
 /*
  * 60 张演示牌库：10 种生物 × 4 张 = 40，另加 20 张基础能量。
- * 主线引擎允许同名牌多张；抽牌/奖赏/起手数量与旧 UI 一致。
+ * 与官方 TCG 的「同名牌最多 4 张」和 60 张牌库契约一致；基础能量不受限制。
  */
 export function buildSampleDeck() {
-  // 只放费用 ≤2 的生物：旧 UI 首回合只有 2 点能量，保证「出战」按钮可用。
   const creatures = CARD_POOL.filter(function (card) {
-    return card.category !== 'energy' && card.cost <= 2;
+    return card.category !== 'energy';
   }).map(function (card) { return card.id; });
   const energy = CARD_POOL.filter(function (card) {
     return card.category === 'energy';

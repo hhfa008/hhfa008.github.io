@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>琉璃工坊 · 人机对战微桌游</title>
+<meta name="description" content="琉璃工坊：把砂与苏打烧成琉璃，再串成可交付的琉璃珠。 双人单机人机对战，纯前端离线可玩。">
+<meta name="theme-color" content="#8fc4d6">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2316120f'/%3E%3Ccircle cx='16' cy='16' r='8' fill='none' stroke='%23d8b46a' stroke-width='2'/%3E%3Cpath d='M16 8v16M8 16h16' stroke='%23d8b46a' stroke-width='1.4'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#14110e;--bg2:#0d0b09;--panel:#1f1a15;--panel2:#2a231c;--ink:#f5eee2;--muted:#b9aa96;
+  --line:#4a3c2d;--line2:#332a21;--accent:#8fc4d6;--accent2:#f0d9a8;
+  --ok:#9fd6a8;--warn:#e6b36a;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --serif:"Songti SC","Noto Serif SC",Georgia,serif;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:radial-gradient(900px 420px at 50% -8%,#2b241b 0%,var(--bg) 46%,var(--bg2) 100%);
+  color:var(--ink);font:16px/1.6 var(--sans);overflow-x:hidden;padding-bottom:calc(28px + env(safe-area-inset-bottom));
+  -webkit-font-smoothing:antialiased}
+a{color:var(--accent2)}
+button{font:inherit;color:inherit}
+button:focus-visible,a:focus-visible{outline:2px solid var(--accent2);outline-offset:2px}
+.wrap{width:100%;max-width:760px;margin:0 auto;padding:0 16px}
+.topbar{position:sticky;top:0;z-index:20;background:rgb(13 11 9 / .9);border-bottom:1px solid var(--line2);backdrop-filter:blur(8px)}
+.topbar-in{min-height:52px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.topbar a{display:inline-flex;align-items:center;min-height:44px;padding:0 10px;border-radius:10px;text-decoration:none;
+  color:var(--muted);font-size:13.5px;font-weight:650}
+.topbar a:hover{background:var(--panel2);color:var(--ink)}
+.brand{display:flex;align-items:center;gap:8px;font-weight:750;color:var(--ink)!important}
+.mark{width:22px;height:22px;border-radius:50%;border:2px solid var(--accent);position:relative;flex:none}
+.mark::before,.mark::after{content:"";position:absolute;background:var(--accent);left:50%;top:50%;transform:translate(-50%,-50%)}
+.mark::before{width:2px;height:14px}.mark::after{height:2px;width:14px}
+.hero{padding:22px 0 12px}
+.kicker{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent2);font-weight:700;margin:0 0 6px}
+h1{font-family:var(--serif);font-size:clamp(1.9rem,7vw,2.7rem);line-height:1.08;letter-spacing:-.01em;margin:0}
+.lede{color:var(--muted);font-size:14px;line-height:1.65;margin:8px 0 0}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.tag{display:inline-flex;align-items:center;min-height:28px;padding:0 9px;border:1px solid var(--line);border-radius:999px;
+  color:var(--muted);font-size:12px;font-weight:650;background:rgb(31 26 21 / .7)}
+.panel{background:linear-gradient(180deg,var(--panel),#191410);border:1px solid var(--line2);border-radius:16px;padding:13px;margin-top:12px}
+.panel h2{font-size:12px;letter-spacing:.1em;color:var(--accent2);text-transform:uppercase;margin:0 0 8px;font-weight:750}
+.scores{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:12px}
+.pcard{min-width:0;background:linear-gradient(180deg,var(--panel),#18130f);border:1px solid var(--line2);border-radius:14px;padding:11px}
+.pcard.you{border-color:var(--line)}
+.pname{font-size:12px;color:var(--muted);font-weight:700;display:flex;justify-content:space-between;gap:6px}
+.pcard.you .pname{color:var(--accent2)}
+.worth{font-family:var(--serif);font-size:30px;line-height:1.1;margin:3px 0 1px}
+.worth small{font-family:var(--sans);font-size:12px;color:var(--muted);font-weight:600;margin-left:3px}
+.pdetail{font-size:12px;color:var(--muted);line-height:1.55;overflow-wrap:anywhere}
+.status{display:flex;align-items:center;gap:8px;min-height:44px;margin-top:10px;padding:8px 12px;border-radius:12px;
+  border:1px solid var(--line2);background:rgb(42 35 28 / .55);font-size:12.5px;color:var(--muted);line-height:1.45}
+.status strong{color:var(--ink)}
+.status .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex:none;box-shadow:0 0 0 4px rgb(216 180 106 / .14)}
+.status.thinking .dot{animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.3}}
+.board{display:grid;gap:9px}
+.orders,.recipes,.spots{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.order,.recipe,.spot,.lot,.grow{min-width:0;border:1px solid var(--line2);border-radius:12px;padding:9px 10px;background:#211b15}
+.order .oname,.spot .sname,.lot .lname{font-weight:750;font-size:13.5px;overflow-wrap:anywhere}
+.order .need,.recipe .line,.spot .sdesc,.lot .ldesc{font-size:12px;color:var(--muted);margin-top:2px;overflow-wrap:anywhere;line-height:1.5}
+.reward{font-size:12px;color:var(--ok);font-weight:700;margin-top:3px}
+.recipe{font-size:12px;line-height:1.5}
+.spot.taken{opacity:.55;border-style:dashed}
+.spot .taken-by{display:inline-block;margin-top:4px;font-size:12px;padding:1px 7px;border-radius:999px;background:var(--line2);color:var(--muted)}
+.lot{border-color:var(--line);background:linear-gradient(180deg,#2a2219,#1d1712)}
+.lot .points{font-family:var(--serif);font-size:34px;line-height:1.05;color:var(--accent2)}
+.lot .points small{font-family:var(--sans);font-size:12px;color:var(--muted);margin-left:2px}
+.goods{display:grid;gap:7px}
+.grow{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center;padding:8px 10px}
+.gname{font-size:13px;font-weight:700;overflow-wrap:anywhere}
+.gprice{font-size:13px;font-weight:750;text-align:right;white-space:nowrap}
+.gprice small{display:block;font-size:12px;font-weight:600;color:var(--muted)}
+.ginv{font-size:12px;color:var(--muted);white-space:nowrap;text-align:right}
+.up{color:var(--ok)}.down{color:var(--warn)}
+.chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.chip{display:inline-flex;align-items:center;gap:4px;min-height:22px;padding:0 6px;border-radius:6px;background:#2d251d;
+  font-size:12px;color:var(--ink);white-space:nowrap}
+.chip i{width:7px;height:7px;border-radius:50%;display:inline-block;flex:none}
+.actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.act{min-height:48px;text-align:left;padding:8px 11px;border-radius:12px;border:1px solid var(--line);
+  background:linear-gradient(180deg,#2b241c,#211b15);cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+  transition:transform .06s ease,border-color .12s ease;overflow-wrap:anywhere}
+.act:hover{border-color:var(--accent)}
+.act:active{transform:scale(.985)}
+.act .alabel{display:block;font-size:13px;font-weight:700;line-height:1.35}
+.act .ahint{display:block;font-size:12px;color:var(--muted);margin-top:1px;line-height:1.4}
+.act.primary{border-color:var(--accent);background:linear-gradient(180deg,#3a2e20,#2a2219)}
+.act:disabled{opacity:.45;cursor:not-allowed}
+.act.wide{grid-column:1 / -1;text-align:center}
+.result{grid-column:1 / -1;border:1px solid var(--accent);border-radius:14px;padding:12px;background:rgb(58 46 32 / .55);text-align:center}
+.result .big{font-family:var(--serif);font-size:22px;line-height:1.25;margin-bottom:3px}
+.result p{font-size:12.5px;color:var(--muted);margin:0 0 10px}
+.loglist{list-style:none;margin:0;padding:0;display:grid;gap:5px}
+.loglist li{font-size:12px;color:var(--muted);line-height:1.5;padding-left:10px;position:relative;overflow-wrap:anywhere}
+.loglist li::before{content:"";position:absolute;left:0;top:.6em;width:4px;height:4px;border-radius:50%;background:var(--line)}
+.loglist li:first-child{color:var(--ink)}
+.foot{margin-top:16px;text-align:center;font-size:12px;color:var(--muted);line-height:1.7}
+.toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#3a2e20;border:1px solid var(--accent);
+  color:var(--ink);padding:9px 14px;border-radius:10px;font-size:12.5px;z-index:50;max-width:calc(100vw - 32px)}
+@media(max-width:360px){.actions,.orders,.recipes,.spots{grid-template-columns:1fr}.worth{font-size:26px}}
+/* mini-quality: reduced-motion */
+@media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; scroll-behavior:auto !important; } }
+</style>
+  <link rel="canonical" href="https://hhfa008.github.io/games/boardgame/mini-euro-a-05/index.html">
+</head>
+<body>
+<div class="topbar"><div class="wrap topbar-in">
+  <a class="brand" href="../index.html"><span class="mark" aria-hidden="true"></span>桌游大厅</a>
+  <nav><a href="rules.html">规则 / FAQ</a></nav>
+</div></div>
+<main class="wrap">
+  <section class="hero">
+    <p class="kicker">MINI EURO · GLASSWORKS</p>
+    <h1>琉璃工坊</h1>
+    <p class="lede">把砂与苏打烧成琉璃，再串成可交付的琉璃珠。</p>
+    <div class="tags"><span class="tag">你 vs AI</span><span class="tag">约 5 分钟</span><span class="tag">纯前端离线</span><span class="tag">原创规则</span></div>
+  </section>
+
+  <section class="scores" id="scores" aria-label="比分"></section>
+  <div class="status" id="status" aria-live="polite"><span class="dot"></span><span id="statusText">准备开局…</span></div>
+
+  <section class="panel"><h2>局面</h2><div class="board" id="board"></div></section>
+  <section class="panel"><h2>可选行动</h2><div class="actions" id="actions"></div></section>
+  <section class="panel"><h2>对局记录</h2><ol class="loglist" id="log"></ol></section>
+  <p class="foot">原创极简德式桌游 · 单机人机对战<br>所有规则与随机种子都在本地运行，不发送任何请求。</p>
+</main>
+<script src="engine.js"></script>
+<script>
+(function () {
+  'use strict';
+  var E = window.MiniEuroEngine;
+  var CFG = E.config;
+  var state = E.createGame((Date.now ? (Date.now() % 100000) : 1) + 17);
+  var busy = false;
+  var aiTimer = null;
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function resChips(arr) {
+    var out = '';
+    for (var i = 0; i < arr.length; i++) {
+      out += '<span class="chip"><i style="background:' + esc(CFG.res[i].c) + '"></i>' + esc(CFG.res[i].n) + ' ' + arr[i] + '</span>';
+    }
+    return '<div class="chips">' + out + '</div>';
+  }
+  function invChips(inv) {
+    var out = '';
+    for (var i = 0; i < inv.length; i++) {
+      out += '<span class="chip"><i style="background:' + esc(CFG.goods[i].c || '#b9aa96') + '"></i>' + esc(CFG.goods[i].n) + ' ' + inv[i] + '</span>';
+    }
+    return '<div class="chips">' + out + '</div>';
+  }
+  function scoreCards() {
+    var html = '';
+    for (var i = 0; i < 2; i++) {
+      var p = state.players[i];
+      var detail = '';
+      if (state.mode === 'market') {
+        detail = '金币 ' + p.coins + invChips(p.inv);
+      } else if (state.mode === 'auction') {
+        detail = '银币 ' + p.coins + ' · 拍品分 ' + p.score;
+      } else if (state.mode === 'worker') {
+        detail = '金币 ' + p.coins + ' · 工人 ' + p.workers + resChips(p.res);
+      } else {
+        detail = '金币 ' + p.coins + resChips(p.res);
+      }
+      html += '<div class="pcard ' + (i === 0 ? 'you' : '') + '">' +
+        '<div class="pname"><span>' + (i === 0 ? '你' : 'AI') + '</span><span>' + (state.over ? '终局' : '估值') + '</span></div>' +
+        '<div class="worth">' + E.netWorth(state, i) + '<small>分</small></div>' +
+        '<div class="pdetail">' + detail + '</div></div>';
+    }
+    return html;
+  }
+  function statusText() {
+    if (state.over) {
+      if (state.winner === -1) return '平局 · 双方 ' + state.players[0].score + ' 分';
+      return (state.winner === 0 ? '你获胜' : 'AI 获胜') + ' · ' + state.players[0].score + ' : ' + state.players[1].score;
+    }
+    if (state.mode === 'auction') {
+      return '拍品 ' + (state.lotIndex + 1) + '/' + state.lots.length + ' ·「' + state.currentLot.name + '」' +
+        state.currentLot.points + ' 分 · 你持有 ' + state.players[0].coins + ' 银币';
+    }
+    if (state.mode === 'worker') {
+      return '第 ' + state.round + '/' + CFG.rounds + ' 轮 · 你剩 ' + state.players[0].workers + ' 名工人 · ' +
+        (state.turn === 0 ? '轮到你' : 'AI 正在派遣');
+    }
+    return '行动 你 ' + state.actions[0] + '/' + CFG.actions + ' · AI ' + state.actions[1] + '/' + CFG.actions +
+      ' · ' + (state.turn === 0 ? '轮到你' : 'AI 行动中');
+  }
+  function orderCard(o) {
+    return '<div class="order"><div class="oname">' + esc(o.name) + '</div>' +
+      '<div class="need">需要 ' + esc(needText(o.need)) + '</div>' +
+      '<div class="reward">+' + o.points + ' 分 · +' + o.coins + ' 币</div></div>';
+  }
+  function needText(need) {
+    var p = [];
+    for (var i = 0; i < need.length; i++) if (need[i]) p.push(need[i] + CFG.res[i].n);
+    return p.join(' + ') || '无';
+  }
+  function boardHtml() {
+    var h = '', i;
+    if (state.mode === 'convert' || state.mode === 'orders') {
+      h += '<div><h2 style="font-size:12px;color:var(--muted);margin:0 0 6px">' +
+        (state.mode === 'convert' ? '公开订单' : '订单市场') + '</h2><div class="orders">';
+      var orders = state.mode === 'convert' ? state.orders : state.orderMarket;
+      orders.forEach(function (o) { h += orderCard(o); });
+      if (!orders.length) h += '<div class="order"><div class="need">暂时没有订单</div></div>';
+      h += '</div></div>';
+      if (state.mode === 'orders') {
+        h += '<div><h2 style="font-size:12px;color:var(--muted);margin:8px 0 6px">你的手牌（上限 3）</h2><div class="orders">';
+        if (!state.players[0].hand.length) h += '<div class="order"><div class="need">先“接单”，再采集并交付。</div></div>';
+        state.players[0].hand.forEach(function (o) { h += orderCard(o); });
+        h += '</div></div>';
+      }
+      h += '<div><h2 style="font-size:12px;color:var(--muted);margin:8px 0 6px">转换配方</h2><div class="recipes">';
+      CFG.recipes.forEach(function (r) {
+        h += '<div class="recipe"><div class="line">' + esc(needText(r.in)) + ' → ' + esc(needText(r.out)) + '</div></div>';
+      });
+      h += '</div></div>';
+    } else if (state.mode === 'worker') {
+      h = '<div class="spots">';
+      state.spots.forEach(function (s) {
+        h += '<div class="spot ' + (s.taken !== null ? 'taken' : '') + '">' +
+          '<div class="sname">' + esc(s.name) + '</div><div class="sdesc">' + esc(s.desc) + '</div>' +
+          (s.taken !== null ? '<span class="taken-by">' + (s.taken === 0 ? '你已占用' : 'AI 已占用') + '</span>' : '') +
+          '</div>';
+      });
+      h += '</div>';
+    } else if (state.mode === 'auction') {
+      h = '<div class="lot"><div class="lname">第 ' + (state.lotIndex + 1) + ' 件 · ' + esc(state.currentLot.name) + '</div>' +
+        '<div class="points">' + state.currentLot.points + '<small>分</small></div>' +
+        '<div class="ldesc">密封出价：你出价后 AI 亮价。同价你优先；放弃请选 0。剩余 ' +
+        (state.lots.length - state.lotIndex) + ' 件。</div></div>';
+    } else if (state.mode === 'market') {
+      h = '<div class="goods">';
+      state.goods.forEach(function (g, idx) {
+        var diff = g.price - g.base;
+        var cls = diff > 0 ? 'up' : (diff < 0 ? 'down' : '');
+        var arrow = diff > 0 ? '▲ +' + diff : (diff < 0 ? '▼ ' + diff : '— 基准');
+        h += '<div class="grow"><div class="gname">' + esc(g.name) + '<div class="pdetail">基准价 ' + g.base + '</div></div>' +
+          '<div class="gprice">' + g.price + ' 币<small class="' + cls + '">' + arrow + '</small></div>' +
+          '<div class="ginv">库存<br>你 ' + state.players[0].inv[idx] + ' / AI ' + state.players[1].inv[idx] + '</div></div>';
+      });
+      h += '</div>';
+    }
+    return h;
+  }
+  function actionsHtml() {
+    if (state.over) {
+      var msg = state.winner === -1 ? '势均力敌，平局收场。' :
+        (state.winner === 0 ? '你赢了这一局。' : 'AI 略胜一筹，再来一局？');
+      return '<div class="result"><div class="big">' + state.players[0].score + ' : ' + state.players[1].score + '</div>' +
+        '<p>' + msg + '</p><button class="act primary wide" type="button" id="restart">再来一局</button></div>';
+    }
+    if (busy || state.turn !== 0) {
+      return '<div class="result"><div class="big">AI 思考中</div><p>它正在比较订单、资源与价格。</p></div>';
+    }
+    var legal = E.getLegalMoves(state);
+    if (!legal.length) return '<div class="result"><div class="big">无合法行动</div><p>请刷新重开。</p></div>';
+    var html = '';
+    legal.forEach(function (m, idx) {
+      var primary = /fulfill|deliver|place/.test(m.type) && idx < 2 ? ' primary' : '';
+      html += '<button class="act' + primary + '" type="button" data-key="' + esc(m.key) + '">' +
+        '<span class="alabel">' + esc(m.label) + '</span><span class="ahint">' + esc(m.hint) + '</span></button>';
+    });
+    return html;
+  }
+  function render() {
+    $('scores').innerHTML = scoreCards();
+    var st = $('status');
+    st.className = 'status' + (busy || (state.turn === 1 && !state.over) ? ' thinking' : '');
+    $('statusText').innerHTML = '<strong>' + esc(statusText()) + '</strong>';
+    $('board').innerHTML = boardHtml();
+    $('actions').innerHTML = actionsHtml();
+    var restart = $('restart');
+    if (restart) restart.addEventListener('click', newGame);
+    var logs = state.log.slice(-10).reverse();
+    $('log').innerHTML = logs.map(function (line) { return '<li>' + esc(line) + '</li>'; }).join('');
+  }
+  function newGame() {
+    if (aiTimer) { clearTimeout(aiTimer); aiTimer = null; }
+    busy = false;
+    state = E.createGame((Date.now() % 100000) + Math.floor(Math.random() * 997));
+    render();
+  }
+  function scheduleAi() {
+    if (busy || state.over || state.turn !== 1) return;
+    busy = true;
+    render();
+    aiTimer = setTimeout(function () {
+      aiTimer = null;
+      try {
+        var m = E.aiMove(state);
+        if (m) state = E.applyMove(state, m);
+      } catch (err) {
+        console.error(err);
+      }
+      busy = false;
+      render();
+      if (!state.over && state.turn === 1) scheduleAi();
+    }, 360);
+  }
+  $('actions').addEventListener('click', function (ev) {
+    var btn = ev.target.closest ? ev.target.closest('button[data-key]') : null;
+    if (!btn || busy || state.over || state.turn !== 0) return;
+    var key = btn.getAttribute('data-key');
+    var legal = E.getLegalMoves(state);
+    var move = null;
+    for (var i = 0; i < legal.length; i++) if (legal[i].key === key) move = legal[i];
+    if (!move) return;
+    busy = true;
+    try {
+      state = E.applyMove(state, move);
+    } catch (err) {
+      console.error(err);
+    }
+    busy = false;
+    render();
+    if (!state.over && state.turn === 1) scheduleAi();
+  });
+  render();
+})();
+</script>
+</body>
+</html>

@@ -25,6 +25,29 @@
    same action sequence therefore produces a bit-identical snapshot, on
    any JS engine: integer ops always go through Math.imul / >>> 0.
 
+   Replay records
+   --------------
+   match.record() returns a JSON-safe record:
+     { engineVersion, rng, ruleset, seed, result, setup, actions }
+   The header identifies the engine ('tcg/v2'), the PRNG
+   ('sfc32/fnv1a/v1' plus the seed and an initial-state digest) and the
+   ruleset digest. match.replay(record) validates the header first and throws
+   replay_version_mismatch / replay_rng_mismatch / replay_ruleset_mismatch
+   when the record was made by a different build. Legacy records without a
+   header (including the old bare action array) throw replay_legacy_format.
+   match.replayLegacy(log) is the explicit opt-in migration path for such
+   logs: it replays against this match's setup and performs no header check,
+   so callers must only use it for logs they know belong to that setup.
+   The snapshot also carries engineVersion, rngInfo and ruleset.
+
+   Hidden information
+   ------------------
+   match.state / snapshot() are the full authoritative state (server use).
+   viewFor(state, playerId) / snapshotFor(state, playerId) return a per-player
+   view: opponent hand is replaced by face-down placeholders plus handCount,
+   deck order is reduced to deckCount, and the RNG stream/seed are removed.
+   Public zones (field, discard, exile), defs, rules and the result are kept.
+
    Error contract
    --------------
    Illegal actions throw TCG.Error with a stable machine code:
@@ -32,6 +55,9 @@
      unknown_card, not_enough_<resource>, target_required, target_invalid,
      unexpected_target, unit_not_found, unit_not_ready, ability_not_found,
      ability_used.
+   Replay and view validation add: replay_legacy_format,
+   replay_invalid_record, replay_version_mismatch, replay_rng_mismatch,
+   replay_seed_mismatch, replay_ruleset_mismatch, invalid_player.
 */
 (function (root, factory) {
   var api = factory();
@@ -41,6 +67,14 @@
   'use strict';
 
   var VERSION = '1.0.0';
+  // Replay compatibility tag. Bump this whenever a rules or PRNG change makes
+  // old action logs replay differently. It is part of every replay record and
+  // every snapshot, and replay() refuses records from another tag instead of
+  // silently producing a different game.
+  var ENGINE_VERSION = 'tcg/v2';
+  var RULESET_VERSION = 'tcg-rules/v1';
+  // PRNG implementation identifier: algorithm / seed hash / version.
+  var RNG_NAME = 'sfc32/fnv1a/v1';
 
   /* ------------------------------------------------------------------ *
    * Errors                                                              *
@@ -71,6 +105,40 @@
       h = Math.imul(h, 0x01000193) >>> 0;
     }
     return h >>> 0;
+  }
+
+  function hex32(n) {
+    return ('00000000' + (n >>> 0).toString(16)).slice(-8);
+  }
+
+  function hashString(str) {
+    return 'fnv1a:' + hex32(fnv1a(str));
+  }
+
+  // Header metadata for a replay record. `seed` is the caller-supplied seed;
+  // initialStateDigest fingerprints the warmed-up sfc32 state, so changing the
+  // seed hash, warm-up count or PRNG algorithm is detectable even if the
+  // human-readable name were accidentally left unchanged.
+  function describeRng(seed, initialState) {
+    return {
+      name: RNG_NAME,
+      algorithm: 'sfc32',
+      seedHash: 'fnv1a',
+      version: 'v1',
+      seed: String(seed),
+      initialStateDigest: hashString(initialState.join(','))
+    };
+  }
+
+  // Rules are hashed with sorted keys so the digest does not depend on object
+  // insertion order.
+  function describeRuleset(rules) {
+    var keys = Object.keys(rules).sort();
+    var parts = [];
+    for (var i = 0; i < keys.length; i++) {
+      parts.push(keys[i] + '=' + JSON.stringify(rules[keys[i]]));
+    }
+    return { version: RULESET_VERSION, hash: hashString(parts.join('&')) };
   }
 
   function splitmix32(state) {
@@ -926,6 +994,176 @@
     return JSON.parse(JSON.stringify(state));
   }
 
+  function hiddenCard() {
+    return { hidden: true };
+  }
+
+  // Per-player view of the authoritative state. Hidden information is removed
+  // rather than merely hidden in the UI:
+  //   - the opponent's hand becomes `handCount` + face-down placeholders;
+  //   - both decks become `deckCount` + an empty array (draw order is secret
+  //     from every player, including the owner);
+  //   - the RNG stream, its initial-state digest and the seed are server-only,
+  //     because any of them lets a client predict future draws.
+  // Public zones (field, discard, exile), defs, rules and the result stay
+  // intact. The input state is never mutated.
+  function viewFor(state, playerId) {
+    if (playerId !== 0 && playerId !== 1) {
+      fail('invalid_player', 'viewFor needs playerId 0 or 1', { playerId: playerId });
+    }
+    var view = snapshot(state);
+    delete view.rng;
+    delete view.rngInfo;
+    delete view.seed;
+    for (var p = 0; p < view.players.length; p++) {
+      var player = view.players[p];
+      var hidden = p !== playerId;
+      var handCount = Array.isArray(player.hand) ? player.hand.length : 0;
+      var deckCount = Array.isArray(player.deck) ? player.deck.length : 0;
+      if (hidden) {
+        var hand = [];
+        for (var i = 0; i < handCount; i++) hand.push(hiddenCard());
+        player.hand = hand;
+      }
+      player.handCount = handCount;
+      player.handHidden = hidden;
+      player.deck = [];
+      player.deckCount = deckCount;
+      player.deckHidden = true;
+    }
+    return view;
+  }
+
+  // snapshotFor is the named entry point from the online-protocol contract; it
+  // is deliberately identical to viewFor (a JSON-safe, already-cloned view).
+  function snapshotFor(state, playerId) {
+    return viewFor(state, playerId);
+  }
+
+  // A replay record is {engineVersion, rng, ruleset, seed, result, setup,
+  // actions}. The header is validated before a single action is applied, so a
+  // record from another engine/PRNG/ruleset fails loudly instead of silently
+  // producing a different game. Records written before this header existed
+  // (including the old bare action array) are reported as legacy format.
+  function buildReplayHeader(setup, rngInfo, ruleset, state) {
+    return {
+      engineVersion: ENGINE_VERSION,
+      rng: clone(rngInfo),
+      ruleset: clone(ruleset),
+      seed: setup.seed,
+      result: {
+        phase: state.phase,
+        turn: state.turn,
+        winner: state.winner,
+        winReason: state.winReason,
+        draw: state.draw
+      }
+    };
+  }
+
+  function buildReplayRecord(history, setup, rngInfo, ruleset, state) {
+    var record = buildReplayHeader(setup, rngInfo, ruleset, state);
+    record.setup = clone(setup);
+    record.actions = clone(history);
+    return record;
+  }
+
+  function validateReplayRecord(record, fallbackSetup) {
+    if (record === undefined || Array.isArray(record)) {
+      fail('replay_legacy_format',
+        'legacy replay record: no header; re-record with match.record()',
+        { got: record === undefined ? 'undefined' : 'array', expected: 'object with engineVersion/rng/ruleset' });
+    }
+    if (!isObj(record)) {
+      fail('replay_invalid_record', 'replay record must be an object', { got: typeof record });
+    }
+    if (record.engineVersion === undefined) {
+      fail('replay_legacy_format',
+        'replay record has no engineVersion header (recorded by an older engine); it cannot be replayed safely',
+        { keys: Object.keys(record).slice(0, 12) });
+    }
+    if (record.engineVersion !== ENGINE_VERSION) {
+      fail('replay_version_mismatch',
+        'replay record engine version does not match this engine',
+        { recorded: record.engineVersion, current: ENGINE_VERSION });
+    }
+
+    if (record.setup !== undefined && !isObj(record.setup)) {
+      fail('replay_invalid_record', 'record.setup must be an object', { got: typeof record.setup });
+    }
+    var setup = isObj(record.setup) ? clone(record.setup) : clone(fallbackSetup);
+    var setupSeed = setup.seed === undefined ? 1 : setup.seed;
+    var expectedRng = describeRng(setupSeed, initRng(setupSeed));
+
+    var recordedRng = typeof record.rng === 'string' ? { name: record.rng } : record.rng;
+    if (!isObj(recordedRng)) {
+      fail('replay_legacy_format',
+        'replay record has no rng header; the PRNG algorithm must be identified before replay',
+        { got: typeof record.rng });
+    }
+    // Accept either the canonical {name:'sfc32/fnv1a/v1'} form or explicit
+    // algorithm/seedHash/version fields. Either way the algorithm must match.
+    if (recordedRng.name !== undefined) {
+      if (recordedRng.name !== RNG_NAME) {
+        fail('replay_rng_mismatch', 'replay record was produced by a different PRNG',
+          { recorded: recordedRng.name, current: RNG_NAME });
+      }
+    } else if (recordedRng.algorithm !== undefined) {
+      if (String(recordedRng.algorithm) !== 'sfc32' ||
+          (recordedRng.seedHash !== undefined && String(recordedRng.seedHash) !== 'fnv1a') ||
+          (recordedRng.version !== undefined && String(recordedRng.version) !== 'v1')) {
+        fail('replay_rng_mismatch', 'replay record was produced by a different PRNG',
+          { recorded: recordedRng, current: RNG_NAME });
+      }
+    } else {
+      fail('replay_legacy_format',
+        'replay record rng header has neither a name nor an algorithm',
+        { keys: Object.keys(recordedRng).slice(0, 8) });
+    }
+    if (recordedRng.seed !== undefined && String(recordedRng.seed) !== expectedRng.seed) {
+      fail('replay_seed_mismatch', 'replay record seed does not match its setup seed',
+        { recorded: String(recordedRng.seed), setup: expectedRng.seed });
+    }
+    if (recordedRng.initialStateDigest !== undefined &&
+        recordedRng.initialStateDigest !== expectedRng.initialStateDigest) {
+      fail('replay_rng_mismatch', 'replay record PRNG initial state does not match this engine',
+        { recorded: recordedRng.initialStateDigest, current: expectedRng.initialStateDigest });
+    }
+    if (record.seed !== undefined && String(record.seed) !== expectedRng.seed) {
+      fail('replay_seed_mismatch', 'replay record seed does not match its setup seed',
+        { recorded: String(record.seed), setup: expectedRng.seed });
+    }
+
+    // ruleset is optional ("若有"): a record without one is still replayable,
+    // but a present header must agree with the setup rules.
+    if (record.ruleset !== undefined) {
+      var recordedRuleset = typeof record.ruleset === 'string'
+        ? { hash: record.ruleset }
+        : record.ruleset;
+      if (!isObj(recordedRuleset)) {
+        fail('replay_invalid_record', 'record.ruleset must be an object or hash string',
+          { got: typeof record.ruleset });
+      }
+      var expectedRuleset = describeRuleset(normalizeRules(setup.rules));
+      if (recordedRuleset.version !== undefined &&
+          recordedRuleset.version !== expectedRuleset.version) {
+        fail('replay_ruleset_mismatch', 'replay record was produced by a different ruleset version',
+          { recorded: recordedRuleset.version, current: expectedRuleset.version });
+      }
+      if (recordedRuleset.hash !== undefined &&
+          recordedRuleset.hash !== expectedRuleset.hash) {
+        fail('replay_ruleset_mismatch', 'replay record ruleset hash does not match its setup',
+          { recorded: recordedRuleset.hash, current: expectedRuleset.hash });
+      }
+    }
+
+    if (!Array.isArray(record.actions)) {
+      fail('replay_invalid_record', 'replay record actions must be an array',
+        { got: typeof record.actions });
+    }
+    return { setup: setup, actions: record.actions };
+  }
+
   function setupCardPool(config) {
     var pool = {};
     var raw = config.cardPool || {};
@@ -962,8 +1200,12 @@
     var rules = normalizeRules(config.rules);
     var pool = setupCardPool(config);
     var seed = config.seed === undefined ? 1 : config.seed;
+    var initialRng = initRng(seed);
+    var rngInfo = describeRng(seed, initialRng);
+    var ruleset = describeRuleset(rules);
     var state = {
       version: VERSION,
+      engineVersion: ENGINE_VERSION,
       seed: String(seed),
       turn: 1,
       activePlayer: 0,
@@ -971,7 +1213,9 @@
       winner: null,
       winReason: null,
       draw: false,
-      rng: initRng(seed),
+      rng: initialRng.slice(),
+      rngInfo: clone(rngInfo),
+      ruleset: clone(ruleset),
       rules: clone(rules),
       defs: {},
       players: []
@@ -1036,6 +1280,28 @@
       get state() { return snapshot(state); },
       get log() { return clone(history); },
       get events() { return clone(lastEvents); },
+      // Full authoritative snapshot (same as match.state).
+      snapshot: function () {
+        return snapshot(state);
+      },
+      // Full replay record: header (engineVersion/rng/ruleset/seed/result),
+      // setup and the action stream. Pass it back to replay().
+      record: function () {
+        return buildReplayRecord(history, setup, rngInfo, ruleset, state);
+      },
+      // Header only, parseable without touching the action stream.
+      header: function () {
+        return buildReplayHeader(setup, rngInfo, ruleset, state);
+      },
+      // Per-player view; the authoritative snapshot() (match.state) stays full
+      // for the server. Kept as an added method so existing callers are not
+      // affected.
+      viewFor: function (playerId) {
+        return viewFor(state, playerId);
+      },
+      snapshotFor: function (playerId) {
+        return snapshotFor(state, playerId);
+      },
       legalActions: function (playerId) {
         return legalActions(state, playerId === undefined ? state.activePlayer : playerId);
       },
@@ -1045,10 +1311,31 @@
         lastEvents = events;
         return clone(events);
       },
-      replay: function (log) {
-        var fresh = createMatch(setup);
-        var actions = log || [];
+      replay: function (record) {
+        var checked = validateReplayRecord(record, setup);
+        var fresh = createMatch(checked.setup);
+        var actions = checked.actions;
         for (var i = 0; i < actions.length; i++) fresh.apply(actions[i]);
+        return fresh;
+      },
+      // Explicit migration path for action logs written before the v2 replay
+      // header existed. A bare log carries no engine/rng/ruleset identity, so
+      // callers must opt in: replaying it against another setup can silently
+      // produce a different game. The strict replay() above keeps rejecting
+      // bare arrays with replay_legacy_format; this method is the only place
+      // that trusts the caller-supplied setup (default: this match's setup).
+      replayLegacy: function (log, legacySetup) {
+        if (!Array.isArray(log)) {
+          fail('replay_invalid_record', 'legacy replay log must be an array of actions',
+            { got: log === null ? 'null' : typeof log });
+        }
+        var target = legacySetup === undefined ? setup : legacySetup;
+        if (!isObj(target)) {
+          fail('replay_invalid_record', 'legacy replay setup must be an object',
+            { got: target === null ? 'null' : typeof target });
+        }
+        var fresh = createMatch(clone(target));
+        for (var i = 0; i < log.length; i++) fresh.apply(clone(log[i]));
         return fresh;
       }
     };
@@ -1057,8 +1344,13 @@
 
   return {
     version: VERSION,
+    engineVersion: ENGINE_VERSION,
+    rulesetVersion: RULESET_VERSION,
+    rngName: RNG_NAME,
     Error: TCGError,
     createMatch: createMatch,
+    viewFor: viewFor,
+    snapshotFor: snapshotFor,
     defaults: function () { return clone(DEFAULT_RULES); }
   };
 });

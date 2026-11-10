@@ -63,7 +63,7 @@ var I18N = {
     E.extra.textContent = S.flags.filter(Boolean).length;
     if (S.status !== 'playing') {
       E.overlay.hidden = false;
-      E.overlayTitle.textContent = I18N[Arcade.lang()][`overlay${S.status.charAt(0).toUpperCase() + S.status.slice(1)}`];
+      E.overlayTitle.textContent = I18N[Arcade.lang()][Arcade.overlayKey(S.status)];
       E.overlayText.textContent = '';
       E.btnOverlay.textContent = I18N[Arcade.lang()].playAgain;
     } else {

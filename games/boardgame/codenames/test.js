@@ -37,7 +37,7 @@ var FULL = RED9.concat(BLUE8, NEUTRAL7, ['assassin']);
 s.group('静态页面约束', function () {
   s.ok('引用同源 engine.js', /<script[^>]*src="engine\.js"/.test(html));
   s.ok('移动端 viewport', /name="viewport"[^>]*width=device-width/.test(html));
-  s.ok('无外部 http(s) 请求', !/(src|href)="https?:\/\//.test(html));
+  s.ok('无外部 http(s) 请求', !/(src|href)="https?:\/\//.test(html.replace(/<link[^>]*rel=["']canonical["'][^>]*>/gi, '')));
   s.ok('触控目标 >=44px', /min-height:\s*(44|48|52|56)px/.test(html));
   s.ok('aria-label 存在', /aria-label=/.test(html));
   s.ok('规则页含 FAQ JSON-LD', rules.indexOf('"@type": "FAQPage"') >= 0 ||

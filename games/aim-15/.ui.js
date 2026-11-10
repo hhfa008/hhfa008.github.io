@@ -82,4 +82,10 @@ var I18N = {
   Arcade.onLang(render);
   Arcade.init({ strings: I18N, onLang: render });
   render();
+  // 每秒一步（固定步长累加器）；标签页隐藏时不推进，回前台不补步。
+  var TICKER = ArcadeTick.create({
+    step: 1000,
+    onStep: function () { input('tick'); }
+  });
+  TICKER.start();
 })();

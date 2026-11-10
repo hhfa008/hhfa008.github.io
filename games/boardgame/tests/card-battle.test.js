@@ -171,9 +171,14 @@ s.group('页面静态约束', function () {
   var embedded = match ? JSON.parse(match[1]) : null;
   s.eq('内嵌数据与 data/cards.json 完全一致', embedded, cards);
 
-  s.ok('页面无任何 http(s) URL', !/https?:\/\//i.test(pageHtml));
-  s.ok('页面无外部资源引用', !/\b(?:src|href)="(?:https?:)?\/\//i.test(pageHtml) &&
-    !/url\(\s*['"]?(?:https?:)?\/\//i.test(pageHtml));
+  // Metadata (canonical/og) is allowed to carry absolute URLs; the intent of
+  // this assertion is "no external resource URLs in the page body".
+  var pageBody = pageHtml
+    .replace(/<meta\b[^>]*>/gi, '')
+    .replace(/<link\b[^>]*rel=["']?canonical["']?[^>]*>/gi, '');
+  s.ok('页面除元数据外无任何 http(s) URL', !/https?:\/\//i.test(pageBody));
+  s.ok('页面无外部资源引用', !/\b(?:src|href)="(?:https?:)?\/\//i.test(pageBody) &&
+    !/url\(\s*['"]?(?:https?:)?\/\//i.test(pageBody));
   s.ok('页面不发起网络请求', !/\bfetch\s*\(|XMLHttpRequest|new\s+WebSocket|new\s+Image\s*\(/.test(pageHtml));
 
   var scriptSrcs = [];

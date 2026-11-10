@@ -1,0 +1,894 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark" data-online-key="reversi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="黑白棋 Reversi 精美版：8×8 标准规则、双面棋子材质、翻面动画、三档 AI、悔棋与 2 人联机房间。本地运行，零外部请求。">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#12100c">
+<title>黑白棋 Reversi · 精美版 | 翻面、占角、联机</title>
+<meta property="og:type" content="website">
+<meta property="og:title" content="黑白棋 Reversi · 精美版">
+<meta property="og:description" content="8×8 标准黑白棋：双面棋子、翻面动画、三档 AI、悔棋与双人联机。">
+<meta property="og:image" content="../../assets/art/premium/reversi/og.webp">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="黑白棋 Reversi · 精美版">
+<meta name="twitter:description" content="8×8 标准黑白棋：双面棋子、翻面动画、三档 AI、悔棋与双人联机。">
+<meta name="twitter:image" content="../../assets/art/premium/reversi/og.webp">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2317130d'/%3E%3Ccircle cx='24' cy='24' r='13' fill='%23101418' stroke='%23d8b26c' stroke-width='1.5'/%3E%3Ccircle cx='41' cy='41' r='13' fill='%23f4efe4' stroke='%23d8b26c' stroke-width='1.5'/%3E%3C/svg%3E">
+<style>
+:root{
+  --serif:"Songti SC","Iowan Old Style","Palatino Linotype","Noto Serif SC",Georgia,serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --bg:#12100c;--bg-2:#1b1711;--panel:#211b13;--panel-2:#2a2218;--panel-3:#16120d;
+  --ink:#f3e9d6;--ink-soft:#e4d6bd;--dim:#b9a98e;--gold:#d8b26c;--gold-2:#f1d9a5;
+  --felt:#2f6046;--felt-2:#244d38;--line:rgba(216,178,108,.26);--line-soft:rgba(216,178,108,.12);
+  --danger:#e88b78;--ok:#8ed3a8;--shadow:0 28px 70px rgba(0,0,0,.5);
+  --disc-b:url("../../assets/art/premium/reversi/disc-black.webp");
+  --disc-w:url("../../assets/art/premium/reversi/disc-white.webp");
+  --felt-img:url("../../assets/art/premium/reversi/table-felt.webp");
+}
+html[data-theme="light"]{
+  --bg:#efe6d3;--bg-2:#f8f1e2;--panel:#fffaf0;--panel-2:#f3e8d3;--panel-3:#fbf5e8;
+  --ink:#241d13;--ink-soft:#3a2f21;--dim:#6f614c;--gold:#9a6f2c;--gold-2:#7a521b;
+  --line:rgba(122,82,27,.3);--line-soft:rgba(122,82,27,.14);
+  --shadow:0 24px 60px rgba(74,52,24,.2);
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{
+  margin:0;min-height:100vh;min-height:100dvh;color:var(--ink);font:16px/1.55 var(--sans);
+  background:
+    radial-gradient(1000px 700px at 6% -10%,rgba(216,178,108,.14),transparent 60%),
+    radial-gradient(900px 680px at 100% 0%,rgba(47,96,70,.28),transparent 62%),
+    linear-gradient(158deg,var(--bg),var(--bg-2) 70%,var(--bg));
+  overflow-x:hidden;-webkit-font-smoothing:antialiased;
+  padding-bottom:calc(18px + env(safe-area-inset-bottom));
+}
+body::before{
+  content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;
+  background:var(--felt-img) center/cover no-repeat;opacity:.07;filter:saturate(.8) contrast(1.05);
+}
+a{color:var(--gold-2);text-underline-offset:3px}
+button,input,select,a{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--gold-2);outline-offset:3px;border-radius:10px}
+.app{max-width:1160px;margin:0 auto;padding:0 max(14px,env(safe-area-inset-right)) 0 max(14px,env(safe-area-inset-left))}
+.topbar{
+  padding:max(14px,env(safe-area-inset-top)) 0 10px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.crest{
+  width:54px;height:54px;border-radius:16px;flex:none;position:relative;overflow:hidden;
+  background:linear-gradient(145deg,#3f2f1c,#17120b);border:1px solid rgba(216,178,108,.5);
+  box-shadow:0 12px 26px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.16);
+}
+.crest::before,.crest::after{content:"";position:absolute;width:25px;height:25px;border-radius:50%;border:1px solid rgba(216,178,108,.6)}
+.crest::before{left:6px;top:8px;background:radial-gradient(circle at 34% 30%,#4b535b,#0a0c0e 70%)}
+.crest::after{right:6px;bottom:7px;background:radial-gradient(circle at 34% 30%,#fffdf6,#d4cbb9 70%)}
+.brand h1{margin:0;font-family:var(--serif);font-weight:700;font-size:clamp(24px,3.6vw,34px);letter-spacing:.1em;line-height:1.02}
+.brand h1 span{display:block;font-family:var(--sans);font-weight:600;font-size:12px;letter-spacing:.24em;color:var(--dim);margin-top:6px}
+.top-actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:44px;padding:0 15px;
+  border-radius:12px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink-soft);
+  text-decoration:none;font-size:13px;letter-spacing:.04em;cursor:pointer;
+}
+.btn:hover{border-color:var(--gold);color:var(--ink)}
+.btn.primary{background:linear-gradient(145deg,var(--gold-2),var(--gold));color:#2a1c08;border-color:transparent;font-weight:700}
+.btn.ghost{background:transparent}
+.btn:disabled{opacity:.42;cursor:not-allowed}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 346px;gap:16px;align-items:start;margin-top:8px}
+.panel{
+  border:1px solid var(--line);border-radius:20px;background:linear-gradient(160deg,var(--panel),var(--panel-3));
+  box-shadow:var(--shadow);padding:clamp(12px,2.2vw,22px);min-width:0;
+}
+.board-panel{padding:clamp(10px,1.8vw,18px)}
+.board-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.pill{
+  display:inline-flex;align-items:center;min-height:30px;padding:0 11px;border-radius:999px;
+  border:1px solid var(--line);background:rgba(0,0,0,.2);font-size:12px;color:var(--dim);letter-spacing:.05em;
+}
+html[data-theme="light"] .pill{background:rgba(255,255,255,.5)}
+.hint{font-size:12px;color:var(--dim);line-height:1.45}
+.board-head .grow{flex:1}
+.board-wrap{display:flex;justify-content:center;width:100%}
+.board{
+  display:grid;grid-template-columns:repeat(8,minmax(0,1fr));width:100%;max-width:min(560px,100%);aspect-ratio:1;
+  background:var(--felt-img) center/cover,linear-gradient(145deg,var(--felt),var(--felt-2));
+  border:1px solid rgba(216,178,108,.34);border-radius:16px;padding:6px;gap:2px;
+  box-shadow:0 18px 40px rgba(0,0,0,.42),inset 0 0 0 4px rgba(0,0,0,.18);touch-action:manipulation;
+}
+.cell{
+  position:relative;min-width:0;min-height:0;aspect-ratio:1;border-radius:4px;cursor:pointer;
+  background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(0,0,0,.08));
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.2);touch-action:manipulation;
+}
+.cell:hover{background:rgba(216,178,108,.1)}
+.cell:focus-visible{outline:2px solid var(--gold-2);outline-offset:-2px}
+.cell.legal::after{
+  content:"";position:absolute;left:50%;top:50%;width:26%;height:26%;transform:translate(-50%,-50%);
+  border-radius:50%;background:rgba(241,217,165,.52);box-shadow:0 0 0 1px rgba(255,255,255,.2);
+}
+.cell.last{box-shadow:inset 0 0 0 2px rgba(241,217,165,.72),inset 0 0 0 1px rgba(0,0,0,.2)}
+.disc{
+  position:absolute;inset:6%;border-radius:50%;background-size:contain;background-repeat:no-repeat;background-position:center;
+  filter:drop-shadow(0 3px 3px rgba(0,0,0,.5));will-change:transform;
+}
+.disc.b{background-image:var(--disc-b),radial-gradient(circle at 35% 30%,#4a5057,#0a0c0e 68%)}
+.disc.w{background-image:var(--disc-w),radial-gradient(circle at 35% 30%,#fffdf7,#d2c9b7 70%)}
+.disc.pop{animation:pop .22s ease}
+.disc.flip{animation:flipX .32s ease}
+@keyframes pop{0%{transform:scale(.25);opacity:.15}72%{transform:scale(1.06)}100%{transform:scale(1)}}
+@keyframes flipX{0%{transform:rotateY(0) scaleX(1)}48%{transform:rotateY(90deg) scaleX(.08)}52%{transform:rotateY(90deg) scaleX(.08)}100%{transform:rotateY(0) scaleX(1)}}
+.statusbar{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:12px 0 8px;min-height:44px}
+.turn-dot{width:14px;height:14px;border-radius:50%;flex:none;border:1px solid rgba(216,178,108,.6)}
+.turn-dot.b{background:radial-gradient(circle at 35% 30%,#4b535b,#0a0c0e 72%)}
+.turn-dot.w{background:radial-gradient(circle at 35% 30%,#fffdf6,#d4cbb9 72%)}
+.status{flex:1;min-width:140px;font-size:14px;font-weight:650;line-height:1.35}
+.scoreboard{display:grid;grid-template-columns:auto minmax(48px,1fr) auto;align-items:center;gap:10px;padding:10px 12px;border-radius:13px;background:rgba(0,0,0,.2);border:1px solid var(--line-soft)}
+html[data-theme="light"] .scoreboard{background:rgba(255,255,255,.5)}
+.score{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--dim);white-space:nowrap}
+.score b{font-family:var(--serif);font-size:22px;color:var(--ink);min-width:24px;text-align:center;font-variant-numeric:tabular-nums}
+.disc-mini{width:16px;height:16px;border-radius:50%;flex:none;border:1px solid rgba(216,178,108,.5);background-size:contain;background-repeat:no-repeat;background-position:center}
+.disc-mini.b{background-image:var(--disc-b),radial-gradient(circle at 35% 30%,#4b535b,#0a0c0e)}
+.disc-mini.w{background-image:var(--disc-w),radial-gradient(circle at 35% 30%,#fffdf6,#d4cbb9)}
+.bar{height:9px;border-radius:999px;background:#0b0d0e;overflow:hidden;box-shadow:inset 0 1px 2px rgba(0,0,0,.6)}
+.bar i{display:block;height:100%;width:50%;background:linear-gradient(90deg,#15181b,#3d444b);transition:width .35s ease}
+aside{display:grid;gap:14px;min-width:0}
+h2{margin:0 0 8px;font-family:var(--serif);font-weight:700;font-size:19px;letter-spacing:.06em}
+h3{margin:0 0 8px;font-family:var(--serif);font-weight:700;font-size:16px;letter-spacing:.05em;color:var(--gold-2)}
+.seg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;background:var(--panel-2);border:1px solid var(--line-soft);border-radius:12px;padding:4px;margin-bottom:9px}
+.seg.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+.seg button{
+  min-height:44px;min-width:44px;padding:0 6px;border:0;border-radius:9px;background:transparent;
+  color:var(--dim);font-size:13px;font-weight:600;cursor:pointer;
+}
+.seg button[aria-pressed="true"]{background:linear-gradient(145deg,var(--gold-2),var(--gold));color:#2a1c08}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.actions .btn{width:100%}
+.record{font-family:var(--mono);font-size:12px;color:var(--dim);margin-top:10px;line-height:1.6;overflow-wrap:anywhere}
+.players{display:grid;gap:7px;margin-top:12px}
+.player{display:flex;align-items:center;gap:9px;min-height:46px;padding:7px 10px;border-radius:11px;border:1px solid var(--line-soft);background:rgba(0,0,0,.16);font-size:13px}
+html[data-theme="light"] .player{background:rgba(255,255,255,.45)}
+.player.current{border-color:var(--gold);box-shadow:0 0 0 1px rgba(216,178,108,.16)}
+.player .who{flex:1;min-width:0;overflow-wrap:anywhere}
+.player .tag{font-size:12px;color:var(--dim);white-space:nowrap}
+.player .tag.ai{color:var(--gold)}
+.tips ol{margin:0;padding-left:1.15em;display:grid;gap:7px}
+.tips li{font-size:12px;line-height:1.6;color:var(--dim)}
+.tips p{margin:8px 0 0;font-size:12px;line-height:1.65;color:var(--dim)}
+.online-box{display:grid;gap:8px;margin-top:12px;padding:10px;border-radius:12px;border:1px dashed var(--line);background:rgba(0,0,0,.16)}
+html[data-theme="light"] .online-box{background:rgba(255,255,255,.45)}
+.room-code{font-family:var(--serif);font-weight:700;font-size:22px;letter-spacing:.16em;color:var(--gold-2)}
+.online-line{font-size:12px;color:var(--dim);line-height:1.6;overflow-wrap:anywhere}
+.toast{
+  position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translate(-50%,16px);
+  max-width:min(420px,calc(100vw - 28px));padding:10px 16px;border-radius:999px;border:1px solid var(--line);
+  background:rgba(24,19,12,.94);color:var(--ink);font-size:13px;opacity:0;pointer-events:none;transition:.22s;z-index:40;
+}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.modal{position:fixed;inset:0;z-index:50;display:none;place-items:center;padding:18px;background:rgba(6,5,3,.66)}
+.modal.show{display:grid}
+.dialog{
+  width:min(420px,100%);border:1px solid var(--line);border-radius:20px;background:linear-gradient(160deg,var(--panel),var(--panel-3));
+  box-shadow:var(--shadow);padding:22px;text-align:center;
+}
+.dialog h3{font-size:24px;color:var(--gold-2);margin-bottom:6px}
+.dialog .final{font-family:var(--serif);font-size:44px;letter-spacing:.08em;margin:8px 0}
+.dialog p{font-size:13px;color:var(--dim);line-height:1.65;margin:0 0 14px}
+.dialog .actions{grid-template-columns:1fr 1fr}
+.footer{max-width:1160px;margin:18px auto 0;padding:0 max(14px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left));display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--dim)}
+.footer a{color:var(--dim);text-decoration:none;display:inline-flex;align-items:center;min-height:44px;padding:0 4px}
+.footer a:hover{color:var(--gold-2)}
+@media (max-width:900px){
+  .layout{grid-template-columns:1fr}
+  aside{grid-template-columns:1fr 1fr}
+}
+@media (max-width:620px){
+  .top-actions{width:100%}
+  .scoreboard{gap:6px;padding:8px 9px}
+  .score{gap:4px}
+  .score b{font-size:18px;min-width:20px}
+  .disc-mini{width:13px;height:13px}
+  .top-actions .btn{flex:1 1 auto}
+  aside{grid-template-columns:1fr}
+  .brand h1{font-size:24px}
+  .board{padding:4px;gap:1px;border-radius:12px}
+  .panel{border-radius:16px}
+  .score b{font-size:20px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important}
+  html{scroll-behavior:auto}
+}
+</style>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/reversi-premium/">
+</head>
+<body>
+<div hidden aria-hidden="true" id="asset-refs"><img src="../../assets/art/premium/reversi/cover.webp" alt=""><img src="../../assets/art/premium/reversi/og.webp" alt=""><img src="../../assets/art/premium/reversi/detail.webp" alt=""><img src="../../assets/art/premium/reversi/table-wood.webp" alt=""></div>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="crest" aria-hidden="true"></div>
+      <div>
+        <h1>黑白棋 <span>REVERSI · 8×8 经典</span></h1>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button class="btn ghost" id="theme" type="button">明暗</button>
+      <button class="btn ghost" id="sound" type="button">音效</button>
+      <button class="btn ghost" type="button" data-share-btn>分享</button>
+      <a class="btn ghost" href="online.html">联机</a>
+      <a class="btn" href="rules.html">规则</a>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="panel board-panel" aria-label="黑白棋棋盘">
+      <div class="board-head">
+        <span class="pill" id="mode-pill">人机对战</span>
+        <span class="hint" id="turn-info">黑棋先行</span>
+        <span class="grow"></span>
+        <span class="pill" id="move-pill">第 0 手</span>
+        <span class="hint" id="room-info" hidden></span>
+      </div>
+      <div class="board-wrap">
+        <div class="board" id="board" role="grid" aria-label="8 乘 8 黑白棋棋盘"></div>
+      </div>
+      <div class="statusbar">
+        <span class="turn-dot b" id="turn-dot" aria-hidden="true"></span>
+        <span class="status" id="status" role="status" aria-live="polite">轮到你（黑棋）</span>
+        <button class="btn primary" id="pass" type="button" hidden>无子可下 · 跳过</button>
+      </div>
+      <div class="scoreboard" aria-label="比分">
+        <span class="score"><i class="disc-mini b" aria-hidden="true"></i><span>黑棋</span><b id="bcount">2</b></span>
+        <span class="bar" aria-hidden="true"><i id="bar-black"></i></span>
+        <span class="score"><b id="wcount">2</b><span>白棋</span><i class="disc-mini w" aria-hidden="true"></i></span>
+      </div>
+    </section>
+
+    <aside>
+      <section class="panel" aria-label="对局控制">
+        <h2>对局</h2>
+        <div class="seg" id="mode-seg" role="group" aria-label="模式">
+          <button type="button" data-mode="ai" aria-pressed="true">人机</button>
+          <button type="button" data-mode="local" aria-pressed="false">双人同屏</button>
+        </div>
+        <div class="seg three" id="diff-seg" role="group" aria-label="难度">
+          <button type="button" data-diff="easy" aria-pressed="false">简单</button>
+          <button type="button" data-diff="normal" aria-pressed="true">普通</button>
+          <button type="button" data-diff="hard" aria-pressed="false">困难</button>
+        </div>
+        <div class="actions">
+          <button class="btn primary" id="new" type="button">新开一局</button>
+          <button class="btn" id="undo" type="button">悔棋</button>
+        </div>
+        <div class="record" id="record"></div>
+        <div class="players" id="players"></div>
+        <div class="online-box" id="online-box" hidden>
+          <div class="room-code" id="online-code">——</div>
+          <div class="online-line" id="online-line">正在连接联机房间…</div>
+          <button class="btn" id="online-restart" type="button" hidden>房主重开</button>
+        </div>
+      </section>
+
+      <section class="panel tips" aria-label="提示">
+        <h3>下法提要</h3>
+        <ol>
+          <li>落子必须夹住至少一枚对方棋子，八个方向同时结算。</li>
+          <li>四角不会被翻，角旁的 X 位最危险。</li>
+          <li>没有合法落点时跳过；双方都无子可下即终局。</li>
+          <li>终局棋子多者胜，数量相同为平局。</li>
+        </ol>
+        <p id="hint-line">黑棋先行。轻触亮起的空位落子。</p>
+      </section>
+    </aside>
+  </main>
+
+  <footer class="footer">
+    <span>黑白棋 Reversi · 标准 8×8 · 本地运行 · 零外部请求</span>
+    <span><a href="rules.html">完整规则</a> · <a href="online.html">联机房间</a></span>
+  </footer>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="dialog">
+    <h3 id="modal-title">终局</h3>
+    <div class="final" id="modal-score">—</div>
+    <p id="modal-text"></p>
+    <div class="actions">
+      <button class="btn primary" id="modal-again" type="button">再来一局</button>
+      <button class="btn" id="modal-close" type="button">查看棋盘</button>
+    </div>
+  </div>
+</div>
+
+<script src="../../shared/sfx.js"></script>
+<script src="../../shared/share.js" data-name-zh="黑白棋" data-name-en="Reversi" data-name-id="Reversi"></script>
+<script src="../app/online-bridge.js"></script>
+<script src="./engine.js"></script>
+<script src="./data.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var E = window.ReversiEngine;
+  var D = window.ReversiData;
+  var ONLINE = !!(window.OnlineBridge && window.OnlineBridge.active);
+
+  var $ = function (id) { return document.getElementById(id); };
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' };
+    });
+  }
+  function storeGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function storeSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  function sfx(name) { if (!muted && window.Sfx) { try { window.Sfx.play(name); } catch (e) {} } }
+  function toast(msg) {
+    var el = $('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove('show'); }, 2200);
+  }
+
+  var game = null;
+  var onlineView = null;
+  var onlineReady = false;
+  var mode = 'ai';
+  var diff = 'normal';
+  var thinking = false;
+  var aiTimer = null;
+  var passTimer = null;
+  var toastTimer = null;
+  var gen = 0;
+  var muted = false;
+  var lastRendered = new Array(64).fill(0);
+  var lastAutoPassKey = '';
+  var resultShownKey = '';
+  var cells = [];
+  var boardEl = $('board');
+
+  function readRecord() {
+    try { return JSON.parse(storeGet(D.RECORD_KEY) || '{}') || {}; } catch (e) { return {}; }
+  }
+  function writeRecord(rec) { storeSet(D.RECORD_KEY, JSON.stringify(rec)); }
+  function recordLine() {
+    var r = readRecord();
+    return '人机战绩：' + (r.w || 0) + ' 胜 · ' + (r.l || 0) + ' 负 · ' + (r.d || 0) + ' 平';
+  }
+  function recordGame(state) {
+    if (!state || !state.result) return;
+    var r = readRecord();
+    if (state.result.draw) r.d = (r.d || 0) + 1;
+    else if (state.result.winner === E.BLACK) r.w = (r.w || 0) + 1;
+    else r.l = (r.l || 0) + 1;
+    writeRecord(r);
+    $('record').textContent = recordLine();
+  }
+
+  function buildBoard() {
+    for (var i = 0; i < 64; i += 1) {
+      var cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.setAttribute('role', 'gridcell');
+      cell.setAttribute('data-i', String(i));
+      cell.setAttribute('tabindex', '0');
+      cell.setAttribute('aria-label', '第 ' + ((i / 8 | 0) + 1) + ' 行第 ' + (i % 8 + 1) + ' 列');
+      boardEl.appendChild(cell);
+      cells.push(cell);
+    }
+  }
+
+  function seatOf(index) {
+    var players = currentPlayers();
+    return players[index] || null;
+  }
+  function currentPlayers() {
+    if (ONLINE) return (onlineView && onlineView.state && onlineView.state.players) || [];
+    return game ? game.players : [];
+  }
+  function stateOf() {
+    if (ONLINE) return onlineView && onlineView.state ? onlineView.state : null;
+    return game;
+  }
+  function myTurn() {
+    var state = stateOf();
+    if (!state || state.over) return false;
+    if (ONLINE) return !!(onlineView && onlineReady && window.OnlineBridge.isMyTurn());
+    if (mode === 'local') return true;
+    var p = seatOf(state.current - 1);
+    return !!(p && !p.isAI);
+  }
+  function canInteract() {
+    var state = stateOf();
+    if (!state || state.over) return false;
+    return myTurn();
+  }
+  function legalMovesFor(state) {
+    if (!state || state.over) return [];
+    return E.legalFor(state.board, state.current);
+  }
+
+  function discClass(value) { return value === E.BLACK ? 'b' : 'w'; }
+
+  function renderBoard(state, animate) {
+    if (!state) return;
+    var moves = canInteract() ? legalMovesFor(state) : [];
+    var legal = {};
+    for (var m = 0; m < moves.length; m += 1) legal[moves[m].i] = true;
+    var lastIndex = state.lastMove ? (state.lastMove.row * 8 + state.lastMove.col) : -1;
+    for (var i = 0; i < 64; i += 1) {
+      var cell = cells[i];
+      var value = state.board[i] || 0;
+      var before = lastRendered[i];
+      var disc = cell.firstElementChild;
+      if (!value) {
+        if (disc) disc.remove();
+      } else {
+        if (!disc) {
+          disc = document.createElement('span');
+          disc.className = 'disc';
+          cell.appendChild(disc);
+        }
+        var target = 'disc ' + discClass(value);
+        if (animate && before && before !== value) {
+          disc.className = 'disc flip ' + discClass(before);
+          (function (d, g) {
+            setTimeout(function () { if (g === gen) d.className = 'disc ' + discClass(value); }, 150);
+            setTimeout(function () { if (g === gen) d.className = 'disc ' + discClass(value); }, 330);
+          })(disc, gen);
+        } else if (animate && !before) {
+          disc.className = target + ' pop';
+          (function (d, g) {
+            setTimeout(function () { if (g === gen) d.className = 'disc ' + discClass(value); }, 240);
+          })(disc, gen);
+        } else {
+          disc.className = target;
+        }
+      }
+      cell.classList.toggle('legal', !!legal[i]);
+      cell.classList.toggle('last', i === lastIndex);
+      lastRendered[i] = value;
+    }
+  }
+
+  function statusText(state) {
+    if (!state) return ONLINE ? (onlineReady ? '等待房主开始对局' : '正在连接联机房间…') : '准备开局';
+    if (state.over) {
+      var r = state.result || { black: state.scores.black, white: state.scores.white, draw: state.scores.black === state.scores.white, winner: 0 };
+      if (r.draw) return '平局 · 黑 ' + r.black + ' : 白 ' + r.white;
+      var winnerBlack = r.winner === E.BLACK;
+      if (ONLINE) {
+        var seat = seatOf(winnerBlack ? 0 : 1);
+        return (seat ? seat.name : (winnerBlack ? '黑方' : '白方')) + ' 获胜 · ' + r.black + ' : ' + r.white;
+      }
+      if (mode === 'local') return (winnerBlack ? '黑棋获胜' : '白棋获胜') + ' · ' + r.black + ' : ' + r.white;
+      return (winnerBlack ? '你赢了' : 'AI 获胜') + ' · ' + r.black + ' : ' + r.white;
+    }
+    if (ONLINE) {
+      if (!onlineView || !onlineView.started) return '等待房主开始对局';
+      if (window.OnlineBridge.isMyTurn()) return '轮到你 · ' + (onlineView.you.playerIndex === 0 ? '黑棋' : '白棋');
+      var cur = seatOf(state.current - 1);
+      if (cur && (cur.takeover || cur.ai)) return 'AI 托管中 · ' + cur.name;
+      return '等待 ' + (cur ? cur.name : '对手') + ' 落子';
+    }
+    if (thinking) return 'AI 正在思考…';
+    if (mode === 'local') return state.current === E.BLACK ? '黑棋落子' : '白棋落子';
+    return state.current === E.BLACK ? '轮到你（黑棋）' : '轮到 AI（白棋）';
+  }
+
+  function renderPlayers(state) {
+    var box = $('players');
+    if (!state) { box.innerHTML = ''; return; }
+    var players = state.players || [];
+    box.innerHTML = players.map(function (p, i) {
+      var active = !state.over && state.current - 1 === i;
+      var tags = [];
+      if (p.isAI) tags.push('AI');
+      if (ONLINE && onlineView && onlineView.players && onlineView.players[i]) {
+        if (onlineView.players[i].takeover) tags.push('托管');
+      }
+      var color = i === 0 ? '黑' : '白';
+      return '<div class="player' + (active ? ' current' : '') + '">' +
+        '<i class="disc-mini ' + (i === 0 ? 'b' : 'w') + '"></i>' +
+        '<span class="who">' + esc(p.name || (color + '方')) + '</span>' +
+        '<span class="tag' + (p.isAI ? ' ai' : '') + '">' + esc(color + '棋') + (tags.length ? ' · ' + tags.join(' · ') : '') + '</span></div>';
+    }).join('');
+  }
+
+  function renderScores(state) {
+    var b = state ? state.scores.black : 2;
+    var w = state ? state.scores.white : 2;
+    $('bcount').textContent = String(b);
+    $('wcount').textContent = String(w);
+    $('bar-black').style.width = (b + w > 0 ? Math.round(b / (b + w) * 100) : 50) + '%';
+    $('move-pill').textContent = '第 ' + (state ? state.moveCount || 0 : 0) + ' 手';
+    if (state && state.over) {
+      $('turn-dot').className = 'turn-dot ' + (b >= w ? 'b' : 'w');
+    } else {
+      $('turn-dot').className = 'turn-dot ' + (state && state.current === E.WHITE ? 'w' : 'b');
+    }
+  }
+
+  function renderMode() {
+    if (ONLINE) {
+      $('mode-pill').textContent = '联机对战';
+      $('mode-seg').hidden = true;
+      $('diff-seg').hidden = true;
+      return;
+    }
+    $('mode-pill').textContent = mode === 'ai' ? '人机对战' : '双人同屏';
+    $('mode-seg').hidden = false;
+    $('diff-seg').hidden = mode !== 'ai';
+    var mb = document.querySelectorAll('[data-mode]');
+    for (var i = 0; i < mb.length; i += 1) mb[i].setAttribute('aria-pressed', mb[i].getAttribute('data-mode') === mode ? 'true' : 'false');
+    var db = document.querySelectorAll('[data-diff]');
+    for (var j = 0; j < db.length; j += 1) db[j].setAttribute('aria-pressed', db[j].getAttribute('data-diff') === diff ? 'true' : 'false');
+  }
+
+  function passNeeded(state) {
+    if (!state || state.over) return false;
+    return legalMovesFor(state).length === 0;
+  }
+
+  function render(animate) {
+    var state = stateOf();
+    renderMode();
+    renderBoard(state, animate);
+    renderPlayers(state);
+    renderScores(state);
+    $('status').textContent = statusText(state);
+    var needPass = canInteract() && passNeeded(state);
+    $('pass').hidden = !needPass;
+    $('undo').disabled = ONLINE || !state || !state.history || !state.history.length;
+    $('hint-line').textContent = state && passNeeded(state) && !state.over
+      ? (state.current === E.BLACK ? '黑棋' : '白棋') + '没有合法落点，需要跳过。'
+      : '黑棋先行。轻触亮起的空位落子。';
+    if (ONLINE && onlineView) renderOnlineBox(onlineView);
+    if (state && state.over && !ONLINE) {
+      var resultKey = state.moveCount + ':' + state.scores.black + ':' + state.scores.white;
+      if (resultKey !== resultShownKey) showResult(state);
+    }
+    ensureReadable();
+  }
+
+  function ensureReadable() {
+    if (!document.body) return;
+    var nodes = document.body.querySelectorAll('span, b, p, li, a, button, h1, h2, h3, div, small, strong, em, label');
+    for (var i = 0; i < nodes.length; i += 1) {
+      var el = nodes[i];
+      var direct = false;
+      for (var c = 0; c < el.childNodes.length; c += 1) {
+        if (el.childNodes[c].nodeType === 3 && el.childNodes[c].nodeValue && el.childNodes[c].nodeValue.trim().length > 1) { direct = true; break; }
+      }
+      if (!direct) continue;
+      var fs = parseFloat(window.getComputedStyle(el).fontSize);
+      if (fs && fs < 12) el.style.fontSize = '12px';
+    }
+  }
+
+  function showResult(state) {
+    if (!state || !state.result) return;
+    resultShownKey = state.moveCount + ':' + state.scores.black + ':' + state.scores.white;
+    var r = state.result;
+    $('modal-title').textContent = r.draw ? '平局' : '终局';
+    $('modal-score').textContent = r.black + ' : ' + r.white;
+    var text;
+    if (ONLINE) text = '联机对局结束，双方结算一致。';
+    else if (r.draw) text = '棋盘已满或双方都无子可下，黑白数量相同。';
+    else if (mode === 'local') text = (r.winner === E.BLACK ? '黑棋' : '白棋') + '占据更多格子。';
+    else text = r.winner === E.BLACK ? '你击败了 AI。' : 'AI 守住了白棋优势。';
+    $('modal-text').textContent = text;
+    $('modal-again').textContent = ONLINE ? '关闭' : '再来一局';
+    $('modal').classList.add('show');
+    if (!ONLINE && mode === 'ai' && !state.recorded) {
+      state.recorded = true;
+      recordGame(state);
+    }
+    sfx(r.draw ? 'notify' : (mode === 'ai' && r.winner !== E.BLACK ? 'lose' : 'win'));
+  }
+
+  function renderOnlineBox(view) {
+    $('online-box').hidden = false;
+    $('room-info').hidden = false;
+    $('room-info').textContent = '房间 ' + (view.roomCode || view.roomId || '—');
+    $('online-code').textContent = view.roomCode || view.roomId || '——';
+    var humans = (view.seats || []).filter(function (s) { return !s.ai; }).length;
+    var lines = [];
+    lines.push('座位 ' + humans + ' / ' + (view.maxPlayers || 2) + ' · 状态 ' + (view.status || 'waiting'));
+    if (view.seats) {
+      view.seats.forEach(function (s) {
+        var tags = [];
+        if (s.ai) tags.push('AI');
+        if (s.takeover) tags.push('托管');
+        if (s.current) tags.push('行动中');
+        lines.push((s.index + 1) + '. ' + (s.nickname || ('座位 ' + (s.index + 1))) + (tags.length ? ' · ' + tags.join(' · ') : ''));
+      });
+    }
+    if (view.currentControlledByAI) lines.push('当前座位由 AI 托管。');
+    $('online-line').textContent = lines.join('\n');
+    $('online-line').style.whiteSpace = 'pre-line';
+    $('online-restart').hidden = !(view.canRestart && view.isHost);
+  }
+
+  function applyLocal(next, animate) {
+    game = next;
+    render(animate);
+    if (!game.over) {
+      scheduleAI();
+      maybeAutoPass();
+    }
+  }
+
+  function scheduleAI() {
+    if (ONLINE || !game || game.over || mode !== 'ai') return;
+    var p = game.players[game.current - 1];
+    if (!p || !p.isAI) return;
+    thinking = true;
+    $('status').textContent = 'AI 正在思考…';
+    clearTimeout(aiTimer);
+    var g = gen;
+    aiTimer = setTimeout(function () {
+      if (g !== gen || !game || game.over || mode !== 'ai') return;
+      var now = game.players[game.current - 1];
+      if (!now || !now.isAI) { thinking = false; return; }
+      var move = E.chooseAIMove(game, diff);
+      var next;
+      try { next = E.applyMove(game, move); }
+      catch (err) {
+        thinking = false;
+        toast('AI 落子失败：' + (err && err.message ? err.message : '未知错误'));
+        return;
+      }
+      thinking = false;
+      sfx(next.lastFlips && next.lastFlips.length ? 'capture' : 'move');
+      applyLocal(next, true);
+    }, 420);
+  }
+
+  function maybeAutoPass() {
+    if (ONLINE || !game || game.over) return;
+    if (mode === 'ai') {
+      if (!myTurn() || !passNeeded(game)) return;
+      var key = gen + ':' + game.moveCount + ':' + game.current;
+      if (lastAutoPassKey === key) return;
+      lastAutoPassKey = key;
+      clearTimeout(passTimer);
+      passTimer = setTimeout(function () {
+        if (!game || game.over || !myTurn() || !passNeeded(game)) return;
+        var next = E.applyMove(game, { type: 'pass' });
+        toast('没有合法落点，自动跳过。');
+        sfx('click');
+        applyLocal(next, false);
+      }, 1200);
+    }
+  }
+
+  function doLocalMove(row, col) {
+    if (!game || game.over || !canInteract()) return false;
+    var flips = E.flipsAt(game.board, row, col, game.current);
+    if (!flips) { sfx('error'); toast('这里不能落子：必须夹住对方棋子。'); return false; }
+    var next;
+    try { next = E.applyMove(game, { type: 'place', row: row, col: col }); }
+    catch (err) { toast(err.message || '落子失败'); return false; }
+    sfx(flips.length ? 'capture' : 'move');
+    applyLocal(next, true);
+    return true;
+  }
+
+  function doOnlineMove(row, col) {
+    if (!onlineView || !window.OnlineBridge.isMyTurn()) return false;
+    var state = onlineView.state;
+    var flips = E.flipsAt(state.board, row, col, state.current);
+    if (!flips) { sfx('error'); toast('这里不能落子。'); return false; }
+    sfx(flips.length ? 'capture' : 'move');
+    window.OnlineBridge.send({ type: 'place', row: row, col: col }).then(function (view) {
+      if (view) { onlineView = view; onlineReady = true; render(true); }
+    });
+    return true;
+  }
+
+  function handleCell(i) {
+    var state = stateOf();
+    if (!state || state.over) return;
+    if (!canInteract()) {
+      if (ONLINE) toast('还没轮到你。');
+      return;
+    }
+    if (state.board[i]) return;
+    var row = (i / 8) | 0;
+    var col = i % 8;
+    if (ONLINE) doOnlineMove(row, col);
+    else doLocalMove(row, col);
+  }
+
+  function newGameLocal() {
+    gen += 1;
+    clearTimeout(aiTimer);
+    clearTimeout(passTimer);
+    thinking = false;
+    lastAutoPassKey = '';
+    resultShownKey = '';
+    var names = mode === 'ai' ? [D.PLAYER_NAMES[0], D.AI_NAMES[1]] : [D.PLAYER_NAMES[0], D.PLAYER_NAMES[1]];
+    var isAI = mode === 'ai' ? [false, true] : [false, false];
+    game = E.createGame({ names: names, isAI: isAI, seed: (Date.now() ^ (gen * 2654435761)) >>> 0, aiLevel: diff });
+    lastRendered = new Array(64).fill(0);
+    $('modal').classList.remove('show');
+    render(false);
+    maybeAutoPass();
+  }
+
+  function undoLocal() {
+    if (!game || !game.history.length) return;
+    gen += 1;
+    clearTimeout(aiTimer);
+    clearTimeout(passTimer);
+    thinking = false;
+    var next = E.undo(game);
+    if (mode === 'ai' && !next.over && next.players[next.current - 1].isAI && next.history.length) {
+      next = E.undo(next);
+    }
+    game = next;
+    lastRendered = new Array(64).fill(0);
+    $('modal').classList.remove('show');
+    render(false);
+  }
+
+  function onlineApply(view) {
+    onlineReady = true;
+    onlineView = view;
+    if (view && view.state && !view.state.over && view.state.moveCount === 0) {
+      resultShownKey = '';
+      lastRendered = new Array(64).fill(0);
+    }
+    if (view && view.state) {
+      render(true);
+      if (view.state.over) {
+        var resultKey = view.state.moveCount + ':' + view.state.scores.black + ':' + view.state.scores.white;
+        if (resultKey !== resultShownKey) showResult(view.state);
+      }
+      maybeOnlinePass(view);
+    } else {
+      render(false);
+      renderOnlineBox(view);
+    }
+  }
+
+  function maybeOnlinePass(view) {
+    if (!view || !view.state || view.state.over) return;
+    if (!view.canMove || !window.OnlineBridge.isMyTurn()) return;
+    if (E.legalFor(view.state.board, view.state.current).length) return;
+    var key = view.state.moveCount + ':' + view.state.current + ':' + (view.state.board.join(''));
+    if (lastAutoPassKey === key) return;
+    lastAutoPassKey = key;
+    setTimeout(function () {
+      if (!onlineView || !onlineView.state || onlineView.state.over) return;
+      if (!window.OnlineBridge.isMyTurn()) return;
+      if (E.legalFor(onlineView.state.board, onlineView.state.current).length) return;
+      window.OnlineBridge.send({ type: 'pass' }).then(function (next) {
+        if (next) { onlineView = next; render(true); }
+      });
+    }, 900);
+  }
+
+  function bind() {
+    boardEl.addEventListener('click', function (e) {
+      var cell = e.target.closest ? e.target.closest('.cell') : null;
+      if (!cell) return;
+      handleCell(parseInt(cell.getAttribute('data-i'), 10));
+    });
+    boardEl.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      var cell = e.target.closest ? e.target.closest('.cell') : null;
+      if (!cell) return;
+      e.preventDefault();
+      handleCell(parseInt(cell.getAttribute('data-i'), 10));
+    });
+    $('new').addEventListener('click', function () {
+      if (ONLINE) { toast('联机对局请由房主重开。'); return; }
+      sfx('click');
+      newGameLocal();
+    });
+    $('undo').addEventListener('click', function () {
+      if (ONLINE) { toast('联机对局不支持悔棋。'); return; }
+      sfx('click');
+      undoLocal();
+    });
+    $('pass').addEventListener('click', function () {
+      if (ONLINE) {
+        window.OnlineBridge.send({ type: 'pass' }).then(function (v) { if (v) { onlineView = v; render(true); } });
+        return;
+      }
+      if (!game || game.over || !myTurn()) return;
+      if (E.legalFor(game.board, game.current).length) { toast('还有合法落点，不能跳过。'); return; }
+      var next = E.applyMove(game, { type: 'pass' });
+      sfx('click');
+      applyLocal(next, false);
+    });
+    $('modal-close').addEventListener('click', function () { $('modal').classList.remove('show'); });
+    $('modal-again').addEventListener('click', function () {
+      $('modal').classList.remove('show');
+      if (!ONLINE) newGameLocal();
+    });
+    var mb = document.querySelectorAll('[data-mode]');
+    for (var i = 0; i < mb.length; i += 1) {
+      mb[i].addEventListener('click', function () {
+        mode = this.getAttribute('data-mode');
+        sfx('click');
+        newGameLocal();
+        $('record').textContent = mode === 'ai' ? recordLine() : '双人同屏不记录战绩。';
+      });
+    }
+    var db = document.querySelectorAll('[data-diff]');
+    for (var j = 0; j < db.length; j += 1) {
+      db[j].addEventListener('click', function () {
+        diff = this.getAttribute('data-diff');
+        sfx('click');
+        newGameLocal();
+      });
+    }
+    $('theme').addEventListener('click', function () {
+      var next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', next);
+      storeSet(D.THEME_KEY, next);
+      var meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) meta.setAttribute('content', next === 'light' ? '#efe6d3' : '#12100c');
+    });
+    $('sound').addEventListener('click', function () {
+      muted = !muted;
+      storeSet(D.SOUND_KEY, muted ? '1' : '0');
+      if (window.Sfx) { try { window.Sfx.mute(muted); } catch (e) {} }
+      $('sound').style.opacity = muted ? '.45' : '1';
+      if (!muted) sfx('click');
+    });
+    $('online-restart').addEventListener('click', function () {
+      if (!window.OnlineBridge || !onlineView || !onlineView.canRestart) return;
+      window.OnlineBridge.restart().then(function (v) {
+        if (v) { onlineView = v; lastRendered = new Array(64).fill(0); resultShownKey = ''; render(false); }
+      });
+    });
+    window.addEventListener('resize', function () { ensureReadable(); });
+  }
+
+  function init() {
+    var savedTheme = storeGet(D.THEME_KEY);
+    if (savedTheme === 'light' || savedTheme === 'dark') document.documentElement.setAttribute('data-theme', savedTheme);
+    muted = storeGet(D.SOUND_KEY) === '1';
+    if (window.Sfx) { try { window.Sfx.mute(muted); } catch (e) {} }
+    $('sound').style.opacity = muted ? '.45' : '1';
+    buildBoard();
+    bind();
+    $('record').textContent = recordLine();
+    if (ONLINE) {
+      $('mode-seg').hidden = true;
+      $('diff-seg').hidden = true;
+      $('new').disabled = true;
+      $('undo').disabled = true;
+      window.OnlineBridge.onChange(onlineApply);
+      window.OnlineBridge.onError(function (err) {
+        toast('联机：' + (err && err.message ? err.message : '连接失败'));
+        if (err && (err.code === 'E_SESSION' || err.status === 404)) setTimeout(function () { location.href = 'online.html'; }, 1200);
+      });
+      $('status').textContent = '正在连接联机房间…';
+      render(false);
+    } else {
+      newGameLocal();
+    }
+    setTimeout(ensureReadable, 80);
+    setTimeout(ensureReadable, 500);
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+</script>
+</body>
+</html>

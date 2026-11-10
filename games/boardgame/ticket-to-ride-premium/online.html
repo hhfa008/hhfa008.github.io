@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#243447">
+<meta name="description" content="车票之旅 Ticket to Ride 双人联机：房间码、邀请、空位 AI、断线重连与超时托管。">
+<link rel="icon" href="../../assets/icons/pioneers.svg">
+<title>车票之旅 · 联机</title>
+<style>
+:root{--ink:#20242a;--ink2:#3f4650;--muted:#6f7884;--navy:#243447;--brass:#b58a45;--red:#b34336;--blue:#3c668c;--line:rgba(36,45,58,.2);--line2:rgba(36,45,58,.1);--touch:44px}
+*{box-sizing:border-box}
+body{margin:0;min-height:100dvh;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;background:radial-gradient(1000px 500px at 10% 0,rgba(181,138,69,.2),transparent 60%),radial-gradient(800px 500px at 100% 0,rgba(60,102,140,.18),transparent 55%),linear-gradient(160deg,#f7f2e7,#e9e1d1)}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.1;background:url('../../assets/art/premium/ticket-to-ride/board.webp') center/780px;mix-blend-mode:multiply}
+.wrap{position:relative;max-width:1120px;margin:0 auto;padding:0 14px calc(28px + env(safe-area-inset-bottom))}
+h1,h2,h3{font-family:"Songti SC","STSong",serif;font-weight:700}
+.top{display:flex;align-items:center;gap:12px;padding:16px 0 12px;flex-wrap:wrap}
+.mark{width:44px;height:44px;border-radius:11px;background:var(--navy);display:grid;place-items:center}
+.mark svg{width:28px;height:28px}
+.title h1{margin:0;font-size:clamp(21px,4.5vw,29px)}.title p{margin:2px 0 0;font-size:12px;color:var(--muted);letter-spacing:.1em}
+.nav{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.nav a,.nav button{min-height:var(--touch);padding:0 14px;display:inline-flex;align-items:center;justify-content:center;border-radius:999px;border:1px solid var(--line);background:rgba(255,253,247,.8);text-decoration:none;font-size:13px;font-weight:700;cursor:pointer}
+.panel{min-width:0;background:rgba(255,253,247,.95);border:1px solid var(--line);border-radius:18px;box-shadow:0 14px 36px rgba(24,30,38,.15);padding:15px;margin-bottom:14px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+h2{font-size:19px;margin:0 0 10px}h3{font-size:15px;margin:0 0 8px}
+label{display:block;font-size:12px;color:var(--muted);font-weight:700;margin:10px 0 4px}
+input{width:100%;min-height:46px;border:1px solid var(--line);border-radius:10px;background:#fffdf7;padding:0 12px;font:inherit;font-size:16px}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.btn{min-height:46px;min-width:44px;padding:0 16px;border-radius:11px;border:1px solid var(--line);background:#fffdf7;font-weight:700;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn.primary{background:linear-gradient(180deg,#35506b,#24374c);border-color:#1c2b3c;color:#f8efd9}
+.btn.brass{background:linear-gradient(180deg,#c69a52,#a97a35);border-color:#8a6128;color:#241a0c}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.wide{width:100%}
+.muted{font-size:12px;color:var(--muted);line-height:1.5}
+.code{font-family:ui-monospace,Menlo,monospace;font-size:19px;letter-spacing:.18em;font-weight:700;background:rgba(60,102,140,.1);border-radius:8px;padding:4px 10px}
+.status{min-height:22px;font-size:13px;color:var(--red);margin:8px 0 0}
+.seats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+.seat{padding:10px;border-radius:10px;border:1px solid var(--line2);background:rgba(181,138,69,.08);font-size:13px}
+.seat b{display:block;font-size:14px}.seat .tag{display:inline-block;margin-top:4px;font-size:11px;padding:1px 7px;border-radius:999px;background:rgba(60,102,140,.14);color:#2c4963;font-weight:700}
+.seat.ai .tag{background:rgba(179,67,54,.12);color:var(--red)}
+.layout{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,.7fr);gap:14px;align-items:start}
+.map-frame{border-radius:12px;background:linear-gradient(160deg,#f8f0dd,#e5d8be);border:1px solid rgba(36,45,58,.24);box-shadow:inset 0 0 0 6px rgba(255,255,255,.35);padding:6px;overflow:hidden}
+.map{display:block;width:100%;height:auto}
+.route{stroke-linecap:round;cursor:pointer}.route-hit{stroke:transparent;stroke-width:13;fill:none;cursor:pointer}
+.city{fill:#2f3a46;stroke:#fffdf7;stroke-width:1.3}
+.city-label{font-family:-apple-system,"PingFang SC",sans-serif;font-size:12px;font-weight:700;fill:#2c3742;paint-order:stroke;stroke:rgba(255,253,247,.92);stroke-width:2.6px;stroke-linejoin:round}
+.scorebar{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.scorecard{padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:linear-gradient(180deg,#fffdf7,#f5eddd);font-size:13px}
+.scorecard.active{outline:2px solid var(--brass);outline-offset:2px}.scorecard b{font-size:16px}.scorecard span{display:block;font-size:12px;color:var(--muted)}
+.market{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.train-card{position:relative;min-height:76px;border-radius:9px;border:1px solid rgba(30,35,42,.28);background:#fffdf8;padding:4px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;cursor:pointer}
+.train-card .swatch{width:100%;flex:1;border-radius:5px}
+.train-card .lbl{font-size:12px;font-weight:800;margin-top:3px}.train-card:disabled{opacity:.55;cursor:not-allowed}
+.train-card[data-color="red"] .swatch{background:#b34336}.train-card[data-color="blue"] .swatch{background:#3c668c}.train-card[data-color="green"] .swatch{background:#4c7357}.train-card[data-color="yellow"] .swatch{background:#d0a83c}.train-card[data-color="black"] .swatch{background:#252b33}.train-card[data-color="white"] .swatch{background:#ece6d8}.train-card[data-color="orange"] .swatch{background:#c06e35}.train-card[data-color="pink"] .swatch{background:#b47c9a}.train-card[data-color="wild"] .swatch{background:linear-gradient(135deg,#242b36,#4d5a6b 45%,#b58a45 46%,#e3c68c 55%,#242b36 56%)}
+.hand{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.hand-chip{border:1px solid var(--line);border-radius:9px;background:#fffdf7;padding:6px;text-align:center;font-size:12px;color:#626b77}
+.hand-chip b{display:block;font-size:16px;color:var(--ink)}
+.tickets{display:flex;flex-direction:column;gap:5px;max-height:150px;overflow:auto;font-size:12px}
+.ticket-row{padding:6px 8px;border-radius:8px;background:rgba(60,102,140,.07);border:1px solid var(--line2)}
+.ticket-row b{float:right;color:#36543f}
+.log{list-style:none;margin:0;padding:0;font-size:13px;max-height:140px;overflow:auto;color:var(--ink2)}
+.log li{padding:5px 0;border-bottom:1px dashed var(--line2)}
+.overlay{position:fixed;inset:0;z-index:40;display:grid;place-items:center;padding:18px;background:rgba(20,26,34,.56)}
+.overlay[hidden]{display:none}
+.modal{width:min(460px,100%);max-height:90dvh;overflow:auto;border-radius:18px;padding:20px;background:linear-gradient(180deg,#fffdf7,#f3ecdd);border:1px solid var(--line)}
+.modal h2{margin:0 0 8px;font-size:23px}.modal p{font-size:14px;color:var(--ink2);line-height:1.6}
+.leaderboard{list-style:none;margin:0;padding:0;font-size:13px}
+.leaderboard li{display:flex;gap:8px;padding:8px 0;border-bottom:1px dashed var(--line2)}.leaderboard b{margin-left:auto}
+.hidden{display:none!important}
+@media(max-width:800px){.layout{grid-template-columns:1fr}.grid2{grid-template-columns:1fr}.wrap{padding-left:10px;padding-right:10px}.panel{padding:12px}}
+@media(max-width:430px){.market{gap:4px}.train-card{min-height:70px}.train-card .lbl{font-size:12px}.hand{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:350px){.title p{display:none}.nav a,.nav button{padding:0 10px;font-size:12px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/ticket-to-ride-premium/online.html">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="mark" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M7 22h18v4H7z" fill="#b58a45"/><path d="M9 12h14l3 8H6z" fill="#e3c68c"/><circle cx="11" cy="26" r="2.3" fill="#f4efe4"/><circle cx="21" cy="26" r="2.3" fill="#f4efe4"/></svg></div>
+    <div class="title"><h1>车票之旅 · 联机</h1><p>TICKET TO RIDE ONLINE · 2 SEATS</p></div>
+    <nav class="nav"><a href="index.html">单人</a><a href="rules.html">玩法</a><button type="button" class="sfx-toggle">声音</button></nav>
+  </header>
+
+  <section id="lobby">
+    <div class="grid2">
+      <div class="panel"><h2>创建房间</h2>
+        <label for="createName">你的昵称</label><input id="createName" maxlength="18" placeholder="例如：铁路大亨">
+        <label for="createPass">房间密码（可选，4–64 位）</label><input id="createPass" type="password" maxlength="64" placeholder="留空即公开房">
+        <div class="row" style="margin-top:12px"><button class="btn primary wide" type="button" id="createBtn">创建并进入</button></div>
+        <p class="status" id="createStatus" role="status"></p>
+      </div>
+      <div class="panel"><h2>加入房间</h2>
+        <label for="joinName">你的昵称</label><input id="joinName" maxlength="18" placeholder="例如：调度员">
+        <label for="joinCode">房间码 / 邀请码</label><input id="joinCode" maxlength="40" autocapitalize="characters" placeholder="例如 ABC234">
+        <label for="joinPass">房间密码（如有）</label><input id="joinPass" type="password" maxlength="64" placeholder="公开房留空">
+        <div class="row" style="margin-top:12px"><button class="btn primary wide" type="button" id="joinBtn">加入房间</button></div>
+        <p class="status" id="joinStatus" role="status"></p>
+      </div>
+    </div>
+    <div class="panel"><h2>最近战绩</h2><ul class="leaderboard" id="leaderboard"><li class="muted">还没有完成的联机对局。</li></ul>
+      <p class="muted">断线后用同一浏览器打开本页会自动重连；超时座位由 AI 托管，回到页面即可收回。</p></div>
+  </section>
+
+  <section id="room" class="hidden">
+    <div class="panel">
+      <div class="row" style="align-items:center">
+        <div><span class="muted">房间码</span><br><span class="code" id="roomCode">------</span></div>
+        <div style="margin-left:auto" class="row">
+          <button class="btn" type="button" id="copyBtn">复制邀请</button>
+          <button class="btn" type="button" id="leaveBtn">离开</button>
+          <button class="btn primary" type="button" id="startBtn" hidden>开始对局</button>
+          <button class="btn" type="button" id="restartBtn" hidden>再来一局</button>
+        </div>
+      </div>
+      <div class="seats" id="seats"></div>
+      <p class="status" id="roomStatus" role="status" aria-live="polite"></p>
+      <p class="muted" id="roomHint">把房间码发给朋友；空位会由 AI 补足，一个人也能开局。</p>
+    </div>
+
+    <div id="game" class="hidden">
+      <div class="scorebar" id="scorebar"></div>
+      <div class="layout">
+        <div class="panel"><h2>美国铁路网</h2><div class="map-frame"><svg class="map" id="map" viewBox="0 0 290 200" role="group" aria-label="铁路地图"></svg></div><p class="muted" style="margin-top:8px">点击可支付的路线直接占领；灰色路线任意单色。</p></div>
+        <div>
+          <div class="panel"><h2>明牌区</h2><div class="market" id="market"></div>
+            <div class="row" style="margin-top:10px"><button class="btn primary" type="button" id="drawDeck">摸牌堆</button><button class="btn brass" type="button" id="drawTickets">抽任务</button></div>
+            <p class="muted" id="drawHint">摸 2 张车厢卡，或占领路线 / 抽任务。</p>
+          </div>
+          <div class="panel"><h2>你的手牌 / 任务</h2><div class="hand" id="hand"></div><div class="tickets" id="tickets" style="margin-top:10px"></div></div>
+          <div class="panel"><h2>对局记录</h2><ol class="log" id="log"></ol></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="overlay" id="ticketOverlay" hidden><div class="modal">
+  <h2>保留目的地任务</h2><p>抽 3 张，至少保留 1 张。未完成任务终局扣分。</p>
+  <div id="ticketPick" style="display:grid;gap:8px;margin:12px 0"></div>
+  <button class="btn primary wide" type="button" id="keepTickets">确认保留</button>
+</div></div>
+<div class="overlay" id="resultOverlay" hidden><div class="modal"><h2 id="resultTitle">对局结束</h2><p id="resultText"></p><div class="row"><button class="btn primary wide" type="button" id="againBtn">再来一局</button><button class="btn wide" type="button" id="closeBtn">查看地图</button></div></div></div>
+
+<script src="../../shared/sfx.js"></script>
+<script src="engine.js"></script>
+<script>
+(function () {
+  'use strict';
+  var E = window.TicketToRideEngine;
+  var $ = function (id) { return document.getElementById(id); };
+  var COLOR_HEX = { red:'#b34336', blue:'#3c668c', green:'#4c7357', yellow:'#d0a83c', black:'#252b33', white:'#ece6d8', orange:'#c06e35', pink:'#b47c9a', wild:'#4d4a42', gray:'#b9af9f' };
+  var st = { session:null, playerId:null, roomId:null, view:null, poll:null, busy:false, keep:[] };
+  var KEY = 'hhfa-ttr-online-v1';
+  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]})}
+  function save(){try{localStorage.setItem(KEY,JSON.stringify({session:st.session,playerId:st.playerId,roomId:st.roomId}))}catch(e){}}
+  function load(){try{return JSON.parse(localStorage.getItem(KEY)||'null')}catch(e){return null}}
+  function clearSave(){try{localStorage.removeItem(KEY)}catch(e){}}
+  function sound(n){try{if(window.Sfx)window.Sfx.play(n,{volume:.5})}catch(e){}}
+  function setStatus(id,text,bad){var el=$(id);if(!el)return;el.textContent=text||'';el.style.color=bad?'#b34336':'#3f4650'}
+  async function api(method,route,body){
+    var res=await fetch(route,{method:method,headers:{'content-type':'application/json'},body:body?JSON.stringify(body):undefined});
+    var data=null;try{data=await res.json()}catch(e){}
+    if(!res.ok||!data||data.ok===false){var m=data&&data.error&&data.error.message?data.error.message:('HTTP '+res.status);throw new Error(m)}
+    return data;
+  }
+  function nick(id,fallback){var el=$(id);return (el&&el.value.trim())||fallback}
+  async function createRoom(){
+    var pid=nick('createName','铁路大亨');setStatus('createStatus','正在创建…');
+    try{var d=await api('POST','/api/rooms',{playerId:pid,password:$('createPass').value||undefined});enter(d,d.playerSession);sound('notify')}
+    catch(e){setStatus('createStatus',e.message,true)}
+  }
+  async function joinRoom(){
+    var pid=nick('joinName','调度员');var code=$('joinCode').value.trim().toUpperCase();
+    if(!code){setStatus('joinStatus','请填房间码。',true);return}
+    setStatus('joinStatus','正在加入…');
+    try{var d=await api('POST','/api/rooms/'+encodeURIComponent(code)+'/join',{playerId:pid,password:$('joinPass').value||undefined});enter(d,d.playerSession);sound('notify')}
+    catch(e){setStatus('joinStatus',e.message,true)}
+  }
+  function enter(d,session){
+    st.session=session;st.playerId=d.playerId||(d.you&&d.you.playerId)||st.playerId;st.roomId=d.roomId;st.view=d;
+    save();$('lobby').classList.add('hidden');$('room').classList.remove('hidden');
+    try{history.replaceState({},'','?room='+encodeURIComponent(d.roomCode||d.roomId))}catch(e){}
+    renderRoom();startPolling();
+  }
+  function startPolling(){stopPolling();st.poll=setInterval(poll,900);poll()}
+  function stopPolling(){if(st.poll){clearInterval(st.poll);st.poll=null}}
+  async function poll(){
+    if(!st.roomId||!st.session)return;
+    try{var v=await api('GET','/api/rooms/'+encodeURIComponent(st.roomId)+'?session='+encodeURIComponent(st.session)+'&playerId='+encodeURIComponent(st.playerId));applyView(v)}
+    catch(e){if(/not found|invalid session|not a member/i.test(e.message)){clearSave();stopPolling();$('room').classList.add('hidden');$('lobby').classList.remove('hidden');setStatus('joinStatus','房间已关闭，请重新加入。',true)}}
+  }
+  function applyView(v){st.view=v;renderRoom();if(v.started&&v.state){renderGame();if(v.state.phase==='ticketSelect'&&v.state.current===v.youIndex)showTicketPick(v)}if(v.state&&v.state.over&&v.result)showResult(v.result)}
+  function renderRoom(){
+    var v=st.view;if(!v)return;
+    $('roomCode').textContent=v.roomCode||v.roomId.slice(-6).toUpperCase();
+    $('seats').innerHTML=(v.seats||[]).map(function(s){return '<div class="seat'+(s.ai?' ai':'')+'"><b>'+esc(s.nickname)+'</b>'+(s.playerId===st.playerId?'你':(s.ai?'AI 补位':'玩家'))+'<span class="tag">'+(s.ai?'AI':s.takeover?'托管中':(v.currentPlayerIndex===s.index&&v.started?'行动中':'在线'))+'</span></div>'}).join('');
+    $('startBtn').hidden=!v.canStart;$('restartBtn').hidden=!v.canRestart;
+    $('game').classList.toggle('hidden',!v.started||!v.state);
+    $('roomStatus').textContent=v.lastAiError?('AI 提示：'+v.lastAiError):'';
+    $('roomHint').textContent=v.started?(v.state&&v.state.over?'对局结束。':(v.canMove?'轮到你行动。':(v.currentControlledByAI?'对方由 AI 行动中…':'等待对方行动…'))):'把房间码发给朋友；空位会由 AI 补足，一个人也能开局。';
+  }
+  function renderGame(){
+    var v=st.view,state=v.state,me=v.youIndex,mine=state.players[me];
+    $('scorebar').innerHTML=state.players.map(function(p){return '<div class="scorecard'+(state.current===p.index&&!state.over?' active':'')+'"><b>'+esc(p.name)+'</b><span>车厢 '+p.trains+' · 手牌 '+p.handCount+' · 任务 '+p.ticketCount+'</span></div>'}).join('');
+    var svg='';
+    E.ROUTES.forEach(function(r){var a=E.CITIES[r.a],b=E.CITIES[r.b],owner=state.routes[r.id];var color=owner===0?'#3c668c':owner===1?'#b34336':(COLOR_HEX[r.color]||'#b9af9f');svg+='<g data-route="'+r.id+'"><line class="route-hit" x1="'+a.x+'" y1="'+a.y+'" x2="'+b.x+'" y2="'+b.y+'"></line><line class="route" x1="'+a.x+'" y1="'+a.y+'" x2="'+b.x+'" y2="'+b.y+'" stroke="'+color+'" stroke-width="'+(r.length>=5?4.4:r.length>=3?3.8:3.2)+'" stroke-dasharray="'+(r.color==='gray'&&owner===null?'4 3':'none')+'"></line><title>'+esc(E.CITIES[r.a].name+'–'+E.CITIES[r.b].name)+'</title></g>'});
+    E.CITIES.forEach(function(c){svg+='<circle class="city" cx="'+c.x+'" cy="'+c.y+'" r="2.7"></circle><text class="city-label" x="'+(c.x+4)+'" y="'+(c.y-4)+'">'+esc(c.name)+'</text>'});
+    $('map').innerHTML=svg;
+    $('market').innerHTML=state.market.map(function(card,i){return '<button class="train-card" type="button" data-market="'+i+'" data-color="'+card+'" '+(v.canMove?'':'disabled')+'><span class="swatch"></span><span class="lbl">'+(E.COLOR_NAMES[card]||'?')+'</span></button>'}).join('');
+    $('drawDeck').disabled=!v.canMove;$('drawTickets').disabled=!v.canMove;
+    $('drawHint').textContent=v.canMove?(state.drawsLeft>0?'本回合还可摸 '+state.drawsLeft+' 张。':'摸 2 张车厢卡，或占领路线 / 抽任务。'):'等待对方行动…';
+    var h=[];E.COLORS.forEach(function(c){h.push({c:c,n:mine.hand?mine.hand[c]:0})});if(mine.wilds!=null)h.push({c:'wild',n:mine.wilds});
+    h.sort(function(a,b){return b.n-a.n});
+    $('hand').innerHTML=h.map(function(x){return '<div class="hand-chip"><b>'+x.n+'</b>'+E.COLOR_NAMES[x.c]+'</div>'}).join('');
+    $('tickets').innerHTML=(mine.cards||[]).map(function(ti){var t=E.TICKETS[ti];return '<div class="ticket-row">'+esc(E.CITIES[t.a].name+' → '+E.CITIES[t.b].name)+'<b>'+t.value+'</b></div>'}).join('')||'<p class="muted">还没有任务。</p>';
+    $('log').innerHTML=(state.log||[]).slice(-14).map(function(x){return '<li>'+esc(x)+'</li>'}).join('')||'<li class="muted">等待第一步。</li>';
+  }
+  function showTicketPick(v){
+    st.keep=v.state.pendingTickets.map(function(_,i){return i});
+    $('ticketPick').innerHTML=v.state.pendingTickets.map(function(ti,i){var t=E.TICKETS[ti];return '<label style="display:flex;gap:10px;align-items:center;padding:10px;border:1px solid rgba(36,45,58,.2);border-radius:10px;background:#fffdf7;min-height:44px"><input type="checkbox" data-ticket="'+i+'" checked><span>'+esc(E.CITIES[t.a].name+' → '+E.CITIES[t.b].name)+'</span><b style="margin-left:auto">+'+t.value+'</b></label>'}).join('');
+    $('ticketPick').querySelectorAll('input').forEach(function(inp){inp.addEventListener('change',function(){var i=Number(inp.getAttribute('data-ticket'));if(inp.checked){if(st.keep.indexOf(i)===-1)st.keep.push(i)}else st.keep=st.keep.filter(function(x){return x!==i})})});
+    $('ticketOverlay').hidden=false;
+  }
+  async function sendAction(move){
+    if(st.busy)return;st.busy=true;
+    try{var d=await api('POST','/api/rooms/'+encodeURIComponent(st.roomId)+'/actions',{session:st.session,playerId:st.playerId,move:move});applyView(d);sound('move');$('ticketOverlay').hidden=true}
+    catch(e){setStatus('roomStatus','动作被拒绝：'+e.message,true)}
+    st.busy=false;
+  }
+  function showResult(result){
+    if(!result||!$('resultOverlay').hidden)return;
+    var meSeat=result.seats&&result.seats.find(function(s){return s.playerId===st.playerId});
+    var title=result.winner==null?'平局':(!meSeat?'对局结束':(result.winner===meSeat.index?'你赢了':'对手获胜'));
+    $('resultTitle').textContent=title;$('resultText').textContent=(result.scores||[]).map(function(s){return s.name+'：'+s.score+' 分'}).join(' · ')+'。';
+    $('resultOverlay').hidden=false;sound(title==='你赢了'?'win':title==='对手获胜'?'lose':'notify');
+  }
+  async function copyInvite(){var url=location.origin+location.pathname+'?room='+encodeURIComponent(st.view.roomCode||st.roomId);try{await navigator.clipboard.writeText(url);setStatus('roomStatus','邀请链接已复制：'+url)}catch(e){setStatus('roomStatus','邀请链接：'+url)}}
+  async function start(){try{var d=await api('POST','/api/rooms/'+encodeURIComponent(st.roomId)+'/start',{session:st.session,playerId:st.playerId});applyView(d)}catch(e){setStatus('roomStatus',e.message,true)}}
+  async function restart(){try{var d=await api('POST','/api/rooms/'+encodeURIComponent(st.roomId)+'/restart',{session:st.session,playerId:st.playerId});$('resultOverlay').hidden=true;applyView(d)}catch(e){setStatus('roomStatus',e.message,true)}}
+  async function leave(){try{await api('POST','/api/rooms/'+encodeURIComponent(st.roomId)+'/leave',{session:st.session,playerId:st.playerId})}catch(e){}clearSave();stopPolling();st.roomId=null;st.view=null;$('room').classList.add('hidden');$('lobby').classList.remove('hidden')}
+  $('createBtn').addEventListener('click',createRoom);$('joinBtn').addEventListener('click',joinRoom);
+  $('copyBtn').addEventListener('click',copyInvite);$('leaveBtn').addEventListener('click',leave);
+  $('startBtn').addEventListener('click',start);$('restartBtn').addEventListener('click',restart);
+  $('againBtn').addEventListener('click',restart);$('closeBtn').addEventListener('click',function(){$('resultOverlay').hidden=true});
+  $('drawDeck').addEventListener('click',function(){sendAction({type:'drawCard',source:'deck'})});
+  $('drawTickets').addEventListener('click',function(){sendAction({type:'drawTickets'})});
+  $('keepTickets').addEventListener('click',function(){if(!st.keep.length){setStatus('roomStatus','至少保留 1 张任务。',true);return}sendAction({type:'keepTickets',keep:st.keep.slice().sort(function(a,b){return a-b})})});
+  $('market').addEventListener('click',function(e){var b=e.target.closest('[data-market]');if(b&&st.view&&st.view.canMove)sendAction({type:'drawCard',source:'market',marketIndex:Number(b.getAttribute('data-market'))})});
+  $('map').addEventListener('click',function(e){var g=e.target.closest('[data-route]');if(g&&st.view&&st.view.canMove)sendAction({type:'claimRoute',routeId:Number(g.getAttribute('data-route'))})});
+  (async function boot(){
+    if(location.pathname.indexOf('/games/')!==0){ // static site: no room API
+    try{var lb=await api('GET','/api/leaderboard?limit=5');if(lb.entries&&lb.entries.length)$('leaderboard').innerHTML=lb.entries.map(function(x){return '<li><span>'+esc(x.winnerName||'平局')+'</span><b>'+(x.scores||[]).map(function(s){return s.score}).join(' : ')+'</b></li>'}).join('')}catch(e){}}
+    var saved=load();var q=new URLSearchParams(location.search);var room=q.get('room');
+    if(saved&&saved.roomId&&saved.session){st.roomId=saved.roomId;st.session=saved.session;st.playerId=saved.playerId;try{var d=await api('POST','/api/rooms/'+encodeURIComponent(st.roomId)+'/reconnect',{token:saved.session,playerId:saved.playerId});enter(d,saved.session);return}catch(e){clearSave()}}
+    if(room)$('joinCode').value=room;
+  })();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Stone Age 美术合成页：本地生成的素材在浏览器中的渲染预览。">
+<title>Stone Age art composition</title>
+<style>
+:root{
+  --serif:"Songti SC","Noto Serif SC","Palatino Linotype",Georgia,serif;
+  --sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+  --gold:#d9b06a;--gold2:#f3d9a0;--ink:#f5ecd9;--dim:#d3bd98;
+  --leather:url("../../assets/art/premium/stoneage/table-leather.webp");
+  --worker:url("../../assets/art/premium/stoneage/worker.webp");
+  --wood:url("../../assets/art/premium/stoneage/resource-wood.webp");
+  --brick:url("../../assets/art/premium/stoneage/resource-brick.webp");
+  --stone:url("../../assets/art/premium/stoneage/resource-stone.webp");
+  --goldres:url("../../assets/art/premium/stoneage/resource-gold.webp");
+  --food:url("../../assets/art/premium/stoneage/food-bowl.webp");
+  --die:url("../../assets/art/premium/stoneage/die-blank.webp");
+  --hut:url("../../assets/art/premium/stoneage/hut.webp");
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:#0c0906;overflow:hidden}
+body{width:1200px;height:1200px;font-family:var(--sans);color:var(--ink)}
+.stage{position:relative;width:1200px;height:1200px;overflow:hidden;
+  background:radial-gradient(900px 700px at 18% 0%,rgba(201,114,60,.26),transparent 62%),
+    radial-gradient(800px 620px at 92% 100%,rgba(217,176,106,.16),transparent 60%),
+    linear-gradient(150deg,#1b130b,#0a0704 78%)}
+.stage::before{content:"";position:absolute;inset:0;background:var(--leather) center/cover;opacity:.6;filter:saturate(.8) contrast(1.06)}
+.stage::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(6,4,2,.16),rgba(6,4,2,.72))}
+.frame{position:absolute;inset:28px;border:1px solid rgba(217,176,106,.5);border-radius:28px;
+  box-shadow:inset 0 0 0 7px rgba(217,176,106,.06),0 40px 100px rgba(0,0,0,.5);z-index:2}
+.frame::before,.frame::after{content:"";position:absolute;width:60px;height:60px;border:2px solid rgba(217,176,106,.6)}
+.frame::before{left:14px;top:14px;border-right:0;border-bottom:0;border-radius:18px 0 0 0}
+.frame::after{right:14px;bottom:14px;border-left:0;border-top:0;border-radius:0 0 18px 0}
+.content{position:absolute;inset:70px;z-index:4;display:flex;flex-direction:column}
+.brand{display:flex;align-items:flex-start;gap:20px}
+.crest{width:88px;height:88px;border-radius:22px;display:grid;place-items:center;flex:none;
+  background:linear-gradient(145deg,#6b4a28,#2a1c0e);border:1px solid rgba(217,176,106,.4);
+  box-shadow:0 18px 40px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.2);transform:rotate(-3deg);overflow:hidden}
+.crest img{width:74px;height:74px;object-fit:contain}
+h1{margin:0;font-family:var(--serif);font-weight:700;font-size:96px;line-height:.86;letter-spacing:.12em;
+  text-shadow:0 14px 40px rgba(0,0,0,.5)}
+h1 span{color:var(--gold2)}
+.tag{margin:14px 0 0;font-size:18px;letter-spacing:.3em;color:var(--dim);font-weight:600}
+.rule{height:2px;background:linear-gradient(90deg,var(--gold),transparent);margin:18px 0 0;width:520px}
+.chips{display:flex;gap:10px;margin-top:22px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;height:40px;padding:0 17px;border-radius:999px;
+  border:1px solid rgba(217,176,106,.4);background:rgba(10,7,4,.55);color:var(--gold2);font-size:15px;letter-spacing:.08em}
+.board{position:absolute;right:60px;bottom:80px;width:720px;height:760px;z-index:3;transform:rotate(-1.5deg)}
+.loc{position:absolute;width:200px;height:190px;border-radius:16px;border:1px solid #7a5c38;
+  background:linear-gradient(165deg,#4a3822,#2a1d10);box-shadow:0 20px 34px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.12);
+  padding:12px;overflow:hidden}
+.loc::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 20% 0%,rgba(255,255,255,.2),transparent 55%);pointer-events:none}
+.loc .nm{position:relative;font-family:var(--serif);font-size:24px;font-weight:700;color:var(--gold2);z-index:2}
+.loc .ds{position:relative;font-size:11px;color:var(--dim);line-height:1.4;margin-top:4px;z-index:2;max-width:116px}
+.loc .art{position:absolute;right:6px;bottom:4px;width:100px;height:100px;background-size:contain;background-repeat:no-repeat;background-position:center;
+  filter:drop-shadow(0 10px 12px rgba(0,0,0,.4));z-index:1}
+.loc .workers{position:absolute;left:12px;bottom:12px;display:flex;gap:-4px;z-index:3}
+.loc .wk{width:34px;height:44px;background:var(--worker) center/contain no-repeat;margin-right:-7px;filter:drop-shadow(0 4px 5px rgba(0,0,0,.4))}
+.loc.wood .art{background-image:var(--wood)}.loc.brick .art{background-image:var(--brick)}
+.loc.stone .art{background-image:var(--stone)}.loc.gold .art{background-image:var(--goldres)}
+.loc.food .art{background-image:var(--food)}.loc.hut .art{background-image:var(--hut)}
+.dice{position:absolute;left:96px;bottom:96px;display:flex;gap:10px;z-index:4}
+.die{width:86px;height:86px;background:var(--die) center/contain no-repeat;position:relative;filter:drop-shadow(0 12px 14px rgba(0,0,0,.4))}
+.die i{position:absolute;width:12px;height:12px;border-radius:50%;background:#3a2a16;box-shadow:inset 0 1px 1px rgba(255,255,255,.3)}
+.res{position:absolute;z-index:5;background-size:contain;background-repeat:no-repeat;background-position:center;filter:drop-shadow(0 14px 16px rgba(0,0,0,.45))}
+.res.wood{left:120px;bottom:420px;width:150px;height:150px;background-image:var(--wood);transform:rotate(-6deg)}
+.res.gold{left:250px;bottom:392px;width:130px;height:130px;background-image:var(--goldres);transform:rotate(8deg)}
+.res.hut{left:74px;bottom:236px;width:190px;height:190px;background-image:var(--hut);transform:rotate(2deg)}
+.foot{position:absolute;left:70px;bottom:54px;font-size:13px;letter-spacing:.22em;color:rgba(245,236,217,.7);z-index:6}
+.detail-title{display:none}
+
+/* OG */
+body[data-shot="og"]{height:630px}
+body[data-shot="og"] .stage{height:630px}
+body[data-shot="og"] .content{inset:52px 64px}
+body[data-shot="og"] h1{font-size:78px}
+body[data-shot="og"] .tag{font-size:15px}
+body[data-shot="og"] .crest{width:70px;height:70px}
+body[data-shot="og"] .board{right:20px;bottom:10px;transform:scale(.68) rotate(-1.5deg);transform-origin:right bottom}
+body[data-shot="og"] .res,body[data-shot="og"] .dice,body[data-shot="og"] .foot{display:none}
+body[data-shot="og"] .rule{width:420px}
+
+/* detail */
+body[data-shot="detail"]{width:1536px;height:1024px}
+body[data-shot="detail"] .stage{width:1536px;height:1024px}
+body[data-shot="detail"] .content{inset:48px 60px}
+body[data-shot="detail"] .brand,body[data-shot="detail"] .rule,body[data-shot="detail"] .chips{display:none}
+body[data-shot="detail"] .board{right:60px;bottom:40px;transform:scale(1.06) rotate(-1.5deg);transform-origin:right bottom}
+body[data-shot="detail"] .res.wood{left:90px;bottom:300px;transform:scale(1.2) rotate(-6deg)}
+body[data-shot="detail"] .res.gold{left:240px;bottom:260px;transform:scale(1.2) rotate(8deg)}
+body[data-shot="detail"] .res.hut{left:70px;bottom:80px;transform:scale(1.3) rotate(2deg)}
+body[data-shot="detail"] .dice{left:360px;bottom:110px;transform:scale(1.1)}
+body[data-shot="detail"] .foot{left:60px;bottom:40px;font-size:15px}
+body[data-shot="detail"] .detail-title{display:block;font-family:var(--serif);font-size:64px;color:var(--gold2);margin:0}
+body[data-shot="detail"] .detail-sub{display:block;font-size:16px;letter-spacing:.24em;color:var(--dim);margin-top:10px}
+</style>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/stone-age-premium/art-render.html">
+<style>
+/* site-quality: fixed-size art composition must not create page overflow */
+html{overflow-x:hidden}
+body{width:100%!important;max-width:100vw!important;overflow-x:hidden}
+.stage,#stage{max-width:100vw;overflow:hidden}
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="frame"></div>
+  <div class="content">
+    <div class="brand">
+      <div class="crest"><img src="../../assets/art/premium/stoneage/worker.webp" alt=""></div>
+      <div>
+        <h1>石器时代 <span>STONE AGE</span></h1>
+        <p class="tag">工人放置 · 2–4 人 · 60–90 分钟</p>
+        <div class="rule"></div>
+        <div class="chips"><span class="chip">28 座建筑</span><span class="chip">36 张文明卡</span><span class="chip">本地 AI</span><span class="chip">2–4 人联机</span></div>
+      </div>
+    </div>
+    <div class="detail-title">石器时代 · 部落崛起</div>
+    <div class="detail-sub">STONE AGE · PREMIUM EDITION</div>
+  </div>
+  <div class="board">
+    <div class="loc wood" style="left:0;top:0"><span class="nm">森林</span><span class="ds">每工人 1 骰，总点数 ÷3 得木。</span><span class="art"></span><span class="workers"><span class="wk"></span><span class="wk"></span></span></div>
+    <div class="loc brick" style="left:220px;top:0"><span class="nm">砖坑</span><span class="ds">总点数 ÷4 得砖。</span><span class="art"></span><span class="workers"><span class="wk"></span></span></div>
+    <div class="loc stone" style="left:440px;top:0"><span class="nm">采石场</span><span class="ds">总点数 ÷5 得石。</span><span class="art"></span><span class="workers"><span class="wk"></span><span class="wk"></span><span class="wk"></span></span></div>
+    <div class="loc food" style="left:0;top:210px"><span class="nm">猎场</span><span class="ds">总点数 ÷2 得食物，不限人数。</span><span class="art"></span><span class="workers"><span class="wk"></span><span class="wk"></span></span></div>
+    <div class="loc gold" style="left:220px;top:210px"><span class="nm">河流</span><span class="ds">总点数 ÷6 得金。</span><span class="art"></span><span class="workers"><span class="wk"></span></span></div>
+    <div class="loc hut" style="left:440px;top:210px"><span class="nm">成长小屋</span><span class="ds">恰好 2 名工人，获得 1 个新工人。</span><span class="art"></span><span class="workers"><span class="wk"></span><span class="wk"></span></span></div>
+  </div>
+  <div class="res wood"></div>
+  <div class="res gold"></div>
+  <div class="res hut"></div>
+  <div class="dice">
+    <span class="die"><i style="left:20px;top:20px"></i></span>
+    <span class="die"><i style="left:20px;top:20px"></i><i style="left:37px;top:37px"></i><i style="left:54px;top:54px"></i></span>
+    <span class="die"><i style="left:20px;top:20px"></i><i style="left:54px;top:20px"></i><i style="left:20px;top:54px"></i><i style="left:54px;top:54px"></i></span>
+  </div>
+  <div class="foot">PREMIUM EDITION · 28 BUILDINGS · 36 CIVILIZATION CARDS · ZERO EXTERNAL REQUESTS</div>
+</div>
+<script>
+  var shot = new URLSearchParams(location.search).get('shot') || 'cover';
+  document.body.setAttribute('data-shot', shot);
+</script>
+</body>
+</html>

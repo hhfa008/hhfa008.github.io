@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="骷髅牌 Skull 精品单机版：3–6 人、每人 3 玫瑰 1 骷髅，放置、叫价、翻牌，先赢两次挑战。含 AI、规则页与联机房间，纯前端本地素材。">
+<meta name="color-scheme" content="dark light">
+<meta property="og:title" content="骷髅牌 SKULL · 精品桌游">
+<meta property="og:description" content="3–6 人骷髅牌：把骷髅藏在玫瑰下面，叫价翻牌，先赢两次挑战。精品单机 + 联机。">
+<meta property="og:type" content="website">
+<meta property="og:image" content="assets/og.webp">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preload" as="image" href="../../assets/art/premium/skull/coaster.webp">
+<link rel="preload" as="image" href="../../assets/art/premium/skull/table-wood.webp">
+<link rel="preload" as="image" href="../../assets/art/premium/skull/bar-mat.webp">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231b1712'/%3E%3Ccircle cx='32' cy='32' r='22' fill='%23d8c9ae'/%3E%3Cpath d='M32 16c-9 0-14 6-14 14 0 5 2 8 5 10v6h18v-6c3-2 5-5 5-10 0-8-5-14-14-14z' fill='%23352b22'/%3E%3Ccircle cx='26' cy='30' r='3' fill='%23d8c9ae'/%3E%3Ccircle cx='38' cy='30' r='3' fill='%23d8c9ae'/%3E%3Cpath d='M30 38h4v5h-4z' fill='%23d8c9ae'/%3E%3C/svg%3E">
+<title>骷髅牌 SKULL · 精品桌游</title>
+<style>
+:root { --font-serif: "Iowan Old Style", "Palatino Linotype", "Songti SC", "Noto Serif SC", Georgia, serif; --font-sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; --art-coaster: url("../../assets/art/premium/skull/coaster.webp"); --art-wood: url("../../assets/art/premium/skull/table-wood.webp"); --art-mat: url("../../assets/art/premium/skull/bar-mat.webp"); --bg: #0f0c09; --bg-2: #1a140f; --panel: rgba(38,29,21,.86); --panel-2: rgba(54,40,28,.62); --ink: #f4e8d4; --ink-soft: #ddcbb0; --ink-dim: #b39d80; --brass: #c9a25e; --brass-2: #f0d79a; --brass-dim: rgba(201,162,94,.24); --line: rgba(201,162,94,.26); --line-soft: rgba(201,162,94,.12); --rose: #b84a5a; --rose-2: #e88a96; --skull: #d9cbb4; --danger: #e07a6b; --ok: #8fd0ae; --focus: #f7e2a8; --coaster: #e7dcc6; --coaster-ink: #3a2f24; --radius: 16px; --shadow: 0 26px 70px rgba(0,0,0,.55); --shadow-soft: 0 12px 30px rgba(0,0,0,.35); }
+html[data-theme="light"] { --bg: #efe6d6; --bg-2: #e7dac4; --panel: rgba(255,250,240,.92); --panel-2: rgba(255,248,236,.7); --ink: #2c2118; --ink-soft: #4c3a2a; --ink-dim: #7a6450; --brass: #8d6228; --brass-2: #6f4a18; --line: rgba(141,98,40,.3); --line-soft: rgba(141,98,40,.14); --coaster: #f2e9d8; --coaster-ink: #3a2f24; --shadow: 0 22px 60px rgba(60,40,20,.2); --shadow-soft: 0 10px 24px rgba(60,40,20,.14); }
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; min-height: 100vh; min-height: 100dvh; color: var(--ink); font-family: var(--font-sans); font-size: 16px; line-height: 1.5; background: radial-gradient(1100px 760px at 8% -10%, rgba(120,84,42,.3), transparent 62%), radial-gradient(900px 700px at 96% 4%, rgba(201,162,94,.12), transparent 60%), linear-gradient(158deg, var(--bg), var(--bg-2) 66%, #090705); -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; overflow-x: hidden; }
+body::before { content: ""; position: fixed; inset: 0; z-index: -2; background: var(--art-wood) center / cover no-repeat; opacity: .6; filter: saturate(.78) contrast(1.05); pointer-events: none; }
+body::after { content: ""; position: fixed; inset: 0; z-index: -1; background: var(--art-mat) center / cover no-repeat; opacity: .18; mix-blend-mode: soft-light; pointer-events: none; }
+a { color: var(--brass-2); text-underline-offset: 3px; }
+button, input, select, a { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+button, input, select { font: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 8px; }
+.shell { max-width: 1180px; margin: 0 auto; padding: max(14px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); }
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 4px 2px 12px; }
+.brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.brand-mark { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--art-coaster) center / cover no-repeat; border: 2px solid var(--brass); box-shadow: inset 0 0 0 2px rgba(40,30,20,.35), 0 4px 10px rgba(0,0,0,.4); }
+.brand-mark svg { width: 24px; height: 24px; color: #3a2f24; }
+.brand h1 { margin: 0; font-family: var(--font-serif); font-size: clamp(19px,4.6vw,27px); letter-spacing: .08em; font-weight: 700; line-height: 1.1; }
+.brand h1 small { display: block; font-family: var(--font-sans); font-size: 12px; letter-spacing: .24em; color: var(--brass); font-weight: 600; margin-top: 3px; }
+.top-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.btn { min-height: 44px; min-width: 44px; padding: 10px 14px; border-radius: 11px; border: 1px solid var(--line); background: linear-gradient(180deg, rgba(70,52,34,.8), rgba(32,24,17,.92)); color: var(--ink); font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.btn.primary { background: linear-gradient(160deg, #a97c33, #6b4a1a); border-color: rgba(240,215,154,.5); color: #fff6e0; }
+.btn.ghost { background: rgba(22,16,11,.55); }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.btn svg { width: 16px; height: 16px; }
+.layout { display: grid; grid-template-columns: minmax(0,1fr) 300px; gap: 16px; align-items: start; }
+@media (max-width: 940px) { .layout { grid-template-columns: minmax(0,1fr); } }
+.table-card { position: relative; border-radius: var(--radius); border: 1px solid var(--line); background: linear-gradient(180deg, rgba(34,26,18,.82), rgba(18,13,9,.9)); box-shadow: var(--shadow); overflow: hidden; }
+.table-card::before { content: ""; position: absolute; inset: 0; background: var(--art-wood) center / cover no-repeat; opacity: .22; pointer-events: none; }
+.table-head { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--line-soft); flex-wrap: wrap; }
+.round-badge { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-serif); font-size: 14px; letter-spacing: .06em; color: var(--brass-2); }
+.round-badge b { font-size: 20px; }
+.phase-pill { display: inline-flex; align-items: center; gap: 7px; min-height: 32px; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--line); background: rgba(18,13,9,.6); font-size: 12px; color: var(--ink-soft); }
+.phase-pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--brass); box-shadow: 0 0 10px var(--brass); }
+.phase-pill.waiting::before { background: var(--ink-dim); box-shadow: none; }
+.players { position: relative; display: grid; grid-template-columns: repeat(auto-fit, minmax(96px,1fr)); gap: 8px; padding: 12px; }
+@media (max-width: 420px) { .players { grid-template-columns: repeat(auto-fit, minmax(86px,1fr)); gap: 6px; padding: 10px; } }
+.player-box { position: relative; min-width: 0; border-radius: 13px; border: 1px solid var(--line-soft); background: rgba(15,10,7,.55); padding: 8px; transition: border-color .15s ease, background .15s ease, transform .15s ease; }
+.player-box.me { border-color: rgba(240,215,154,.4); background: rgba(90,64,30,.25); }
+.player-box.out { opacity: .45; filter: grayscale(.6); }
+.player-box .pname { font-family: var(--font-serif); font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink); }
+.player-box .psub { font-size: 12px; color: var(--ink-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+.player-box .pscore { display: flex; gap: 3px; margin-top: 5px; min-height: 12px; }
+.score-dot { width: 12px; height: 12px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #f7e8b5, var(--brass)); border: 1px solid #6b4a1a; box-shadow: 0 1px 3px rgba(0,0,0,.5); }
+.stack-zone { position: relative; width: 100%; min-height: 58px; margin-top: 7px; border: 0; border-radius: 10px; background: transparent; padding: 0; display: grid; place-items: center; }
+.stack-zone.revealable { border: 1px solid var(--brass-2); box-shadow: 0 0 0 2px rgba(240,215,154,.18) inset, 0 0 22px rgba(201,162,94,.18); }
+.stack-zone:disabled { cursor: default; }
+.stack { position: relative; width: 44px; height: 44px; }
+.stack .disc { position: absolute; left: 50%; width: 38px; height: 38px; margin-left: -19px; border-radius: 50%; background: var(--art-coaster) center / cover no-repeat, var(--coaster); border: 2px solid var(--ring, var(--brass)); box-shadow: 0 2px 4px rgba(0,0,0,.5); }
+.stack .disc:nth-child(1) { top: 12px; }
+.stack .disc:nth-child(2) { top: 8px; }
+.stack .disc:nth-child(3) { top: 4px; }
+.stack .disc:nth-child(4) { top: 0; }
+.stack .disc::after { content: ""; position: absolute; inset: 5px; border-radius: 50%; border: 1px dashed rgba(58,47,36,.35); }
+.stack-count { position: absolute; right: -2px; bottom: -2px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 999px; display: grid; place-items: center; font-size: 12px; font-weight: 700; background: var(--brass-2); color: #3a2a12; border: 1px solid #6b4a1a; }
+.zone { position: relative; display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; padding: 8px 14px 14px; }
+@media (max-width: 560px) { .zone { grid-template-columns: 1fr; gap: 8px; padding: 4px 10px 10px; } }
+.revealed { min-height: 72px; border: 1px solid var(--line-soft); border-radius: 12px; background: rgba(10,7,4,.45); padding: 8px 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.revealed .empty { font-size: 12px; color: var(--ink-dim); }
+.flip-disc { width: 46px; height: 46px; border-radius: 50%; background: var(--art-coaster) center / cover no-repeat, var(--coaster); border: 2px solid var(--brass); display: grid; place-items: center; color: var(--coaster-ink); box-shadow: 0 3px 8px rgba(0,0,0,.5); }
+.flip-disc svg { width: 26px; height: 26px; }
+.flip-disc.skull { border-color: var(--danger); color: #6b1f22; background: linear-gradient(150deg, #e8dcc6, #cfc0a6); }
+.flip-disc.rose { border-color: var(--rose); color: #8d2a38; }
+.bid-box { text-align: right; }
+@media (max-width: 560px) { .bid-box { text-align: left; } }
+.bid-box .big { font-family: var(--font-serif); font-size: 28px; font-weight: 700; color: var(--brass-2); line-height: 1; }
+.bid-box .lbl { font-size: 12px; color: var(--ink-dim); }
+.log { position: relative; margin: 0 14px 12px; max-height: 104px; overflow-y: auto; border: 1px solid var(--line-soft); border-radius: 10px; background: rgba(8,5,3,.42); padding: 8px 10px; font-size: 12px; line-height: 1.65; color: var(--ink-soft); scrollbar-width: thin; }
+.log p { margin: 0 0 4px; }
+.log p:last-child { margin-bottom: 0; }
+.my-zone { position: relative; padding: 12px 14px 16px; border-top: 1px solid var(--line-soft); background: linear-gradient(180deg, rgba(12,8,5,.14), rgba(12,8,5,.55)); }
+.my-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.my-title { font-family: var(--font-serif); font-size: 15px; letter-spacing: .05em; }
+.my-title span { font-family: var(--font-sans); font-size: 12px; color: var(--ink-dim); margin-left: 6px; }
+.hand { display: flex; justify-content: center; gap: clamp(6px,3vw,16px); padding: 2px 0 10px; flex-wrap: wrap; }
+.disc-btn { position: relative; width: clamp(58px,16vw,72px); height: clamp(58px,16vw,72px); border-radius: 50%; border: 2px solid var(--brass); background: var(--art-coaster) center / cover no-repeat, var(--coaster); color: var(--coaster-ink); display: grid; place-items: center; box-shadow: 0 8px 18px rgba(0,0,0,.4), inset 0 0 0 4px rgba(58,47,36,.18); transition: transform .15s ease, box-shadow .15s ease; }
+.disc-btn svg { width: 58%; height: 58%; }
+.disc-btn.skull-disc { border-color: var(--danger); color: #6b1f22; }
+.disc-btn.rose-disc { border-color: var(--rose); color: #8d2a38; }
+.disc-btn:not(:disabled):hover { transform: translateY(-3px); }
+.disc-btn.sel { box-shadow: 0 0 0 4px var(--brass-2), 0 10px 22px rgba(0,0,0,.5); transform: translateY(-4px); }
+.disc-btn .cnt { position: absolute; right: 1px; bottom: 1px; min-width: 20px; height: 20px; padding: 0 4px; border-radius: 999px; display: grid; place-items: center; font-size: 12px; font-weight: 700; background: var(--brass-2); color: #3a2a12; border: 1px solid #6b4a1a; }
+.disc-btn:disabled { opacity: .4; }
+.action-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 14px 14px; }
+@media (max-width: 560px) { .action-bar { padding: 8px 10px 12px; } }
+.action-hint { flex: 1 1 200px; min-width: 0; font-size: 12px; color: var(--ink-soft); line-height: 1.5; }
+.action-hint b { color: var(--brass-2); }
+.btn-play { min-height: 46px; min-width: 108px; padding: 11px 18px; border-radius: 11px; border: 1px solid rgba(240,215,154,.55); background: linear-gradient(160deg, #b08438, #6b4a1a); color: #fff6e0; font-weight: 700; letter-spacing: .06em; }
+.option-row { display: none; flex-wrap: wrap; gap: 6px; align-items: center; padding: 0 14px 4px; }
+.option-row.on { display: flex; }
+.option-row .label { font-size: 12px; color: var(--ink-dim); margin-right: 2px; }
+.option { min-width: 44px; height: 44px; padding: 0 10px; border-radius: 9px; border: 1px solid var(--line); background: rgba(28,20,13,.75); color: var(--ink); font-family: var(--font-serif); font-size: 15px; font-weight: 700; }
+.option.sel { background: linear-gradient(160deg, #a97c33, #6b4a1a); border-color: var(--brass-2); color: #fff6e0; }
+.side { display: grid; gap: 14px; }
+.panel { border-radius: var(--radius); border: 1px solid var(--line); background: linear-gradient(180deg, rgba(38,29,21,.86), rgba(18,13,9,.9)); box-shadow: var(--shadow-soft); padding: 14px; position: relative; overflow: hidden; }
+.panel h2 { margin: 0 0 10px; font-family: var(--font-serif); font-size: 15px; letter-spacing: .08em; color: var(--brass-2); font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.panel h2::before { content: ""; width: 16px; height: 1px; background: var(--brass); }
+.panel p { margin: 0 0 8px; font-size: 12px; line-height: 1.7; color: var(--ink-soft); }
+.panel .kv { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-bottom: 1px dashed var(--line-soft); font-size: 12px; color: var(--ink-soft); }
+.panel .kv:last-child { border-bottom: 0; }
+.panel .kv b { color: var(--brass-2); font-weight: 600; }
+.panel .coaster-hero { width: 100%; aspect-ratio: 1.9; border-radius: 12px; background: var(--art-coaster) center / cover no-repeat; border: 1px solid var(--line-soft); margin-bottom: 10px; opacity: .95; }
+.tips { font-size: 12px; color: var(--ink-dim); line-height: 1.7; padding-left: 18px; }
+.tips li { margin-bottom: 5px; }
+.disc-legend { display: grid; gap: 6px; }
+.disc-legend .row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-soft); }
+.disc-legend .mini { width: 30px; height: 30px; border-radius: 50%; background: var(--art-coaster) center / cover no-repeat, var(--coaster); border: 2px solid var(--brass); display: grid; place-items: center; color: var(--coaster-ink); }
+.disc-legend .mini svg { width: 18px; height: 18px; }
+.foot { margin-top: 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 12px; color: var(--ink-dim); }
+.foot a { display:inline-flex; align-items:center; justify-content:center; min-width:44px; min-height:44px; }
+.modal { position: fixed; inset: 0; z-index: 40; display: none; align-items: center; justify-content: center; padding: 18px; background: rgba(5,3,2,.76); backdrop-filter: blur(6px); }
+.modal.on { display: flex; }
+.modal-card { width: min(480px,100%); max-height: 86vh; overflow-y: auto; border-radius: 18px; border: 1px solid var(--line); background: linear-gradient(180deg, #2a2016, #140e09); box-shadow: var(--shadow); padding: 20px; }
+.modal-card h3 { margin: 0 0 6px; font-family: var(--font-serif); font-size: 20px; letter-spacing: .06em; color: var(--brass-2); }
+.modal-card p { margin: 0 0 12px; font-size: 13px; line-height: 1.7; color: var(--ink-soft); }
+.modal-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+.round-table { display: grid; gap: 5px; margin: 10px 0; }
+.round-table .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; border-radius: 9px; background: rgba(255,255,255,.04); border: 1px solid var(--line-soft); font-size: 12px; }
+.round-table .row.win { border-color: rgba(240,215,154,.5); background: rgba(120,84,42,.28); }
+.flip-row { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0; }
+.toast { position: fixed; left: 50%; bottom: max(18px, env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(20px); z-index: 50; opacity: 0; pointer-events: none; transition: opacity .2s ease, transform .2s ease; padding: 10px 16px; border-radius: 999px; background: rgba(24,18,12,.96); border: 1px solid var(--line); color: var(--ink); font-size: 12px; box-shadow: var(--shadow-soft); max-width: calc(100vw - 24px); text-align: center; }
+.toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; scroll-behavior: auto !important; } }
+</style>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/skull-premium/">
+</head>
+<body>
+<div class="shell">
+  <header class="topbar">
+    <div class="brand"><div class="brand-mark" aria-hidden="true"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M32 14c-9 0-14 6-14 14 0 5 2 8 5 10v7h18v-7c3-2 5-5 5-10 0-8-5-14-14-14z"/><circle cx="26" cy="29" r="3.2" fill="currentColor"/><circle cx="38" cy="29" r="3.2" fill="currentColor"/><path d="M30 38h4v6h-4z"/></svg></div><h1>骷髅牌 <small>SKULL · PREMIUM</small></h1></div>
+    <div class="top-actions"><button class="btn primary" id="newBtn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>新对局</button><a class="btn ghost" href="online.html">联机</a><a class="btn ghost" href="rules.html">规则</a><button class="btn ghost" id="themeBtn" type="button" aria-label="切换明暗主题">◐</button><button class="btn ghost sfx-toggle" type="button" aria-label="音效开关"></button></div>
+  </header>
+  <main class="layout">
+    <section class="table-card" aria-label="牌桌">
+      <div class="table-head"><div class="round-badge">第 <b id="roundNum">1</b> 轮 <span style="font-size:12px;color:var(--ink-dim)">· 先赢 <b id="targetNum">2</b> 次挑战</span></div><div class="phase-pill" id="phasePill">放置阶段</div></div>
+      <div class="players" id="players"></div>
+      <div class="zone"><div class="revealed" id="revealed"><span class="empty">已经翻开的牌会出现在这里。</span></div><div class="bid-box"><div class="lbl">当前叫价</div><div class="big" id="bidBig">—</div><div class="lbl" id="bidSub">尚未开始</div></div></div>
+      <div class="option-row" id="optionRow" aria-label="叫价选项"><span class="label">叫价</span></div>
+      <div class="log" id="log" aria-live="polite"></div>
+      <div class="my-zone"><div class="my-head"><div class="my-title">你的手牌 <span id="handHint">玫瑰 3 · 骷髅 1</span></div><div class="my-title" style="font-size:12px;color:var(--ink-dim)">得分 <b id="myScore" style="color:var(--brass-2)">0</b> / 2</div></div><div class="hand" id="hand"></div><div class="action-bar"><div class="action-hint" id="actionHint">放置阶段：先放一枚牌。</div><button class="btn-play" id="passBtn" type="button">停手 / 不叫</button></div></div>
+    </section>
+    <aside class="side">
+      <section class="panel"><h2>本局</h2><div class="coaster-hero" role="img" aria-label="啤酒杯垫"></div><div class="kv"><span>模式</span><b>3–6 人 · 对战 AI</b></div><div class="kv"><span>每人</span><b>3 玫瑰 + 1 骷髅</b></div><div class="kv"><span>胜利</span><b>先赢 2 次挑战</b></div><div class="kv"><span>牌堆</span><b id="placedTotal">0 枚已放置</b></div><div class="kv"><span>音效</span><b>本地合成</b></div></section>
+      <section class="panel"><h2>两种牌</h2><div class="disc-legend"><div class="row"><span class="mini" id="legendRose"></span><div><b style="color:var(--rose-2)">玫瑰</b>：安全牌，翻到就算成功一步。</div></div><div class="row"><span class="mini" id="legendSkull"></span><div><b style="color:var(--danger)">骷髅</b>：翻到它，挑战立即失败。</div></div></div></section>
+      <section class="panel"><h2>小提示</h2><ul class="tips"><li>把骷髅放在自己牌堆的最下面，让玫瑰替它挡刀。</li><li>叫价必须比当前更高，最多不能超过桌面上的总牌数。</li><li>翻牌先翻任意玩家的最上面一张；只有自己的牌堆可以继续往下翻。</li><li>失败者从手中随机失去一枚牌；失去全部牌即出局。</li><li>先成功完成两次挑战的玩家获胜。</li></ul></section>
+    </aside>
+  </main>
+  <footer class="foot"><span>本地素材 · 零外部请求 · 离线可玩</span><span><a href="rules.html">完整规则</a> · <a href="online.html">联机房间</a></span></footer>
+</div>
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-card"><h3 id="modalTitle">提示</h3><div id="modalBody"></div><div class="modal-actions" id="modalActions"></div></div></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="../../shared/shuffle.js"></script>
+<script src="../../shared/sfx.js"></script>
+<script src="data.js"></script>
+<script src="engine.js"></script>
+<script>
+(function () {
+  'use strict';
+  var E = window.SkullEngine, D = window.SkullData;
+  var LS_KEY = 'hhfa-skull-premium-v1', AI_DELAY = 700, fastAI = false;
+  var state = null, seat = 0, selectedDisc = null, selectedBid = null, aiTimer = null, pendingRoundModal = false, lastSeenRound = 0;
+  function $(id) { return document.getElementById(id); }
+  function el(tag, cls, text) { var n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
+  function esc(value) { return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]; }); }
+  function sfx(name) { try { if (window.Sfx && window.Sfx.play) window.Sfx.play(name); } catch (err) {} }
+  function toast(text) { var t = $('toast'); t.textContent = text; t.classList.add('on'); clearTimeout(t._timer); t._timer = setTimeout(function () { t.classList.remove('on'); }, 2200); }
+  var ROSE = '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M32 28c-4-4-4-9 0-12 4 3 4 8 0 12z"/><path d="M32 28c-6 0-10-3-10-8 5-2 9 1 10 8z"/><path d="M32 28c6 0 10-3 10-8-5-2-9 1-10 8z"/><path d="M32 28c-5 2-7 6-5 11 5 0 7-4 5-11z"/><path d="M32 28c5 2 7 6 5 11-5 0-7-4-5-11z"/><path d="M32 30v22M32 42c-5-1-8-3-9-7M32 46c5-1 8-3 9-7"/></svg>';
+  var SKULL = '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M32 12c-10 0-16 7-16 16 0 6 3 10 7 12v8h18v-8c4-2 7-6 7-12 0-9-6-16-16-16z"/><circle cx="25" cy="29" r="3.4" fill="currentColor"/><circle cx="39" cy="29" r="3.4" fill="currentColor"/><path d="M29 39h6v6h-6zM26 48v4M32 48v5M38 48v4"/></svg>';
+  function colorOf(index) { return D.PLAYER_COLORS[index % D.PLAYER_COLORS.length]; }
+  function playerName(index) { return state.players[index] ? state.players[index].name : ('玩家 ' + (index + 1)); }
+  function humanTurn() { return state && !state.over && state.current === seat && !state.players[state.current].isAI; }
+  function render() {
+    if (!state) return;
+    $('roundNum').textContent = String(state.round); $('targetNum').textContent = String(state.targetPoints);
+    $('placedTotal').textContent = state.placement ? state.placement.placedTotal + ' 枚已放置' : '—';
+    var me = state.players[seat]; $('myScore').textContent = String(me.score); $('handHint').textContent = '玫瑰 ' + me.roses + ' · 骷髅 ' + me.skull;
+    var phase = state.phase, pill = $('phasePill');
+    if (state.over) { pill.textContent = '对局结束'; pill.className = 'phase-pill waiting'; }
+    else if (phase === 'placement') { pill.textContent = humanTurn() ? '放置阶段 · 轮到你' : '放置阶段 · ' + playerName(state.current) + ' 思考'; pill.className = 'phase-pill' + (humanTurn() ? '' : ' waiting'); }
+    else if (phase === 'bidding') { pill.textContent = humanTurn() ? '叫价阶段 · 轮到你' : '叫价阶段 · ' + playerName(state.current) + ' 叫价'; pill.className = 'phase-pill' + (humanTurn() ? '' : ' waiting'); }
+    else if (phase === 'reveal') { pill.textContent = '翻牌阶段 · ' + playerName(state.reveal.bidder) + ' 翻牌'; pill.className = 'phase-pill'; }
+    else { pill.textContent = phase; pill.className = 'phase-pill waiting'; }
+    var host = $('players'); host.innerHTML = '';
+    state.players.forEach(function (p) {
+      var box = el('div', 'player-box' + (p.index === seat ? ' me' : '') + (p.out ? ' out' : ''));
+      var color = colorOf(p.index); var top = el('div');
+      var name = el('div', 'pname', p.name); name.style.color = 'var(--ink)'; name.title = color.name;
+      var sub = el('div', 'psub', p.out ? '已出局' : ('手牌 ' + p.handCount + ' · 牌堆 ' + p.stackCount + (p.passed && phase === 'placement' ? ' · 停手' : '')));
+      top.appendChild(name); top.appendChild(sub); box.appendChild(top);
+      var score = el('div', 'pscore'); for (var s = 0; s < state.targetPoints; s++) { var dot = el('span', 'score-dot'); if (s >= p.score) dot.style.opacity = '.22'; score.appendChild(dot); } box.appendChild(score);
+      var revealable = phase === 'reveal' && humanTurn() && E.getLegalMoves(state).some(function (m) { return m.type === 'reveal' && m.player === p.index; });
+      var zone = el(revealable ? 'button' : 'div', 'stack-zone');
+      if (revealable) { zone.type = 'button'; zone.setAttribute('aria-label', '翻开 ' + p.name + ' 的牌'); zone.classList.add('revealable'); zone.addEventListener('click', function () { doReveal(p.index); }); }
+      var stack = el('div', 'stack'); var count = Math.min(4, p.stackCount);
+      for (var i = 0; i < count; i++) { var disc = el('div', 'disc'); disc.style.setProperty('--ring', color.hex); stack.appendChild(disc); }
+      if (p.stackCount) stack.appendChild(el('span', 'stack-count', String(p.stackCount)));
+      zone.appendChild(stack); box.appendChild(zone); host.appendChild(box);
+    });
+    var rev = $('revealed'); rev.innerHTML = '';
+    if (state.reveal && state.reveal.flips.length) {
+      state.reveal.flips.forEach(function (f) { var d = el('div', 'flip-disc ' + f.disc); d.innerHTML = f.disc === 'skull' ? SKULL : ROSE; d.title = playerName(f.player) + ' · ' + (f.disc === 'skull' ? '骷髅' : '玫瑰'); rev.appendChild(d); });
+    } else rev.appendChild(el('span', 'empty', state.phase === 'reveal' ? '点击上方任意玩家牌堆的最上面一张翻牌。' : '已经翻开的牌会出现在这里。'));
+    var bid = state.bid;
+    if (bid && bid.highest > 0) { $('bidBig').textContent = bid.highest + ' 枚'; $('bidSub').textContent = playerName(bid.bidder) + ' 叫价 · 目标 ' + bid.highest; }
+    else if (state.phase === 'bidding') { $('bidBig').textContent = '—'; $('bidSub').textContent = '由 ' + playerName(state.current) + ' 开叫'; }
+    else if (state.reveal) { $('bidBig').textContent = state.reveal.flipped + ' / ' + state.reveal.target; $('bidSub').textContent = playerName(state.reveal.bidder) + ' 翻牌中'; }
+    else { $('bidBig').textContent = '—'; $('bidSub').textContent = '尚未开始'; }
+    var optRow = $('optionRow'); optRow.innerHTML = '<span class="label">叫价</span>'; optRow.classList.toggle('on', phase === 'bidding' && humanTurn());
+    if (phase === 'bidding' && humanTurn()) E.getLegalMoves(state).filter(function (m) { return m.type === 'bid'; }).forEach(function (m) { var b = el('button', 'option' + (selectedBid === m.amount ? ' sel' : ''), String(m.amount)); b.type = 'button'; b.dataset.bid = String(m.amount); b.addEventListener('click', function () { selectedBid = m.amount; sfx('click'); render(); }); optRow.appendChild(b); });
+    var logHost = $('log'); logHost.innerHTML = '';
+    state.log.slice(-12).reverse().forEach(function (entry) { var p = el('p'); p.innerHTML = '<span style="color:var(--brass-2)">R' + entry.round + '</span> · ' + esc(entry.text); logHost.appendChild(p); });
+    var handHost = $('hand'); handHost.innerHTML = ''; var canPlace = phase === 'placement' && humanTurn();
+    if (me.roses > 0) handHost.appendChild(makeDiscButton('rose', me.roses, canPlace));
+    if (me.skull > 0) handHost.appendChild(makeDiscButton('skull', me.skull, canPlace));
+    if (!me.roses && !me.skull) handHost.appendChild(el('p', 'action-hint', me.out ? '你已出局。' : '你已没有手牌。'));
+    var hint = $('actionHint'), passBtn = $('passBtn'); passBtn.disabled = true; passBtn.textContent = '停手 / 不叫';
+    if (state.over) hint.textContent = '对局结束。点击「新对局」再来一局。';
+    else if (!humanTurn()) hint.textContent = '等待 ' + playerName(state.current) + ' 行动…';
+    else if (phase === 'placement') {
+      hint.innerHTML = '放置阶段：选择一枚牌放到自己的牌堆，或<b>停手</b>。';
+      if (state.placement.placedTotal > 0) { passBtn.disabled = false; passBtn.onclick = function () { doMove({ type: 'pass' }); }; }
+      if (selectedDisc) hint.innerHTML = '已选择<b>' + (selectedDisc === 'rose' ? '玫瑰' : '骷髅') + '</b>，点击它再确认放置。';
+    } else if (phase === 'bidding') {
+      var highest = state.bid ? state.bid.highest : 0;
+      hint.innerHTML = '叫价阶段：选择一个数字（必须大于 <b>' + highest + '</b>），或<b>不叫</b>。';
+      if (selectedBid != null) { hint.innerHTML = '已选择叫 <b>' + selectedBid + '</b> 枚，点击「确认叫价」。'; passBtn.textContent = '确认叫价'; passBtn.disabled = false; passBtn.onclick = function () { doMove({ type: 'bid', amount: selectedBid }); }; }
+      if (highest > 0) { var noBid = el('button', 'option', '不叫'); noBid.type = 'button'; noBid.style.minWidth = '64px'; noBid.addEventListener('click', function () { doMove({ type: 'pass' }); }); optRow.appendChild(noBid); }
+    } else if (phase === 'reveal') hint.innerHTML = humanTurn() ? '翻牌阶段：点击任意玩家牌堆最上面一张；自己的牌堆可以继续往下翻。' : '等待叫价者翻牌…';
+    if (state.lastRound && state.lastRound.round !== lastSeenRound && !state.over) { lastSeenRound = state.lastRound.round; showRoundSummary(state.lastRound); }
+    if (state.over) showResult();
+  }
+  function makeDiscButton(disc, count, enabled) {
+    var btn = el('button', 'disc-btn ' + disc + '-disc' + (selectedDisc === disc ? ' sel' : '')); btn.type = 'button'; btn.disabled = !enabled; btn.setAttribute('aria-label', (disc === 'rose' ? '玫瑰' : '骷髅') + '，剩 ' + count + ' 枚');
+    btn.innerHTML = (disc === 'rose' ? ROSE : SKULL) + '<span class="cnt">' + count + '</span>';
+    btn.addEventListener('click', function () { if (!enabled) return; if (selectedDisc === disc) { doMove({ type: 'place', disc: disc }); return; } selectedDisc = disc; sfx('click'); render(); });
+    return btn;
+  }
+  function doReveal(playerIndex) { if (!humanTurn() || state.phase !== 'reveal') return; doMove({ type: 'reveal', player: playerIndex }); }
+  function doMove(move) { if (!state || state.over) return; try { state = E.applyMove(state, move); } catch (err) { toast(err.message); sfx('error'); return; } selectedDisc = null; selectedBid = null; sfx(move.type === 'reveal' ? 'deal' : 'move'); persist(); render(); scheduleAI(); }
+  function scheduleAI() { clearTimeout(aiTimer); if (!state || state.over || pendingRoundModal || humanTurn()) return; aiTimer = setTimeout(function () { if (!state || state.over || pendingRoundModal || humanTurn()) return; if (state.players[state.current].isAI) { var move = E.chooseAIMove(state); if (move) { try { state = E.applyMove(state, move); sfx('move'); persist(); render(); } catch (err) { toast('AI 行动失败：' + err.message); } } } scheduleAI(); }, fastAI ? 10 : AI_DELAY); }
+  function showRoundSummary(summary) { if (!summary) return; var flips = (summary.flips || []).map(function (f) { return '<span class="flip-disc ' + f.disc + '" title="' + esc(playerName(f.player)) + '">' + (f.disc === 'skull' ? SKULL : ROSE) + '</span>'; }).join(''); var rows = summary.scores.map(function (s) { return '<div class="row ' + (summary.bidder === s.index ? 'win' : '') + '"><span>' + esc(s.name) + (s.out ? '（出局）' : '') + '</span><b>' + s.score + ' 分 · 手牌 ' + s.discs + '</b></div>'; }).join(''); showModal('第 ' + summary.round + ' 轮结算', '<p>' + esc(summary.bidderName || '') + ' 叫了 ' + summary.target + ' 枚，' + (summary.success ? '全部翻出玫瑰，挑战成功。' : '翻到了骷髅，挑战失败' + (summary.lostDisc ? '，随机失去一枚' + (summary.lostDisc === 'skull' ? '骷髅' : '玫瑰') : '') + '。') + '</p><div class="flip-row">' + flips + '</div><div class="round-table">' + rows + '</div>', [{ label: '继续', primary: true, onClick: function () { closeModal(); pendingRoundModal = false; scheduleAI(); } }]); pendingRoundModal = true; }
+  function showResult() { if (!state || state._resultShown) return; state._resultShown = true; var result = E.getResults(state); var rows = result.scores.map(function (s) { var win = result.winners.indexOf(s.index) >= 0; return '<div class="row ' + (win ? 'win' : '') + '"><span>' + esc(s.name) + (s.isAI ? ' · AI' : '') + '</span><b>' + s.score + ' / ' + result.targetPoints + ' 分</b></div>'; }).join(''); var title = result.winners.length === 1 ? (result.winners[0] === seat ? '你赢下了骷髅牌' : playerName(result.winners[0]) + ' 赢下了比赛') : '共享胜利'; showModal(title, '<p>' + (result.winners.indexOf(seat) >= 0 ? '你的玫瑰替你把骷髅藏到了最后。' : '杯垫收好，下一轮再试。') + '</p><div class="round-table">' + rows + '</div>', [{ label: '再来一局', primary: true, onClick: function () { closeModal(); newGame(); } }, { label: '查看牌桌', onClick: closeModal }]); sfx(result.winners.indexOf(seat) >= 0 ? 'win' : 'lose'); }
+  function showModal(title, body, actions) { $('modalTitle').textContent = title; $('modalBody').innerHTML = body; var host = $('modalActions'); host.innerHTML = ''; (actions || []).forEach(function (a) { var b = el('button', 'btn' + (a.primary ? ' primary' : ''), a.label); b.type = 'button'; b.addEventListener('click', a.onClick); host.appendChild(b); }); $('modal').classList.add('on'); $('modal').setAttribute('aria-hidden', 'false'); }
+  function closeModal() { $('modal').classList.remove('on'); $('modal').setAttribute('aria-hidden', 'true'); }
+  function newGame(opts) { opts = opts || {}; var count = opts.playerCount || (state ? state.playerCount : 4); if (count < 3 || count > 6) count = 4; var names = D.NAMES.slice(0, count); var flags = names.map(function (_, i) { return i > 0; }); state = E.createGame({ seed: opts.seed == null ? (Date.now() % 2147483647) : opts.seed, playerCount: count, names: names, isAI: flags }); state._resultShown = false; selectedDisc = null; selectedBid = null; lastSeenRound = 0; pendingRoundModal = false; closeModal(); render(); persist(); scheduleAI(); }
+  function persist() { try { if (!state || state.over) { localStorage.removeItem(LS_KEY); return; } localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch (err) {} }
+  function restore() { try { var raw = localStorage.getItem(LS_KEY); if (!raw) return false; var saved = JSON.parse(raw); if (!saved || saved.version !== E.VERSION || saved.over) return false; state = saved; state._resultShown = false; lastSeenRound = state.lastRound ? state.lastRound.round : 0; render(); scheduleAI(); return true; } catch (err) { return false; } }
+  function countDialog() { showModal('新对局', '<p>选择同桌人数。除你之外的空位由 AI 补足。</p><div class="modal-actions" style="margin-top:0"><button class="btn primary" data-count="3">3 人</button><button class="btn" data-count="4">4 人</button><button class="btn" data-count="5">5 人</button><button class="btn" data-count="6">6 人</button></div>', []); Array.prototype.forEach.call($('modalBody').querySelectorAll('[data-count]'), function (btn) { btn.addEventListener('click', function () { closeModal(); newGame({ playerCount: Number(btn.dataset.count) }); }); }); }
+  function bind() { $('newBtn').addEventListener('click', function () { if (state && !state.over) showModal('开始新对局？', '<p>当前对局尚未结束，开始新对局会丢弃当前进度。</p>', [{ label: '取消', onClick: closeModal }, { label: '开始新对局', primary: true, onClick: function () { closeModal(); countDialog(); } }]); else countDialog(); }); $('themeBtn').addEventListener('click', function () { var root = document.documentElement; root.dataset.theme = root.dataset.theme === 'light' ? 'dark' : 'light'; try { localStorage.setItem('hhfa-skull-theme', root.dataset.theme); } catch (err) {} }); try { var savedTheme = localStorage.getItem('hhfa-skull-theme'); if (savedTheme === 'light' || savedTheme === 'dark') document.documentElement.dataset.theme = savedTheme; } catch (err) {} $('modal').addEventListener('click', function (e) { if (e.target === $('modal')) closeModal(); }); document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModal(); if (e.key === 'Enter' && !$('passBtn').disabled) $('passBtn').click(); }); $('legendRose').innerHTML = ROSE; $('legendSkull').innerHTML = SKULL; }
+  function start() { if (!E) { $('actionHint').textContent = '规则引擎加载失败，请确认 engine.js 与 data.js 位于同一目录。'; return; } bind(); if (!restore()) { state = E.createGame({ seed: 1, playerCount: 4, names: D.NAMES.slice(0, 4), isAI: [false, true, true, true] }); state._resultShown = false; render(); scheduleAI(); } window.__SK_PREMIUM__ = { newGame: newGame, state: function () { return state; }, view: function () { return E.getView(state, seat); }, setFastAI: function (on) { fastAI = !!on; }, render: render, engine: E }; window.__SK_READY__ = true; if ('serviceWorker' in navigator) window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); }); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+})();
+</script>
+</body>
+</html>

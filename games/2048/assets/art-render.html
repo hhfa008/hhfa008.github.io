@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="2048 美术合成页：本地生成的素材在浏览器中的渲染预览。">
+<title>2048 art render</title>
+<meta name="description" content="2048 art render harness: composes the walnut table, tiles and UI in code for reproducible OG and detail art captures.">
+<link rel="canonical" href="https://hhfa008.github.io/games/2048/assets/art-render.html">
+<style>
+  :root {
+    --mat: ../../assets/art/2048/materials;
+    --ink: #fff7ea;
+    --ink-dim: rgba(255, 240, 220, .56);
+    --gold: #e8c27a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #1a0f0b; }
+  body {
+    font-family: "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: geometricPrecision;
+  }
+
+  .stage { position: fixed; inset: 0; overflow: hidden; }
+  .table {
+    position: absolute; inset: -8%;
+    background-image: url("../../assets/art/2048/materials/table-walnut.png");
+    background-size: cover; background-position: center;
+    filter: brightness(.56) saturate(.82) contrast(1.06);
+    transform: scale(1.1) rotate(.4deg);
+  }
+  .table::after {
+    content: ""; position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 58% 44% at 54% 36%, rgba(255, 214, 160, .30), transparent 62%),
+      linear-gradient(115deg, rgba(255, 190, 120, .08), transparent 44%, rgba(0, 0, 0, .25));
+  }
+  .vignette {
+    position: absolute; inset: 0; pointer-events: none;
+    background:
+      radial-gradient(ellipse 72% 68% at 50% 45%, transparent 42%, rgba(8, 4, 2, .62) 100%),
+      linear-gradient(to bottom, rgba(0, 0, 0, .18), transparent 26%, transparent 72%, rgba(0, 0, 0, .38));
+  }
+
+  .brand { position: absolute; z-index: 6; color: var(--ink); }
+  .brand .title {
+    font-size: var(--title-size);
+    font-weight: 800; line-height: .82; letter-spacing: -.065em;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 6px 22px rgba(0, 0, 0, .48), 0 1px 0 rgba(255, 255, 255, .16);
+  }
+  .brand .rule {
+    width: var(--rule-w); height: 2px; margin: var(--rule-gap) 0 var(--sub-gap);
+    background: linear-gradient(90deg, var(--gold), rgba(232, 194, 122, 0));
+    border-radius: 2px;
+  }
+  .brand .sub {
+    font-size: var(--sub-size); font-weight: 600; letter-spacing: .30em;
+    color: var(--ink-dim); text-transform: uppercase; white-space: nowrap;
+  }
+
+  .hud { position: absolute; z-index: 6; display: flex; gap: var(--hud-gap); }
+  .chip {
+    min-width: var(--chip-w);
+    padding: var(--chip-pad-y) var(--chip-pad-x);
+    border-radius: calc(var(--chip-w) * .16);
+    background: linear-gradient(160deg, rgba(46, 27, 19, .82), rgba(24, 13, 9, .72));
+    border: 1px solid rgba(255, 220, 170, .20);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .10), 0 10px 24px rgba(0, 0, 0, .35);
+  }
+  .chip .label {
+    display: block; font-size: var(--hud-label); font-weight: 600;
+    letter-spacing: .22em; color: var(--ink-dim); line-height: 1.25;
+  }
+  .chip .value {
+    display: block; margin-top: .18em;
+    font-size: var(--hud-value); font-weight: 700; line-height: 1;
+    color: var(--ink); font-variant-numeric: tabular-nums;
+    letter-spacing: -.02em; text-shadow: 0 2px 8px rgba(0, 0, 0, .35);
+  }
+
+  .caption {
+    position: absolute; z-index: 6; color: var(--ink-dim);
+    font-size: var(--caption-size); font-weight: 600; letter-spacing: .18em;
+    text-transform: uppercase; font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
+
+  .scene {
+    position: absolute; z-index: 3;
+    left: var(--bx); top: var(--by);
+    width: var(--bw); height: var(--bw);
+    transform: translate(-50%, -50%);
+    perspective: 1900px; perspective-origin: 50% 48%;
+  }
+  .board3d {
+    position: absolute; inset: 0; transform-style: preserve-3d;
+    transform: rotateX(var(--rx)) rotateZ(var(--rz));
+    transform-origin: 50% 50%;
+  }
+  .tray {
+    position: absolute; inset: 0;
+    padding: 4.1%;
+    border-radius: 4.6%;
+    background-image:
+      linear-gradient(155deg, rgba(28, 15, 10, .62), rgba(18, 9, 6, .82)),
+      url("../../assets/art/2048/materials/table-walnut.png");
+    background-size: cover; background-position: center;
+    box-shadow:
+      0 44px 84px rgba(0, 0, 0, .58),
+      0 14px 22px rgba(0, 0, 0, .38),
+      inset 0 0 0 2px rgba(255, 220, 180, .13),
+      inset 0 16px 26px rgba(0, 0, 0, .42),
+      inset 0 -10px 18px rgba(255, 190, 130, .05);
+    transform-style: preserve-3d;
+  }
+  .tray::before {
+    content: ""; position: absolute; inset: 2.9%;
+    border: 1px solid rgba(255, 220, 180, .12);
+    border-radius: 3.2%; pointer-events: none;
+    box-shadow: inset 0 0 24px rgba(0, 0, 0, .35);
+  }
+  .grid {
+    position: relative; width: 100%; height: 100%;
+    display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr);
+    gap: 2.35%;
+    transform-style: preserve-3d;
+  }
+  .slot { position: relative; transform-style: preserve-3d; }
+  .cell {
+    position: absolute; inset: 0; border-radius: 11%;
+    background:
+      radial-gradient(ellipse at 50% 20%, rgba(255, 210, 160, .055), transparent 68%),
+      linear-gradient(160deg, #24130d, #170b08 65%, #120806);
+    box-shadow:
+      inset 0 5px 12px rgba(0, 0, 0, .72),
+      inset 0 -2px 0 rgba(255, 220, 180, .055),
+      0 1px 0 rgba(255, 220, 180, .05);
+  }
+  .slot.filled .cell::after {
+    content: ""; position: absolute; z-index: 0;
+    left: 4%; right: 4%; bottom: -8%; height: 34%;
+    border-radius: 50%;
+    background: radial-gradient(ellipse at 50% 50%, rgba(0, 0, 0, .58), rgba(0, 0, 0, 0) 70%);
+    filter: blur(5px);
+    transform: translateZ(1px);
+  }
+  .tile {
+    position: absolute; inset: 0; z-index: 2;
+    border-radius: 10%;
+    background-image: var(--tex);
+    background-size: 116% 116%; background-position: center;
+    transform: translateZ(15px);
+    transform-style: preserve-3d;
+    box-shadow:
+      0 9px 0 #2b160e,
+      0 13px 0 #1c0d08,
+      0 20px 24px rgba(0, 0, 0, .42),
+      inset 0 2px 0 rgba(255, 255, 255, .34),
+      inset 0 -3px 0 rgba(45, 20, 8, .20);
+    filter: saturate(var(--sat, 1.0)) contrast(1.015);
+  }
+  .tile .tint {
+    position: absolute; inset: 0; border-radius: inherit;
+    background: var(--tint);
+    mix-blend-mode: soft-light;
+  }
+  .tile .sheen {
+    position: absolute; inset: 2.5% 2.5% 56% 2.5%;
+    border-radius: 7%;
+    background: linear-gradient(to bottom, rgba(255, 255, 255, .26), rgba(255, 255, 255, 0));
+    mix-blend-mode: screen; pointer-events: none;
+  }
+  .tile .num {
+    position: absolute; inset: 0; z-index: 3;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; letter-spacing: -.045em;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+    text-shadow: 0 2px 0 rgba(52, 24, 8, .30), 0 1px 3px rgba(0, 0, 0, .24);
+    transform: translateZ(1px);
+    user-select: none;
+  }
+
+  /* cover: square 1024x1024 */
+  body[data-shot="cover"] {
+    --bw: 74vmin; --bx: 50%; --by: 57%; --rx: 34deg; --rz: -11deg;
+    --title-size: 13.2vmin; --sub-size: 1.35vmin; --rule-w: 18vmin; --rule-gap: 1.6vmin; --sub-gap: 1.1vmin;
+    --hud-gap: 1.4vmin; --chip-w: 12.2vmin; --chip-pad-y: 1.25vmin; --chip-pad-x: 1.5vmin;
+    --hud-label: 1.05vmin; --hud-value: 2.45vmin; --caption-size: 1.05vmin;
+  }
+  body[data-shot="cover"] .brand { left: 6%; top: 5.2%; }
+  body[data-shot="cover"] .hud { right: 6%; top: 5.6%; }
+  body[data-shot="cover"] .caption { display: none; }
+
+  /* og: 1200x630 */
+  body[data-shot="og"] {
+    --bw: 73vmin; --bx: 71%; --by: 52%; --rx: 32deg; --rz: -12deg;
+    --title-size: 18.5vmin; --sub-size: 1.65vmin; --rule-w: 24vmin; --rule-gap: 1.8vmin; --sub-gap: 1.5vmin;
+    --hud-gap: 1.6vmin; --chip-w: 14.5vmin; --chip-pad-y: 1.4vmin; --chip-pad-x: 1.7vmin;
+    --hud-label: 1.2vmin; --hud-value: 2.8vmin; --caption-size: 1.2vmin;
+  }
+  body[data-shot="og"] .brand { left: 5.5%; top: 12.5%; }
+  body[data-shot="og"] .hud { left: 5.5%; top: 61.5%; }
+  body[data-shot="og"] .caption { left: 5.5%; bottom: 8.5%; }
+
+  /* detail: 1200x800 */
+  body[data-shot="detail"] {
+    --bw: 69vmin; --bx: 50%; --by: 56%; --rx: 35deg; --rz: -9deg;
+    --title-size: 8.6vmin; --sub-size: 1.3vmin; --rule-w: 13vmin; --rule-gap: 1.3vmin; --sub-gap: .9vmin;
+    --hud-gap: 1.2vmin; --chip-w: 10.5vmin; --chip-pad-y: 1.05vmin; --chip-pad-x: 1.25vmin;
+    --hud-label: .92vmin; --hud-value: 2.1vmin; --caption-size: 1.02vmin;
+  }
+  body[data-shot="detail"] .brand { left: 5%; top: 5%; }
+  body[data-shot="detail"] .hud { right: 5%; top: 5%; }
+  body[data-shot="detail"] .caption { left: 5%; bottom: 5.6%; }
+
+  /* card: 480x320 */
+  body[data-shot="card"] {
+    --bw: 74vmin; --bx: 69.5%; --by: 53%; --rx: 36deg; --rz: -11deg;
+    --title-size: 16.5vmin; --sub-size: 0; --rule-w: 13vmin; --rule-gap: 1.2vmin; --sub-gap: 0;
+    --hud-gap: 1.4vmin; --chip-w: 15.5vmin; --chip-pad-y: 1.4vmin; --chip-pad-x: 1.7vmin;
+    --hud-label: 1.65vmin; --hud-value: 4.1vmin; --caption-size: 0;
+  }
+  body[data-shot="card"] .brand { left: 6%; top: 8%; }
+  body[data-shot="card"] .sub { display: none; }
+  body[data-shot="card"] .hud { left: 6%; top: 64%; flex-direction: column; }
+  body[data-shot="card"] .caption { display: none; }
+</style>
+<link rel="canonical" href="https://hhfa008.github.io/games/2048/assets/art-render.html">
+</head>
+<body data-shot="cover">
+<div class="stage">
+  <div class="table"></div>
+  <div class="vignette"></div>
+
+  <header class="brand">
+    <div class="title">2048</div>
+    <div class="rule"></div>
+    <div class="sub">slide · merge · repeat</div>
+  </header>
+
+  <div class="hud">
+    <div class="chip"><span class="label">Score</span><span class="value" id="hud-score">0</span></div>
+    <div class="chip"><span class="label">Moves</span><span class="value" id="hud-moves">0</span></div>
+  </div>
+
+  <p class="caption" id="caption"></p>
+
+  <div class="scene">
+    <div class="board3d">
+      <div class="tray">
+        <div class="grid" id="grid"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(async function () {
+  'use strict';
+  var params = new URLSearchParams(location.search);
+  var shot = params.get('shot') || 'cover';
+  document.body.dataset.shot = shot;
+
+  var MAT = {
+    2:    { tex: 'ivory', tint: 'rgba(238, 228, 218, .42)', text: '#6b5d50', sat: 1.00 },
+    4:    { tex: 'ivory', tint: 'rgba(237, 224, 200, .56)', text: '#6b5d50', sat: 1.00 },
+    8:    { tex: 'clay',  tint: 'rgba(242, 177, 121, .34)', text: '#fff8ee', sat: 1.04 },
+    16:   { tex: 'clay',  tint: 'rgba(245, 149,  99, .42)', text: '#fff8ee', sat: 1.05 },
+    32:   { tex: 'clay',  tint: 'rgba(246, 124,  95, .48)', text: '#fff8ee', sat: 1.06 },
+    64:   { tex: 'clay',  tint: 'rgba(246,  94,  59, .42)', text: '#fff8ee', sat: 1.08 },
+    128:  { tex: 'gold',  tint: 'rgba(237, 207, 114, .30)', text: '#fffaf0', sat: 1.02 },
+    256:  { tex: 'gold',  tint: 'rgba(237, 204,  97, .36)', text: '#fffaf0', sat: 1.03 },
+    512:  { tex: 'gold',  tint: 'rgba(237, 200,  80, .42)', text: '#fffaf0', sat: 1.04 },
+    1024: { tex: 'gold',  tint: 'rgba(237, 197,  63, .48)', text: '#fffaf0', sat: 1.05 },
+    2048: { tex: 'gold',  tint: 'rgba(237, 194,  46, .55)', text: '#fffaf0', sat: 1.06 }
+  };
+  var TEX = {
+    ivory: 'url("../../assets/art/2048/materials/tile-ivory-cut.png")',
+    clay:  'url("../../assets/art/2048/materials/tile-clay-cut.png")',
+    gold:  'url("../../assets/art/2048/materials/tile-gold-cut.png")'
+  };
+
+  function loadImage(src) {
+    return new Promise(function (resolve, reject) {
+      var img = new Image();
+      img.onload = function () { resolve(src); };
+      img.onerror = function () { reject(new Error('image failed: ' + src)); };
+      img.src = src;
+    });
+  }
+
+  var state;
+  try {
+    var res = await fetch('state.json', { cache: 'no-store' });
+    if (!res.ok) throw new Error('state.json HTTP ' + res.status);
+    state = await res.json();
+  } catch (err) {
+    document.body.dataset.error = String(err);
+    console.error(err);
+    return;
+  }
+
+  document.getElementById('hud-score').textContent = state.score.toLocaleString('en-US');
+  document.getElementById('hud-moves').textContent = String(state.moves);
+  document.getElementById('caption').textContent =
+    'Real 4×4 position · ' + state.moves + ' valid moves · score ' + state.score.toLocaleString('en-US');
+
+  var grid = document.getElementById('grid');
+  var factor = { 1: 0.50, 2: 0.42, 3: 0.33, 4: 0.26 };
+  var built = [];
+  for (var i = 0; i < 16; i++) {
+    var slot = document.createElement('div');
+    slot.className = 'slot';
+    var cell = document.createElement('div');
+    cell.className = 'cell';
+    slot.appendChild(cell);
+    var v = state.board[i];
+    if (v) {
+      var mat = MAT[v];
+      if (!mat) {
+        console.error('unmapped tile value', v);
+        document.body.dataset.error = 'unmapped value ' + v;
+        return;
+      }
+      var tile = document.createElement('div');
+      tile.className = 'tile';
+      tile.setAttribute('data-v', String(v));
+      tile.style.setProperty('--tex', TEX[mat.tex]);
+      tile.style.setProperty('--tint', mat.tint);
+      tile.style.setProperty('--text', mat.text);
+      tile.style.setProperty('--sat', String(mat.sat));
+      var tint = document.createElement('div');
+      tint.className = 'tint';
+      var sheen = document.createElement('div');
+      sheen.className = 'sheen';
+      var num = document.createElement('span');
+      num.className = 'num';
+      num.textContent = String(v);
+      tile.appendChild(tint);
+      tile.appendChild(sheen);
+      tile.appendChild(num);
+      slot.classList.add('filled');
+      slot.appendChild(tile);
+      built.push({ slot: slot, num: num, digits: String(v).length });
+    }
+    grid.appendChild(slot);
+  }
+
+  // The grid is laid out before text sizing so offsetWidth is the local cell
+  // width (not the perspective-projected width).
+  built.forEach(function (item) {
+    var size = item.slot.offsetWidth * (factor[item.digits] || 0.26);
+    item.num.style.fontSize = size.toFixed(2) + 'px';
+  });
+
+  var sources = [
+    '../../assets/art/2048/materials/tile-ivory-cut.png',
+    '../../assets/art/2048/materials/tile-clay-cut.png',
+    '../../assets/art/2048/materials/tile-gold-cut.png',
+    '../../assets/art/2048/materials/table-walnut.png'
+  ];
+  try {
+    await Promise.all(sources.map(loadImage));
+  } catch (err) {
+    document.body.dataset.error = String(err);
+    console.error(err);
+    return;
+  }
+  requestAnimationFrame(function () {
+    requestAnimationFrame(function () {
+      document.body.dataset.ready = '1';
+    });
+  });
+})();
+</script>
+</body>
+</html>

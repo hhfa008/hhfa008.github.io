@@ -11,7 +11,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { allGames } from './families.mjs';
+import { allGames, families } from './families.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const ARCADE = path.join(ROOT, 'games/shared/arcade');
@@ -111,6 +111,8 @@ async function genUI(feedback) {
     '- 页面里已有 `var CORE = ArcadeKit.create(<参数>);`，直接使用 CORE，不要再输出 CORE 或 kit；',
     '- 用 #board 渲染；按钮/键盘/触控接线齐全；状态字段严格按上方引擎；',
     '- 状态可能是 playing / won / lost / draw：won 显示胜利遮罩，lost 显示失败，draw 显示平局；',
+    '- 结算文案必须写成 `I18N[Arcade.lang()][Arcade.overlayKey(status)]`（不要拼 `status + \'Overlay\'` 或 `overlay${...}`）；',
+    '- 显示/隐藏遮罩用 `E.overlay.hidden = false` / `= true`，不要用 `classList.remove/add(\'hidden\')`（动不了 hidden 属性）；',
     '- 最高分 key 固定 arcade.' + slug + '.best，用 Arcade.best / Arcade.setBest；',
     '- 只用模板里已有的元素 id（#stat-score #stat-best #stat-extra #overlay #overlay-title #overlay-text #feedback #btn-new #btn-hint #btn-overlay #board）；',
     feedback ? '## 上一版的问题（必须修复）\n' + feedback : '',
@@ -165,10 +167,52 @@ function cjkCount(html) {
 function validRules(html) {
   const n = cjkCount(html);
   const faq = (html.match(/"@type":\s*"Question"/g) || []).length;
-  return n >= 1200 && n <= 2100 && faq >= 5 && /<\/html>\s*$/.test(html.trim());
+  return n >= 1200 && n <= 4000 && faq >= 5 && /<\/html>\s*$/.test(html.trim());
+}
+
+function siblingRules() {
+  const fam = families.find((f) => f.key === entry.family);
+  if (!fam) return null;
+  for (const v of fam.variants) {
+    if (v.slug === slug) continue;
+    const p = path.join(ROOT, 'games', v.slug, 'rules.html');
+    if (!fs.existsSync(p)) continue;
+    const html = fs.readFileSync(p, 'utf8');
+    if (validRules(html)) return { html, v };
+  }
+  return null;
+}
+
+function adaptRules(html, sib) {
+  let out = html;
+  const oldNames = [sib.zh, sib.en, sib.id].filter(Boolean);
+  const newNames = [entry.zh, entry.en, entry.id].filter(Boolean);
+  for (let i = 0; i < oldNames.length; i++) {
+    out = out.split(oldNames[i]).join(newNames[i] || newNames[0] || oldNames[i]);
+  }
+  const sp = sib.params || {}, ep = entry.params || {};
+  for (const k of Object.keys(ep)) {
+    const a = String(sp[k]), b = String(ep[k]);
+    if (!a || !b || a === b) continue;
+    out = out.split(a + '×' + a).join(b + '×' + b);
+    out = out.split(a + ' 人').join(b + ' 人');
+    out = out.split(a + ' 分钟').join(b + ' 分钟');
+    out = out.split(a + ' 颗雷').join(b + ' 颗雷');
+    out = out.split(a + ' 个盘').join(b + ' 个盘');
+  }
+  return out;
 }
 
 async function genRules() {
+  const sib = siblingRules();
+  if (sib) {
+    const adapted = adaptRules(sib.html, sib.v);
+    if (validRules(adapted)) {
+      fs.writeFileSync(path.join(dir, 'rules.html'), adapted + (adapted.endsWith('\n') ? '' : '\n'));
+      log(`rules reused from ${sib.v.slug} (${cjkCount(adapted)} CJK)`);
+      return adapted;
+    }
+  }
   const prompt = [
     '## 参考页面（只参考 head / JSON-LD / 样式 / footer 结构，不要照抄内容）', RULES_REF,
     `## 任务\n写 games/${slug}/rules.html：中文规则页，**正文 1500–1900 个汉字（宁多勿少）**，<html lang="zh-CN">，` +
@@ -180,8 +224,8 @@ async function genRules() {
   ].join('\n\n');
   let html = await chat(prompt, 12000);
   fs.writeFileSync(path.join(dir, 'rules.html'), html + '\n');
-  if (!validRules(html)) {
-    log(`rules invalid (${cjkCount(html)} CJK), expanding`);
+  if (!validRules(html) && cjkCount(html) < 1200) {
+    log(`rules too short (${cjkCount(html)} CJK), expanding`);
     const prompt2 = [
       '## 现有页面', html,
       `## 任务\n把正文扩写到 1500–1900 个汉字（当前 ${cjkCount(html)}），保留 head/JSON-LD/样式/footer，FAQ 与 JSON-LD 一一对应（≥6 条）。只输出完整 HTML。`,

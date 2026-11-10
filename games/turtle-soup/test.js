@@ -393,7 +393,7 @@ s.group('脚本与离线约束', function () {
 
   var srcs = [];
   html.replace(/<script[^>]*\bsrc="([^"]+)"/g, function (_, src) { srcs.push(src); });
-  s.eq('脚本均为同源', srcs, ['soups.js', '/games/shared/share.js']);
+  s.eq('脚本均为同源', srcs, ['soups.js', '../shared/store.js', '../shared/i18n.js', '/games/shared/share.js']);
 
   var urls = html.match(/https?:\/\/[^\s"'<>)]+/g) || [];
   var allowed = urls.filter(function (url) {
@@ -416,11 +416,13 @@ s.group('脚本与离线约束', function () {
   var viewport = html.match(/<meta name="viewport" content="([^"]+)"/);
   s.ok('viewport 适配手机', !!viewport && viewport[1].indexOf('width=device-width') >= 0);
 
-  var swSrc = fs.readFileSync(path.join(__dirname, '..', 'sw.js'), 'utf8');
+  // 预缓存清单自 v20 起由 scripts/gen-precache.js 生成到 precache-manifest.js，
+  // sw.js 不再内联 URL 列表。
+  var manifestSrc = fs.readFileSync(path.join(__dirname, '..', 'precache-manifest.js'), 'utf8');
   s.ok('service worker 预缓存题库与入口',
-    swSrc.indexOf("'/games/turtle-soup/soups.js'") >= 0 &&
-    swSrc.indexOf("'/games/turtle-soup/'") >= 0 &&
-    swSrc.indexOf("'/games/turtle-soup/rules.html'") >= 0);
+    manifestSrc.indexOf('"/games/turtle-soup/soups.js"') >= 0 &&
+    manifestSrc.indexOf('"/games/turtle-soup/"') >= 0 &&
+    manifestSrc.indexOf('"/games/turtle-soup/rules.html"') >= 0);
 
   var rulesHtml = fs.readFileSync(path.join(__dirname, 'rules.html'), 'utf8');
   s.ok('规则页提示次数与计分口径和引擎一致',

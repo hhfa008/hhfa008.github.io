@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Carcassonne 美术合成页：本地生成的素材在浏览器中的渲染预览。">
+<title>Carcassonne art composition</title>
+<style>
+:root{
+  --serif:"Songti SC","Noto Serif SC","Palatino Linotype",Georgia,serif;
+  --sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+  --gold:#d9b97c;--gold2:#f0d9a8;--ink:#f3eddc;--dim:#c3d0bb;
+  --linen:url("../../assets/art/premium/carcassonne/table-linen.webp");
+  --tile:url("../../assets/art/premium/carcassonne/blank-tile.webp");
+  --red:url("../../assets/art/premium/carcassonne/meeple-red.webp");
+  --blue:url("../../assets/art/premium/carcassonne/meeple-blue.webp");
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:#0a0d09;overflow:hidden}
+body{width:1200px;height:1200px;font-family:var(--sans);color:var(--ink)}
+.stage{position:relative;width:1200px;height:1200px;overflow:hidden;
+  background:radial-gradient(900px 700px at 16% 0%,rgba(143,188,124,.24),transparent 60%),
+    radial-gradient(800px 600px at 92% 100%,rgba(217,185,124,.14),transparent 60%),
+    linear-gradient(150deg,#152016,#080d08 76%)}
+.stage::before{content:"";position:absolute;inset:0;background:var(--linen) center/cover;opacity:.58;filter:saturate(.72) contrast(1.05)}
+.stage::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(5,8,5,.16),rgba(5,8,5,.72))}
+.frame{position:absolute;inset:28px;border:1px solid rgba(217,185,124,.5);border-radius:28px;
+  box-shadow:inset 0 0 0 7px rgba(217,185,124,.06),0 40px 100px rgba(0,0,0,.5);z-index:2}
+.frame::before,.frame::after{content:"";position:absolute;width:60px;height:60px;border:2px solid rgba(217,185,124,.6)}
+.frame::before{left:14px;top:14px;border-right:0;border-bottom:0;border-radius:18px 0 0 0}
+.frame::after{right:14px;bottom:14px;border-left:0;border-top:0;border-radius:0 0 18px 0}
+.content{position:absolute;inset:70px;z-index:4;display:flex;flex-direction:column}
+.brand{display:flex;align-items:flex-start;gap:20px}
+.crest{width:88px;height:88px;border-radius:22px;display:grid;place-items:center;flex:none;
+  background:linear-gradient(145deg,#38503a,#1d2a1e);border:1px solid rgba(217,185,124,.4);
+  box-shadow:0 18px 40px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.2);transform:rotate(-3deg)}
+.crest svg{width:62px;height:62px}
+h1{margin:0;font-family:var(--serif);font-weight:700;font-size:96px;line-height:.86;letter-spacing:.12em;
+  text-shadow:0 14px 40px rgba(0,0,0,.5)}
+h1 span{color:var(--gold2)}
+.tag{margin:14px 0 0;font-size:18px;letter-spacing:.3em;color:var(--dim);font-weight:600}
+.rule{height:2px;background:linear-gradient(90deg,var(--gold),transparent);margin:18px 0 0;width:520px}
+.chips{display:flex;gap:10px;margin-top:22px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;height:40px;padding:0 17px;border-radius:999px;
+  border:1px solid rgba(217,185,124,.4);background:rgba(8,12,8,.55);color:var(--gold2);font-size:15px;letter-spacing:.08em}
+.mosaic{position:absolute;right:78px;bottom:112px;width:690px;height:700px;z-index:3;transform:rotate(-2deg)}
+.tile{position:absolute;width:214px;height:214px;border-radius:12px;overflow:hidden;
+  box-shadow:0 18px 32px rgba(0,0,0,.42),0 0 0 1px rgba(60,45,25,.5);background:#8fae72}
+.tile svg{display:block;width:100%;height:100%}
+.meeple{position:absolute;width:90px;height:120px;background-size:contain;background-repeat:no-repeat;background-position:center;
+  filter:drop-shadow(0 10px 12px rgba(0,0,0,.45));z-index:5}
+.meeple.red{background-image:var(--red)}
+.meeple.blue{background-image:var(--blue)}
+.stack{position:absolute;left:96px;bottom:96px;width:330px;height:330px;z-index:3;transform:rotate(4deg)}
+.stack .sheet{position:absolute;width:270px;height:270px;background:var(--tile) center/contain no-repeat;
+  filter:drop-shadow(0 18px 22px rgba(0,0,0,.4))}
+.stack .sheet:nth-child(1){left:8px;top:34px;transform:rotate(-4deg);opacity:.75}
+.stack .sheet:nth-child(2){left:22px;top:18px;transform:rotate(1deg);opacity:.86}
+.stack .sheet:nth-child(3){left:34px;top:0;transform:rotate(5deg)}
+.foot{position:absolute;left:70px;bottom:54px;font-size:13px;letter-spacing:.22em;color:rgba(243,237,220,.7);z-index:6}
+.piece{position:absolute;width:120px;height:150px;background-size:contain;background-repeat:no-repeat;background-position:center;
+  filter:drop-shadow(0 12px 14px rgba(0,0,0,.4));z-index:6}
+.piece.red{background-image:var(--red);left:400px;bottom:100px;transform:rotate(-4deg)}
+.piece.blue{background-image:var(--blue);left:500px;bottom:80px;transform:rotate(6deg)}
+.detail-title{display:none}
+
+/* OG 1200x630 */
+body[data-shot="og"]{height:630px}
+body[data-shot="og"] .stage{height:630px}
+body[data-shot="og"] .content{inset:52px 64px}
+body[data-shot="og"] h1{font-size:78px}
+body[data-shot="og"] .tag{font-size:15px}
+body[data-shot="og"] .crest{width:70px;height:70px}
+body[data-shot="og"] .mosaic{right:30px;bottom:20px;width:520px;height:540px;transform:scale(.78) rotate(-2deg);transform-origin:right bottom}
+body[data-shot="og"] .stack{left:auto;right:520px;bottom:10px;transform:scale(.55) rotate(4deg);transform-origin:right bottom}
+body[data-shot="og"] .piece,body[data-shot="og"] .foot{display:none}
+body[data-shot="og"] .rule{width:420px}
+
+/* detail 1536x1024 */
+body[data-shot="detail"]{width:1536px;height:1024px}
+body[data-shot="detail"] .stage{width:1536px;height:1024px}
+body[data-shot="detail"] .content{inset:48px 60px}
+body[data-shot="detail"] .brand,body[data-shot="detail"] .rule,body[data-shot="detail"] .chips{display:none}
+body[data-shot="detail"] .mosaic{right:90px;bottom:70px;transform:scale(1.08) rotate(-2deg);transform-origin:right bottom}
+body[data-shot="detail"] .stack{left:70px;bottom:70px;transform:scale(1.15) rotate(4deg);transform-origin:left bottom}
+body[data-shot="detail"] .piece.red{left:420px;bottom:120px;transform:scale(1.2) rotate(-4deg)}
+body[data-shot="detail"] .piece.blue{left:540px;bottom:90px;transform:scale(1.2) rotate(6deg)}
+body[data-shot="detail"] .foot{left:60px;bottom:40px;font-size:15px}
+body[data-shot="detail"] .detail-title{display:block;font-family:var(--serif);font-size:64px;color:var(--gold2);margin:0}
+body[data-shot="detail"] .detail-sub{display:block;font-size:16px;letter-spacing:.24em;color:var(--dim);margin-top:10px}
+</style>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/carcassonne-premium/art-render.html">
+<style>
+/* site-quality: fixed-size art composition must not create page overflow */
+html{overflow-x:hidden}
+body{width:100%!important;max-width:100vw!important;overflow-x:hidden}
+.stage,#stage{max-width:100vw;overflow:hidden}
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="frame"></div>
+  <div class="content">
+    <div class="brand">
+      <div class="crest" aria-hidden="true">
+        <svg viewBox="0 0 64 64"><path d="M8 52V26l10-10 10 10v10h8V26l10-10 10 10v26z" fill="#d9b97c"/><circle cx="32" cy="36" r="4" fill="#b3452f"/><path d="M8 52h48" stroke="#5b4a2e" stroke-width="2"/></svg>
+      </div>
+      <div>
+        <h1>卡卡颂 <span>CARCASSONNE</span></h1>
+        <p class="tag">瓦片拼城 · 2–5 人 · 45 分钟</p>
+        <div class="rule"></div>
+        <div class="chips"><span class="chip">72 张基础瓦片</span><span class="chip">6 枚纹章</span><span class="chip">本地 AI</span><span class="chip">双人联机</span></div>
+      </div>
+    </div>
+    <div class="detail-title">卡卡颂 · 米宝之城</div>
+    <div class="detail-sub">CARCASSONNE · PREMIUM EDITION</div>
+  </div>
+  <div class="mosaic">
+    <div class="tile" style="left:0;top:0;transform:rotate(-2deg)">
+      <svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#9dbb7e"/><path d="M0 0h62v30H30v22H0z" fill="#dfc79b" stroke="#6b4a2e" stroke-width="2"/><path d="M100 50H50" stroke="#e4cfa0" stroke-width="12"/><path d="M100 50H50" stroke="#6b5031" stroke-width="2" stroke-dasharray="3 5"/></svg>
+    </div>
+    <div class="tile" style="left:224px;top:0;transform:rotate(1deg)">
+      <svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#9dbb7e"/><path d="M0 40h100v20H0z" fill="#e4cfa0"/><path d="M0 50h100" stroke="#6b5031" stroke-width="2" stroke-dasharray="3 5"/><circle cx="28" cy="30" r="5" fill="#b7d49a"/></svg>
+    </div>
+    <div class="tile" style="left:448px;top:0;transform:rotate(-1deg)">
+      <svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#9dbb7e"/><path d="M0 0h100v34H0z" fill="#dfc79b" stroke="#6b4a2e" stroke-width="2"/><path d="M30 100V34M70 100V34" stroke="#e4cfa0" stroke-width="10"/></svg>
+    </div>
+    <div class="tile" style="left:0;top:238px;transform:rotate(1deg)">
+      <svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#9dbb7e"/><path d="M22 74V40l14-12 14 12v34z" fill="#d8c39a" stroke="#6b4a2e" stroke-width="2"/><path d="M36 74V52" stroke="#6b4a2e" stroke-width="4"/><path d="M100 50H64" stroke="#e4cfa0" stroke-width="10"/></svg>
+    </div>
+    <div class="tile" style="left:224px;top:238px;transform:rotate(-2deg)">
+      <svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#9dbb7e"/><path d="M0 0h44v44H0zM56 56h44v44H56z" fill="#dfc79b" stroke="#6b4a2e" stroke-width="2"/><path d="M0 50h100" stroke="#e4cfa0" stroke-width="12"/><path d="M100 0L50 50" stroke="#e4cfa0" stroke-width="12"/></svg>
+    </div>
+    <div class="tile" style="left:448px;top:238px;transform:rotate(2deg)">
+      <svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#9dbb7e"/><path d="M0 50h100" stroke="#e4cfa0" stroke-width="12"/><path d="M50 0v100" stroke="#e4cfa0" stroke-width="12"/><circle cx="50" cy="50" r="6" fill="#e4cfa0" stroke="#6b5031" stroke-width="2"/></svg>
+    </div>
+    <div class="tile" style="left:112px;top:119px;transform:rotate(0deg)">
+      <svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#9dbb7e"/><path d="M0 0h100v22H0z" fill="#dfc79b" stroke="#6b4a2e" stroke-width="2"/><path d="M50 100V22" stroke="#e4cfa0" stroke-width="10"/><path d="M0 62h100" stroke="#e4cfa0" stroke-width="10"/></svg>
+    </div>
+    <div class="tile" style="left:336px;top:119px;transform:rotate(3deg)">
+      <svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#9dbb7e"/><path d="M0 0h100v30H0z" fill="#dfc79b" stroke="#6b4a2e" stroke-width="2"/><path d="M18 30v70M82 30v70" stroke="#e4cfa0" stroke-width="10"/><path d="M18 70h64" stroke="#e4cfa0" stroke-width="10"/></svg>
+    </div>
+  </div>
+  <div class="stack"><div class="sheet"></div><div class="sheet"></div><div class="sheet"></div></div>
+  <div class="piece red"></div>
+  <div class="piece blue"></div>
+  <div class="foot">PREMIUM EDITION · 72 LAND TILES · 6 COATS OF ARMS · ZERO EXTERNAL REQUESTS</div>
+</div>
+<script>
+  var shot = new URLSearchParams(location.search).get('shot') || 'cover';
+  document.body.setAttribute('data-shot', shot);
+</script>
+</body>
+</html>

@@ -1,0 +1,79 @@
+
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>星港货栈 · 人机对战</title><meta name="description" content="星港货栈 中文极简德式桌游：轨道货栈里，装卸机器人用信用点采购舱单，争取把最有价值的货柜带上飞船。 纯前端离线，单机对 AI。"><meta name="theme-color" content="#121a18"><link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%23121a18'/><circle cx='16' cy='16' r='8' fill='%23e0b85c'/></svg>">
+<style>
+  :root{--bg:#121a18;--panel:#1d2a25;--panel2:#26362f;--line:#3a5046;--text:#eef4ef;--muted:#a7b9ad;--gold:#e0b85c;--accent:#7fc39a}
+  *{box-sizing:border-box}html,body{margin:0;padding:0}body{background:radial-gradient(circle at 20% 0%,#23352b,#121a18 60%) no-repeat,var(--bg);color:var(--text);font:15px/1.45 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;min-height:100vh;padding:10px 10px 28px}
+  .wrap{max-width:760px;margin:0 auto}header{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:4px 2px 10px}h1{font-size:19px;margin:0}h1 span{display:block;font-size:12px;color:var(--muted);letter-spacing:.09em;font-weight:500}.spacer{flex:1}.btn{min-height:44px;padding:8px 14px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font:inherit;font-weight:700;cursor:pointer}.btn:hover{border-color:var(--accent)}.scorebar{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;font-size:13px;margin-bottom:10px}.scorebar b{color:var(--gold);font-size:19px}h2{font-size:13px;color:var(--muted);margin:14px 0 6px;letter-spacing:.04em}
+  .chips{display:flex;flex-wrap:wrap;gap:5px}.chip{background:#101815;border:1px solid var(--line);border-radius:999px;padding:3px 8px;font-size:12px}
+  .shop{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.card{min-height:64px;text-align:left;border:1px solid var(--line);border-radius:10px;padding:8px;background:var(--panel);color:var(--text);font:inherit;cursor:pointer;display:flex;flex-direction:column;gap:2px}.card b{font-size:13px}.card span,.card em{font-size:12px;color:var(--muted);font-style:normal}.card em{color:var(--gold);margin-top:auto}.card[disabled]{opacity:.45}.card:hover{border-color:var(--accent)}
+  .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.log{background:#0d1512;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:12px;color:var(--muted);max-height:140px;overflow:auto}.log div:first-child{color:var(--text)}
+  .dice{display:flex;gap:8px}.die{width:52px;height:52px;border-radius:12px;border:2px solid var(--line);background:#101815;color:var(--text);font:800 22px/1 inherit;cursor:pointer;min-height:44px}.die.sel{border-color:var(--gold);background:#352b14}.die.used{opacity:.3}
+  .slots{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.slot{min-height:78px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--text);font:inherit;cursor:pointer;padding:6px;display:flex;flex-direction:column;gap:2px;align-items:center;justify-content:center}.slot b{font-size:12px}.slot span{font-size:12px;color:var(--muted)}.slot em{font-style:normal;color:var(--gold);font-size:12px}.slot.used{opacity:.35}.hint{font-size:12px;color:var(--muted)}
+  .tilesel{display:flex;gap:8px}.tile{width:56px;height:56px;border-radius:10px;border:2px solid var(--line);background:#101815;cursor:pointer;padding:5px}.tile span{display:block;width:100%;height:100%;border-radius:6px;background:var(--c)}.tile.sel{border-color:var(--gold)}
+  .board{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}.cell{aspect-ratio:1;border:1px solid var(--line);border-radius:9px;background:#0f1814;color:var(--text);font:inherit;cursor:pointer;min-height:52px;position:relative}.cell[style]{background:var(--c);border-color:#ffffff33}.cell:hover{border-color:var(--gold)}
+  .mapwrap{background:#0f1814;border:1px solid var(--line);border-radius:12px;padding:6px}svg{width:100%;height:auto;display:block}svg line{stroke:#53685d;stroke-width:5;stroke-linecap:round}svg line.open{stroke:#8fbfa4;cursor:pointer}svg line.open:hover{stroke:var(--gold)}svg circle{fill:#e0b85c}svg text{fill:#dfe8e2;font-size:12px;text-anchor:middle}
+  .edges{display:flex;flex-direction:column;gap:6px}.edgebtn{min-height:44px;text-align:left;border:1px solid var(--line);border-radius:9px;background:var(--panel);color:var(--text);font:inherit;font-size:12px;padding:7px 10px;cursor:pointer}.edgebtn:hover{border-color:var(--accent)}
+  .suit{border-left:5px solid var(--c)}.sets{display:flex;flex-direction:column;gap:6px}.setbtn{min-height:44px;text-align:left;border:1px solid var(--line);border-radius:9px;background:var(--panel);color:var(--text);font:inherit;font-size:12px;padding:7px 10px;cursor:pointer}.setbtn i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}.setbtn[disabled]{opacity:.4}
+  .over{text-align:center;padding:14px;border:1px solid var(--gold);border-radius:12px;background:#332b16;margin:10px 0}.over b{color:var(--gold);font-size:18px}
+  @media(max-width:430px){body{padding:8px 8px 24px}h1{font-size:17px}.shop{gap:5px}.card{padding:7px}.slots{grid-template-columns:repeat(2,1fr)}.scorebar{font-size:12px}.scorebar b{font-size:17px}}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+  
+/* mini-quality: safe-area */
+body { --mini-safe-bottom: 24px; padding-bottom: calc(var(--mini-safe-bottom) + env(safe-area-inset-bottom, 0px)); }
+</style><link rel="canonical" href="https://hhfa008.github.io/games/boardgame/mini-euro-b-02/">
+</head><body><div class="wrap"><header><h1>星港货栈<span>STARPORT DEPOT</span></h1><div class="spacer"></div><a class="btn" href="rules.html" aria-label="查看规则">规则</a></header><main id="content"></main><div id="end"></div></div>
+<script>(function(root,factory){if(typeof module==='object'&&module.exports)module.exports=factory();else root.MiniEuroEngine=factory();})(typeof globalThis!=='undefined'?globalThis:this,function(){'use strict';
+  var CFG={"name":"星港货栈","en":"STARPORT DEPOT","slug":"mini-euro-b-02","turns":12,"marketSize":5,"cards":[{"name":"装卸臂","cost":2,"coins":2,"vp":0,"copies":3},{"name":"合金箱","cost":3,"coins":0,"vp":2,"copies":3},{"name":"导航芯片","cost":4,"coins":0,"vp":3,"copies":2},{"name":"燃料券","cost":5,"coins":3,"vp":1,"copies":2},{"name":"外星契约","cost":6,"coins":0,"vp":4,"copies":2},{"name":"舰长许可","cost":8,"coins":0,"vp":6,"copies":1}]};
+
+  function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+  function shuffle(list,rng){var out=list.slice();for(var i=out.length-1;i>0;i--){var j=Math.floor(rng()*(i+1));var t=out[i];out[i]=out[j];out[j]=t;}return out;}
+  function clone(x){return JSON.parse(JSON.stringify(x));}
+  function assertMove(ok,msg){if(!ok)throw new Error('非法动作: '+msg);}
+
+  var STARTER=[{name:'铜币',cost:0,coins:1,vp:0,copies:7},{name:'木箱',cost:0,coins:0,vp:1,copies:3}];
+  function makeCard(def,id){return{id:id,name:def.name,cost:def.cost,coins:def.coins,vp:def.vp};}
+  function buildDeck(){var d=[];STARTER.forEach(function(c){for(var i=0;i<c.copies;i++)d.push(makeCard(c,'s'+d.length));});return d;}
+  function buildMarketDeck(rng){var d=[];CFG.cards.forEach(function(c){for(var i=0;i<(c.copies||2);i++)d.push(makeCard(c,'m'+d.length));});return shuffle(d,rng);}
+  function player(i,seed){var rng=mulberry32(seed+i*911);var p={index:i,name:i===0?'你':'AI 商队',deck:shuffle(buildDeck(),rng),hand:[],discard:[],coins:0};draw(p,seed,0);return p;}
+  function draw(p,seed,turn){while(p.hand.length<5){if(!p.deck.length){if(!p.discard.length)break;var rng=mulberry32((seed+turn*97+p.index*131)>>>0);p.deck=shuffle(p.discard,rng);p.discard=[];}p.hand.push(p.deck.shift());}}
+  function refill(s){while(s.market.length<CFG.marketSize&&s.marketDeck.length)s.market.push(s.marketDeck.shift());}
+  function createGame(seed){var sd=(seed==null?1:Number(seed))>>>0;var rng=mulberry32(sd);var s={seed:sd,marketDeck:buildMarketDeck(rng),market:[],players:[player(0,sd),player(1,sd)],current:0,turn:1,over:false,winner:null,log:['新对局开始，你是先手。']};refill(s);return s;}
+  function handCoins(p){return p.hand.reduce(function(n,c){return n+c.coins;},0);}
+  function owned(p){return p.deck.concat(p.hand,p.discard);}
+  function scoreOf(s,i){var p=s.players[i];var vp=owned(p).reduce(function(n,c){return n+c.vp;},0);return vp+Math.floor(owned(p).filter(function(c){return c.coins>0;}).length/4);}
+  function finishTurn(s,msg){var p=s.players[s.current];p.hand.forEach(function(c){p.discard.push(c);});p.hand=[];p.coins=0;s.turn++;var other=s.players[1-s.current];draw(other,s.seed,s.turn);s.current=1-s.current;draw(s.players[s.current],s.seed,s.turn);s.log.unshift(msg);if(s.log.length>8)s.log.pop();if(s.players[0].turnCount==null)s.players[0].turnCount=0;if(s.players[1].turnCount==null)s.players[1].turnCount=0;s.players[1-s.current].turnCount=(s.players[1-s.current].turnCount||0)+1;if((s.players[0].turnCount||0)>=CFG.turns&&(s.players[1].turnCount||0)>=CFG.turns){s.over=true;var a=scoreOf(s,0),b=scoreOf(s,1);s.winner=a>b?0:(b>a?1:null);s.log.unshift('终局：'+(s.winner==null?'平局':s.winner===0?'你获胜':'AI 获胜'));}return s;}
+  function applyMove(s,m){assertMove(s&&!s.over,'对局已结束');assertMove(m&&typeof m.type==='string','缺少动作类型');var p=s.players[s.current];var n=clone(s);
+    if(m.type==='buy'){assertMove(Number.isInteger(m.index)&&m.index>=0&&m.index<n.market.length,'市场索引无效');var c=n.market[m.index];var coins=handCoins(n.players[n.current]);assertMove(coins>=c.cost,'金币不足');n.players[n.current].discard.push(c);n.market.splice(m.index,1);refill(n);return finishTurn(n,'你买入「'+c.name+'」，花费 '+c.cost+' 金币。');}
+    if(m.type==='pass'){return finishTurn(n,'你跳过购买，保留手牌循环。');}
+    throw new Error('非法动作: 未知动作 '+m.type);}
+  function getLegalMoves(s){if(!s||s.over)return[];var out=[{type:'pass'}];var coins=handCoins(s.players[s.current]);s.market.forEach(function(c,i){if(c.cost<=coins)out.push({type:'buy',index:i});});return out;}
+  function chooseAIMove(s){var moves=getLegalMoves(s);if(!moves.length)return null;var best=moves[0],bv=-1;moves.forEach(function(m){if(m.type!=='buy')return;var c=s.market[m.index];var v=c.vp*4+c.coins*1.2;if(v>bv){bv=v;best=m;}});return best;}
+  return {CFG:CFG,createGame:createGame,applyMove:applyMove,getLegalMoves:getLegalMoves,chooseAIMove:chooseAIMove,scoreOf:scoreOf,handCoins:handCoins};
+});</script>
+<script>
+(function(){
+  
+  var E=window.MiniEuroEngine;var S=null;var sel=null;
+  var $=function(id){return document.getElementById(id);};
+  function render(){if(!S)return;var c=$('content');var h='';
+  
+    h+='<div class="scorebar"><div>你 <b>'+E.scoreOf(S,0)+'</b> 分</div><div>AI <b>'+E.scoreOf(S,1)+'</b> 分</div><div>回合 '+S.turn+' / '+(E.CFG.turns*2)+'</div></div>';
+    h+='<h2>你的手牌 · '+E.handCoins(S.players[0])+' 金币</h2><div class="chips">';S.players[0].hand.forEach(function(x){h+='<span class="chip">'+x.name+(x.coins?' +'+x.coins+'币':'')+(x.vp?' '+x.vp+'分':'')+'</span>';});h+='</div>';
+    h+='<h2>市场</h2><div class="shop">';S.market.forEach(function(x,i){h+='<button class="card" data-buy="'+i+'" aria-label="购买'+x.name+'" '+(E.handCoins(S.players[0])<x.cost?'disabled':'')+'><b>'+x.name+'</b><span>'+x.cost+' 金币</span><em>'+(x.vp?x.vp+' 分':'')+(x.coins?' +'+x.coins+'币':'')+'</em></button>';});h+='</div>';
+    h+='<div class="row"><button class="btn" id="pass" aria-label="跳过购买">跳过购买</button></div>';
+    h+='<h2>日志</h2><div class="log">'+S.log.map(function(x){return '<div>'+x+'</div>';}).join('')+'</div>';
+  
+    document.addEventListener('click',function(ev){var t=ev.target.closest('[data-buy]');if(t&&S&&!S.over){S=E.applyMove(S,{type:'buy',index:+t.dataset.buy});render();return;}if(ev.target.closest('#pass')&&S&&!S.over){S=E.applyMove(S,{type:'pass'});render();}});
+  
+    c.innerHTML=h;
+    var end=$('end');
+    if(end){if(S.over){var a=E.scoreOf?E.scoreOf(S,0):S.players[0].score,b=E.scoreOf?E.scoreOf(S,1):S.players[1].score;end.innerHTML='<div class="over"><b>'+(a>b?'你获胜':a<b?'AI 获胜':'平局')+'</b><br>你 '+a+' 分 · AI '+b+' 分<br><button class="btn" id="again" aria-label="再来一局" style="margin-top:8px">再来一局</button></div>';}else{end.innerHTML='';}}
+    if(S&&!S.over&&S.current===1){setTimeout(function(){if(!S||S.over||S.current!==1)return;try{var m=E.chooseAIMove(S);if(m)S=E.applyMove(S,m);}catch(e){}render();},380);}
+  }
+
+  function boot(){S=E.createGame(1);render();}
+  document.addEventListener('click',function(){setTimeout(function(){if(S&&S.over){var e=document.getElementById('end');if(e&&!e.innerHTML){var a=E.scoreOf?E.scoreOf(S,0):S.players[0].score,b=E.scoreOf?E.scoreOf(S,1):S.players[1].score;e.innerHTML='<div class="over"><b>'+(a>b?'你获胜':a<b?'AI 获胜':'平局')+'</b><br>你 '+a+' 分 · AI '+b+' 分<br><button class="btn" id="again" aria-label="再来一局" style="margin-top:8px">再来一局</button></div>';}}},0);});
+  document.addEventListener('click',function(ev){if(ev.target.closest('#again')){S=E.createGame((Math.random()*1e9)|0);sel=null;document.getElementById('end').innerHTML='';render();}});
+  boot();
+})();
+</script></body></html>

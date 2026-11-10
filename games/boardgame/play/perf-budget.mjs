@@ -39,8 +39,8 @@ export async function measureFps(view, durationMs) {
 
   await view.evaluate('(function(){' +
     'if(window.__e2eFps){cancelAnimationFrame(window.__e2eFps.raf);clearInterval(window.__e2eFps.timer);}' +
-    'var s={frames:0,start:0,end:0,raf:0,timer:0,active:true};' +
-    'function tick(t){if(!s.active)return;if(!s.start)s.start=t;s.frames+=1;s.end=t;' +
+    'var s={frames:0,start:performance.now(),end:0,raf:0,timer:0,active:true};' +
+    'function tick(t){if(!s.active)return;s.frames+=1;s.end=performance.now();' +
     '  s.raf=requestAnimationFrame(tick);}' +
     's.raf=requestAnimationFrame(tick);' +
     'var i=0;' +
@@ -57,7 +57,7 @@ export async function measureFps(view, durationMs) {
   const sample = await view.evaluate('(function(){' +
     'var s=window.__e2eFps;if(!s)return null;' +
     's.active=false;cancelAnimationFrame(s.raf);clearInterval(s.timer);' +
-    'var duration=s.end-s.start;' +
+    'var duration=performance.now()-s.start;' +
     'return {frames:s.frames,durationMs:duration,' +
     '  fps:duration>0?(s.frames-1)/(duration/1000):0,' +
     '  visibility:document.visibilityState};})()');
@@ -65,6 +65,8 @@ export async function measureFps(view, durationMs) {
 }
 
 async function heapBytes(view) {
+  try { await view.send('HeapProfiler.collectGarbage'); } catch (err) { /* best effort */ }
+  await sleep(80);
   try { await view.send('HeapProfiler.collectGarbage'); } catch (err) { /* best effort */ }
   await sleep(40);
   const result = await view.send('Performance.getMetrics');
