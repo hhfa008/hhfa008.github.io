@@ -16,15 +16,10 @@
 <meta property="og:title" content="Reversi Online — take the corners">
 <meta property="og:description" content="Free 8×8 reversi with three AI levels, legal-move hints and flip animations. Offline, no sign-up. 黑白棋在线。">
 <meta property="og:url" content="https://hhfa008.github.io/games/reversi/">
-<meta property="og:image" content="https://hhfa008.github.io/games/assets/art/composed/reversi-og.png">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="黑白棋">
 <meta property="og:locale" content="en_US">
 <meta property="og:locale:alternate" content="zh_CN">
 <meta property="og:locale:alternate" content="id_ID">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="https://hhfa008.github.io/games/assets/art/composed/reversi-og.png">
+<meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Reversi Online — free Othello vs AI">
 <meta name="twitter:description" content="Free 8×8 reversi: three AI levels, legal-move hints, flip animations. Works offline.">
 
@@ -45,6 +40,7 @@
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
 }
 </script>
+<link rel="stylesheet" href="/games/shared/arcade/legacy-mobile.css">
 
 <style>
 :root{
@@ -72,7 +68,7 @@ a{color:inherit}
   background:transparent;color:var(--on-dark-muted);font-size:13px;font-weight:600;cursor:pointer}
 .langs button[aria-pressed="true"]{background:var(--on-dark);color:var(--dark);border-color:var(--on-dark)}
 .hero{padding:24px 0 4px}
-.eyebrow{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.12em;
+.eyebrow{font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.12em;
   text-transform:uppercase;color:var(--accent);margin-bottom:8px}
 .hero h1{font-size:clamp(1.9rem,7.4vw,2.5rem);line-height:1.1;letter-spacing:-.02em;margin-bottom:8px}
 .lede{color:var(--muted);font-size:16px}
@@ -95,9 +91,9 @@ a{color:inherit}
 .pill{display:flex;align-items:center;gap:6px;font-weight:600}
 .pill strong{color:var(--on-dark);font-size:16px;font-variant-numeric:tabular-nums;min-width:20px}
 .legal-pill{margin-left:auto;font-weight:500}
-.disc{width:14px;height:14px;border-radius:50%;flex:none;border:1px solid #5c625c}
-.disc.b{background:radial-gradient(circle at 35% 30%,#4a4f55,#0a0c0e)}
-.disc.w{background:radial-gradient(circle at 35% 30%,#fff,#d6cfc1)}
+.legend-disc{width:14px;height:14px;border-radius:50%;flex:none;border:1px solid #5c625c}
+.legend-disc.b{background:radial-gradient(circle at 35% 30%,#4a4f55,#0a0c0e)}
+.legend-disc.w{background:radial-gradient(circle at 35% 30%,#fff,#d6cfc1)}
 .boardbox{display:flex;justify-content:center}
 .board{display:grid;grid-template-columns:repeat(8,1fr);gap:2px;width:100%;max-width:520px;aspect-ratio:1;
   background:#2f5d3d;border:1px solid #224730;border-radius:14px;padding:6px;
@@ -118,7 +114,7 @@ a{color:inherit}
 @keyframes pop{0%{transform:scale(.2);opacity:.2}70%{transform:scale(1.06)}100%{transform:scale(1)}}
 @keyframes flipX{0%{transform:scaleX(1)}48%{transform:scaleX(.04)}52%{transform:scaleX(.04)}100%{transform:scaleX(1)}}
 .hint{min-height:20px;font-size:12.5px;color:var(--on-dark-muted);text-align:center;padding:6px 4px 0}
-.record{min-height:17px;font-family:var(--mono);font-size:11.5px;color:#8f948d;text-align:center;
+.record{min-height:17px;font-family:var(--mono);font-size:12px;color:#8f948d;text-align:center;
   letter-spacing:.01em;padding:2px 4px 0}
 .more{margin:18px 0 0;font-size:13.5px;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap}
 .more a{display:inline-flex;align-items:center;min-height:44px;text-decoration:none;border-bottom:1px solid var(--line-strong)}
@@ -175,8 +171,8 @@ a{color:inherit}
     </div>
 
     <div class="scores">
-      <span class="pill"><i class="disc b" aria-hidden="true"></i><span data-i="black">Black</span> <strong id="bcount">2</strong></span>
-      <span class="pill"><i class="disc w" aria-hidden="true"></i><span data-i="white">White</span> <strong id="wcount">2</strong></span>
+      <span class="pill"><i class="legend-disc b" aria-hidden="true"></i><span data-i="black">Black</span> <strong id="bcount">2</strong></span>
+      <span class="pill"><i class="legend-disc w" aria-hidden="true"></i><span data-i="white">White</span> <strong id="wcount">2</strong></span>
       <span class="pill legal-pill"><span data-i="legalLabel">Legal moves</span> <strong id="lcount">4</strong></span>
     </div>
 
@@ -207,6 +203,9 @@ a{color:inherit}
   <a href="https://hhfa008.github.io/" data-i="moreLink">Built by an indie developer — more tools here</a>
 </footer>
 
+<script src="../shared/store.js"></script>
+<script src="../shared/i18n.js"></script>
+<script src="../shared/dom.js"></script>
 <script>
 (function () {
   'use strict';
@@ -301,7 +300,7 @@ a{color:inherit}
     return d[k] != null ? d[k] : (I18N.en[k] != null ? I18N.en[k] : k);
   };
   var fillText = function (s, map) {
-    return s.replace(/\{(\w+)\}/g, function (m, k) { return map[k] != null ? map[k] : ''; });
+    return Dom.format(s, map);
   };
   var inBoard = function (r, c) { return r >= 0 && r < S && c >= 0 && c < S; };
 
@@ -448,16 +447,13 @@ a{color:inherit}
   // __TEST_CORE_END__
 
   function loadPrefs() {
-    try {
-      var saved = localStorage.getItem(RECORD_KEY);
-      if (saved) stats = JSON.parse(saved) || {};
-    } catch (e) { stats = {}; }
-    var l = (navigator.language || 'en').toLowerCase();
-    if (l.indexOf('zh') === 0) ui.lang = 'zh';
-    else if (l.indexOf('id') === 0 || l.indexOf('in') === 0) ui.lang = 'id';
+    // Same key and "parse ... || {}" semantics as before; a denied read
+    // degrades to {} because Store.getJSON returns the fallback instead of throwing.
+    stats = Store.getJSON(RECORD_KEY, {}) || {};
   }
   function saveStats() {
-    try { localStorage.setItem(RECORD_KEY, JSON.stringify(stats)); } catch (e) {}
+    // Same stored JSON as before; a failed write stays silent.
+    Store.setJSON(RECORD_KEY, stats);
   }
   function recordOf() {
     if (!stats.ai) stats.ai = { w: 0, l: 0, d: 0 };
@@ -649,20 +645,6 @@ a{color:inherit}
     } else rec.textContent = '';
   }
 
-  function applyLang() {
-    document.documentElement.lang = ui.lang === 'zh' ? 'zh-CN' : ui.lang;
-    var nodes = document.querySelectorAll('[data-i]');
-    for (var i = 0; i < nodes.length; i++) {
-      var k = nodes[i].getAttribute('data-i');
-      if (I18N[ui.lang][k] != null) nodes[i].textContent = I18N[ui.lang][k];
-    }
-    var langs = document.querySelectorAll('.langs button');
-    for (var j = 0; j < langs.length; j++) {
-      langs[j].setAttribute('aria-pressed', langs[j].getAttribute('data-lang') === ui.lang ? 'true' : 'false');
-    }
-    updateUI();
-  }
-
   function buildBoard() {
     boardEl = $('board');
     for (var i = 0; i < NN; i++) {
@@ -678,13 +660,6 @@ a{color:inherit}
   }
 
   function bind() {
-    var langBtns = document.querySelectorAll('.langs button');
-    for (var i = 0; i < langBtns.length; i++) {
-      langBtns[i].addEventListener('click', function () {
-        ui.lang = this.getAttribute('data-lang');
-        applyLang();
-      });
-    }
     var modeBtns = document.querySelectorAll('[data-mode]');
     for (var m = 0; m < modeBtns.length; m++) {
       modeBtns[m].addEventListener('click', function () {
@@ -715,8 +690,19 @@ a{color:inherit}
   function init() {
     loadPrefs();
     buildBoard();
+    var i18n = I18n.create({
+      strings: I18N,
+      defaultLang: 'auto',
+      storageKey: 'reversi-lang-v1',
+      attrs: { text: 'data-i', ph: 'data-i-ph', aria: 'data-i-aria' },
+      buttons: '.langs button'
+    });
+    i18n.onLang(function (next) {
+      ui.lang = next;
+      updateUI();
+    });
     bind();
-    applyLang();
+    i18n.apply();
     newGame();
   }
 

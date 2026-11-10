@@ -20,12 +20,18 @@
 <meta property="og:title" content="Pong 4× — free online game">
 <meta property="og:description" content="[object Object]">
 <meta property="og:url" content="https://hhfa008.github.io/games/pong-4/">
+<meta property="og:image" content="https://hhfa008.github.io/games/assets/art/arcade/pong/og.webp">
+<meta property="og:image:type" content="image/webp">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Pong 4× — Live rally · 100×60 court · score 3–2 · ball in play">
 <meta property="og:locale" content="en_US">
 <meta property="og:locale:alternate" content="zh_CN">
 <meta property="og:locale:alternate" content="id_ID">
-<meta name="twitter:card" content="summary">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Pong 4× — free online game">
 <meta name="twitter:description" content="[object Object]">
+<meta name="twitter:image" content="https://hhfa008.github.io/games/assets/art/arcade/pong/og.webp">
 
 <script type="application/ld+json">
 {
@@ -96,7 +102,7 @@
   width: 2px;
   height: 16px;
   background-color: #fff;
-  transform: translate(-50%, -50%);
+  transform: translateY(-50%);
 }
 
 .paddle.left {
@@ -104,7 +110,7 @@
 }
 
 .paddle.right {
-  left: 386px;
+  right: 4px;
 }
 
 @media (prefers-color-scheme: light) {
@@ -231,25 +237,30 @@ var I18N = {
   var best = Arcade.best(BEST_KEY, 0);
 
   function render() {
-    var ctx = E.board.getContext('2d');
-    var W = S.w, H = S.h, BALL = 2;
-    ctx.clearRect(0, 0, W, H);
-    ctx.fillStyle = '#333';
-    ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(4 - BALL, S.left.y - 8, BALL * 2, 16);
-    ctx.fillRect(W - 4 - BALL, S.right.y - 8, BALL * 2, 16);
-    ctx.beginPath();
-    ctx.arc(S.ball.x, S.ball.y, BALL, 0, Math.PI * 2);
-    ctx.fill();
-    E.score.textContent = S.score[0] + ' - ' + S.score[1];
+    var state = S;
+    E.score.textContent = state.score[0] + ' - ' + state.score[1];
     E.best.textContent = best;
     E.extra.textContent = '';
+    E.board.innerHTML = '';
+    var ball = document.createElement('div');
+    ball.className = 'ball';
+    ball.style.left = (state.ball.x / state.w * 100) + '%';
+    ball.style.top = (state.ball.y / state.h * 100) + '%';
+    E.board.appendChild(ball);
+    var leftPaddle = document.createElement('div');
+    leftPaddle.className = 'paddle left';
+    leftPaddle.style.top = (state.left.y / state.h * 100) + '%';
+    E.board.appendChild(leftPaddle);
+    var rightPaddle = document.createElement('div');
+    rightPaddle.className = 'paddle right';
+    rightPaddle.style.top = (state.right.y / state.h * 100) + '%';
+    E.board.appendChild(rightPaddle);
     var status = CORE.status(S);
-    if (status === 'won' || status === 'lost' || status === 'draw') {
-      E.overlayTitle.textContent = I18N[I18N.lang][status === 'won' ? 'overlayWin' : status === 'lost' ? 'overlayLose' : 'overlayDraw'];
-      E.overlayText.textContent = '';
+    if (status !== 'playing') {
+      var L = I18N[Arcade.lang()] || I18N.en;
       E.overlay.hidden = false;
+      E.overlayTitle.textContent = status === 'won' ? L.overlayWin : status === 'lost' ? L.overlayLose : L.overlayDraw;
+      E.overlayText.textContent = '';
     } else {
       E.overlay.hidden = true;
     }
@@ -263,7 +274,7 @@ var I18N = {
         E.feedback.textContent = 'Hit!';
         setTimeout(() => { E.feedback.textContent = ''; }, 500);
       }
-      best = Arcade.setBest(BEST_KEY, best, S.score[0] + S.score[1]);
+      best = Math.max(best, S.score[0] + S.score[1]); Arcade.setBest(BEST_KEY, best);
       render();
     }
   }
