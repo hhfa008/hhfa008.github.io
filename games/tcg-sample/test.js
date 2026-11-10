@@ -106,7 +106,8 @@ s.group('2. 重放：100 份动作日志用 replay 重跑，终局快照一致',
     var run = playRandom(seed, 4000);
     var replayed;
     try {
-      replayed = run.match.replay(run.log);
+      var record = run.match.record();
+      replayed = run.match.replay(record);
     } catch (e) {
       badReplay++;
       continue;
@@ -457,6 +458,45 @@ s.group('7. 规则页：中文正文 1500–2000 字，含独创声明', functio
   s.ok('包含 Article JSON-LD', /"@type"\s*:\s*"Article"/.test(html));
   s.ok('包含 FAQPage JSON-LD', /"@type"\s*:\s*"FAQPage"/.test(html));
   return cjk + ' 个汉字';
+});
+
+/* ------------------------------------------------------------------ *
+ * 8. Version migration                                                *
+ * ------------------------------------------------------------------ */
+
+s.group('8. 版本迁移：旧裸日志经 replayLegacy 显式重放，严格 replay 仍拒绝裸数组', function () {
+  var mismatch = 0, rejected = 0, headerOk = 0, mutated = 0, firstBad = null;
+  for (var seed = 1; seed <= 20; seed++) {
+    var run = playRandom(seed, 4000);
+    var legacyLog = run.log;
+    var before = JSON.stringify(run.match.state);
+
+    // 旧格式（裸动作数组）仍可读，但只能走显式迁移入口。
+    var migrated = run.match.replayLegacy(legacyLog);
+    if (JSON.stringify(migrated.state) !== before) {
+      mismatch++;
+      if (!firstBad) firstBad = 'seed ' + seed + ' snapshot';
+    }
+    if (JSON.stringify(run.match.state) !== before) mutated++;
+
+    // 严格入口必须继续拒绝裸数组，不允许为了兼容而放宽校验。
+    try {
+      run.match.replay(legacyLog);
+    } catch (e) {
+      if (e && e.code === 'replay_legacy_format' && e instanceof TCG.Error) rejected++;
+    }
+
+    // 新记录带版本头，严格入口可重放。
+    var record = run.match.record();
+    var header = record.engineVersion && record.rng && record.ruleset;
+    var replayed = run.match.replay(record);
+    if (header && JSON.stringify(replayed.state) === before) headerOk++;
+  }
+  s.ok('20/20 旧裸日志 replayLegacy 终局快照一致', mismatch === 0, firstBad || '');
+  s.ok('replayLegacy 不修改原 match', mutated === 0, mutated + ' 被修改');
+  s.ok('20/20 严格 replay 仍拒绝裸数组（replay_legacy_format）', rejected === 20, rejected + '/20');
+  s.ok('20/20 新记录 record() 带头部且 replay(record) 一致', headerOk === 20, headerOk + '/20');
+  return '旧裸日志显式迁移 / 严格入口保持拒绝';
 });
 
 s.done();

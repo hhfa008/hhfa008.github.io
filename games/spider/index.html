@@ -36,6 +36,7 @@
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
 }
 </script>
+<link rel="stylesheet" href="/games/shared/arcade/legacy-mobile.css">
 
 <style>
 :root{
@@ -65,7 +66,7 @@ a{color:inherit}
 .langs button[aria-pressed="true"]{background:var(--cream);color:var(--ink);border-color:var(--cream)}
 
 .hero{padding:22px 0 2px}
-.eyebrow{font-family:var(--mono);font-size:11px;font-weight:650;letter-spacing:.13em;text-transform:uppercase;color:var(--wood-d);margin-bottom:7px}
+.eyebrow{font-family:var(--mono);font-size:12px;font-weight:650;letter-spacing:.13em;text-transform:uppercase;color:var(--wood-d);margin-bottom:7px}
 .hero h1{font-size:clamp(1.9rem,7vw,2.6rem);line-height:1.08;letter-spacing:-.02em;margin-bottom:8px}
 .lede{color:var(--muted);max-width:62ch}
 
@@ -75,7 +76,7 @@ a{color:inherit}
 .toolbar{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px}
 .stats{display:flex;gap:14px;flex-wrap:wrap}
 .stat{display:flex;flex-direction:column;line-height:1.12}
-.stat span{font-family:var(--mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--dark-muted)}
+.stat span{font-family:var(--mono);font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--dark-muted)}
 .stat b{font-size:18px;font-variant-numeric:tabular-nums;font-weight:700}
 .controls{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .btn{min-height:44px;padding:0 12px;border-radius:9px;border:1px solid #4a525c;background:#343b44;color:var(--cream);
@@ -102,7 +103,7 @@ a{color:inherit}
   box-shadow:0 1px 3px rgba(0,0,0,.35)}
 .slot.stock.empty{display:grid;place-items:center;font:700 4cqw/1 var(--sans);color:rgba(243,234,217,.4)}
 .done{display:flex;flex-direction:column;align-items:flex-end;gap:1px;line-height:1.1}
-.done span{font-family:var(--mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--dark-muted)}
+.done span{font-family:var(--mono);font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--dark-muted)}
 .done b{font:800 20px var(--mono);color:var(--gold);font-variant-numeric:tabular-nums}
 .cols{display:grid;grid-template-columns:repeat(10,1fr);gap:5px;align-items:start;min-height:calc(19.6cqw + 6px)}
 .col{position:relative;display:flex;flex-direction:column;min-height:1px;border-radius:clamp(4px,.9cqw,9px)}
@@ -264,6 +265,8 @@ a{color:inherit}
   </div>
 </div>
 
+<script src="../shared/store.js"></script>
+<script src="../shared/i18n.js"></script>
 <script src="/games/shared/shuffle.js"></script>
 <script id="spider-core">
 (function (root) {
@@ -644,20 +647,22 @@ a{color:inherit}
     }
   };
 
-  var lang = 'en';
   function detectLang() {
     var nav = (navigator.language || 'en').toLowerCase();
     if (nav.indexOf('zh') === 0) return 'zh';
     if (nav.indexOf('id') === 0) return 'id';
     return 'en';
   }
-  try {
-    var savedLang = localStorage.getItem('sp.lang.v1');
-    lang = (savedLang === 'en' || savedLang === 'zh' || savedLang === 'id') ? savedLang : detectLang();
-  } catch (e) { lang = detectLang(); }
+  var i18n = I18n.create({
+    strings: DICT,
+    defaultLang: detectLang(),
+    storageKey: 'sp.lang.v1',
+    attrs: { text: 'data-i18n' },
+    buttons: '.langs button'
+  });
+  var lang = i18n.lang();
   function t(key) {
-    var d = DICT[lang] || DICT.en;
-    return d[key] !== undefined ? d[key] : DICT.en[key];
+    return i18n.t(key);
   }
 
   var boardEl = document.getElementById('board');
@@ -677,7 +682,7 @@ a{color:inherit}
 
   var difficulty = 1;
   try {
-    var savedDiff = parseInt(localStorage.getItem('sp.diff.v1'), 10);
+    var savedDiff = parseInt(Store.get('sp.diff.v1', null), 10);
     if (savedDiff === 1 || savedDiff === 2 || savedDiff === 4) difficulty = savedDiff;
   } catch (e) {}
 
@@ -709,11 +714,13 @@ a{color:inherit}
   }
 
   function readBest() {
-    try { return JSON.parse(localStorage.getItem('sp.best.v1') || '{}') || {}; }
-    catch (e) { return {}; }
+    // Same key and "parse ... || {}" semantics as before; a denied read
+    // degrades to {} because Store.getJSON returns the fallback instead of throwing.
+    return Store.getJSON('sp.best.v1', {}) || {};
   }
   function saveBest(obj) {
-    try { localStorage.setItem('sp.best.v1', JSON.stringify(obj)); } catch (e) {}
+    // Same stored JSON as before; a failed write stays silent.
+    Store.setJSON('sp.best.v1', obj);
   }
   function updateBest() {
     var rec = readBest()[String(difficulty)];
@@ -997,32 +1004,16 @@ a{color:inherit}
     renderAll();
   }
 
-  function setLang(next) {
+  i18n.onLang(function (next) {
     lang = next;
-    try { localStorage.setItem('sp.lang.v1', lang); } catch (e) {}
-    applyLang();
-  }
-
-  function applyLang() {
-    document.documentElement.lang = lang === 'zh' ? 'zh-CN' : lang;
-    var nodes = document.querySelectorAll('[data-i18n]');
-    for (var i = 0; i < nodes.length; i++) {
-      var key = nodes[i].getAttribute('data-i18n');
-      var value = t(key);
-      if (value !== undefined) nodes[i].textContent = value;
-    }
     var rules = t('rules') || [];
     document.getElementById('rulesList').innerHTML = rules.map(function (r) { return '<li>' + r + '</li>'; }).join('');
-    var langBtns = document.querySelectorAll('.langs button');
-    for (var j = 0; j < langBtns.length; j++) {
-      langBtns[j].setAttribute('aria-pressed', String(langBtns[j].getAttribute('data-lang') === lang));
-    }
     renderAll();
     if (game && !winOverlay.hidden) {
       winStatsEl.textContent = t('winStats').replace('{t}', fmt(winSeconds)).replace('{m}', game.state.moves);
       winRecordEl.textContent = t('record');
     }
-  }
+  });
 
   boardEl.addEventListener('click', function (e) {
     tapOn(e.target.closest('[data-zone]'));
@@ -1049,20 +1040,13 @@ a{color:inherit}
     if (d === difficulty) return;
     if (game.state.moves > 0 && !won && !confirm(t('confirmDiff'))) return;
     difficulty = d;
-    try { localStorage.setItem('sp.diff.v1', String(d)); } catch (e) {}
+    try { Store.set('sp.diff.v1', String(d)); } catch (e) {}
     newGame();
   }
   for (var di = 0; di < diffBtns.length; di++) {
     (function (btn) {
       btn.addEventListener('click', function () { chooseDifficulty(+btn.getAttribute('data-d')); });
     })(diffBtns[di]);
-  }
-
-  var langBtns = document.querySelectorAll('.langs button');
-  for (var li = 0; li < langBtns.length; li++) {
-    (function (btn) {
-      btn.addEventListener('click', function () { setLang(btn.getAttribute('data-lang')); });
-    })(langBtns[li]);
   }
 
   var startSeed = null, startDiff = difficulty;
@@ -1074,9 +1058,9 @@ a{color:inherit}
     if (qd === 1 || qd === 2 || qd === 4) startDiff = qd;
   } catch (e) {}
   difficulty = startDiff;
-  try { localStorage.setItem('sp.diff.v1', String(difficulty)); } catch (e) {}
+  try { Store.set('sp.diff.v1', String(difficulty)); } catch (e) {}
   newGame(startSeed == null ? null : startSeed);
-  applyLang();
+  i18n.apply();
   setInterval(function () { if (timerOn) updateTime(); }, 500);
 })();
 </script>

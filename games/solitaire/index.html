@@ -36,6 +36,7 @@
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
 }
 </script>
+<link rel="stylesheet" href="/games/shared/arcade/legacy-mobile.css">
 
 <style>
 :root{
@@ -66,7 +67,7 @@ a{color:inherit}
 .langs button[aria-pressed="true"]{background:var(--cream);color:var(--ink);border-color:var(--cream)}
 
 .hero{padding:22px 0 2px}
-.eyebrow{font-family:var(--mono);font-size:11px;font-weight:650;letter-spacing:.13em;text-transform:uppercase;color:var(--wood-d);margin-bottom:7px}
+.eyebrow{font-family:var(--mono);font-size:12px;font-weight:650;letter-spacing:.13em;text-transform:uppercase;color:var(--wood-d);margin-bottom:7px}
 .hero h1{font-size:clamp(1.9rem,7vw,2.6rem);line-height:1.08;letter-spacing:-.02em;margin-bottom:8px}
 .lede{color:var(--muted);max-width:62ch}
 
@@ -76,7 +77,7 @@ a{color:inherit}
 .toolbar{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px}
 .stats{display:flex;gap:16px;flex-wrap:wrap}
 .stat{display:flex;flex-direction:column;line-height:1.12}
-.stat span{font-family:var(--mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--dark-muted)}
+.stat span{font-family:var(--mono);font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--dark-muted)}
 .stat b{font-size:18px;font-variant-numeric:tabular-nums;font-weight:700}
 .controls{display:flex;gap:6px;flex-wrap:wrap}
 .btn{min-height:44px;padding:0 12px;border-radius:9px;border:1px solid #4a525c;background:#343b44;color:var(--cream);
@@ -186,7 +187,7 @@ a{color:inherit}
 .fx-toggle{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 4px;
   font-size:12.5px;font-weight:600;color:var(--cream);cursor:pointer;white-space:nowrap}
 .fx-toggle input{width:16px;height:16px;accent-color:var(--gold);cursor:pointer}
-.deal-fx{position:absolute;inset:0;pointer-events:none;z-index:80;overflow:visible}
+.deal-fx{position:absolute;inset:0;pointer-events:none;z-index:80;overflow:hidden}
 .fx-card{position:absolute;left:0;top:0;border-radius:clamp(4px,.9cqw,9px);
   background:linear-gradient(145deg,#b98a5a,#8d6238);
   box-shadow:0 4px 14px rgba(0,0,0,.42),inset 0 0 0 1px rgba(243,234,217,.32);
@@ -280,6 +281,8 @@ a{color:inherit}
   </div>
 </div>
 
+<script src="../shared/store.js"></script>
+<script src="../shared/i18n.js"></script>
 <script src="/games/shared/shuffle.js"></script>
 <script src="/games/shared/sfx.js"></script>
 <script src="/games/shared/physics.js"></script>
@@ -709,32 +712,33 @@ a{color:inherit}
     }
   };
 
-  var lang = 'en';
-  try {
-    var savedLang = localStorage.getItem('sol.lang.v1');
-    lang = (savedLang === 'en' || savedLang === 'zh' || savedLang === 'id') ? savedLang : detectLang();
-  } catch (e) { lang = detectLang(); }
-
   function detectLang() {
     var nav = (navigator.language || 'en').toLowerCase();
     if (nav.indexOf('zh') === 0) return 'zh';
     if (nav.indexOf('id') === 0) return 'id';
     return 'en';
   }
+  var i18n = I18n.create({
+    strings: DICT,
+    defaultLang: detectLang(),
+    storageKey: 'sol.lang.v1',
+    attrs: { text: 'data-i18n' },
+    buttons: '.langs button'
+  });
+  var lang = i18n.lang();
   function t(key) {
-    var d = DICT[lang] || DICT.en;
-    return d[key] !== undefined ? d[key] : DICT.en[key];
+    return i18n.t(key);
   }
 
   var drawPref = 1;
   try {
-    var savedDraw = parseInt(localStorage.getItem('sol.draw.v1'), 10);
+    var savedDraw = parseInt(Store.get('sol.draw.v1', null), 10);
     if (savedDraw === 1 || savedDraw === 3) drawPref = savedDraw;
   } catch (e) {}
 
   // Fast deal animation (physics), on by default; respects reduced motion.
   var dealFxPref = true;
-  try { if (localStorage.getItem('sol.dealfx.v1') === '0') dealFxPref = false; } catch (e) {}
+  try { if (Store.get('sol.dealfx.v1', null) === '0') dealFxPref = false; } catch (e) {}
 
   var boardEl = document.getElementById('board');
   var statusEl = document.getElementById('status');
@@ -971,11 +975,13 @@ a{color:inherit}
   }
 
   function readBest() {
-    try { return JSON.parse(localStorage.getItem('sol.best.v1') || '{}') || {}; }
-    catch (e) { return {}; }
+    // Same key and "parse ... || {}" semantics as before; a denied read
+    // degrades to {} because Store.getJSON returns the fallback instead of throwing.
+    return Store.getJSON('sol.best.v1', {}) || {};
   }
   function saveBest(obj) {
-    try { localStorage.setItem('sol.best.v1', JSON.stringify(obj)); } catch (e) {}
+    // Same stored JSON as before; a failed write stays silent.
+    Store.setJSON('sol.best.v1', obj);
   }
   function bestKey() { return drawPref === 3 ? 'draw3' : 'draw1'; }
   function updateBest() {
@@ -1442,32 +1448,16 @@ a{color:inherit}
     if (drag) { endGhost(); drag = null; renderAll(); }
   }
 
-  function setLang(next) {
+  i18n.onLang(function (next) {
     lang = next;
-    try { localStorage.setItem('sol.lang.v1', lang); } catch (e) {}
-    applyLang();
-  }
-
-  function applyLang() {
-    document.documentElement.lang = lang === 'zh' ? 'zh-CN' : lang;
-    var nodes = document.querySelectorAll('[data-i18n]');
-    for (var i = 0; i < nodes.length; i++) {
-      var key = nodes[i].getAttribute('data-i18n');
-      var value = t(key);
-      if (value !== undefined) nodes[i].textContent = value;
-    }
     var rules = t('rules') || [];
     document.getElementById('rulesList').innerHTML = rules.map(function (r) { return '<li>' + r + '</li>'; }).join('');
-    var langBtns = document.querySelectorAll('.langs button');
-    for (var j = 0; j < langBtns.length; j++) {
-      langBtns[j].setAttribute('aria-pressed', String(langBtns[j].getAttribute('data-lang') === lang));
-    }
     renderAll();
     if (game && !winOverlay.hidden) {
       winStatsEl.textContent = t('winStats').replace('{t}', fmt(winSeconds)).replace('{m}', game.state.moves);
       winRecordEl.textContent = t('record');
     }
-  }
+  });
 
   boardEl.addEventListener('pointerdown', onPointerDown);
   boardEl.addEventListener('pointermove', onPointerMove);
@@ -1486,7 +1476,7 @@ a{color:inherit}
 
   if (dealFxInput) dealFxInput.addEventListener('change', function () {
     dealFxPref = !!dealFxInput.checked;
-    try { localStorage.setItem('sol.dealfx.v1', dealFxPref ? '1' : '0'); } catch (e) {}
+    try { Store.set('sol.dealfx.v1', dealFxPref ? '1' : '0'); } catch (e) {}
     if (!dealFxPref) stopDealFx();
   });
 
@@ -1501,20 +1491,13 @@ a{color:inherit}
     if (autoRunning) return;
     if (game.state.moves > 0 && !won && !confirm(t('confirmNew'))) return;
     drawPref = drawPref === 3 ? 1 : 3;
-    try { localStorage.setItem('sol.draw.v1', String(drawPref)); } catch (e) {}
+    try { Store.set('sol.draw.v1', String(drawPref)); } catch (e) {}
     newGame(true);
   });
   document.getElementById('winNew').addEventListener('click', function () { newGame(true); });
   document.getElementById('winClose').addEventListener('click', hideWin);
 
-  var langBtns = document.querySelectorAll('.langs button');
-  for (var li = 0; li < langBtns.length; li++) {
-    (function (btn) {
-      btn.addEventListener('click', function () { setLang(btn.getAttribute('data-lang')); });
-    })(langBtns[li]);
-  }
-
-  applyLang();
+  i18n.apply();
   newGame();
   setInterval(function () { if (timerOn) updateTime(); }, 500);
 })();

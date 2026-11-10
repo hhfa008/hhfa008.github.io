@@ -213,6 +213,8 @@ a{color:inherit}
   <a href="https://hhfa008.github.io/" data-i="moreLink">Built by an indie developer — more tools here</a>
 </footer>
 
+<script src="../shared/store.js"></script>
+<script src="../shared/i18n.js"></script>
 <script>
 (function () {
   'use strict';
@@ -220,6 +222,7 @@ a{color:inherit}
   var SYMBOLS = ['🍊', '🍌', '🥭', '🍬', '🥤', '🍪', '🍚', '🥚'];
   var BEST_KEY = 'tapmatch-best-v1';
   var MUTE_KEY = 'tapmatch-muted-v1';
+  var LANG_KEY = 'tapmatch-lang-v1';
   var SIZE = 16;
   var ROUND_MS = 30000;
 
@@ -305,38 +308,50 @@ a{color:inherit}
   var symbol = function () { return SYMBOLS[rand(SYMBOLS.length)]; };
 
   function loadPrefs() {
-    try {
-      var saved = localStorage.getItem(BEST_KEY);
-      if (saved != null) best = Math.max(0, parseInt(saved, 10) || 0);
-      muted = localStorage.getItem(MUTE_KEY) === '1';
-    } catch (e) {}
-    var l = (navigator.language || 'en').toLowerCase();
-    if (l.indexOf('id') === 0 || l.indexOf('in') === 0) ui.lang = 'id';
-    else if (l.indexOf('fil') === 0 || l.indexOf('tl') === 0) ui.lang = 'fil';
+    var saved = Store.get(BEST_KEY, null);
+    if (saved != null) best = Math.max(0, parseInt(saved, 10) || 0);
+    muted = Store.get(MUTE_KEY, null) === '1';
   }
 
   function saveBest() {
-    try { localStorage.setItem(BEST_KEY, String(best)); } catch (e) {}
+    Store.set(BEST_KEY, String(best));
   }
   function saveMute() {
-    try { localStorage.setItem(MUTE_KEY, muted ? '1' : '0'); } catch (e) {}
+    Store.set(MUTE_KEY, muted ? '1' : '0');
   }
 
-  function applyLang() {
-    document.documentElement.lang = ui.lang;
-    var nodes = document.querySelectorAll('[data-i]');
-    for (var i = 0; i < nodes.length; i++) {
-      var k = nodes[i].getAttribute('data-i');
-      if (I18N[ui.lang][k] != null) nodes[i].textContent = I18N[ui.lang][k];
-    }
+  function detectLang() {
+    var l = (navigator.language || 'en').toLowerCase();
+    if (l.indexOf('id') === 0 || l.indexOf('in') === 0) return 'id';
+    if (l.indexOf('fil') === 0 || l.indexOf('tl') === 0) return 'fil';
+    return 'en';
+  }
+
+  function setPressed(lang) {
     var langs = document.querySelectorAll('.langs button');
     for (var j = 0; j < langs.length; j++) {
-      langs[j].setAttribute('aria-pressed', langs[j].getAttribute('data-lang') === ui.lang ? 'true' : 'false');
+      langs[j].setAttribute('aria-pressed', langs[j].getAttribute('data-lang') === lang ? 'true' : 'false');
     }
+  }
+
+  function afterLang() {
     updateMute();
     if (!playing && !$('screen-over').hidden) {
       $('over-best').textContent = best > 0 ? t('bestLine') + ': ' + best : '';
     }
+  }
+
+  // shared/i18n.js only switches en/zh/id; Tap Match's third locale is
+  // Filipino, so that one language keeps a small render path of its own.
+  function applyFil() {
+    document.documentElement.lang = 'fil';
+    var nodes = document.querySelectorAll('[data-i]');
+    for (var i = 0; i < nodes.length; i++) {
+      var k = nodes[i].getAttribute('data-i');
+      if (I18N.fil[k] != null) nodes[i].textContent = I18N.fil[k];
+    }
+    setPressed('fil');
+    afterLang();
   }
 
   function updateMute() {
@@ -462,14 +477,6 @@ a{color:inherit}
   }
 
   function bind() {
-    var langBtns = document.querySelectorAll('.langs button');
-    for (var i = 0; i < langBtns.length; i++) {
-      langBtns[i].addEventListener('click', function () {
-        ui.lang = this.getAttribute('data-lang');
-        applyLang();
-      });
-    }
-
     $('start').addEventListener('click', startGame);
     $('again').addEventListener('click', startGame);
 
@@ -501,9 +508,33 @@ a{color:inherit}
 
   function init() {
     loadPrefs();
+    var savedLang = null;
+    try { savedLang = Store.get(LANG_KEY, null); } catch (e) {}
+    var initial = (savedLang === 'en' || savedLang === 'id' || savedLang === 'fil') ? savedLang : detectLang();
+    var i18n = I18n.create({
+      strings: I18N,
+      defaultLang: initial === 'id' ? 'id' : 'en',
+      storageKey: LANG_KEY,
+      attrs: { text: 'data-i' },
+      buttons: '.langs button'
+    });
+    i18n.onLang(function (next) {
+      ui.lang = next;
+      afterLang();
+    });
+    ui.lang = initial;
+    var filBtn = document.querySelector('.langs button[data-lang="fil"]');
+    if (filBtn) {
+      filBtn.addEventListener('click', function () {
+        ui.lang = 'fil';
+        try { Store.set(LANG_KEY, 'fil'); } catch (e) {}
+        applyFil();
+      });
+    }
     $('best').textContent = String(best);
     bind();
-    applyLang();
+    if (initial === 'fil') applyFil();
+    else i18n.apply();
   }
 
   if (document.readyState === 'loading') {

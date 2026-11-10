@@ -298,6 +298,7 @@ footer{max-width:1040px;margin:0 auto;padding:0 var(--safe) 30px;font-size:12px;
 </div>
 
 <script src="/games/shared/tcg.js"></script>
+<script src="/games/shared/store.js"></script>
 
 <script id="sample-data">
 (function () {
@@ -675,7 +676,9 @@ footer{max-width:1040px;margin:0 auto;padding:0 var(--safe) 30px;font-size:12px;
   if (!D || !TCG || !AI) return;
 
   var LANG_KEY = 'hhfa-tcg-lang';
-  var lang = localStorage.getItem(LANG_KEY) || 'zh';
+  // Same key and 'zh' fallback as before; a denied read now degrades to 'zh'
+  // instead of throwing.
+  var lang = Store.get(LANG_KEY, 'zh') || 'zh';
   if (['zh', 'en', 'id'].indexOf(lang) < 0) lang = 'zh';
 
   var TEXT = {
@@ -1328,7 +1331,8 @@ footer{max-width:1040px;margin:0 auto;padding:0 var(--safe) 30px;font-size:12px;
   document.querySelectorAll('.lang button').forEach(function (b) {
     b.addEventListener('click', function () {
       lang = b.getAttribute('data-lang');
-      try { localStorage.setItem(LANG_KEY, lang); } catch (e) { /* storage can be blocked */ }
+      // Same stored string as before; a failed write stays silent.
+      Store.set(LANG_KEY, lang);
       applyLang();
     });
   });
