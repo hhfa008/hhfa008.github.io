@@ -13,7 +13,7 @@
  *   lazy    - game pages, page scripts/styles, registry/data. Cached on
  *             demand by the SW (stale-while-revalidate).
  *   runtime - images/fonts. Cached on demand (stale-while-revalidate).
- * 451 game pages, 51 shell / 1408 lazy / 418 runtime URLs, ~61.71 MB total, shell ~0.45 MB / 2.00 MB budget.
+ * 451 game pages, 51 shell / 1408 lazy / 419 runtime URLs, ~61.72 MB total, shell ~0.46 MB / 2.00 MB budget.
  */
 self.GAMES_PRECACHE_MANIFEST = {
   "schema": 2,
@@ -22,18 +22,18 @@ self.GAMES_PRECACHE_MANIFEST = {
   "offlineUrl": "/games/offline.html",
   "budget": {
     "shellLimitBytes": 2097152,
-    "shellBytes": 475240
+    "shellBytes": 477944
   },
   "counts": {
     "shell": 51,
     "lazy": 1408,
-    "runtime": 418,
-    "total": 1877
+    "runtime": 419,
+    "total": 1878
   },
   "bytes": {
-    "shell": 475240,
-    "lazy": 20702468,
-    "runtime": 43524699
+    "shell": 477944,
+    "lazy": 20712857,
+    "runtime": 43525372
   },
   "groups": {
     "shell": [
@@ -1750,6 +1750,7 @@ self.GAMES_PRECACHE_MANIFEST = {
       "/games/assets/icons/aim-trainer.svg",
       "/games/assets/icons/backgammon.svg",
       "/games/assets/icons/banqi.svg",
+      "/games/assets/icons/boardgame.svg",
       "/games/assets/icons/hanoi-10.svg",
       "/games/assets/icons/hanoi-11.svg",
       "/games/assets/icons/hanoi-12.svg",
