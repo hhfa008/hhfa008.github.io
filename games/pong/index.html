@@ -20,12 +20,18 @@
 <meta property="og:title" content="Pong — free online game">
 <meta property="og:description" content="[object Object]">
 <meta property="og:url" content="https://hhfa008.github.io/games/pong/">
+<meta property="og:image" content="https://hhfa008.github.io/games/assets/art/arcade/pong/og.webp">
+<meta property="og:image:type" content="image/webp">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Pong — Live rally · 100×60 court · score 3–2 · ball in play">
 <meta property="og:locale" content="en_US">
 <meta property="og:locale:alternate" content="zh_CN">
 <meta property="og:locale:alternate" content="id_ID">
-<meta name="twitter:card" content="summary">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Pong — free online game">
 <meta name="twitter:description" content="[object Object]">
+<meta name="twitter:image" content="https://hhfa008.github.io/games/assets/art/arcade/pong/og.webp">
 
 <script type="application/ld+json">
 {
@@ -62,50 +68,67 @@
 <link rel="stylesheet" href="/games/shared/arcade/arcade.css">
 <style>
 #board {
-  width: 100%;
-  max-width: 390px;
-  height: 0;
-  padding-bottom: 60%;
-  background: #111;
-  border: 1px solid #333;
+  width: 390px;
+  height: 234px;
+  background-color: #1e1e1e;
+  border: 1px solid #444;
   position: relative;
   overflow: hidden;
   margin: 0 auto;
 }
 
-.board > * {
+#board::before {
+  content: "";
   position: absolute;
-  background: #fff;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2px;
+  height: 100%;
+  background-color: #444;
 }
 
-.board > .ball {
+.ball {
+  position: absolute;
   width: 2px;
   height: 2px;
+  background-color: #fff;
   border-radius: 50%;
+  transform: translate(-50%, -50%);
 }
 
-.board > .paddle {
+.paddle {
+  position: absolute;
   width: 2px;
   height: 16px;
-  border-radius: 1px;
+  background-color: #fff;
+  transform: translateY(-50%);
 }
 
-.board > .paddle.left {
+.paddle.left {
   left: 4px;
 }
 
-.board > .paddle.right {
+.paddle.right {
   right: 4px;
 }
 
-@media (prefers-color-scheme: dark) {
+@media (prefers-color-scheme: light) {
   #board {
-    background: #000;
-    border-color: #444;
+    background-color: #f3ead9;
+    border-color: #ccc;
   }
-  .board > .ball,
-  .board > .paddle {
-    background: #fff;
+
+  .ball {
+    background-color: #000;
+  }
+
+  .paddle {
+    background-color: #000;
+  }
+
+  #board::before {
+    background-color: #ccc;
   }
 }
 </style>
@@ -215,22 +238,29 @@ var I18N = {
   var hintShown = false;
 
   function render() {
-    var ctx = E.board.getContext('2d');
-    var W = S.w, H = S.h, BALL = 2;
-    ctx.clearRect(0, 0, W, H);
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(S.left.y - 8, 2, 4, 16);
-    ctx.fillRect(S.right.y - 8, 2, 4, 16);
-    ctx.fillRect(S.ball.x - BALL, S.ball.y - BALL, BALL * 2, BALL * 2);
-    E.score.textContent = S.score[0] + ' - ' + S.score[1];
+    var state = S;
+    E.score.textContent = state.score[0] + ' - ' + state.score[1];
     E.best.textContent = best;
     E.extra.textContent = '';
+    E.board.innerHTML = '';
+    var ball = document.createElement('div');
+    ball.className = 'ball';
+    ball.style.left = (state.ball.x / state.w * 100) + '%';
+    ball.style.top = (state.ball.y / state.h * 100) + '%';
+    E.board.appendChild(ball);
+    var leftPaddle = document.createElement('div');
+    leftPaddle.className = 'paddle left';
+    leftPaddle.style.top = (state.left.y / state.h * 100) + '%';
+    E.board.appendChild(leftPaddle);
+    var rightPaddle = document.createElement('div');
+    rightPaddle.className = 'paddle right';
+    rightPaddle.style.top = (state.right.y / state.h * 100) + '%';
+    E.board.appendChild(rightPaddle);
     var status = CORE.status(S);
-    if (status === 'won' || status === 'lost' || status === 'draw') {
+    if (status !== 'playing') {
+      var L = I18N[Arcade.lang()] || I18N.en;
       E.overlay.hidden = false;
-      E.overlayTitle.textContent = I18N[I18N.lang][status === 'won' ? 'overlayWin' : status === 'lost' ? 'overlayLose' : 'overlayDraw'];
+      E.overlayTitle.textContent = status === 'won' ? L.overlayWin : status === 'lost' ? L.overlayLose : L.overlayDraw;
       E.overlayText.textContent = '';
     } else {
       E.overlay.hidden = true;
