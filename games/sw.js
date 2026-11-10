@@ -31,7 +31,7 @@
 // v21 introduced the shell/lazy/runtime split. After changing the group schema
 // (or any PRECACHE_* logic) you MUST re-run the generator: this worker refuses
 // to install a manifest whose version does not match.
-var CACHE_VERSION = 'v22';
+var CACHE_VERSION = 'v23';
 var CACHE_PREFIX = 'hhfa-games-';
 var CACHE_NAME = CACHE_PREFIX + CACHE_VERSION;
 

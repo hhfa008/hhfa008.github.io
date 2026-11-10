@@ -13,27 +13,27 @@
  *   lazy    - game pages, page scripts/styles, registry/data. Cached on
  *             demand by the SW (stale-while-revalidate).
  *   runtime - images/fonts. Cached on demand (stale-while-revalidate).
- * 451 game pages, 51 shell / 1408 lazy / 419 runtime URLs, ~61.72 MB total, shell ~0.46 MB / 2.00 MB budget.
+ * 453 game pages, 53 shell / 1412 lazy / 421 runtime URLs, ~61.89 MB total, shell ~0.47 MB / 2.00 MB budget.
  */
 self.GAMES_PRECACHE_MANIFEST = {
   "schema": 2,
-  "version": "v22",
+  "version": "v23",
   "generator": "scripts/gen-precache.js",
   "offlineUrl": "/games/offline.html",
   "budget": {
     "shellLimitBytes": 2097152,
-    "shellBytes": 477944
+    "shellBytes": 491546
   },
   "counts": {
-    "shell": 51,
-    "lazy": 1408,
-    "runtime": 419,
-    "total": 1878
+    "shell": 53,
+    "lazy": 1412,
+    "runtime": 421,
+    "total": 1886
   },
   "bytes": {
-    "shell": 477944,
-    "lazy": 20712857,
-    "runtime": 43525372
+    "shell": 491546,
+    "lazy": 20877100,
+    "runtime": 43527119
   },
   "groups": {
     "shell": [
@@ -60,6 +60,7 @@ self.GAMES_PRECACHE_MANIFEST = {
       "/games/shared/agent-api.js",
       "/games/shared/arcade/arcade.css",
       "/games/shared/arcade/arcade.js",
+      "/games/shared/arcade/board-art.js",
       "/games/shared/arcade/catalog.json",
       "/games/shared/arcade/kits/hanoi.js",
       "/games/shared/arcade/kits/lights-out.js",
@@ -74,6 +75,7 @@ self.GAMES_PRECACHE_MANIFEST = {
       "/games/shared/arcade/kits/tictactoe.js",
       "/games/shared/arcade/legacy-mobile.css",
       "/games/shared/arcade/memory-symbols.js",
+      "/games/shared/arcade/reaction-art.js",
       "/games/shared/dom.js",
       "/games/shared/hand-eval.js",
       "/games/shared/i18n.js",
@@ -1334,6 +1336,8 @@ self.GAMES_PRECACHE_MANIFEST = {
       "/games/lights-8/rules.html",
       "/games/lights-9/",
       "/games/lights-9/rules.html",
+      "/games/mahjong/",
+      "/games/mahjong/rules.html",
       "/games/memory-3x4/",
       "/games/memory-3x4/rules.html",
       "/games/memory-4x4/",
@@ -1456,6 +1460,8 @@ self.GAMES_PRECACHE_MANIFEST = {
       "/games/spider/rules.html",
       "/games/tap-match/",
       "/games/tap-match/rules.html",
+      "/games/tcg-deck/",
+      "/games/tcg-deck/rules.html",
       "/games/tcg-sample/",
       "/games/tcg-sample/cards.json",
       "/games/tcg-sample/rules.html",
@@ -1771,6 +1777,7 @@ self.GAMES_PRECACHE_MANIFEST = {
       "/games/assets/icons/lights-7.svg",
       "/games/assets/icons/lights-8.svg",
       "/games/assets/icons/lights-9.svg",
+      "/games/assets/icons/mahjong.svg",
       "/games/assets/icons/memory-3x4.svg",
       "/games/assets/icons/memory-4x4.svg",
       "/games/assets/icons/memory-4x5.svg",
@@ -1825,6 +1832,7 @@ self.GAMES_PRECACHE_MANIFEST = {
       "/games/assets/icons/snake-fast.svg",
       "/games/assets/icons/snake-wrap.svg",
       "/games/assets/icons/snake.svg",
+      "/games/assets/icons/tcg-deck.svg",
       "/games/assets/icons/tcg-sample.svg",
       "/games/assets/icons/texas-holdem.svg",
       "/games/assets/icons/tictactoe-10.svg",

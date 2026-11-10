@@ -98,6 +98,7 @@
     if (extraClass) img.className += ' ' + extraClass;
     el.appendChild(img);
     el.classList.add('has-art');
+    if (kind) el.setAttribute('data-art-tier', kind);
   }
 
   /* Board-ground layer. Absolutely positioned so grid/flex layout ignores it. */
