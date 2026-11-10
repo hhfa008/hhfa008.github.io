@@ -9,31 +9,31 @@
  *
  * Groups:
  *   shell   - install-time precache (hall, offline page, manifest, icons,
- *             shared runtime). Must stay within shellLimitBytes.
+ *             hall-loaded shared runtime). Must stay within shellLimitBytes.
  *   lazy    - game pages, page scripts/styles, registry/data. Cached on
  *             demand by the SW (stale-while-revalidate).
  *   runtime - images/fonts. Cached on demand (stale-while-revalidate).
- * 453 game pages, 53 shell / 1412 lazy / 421 runtime URLs, ~61.89 MB total, shell ~0.47 MB / 2.00 MB budget.
+ * 453 game pages, 21 shell / 1444 lazy / 421 runtime URLs, ~51.07 MB total, shell ~0.14 MB / 2.00 MB budget.
  */
 self.GAMES_PRECACHE_MANIFEST = {
   "schema": 2,
-  "version": "v23",
+  "version": "v24",
   "generator": "scripts/gen-precache.js",
   "offlineUrl": "/games/offline.html",
   "budget": {
     "shellLimitBytes": 2097152,
-    "shellBytes": 491546
+    "shellBytes": 151075
   },
   "counts": {
-    "shell": 53,
-    "lazy": 1412,
+    "shell": 21,
+    "lazy": 1444,
     "runtime": 421,
     "total": 1886
   },
   "bytes": {
-    "shell": 491546,
-    "lazy": 20877100,
-    "runtime": 43527119
+    "shell": 151075,
+    "lazy": 21236219,
+    "runtime": 32161713
   },
   "groups": {
     "shell": [
@@ -57,39 +57,7 @@ self.GAMES_PRECACHE_MANIFEST = {
       "/games/assets/icons/xiangqi.svg",
       "/games/manifest.webmanifest",
       "/games/offline.html",
-      "/games/shared/agent-api.js",
-      "/games/shared/arcade/arcade.css",
-      "/games/shared/arcade/arcade.js",
-      "/games/shared/arcade/board-art.js",
-      "/games/shared/arcade/catalog.json",
-      "/games/shared/arcade/kits/hanoi.js",
-      "/games/shared/arcade/kits/lights-out.js",
-      "/games/shared/arcade/kits/memory-pairs.js",
-      "/games/shared/arcade/kits/minesweeper.js",
-      "/games/shared/arcade/kits/pong.js",
-      "/games/shared/arcade/kits/reaction.js",
-      "/games/shared/arcade/kits/slide-puzzle.js",
-      "/games/shared/arcade/kits/slide2048.js",
-      "/games/shared/arcade/kits/snake.js",
-      "/games/shared/arcade/kits/tick.js",
-      "/games/shared/arcade/kits/tictactoe.js",
-      "/games/shared/arcade/legacy-mobile.css",
-      "/games/shared/arcade/memory-symbols.js",
-      "/games/shared/arcade/reaction-art.js",
-      "/games/shared/dom.js",
-      "/games/shared/hand-eval.js",
-      "/games/shared/i18n.js",
-      "/games/shared/leaderboard.js",
-      "/games/shared/online-lobby.js",
-      "/games/shared/physics.js",
-      "/games/shared/rewards.js",
-      "/games/shared/rules.js",
-      "/games/shared/search.js",
-      "/games/shared/sfx.js",
-      "/games/shared/share.js",
-      "/games/shared/shuffle.js",
-      "/games/shared/store.js",
-      "/games/shared/tcg.js"
+      "/games/shared/share.js"
     ],
     "lazy": [
       "/games/2048-10/",
@@ -1413,6 +1381,38 @@ self.GAMES_PRECACHE_MANIFEST = {
       "/games/reversi/",
       "/games/reversi/rules-en.html",
       "/games/reversi/rules.html",
+      "/games/shared/agent-api.js",
+      "/games/shared/arcade/arcade.css",
+      "/games/shared/arcade/arcade.js",
+      "/games/shared/arcade/board-art.js",
+      "/games/shared/arcade/catalog.json",
+      "/games/shared/arcade/kits/hanoi.js",
+      "/games/shared/arcade/kits/lights-out.js",
+      "/games/shared/arcade/kits/memory-pairs.js",
+      "/games/shared/arcade/kits/minesweeper.js",
+      "/games/shared/arcade/kits/pong.js",
+      "/games/shared/arcade/kits/reaction.js",
+      "/games/shared/arcade/kits/slide-puzzle.js",
+      "/games/shared/arcade/kits/slide2048.js",
+      "/games/shared/arcade/kits/snake.js",
+      "/games/shared/arcade/kits/tick.js",
+      "/games/shared/arcade/kits/tictactoe.js",
+      "/games/shared/arcade/legacy-mobile.css",
+      "/games/shared/arcade/memory-symbols.js",
+      "/games/shared/arcade/reaction-art.js",
+      "/games/shared/dom.js",
+      "/games/shared/hand-eval.js",
+      "/games/shared/i18n.js",
+      "/games/shared/leaderboard.js",
+      "/games/shared/online-lobby.js",
+      "/games/shared/physics.js",
+      "/games/shared/rewards.js",
+      "/games/shared/rules.js",
+      "/games/shared/search.js",
+      "/games/shared/sfx.js",
+      "/games/shared/shuffle.js",
+      "/games/shared/store.js",
+      "/games/shared/tcg.js",
       "/games/slide-10/",
       "/games/slide-10/rules.html",
       "/games/slide-11/",
