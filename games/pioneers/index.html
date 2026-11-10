@@ -383,6 +383,7 @@ a{color:inherit}
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="engine.js"></script>
+<script src="/games/shared/store.js"></script>
 <script>
 (function () {
   'use strict';
@@ -672,7 +673,8 @@ a{color:inherit}
     document.documentElement.lang = UI.lang === 'zh' ? 'zh-CN' : UI.lang;
     $('mode-hint').textContent = UI.mode === 'ai' ? t('modeHintAI') : t('modeHintHot');
     document.title = I18N[UI.lang].title + ' — ' + (UI.lang === 'zh' ? '原创德式资源经营桌游' : UI.lang === 'en' ? 'an original Euro-style resource game' : 'game sumber daya gaya Euro orisinal');
-    try { localStorage.setItem('pn-lang', UI.lang); } catch (e) {}
+    // Same stored string as before; a failed write stays silent.
+    Store.set('pn-lang', UI.lang);
   }
 
   /* ---------- setup controls ---------- */
@@ -1325,16 +1327,16 @@ a{color:inherit}
   }
 
   function init() {
-    try {
-      var saved = localStorage.getItem('pn-lang');
-      if (saved && I18N[saved]) UI.lang = saved;
-      else {
-        var nav = (navigator.language || 'zh').toLowerCase();
-        if (nav.indexOf('zh') === 0) UI.lang = 'zh';
-        else if (nav.indexOf('id') === 0 || nav.indexOf('in') === 0) UI.lang = 'id';
-        else UI.lang = 'en';
-      }
-    } catch (e) {}
+    // Same key and browser-language fallback as before; a denied read yields
+    // null instead of throwing.
+    var saved = Store.get('pn-lang', null);
+    if (saved && I18N[saved]) UI.lang = saved;
+    else {
+      var nav = (navigator.language || 'zh').toLowerCase();
+      if (nav.indexOf('zh') === 0) UI.lang = 'zh';
+      else if (nav.indexOf('id') === 0 || nav.indexOf('in') === 0) UI.lang = 'id';
+      else UI.lang = 'en';
+    }
     bind();
     updateSetupUI();
     render();

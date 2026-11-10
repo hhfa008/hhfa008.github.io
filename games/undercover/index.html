@@ -428,6 +428,8 @@ a{color:inherit}
   </div>
 </div>
 
+<script src="../shared/store.js"></script>
+<script src="../shared/i18n.js"></script>
 <script>
 (function () {
   'use strict';
@@ -665,29 +667,6 @@ a{color:inherit}
     });
     var stage = $('stage');
     stage.scrollIntoView({ block: 'nearest' });
-  }
-
-  function applyLang() {
-    document.documentElement.lang = S.lang === 'zh' ? 'zh-CN' : S.lang;
-    var nodes = document.querySelectorAll('[data-i]');
-    for (var i = 0; i < nodes.length; i++) {
-      var k = nodes[i].getAttribute('data-i');
-      if (I18N[S.lang][k] != null) nodes[i].textContent = I18N[S.lang][k];
-    }
-    var langs = document.querySelectorAll('.langs button');
-    for (var j = 0; j < langs.length; j++) {
-      langs[j].setAttribute('aria-pressed', langs[j].getAttribute('data-lang') === S.lang ? 'true' : 'false');
-    }
-    try { localStorage.setItem('uc-lang', S.lang); } catch (e) {}
-    renderSetup();
-    if (!$('sc-pass').hidden) renderPass();
-    if (!$('sc-vote').hidden) renderVote();
-    if (!$('sc-speak').hidden) renderSpeak();
-    if (!$('sc-over').hidden) renderOver();
-    if (!$('sc-elim').hidden && S.lastElim) {
-      if (S.lastElim.pid == null) renderTie(S.lastElim.tally);
-      else renderElim(S.lastElim.pid, S.lastElim.tally);
-    }
   }
 
   function renderSetup() {
@@ -1102,33 +1081,27 @@ a{color:inherit}
   $('elim-next').addEventListener('click', continueAfterElim);
   $('again').addEventListener('click', resetGame);
 
-  var langBtns = document.querySelectorAll('.langs button');
-  for (var lb = 0; lb < langBtns.length; lb++) {
-    langBtns[lb].addEventListener('click', function () {
-      S.lang = this.getAttribute('data-lang');
-      applyLang();
-    });
-  }
-
   // boot
-  try {
-    var saved = localStorage.getItem('uc-lang');
-    if (saved && I18N[saved]) S.lang = saved;
-  } catch (e) {}
-  if (!I18N[S.lang]) S.lang = 'zh';
-  var nav = (navigator.language || 'zh').toLowerCase();
-  try {
-    if (!localStorage.getItem('uc-lang')) {
-      if (nav.indexOf('zh') === 0) S.lang = 'zh';
-      else if (nav.indexOf('id') === 0 || nav.indexOf('in') === 0) S.lang = 'id';
-      else S.lang = 'en';
+  var i18n = I18n.create({
+    strings: I18N,
+    defaultLang: 'auto',
+    storageKey: 'uc-lang',
+    attrs: { text: 'data-i' },
+    buttons: '.langs button'
+  });
+  i18n.onLang(function (next) {
+    S.lang = next;
+    renderSetup();
+    if (!$('sc-pass').hidden) renderPass();
+    if (!$('sc-vote').hidden) renderVote();
+    if (!$('sc-speak').hidden) renderSpeak();
+    if (!$('sc-over').hidden) renderOver();
+    if (!$('sc-elim').hidden && S.lastElim) {
+      if (S.lastElim.pid == null) renderTie(S.lastElim.tally);
+      else renderElim(S.lastElim.pid, S.lastElim.tally);
     }
-  } catch (e) {
-    if (nav.indexOf('zh') === 0) S.lang = 'zh';
-    else if (nav.indexOf('id') === 0 || nav.indexOf('in') === 0) S.lang = 'id';
-    else S.lang = 'en';
-  }
-  applyLang();
+  });
+  i18n.apply();
   resetCard();
   show('sc-setup');
 })();

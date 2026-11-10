@@ -16,15 +16,10 @@
 <meta property="og:title" content="Chinese Checkers Online — 2 or 6 players vs AI">
 <meta property="og:description" content="Star board, chained jumps, three AI levels, six-player mode and undo. Works offline. 中国跳棋在线。">
 <meta property="og:url" content="https://hhfa008.github.io/games/checkers-jump/">
-<meta property="og:image" content="https://hhfa008.github.io/games/assets/art/composed/checkers-jump-og.png">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="中国跳棋">
 <meta property="og:locale" content="en_US">
 <meta property="og:locale:alternate" content="zh_CN">
 <meta property="og:locale:alternate" content="id_ID">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="https://hhfa008.github.io/games/assets/art/composed/checkers-jump-og.png">
+<meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Chinese Checkers Online — chained jumps on a star board">
 <meta name="twitter:description" content="Two or six players, chained jumps, three AI levels and undo. Free in the browser.">
 
@@ -202,6 +197,9 @@ svg.board{display:block;width:100%;max-width:440px;height:auto;touch-action:mani
   <p><a href="/" data-i="home">Devin — free browser games</a> · <a href="/games/" data-i="allGames2">Board game collection</a></p>
 </footer>
 
+<script src="../shared/store.js"></script>
+<script src="../shared/i18n.js"></script>
+<script src="../shared/dom.js"></script>
 <script>
 /* === ENGINE START === */
 var CC = (function () {
@@ -487,14 +485,12 @@ var CC = (function () {
     return d[k] != null ? d[k] : (I18N.en[k] != null ? I18N.en[k] : k);
   };
   var fmt = function (s, map) {
-    return s.replace(/\{(\w+)\}/g, function (m, k) { return map[k] != null ? map[k] : ''; });
+    return Dom.format(s, map);
   };
   var pname = function (p) { return I18N[ui.lang].names[p]; };
 
   function el(name, attrs) {
-    var node = document.createElementNS(NS, name);
-    if (attrs) for (var k in attrs) node.setAttribute(k, attrs[k]);
-    return node;
+    return Dom.el(name, attrs, { ns: NS });
   }
 
   function buildGeometry() {
@@ -756,36 +752,26 @@ var CC = (function () {
     if (!over && isAiTurn()) scheduleAi();
   }
 
-  function applyLang() {
-    document.documentElement.lang = ui.lang === 'zh' ? 'zh-CN' : ui.lang;
-    var nodes = document.querySelectorAll('[data-i]');
-    for (var i = 0; i < nodes.length; i++) {
-      var k = nodes[i].getAttribute('data-i');
-      if (I18N[ui.lang][k] != null) nodes[i].textContent = I18N[ui.lang][k];
-    }
-    var langs = document.querySelectorAll('.langs button');
-    for (var j = 0; j < langs.length; j++) {
-      langs[j].setAttribute('aria-pressed', langs[j].getAttribute('data-lang') === ui.lang ? 'true' : 'false');
-    }
-    var title = document.querySelector('#page-title');
-    if (title) {
-      var zh = document.createElement('span');
-      zh.style.fontWeight = '400'; zh.style.color = 'var(--muted)';
-      zh.textContent = ' 中国跳棋';
-      title.textContent = ui.lang === 'zh' ? '中国跳棋' : 'Chinese Checkers';
-      if (ui.lang !== 'zh') title.appendChild(zh);
-    }
-    updateUI();
-  }
-
   function bind() {
-    var langBtns = document.querySelectorAll('.langs button');
-    for (var i = 0; i < langBtns.length; i++) {
-      langBtns[i].addEventListener('click', function () {
-        ui.lang = this.getAttribute('data-lang');
-        applyLang();
-      });
-    }
+    var i18n = I18n.create({
+      strings: I18N,
+      defaultLang: 'auto',
+      storageKey: 'checkers-jump-lang-v1',
+      attrs: { text: 'data-i', ph: 'data-i-ph', aria: 'data-i-aria' },
+      buttons: '.langs button'
+    });
+    i18n.onLang(function (next) {
+      ui.lang = next;
+      var title = document.querySelector('#page-title');
+      if (title) {
+        var zh = document.createElement('span');
+        zh.style.fontWeight = '400'; zh.style.color = 'var(--muted)';
+        zh.textContent = ' 中国跳棋';
+        title.textContent = next === 'zh' ? '中国跳棋' : 'Chinese Checkers';
+        if (next !== 'zh') title.appendChild(zh);
+      }
+      updateUI();
+    });
     var modeBtns = document.querySelectorAll('#modeRow button');
     for (var m = 0; m < modeBtns.length; m++) {
       modeBtns[m].addEventListener('click', function () {
@@ -812,10 +798,7 @@ var CC = (function () {
     $('undo').addEventListener('click', undo);
     $('restart').addEventListener('click', newGame);
     $('again').addEventListener('click', newGame);
-    var l = (navigator.language || 'en').toLowerCase();
-    if (l.indexOf('zh') === 0) ui.lang = 'zh';
-    else if (l.indexOf('id') === 0 || l.indexOf('in') === 0) ui.lang = 'id';
-    applyLang();
+    i18n.apply();
   }
 
   buildBoard();

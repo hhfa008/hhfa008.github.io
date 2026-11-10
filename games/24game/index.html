@@ -44,6 +44,7 @@
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
 }
 </script>
+<link rel="stylesheet" href="/games/shared/arcade/legacy-mobile.css">
 
 <style>
 :root{
@@ -84,7 +85,7 @@ a{color:inherit}
 .langs button[aria-pressed="true"]{background:var(--on-dark);color:var(--dark);border-color:var(--on-dark)}
 
 .hero{padding:24px 0 4px}
-.eyebrow{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.12em;
+.eyebrow{font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.12em;
   text-transform:uppercase;color:var(--accent-2);margin-bottom:8px}
 .hero h1{font-size:clamp(2rem,7.8vw,2.7rem);line-height:1.08;letter-spacing:-.02em;margin-bottom:8px}
 .lede{color:var(--muted);font-size:16px}
@@ -94,7 +95,7 @@ a{color:inherit}
 .game-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
 .stats{display:flex;gap:16px;flex-wrap:wrap}
 .stat{display:flex;flex-direction:column;line-height:1.15}
-.stat-label{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;
+.stat-label{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;
   color:var(--on-dark-muted)}
 .stat strong{font-size:19px;font-variant-numeric:tabular-nums}
 
@@ -104,9 +105,9 @@ a{color:inherit}
   border-radius:12px;background:var(--paper-2);color:var(--ink);cursor:default;user-select:none;
   box-shadow:0 3px 0 rgb(0 0 0 / .18);animation:dealIn .32s cubic-bezier(.2,.7,.3,1) both}
 .card.red{color:var(--red)}
-.card .rank{font-family:var(--card);font-size:clamp(30px,9.4vw,46px);font-weight:700;line-height:1}
+.card .num{font-family:var(--card);font-size:clamp(30px,9.4vw,46px);font-weight:700;line-height:1}
 .card .suit{font-size:clamp(17px,5vw,24px);line-height:1.1}
-.card .val{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:2px}
+.card .val{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:2px}
 .card.red .val{color:var(--red);opacity:.85}
 .card.pick{outline:3px solid var(--accent);outline-offset:2px}
 .card.good{background:var(--green-soft);border-color:var(--green)}
@@ -149,6 +150,10 @@ a{color:inherit}
 @media (max-width:380px){
   .stats{gap:12px}
   .entry button{min-width:76px;padding:0 10px}
+}
+@media (max-width:360px){
+  .keypad{flex-wrap:wrap}
+  .keypad button{flex:1 1 calc(33.333% - 4px);min-width:44px}
 }
 </style>
 </head>
@@ -230,6 +235,7 @@ a{color:inherit}
   <a href="https://hhfa008.github.io/" data-i="moreLink">Built by an indie developer — more tools here</a>
 </footer>
 
+<script src="../shared/store.js"></script>
 <script>
 // __CORE_START__
 var CORE = (function () {
@@ -619,8 +625,7 @@ var CORE = (function () {
   }
 
   function pickLang() {
-    var saved = null;
-    try { saved = localStorage.getItem(LANG_KEY); } catch (e) {}
+    var saved = Store.get(LANG_KEY, null);
     if (saved && I18N[saved]) return saved;
     var n = (navigator.language || 'en').toLowerCase();
     if (n.indexOf('zh') === 0) return 'zh';
@@ -629,11 +634,13 @@ var CORE = (function () {
   }
 
   function loadBest() {
-    try { state.best = parseInt(localStorage.getItem(BEST_KEY) || '0', 10) || 0; }
-    catch (e) { state.best = 0; }
+    // Same key and "parseInt(...) || 0" semantics as before; a denied read
+    // degrades to 0 because Store.get returns the fallback instead of throwing.
+    state.best = parseInt(Store.get(BEST_KEY, '0') || '0', 10) || 0;
   }
   function saveBest() {
-    try { localStorage.setItem(BEST_KEY, String(state.best)); } catch (e) {}
+    // Same stored string as before; a failed write stays silent.
+    Store.set(BEST_KEY, String(state.best));
   }
 
   function fmtTime(ms) { return (ms / 1000).toFixed(1) + 's'; }
@@ -661,7 +668,7 @@ var CORE = (function () {
       el.className = 'card' + (c.s === 1 || c.s === 2 ? ' red' : '');
       el.style.animationDelay = (idx * 55) + 'ms';
       var rank = document.createElement('span');
-      rank.className = 'rank';
+      rank.className = 'num';
       rank.textContent = RANKS[c.r];
       var suit = document.createElement('span');
       suit.className = 'suit';
@@ -842,7 +849,7 @@ var CORE = (function () {
   function setLang(lang) {
     if (!I18N[lang]) lang = 'en';
     state.lang = lang;
-    try { localStorage.setItem(LANG_KEY, lang); } catch (e) {}
+    Store.set(LANG_KEY, lang);
     document.documentElement.lang = lang === 'zh' ? 'zh-CN' : lang;
     document.title = t('pageTitle');
     var nodes = document.querySelectorAll('[data-i]');

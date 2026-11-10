@@ -16,15 +16,10 @@
 <meta property="og:title" content="Backgammon Online — 24 points, bar and bear off">
 <meta property="og:description" content="Classic backgammon with the bar, blocked points, forced maximum moves and gammon scoring. Three AI levels, local two-player and undo.">
 <meta property="og:url" content="https://hhfa008.github.io/games/backgammon/">
-<meta property="og:image" content="https://hhfa008.github.io/games/assets/art/composed/backgammon-og.png">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="西洋双陆棋">
 <meta property="og:locale" content="en_US">
 <meta property="og:locale:alternate" content="zh_CN">
 <meta property="og:locale:alternate" content="id_ID">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="https://hhfa008.github.io/games/assets/art/composed/backgammon-og.png">
+<meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Backgammon Online — 24 points, bar and bear off">
 <meta name="twitter:description" content="Roll two dice, re-enter from the bar, close points and bear off all 15 checkers first. Three AI levels and undo.">
 
@@ -45,6 +40,7 @@
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
 }
 </script>
+<link rel="stylesheet" href="/games/shared/arcade/legacy-mobile.css">
 
 <style>
 :root{
@@ -87,7 +83,7 @@ a{color:inherit}
   background:transparent;color:var(--on-dark-muted);font-size:13px;font-weight:600;cursor:pointer}
 .langs button[aria-pressed="true"]{background:var(--on-dark);color:var(--dark);border-color:var(--on-dark)}
 .hero{padding:24px 0 4px}
-.eyebrow{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.12em;
+.eyebrow{font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.12em;
   text-transform:uppercase;color:var(--accent);margin-bottom:8px}
 .hero h1{font-size:clamp(1.9rem,7.4vw,2.5rem);line-height:1.1;letter-spacing:-.02em;margin-bottom:8px}
 .hero h1 .sub{font-weight:400;color:var(--muted);font-size:.62em;white-space:nowrap}
@@ -110,10 +106,10 @@ a{color:inherit}
 .dicebar{display:flex;align-items:center;gap:10px;min-height:44px;margin:0 0 8px;padding:0 2px}
 .dicelabel{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--on-dark-muted)}
 .dice{display:flex;gap:6px;flex-wrap:wrap}
-.die{width:34px;height:34px;border-radius:7px;background:var(--on-dark);display:grid;
-  grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);padding:4px;gap:1px;
+.die{width:44px;height:44px;border-radius:7px;background:var(--on-dark);display:grid;
+  grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);padding:5px;gap:1px;
   box-shadow:0 2px 0 rgb(0 0 0 / .28),inset 0 0 0 1px rgb(0 0 0 / .08)}
-.die .cell{display:flex;align-items:center;justify-content:center}
+.die .pip-cell{display:flex;align-items:center;justify-content:center}
 .die .pip{width:6px;height:6px;border-radius:50%;background:var(--dark)}
 .die.used{opacity:.24}
 .dienone{color:var(--on-dark-muted);font-size:14px}
@@ -133,7 +129,7 @@ svg.board{display:block;width:100%;max-width:660px;height:auto;touch-action:mani
 .chk-in{fill:none;stroke-width:1.1;pointer-events:none}
 .chk-in.w{stroke:var(--piece-edge);opacity:.42}
 .chk-in.b{stroke:var(--piece-dark-edge);opacity:.3}
-.badge{fill:var(--on-dark);font-family:var(--mono);font-size:11px;font-weight:700;pointer-events:none}
+.badge{fill:var(--on-dark);font-family:var(--mono);font-size:12px;font-weight:700;pointer-events:none}
 .destring{fill:none;stroke:var(--accent);stroke-width:2.6;opacity:.95;pointer-events:none;
   animation:destp 1.2s ease-in-out infinite}
 .destdot{fill:var(--accent);opacity:.75;pointer-events:none}
@@ -160,7 +156,7 @@ svg.board{display:block;width:100%;max-width:660px;height:auto;touch-action:mani
 .site-footer a{display:inline-flex;align-items:center;min-height:44px;text-decoration:none;border-bottom:1px solid var(--line-strong)}
 .site-footer a:hover{color:var(--accent)}
 .rule{margin:14px 0 0;padding-top:12px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted-2)}
-@media (max-width:420px){.seg button{font-size:12.5px;padding:0 4px}.game{padding:10px}.die{width:30px;height:30px}}
+@media (max-width:420px){.seg button{font-size:12.5px;padding:0 4px}.game{padding:10px}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -237,6 +233,9 @@ svg.board{display:block;width:100%;max-width:660px;height:auto;touch-action:mani
   <p><a href="/" data-i="home">Devin — free browser games</a> · <a href="/games/" data-i="allGames2">Game collection</a></p>
 </footer>
 
+<script src="../shared/store.js"></script>
+<script src="../shared/i18n.js"></script>
+<script src="../shared/dom.js"></script>
 <script>
 /* === ENGINE START === */
 var BG = (function () {
@@ -608,13 +607,11 @@ var BG = (function () {
     return d[k] != null ? d[k] : (I18N.en[k] != null ? I18N.en[k] : k);
   }
   function fmt(s, map) {
-    return s.replace(/\{(\w+)\}/g, function (m, k) { return map[k] != null ? map[k] : ''; });
+    return Dom.format(s, map);
   }
   function sideName(side) { return side === BG.WHITE ? t('white') : t('black'); }
   function el(name, attrs) {
-    var node = document.createElementNS(NS, name);
-    if (attrs) for (var k in attrs) node.setAttribute(k, attrs[k]);
-    return node;
+    return Dom.el(name, attrs, { ns: NS });
   }
   function pointX(i) {
     if (i <= 5) return 790 - (i + 1) * PW;
@@ -820,7 +817,7 @@ var BG = (function () {
       die.setAttribute('aria-label', String(v));
       for (var c = 0; c < 9; c++) {
         var cell = document.createElement('span');
-        cell.className = 'cell';
+        cell.className = 'pip-cell';
         if (DIE_PIPS[v].indexOf(c) >= 0) {
           var pip = document.createElement('span');
           pip.className = 'pip';
@@ -1003,30 +1000,20 @@ var BG = (function () {
     render();
   }
 
-  function applyLang() {
-    document.documentElement.lang = ui.lang === 'zh' ? 'zh-CN' : ui.lang;
-    var nodes = document.querySelectorAll('[data-i]');
-    for (var i = 0; i < nodes.length; i++) {
-      var k = nodes[i].getAttribute('data-i');
-      if (I18N[ui.lang][k] != null) nodes[i].textContent = I18N[ui.lang][k];
-    }
-    var langs = document.querySelectorAll('.langs button');
-    for (var j = 0; j < langs.length; j++) {
-      langs[j].setAttribute('aria-pressed', langs[j].getAttribute('data-lang') === ui.lang ? 'true' : 'false');
-    }
-    $('titleMain').textContent = t('title');
-    $('titleSub').textContent = t('sub');
-    render();
-  }
-
   function bind() {
-    var langBtns = document.querySelectorAll('.langs button');
-    for (var i = 0; i < langBtns.length; i++) {
-      langBtns[i].addEventListener('click', function () {
-        ui.lang = this.getAttribute('data-lang');
-        applyLang();
-      });
-    }
+    var i18n = I18n.create({
+      strings: I18N,
+      defaultLang: 'auto',
+      storageKey: 'backgammon-lang-v1',
+      attrs: { text: 'data-i', ph: 'data-i-ph', aria: 'data-i-aria' },
+      buttons: '.langs button'
+    });
+    i18n.onLang(function (next) {
+      ui.lang = next;
+      $('titleMain').textContent = t('title');
+      $('titleSub').textContent = t('sub');
+      render();
+    });
     var modeBtns = document.querySelectorAll('#modeRow button');
     for (var m = 0; m < modeBtns.length; m++) {
       modeBtns[m].addEventListener('click', function () {
@@ -1046,10 +1033,7 @@ var BG = (function () {
     $('undo').addEventListener('click', undo);
     $('restart').addEventListener('click', newGame);
     $('again').addEventListener('click', newGame);
-    var l = (navigator.language || 'en').toLowerCase();
-    if (l.indexOf('zh') === 0) ui.lang = 'zh';
-    else if (l.indexOf('id') === 0 || l.indexOf('in') === 0) ui.lang = 'id';
-    applyLang();
+    i18n.apply();
   }
 
   buildBoard();

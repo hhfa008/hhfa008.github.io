@@ -386,6 +386,8 @@ footer.site a{color:var(--muted)}
   </div>
 </footer>
 
+<script src="/games/shared/store.js"></script>
+
 <script id="deck-core">
 (function () {
   'use strict';
@@ -584,16 +586,24 @@ footer.site a{color:var(--muted)}
 
   /* ---------- storage ---------- */
 
+  // Shared safe-storage (games/shared/store.js). The page's own test harness
+  // evaluates this script block without loading external scripts, so fall
+  // back to an in-memory store with the same never-throw contract there.
+  var hasStore = typeof Store !== 'undefined' && Store;
+  var memStore = Object.create(null);
+
   function readStore(key, fallback) {
-    try {
-      var raw = localStorage.getItem(key);
-      if (!raw) return fallback;
-      return JSON.parse(raw);
-    } catch (e) { return fallback; }
+    if (hasStore) return Store.getJSON(key, fallback);
+    var raw = memStore[key];
+    if (raw == null) return fallback;
+    try { return JSON.parse(raw); } catch (e) { return fallback; }
   }
 
   function writeStore(key, value) {
-    try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* private mode */ }
+    if (hasStore) { Store.setJSON(key, value); return; }
+    var text;
+    try { text = JSON.stringify(value); } catch (e) { return; }
+    if (typeof text === 'string') memStore[key] = text;
   }
 
   function cleanCards(list) {
