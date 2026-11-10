@@ -25,56 +25,56 @@
   var MAT = ARCADE + 'materials/';
   var MAPS = {
     '2048': {
-      board: '/games/assets/art/2048/materials/table-walnut.png',
+      board: '/games/assets/art/2048/materials/table-walnut.webp',
       boardOpacity: 0.9,
       tiles: {
-        ivory: '/games/assets/art/2048/materials/tile-ivory-cut.png',
-        clay: '/games/assets/art/2048/materials/tile-clay-cut.png',
-        gold: '/games/assets/art/2048/materials/tile-gold-cut.png'
+        ivory: '/games/assets/art/2048/materials/tile-ivory-cut.webp',
+        clay: '/games/assets/art/2048/materials/tile-clay-cut.webp',
+        gold: '/games/assets/art/2048/materials/tile-gold-cut.webp'
       }
     },
     slide: {
-      board: '/games/assets/art/2048/materials/table-walnut.png',
+      board: '/games/assets/art/2048/materials/table-walnut.webp',
       boardOpacity: 0.9,
       tiles: {
-        ivory: '/games/assets/art/2048/materials/tile-ivory-cut.png',
-        clay: '/games/assets/art/2048/materials/tile-clay-cut.png',
-        gold: '/games/assets/art/2048/materials/tile-gold-cut.png'
+        ivory: '/games/assets/art/2048/materials/tile-ivory-cut.webp',
+        clay: '/games/assets/art/2048/materials/tile-clay-cut.webp',
+        gold: '/games/assets/art/2048/materials/tile-gold-cut.webp'
       }
     },
     lights: {
-      board: MAT + 'lights-out/surface.png',
+      board: MAT + 'lights-out/surface.webp',
       boardOpacity: 0.85,
       on: ARCADE + 'lights-out/light-on.png',
       off: ARCADE + 'lights-out/light-off.png'
     },
     mines: {
-      board: MAT + 'minesweeper/surface.png',
+      board: MAT + 'minesweeper/surface.webp',
       boardOpacity: 0.9,
       cover: ARCADE + 'minesweeper/cover-tile.png',
       mine: ARCADE + 'minesweeper/mine.png',
       flag: ARCADE + 'minesweeper/flag.png'
     },
     tictactoe: {
-      board: MAT + 'tictactoe/surface.png',
+      board: MAT + 'tictactoe/surface.webp',
       boardOpacity: 0.92,
       x: ARCADE + 'tictactoe/mark-x.png',
       o: ARCADE + 'tictactoe/mark-o.png'
     },
     hanoi: {
-      board: MAT + 'hanoi/surface.png',
+      board: MAT + 'hanoi/surface.webp',
       boardOpacity: 0.85,
       disk: ARCADE + 'hanoi/disk.png'
     },
     snake: {
-      board: MAT + 'snake/surface.png',
+      board: MAT + 'snake/surface.webp',
       boardOpacity: 0.7,
       head: ARCADE + 'snake/head.png',
       body: ARCADE + 'snake/body.png',
       food: ARCADE + 'snake/food.png'
     },
     pong: {
-      board: MAT + 'pong/surface.png',
+      board: MAT + 'pong/surface.webp',
       boardOpacity: 0.35,
       paddle: ARCADE + 'pong/paddle.png',
       ball: ARCADE + 'pong/ball.png'
