@@ -1,0 +1,1244 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>余烬牌组工坊 · Ember Deck Forge — 原创 TCG 卡牌库与组卡器</title>
+<meta name="description" content="原创集换式卡牌《余烬海岸》的卡牌库与组卡器：36 张三语卡牌、筛选、30 张牌组校验、导入导出、本地多牌组保存与分享链接。纯前端，无需登录。Build and validate original TCG decks in your browser.">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="author" content="Devin">
+<meta name="theme-color" content="#2b2f36">
+<link rel="canonical" href="https://hhfa008.github.io/games/tcg-deck/">
+<link rel="alternate" hreflang="zh-CN" href="https://hhfa008.github.io/games/tcg-deck/?lang=zh">
+<link rel="alternate" hreflang="en" href="https://hhfa008.github.io/games/tcg-deck/?lang=en">
+<link rel="alternate" hreflang="id" href="https://hhfa008.github.io/games/tcg-deck/?lang=id">
+<link rel="alternate" hreflang="x-default" href="https://hhfa008.github.io/games/tcg-deck/">
+<link rel="icon" href="../assets/icons/tcg-deck.svg" type="image/svg+xml">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Devin">
+<meta property="og:title" content="余烬牌组工坊 · Ember Deck Forge">
+<meta property="og:description" content="原创 TCG 卡牌库与组卡器：36 张三语卡牌、筛选、30 张牌组校验、导入导出、本地存档与分享链接。">
+<meta property="og:url" content="https://hhfa008.github.io/games/tcg-deck/">
+<meta property="og:image" content="https://hhfa008.github.io/games/assets/og/hall.png">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:locale:alternate" content="en_US">
+<meta property="og:locale:alternate" content="id_ID">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Ember Deck Forge",
+  "alternateName": "余烬牌组工坊",
+  "url": "https://hhfa008.github.io/games/tcg-deck/",
+  "applicationCategory": "GameApplication",
+  "operatingSystem": "Any",
+  "inLanguage": ["zh-CN", "en", "id"],
+  "description": "Card database and deck builder for the original trading card game Ember Coast: 36 trilingual cards, filters, 30-card validation, JSON import/export, local deck library and share links.",
+  "isPartOf": { "@type": "WebSite", "name": "Devin", "url": "https://hhfa008.github.io/" },
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+}
+</script>
+<style>
+:root{
+  --paper:#f2efe7;--paper-2:#fbf9f4;--paper-3:#f6f2e8;--ink:#14171a;
+  --muted:#5b615c;--muted-2:#70736d;--line:#ddd6c8;--line-strong:#c9c0ad;
+  --accent:#b3542e;--accent-2:#8a3d1f;--ok:#2b7247;--ok-bg:#e3f1e7;--bad:#b23b32;--bad-bg:#f8e3e0;
+  --shadow:0 10px 30px rgba(20,23,26,.08);
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);line-height:1.5;-webkit-font-smoothing:antialiased;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+img{display:block;max-width:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--accent-2)}
+h1,h2,h3,p,ul{margin:0}
+.wrap{max-width:1240px;margin:0 auto;padding:0 16px}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+/* header */
+.site-header{background:linear-gradient(180deg,#2b2f36,#22262c);color:#f3ead9;padding:10px 0}
+.bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:9px;color:#f3ead9;text-decoration:none;font-weight:650;letter-spacing:-.01em}
+.brand-mark{width:18px;height:18px;border-radius:5px;background:conic-gradient(from 210deg,#b3542e,#e3a656,#5fd3e6,#b3542e);box-shadow:0 0 0 1px #ffffff26 inset}
+.site-nav{display:flex;gap:14px;margin-left:auto;font-size:13px;flex-wrap:wrap}
+.site-nav a{color:#cfc8bb;text-decoration:none;padding:4px 0}
+.site-nav a:hover{color:#fff}
+.langs{display:flex;gap:4px;padding:3px;border:1px solid #ffffff24;border-radius:8px}
+.langs button{background:none;border:0;color:#d8d1c4;padding:3px 8px;border-radius:5px;font-size:12px;cursor:pointer;min-height:32px}
+.langs button[aria-pressed="true"]{background:#f3ead9;color:#22262c;font-weight:650}
+
+/* intro */
+.intro{padding:24px 0 10px;max-width:760px}
+.intro h1{font-size:clamp(24px,5vw,38px);line-height:1.12;letter-spacing:-.03em;font-weight:750}
+.intro .lead{margin-top:8px;color:var(--muted);font-size:14.5px;overflow-wrap:anywhere}
+.rules-strip{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.rules-strip span{font:500 11px/1.4 var(--mono);background:var(--paper-2);border:1px solid var(--line);
+  border-radius:999px;padding:5px 9px;color:var(--muted)}
+.rules-strip a{text-decoration:none;border-bottom:1px dotted var(--line-strong)}
+
+/* filters */
+.filters{display:grid;grid-template-columns:minmax(0,1fr) repeat(3,minmax(0,132px)) auto;gap:8px;
+  padding:12px 0 14px;position:relative;z-index:2}
+.field{min-width:0;display:flex;flex-direction:column;gap:3px}
+.field label{font:600 10px/1.2 var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--muted-2)}
+.field input,.field select{width:100%;min-width:0;background:var(--paper-2);border:1px solid var(--line);
+  border-radius:9px;padding:9px 10px;font-size:13px;min-height:42px}
+.field input:focus,.field select:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+.filter-side{display:flex;align-items:flex-end;gap:6px}
+.btn{border:1px solid var(--line-strong);background:var(--paper-2);border-radius:9px;padding:9px 12px;
+  font-size:13px;font-weight:600;cursor:pointer;min-height:42px;transition:background .12s,border-color .12s,transform .12s}
+.btn:hover{background:#fff;border-color:var(--muted-2)}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:var(--accent-2);border-color:var(--accent-2);color:#fff}
+.btn.ghost{background:transparent}
+.btn.small{min-height:34px;padding:6px 9px;font-size:12px;border-radius:7px}
+.btn.danger{color:var(--bad)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* layout */
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 366px;gap:16px;align-items:start;padding-bottom:32px}
+@media(max-width:920px){.layout{grid-template-columns:minmax(0,1fr)}}
+
+/* library */
+.panel{background:var(--paper-2);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);min-width:0}
+.panel-head{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.panel-head h2{font-size:15px;line-height:1.2;letter-spacing:-.01em}
+.panel-head .spacer{margin-left:auto}
+.count-note{font:500 11px/1 var(--mono);color:var(--muted-2)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:10px;padding:12px}
+@media(max-width:430px){.cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:10px}}
+@media(max-width:760px){
+  .filters{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .filters .search{grid-column:1/-1}
+  .filter-side{grid-column:1/-1}
+  .filter-side .btn{width:100%}
+}
+.card{position:relative;display:flex;flex-direction:column;text-align:left;padding:0;border:1px solid var(--line);
+  border-radius:12px;background:var(--paper);overflow:hidden;cursor:pointer;min-width:0;
+  transition:transform .12s,border-color .12s,box-shadow .12s;font:inherit;color:inherit}
+.card:hover{transform:translateY(-2px);border-color:var(--line-strong);box-shadow:0 8px 20px rgba(20,23,26,.10)}
+.card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.card[hidden]{display:none}
+.card .art{width:100%;aspect-ratio:320/220;object-fit:cover;background:#0a0d12;border-bottom:1px solid var(--line)}
+.card .body{padding:8px 9px 9px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.card .name{font-size:13.5px;font-weight:650;line-height:1.25;overflow-wrap:anywhere}
+.card .meta{display:flex;align-items:center;gap:4px;flex-wrap:wrap;font-size:10px;color:var(--muted-2)}
+.chip{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:1px 6px;font:500 9.5px/1.4 var(--mono);
+  letter-spacing:.03em;text-transform:uppercase;background:var(--paper-3);white-space:nowrap}
+.chip.creature{border-color:#9fc0a8;color:#2f6b48;background:#eef6f0}
+.chip.spell{border-color:#a9b9d8;color:#35557f;background:#eef2fa}
+.chip.relic{border-color:#cdb58a;color:#7a5a26;background:#f8f1e3}
+.chip.rare{border-color:#8db9dd;color:#246b9e;background:#eaf4fb}
+.chip.legendary{border-color:#d8b04e;color:#7d5a05;background:#fbf3da}
+.card .text{font-size:11px;color:var(--muted);line-height:1.35;overflow-wrap:anywhere;
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.card .stats{display:flex;gap:9px;font:650 11px/1 var(--mono);color:var(--ink)}
+.card .stats .hp{color:#a13b32}
+.cost-badge{position:absolute;top:6px;left:6px;min-width:25px;height:25px;border-radius:999px;
+  background:#14171ad9;color:#fff;font:700 12px/25px var(--mono);text-align:center;border:1px solid #ffffff33;padding:0 5px}
+.owned-badge{position:absolute;top:6px;right:6px;background:var(--accent);color:#fff;border-radius:999px;
+  padding:2px 7px;font:700 10px/1.4 var(--mono);border:1px solid #ffffff42}
+.empty{padding:26px 16px;text-align:center;color:var(--muted);font-size:13px}
+
+/* deck panel */
+.deck-panel{position:sticky;top:12px;display:flex;flex-direction:column;max-height:calc(100vh - 24px);overflow:auto}
+@media(max-width:920px){.deck-panel{position:static;max-height:none;overflow:visible}}
+.deck-body{padding:12px 14px 14px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.deck-name{display:flex;flex-direction:column;gap:3px}
+.deck-name input{width:100%;min-width:0;background:var(--paper);border:1px solid var(--line);border-radius:8px;
+  padding:8px 9px;font-size:13px;min-height:38px}
+.deck-name input:focus{outline:2px solid var(--accent);outline-offset:1px}
+.counts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.count-box{background:var(--paper);border:1px solid var(--line);border-radius:9px;padding:7px 8px;min-width:0}
+.count-box small{display:block;font:600 9.5px/1.2 var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--muted-2);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.count-box b{display:block;margin-top:3px;font:750 18px/1 var(--mono);letter-spacing:-.02em}
+.count-box b span{font-size:11px;color:var(--muted-2);font-weight:600}
+.count-box.warn b{color:var(--bad)}
+.count-box.good b{color:var(--ok)}
+.validation{list-style:none;padding:0;margin:0;border-top:1px solid var(--line)}
+.rule{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:12.5px}
+.rule .mark{flex:none;width:19px;height:19px;border-radius:50%;display:grid;place-items:center;font:700 11px/1 var(--mono)}
+.rule.ok .mark{background:var(--ok-bg);color:var(--ok)}
+.rule.fail .mark{background:var(--bad-bg);color:var(--bad)}
+.rule .rule-label{min-width:0;overflow-wrap:anywhere}
+.rule .rule-value{margin-left:auto;font:650 11px/1 var(--mono);color:var(--muted-2);white-space:nowrap}
+.deck-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px;max-height:250px;overflow:auto}
+@media(max-width:920px){.deck-list{max-height:none}}
+.deck-item{display:flex;align-items:center;gap:7px;background:var(--paper);border:1px solid var(--line);
+  border-radius:8px;padding:5px 7px;min-width:0}
+.deck-item .di-name{flex:1 1 auto;min-width:0;font-size:12.5px;font-weight:600;overflow-wrap:anywhere}
+.deck-item .di-meta{flex:none;font:600 10px/1 var(--mono);color:var(--muted-2)}
+.icon-btn{flex:none;width:31px;height:31px;border-radius:7px;border:1px solid var(--line-strong);background:var(--paper-2);
+  cursor:pointer;font:700 15px/1 var(--mono);display:grid;place-items:center;padding:0}
+.icon-btn:hover{background:#fff}
+.icon-btn.minus{color:var(--bad)}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.actions .btn{width:100%}
+.share-row{display:flex;flex-direction:column;gap:4px}
+.share-row input{width:100%;min-width:0;font:500 10.5px/1.4 var(--mono);background:var(--paper);border:1px solid var(--line);
+  border-radius:7px;padding:7px 8px;color:var(--muted)}
+details.io{border:1px solid var(--line);border-radius:9px;background:var(--paper)}
+details.io summary{cursor:pointer;padding:8px 10px;font-size:12.5px;font-weight:650;list-style:none;display:flex;align-items:center;gap:6px}
+details.io summary::-webkit-details-marker{display:none}
+details.io summary::before{content:"▸";font-size:10px;color:var(--muted-2);transition:transform .12s}
+details.io[open] summary::before{transform:rotate(90deg)}
+.io-body{padding:0 10px 10px;display:flex;flex-direction:column;gap:7px}
+.io-body textarea{width:100%;min-height:88px;resize:vertical;background:var(--paper-2);border:1px solid var(--line);
+  border-radius:7px;padding:7px 8px;font:500 10.5px/1.45 var(--mono)}
+.io-note{font-size:10.5px;color:var(--muted-2);overflow-wrap:anywhere}
+.io-actions{display:flex;flex-wrap:wrap;gap:6px}
+.saved-head{display:flex;align-items:center;gap:6px;font:700 11px/1 var(--mono);letter-spacing:.05em;
+  text-transform:uppercase;color:var(--muted-2)}
+.saved-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
+.saved-item{display:flex;align-items:center;gap:5px;border:1px solid var(--line);border-radius:8px;padding:5px 7px;background:var(--paper);min-width:0}
+.saved-item .s-name{flex:1 1 auto;min-width:0;font-size:12px;font-weight:600;overflow-wrap:anywhere}
+.saved-item .s-count{flex:none;font:600 10px/1 var(--mono);color:var(--muted-2)}
+.saved-empty{font-size:11.5px;color:var(--muted-2)}
+
+/* mobile deck bar */
+.mobile-bar{display:none}
+@media(max-width:920px){
+  .mobile-bar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:40;align-items:center;gap:10px;
+    padding:9px 14px calc(9px + env(safe-area-inset-bottom));background:#14171af2;color:#fff;
+    border-top:1px solid #ffffff1f;backdrop-filter:blur(8px)}
+  .mobile-bar .mb-count{font:700 13px/1 var(--mono);white-space:nowrap}
+  .mobile-bar .mb-hint{font-size:11px;color:#c9c4ba;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .mobile-bar .btn{margin-left:auto;min-height:36px;padding:6px 11px;background:#f3ead9;border-color:#f3ead9;color:#22262c}
+  body{padding-bottom:64px}
+}
+
+/* status toast */
+.toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:60;max-width:min(600px,calc(100vw - 24px));
+  background:#14171a;color:#fff;padding:10px 14px;border-radius:10px;font-size:13px;line-height:1.4;
+  box-shadow:0 12px 34px rgba(0,0,0,.28);overflow-wrap:anywhere}
+.toast[hidden]{display:none}
+.toast[data-kind="error"]{background:#8f2f28}
+.toast[data-kind="ok"]{background:#245c3c}
+@media(max-width:920px){.toast{bottom:calc(72px + env(safe-area-inset-bottom))}}
+
+footer.site{border-top:1px solid var(--line);padding:18px 0 26px;color:var(--muted-2);font-size:12px}
+footer.site .wrap{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center}
+footer.site a{color:var(--muted)}
+
+/* a11y: reduced-motion guard */
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap bar">
+    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true"></span><span>Devin</span></a>
+    <nav class="site-nav" aria-label="Site">
+      <a href="/games/" data-i18n="back">返回游戏大厅</a>
+      <a href="rules.html" data-i18n="help">规则说明</a>
+      <a href="/tools/" data-i18n="tools">工具</a>
+    </nav>
+    <div class="langs" role="group" aria-label="Language">
+      <button type="button" data-lang="zh" aria-pressed="false">中文</button>
+      <button type="button" data-lang="en" aria-pressed="false">EN</button>
+      <button type="button" data-lang="id" aria-pressed="false">ID</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="intro">
+    <h1 data-i18n="title">余烬牌组工坊</h1>
+    <p class="lead" data-i18n="subtitle">原创集换式卡牌《余烬海岸》的卡牌库与组卡器。</p>
+    <div class="rules-strip">
+      <span data-i18n="rulesTotal">30 张整</span>
+      <span data-i18n="rulesCopies">同名最多 3 张</span>
+      <span data-i18n="rulesCreatures">至少 12 张生物</span>
+      <a href="rules.html" data-i18n="rulesMore">完整规则 →</a>
+    </div>
+  </section>
+
+  <section class="filters" aria-label="Filters">
+    <div class="field search">
+      <label for="search" data-i18n="search">按名称搜索</label>
+      <input id="search" type="search" autocomplete="off" data-i18n-ph="searchPh" placeholder="赤灯 / Crimson Lamp / Lampu Merah">
+    </div>
+    <div class="field">
+      <label for="filter-type" data-i18n="type">类型</label>
+      <select id="filter-type">
+        <option value="all" data-i18n="all">全部</option>
+        <option value="creature" data-i18n="typeCreature">生物</option>
+        <option value="spell" data-i18n="typeSpell">法术</option>
+        <option value="relic" data-i18n="typeRelic">圣物</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="filter-cost" data-i18n="cost">费用</label>
+      <select id="filter-cost">
+        <option value="all" data-i18n="all">全部</option>
+        <option value="0">0</option><option value="1">1</option><option value="2">2</option>
+        <option value="3">3</option><option value="4">4</option><option value="5">5</option>
+        <option value="6">6</option><option value="7">7</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="filter-rarity" data-i18n="rarity">稀有度</label>
+      <select id="filter-rarity">
+        <option value="all" data-i18n="all">全部</option>
+        <option value="common" data-i18n="rarityCommon">普通</option>
+        <option value="rare" data-i18n="rarityRare">稀有</option>
+        <option value="legendary" data-i18n="rarityLegendary">传说</option>
+      </select>
+    </div>
+    <div class="filter-side">
+      <button id="reset-filters" class="btn ghost" type="button" data-i18n="reset">重置</button>
+    </div>
+  </section>
+
+  <div class="layout">
+    <section class="panel library" aria-labelledby="library-title">
+      <div class="panel-head">
+        <h2 id="library-title" data-i18n="library">卡牌库</h2>
+        <span class="count-note" id="library-count">36</span>
+        <span class="spacer"></span>
+        <span class="count-note" data-i18n="libraryHint">点击卡牌加入牌组</span>
+      </div>
+      <div class="cards" id="library"></div>
+      <div class="empty" id="library-empty" hidden data-i18n="noMatch">没有符合筛选条件的卡牌。</div>
+    </section>
+
+    <aside class="panel deck-panel" id="deck-panel" aria-labelledby="deck-title">
+      <div class="panel-head">
+        <h2 id="deck-title" data-i18n="deck">牌组</h2>
+        <span class="count-note" id="deck-head-count">0/30</span>
+        <span class="spacer"></span>
+        <button id="clear-btn" class="btn small ghost danger" type="button" data-i18n="clear">清空</button>
+      </div>
+      <div class="deck-body">
+        <div class="deck-name">
+          <label for="deck-name" data-i18n="deckName">牌组名称</label>
+          <input id="deck-name" type="text" maxlength="60" autocomplete="off" data-i18n-ph="deckNamePh" placeholder="给这套牌起个名字">
+        </div>
+
+        <div class="counts">
+          <div class="count-box" id="count-total-box"><small data-i18n="total">总张数</small><b id="deck-total">0<span>/30</span></b></div>
+          <div class="count-box" id="count-creature-box"><small data-i18n="creatures">生物</small><b id="deck-creatures">0<span>/12</span></b></div>
+          <div class="count-box" id="count-copies-box"><small data-i18n="copies">同名上限</small><b id="deck-copies">0<span>/3</span></b></div>
+        </div>
+
+        <ul class="validation" id="validation" aria-live="polite">
+          <li class="rule" data-rule="total"><span class="mark">?</span><span class="rule-label" data-i18n="ruleTotal">正好 30 张</span><span class="rule-value">0/30</span></li>
+          <li class="rule" data-rule="creature"><span class="mark">?</span><span class="rule-label" data-i18n="ruleCreature">至少 12 张生物</span><span class="rule-value">0/12</span></li>
+          <li class="rule" data-rule="copies"><span class="mark">?</span><span class="rule-label" data-i18n="ruleCopies">同名不超过 3 张</span><span class="rule-value">0/3</span></li>
+        </ul>
+
+        <ul class="deck-list" id="deck-list"></ul>
+        <p class="io-note" id="deck-empty" data-i18n="deckEmpty">还没有加入任何卡牌。</p>
+
+        <div class="actions">
+          <button id="export-btn" class="btn primary" type="button" data-i18n="export">导出 JSON</button>
+          <button id="share-btn" class="btn" type="button" data-i18n="share">分享链接</button>
+          <button id="save-btn" class="btn" type="button" data-i18n="save">保存牌组</button>
+          <button id="import-open-btn" class="btn" type="button" data-i18n="import">导入 JSON</button>
+        </div>
+
+        <div class="share-row">
+          <label class="io-note" for="share-url" data-i18n="shareLabel">分享链接</label>
+          <input id="share-url" type="text" readonly aria-label="Share URL">
+          <span class="io-note" data-i18n="shareHint">链接内嵌压缩后的牌组数据，打开即还原。</span>
+        </div>
+
+        <details class="io" id="io-panel">
+          <summary data-i18n="ioTitle">导入 / 导出 JSON</summary>
+          <div class="io-body">
+            <p class="io-note" data-i18n="ioHint">导出为 {name, cards:[{id,count}]}；导入时校验卡牌 id。</p>
+            <textarea id="io-text" spellcheck="false" data-i18n-ph="ioPh" placeholder="粘贴牌组 JSON，或点“导出 JSON”。"></textarea>
+            <div class="io-actions">
+              <button id="import-btn" class="btn small primary" type="button" data-i18n="importDo">导入</button>
+              <button id="export-fill-btn" class="btn small" type="button" data-i18n="exportFill">导出到文本框</button>
+              <label class="btn small" for="import-file" data-i18n="chooseFile">选择文件</label>
+              <input id="import-file" type="file" accept="application/json,.json" class="sr-only">
+            </div>
+          </div>
+        </details>
+
+        <section aria-labelledby="saved-title">
+          <div class="saved-head"><span id="saved-title" data-i18n="savedDecks">已保存的牌组</span></div>
+          <ul class="saved-list" id="saved-list"></ul>
+          <p class="saved-empty" id="saved-empty" data-i18n="noSaved">还没有保存的牌组。</p>
+        </section>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<div class="mobile-bar">
+  <span class="mb-count" id="mobile-count">0/30</span>
+  <span class="mb-hint" data-i18n="mobileHint">牌组实时校验</span>
+  <button class="btn" type="button" id="jump-deck" data-i18n="viewDeck">查看牌组</button>
+</div>
+
+<div class="toast" id="status" role="status" aria-live="polite" hidden></div>
+
+<footer class="site">
+  <div class="wrap">
+    <span data-i18n="footer">原创卡牌与卡面 · 纯前端 · 无追踪</span>
+    <a href="/games/" data-i18n="back">返回游戏大厅</a>
+    <a href="rules.html" data-i18n="help">规则说明</a>
+    <a href="/">首页</a>
+  </div>
+</footer>
+
+<script src="/games/shared/store.js"></script>
+
+<script id="deck-core">
+(function () {
+  'use strict';
+
+  var RULES = { deckSize: 30, maxCopies: 3, minCreatures: 12 };
+  var LANGS = ['zh', 'en', 'id'];
+  var STORE = { draft: 'tcg.draft.v1', decks: 'tcg.decks.v1', lang: 'tcg.lang.v1' };
+
+  var I18N = {
+    zh: {
+      title: '余烬牌组工坊',
+      subtitle: '原创集换式卡牌《余烬海岸》的卡牌库与组卡器：筛选、构筑、校验、存档与分享。',
+      rulesTotal: '30 张整', rulesCopies: '同名最多 3 张', rulesCreatures: '至少 12 张生物', rulesMore: '完整规则 →',
+      search: '按名称搜索', searchPh: '赤灯 / Crimson Lamp / Lampu Merah',
+      type: '类型', cost: '费用', rarity: '稀有度', all: '全部',
+      typeCreature: '生物', typeSpell: '法术', typeRelic: '圣物',
+      rarityCommon: '普通', rarityRare: '稀有', rarityLegendary: '传说',
+      reset: '重置', library: '卡牌库', libraryHint: '点击卡牌加入牌组', libraryCount: '{n} 张卡', noMatch: '没有符合筛选条件的卡牌。',
+      deck: '牌组', clear: '清空', deckName: '牌组名称', deckNamePh: '给这套牌起个名字',
+      total: '总张数', creatures: '生物', copies: '同名上限',
+      ruleTotal: '正好 30 张', ruleCreature: '至少 12 张生物', ruleCopies: '同名不超过 3 张',
+      deckEmpty: '还没有加入任何卡牌。',
+      export: '导出 JSON', share: '分享链接', save: '保存牌组', import: '导入 JSON',
+      shareLabel: '分享链接', shareHint: '链接内嵌压缩后的牌组数据，打开即还原。',
+      ioTitle: '导入 / 导出 JSON', ioHint: '导出为 {name, cards:[{id,count}]}；导入时校验卡牌 id。',
+      ioPh: '粘贴牌组 JSON，或点“导出 JSON”。', importDo: '导入', exportFill: '导出到文本框', chooseFile: '选择文件',
+      savedDecks: '已保存的牌组', noSaved: '还没有保存的牌组。',
+      load: '载入', del: '删除', nameFallback: '未命名牌组',
+      mobileHint: '牌组实时校验', viewDeck: '查看牌组',
+      footer: '原创卡牌与卡面 · 纯前端 · 无追踪', back: '返回游戏大厅', help: '规则说明', tools: '工具',
+      atk: '攻', hp: '血', copyBadge: '×{n}',
+      statusAdded: '已加入 {name}。', statusRemoved: '已移除 {name}。',
+      statusLimitTotal: '牌组已满 30 张，无法继续加入。',
+      statusLimitCopies: '同名卡最多 3 张，{name} 已满。',
+      statusExportInvalid: '无法导出：{rules}',
+      statusExported: '已导出牌组。', statusImported: '已导入牌组（{n} 张）。',
+      statusImportBad: '导入失败：{msg}', statusUnknownIds: '导入失败：未知卡牌 id {ids}',
+      statusSaved: '已保存牌组「{name}」。', statusLoaded: '已载入牌组「{name}」。',
+      statusDeleted: '已删除牌组「{name}」。', statusShared: '分享链接已生成并复制。',
+      statusShareManual: '分享链接已生成，请手动复制。', statusSharedLoaded: '已从分享链接载入牌组。',
+      statusShareBad: '分享链接无法解析，已载入本地草稿。', statusCleared: '已清空当前牌组。',
+      statusFileBad: '文件读取失败。', statusUnknown: '未知卡牌'
+    },
+    en: {
+      title: 'Ember Deck Forge',
+      subtitle: 'Card library and deck builder for the original trading card game Ember Coast: filter, build, validate, save and share.',
+      rulesTotal: 'Exactly 30 cards', rulesCopies: 'Max 3 copies', rulesCreatures: 'At least 12 creatures', rulesMore: 'Full rules →',
+      search: 'Search by name', searchPh: 'Crimson Lamp / 赤灯 / Lampu Merah',
+      type: 'Type', cost: 'Cost', rarity: 'Rarity', all: 'All',
+      typeCreature: 'Creature', typeSpell: 'Spell', typeRelic: 'Relic',
+      rarityCommon: 'Common', rarityRare: 'Rare', rarityLegendary: 'Legendary',
+      reset: 'Reset', library: 'Card library', libraryHint: 'Click a card to add it', libraryCount: '{n} cards', noMatch: 'No cards match these filters.',
+      deck: 'Deck', clear: 'Clear', deckName: 'Deck name', deckNamePh: 'Name this deck',
+      total: 'Cards', creatures: 'Creatures', copies: 'Copy limit',
+      ruleTotal: 'Exactly 30 cards', ruleCreature: 'At least 12 creatures', ruleCopies: 'No more than 3 copies',
+      deckEmpty: 'No cards added yet.',
+      export: 'Export JSON', share: 'Share link', save: 'Save deck', import: 'Import JSON',
+      shareLabel: 'Share link', shareHint: 'The link carries a compact deck payload and restores it on open.',
+      ioTitle: 'Import / export JSON', ioHint: 'Exports {name, cards:[{id,count}]}; imports are checked against card ids.',
+      ioPh: 'Paste deck JSON, or press “Export JSON”.', importDo: 'Import', exportFill: 'Export to text box', chooseFile: 'Choose file',
+      savedDecks: 'Saved decks', noSaved: 'No saved decks yet.',
+      load: 'Load', del: 'Delete', nameFallback: 'Untitled deck',
+      mobileHint: 'Live deck validation', viewDeck: 'View deck',
+      footer: 'Original cards and art · pure front end · no tracking', back: 'Game hall', help: 'Rules', tools: 'Tools',
+      atk: 'ATK', hp: 'HP', copyBadge: '×{n}',
+      statusAdded: 'Added {name}.', statusRemoved: 'Removed {name}.',
+      statusLimitTotal: 'The deck is full at 30 cards.',
+      statusLimitCopies: 'Max 3 copies of a card; {name} is full.',
+      statusExportInvalid: 'Cannot export: {rules}',
+      statusExported: 'Deck exported.', statusImported: 'Deck imported ({n} cards).',
+      statusImportBad: 'Import failed: {msg}', statusUnknownIds: 'Import failed: unknown card ids {ids}',
+      statusSaved: 'Saved deck “{name}”.', statusLoaded: 'Loaded deck “{name}”.',
+      statusDeleted: 'Deleted deck “{name}”.', statusShared: 'Share link generated and copied.',
+      statusShareManual: 'Share link generated; copy it manually.', statusSharedLoaded: 'Deck loaded from the share link.',
+      statusShareBad: 'Could not parse the share link; loaded the local draft.', statusCleared: 'Deck cleared.',
+      statusFileBad: 'Could not read the file.', statusUnknown: 'Unknown card'
+    },
+    id: {
+      title: 'Bengkel Dek Ember',
+      subtitle: 'Perpustakaan kartu dan pembuat dek untuk TCG orisinal Ember Coast: saring, susun, validasi, simpan, dan bagikan.',
+      rulesTotal: 'Tepat 30 kartu', rulesCopies: 'Maksimal 3 salinan', rulesCreatures: 'Minimal 12 makhluk', rulesMore: 'Aturan lengkap →',
+      search: 'Cari nama', searchPh: 'Lampu Merah / Crimson Lamp / 赤灯',
+      type: 'Jenis', cost: 'Biaya', rarity: 'Kelangkaan', all: 'Semua',
+      typeCreature: 'Makhluk', typeSpell: 'Sihir', typeRelic: 'Relik',
+      rarityCommon: 'Umum', rarityRare: 'Langka', rarityLegendary: 'Legendaris',
+      reset: 'Atur ulang', library: 'Perpustakaan kartu', libraryHint: 'Klik kartu untuk menambah', libraryCount: '{n} kartu', noMatch: 'Tidak ada kartu yang cocok.',
+      deck: 'Dek', clear: 'Kosongkan', deckName: 'Nama dek', deckNamePh: 'Beri nama dek ini',
+      total: 'Jumlah kartu', creatures: 'Makhluk', copies: 'Batas salinan',
+      ruleTotal: 'Tepat 30 kartu', ruleCreature: 'Minimal 12 makhluk', ruleCopies: 'Maksimal 3 salinan',
+      deckEmpty: 'Belum ada kartu.',
+      export: 'Ekspor JSON', share: 'Tautan bagikan', save: 'Simpan dek', import: 'Impor JSON',
+      shareLabel: 'Tautan bagikan', shareHint: 'Tautan memuat data dek ringkas dan memulihkannya saat dibuka.',
+      ioTitle: 'Impor / ekspor JSON', ioHint: 'Format ekspor {name, cards:[{id,count}]}; impor memeriksa id kartu.',
+      ioPh: 'Tempel JSON dek, atau tekan “Ekspor JSON”.', importDo: 'Impor', exportFill: 'Ekspor ke kotak teks', chooseFile: 'Pilih berkas',
+      savedDecks: 'Dek tersimpan', noSaved: 'Belum ada dek tersimpan.',
+      load: 'Muat', del: 'Hapus', nameFallback: 'Dek tanpa nama',
+      mobileHint: 'Validasi dek langsung', viewDeck: 'Lihat dek',
+      footer: 'Kartu dan seni orisinal · front-end murni · tanpa pelacakan', back: 'Aula game', help: 'Aturan', tools: 'Alat',
+      atk: 'SER', hp: 'HP', copyBadge: '×{n}',
+      statusAdded: '{name} ditambahkan.', statusRemoved: '{name} dihapus.',
+      statusLimitTotal: 'Dek sudah penuh, 30 kartu.',
+      statusLimitCopies: 'Maksimal 3 salinan per kartu; {name} sudah penuh.',
+      statusExportInvalid: 'Tidak bisa mengekspor: {rules}',
+      statusExported: 'Dek diekspor.', statusImported: 'Dek diimpor ({n} kartu).',
+      statusImportBad: 'Impor gagal: {msg}', statusUnknownIds: 'Impor gagal: id kartu tidak dikenal {ids}',
+      statusSaved: 'Dek “{name}” disimpan.', statusLoaded: 'Dek “{name}” dimuat.',
+      statusDeleted: 'Dek “{name}” dihapus.', statusShared: 'Tautan bagikan dibuat dan disalin.',
+      statusShareManual: 'Tautan bagikan dibuat; salin manual.', statusSharedLoaded: 'Dek dimuat dari tautan bagikan.',
+      statusShareBad: 'Tautan bagikan tidak bisa dibaca; draf lokal dimuat.', statusCleared: 'Dek dikosongkan.',
+      statusFileBad: 'Berkas tidak bisa dibaca.', statusUnknown: 'Kartu tidak dikenal'
+    }
+  };
+
+  var state = {
+    lang: 'zh',
+    cards: [],
+    byId: {},
+    deck: { name: '', cards: [] },
+    saved: [],
+    filter: { q: '', type: 'all', cost: 'all', rarity: 'all' },
+    loaded: false
+  };
+
+  var $ = function (id) { return document.getElementById(id); };
+  var root = document.documentElement;
+
+  function t(key, vars) {
+    var table = I18N[state.lang] || I18N.zh;
+    var s = table[key] != null ? table[key] : (I18N.zh[key] != null ? I18N.zh[key] : key);
+    if (vars) {
+      Object.keys(vars).forEach(function (k) { s = s.split('{' + k + '}').join(String(vars[k])); });
+    }
+    return s;
+  }
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function typeOf(card) {
+    if (!card) return 'creature';
+    if (card.kind) return card.kind;
+    if (card.type === 'unit') return 'creature';
+    return card.type || 'creature';
+  }
+
+  function statsOf(card) {
+    if (card && card.stats && typeof card.stats === 'object') return card.stats;
+    return { atk: card && card.atk || 0, hp: card && card.hp || 0 };
+  }
+
+  function cardName(card) {
+    if (!card) return t('statusUnknown');
+    return (card.name && (card.name[state.lang] || card.name.en || card.name.zh)) || card.id;
+  }
+
+  function cardText(card) {
+    if (!card || !card.text) return '';
+    return card.text[state.lang] || card.text.en || card.text.zh || '';
+  }
+
+  function countTotal() {
+    return state.deck.cards.reduce(function (n, c) { return n + c.count; }, 0);
+  }
+
+  function countCreature() {
+    return state.deck.cards.reduce(function (n, c) {
+      var card = state.byId[c.id];
+      return n + (card && typeOf(card) === 'creature' ? c.count : 0);
+    }, 0);
+  }
+
+  function maxCopy() {
+    return state.deck.cards.reduce(function (n, c) { return Math.max(n, c.count); }, 0);
+  }
+
+  function deckCount(id) {
+    var found = null;
+    state.deck.cards.forEach(function (c) { if (c.id === id) found = c; });
+    return found ? found.count : 0;
+  }
+
+  function validate() {
+    var total = countTotal();
+    var creatures = countCreature();
+    var copies = maxCopy();
+    var rows = [
+      { key: 'total', ok: total === RULES.deckSize, value: total + '/' + RULES.deckSize, target: RULES.deckSize },
+      { key: 'creature', ok: creatures >= RULES.minCreatures, value: creatures + '/' + RULES.minCreatures, target: RULES.minCreatures },
+      { key: 'copies', ok: copies <= RULES.maxCopies, value: copies + '/' + RULES.maxCopies, target: RULES.maxCopies }
+    ];
+    return { ok: rows.every(function (r) { return r.ok; }), rows: rows };
+  }
+
+  /* ---------- storage ---------- */
+
+  // Shared safe-storage (games/shared/store.js). The page's own test harness
+  // evaluates this script block without loading external scripts, so fall
+  // back to an in-memory store with the same never-throw contract there.
+  var hasStore = typeof Store !== 'undefined' && Store;
+  var memStore = Object.create(null);
+
+  function readStore(key, fallback) {
+    if (hasStore) return Store.getJSON(key, fallback);
+    var raw = memStore[key];
+    if (raw == null) return fallback;
+    try { return JSON.parse(raw); } catch (e) { return fallback; }
+  }
+
+  function writeStore(key, value) {
+    if (hasStore) { Store.setJSON(key, value); return; }
+    var text;
+    try { text = JSON.stringify(value); } catch (e) { return; }
+    if (typeof text === 'string') memStore[key] = text;
+  }
+
+  function cleanCards(list) {
+    if (!Array.isArray(list)) return [];
+    var out = [];
+    var seen = Object.create(null);
+    list.forEach(function (entry) {
+      if (!entry || typeof entry.id !== 'string') return;
+      var count = Math.floor(Number(entry.count));
+      if (!isFinite(count) || count < 1) return;
+      if (!state.byId[entry.id]) return;
+      if (seen[entry.id]) { seen[entry.id].count += count; return; }
+      var item = { id: entry.id, count: Math.min(999, count) };
+      seen[entry.id] = item;
+      out.push(item);
+    });
+    return out;
+  }
+
+  function saveDraft() {
+    writeStore(STORE.draft, { name: state.deck.name, cards: state.deck.cards });
+  }
+
+  function loadDraft() {
+    var draft = readStore(STORE.draft, null);
+    if (draft && typeof draft === 'object') {
+      state.deck = {
+        name: typeof draft.name === 'string' ? draft.name.slice(0, 60) : '',
+        cards: cleanCards(draft.cards)
+      };
+    } else {
+      state.deck = { name: '', cards: [] };
+    }
+    $('deck-name').value = state.deck.name;
+  }
+
+  function loadSaved() {
+    var list = readStore(STORE.decks, []);
+    state.saved = (Array.isArray(list) ? list : []).filter(function (d) {
+      return d && typeof d.id === 'string' && typeof d.name === 'string';
+    }).map(function (d) {
+      return { id: d.id, name: d.name.slice(0, 60), cards: cleanCards(d.cards), updated: d.updated || 0 };
+    });
+  }
+
+  function saveSaved() {
+    writeStore(STORE.decks, state.saved);
+  }
+
+  /* ---------- compact share payload ---------- */
+
+  function bytesToB64url(bytes) {
+    var bin = '';
+    for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+
+  function b64urlToBytes(code) {
+    var s = String(code || '').replace(/-/g, '+').replace(/_/g, '/');
+    while (s.length % 4) s += '=';
+    var bin = atob(s);
+    var bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return bytes;
+  }
+
+  function encodeDeck(deck) {
+    var index = Object.create(null);
+    state.cards.forEach(function (c, i) { index[c.id] = i; });
+    var parts = ['1', encodeURIComponent(deck.name || '')];
+    var entries = [];
+    (deck.cards || []).forEach(function (c) {
+      var i = index[c.id];
+      if (i === undefined) return;
+      entries.push(i.toString(36) + ':' + Math.max(1, Math.min(999, c.count)).toString(36));
+    });
+    parts.push(entries.join(','));
+    return bytesToB64url(new TextEncoder().encode(parts.join('|')));
+  }
+
+  function decodeDeck(code) {
+    var text = new TextDecoder().decode(b64urlToBytes(code));
+    var parts = text.split('|');
+    if (parts[0] !== '1') throw new Error('bad payload version');
+    var name = decodeURIComponent(parts[1] || '').slice(0, 60);
+    var cards = [];
+    var entries = parts[2] ? parts[2].split(',') : [];
+    entries.forEach(function (entry) {
+      if (!entry) return;
+      var pair = entry.split(':');
+      var idx = parseInt(pair[0], 36);
+      var count = parseInt(pair[1], 36);
+      if (!isFinite(idx) || !isFinite(count) || !state.cards[idx] || count < 1) return;
+      cards.push({ id: state.cards[idx].id, count: Math.min(999, count) });
+    });
+    return { name: name, cards: cards };
+  }
+
+  /* ---------- rendering ---------- */
+
+  function applyStaticTexts() {
+    root.lang = state.lang === 'zh' ? 'zh-CN' : state.lang;
+    document.querySelectorAll('[data-i18n]').forEach(function (el) {
+      el.textContent = t(el.getAttribute('data-i18n'));
+    });
+    document.querySelectorAll('[data-i18n-ph]').forEach(function (el) {
+      el.setAttribute('placeholder', t(el.getAttribute('data-i18n-ph')));
+    });
+    document.querySelectorAll('[data-lang]').forEach(function (el) {
+      el.setAttribute('aria-pressed', String(el.getAttribute('data-lang') === state.lang));
+    });
+  }
+
+  function renderLibrary() {
+    var host = $('library');
+    host.innerHTML = state.cards.map(function (card) {
+      var kind = typeOf(card);
+      var st = statsOf(card);
+      var stats = kind === 'creature'
+        ? '<span class="stats"><span>⚔ ' + st.atk + '</span><span class="hp">♥ ' + st.hp + '</span></span>'
+        : '';
+      var hay = [
+        card.id, card.name && card.name.zh, card.name && card.name.en, card.name && card.name.id,
+        card.text && card.text.zh, card.text && card.text.en, card.text && card.text.id,
+        kind, card.rarity
+      ].join(' ').toLowerCase();
+      return '<button type="button" class="card" data-card-id="' + esc(card.id) + '"' +
+        ' data-type="' + esc(kind) + '" data-cost="' + esc(card.cost) + '" data-rarity="' + esc(card.rarity) + '"' +
+        ' data-search="' + esc(hay) + '" data-add="' + esc(card.id) + '" aria-label="' + esc(cardName(card)) + '">' +
+        '<img class="art" src="../tcg-sample/' + esc(card.art) + '" alt="" width="320" height="220" loading="lazy" decoding="async">' +
+        '<span class="cost-badge">' + esc(card.cost) + '</span>' +
+        '<span class="owned-badge" data-owned="' + esc(card.id) + '" hidden></span>' +
+        '<span class="body">' +
+          '<span class="name">' + esc(cardName(card)) + '</span>' +
+          '<span class="meta"><span class="chip ' + esc(kind) + '">' + esc(t('type' + kind.charAt(0).toUpperCase() + kind.slice(1))) + '</span>' +
+          '<span class="chip ' + esc(card.rarity) + '">' + esc(t('rarity' + card.rarity.charAt(0).toUpperCase() + card.rarity.slice(1))) + '</span></span>' +
+          '<span class="text">' + esc(cardText(card)) + '</span>' +
+          stats +
+        '</span>' +
+      '</button>';
+    }).join('');
+    applyFilters();
+    updateOwnedBadges();
+  }
+
+  function applyFilters() {
+    var q = state.filter.q.trim().toLowerCase();
+    var visible = 0;
+    var tiles = document.querySelectorAll('#library .card');
+    for (var i = 0; i < tiles.length; i++) {
+      var el = tiles[i];
+      var hit = true;
+      if (q && (el.getAttribute('data-search') || '').indexOf(q) < 0) hit = false;
+      if (state.filter.type !== 'all' && el.getAttribute('data-type') !== state.filter.type) hit = false;
+      if (state.filter.cost !== 'all' && el.getAttribute('data-cost') !== state.filter.cost) hit = false;
+      if (state.filter.rarity !== 'all' && el.getAttribute('data-rarity') !== state.filter.rarity) hit = false;
+      el.hidden = !hit;
+      if (hit) visible++;
+    }
+    $('library-count').textContent = t('libraryCount', { n: String(visible) });
+    $('library-empty').hidden = visible !== 0;
+  }
+
+  function updateOwnedBadges() {
+    document.querySelectorAll('[data-owned]').forEach(function (el) {
+      var n = deckCount(el.getAttribute('data-owned'));
+      if (n > 0) {
+        el.hidden = false;
+        el.textContent = t('copyBadge', { n: String(n) });
+      } else {
+        el.hidden = true;
+        el.textContent = '';
+      }
+    });
+  }
+
+  function renderDeck() {
+    var total = countTotal();
+    var creatures = countCreature();
+    var copies = maxCopy();
+    var result = validate();
+
+    $('deck-total').innerHTML = total + '<span>/' + RULES.deckSize + '</span>';
+    $('deck-creatures').innerHTML = creatures + '<span>/' + RULES.minCreatures + '</span>';
+    $('deck-copies').innerHTML = copies + '<span>/' + RULES.maxCopies + '</span>';
+    $('deck-head-count').textContent = total + '/' + RULES.deckSize;
+    $('mobile-count').textContent = total + '/' + RULES.deckSize;
+
+    var boxTotal = $('count-total-box');
+    boxTotal.classList.toggle('good', total === RULES.deckSize);
+    boxTotal.classList.toggle('warn', total > RULES.deckSize);
+    var boxCreature = $('count-creature-box');
+    boxCreature.classList.toggle('good', creatures >= RULES.minCreatures);
+    boxCreature.classList.toggle('warn', creatures < RULES.minCreatures);
+    var boxCopies = $('count-copies-box');
+    boxCopies.classList.toggle('good', copies <= RULES.maxCopies);
+    boxCopies.classList.toggle('warn', copies > RULES.maxCopies);
+
+    result.rows.forEach(function (row) {
+      var li = document.querySelector('#validation [data-rule="' + row.key + '"]');
+      if (!li) return;
+      li.classList.toggle('ok', row.ok);
+      li.classList.toggle('fail', !row.ok);
+      li.querySelector('.mark').textContent = row.ok ? '✓' : '!';
+      li.querySelector('.rule-value').textContent = row.value;
+      li.setAttribute('data-ok', String(row.ok));
+    });
+
+    var list = $('deck-list');
+    list.innerHTML = state.deck.cards.map(function (entry) {
+      var card = state.byId[entry.id];
+      var kind = typeOf(card);
+      return '<li class="deck-item" data-deck-card-id="' + esc(entry.id) + '">' +
+        '<span class="di-name">' + esc(cardName(card)) + '</span>' +
+        '<span class="di-meta">' + esc(t('type' + kind.charAt(0).toUpperCase() + kind.slice(1))) + '</span>' +
+        '<button type="button" class="icon-btn minus" data-remove="' + esc(entry.id) + '" aria-label="-">−</button>' +
+        '<span class="di-meta" data-count="' + esc(entry.id) + '">×' + entry.count + '</span>' +
+        '<button type="button" class="icon-btn" data-add="' + esc(entry.id) + '" aria-label="+">+</button>' +
+      '</li>';
+    }).join('');
+    $('deck-empty').hidden = state.deck.cards.length > 0;
+    updateOwnedBadges();
+    saveDraft();
+    updateShareField();
+  }
+
+  function renderSaved() {
+    var list = $('saved-list');
+    list.innerHTML = state.saved.map(function (d) {
+      var total = d.cards.reduce(function (n, c) { return n + c.count; }, 0);
+      return '<li class="saved-item" data-saved-id="' + esc(d.id) + '">' +
+        '<span class="s-name">' + esc(d.name) + '</span>' +
+        '<span class="s-count">' + total + '/' + RULES.deckSize + '</span>' +
+        '<button type="button" class="btn small" data-load-saved="' + esc(d.id) + '">' + esc(t('load')) + '</button>' +
+        '<button type="button" class="btn small ghost danger" data-del-saved="' + esc(d.id) + '">' + esc(t('del')) + '</button>' +
+      '</li>';
+    }).join('');
+    $('saved-empty').hidden = state.saved.length > 0;
+  }
+
+  function renderAll() {
+    applyStaticTexts();
+    renderLibrary();
+    renderDeck();
+    renderSaved();
+    updateShareField();
+  }
+
+  /* ---------- status ---------- */
+
+  var statusTimer = null;
+  function showStatus(text, kind) {
+    var el = $('status');
+    el.textContent = text;
+    el.setAttribute('data-kind', kind || 'info');
+    el.hidden = false;
+    if (statusTimer) clearTimeout(statusTimer);
+    statusTimer = setTimeout(function () { el.hidden = true; }, kind === 'error' ? 8000 : 4500);
+  }
+
+  function status(key, vars, kind) {
+    showStatus(t(key, vars || {}), kind);
+  }
+
+  /* ---------- deck operations ---------- */
+
+  function addCard(id) {
+    var card = state.byId[id];
+    if (!card) { status('statusImportBad', { msg: 'unknown card ' + id }, 'error'); return false; }
+    var existing = null;
+    state.deck.cards.forEach(function (c) { if (c.id === id) existing = c; });
+    if (existing && existing.count >= RULES.maxCopies) {
+      status('statusLimitCopies', { name: cardName(card) }, 'error');
+      return false;
+    }
+    if (countTotal() >= RULES.deckSize) {
+      status('statusLimitTotal', {}, 'error');
+      return false;
+    }
+    if (existing) existing.count += 1;
+    else state.deck.cards.push({ id: id, count: 1 });
+    renderDeck();
+    status('statusAdded', { name: cardName(card) }, 'ok');
+    return true;
+  }
+
+  function removeCard(id) {
+    var card = state.byId[id];
+    for (var i = 0; i < state.deck.cards.length; i++) {
+      if (state.deck.cards[i].id === id) {
+        state.deck.cards[i].count -= 1;
+        if (state.deck.cards[i].count <= 0) state.deck.cards.splice(i, 1);
+        renderDeck();
+        status('statusRemoved', { name: cardName(card) }, 'ok');
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function clearDeck() {
+    state.deck = { name: '', cards: [] };
+    $('deck-name').value = '';
+    renderDeck();
+    status('statusCleared', {}, 'ok');
+  }
+
+  function exportDeck() {
+    var result = validate();
+    if (!result.ok) {
+      var labels = result.rows.filter(function (r) { return !r.ok; }).map(function (r) { return t('rule' + r.key.charAt(0).toUpperCase() + r.key.slice(1)); });
+      status('statusExportInvalid', { rules: labels.join('; ') }, 'error');
+      return null;
+    }
+    var payload = {
+      name: state.deck.name.trim() || t('nameFallback'),
+      cards: state.deck.cards.map(function (c) { return { id: c.id, count: c.count }; })
+    };
+    return payload;
+  }
+
+  function downloadJSON(payload) {
+    var json = JSON.stringify(payload, null, 2);
+    $('io-text').value = json;
+    try {
+      var blob = new Blob([json], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      var safe = (payload.name || 'deck').replace(/[^\w一-龥-]+/g, '_').slice(0, 40) || 'deck';
+      a.href = url;
+      a.download = safe + '.json';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    } catch (e) { /* download blocked: the textarea still holds the JSON */ }
+    return json;
+  }
+
+  function doExport() {
+    var payload = exportDeck();
+    if (!payload) return null;
+    downloadJSON(payload);
+    status('statusExported', {}, 'ok');
+    return payload;
+  }
+
+  function importDeck(text) {
+    var parsed;
+    try {
+      parsed = JSON.parse(String(text || ''));
+    } catch (e) {
+      status('statusImportBad', { msg: 'invalid JSON' }, 'error');
+      return { ok: false, error: 'invalid JSON' };
+    }
+    if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.cards)) {
+      status('statusImportBad', { msg: 'missing cards array' }, 'error');
+      return { ok: false, error: 'missing cards array' };
+    }
+    var unknown = [];
+    var cards = [];
+    var seen = Object.create(null);
+    for (var i = 0; i < parsed.cards.length; i++) {
+      var entry = parsed.cards[i];
+      if (!entry || typeof entry.id !== 'string') {
+        status('statusImportBad', { msg: 'bad card entry' }, 'error');
+        return { ok: false, error: 'bad card entry' };
+      }
+      if (!state.byId[entry.id]) { unknown.push(entry.id); continue; }
+      var n = Math.floor(Number(entry.count));
+      if (!isFinite(n) || n < 1) {
+        status('statusImportBad', { msg: 'bad count for ' + entry.id }, 'error');
+        return { ok: false, error: 'bad count' };
+      }
+      if (seen[entry.id]) seen[entry.id].count = Math.min(999, seen[entry.id].count + n);
+      else {
+        var item = { id: entry.id, count: Math.min(999, n) };
+        seen[entry.id] = item;
+        cards.push(item);
+      }
+    }
+    if (unknown.length) {
+      status('statusUnknownIds', { ids: unknown.slice(0, 5).join(', ') }, 'error');
+      return { ok: false, error: 'unknown ids', unknown: unknown };
+    }
+    var name = typeof parsed.name === 'string' ? parsed.name.trim().slice(0, 60) : '';
+    state.deck = { name: name, cards: cards };
+    $('deck-name').value = name;
+    renderDeck();
+    status('statusImported', { n: String(cards.reduce(function (a, c) { return a + c.count; }, 0)) }, 'ok');
+    return { ok: true, deck: { name: name, cards: cards } };
+  }
+
+  function saveDeck() {
+    var name = ($('deck-name').value || '').trim() || t('nameFallback');
+    name = name.slice(0, 60);
+    var cards = state.deck.cards.map(function (c) { return { id: c.id, count: c.count }; });
+    var existing = null;
+    state.saved.forEach(function (d) { if (d.name.toLowerCase() === name.toLowerCase()) existing = d; });
+    if (existing) {
+      existing.name = name;
+      existing.cards = cards;
+      existing.updated = Date.now();
+    } else {
+      state.saved.unshift({ id: 'd' + Date.now().toString(36) + Math.floor(Math.random() * 1296).toString(36), name: name, cards: cards, updated: Date.now() });
+    }
+    state.deck.name = name;
+    $('deck-name').value = name;
+    saveSaved();
+    saveDraft();
+    renderSaved();
+    status('statusSaved', { name: name }, 'ok');
+    return name;
+  }
+
+  function loadSavedDeck(id) {
+    var found = null;
+    state.saved.forEach(function (d) { if (d.id === id) found = d; });
+    if (!found) return false;
+    state.deck = { name: found.name, cards: found.cards.map(function (c) { return { id: c.id, count: c.count }; }) };
+    $('deck-name').value = found.name;
+    renderDeck();
+    status('statusLoaded', { name: found.name }, 'ok');
+    return true;
+  }
+
+  function deleteSavedDeck(id) {
+    var found = null;
+    state.saved = state.saved.filter(function (d) {
+      if (d.id === id) { found = d; return false; }
+      return true;
+    });
+    if (found) {
+      saveSaved();
+      renderSaved();
+      status('statusDeleted', { name: found.name }, 'ok');
+    }
+    return !!found;
+  }
+
+  function updateShareField() {
+    var url = buildShareUrl();
+    $('share-url').value = url;
+    return url;
+  }
+
+  function buildShareUrl() {
+    var code = encodeDeck(state.deck);
+    var base = location.origin + location.pathname;
+    return base + '?deck=' + code + '&lang=' + state.lang;
+  }
+
+  function shareDeck() {
+    var url = updateShareField();
+    var done = function () { status('statusShared', {}, 'ok'); };
+    var fail = function () { status('statusShareManual', {}, 'ok'); };
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(done, fail);
+      } else fail();
+    } catch (e) { fail(); }
+    return url;
+  }
+
+  function setLang(lang) {
+    if (LANGS.indexOf(lang) < 0) return;
+    state.lang = lang;
+    writeStore(STORE.lang, lang);
+    applyStaticTexts();
+    renderLibrary();
+    renderDeck();
+    renderSaved();
+    updateShareField();
+  }
+
+  /* ---------- events ---------- */
+
+  function bind() {
+    document.querySelectorAll('[data-lang]').forEach(function (btn) {
+      btn.addEventListener('click', function () { setLang(btn.getAttribute('data-lang')); });
+    });
+
+    $('search').addEventListener('input', function (e) {
+      state.filter.q = e.target.value;
+      applyFilters();
+    });
+    $('filter-type').addEventListener('change', function (e) { state.filter.type = e.target.value; applyFilters(); });
+    $('filter-cost').addEventListener('change', function (e) { state.filter.cost = e.target.value; applyFilters(); });
+    $('filter-rarity').addEventListener('change', function (e) { state.filter.rarity = e.target.value; applyFilters(); });
+    $('reset-filters').addEventListener('click', function () {
+      state.filter = { q: '', type: 'all', cost: 'all', rarity: 'all' };
+      $('search').value = '';
+      $('filter-type').value = 'all';
+      $('filter-cost').value = 'all';
+      $('filter-rarity').value = 'all';
+      applyFilters();
+    });
+
+    document.addEventListener('click', function (e) {
+      var add = e.target.closest ? e.target.closest('[data-add]') : null;
+      if (add) { e.preventDefault(); addCard(add.getAttribute('data-add')); return; }
+      var rm = e.target.closest ? e.target.closest('[data-remove]') : null;
+      if (rm) { e.preventDefault(); removeCard(rm.getAttribute('data-remove')); return; }
+      var ld = e.target.closest ? e.target.closest('[data-load-saved]') : null;
+      if (ld) { e.preventDefault(); loadSavedDeck(ld.getAttribute('data-load-saved')); return; }
+      var del = e.target.closest ? e.target.closest('[data-del-saved]') : null;
+      if (del) { e.preventDefault(); deleteSavedDeck(del.getAttribute('data-del-saved')); }
+    });
+
+    $('deck-name').addEventListener('input', function (e) {
+      state.deck.name = e.target.value.slice(0, 60);
+      saveDraft();
+      updateShareField();
+    });
+
+    $('clear-btn').addEventListener('click', clearDeck);
+    $('save-btn').addEventListener('click', saveDeck);
+    $('share-btn').addEventListener('click', shareDeck);
+    $('export-btn').addEventListener('click', doExport);
+    $('export-fill-btn').addEventListener('click', function () {
+      var payload = exportDeck();
+      if (!payload) return;
+      $('io-text').value = JSON.stringify(payload, null, 2);
+      $('io-panel').open = true;
+      status('statusExported', {}, 'ok');
+    });
+    $('import-open-btn').addEventListener('click', function () {
+      $('io-panel').open = true;
+      $('io-text').focus();
+    });
+    $('import-btn').addEventListener('click', function () {
+      importDeck($('io-text').value);
+    });
+    $('import-file').addEventListener('change', function (e) {
+      var file = e.target.files && e.target.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function () {
+        $('io-text').value = String(reader.result || '');
+        importDeck($('io-text').value);
+      };
+      reader.onerror = function () { status('statusFileBad', {}, 'error'); };
+      reader.readAsText(file);
+      e.target.value = '';
+    });
+    $('jump-deck').addEventListener('click', function () {
+      $('deck-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+
+  /* ---------- boot ---------- */
+
+  function init() {
+    var params = new URLSearchParams(location.search);
+    var langParam = params.get('lang');
+    var storedLang = readStore(STORE.lang, null);
+    var nav = (navigator.language || 'en').toLowerCase();
+    state.lang = LANGS.indexOf(langParam) >= 0 ? langParam
+      : LANGS.indexOf(storedLang) >= 0 ? storedLang
+      : nav.indexOf('zh') === 0 ? 'zh'
+      : nav.indexOf('id') === 0 ? 'id' : 'en';
+    if (LANGS.indexOf(storedLang) < 0) writeStore(STORE.lang, state.lang);
+
+    fetch('../tcg-sample/cards.json', { cache: 'no-cache' })
+      .then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then(function (data) {
+        var list = Array.isArray(data) ? data : (data && data.cards);
+        if (!Array.isArray(list)) throw new Error('cards.json has no cards array');
+        state.cards = list;
+        state.byId = {};
+        list.forEach(function (c) { state.byId[c.id] = c; });
+        state.loaded = true;
+
+        loadSaved();
+        var shared = params.get('deck');
+        if (shared) {
+          try {
+            state.deck = decodeDeck(shared);
+            $('deck-name').value = state.deck.name;
+            renderAll();
+            status('statusSharedLoaded', {}, 'ok');
+          } catch (e) {
+            loadDraft();
+            renderAll();
+            status('statusShareBad', {}, 'error');
+          }
+        } else {
+          loadDraft();
+          renderAll();
+        }
+      })
+      .catch(function (err) {
+        $('library').innerHTML = '<p class="empty">' + esc('cards.json: ' + err.message) + '</p>';
+        $('library-empty').hidden = true;
+        showStatus('cards.json: ' + err.message, 'error');
+      });
+
+    applyStaticTexts();
+    bind();
+  }
+
+  // Public test/integration surface.
+  window.TCGDeck = {
+    state: state,
+    rules: RULES,
+    addCard: addCard,
+    removeCard: removeCard,
+    clearDeck: clearDeck,
+    validate: validate,
+    exportDeck: exportDeck,
+    doExport: doExport,
+    importDeck: importDeck,
+    saveDeck: saveDeck,
+    loadSavedDeck: loadSavedDeck,
+    deleteSavedDeck: deleteSavedDeck,
+    setLang: setLang,
+    encodeDeck: encodeDeck,
+    decodeDeck: decodeDeck,
+    buildShareUrl: buildShareUrl,
+    updateShareField: updateShareField,
+    showStatus: showStatus,
+    deckSnapshot: function () {
+      return { name: state.deck.name, cards: state.deck.cards.map(function (c) { return { id: c.id, count: c.count }; }) };
+    }
+  };
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+</script>
+</body>
+</html>
