@@ -52,8 +52,8 @@ var I18N = {
     for (var i = 0; i < 16; i++) {
       var tile = document.createElement('div');
       tile.className = 'tile';
-      tile.setAttribute('data-v', S.board[i] || '');
       if (S.board[i]) {
+        tile.classList.add('tile-' + S.board[i]);
         tile.textContent = S.board[i];
       }
       E.board.appendChild(tile);
