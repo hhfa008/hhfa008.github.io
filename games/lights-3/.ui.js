@@ -67,6 +67,7 @@ var I18N = {
       showOverlay('won');
       Arcade.setBest(BEST_KEY, S.moves);
     }
+    ArcadeBoardArt.decorate(E.board, 'lights');
   }
 
   function input(action) {

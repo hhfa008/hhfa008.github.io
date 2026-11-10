@@ -66,6 +66,7 @@ var I18N = {
     } else if (status === 'lost' && E.overlay.hidden) {
       showOverlay('lost');
     }
+    ArcadeBoardArt.decorate(E.board, '2048');
   }
 
   function input(action) {

@@ -48,6 +48,7 @@ var I18N = {
     } else {
       E.board.textContent = '';
     }
+    ArcadeReactionArt.ensure(E.board, 'lamp');
 
     var status = CORE.status(S);
     if (status === 'won') {

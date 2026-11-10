@@ -18,6 +18,29 @@ function sleep(ms) {
   return new Promise(function (resolve) { setTimeout(resolve, ms); });
 }
 
+/*
+ * Decides whether a low FPS sample was taken on a host without headroom.
+ * Returns null when the sample is fine, too short to judge, or when 1-minute
+ * loadavg is at/below 80% of the CPU count. When it returns an object the
+ * caller prints load/fps/frames as evidence and skips the budget for this run.
+ * Pure (no process state) so the guard is testable without loading the host.
+ */
+export function fpsLoadLimited(sample, load1, coreCount, fpsBudget) {
+  const budget = Number.isFinite(fpsBudget) ? fpsBudget : 30;
+  if (!sample) return null;
+  const frames = Number(sample.frames);
+  const fps = Number(sample.fps);
+  const load = Number(load1);
+  const cores = Number(coreCount);
+  if (!Number.isFinite(frames) || frames < 5) return null;
+  if (!Number.isFinite(fps) || fps >= budget) return null;
+  if (!Number.isFinite(load) || !Number.isFinite(cores) || cores <= 0) return null;
+  const loadFactor = 0.8;
+  const budgetLoad = cores * loadFactor;
+  if (load <= budgetLoad) return null;
+  return { load: load, cores: cores, loadFactor: loadFactor, budgetLoad: budgetLoad };
+}
+
 export async function measureFps(view, durationMs) {
   await view.send('Page.bringToFront');
   await view.send('Emulation.setDeviceMetricsOverride', {

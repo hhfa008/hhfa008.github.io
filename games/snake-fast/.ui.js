@@ -71,6 +71,7 @@ var I18N = {
         E.overlayText.textContent = '';
       }
     }
+    ArcadeBoardArt.decorate(E.board, 'snake');
   }
 
   function input(action) {

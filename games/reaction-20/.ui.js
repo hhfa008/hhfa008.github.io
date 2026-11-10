@@ -38,6 +38,7 @@ var I18N = {
     E.best.textContent = best;
     E.extra.textContent = S.hits;
     E.board.style.backgroundColor = S.timeLeft <= 5 ? '#ff6b6b' : '#f3ead9';
+    ArcadeReactionArt.ensure(E.board, 'lamp');
     if (S.over) {
       E.overlay.hidden = false;
       E.overlayTitle.textContent = S.running ? I18N[I18N.lang].overlayWin : I18N[I18N.lang].overlayLose;

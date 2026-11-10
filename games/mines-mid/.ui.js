@@ -69,6 +69,7 @@ var I18N = {
       E.overlayTitle.textContent = I18N[Arcade.lang()][S.status === 'won' ? 'overlayWin' : S.status === 'lost' ? 'overlayLose' : 'overlayDraw'];
       E.overlayText.textContent = '';
     }
+    ArcadeBoardArt.decorate(E.board, 'mines');
   }
 
   function input(action) {

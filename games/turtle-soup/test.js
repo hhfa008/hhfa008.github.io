@@ -395,7 +395,13 @@ s.group('脚本与离线约束', function () {
   html.replace(/<script[^>]*\bsrc="([^"]+)"/g, function (_, src) { srcs.push(src); });
   s.eq('脚本均为同源', srcs, ['soups.js', '../shared/store.js', '../shared/i18n.js', '/games/shared/share.js']);
 
-  var urls = html.match(/https?:\/\/[^\s"'<>)]+/g) || [];
+  // 页面自身的 canonical 是自引用声明，不产生外部请求（bee17bc5f 补 canonical
+  // 后被旧清单误算成第 5 个外部 URL）。只豁免这一条精确地址：任何其它新增外链
+  // 仍然会被下面两条断言拦住。
+  var SELF_URL = /^https:\/\/hhfa008\.github\.io\/games\/turtle-soup\/?$/;
+  var urls = (html.match(/https?:\/\/[^\s"'<>)]+/g) || []).filter(function (url) {
+    return !SELF_URL.test(url);
+  });
   var allowed = urls.filter(function (url) {
     return /^https:\/\/cdn\.jsdelivr\.net\/npm\/@mlc-ai\/web-llm@0\.2\.87\//.test(url) ||
       /^https:\/\/cdn\.jsdelivr\.net\/gh\//.test(url) ||

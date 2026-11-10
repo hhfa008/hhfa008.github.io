@@ -44,6 +44,7 @@ var I18N = {
       if (Math.random() > 0.7) {
         cell.classList.add('mole');
         cell.dataset.mole = 'up';
+        cell.appendChild(ArcadeReactionArt.sprite('mole'));
       }
       E.board.appendChild(cell);
     }

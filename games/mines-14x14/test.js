@@ -7,4 +7,5 @@ var run = require('../shared/arcade/tests/minesweeper.js');
 var params = {"rows":14,"cols":14,"mines":28};
 run(kit.create(params), params, s);
 require('../shared/arcade/tests/terminal.js').check("mines-14x14", s);
+require('../shared/arcade/tests/art.js').check('mines-14x14', 'mines', s);
 s.done();

@@ -53,6 +53,7 @@ var I18N = {
     if (S.timeLeft > 20) {
       E.board.style.backgroundColor = '#118ab2';
     }
+    ArcadeReactionArt.ensure(E.board, 'target');
 
     if (S.over) {
       E.overlay.hidden = false;

@@ -7,4 +7,5 @@ var run = require('../shared/arcade/tests/slide2048.js');
 var params = {"n":12};
 run(kit.create(params), params, s);
 require('../shared/arcade/tests/terminal.js').check("2048-12", s);
+require('../shared/arcade/tests/art.js').check('2048-12', '2048', s);
 s.done();

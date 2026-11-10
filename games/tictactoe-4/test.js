@@ -7,4 +7,5 @@ var run = require('../shared/arcade/tests/tictactoe.js');
 var params = {"n":4,"ai":true};
 run(kit.create(params), params, s);
 require('../shared/arcade/tests/terminal.js').check("tictactoe-4", s);
+require('../shared/arcade/tests/art.js').check('tictactoe-4', 'tictactoe', s);
 s.done();

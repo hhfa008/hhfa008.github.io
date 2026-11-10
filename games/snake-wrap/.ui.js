@@ -63,6 +63,7 @@ var I18N = {
       E.overlayText.textContent = status === 'won' ? 'Congratulations!' : status === 'lost' ? 'Game over!' : 'It\'s a draw!';
       E.overlay.hidden = false;
     }
+    ArcadeBoardArt.decorate(E.board, 'snake');
   }
 
   function input(action) {

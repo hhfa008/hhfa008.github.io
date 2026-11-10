@@ -7,4 +7,5 @@ var run = require('../shared/arcade/tests/lights-out.js');
 var params = {"n":9};
 run(kit.create(params), params, s);
 require('../shared/arcade/tests/terminal.js').check("lights-9", s);
+require('../shared/arcade/tests/art.js').check('lights-9', 'lights', s);
 s.done();

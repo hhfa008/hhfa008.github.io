@@ -222,7 +222,10 @@ async function main() {
     eq('leaderboard 200', board.status, 200);
     ok('leaderboard has finished match', board.body.entries.length >= 1);
     eq('leaderboard game', board.body.entries[0].game, 'love-letter');
-    eq('leaderboard winner matches settlement', board.body.entries[0].winner, lastA.state.winner);
+    // 共享胜利时引擎记 winner=-1，leaderboard 记 winner=null（online-server.mjs
+    // 只在 winners.length===1 时写下标）。两者语义相同，比较前先归一化。
+    var settledWinner = lastA.state.winner === -1 ? null : lastA.state.winner;
+    eq('leaderboard winner matches settlement', board.body.entries[0].winner, settledWinner);
 
     /* ---- rematch ---- */
     var restart = await api('POST', roomRoute(roomId, '/restart'), {

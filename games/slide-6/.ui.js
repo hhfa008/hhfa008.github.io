@@ -67,6 +67,7 @@ var I18N = {
     } else {
       E.overlay.hidden = true;
     }
+    ArcadeBoardArt.decorate(E.board, 'slide');
   }
 
   function input(action) {

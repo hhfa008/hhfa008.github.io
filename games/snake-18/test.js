@@ -7,4 +7,5 @@ var run = require('../shared/arcade/tests/snake.js');
 var params = {"size":18,"wrap":false,"speed":5};
 run(kit.create(params), params, s);
 require('../shared/arcade/tests/terminal.js').check("snake-18", s);
+require('../shared/arcade/tests/art.js').check('snake-18', 'snake', s);
 s.done();

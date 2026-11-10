@@ -51,6 +51,7 @@ var I18N = {
     } else {
       E.overlay.hidden = true;
     }
+    ArcadeBoardArt.decorate(E.board, '2048');
   }
 
   function input(action) {

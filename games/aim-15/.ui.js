@@ -37,6 +37,7 @@ var I18N = {
     E.best.textContent = best;
     E.extra.textContent = S.hits;
     E.board.setAttribute('aria-label', I18N[Arcade.lang()][E.board.dataset.aria]);
+    ArcadeReactionArt.ensure(E.board, 'target');
     if (S.over) {
       E.overlay.hidden = false;
       if (S.running) {

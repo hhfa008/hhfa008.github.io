@@ -7,4 +7,5 @@ var run = require('../shared/arcade/tests/slide-puzzle.js');
 var params = {"n":10};
 run(kit.create(params), params, s);
 require('../shared/arcade/tests/terminal.js').check("slide-10", s);
+require('../shared/arcade/tests/art.js').check('slide-10', 'slide', s);
 s.done();

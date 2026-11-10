@@ -40,6 +40,7 @@ var I18N = {
     if (S.running) {
       var target = document.createElement('div');
       target.className = 'target';
+      target.appendChild(ArcadeReactionArt.sprite('target'));
       target.style.position = 'absolute';
       target.style.left = Math.random() * 300 + 'px';
       target.style.top = Math.random() * 300 + 'px';

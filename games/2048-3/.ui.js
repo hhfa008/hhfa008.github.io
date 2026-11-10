@@ -68,6 +68,7 @@ var I18N = {
     } else {
       showOverlay('none');
     }
+    ArcadeBoardArt.decorate(E.board, '2048');
   }
 
   function input(action) {

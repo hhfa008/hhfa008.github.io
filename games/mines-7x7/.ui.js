@@ -86,6 +86,7 @@ var I18N = {
     } else {
       E.overlay.hidden = true;
     }
+    ArcadeBoardArt.decorate(E.board, 'mines');
   }
 
   function input(action) {

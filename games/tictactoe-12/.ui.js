@@ -65,6 +65,7 @@ var I18N = {
     } else {
       E.overlay.hidden = true;
     }
+    ArcadeBoardArt.decorate(E.board, 'tictactoe');
   }
 
   function input(action) {
