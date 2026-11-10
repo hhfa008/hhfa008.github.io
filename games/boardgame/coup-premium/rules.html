@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1a0509">
+<meta name="description" content="政变 Coup 完整中文规则：15 张身份牌、2–6 人、七大行动、挑战、阻挡、阻挡挑战、弃牌、交换、牌堆耗尽重洗与淘汰胜负。">
+<title>政变 · COUP 完整规则｜未来官僚权谋</title>
+<style>
+  :root {
+    --ink: #f4e8cd; --dim: #d9c6a2; --muted: #ae9672;
+    --brass: #cda756; --line: rgba(205,167,86,.26); --danger: #c9604f; --good: #8cbfa0;
+    --serif: "Songti SC", "STSong", "Noto Serif SC", serif;
+    --sans: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    min-height: 100dvh; color: var(--ink); font-family: var(--serif); font-weight: 700;
+    overflow-x: hidden;
+    background:
+      radial-gradient(ellipse at 50% -10%, rgba(118,28,42,.55), transparent 58%),
+      linear-gradient(160deg, #160307, #0d0205 60%, #1b050b);
+  }
+  body::before {
+    content: ""; position: fixed; inset: 0;
+    background-image: url("../../assets/art/premium/coup/velvet.webp");
+    background-size: cover; background-position: center;
+    opacity: .22; mix-blend-mode: soft-light; pointer-events: none;
+  }
+  .wrap {
+    position: relative; z-index: 1; width: min(900px, 100%); margin: 0 auto;
+    padding: max(14px, env(safe-area-inset-top)) 14px max(24px, env(safe-area-inset-bottom));
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 4px 2px 12px; border-bottom: 1px solid var(--line); }
+  .brand { display: flex; align-items: center; gap: 11px; }
+  .seal { width: 46px; height: 46px; flex: none; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 50%; color: var(--brass); background: rgba(20,4,8,.6); }
+  .seal svg { width: 26px; height: 26px; }
+  h1 { margin: 0; font-size: 25px; letter-spacing: .14em; color: var(--brass); line-height: 1.1; }
+  h1 small { display: block; margin-top: 4px; font-family: var(--sans); font-size: 12px; letter-spacing: .24em; color: var(--dim); }
+  .top nav { display: flex; gap: 8px; flex-wrap: wrap; }
+  .top a {
+    min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center;
+    padding: 0 13px; border: 1px solid var(--line); border-radius: 6px; text-decoration: none;
+    background: linear-gradient(180deg, rgba(74,15,25,.62), rgba(24,6,11,.8));
+    color: var(--ink); font-size: 14px; letter-spacing: .08em;
+  }
+  .top a:hover { border-color: var(--brass); }
+  :focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+  .panel {
+    position: relative; border: 1px solid var(--line); border-radius: 10px;
+    background: linear-gradient(180deg, rgba(69,17,28,.5), rgba(18,5,9,.92));
+    box-shadow: 0 18px 44px rgba(0,0,0,.42), inset 0 1px 0 rgba(244,232,205,.05);
+    padding: 18px 18px 16px;
+  }
+  .panel::before, .panel::after { content: ""; position: absolute; width: 12px; height: 12px; border-color: var(--brass); opacity: .5; pointer-events: none; }
+  .panel::before { top: 5px; left: 5px; border-top: 1px solid; border-left: 1px solid; }
+  .panel::after { bottom: 5px; right: 5px; border-bottom: 1px solid; border-right: 1px solid; }
+  .lede { font-family: var(--sans); font-size: 15px; font-weight: 400; line-height: 1.8; color: var(--dim); margin: 0; }
+  .lede strong { color: var(--brass); }
+  h2 { margin: 4px 0 10px; font-size: 22px; letter-spacing: .1em; color: var(--brass); }
+  h3 { margin: 18px 0 7px; font-size: 17px; color: var(--ink); letter-spacing: .06em; }
+  p, li { font-family: var(--sans); font-size: 14px; font-weight: 400; line-height: 1.8; color: var(--dim); }
+  p { margin: 7px 0; }
+  ul, ol { margin: 6px 0 8px; padding-left: 20px; }
+  li { margin: 3px 0; }
+  strong { color: var(--ink); font-weight: 700; }
+  em { color: var(--brass); font-style: normal; font-weight: 700; }
+  .roles { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 8px; margin: 10px 0 4px; }
+  .role { padding: 10px 6px; border: 1px solid var(--line); border-radius: 7px; text-align: center; background: rgba(14,3,7,.5); }
+  .role svg { width: 28px; height: 28px; color: var(--brass); display: block; margin: 0 auto 4px; }
+  .role b { display: block; font-size: 14px; color: var(--ink); }
+  .role span { display: block; font-family: var(--sans); font-size: 12px; font-weight: 400; color: var(--muted); margin-top: 3px; }
+  .table-wrap { width: 100%; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-family: var(--sans); font-size: 13px; font-weight: 400; margin: 8px 0; min-width: 560px; }
+  th, td { text-align: left; padding: 8px 7px; border-bottom: 1px solid rgba(205,167,86,.13); vertical-align: top; }
+  th { color: var(--brass); font-weight: 700; font-size: 12px; letter-spacing: .05em; }
+  td b { color: var(--ink); }
+  .cost { color: var(--danger); white-space: nowrap; }
+  .chip { display: inline-block; padding: 1px 7px; border: 1px solid var(--line); border-radius: 999px; font-size: 12px; color: var(--brass); margin: 1px 4px 1px 0; white-space: nowrap; }
+  .callout { border-left: 2px solid var(--brass); background: rgba(205,167,86,.06); padding: 9px 12px; margin: 10px 0; border-radius: 0 6px 6px 0; }
+  .callout p { margin: 2px 0; }
+  .faq details { border-bottom: 1px solid rgba(205,167,86,.12); padding: 7px 0; }
+  .faq summary { cursor: pointer; font-family: var(--serif); font-size: 15px; color: var(--ink); min-height: 38px; display: flex; align-items: center; }
+  .faq summary::marker { color: var(--brass); }
+  .faq p { margin: 5px 0 2px; }
+  .sources { font-family: var(--sans); font-size: 13px; font-weight: 400; color: var(--muted); line-height: 1.8; }
+  .sources a { color: var(--brass); text-decoration: underline; text-underline-offset: 3px; }
+  .sources li { margin: 5px 0; }
+  .footer { text-align: center; font-family: var(--sans); font-size: 12px; font-weight: 400; color: var(--muted); padding-top: 4px; }
+  .cta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .cta a { min-height: 46px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 0 18px; border: 1px solid var(--line); border-radius: 6px; text-decoration: none; color: var(--ink); font-size: 15px; letter-spacing: .08em; background: rgba(20,5,9,.7); }
+  .cta a.primary { border-color: var(--brass); color: #241106; background: linear-gradient(180deg, #d9b96d, #a87f34); }
+  .cta a:hover { border-color: var(--brass); }
+  @media (max-width: 640px) {
+    .roles { grid-template-columns: repeat(3, minmax(0,1fr)); }
+    .panel { padding: 15px 12px 14px; }
+    h1 { font-size: 22px; }
+    h2 { font-size: 20px; }
+  }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; } }
+</style>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/coup-premium/rules.html">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <span class="seal" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17h18l-1.6-8-4.4 3.4L12 5 9 12.4 4.6 9z"/><path d="M5 20h14"/></svg>
+      </span>
+      <h1>政变 · 规则<small>COUP · RULES</small></h1>
+    </div>
+    <nav aria-label="页面导航">
+      <a href="index.html">牌桌</a>
+      <a href="online.html">联机</a>
+    </nav>
+  </header>
+
+  <article class="panel">
+    <h2 id="overview">概览</h2>
+    <p class="lede">《政变（Coup）》是一款<strong>2–6 人</strong>的隐藏身份与诈称桌游。每名玩家拥有 <strong>2 张面朝下的身份牌</strong>与 <strong>2 枚金币</strong>；15 张身份牌由五种角色各 3 张组成。玩家轮流执行七种行动之一，可以宣称自己拥有某角色来获得能力——<strong>但你不必真的拥有它</strong>。任何人可以挑战你的宣称；被拆穿就失去一张身份。两张身份都翻开即被淘汰，最后存活者获胜。</p>
+    <div class="roles" aria-label="五种角色">
+      <div class="role"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17.5h18l-1.7-8.4-4.3 3.3L12 4.6 9 12.4 4.7 9.1z"/><path d="M5.2 20.4h13.6"/></svg><b>公爵 Duke</b><span>征税 · 阻挡外援</span></div>
+      <div class="role"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12.2 3.2 14 6.1 13 14.2h-2L10 6.1z"/><path d="M8.2 14.4h7.6"/><path d="M12 14.4v5.2"/><circle cx="12" cy="20.6" r="1.1"/></svg><b>刺客 Assassin</b><span>暗杀</span></div>
+      <div class="role"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5.4" r="2.1"/><path d="M12 7.5v12"/><path d="M6.6 11.2h10.8"/><path d="M5 15.2c.3 4 3.1 5.2 7 5.2s6.7-1.2 7-5.2"/></svg><b>队长 Captain</b><span>偷取 · 阻挡偷取</span></div>
+      <div class="role"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4.5h10v15H7z"/><path d="M5.2 4.5c0-1 .8-1.8 1.8-1.8h9.8c1 0 1.8.8 1.8 1.8v1H5.2z"/><path d="M5.2 19.5h13.6"/><path d="M9.5 8.2h5M9.5 11.2h5M9.5 14.2h3.4"/></svg><b>大使 Ambassador</b><span>交换 · 阻挡偷取</span></div>
+      <div class="role"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.2 8.3c2.6-1.7 5-2.1 7.8-2.1s5.2.4 7.8 2.1c.4 4.7-2.6 8.6-7.8 9.4-5.2-.8-8.2-4.7-7.8-9.4z"/><path d="M7.4 9.4c1.3.7 2.9.9 4.6.9s3.3-.2 4.6-.9"/><path d="M3.4 7.5 1.9 5.4M20.6 7.5l1.5-2.1"/></svg><b>女伯爵 Contessa</b><span>阻挡暗杀</span></div>
+    </div>
+  </article>
+
+  <section class="panel">
+    <h2 id="setup">组件与开局</h2>
+    <ul>
+      <li><strong>15 张身份牌</strong>：公爵、刺客、队长、大使、女伯爵各 3 张。</li>
+      <li><strong>金币</strong>：本高级版以黄铜金币表示，开局每人 2 枚。</li>
+      <li>洗匀身份牌，每人发 <strong>2 张面朝下</strong> 的身份牌；其余作为牌堆。</li>
+      <li>每人 2 枚金币。由一名玩家开始（本实现固定先手为 0 号席位）。</li>
+      <li>你的两张身份只有你自己知道；你可以宣称拥有任何角色，即使并没有。</li>
+    </ul>
+    <div class="callout"><p><strong>目标：</strong>成为最后一名至少保留一张面朝下身份的玩家。两张身份都被翻开即淘汰。</p></div>
+  </section>
+
+  <section class="panel">
+    <h2 id="actions">七大行动</h2>
+    <p>每回合选择一项行动。宣称类行动会进入挑战窗口；收入、外援与政变不会被挑战。</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>行动</th><th>费用</th><th>效果</th><th>宣称</th><th>可否挑战 / 阻挡</th></tr></thead>
+        <tbody>
+          <tr><td><b>收入 Income</b></td><td>0</td><td>获得 1 枚金币。</td><td>无</td><td>不可挑战；不可阻挡</td></tr>
+          <tr><td><b>外援 Foreign Aid</b></td><td>0</td><td>获得 2 枚金币。</td><td>无（阻挡者宣称公爵）</td><td>不可挑战；<em>任何其他玩家</em>可宣称公爵阻挡</td></tr>
+          <tr><td><b>政变 Coup</b></td><td class="cost">7 金币</td><td>目标直接失去 1 张身份。</td><td>无</td><td>不可挑战；不可阻挡</td></tr>
+          <tr><td><b>征税 Tax</b></td><td>0</td><td>获得 3 枚金币。</td><td>公爵</td><td>可挑战；不可阻挡</td></tr>
+          <tr><td><b>暗杀 Assassinate</b></td><td class="cost">3 金币</td><td>目标失去 1 张身份。</td><td>刺客</td><td>可挑战；目标可宣称女伯爵阻挡</td></tr>
+          <tr><td><b>偷取 Steal</b></td><td>0</td><td>从目标处偷取最多 2 枚金币。</td><td>队长</td><td>可挑战；目标可宣称队长或大使阻挡</td></tr>
+          <tr><td><b>交换 Exchange</b></td><td>0</td><td>抽 2 张，保留 2 张，其余洗回牌堆。</td><td>大使</td><td>可挑战；不可阻挡</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <h3>目标与费用</h3>
+    <ul>
+      <li>政变、暗杀、偷取必须选择一名<strong>存活的对手</strong>。</li>
+      <li>政变与暗杀的费用在<strong>宣称行动时立即支付</strong>；即使之后被挑战或阻挡，金币也不退回。</li>
+      <li>偷取最多拿 2 枚；目标只有 1 枚就只拿 1 枚，目标没有金币则拿 0 枚。</li>
+      <li>交换抽 2 张后，从“原手牌 + 2 张”共 4 张中保留 2 张，其余洗回牌堆。</li>
+    </ul>
+  </section>
+
+  <section class="panel">
+    <h2 id="challenge">挑战</h2>
+    <p>当玩家宣称一个角色（征税/暗杀/偷取/交换）后，按顺时针依次询问其他存活玩家是否挑战。<strong>一次行动最多一名挑战者</strong>，一旦有人挑战，挑战窗口立即结束。</p>
+    <h3>挑战结果</h3>
+    <ul>
+      <li><strong>宣称者真有该角色：</strong>亮出该身份牌，随后把它洗回牌堆并补抽 1 张；挑战者失去 1 张身份。行动继续进行。</li>
+      <li><strong>宣称者没有该角色：</strong>宣称者失去 1 张身份，行动取消。暗杀已支付的 3 枚金币不退。</li>
+    </ul>
+    <div class="callout"><p>宣称者亮牌后不是把牌留在桌上，而是洗回牌堆再补抽；因此同一角色仍可能再次出现。</p></div>
+  </section>
+
+  <section class="panel">
+    <h2 id="block">阻挡与阻挡挑战</h2>
+    <p>某些行动可被阻挡。阻挡者也要宣称一个角色；阻挡本身同样可能是诈称。</p>
+    <ul>
+      <li><strong>外援：</strong>任何其他玩家可以宣称<em>公爵</em>阻挡。按顺序询问，先宣布阻挡者生效。</li>
+      <li><strong>暗杀：</strong>目标可以宣称<em>女伯爵</em>阻挡。</li>
+      <li><strong>偷取：</strong>目标可以宣称<em>队长</em>或<em>大使</em>阻挡。</li>
+    </ul>
+    <h3>行动者是否挑战阻挡</h3>
+    <ul>
+      <li>行动者选择<strong>接受阻挡</strong>：行动取消，不产生效果。</li>
+      <li>行动者选择<strong>挑战阻挡</strong>：阻挡者真有该角色，则亮牌、洗回并补抽，行动者失去 1 张身份，行动取消；阻挡者没有该角色，则阻挡者失去 1 张身份，行动继续结算。</li>
+      <li>阻挡挑战只能由<strong>被阻挡的行动者</strong>发起；其他玩家不能替他挑战。</li>
+    </ul>
+  </section>
+
+  <section class="panel">
+    <h2 id="discard">失去身份、淘汰与胜负</h2>
+    <ul>
+      <li>需要失去身份时，从自己<strong>尚未翻开</strong>的身份中选择 1 张翻开；该牌进入弃牌区。</li>
+      <li>当一名玩家的两张身份都已翻开，他立即<strong>被淘汰</strong>，不再行动，也不能再被选为目标。</li>
+      <li>一旦只剩 1 名存活玩家，对局立即结束，该玩家获胜。</li>
+      <li>若一次结算导致多人同时失去身份，按规则顺序逐一处理；只剩一人时立即结束。</li>
+    </ul>
+    <h3>牌堆耗尽</h3>
+    <p>当需要抽牌而牌堆已空时，把<strong>弃牌区</strong>（已翻开失去的身份牌）洗回牌堆，再继续抽牌。补齐后仍不足则按现有牌处理。</p>
+  </section>
+
+  <section class="panel">
+    <h2 id="players">2–6 人规则差异</h2>
+    <p>核心规则在 2–6 人完全一致，不删减行动、不简化挑战或阻挡。人数只影响：</p>
+    <ul>
+      <li>开局牌堆张数：<strong>15 − 2 × 人数</strong>（2 人 11 张、3 人 9 张、4 人 7 张、5 人 5 张、6 人 3 张）。</li>
+      <li>挑战与阻挡的询问顺序：按席位顺时针。</li>
+      <li>多人局中，外援可能被多名玩家依次考虑阻挡；但一旦有人阻挡，行动进入阻挡挑战，其他玩家不再阻挡。</li>
+      <li>联机空位由 AI 补足；AI 会诈称、挑战与阻挡，困难 AI 更倾向于保留女伯爵与公爵。</li>
+    </ul>
+    <div class="cta"><a class="primary" href="index.html">进入单人牌桌</a><a href="online.html">创建联机房间</a></div>
+  </section>
+
+  <section class="panel faq">
+    <h2 id="faq">常见问题 FAQ</h2>
+    <details><summary>收入可以被挑战吗？</summary><p>不能。收入没有角色宣称，不可挑战也不可阻挡，直接获得 1 枚金币。</p></details>
+    <details><summary>外援可以被谁阻挡？</summary><p>任何其他存活玩家都可以宣称公爵阻挡。按顺时针顺序询问；一旦有人阻挡，行动进入阻挡挑战。</p></details>
+    <details><summary>政变可以被阻挡或挑战吗？</summary><p>不能。支付 7 枚金币后，目标直接失去 1 张身份。政变是唯一不可被任何方式阻止的进攻行动。</p></details>
+    <details><summary>暗杀被挑战成功，3 枚金币会退回吗？</summary><p>不会。暗杀费用在宣称时已支付；即使被挑战拆穿或目标用女伯爵阻挡，金币都不退回。</p></details>
+    <details><summary>一次行动可以被多名玩家挑战吗？</summary><p>不能。按顺序询问，第一名选择挑战的玩家成为唯一挑战者，其他玩家不再挑战。</p></details>
+    <details><summary>阻挡可以被其他玩家挑战吗？</summary><p>只有被阻挡的行动者可以决定是否挑战阻挡。其他玩家不能替他挑战。</p></details>
+    <details><summary>亮出的身份牌会留在桌上吗？</summary><p>挑战成功亮牌时，宣称者把该牌洗回牌堆并补抽 1 张；只有因失去身份而翻开的牌才进入弃牌区。</p></details>
+    <details><summary>牌堆耗尽怎么办？</summary><p>把弃牌区的牌洗回牌堆，然后继续抽牌。洗牌使用可复现的 seed，联机时由服务端统一执行。</p></details>
+    <details><summary>2 人局需要特殊规则吗？</summary><p>不需要。2 人局使用同样的 15 张牌、每人 2 张身份与 2 枚金币；牌堆剩 11 张。最后存活者获胜。</p></details>
+    <details><summary>被淘汰的玩家还能被偷取或暗杀吗？</summary><p>不能。淘汰玩家不再行动，也不能被选为目标；其已翻开的身份牌进入弃牌区，可在牌堆耗尽时洗回。</p></details>
+  </section>
+
+  <section class="panel">
+    <h2 id="sources">规则来源</h2>
+    <ul class="sources">
+      <li>官方规则文本（Indie Boards &amp; Cards, Coup）：<a href="https://www.indieboardsandcards.com/coup.php" rel="noopener noreferrer">indieboardsandcards.com/coup.php</a></li>
+      <li>官方规则文字整理（UltraBoardGames）：<a href="https://ultraboardgames.com/coup/game-rules.php" rel="noopener noreferrer">ultraboardgames.com/coup/game-rules.php</a></li>
+      <li>B 站：《【新德里玩桌游】桌游《政变（Coup）》教学+实录》<a href="https://www.bilibili.com/video/BV1pW411Y7kr" rel="noopener noreferrer">BV1pW411Y7kr</a></li>
+      <li>B 站：《你有公爵? 他也有公爵? 政变: 规则+游玩体验分享》<a href="https://www.bilibili.com/video/BV1ja411575N" rel="noopener noreferrer">BV1ja411575N</a></li>
+    </ul>
+    <p class="sources">本页为本地高级版的完整中文规则整理；角色徽记为代码合成 SVG，不使用任何人脸素材。规则以官方英文规则书与上述来源为准，页面仅作教学与实现说明。</p>
+  </section>
+
+  <div class="footer">政变 · COUP PREMIUM · 2–6 人 · 15 张身份 · 零外链</div>
+</div>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "政变 Coup 完整中文规则：15 张身份、挑战、阻挡与交换",
+  "description": "政变（Coup）2–6 人完整规则，包含七种行动、挑战、阻挡、阻挡挑战、失去身份、牌堆耗尽重洗与最后存活者获胜。",
+  "inLanguage": "zh-CN",
+  "datePublished": "2026-11-10",
+  "dateModified": "2026-11-10",
+  "author": {
+    "@type": "Organization",
+    "name": "Coup Premium 本地高级版"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Coup Premium 本地高级版"
+  },
+  "about": {
+    "@type": "Game",
+    "name": "Coup",
+    "alternateName": "政变",
+    "numberOfPlayers": {
+      "@type": "QuantitativeValue",
+      "minValue": 2,
+      "maxValue": 6
+    }
+  },
+  "citation": [
+    "https://www.indieboardsandcards.com/coup.php",
+    "https://ultraboardgames.com/coup/game-rules.php",
+    "https://www.bilibili.com/video/BV1pW411Y7kr",
+    "https://www.bilibili.com/video/BV1ja411575N"
+  ],
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "games/boardgame/coup-premium/rules.html"
+  }
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "inLanguage": "zh-CN",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "收入可以被挑战吗？",
+      "acceptedAnswer": { "@type": "Answer", "text": "不能。收入没有角色宣称，不可挑战也不可阻挡，直接获得 1 枚金币。" }
+    },
+    {
+      "@type": "Question",
+      "name": "外援可以被谁阻挡？",
+      "acceptedAnswer": { "@type": "Answer", "text": "任何其他存活玩家都可以宣称公爵阻挡。按顺时针顺序询问；一旦有人阻挡，行动进入阻挡挑战。" }
+    },
+    {
+      "@type": "Question",
+      "name": "政变可以被阻挡或挑战吗？",
+      "acceptedAnswer": { "@type": "Answer", "text": "不能。支付 7 枚金币后，目标直接失去 1 张身份。政变是唯一不可被任何方式阻止的进攻行动。" }
+    },
+    {
+      "@type": "Question",
+      "name": "暗杀被挑战成功，3 枚金币会退回吗？",
+      "acceptedAnswer": { "@type": "Answer", "text": "不会。暗杀费用在宣称时已支付；即使被挑战拆穿或目标用女伯爵阻挡，金币都不退回。" }
+    },
+    {
+      "@type": "Question",
+      "name": "一次行动可以被多名玩家挑战吗？",
+      "acceptedAnswer": { "@type": "Answer", "text": "不能。按顺序询问，第一名选择挑战的玩家成为唯一挑战者，其他玩家不再挑战。" }
+    },
+    {
+      "@type": "Question",
+      "name": "阻挡可以被其他玩家挑战吗？",
+      "acceptedAnswer": { "@type": "Answer", "text": "只有被阻挡的行动者可以决定是否挑战阻挡。其他玩家不能替他挑战。" }
+    },
+    {
+      "@type": "Question",
+      "name": "亮出的身份牌会留在桌上吗？",
+      "acceptedAnswer": { "@type": "Answer", "text": "挑战成功亮牌时，宣称者把该牌洗回牌堆并补抽 1 张；只有因失去身份而翻开的牌才进入弃牌区。" }
+    },
+    {
+      "@type": "Question",
+      "name": "牌堆耗尽怎么办？",
+      "acceptedAnswer": { "@type": "Answer", "text": "把弃牌区的牌洗回牌堆，然后继续抽牌。洗牌使用可复现的 seed，联机时由服务端统一执行。" }
+    },
+    {
+      "@type": "Question",
+      "name": "2 人局需要特殊规则吗？",
+      "acceptedAnswer": { "@type": "Answer", "text": "不需要。2 人局使用同样的 15 张牌、每人 2 张身份与 2 枚金币；牌堆剩 11 张。最后存活者获胜。" }
+    },
+    {
+      "@type": "Question",
+      "name": "被淘汰的玩家还能被偷取或暗杀吗？",
+      "acceptedAnswer": { "@type": "Answer", "text": "不能。淘汰玩家不再行动，也不能被选为目标；其已翻开的身份牌进入弃牌区，可在牌堆耗尽时洗回。" }
+    }
+  ]
+}
+</script>
+</body>
+</html>

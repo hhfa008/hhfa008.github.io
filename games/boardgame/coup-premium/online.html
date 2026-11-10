@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1a0509">
+<meta name="description" content="政变 Coup 联机大厅：创建 2–6 人房间、邀请好友、密码房、AI 补位、断线重连与超时托管。">
+<title>政变 · 联机大厅｜COUP</title>
+<style>
+  :root {
+    --ink: #f4e8cd; --ink-dim: #d9c6a2; --muted: #ae9672;
+    --brass: #cda756; --line: rgba(205,167,86,.26); --panel: rgba(26,8,13,.9);
+    --danger: #c9604f; --good: #8cbfa0;
+    --serif: "Songti SC", "STSong", "Noto Serif SC", serif;
+    --sans: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    min-height: 100dvh; color: var(--ink); font-family: var(--serif); font-weight: 700;
+    overflow-x: hidden;
+    background:
+      radial-gradient(ellipse at 50% -10%, rgba(118,28,42,.55), transparent 58%),
+      linear-gradient(160deg, #160307, #0d0205 60%, #1b050b);
+  }
+  body::before {
+    content: ""; position: fixed; inset: 0;
+    background-image: url("../../assets/art/premium/coup/velvet.webp");
+    background-size: cover; background-position: center;
+    opacity: .24; mix-blend-mode: soft-light; pointer-events: none;
+  }
+  .wrap {
+    position: relative; z-index: 1;
+    width: min(760px, 100%);
+    margin: 0 auto;
+    padding: max(14px, env(safe-area-inset-top)) 12px max(20px, env(safe-area-inset-bottom));
+    display: flex; flex-direction: column; gap: 14px;
+    min-height: 100dvh;
+  }
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 4px 2px 12px; border-bottom: 1px solid var(--line); }
+  .brand { display: flex; align-items: center; gap: 11px; }
+  .seal {
+    width: 46px; height: 46px; display: grid; place-items: center; border: 1px solid var(--line);
+    border-radius: 50%; color: var(--brass); background: rgba(20,4,8,.6);
+  }
+  .seal svg { width: 26px; height: 26px; }
+  h1 { margin: 0; font-size: 24px; letter-spacing: .14em; color: var(--brass); line-height: 1.1; }
+  h1 small { display: block; margin-top: 4px; font-family: var(--sans); font-size: 12px; letter-spacing: .24em; color: var(--ink-dim); font-weight: 700; }
+  .top a, .top button {
+    min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center;
+    padding: 0 14px; border: 1px solid var(--line); border-radius: 6px;
+    background: linear-gradient(180deg, rgba(74,15,25,.62), rgba(24,6,11,.8));
+    color: var(--ink); font-family: var(--serif); font-size: 14px; letter-spacing: .08em; text-decoration: none;
+    cursor: pointer; -webkit-appearance: none; appearance: none;
+  }
+  .top a:hover, .top button:hover { border-color: var(--brass); }
+  :focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+  .panel {
+    position: relative; border: 1px solid var(--line); border-radius: 10px;
+    background: linear-gradient(180deg, rgba(69,17,28,.5), rgba(18,5,9,.92));
+    box-shadow: 0 18px 44px rgba(0,0,0,.45), inset 0 1px 0 rgba(244,232,205,.05);
+    padding: 16px 14px;
+  }
+  .panel::before, .panel::after { content: ""; position: absolute; width: 12px; height: 12px; border-color: var(--brass); opacity: .55; pointer-events: none; }
+  .panel::before { top: 5px; left: 5px; border-top: 1px solid; border-left: 1px solid; }
+  .panel::after { bottom: 5px; right: 5px; border-bottom: 1px solid; border-right: 1px solid; }
+  h2 { margin: 0 0 4px; font-size: 19px; letter-spacing: .12em; color: var(--brass); }
+  .sub { margin: 0 0 12px; font-family: var(--sans); font-size: 13px; font-weight: 400; color: var(--muted); line-height: 1.55; }
+  .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: start; }
+  label { display: block; font-family: var(--sans); font-size: 13px; color: var(--ink-dim); margin: 10px 0 5px; font-weight: 400; }
+  input, select {
+    width: 100%; min-height: 46px; padding: 8px 11px;
+    border: 1px solid var(--line); border-radius: 6px;
+    background: rgba(10,2,5,.55); color: var(--ink);
+    font-family: var(--sans); font-size: 15px; font-weight: 400;
+    -webkit-appearance: none; appearance: none;
+  }
+  input::placeholder { color: rgba(174,150,114,.65); }
+  input:focus, select:focus { border-color: var(--brass); outline: none; }
+  .seg-row { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 4px; }
+  .seg {
+    min-height: 46px; min-width: 46px; padding: 0 12px;
+    border: 1px solid var(--line); border-radius: 6px;
+    background: rgba(20,5,9,.7); color: var(--ink-dim);
+    font-family: var(--sans); font-size: 14px; cursor: pointer; -webkit-appearance: none; appearance: none;
+  }
+  .seg.sel { border-color: var(--brass); color: var(--brass); background: rgba(205,167,86,.12); }
+  .btn {
+    min-height: 48px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center;
+    padding: 0 18px; border: 1px solid var(--line); border-radius: 6px;
+    background: linear-gradient(180deg, rgba(73,18,29,.7), rgba(24,6,11,.9));
+    color: var(--ink); font-family: var(--serif); font-size: 15px; letter-spacing: .08em;
+    cursor: pointer; -webkit-appearance: none; appearance: none;
+  }
+  .btn.primary { border-color: var(--brass); color: #241106; background: linear-gradient(180deg, #d9b96d, #a87f34); }
+  .btn:hover { border-color: var(--brass); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .actions { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .note { font-family: var(--sans); font-size: 12px; font-weight: 400; color: var(--muted); line-height: 1.55; margin: 8px 0 0; }
+  .error { color: #ffb3a8; font-family: var(--sans); font-size: 13px; min-height: 18px; margin-top: 8px; }
+  .ok { color: var(--good); }
+  .invite {
+    margin-top: 10px; padding: 9px 11px; border: 1px dashed rgba(205,167,86,.3); border-radius: 6px;
+    font-family: var(--sans); font-size: 13px; font-weight: 400; color: var(--ink-dim);
+    word-break: break-all; background: rgba(10,2,5,.4);
+  }
+  .invite b { color: var(--brass); }
+  .steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+  .step { padding: 9px; border: 1px solid rgba(205,167,86,.16); border-radius: 6px; font-family: var(--sans); font-size: 12px; font-weight: 400; color: var(--muted); line-height: 1.5; }
+  .step b { display: block; color: var(--brass); font-size: 13px; margin-bottom: 3px; }
+  .footer { font-family: var(--sans); font-size: 12px; font-weight: 400; color: var(--muted); text-align: center; padding-top: 4px; }
+  .hidden { display: none !important; }
+  @media (max-width: 620px) {
+    .grid2 { grid-template-columns: minmax(0, 1fr); }
+    .steps { grid-template-columns: minmax(0, 1fr); }
+    h1 { font-size: 22px; }
+    .panel { padding: 14px 11px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+  }
+</style>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/coup-premium/online.html">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <span class="seal" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 17h18l-1.6-8-4.4 3.4L12 5 9 12.4 4.6 9z"/><path d="M5 20h14"/>
+        </svg>
+      </span>
+      <h1>联机大厅<small>COUP · ROOMS</small></h1>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <a href="index.html">单人牌桌</a>
+      <a href="rules.html">规则</a>
+    </div>
+  </header>
+
+  <section class="panel">
+    <h2>政变 · 2–6 人房间</h2>
+    <p class="sub">创建房间后把邀请链接发给朋友；空位会由 AI 补足。房主开始对局，服务端权威判定每个行动。断线可重连，超时会自动托管。</p>
+    <div class="steps">
+      <div class="step"><b>1 · 建房</b>房主创建 2–6 人房间，可设密码。</div>
+      <div class="step"><b>2 · 邀请</b>复制邀请链接，或直接分享房间码。</div>
+      <div class="step"><b>3 · 开局</b>至少 2 人，空位 AI 补足，最后存活者胜。</div>
+    </div>
+  </section>
+
+  <div class="grid2">
+    <section class="panel">
+      <h2>创建房间</h2>
+      <p class="sub">你是房主。房间码与邀请链接只保存在本机内存中，不上传任何个人信息。</p>
+      <label for="hostName">你的昵称 / 标识</label>
+      <input id="hostName" maxlength="24" autocomplete="off" placeholder="例如：铁幕书记官">
+      <label for="hostSeats">席位数量</label>
+      <select id="hostSeats">
+        <option value="2">2 人</option>
+        <option value="3">3 人</option>
+        <option value="4" selected>4 人</option>
+        <option value="5">5 人</option>
+        <option value="6">6 人</option>
+      </select>
+      <label for="hostPassword">房间密码（可选，4–64 字符）</label>
+      <input id="hostPassword" type="password" maxlength="64" autocomplete="new-password" placeholder="留空则公开房间">
+      <div class="actions">
+        <button class="btn primary" id="createBtn" type="button">创建并进入</button>
+      </div>
+      <div class="error" id="createError" role="status" aria-live="polite"></div>
+      <p class="note">房间使用共享房间状态机：邀请 token 单次有效，密码连续错误会锁定 60 秒。</p>
+    </section>
+
+    <section class="panel">
+      <h2>加入房间</h2>
+      <p class="sub">输入房间码；如果收到的是邀请链接，房间码与邀请令牌会自动填入。</p>
+      <label for="joinCode">房间码 / 房间 ID</label>
+      <input id="joinCode" maxlength="80" autocomplete="off" placeholder="例如：ABC234">
+      <label for="joinName">你的昵称 / 标识</label>
+      <input id="joinName" maxlength="24" autocomplete="off" placeholder="例如：夜莺">
+      <label for="joinPassword">房间密码（如需要）</label>
+      <input id="joinPassword" type="password" maxlength="64" autocomplete="current-password" placeholder="没有密码可留空">
+      <input id="inviteToken" type="hidden" autocomplete="off">
+      <div class="actions">
+        <button class="btn primary" id="joinBtn" type="button">加入房间</button>
+      </div>
+      <div class="error" id="joinError" role="status" aria-live="polite"></div>
+      <div class="invite hidden" id="inviteBox"></div>
+      <p class="note">加入后会进入同一张牌桌；房主开始对局前请稍候。刷新会通过房间会话自动重连。</p>
+    </section>
+  </div>
+
+  <div class="footer">零外链 · 本地材质 · 服务端权威联机 · 断线重连 · 超时托管</div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  function $(id) { return document.getElementById(id); }
+  function randomId(prefix) {
+    var bytes = new Uint8Array(6);
+    if (window.crypto && window.crypto.getRandomValues) window.crypto.getRandomValues(bytes);
+    else for (var i = 0; i < bytes.length; i += 1) bytes[i] = Math.floor(Math.random() * 256);
+    return prefix + '-' + Array.prototype.map.call(bytes, function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+  }
+  function fail(node, text) { node.textContent = text; node.classList.remove('ok'); }
+  function query(name) { return new URLSearchParams(location.search).get(name); }
+  function enter(roomId, token, playerId) {
+    location.href = 'index.html?room=' + encodeURIComponent(roomId) +
+      '&session=' + encodeURIComponent(token) + '&player=' + encodeURIComponent(playerId);
+  }
+
+  var invitePrefill = query('invite');
+  var roomPrefill = query('room');
+  if (roomPrefill) $('joinCode').value = roomPrefill;
+  if (invitePrefill) {
+    $('inviteToken').value = invitePrefill;
+    $('inviteBox').classList.remove('hidden');
+    $('inviteBox').innerHTML = '已载入邀请令牌：<b>' + invitePrefill.slice(0, 10) + '…</b>，仅可使用一次。';
+  }
+
+  $('createBtn').addEventListener('click', function () {
+    var name = ($('hostName').value || '').trim();
+    var password = $('hostPassword').value || null;
+    if (!name) { fail($('createError'), '请先填写昵称。'); $('hostName').focus(); return; }
+    $('createBtn').disabled = true;
+    fail($('createError'), '正在创建房间…');
+    fetch('/api/rooms', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        playerId: name,
+        maxPlayers: Number($('hostSeats').value),
+        password: password,
+        visibility: password ? 'private' : 'public'
+      })
+    }).then(function (res) { return res.json().then(function (data) { return { status: res.status, data: data }; }); })
+      .then(function (out) {
+        $('createBtn').disabled = false;
+        if (out.status !== 201) {
+          fail($('createError'), (out.data && out.data.error && out.data.error.message) || '创建失败');
+          return;
+        }
+        var data = out.data;
+        sessionStorage.setItem('coup-room', JSON.stringify({
+          roomId: data.roomId, roomCode: data.roomCode, session: data.playerSession,
+          playerId: name, inviteToken: data.inviteToken
+        }));
+        enter(data.roomId, data.playerSession, name);
+      })
+      .catch(function () { $('createBtn').disabled = false; fail($('createError'), '无法连接房间服务器，请从联机服务启动本页。'); });
+  });
+
+  $('joinBtn').addEventListener('click', function () {
+    var code = ($('joinCode').value || '').trim();
+    var name = ($('joinName').value || '').trim();
+    if (!code) { fail($('joinError'), '请填写房间码。'); $('joinCode').focus(); return; }
+    if (!name) { fail($('joinError'), '请填写昵称。'); $('joinName').focus(); return; }
+    $('joinBtn').disabled = true;
+    fail($('joinError'), '正在加入房间…');
+    fetch('/api/rooms/' + encodeURIComponent(code) + '/join', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        playerId: name,
+        password: $('joinPassword').value || null,
+        inviteToken: $('inviteToken').value || null
+      })
+    }).then(function (res) { return res.json().then(function (data) { return { status: res.status, data: data }; }); })
+      .then(function (out) {
+        $('joinBtn').disabled = false;
+        if (out.status !== 200) {
+          fail($('joinError'), (out.data && out.data.error && out.data.error.message) || '加入失败');
+          return;
+        }
+        var data = out.data;
+        enter(data.roomId, data.playerSession, name);
+      })
+      .catch(function () { $('joinBtn').disabled = false; fail($('joinError'), '无法连接房间服务器，请从联机服务启动本页。'); });
+  });
+}());
+</script>
+</body>
+</html>

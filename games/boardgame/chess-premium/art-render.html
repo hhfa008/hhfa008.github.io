@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta name="description" content="国际象棋 premium 内部美术合成页：真实棋盘、材质与局面的渲染源。">
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/chess-premium/art-render.html">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="国际象棋 美术合成页：本地生成的素材在浏览器中的渲染预览。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2317130f'/%3E%3Crect x='10' y='10' width='22' height='22' fill='%23e8d3a9'/%3E%3Crect x='32' y='32' width='22' height='22' fill='%23e8d3a9'/%3E%3C/svg%3E">
+<title>国际象棋 · 精品封面合成</title>
+<style>
+  :root{
+    --art-maple:url("../../assets/art/premium/chess/light-maple.webp");
+    --art-walnut:url("../../assets/art/premium/chess/dark-walnut.webp");
+    --art-felt:url("../../assets/art/premium/chess/felt-cloth.webp");
+    --art-edge:url("../../assets/art/premium/chess/board-edge.webp");
+    --serif:"Songti SC","Iowan Old Style","Palatino Linotype",Georgia,serif;
+    --sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB",sans-serif;
+    --ink:#f7eddb;--muted:#cbb695;--gold:#e3b25f;--gold2:#f6d79c;--coral:#d7653f;--mint:#8fd0a8;
+    --light-sq:#e8d3a9;--dark-sq:#6b4a2f;--frame:#3d2717;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:#0a0806;color:var(--ink);font-family:var(--sans);overflow:hidden}
+  body{width:1200px;height:1200px}
+  body[data-shot="og"]{height:630px}
+  body[data-shot="detail1"],body[data-shot="detail2"]{height:800px}
+  .stage{position:relative;width:1200px;height:1200px;overflow:hidden;
+    background:
+      radial-gradient(920px 720px at 8% -6%,rgba(120,82,44,.4),transparent 62%),
+      radial-gradient(820px 680px at 98% 4%,rgba(227,178,95,.16),transparent 60%),
+      linear-gradient(150deg,#1b1510,#0a0806 74%);}
+  .stage::before{content:"";position:absolute;inset:0;background:var(--art-felt) center/cover no-repeat;opacity:.34;filter:saturate(.8) contrast(1.06)}
+  .stage::after{content:"";position:absolute;inset:0;
+    background:
+      repeating-linear-gradient(116deg,rgba(255,255,255,.035) 0 1px,transparent 1px 9px),
+      radial-gradient(circle at 50% 45%,transparent 0 24%,rgba(227,178,95,.08) 25% 25.4%,transparent 26% 44%,rgba(227,178,95,.05) 45% 45.4%,transparent 46%);
+    mix-blend-mode:soft-light;opacity:.8}
+  .frame{position:absolute;inset:24px;border:1px solid rgba(227,178,95,.42);border-radius:30px;z-index:1;
+    box-shadow:inset 0 0 0 7px rgba(227,178,95,.05),0 40px 110px rgba(0,0,0,.55)}
+  .frame::before{content:"";position:absolute;left:0;right:0;top:0;height:9px;border-radius:30px 30px 0 0;
+    background:var(--art-edge) center/cover no-repeat;opacity:.9}
+  .scene{position:absolute;inset:58px;z-index:2;display:none;flex-direction:column;min-height:0}
+  body[data-shot="cover"] .scene-cover,
+  body[data-shot="og"] .scene-og,
+  body[data-shot="detail1"] .scene-detail1,
+  body[data-shot="detail2"] .scene-detail2{display:flex}
+  .topline{display:flex;align-items:flex-start;justify-content:space-between;gap:28px}
+  .brand{display:flex;align-items:center;gap:18px;min-width:0}
+  .seal{width:78px;height:78px;border-radius:18px;border:1px solid rgba(227,178,95,.6);display:grid;place-items:center;
+    background:linear-gradient(150deg,rgba(227,178,95,.22),rgba(227,178,95,.04));flex:0 0 auto;overflow:hidden}
+  .seal svg{width:58px;height:58px;display:block}
+  .kicker{font-size:14px;letter-spacing:5px;color:var(--muted);text-transform:uppercase}
+  .title{font:700 78px/1.03 var(--serif);letter-spacing:2px;margin:7px 0 0;white-space:nowrap}
+  .title em{font-style:normal;color:var(--gold2)}
+  .sub{font-size:19px;color:var(--muted);margin-top:9px;letter-spacing:1.2px}
+  .stats{display:flex;gap:9px;flex-wrap:wrap;justify-content:flex-end;max-width:410px;flex:0 0 auto}
+  .pill{border:1px solid rgba(227,178,95,.34);border-radius:999px;padding:8px 14px;background:rgba(0,0,0,.26);
+    font-size:14px;color:var(--gold2);font-weight:700;white-space:nowrap}
+
+  .hero{flex:1;display:flex;align-items:center;justify-content:center;min-height:0;position:relative;padding:16px 0 10px}
+  .table-glow{position:absolute;width:980px;height:380px;border-radius:50%;background:radial-gradient(ellipse,rgba(0,0,0,.55),transparent 70%);
+    filter:blur(18px);transform:translateY(300px)}
+  .boardframe{position:relative;padding:16px;border-radius:18px;
+    background:linear-gradient(150deg,rgba(255,222,166,.18),rgba(0,0,0,.32)),var(--art-edge) center/cover no-repeat,var(--frame);
+    box-shadow:0 30px 64px rgba(0,0,0,.58),inset 0 1px 0 rgba(255,235,200,.35),inset 0 0 0 1px rgba(0,0,0,.55)}
+  .boardframe::after{content:"";position:absolute;inset:10px;border-radius:9px;pointer-events:none;
+    box-shadow:inset 0 0 0 1px rgba(20,10,4,.68),inset 0 0 24px rgba(0,0,0,.32)}
+  .board{position:relative;display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr);
+    border-radius:6px;overflow:hidden;box-shadow:0 3px 10px rgba(0,0,0,.4)}
+  .scene-cover .board{width:700px;height:700px}
+  .scene-og .board{width:430px;height:430px}
+  .scene-detail2 .board{width:540px;height:540px}
+  .sq{position:relative;min-width:0;min-height:0;overflow:hidden;--sq-color:var(--light-sq);
+    background-color:var(--sq-color);background-image:linear-gradient(var(--sq-color),var(--sq-color)),var(--sq-tex);
+    background-size:100% 100%,800% 800%;background-position:0 0,calc(var(--c) * 100% / 7) calc(var(--r) * 100% / 7);
+    background-blend-mode:multiply,normal}
+  .sq.light{--sq-color:var(--light-sq);--sq-tex:var(--art-maple)}
+  .sq.dark{--sq-color:var(--dark-sq);--sq-tex:var(--art-walnut)}
+  .piece{position:absolute;left:5%;right:5%;top:4%;bottom:3%;z-index:3;display:block;
+    filter:drop-shadow(0 3px 3px rgba(0,0,0,.42))}
+  .piece svg{display:block;width:100%;height:100%;overflow:visible}
+  .piece .pc{stroke-linejoin:round;stroke-linecap:round;stroke-width:2.4}
+  .piece.w .pc{fill:url(#gMaple);stroke:#5b3c22}
+  .piece.b .pc{fill:url(#gWalnut);stroke:#180d06}
+  .piece .shine{fill:#fff9e9;opacity:.3;stroke:none}
+  .piece .accent{fill:none;stroke:#6b4527;stroke-width:2;opacity:.62;stroke-linecap:round}
+  .piece.b .accent{stroke:#d0a878;opacity:.38}
+  .piece .eye{fill:#201208;stroke:none}
+  .piece.b .eye{fill:#e6c79b}
+  .co{position:absolute;z-index:4;font-size:13px;font-weight:800;line-height:1;pointer-events:none;font-family:var(--sans)}
+  .co.f{right:4px;bottom:2px}.co.r{left:4px;top:3px}
+  .sq.light .co{color:#67502f;opacity:.9}.sq.dark .co{color:#f1dfbd;opacity:.9}
+
+  .bottom{display:flex;align-items:flex-end;justify-content:space-between;gap:26px;margin-top:8px}
+  .caption{max-width:600px;font-size:16px;line-height:1.7;color:var(--muted)}
+  .caption b{color:var(--gold2)}
+  .swatches{display:flex;gap:9px;flex:0 0 auto}
+  .sw{width:94px;border:1px solid rgba(227,178,95,.3);border-radius:12px;overflow:hidden;background:rgba(0,0,0,.32)}
+  .sw i{display:block;height:38px;background-size:cover;background-position:center}
+  .sw i.maple{background-image:var(--art-maple)}.sw i.walnut{background-image:var(--art-walnut)}
+  .sw i.felt{background-image:var(--art-felt)}.sw i.edge{background-image:var(--art-edge)}
+  .sw span{display:block;text-align:center;font-size:12px;color:var(--muted);padding:4px 2px;font-weight:700}
+  .footnote{font-size:12px;color:rgba(203,182,149,.7);letter-spacing:.6px;margin-top:8px}
+
+  /* OG */
+  body[data-shot="og"] .stage{height:630px}
+  body[data-shot="og"] .frame{inset:18px}
+  body[data-shot="og"] .scene{inset:40px 54px}
+  body[data-shot="og"] .title{font-size:54px}
+  body[data-shot="og"] .sub{font-size:16px;margin-top:6px}
+  body[data-shot="og"] .kicker{font-size:12px;letter-spacing:4px}
+  body[data-shot="og"] .hero{padding:0}
+  body[data-shot="og"] .og-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:30px;flex:1;align-items:center;min-height:0;margin-top:10px}
+  body[data-shot="og"] .boardframe{padding:10px;border-radius:14px}
+  body[data-shot="og"] .board{width:430px;height:430px}
+  body[data-shot="og"] .stats{display:none}
+  body[data-shot="og"] .caption{font-size:15px;max-width:none}
+  body[data-shot="og"] .swatches{display:none}
+  body[data-shot="og"] .footnote{margin-top:6px}
+  body[data-shot="og"] .og-copy .stats{display:flex;justify-content:flex-start;max-width:none;margin-top:12px}
+  body[data-shot="og"] .og-copy .pill{font-size:12px;padding:6px 10px}
+  body[data-shot="og"] .co{font-size:11px}
+
+  /* details */
+  body[data-shot="detail1"] .stage,body[data-shot="detail2"] .stage{height:800px}
+  body[data-shot="detail1"] .frame,body[data-shot="detail2"] .frame{inset:18px}
+  body[data-shot="detail1"] .scene,body[data-shot="detail2"] .scene{inset:40px 52px}
+  body[data-shot="detail1"] .title,body[data-shot="detail2"] .title{font-size:47px}
+  body[data-shot="detail1"] .sub,body[data-shot="detail2"] .sub{font-size:16px;margin-top:5px}
+  body[data-shot="detail1"] .stats,body[data-shot="detail2"] .stats{display:none}
+  .detail-body{flex:1;display:flex;min-height:0;margin-top:8px}
+  .lineup{flex:1;display:flex;flex-direction:column;justify-content:center;gap:10px}
+  .lineup-row{display:flex;align-items:flex-end;justify-content:center;gap:0;min-height:0}
+  .pcell{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;width:170px;min-width:0}
+  .pcell .pstage{display:flex;align-items:flex-end;justify-content:center;width:100%;height:330px}
+  .pcell .psvg{display:block;filter:drop-shadow(0 12px 10px rgba(0,0,0,.45))}
+  .pcell .psvg svg{display:block;width:100%;height:100%;overflow:visible}
+  .pcell.r1{height:360px}
+  .plabel{border-top:1px solid rgba(227,178,95,.34);padding-top:6px;margin-top:8px;text-align:center;width:94%}
+  .plabel b{display:block;font:700 19px/1.1 var(--serif);color:var(--gold2)}
+  .plabel span{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+  .baseline{height:1px;background:linear-gradient(90deg,transparent,rgba(227,178,95,.5),transparent);margin:0 40px}
+  .detail-copy{max-width:390px;display:flex;flex-direction:column;justify-content:center;gap:10px;padding-left:18px}
+  .detail-copy .rule{font:700 25px/1.2 var(--serif);color:var(--gold2)}
+  .detail-copy p{font-size:15px;line-height:1.65;color:var(--muted);margin:0}
+  .detail-copy b{color:var(--gold2)}
+  .rulebox{border:1px solid rgba(227,178,95,.3);border-radius:12px;padding:9px 12px;background:rgba(6,4,2,.45)}
+  .rulebox b{display:block;font-size:13px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:2px}
+  .detail2-grid{display:grid;grid-template-columns:1fr 1fr;gap:26px;flex:1;align-items:center;min-height:0}
+  .moves{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 4px}
+  .moves span{border:1px solid rgba(227,178,95,.32);border-radius:8px;padding:5px 9px;font-size:13px;color:var(--gold2);background:rgba(0,0,0,.28);font-weight:700}
+  .materialbar{display:flex;gap:10px;margin-top:8px;flex-wrap:wrap}
+  .materialbar .sw{width:76px}.materialbar .sw i{height:30px}
+  body[data-shot="detail2"] .boardframe{padding:12px;border-radius:16px}
+  body[data-shot="detail2"] .board{width:540px;height:540px}
+  body[data-shot="detail2"] .co{font-size:11px}
+  @media (max-width: 430px) {
+    html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
+    .stage { zoom: 0.32; }
+  }
+  @media (max-width: 340px) {
+    .stage { zoom: 0.26; }
+  }
+</style>
+<style>
+/* site-quality: fixed-size art composition must not create page overflow */
+html{overflow-x:hidden}
+body{width:100%!important;max-width:100vw!important;overflow-x:hidden}
+.stage,#stage{max-width:100vw;overflow:hidden}
+</style>
+</head>
+<body data-shot="cover">
+
+<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0;overflow:hidden">
+  <defs>
+    <linearGradient id="gMaple" x1="0" y1="0" x2="0.9" y2="1">
+      <stop offset="0" stop-color="#fff3d9"/><stop offset="0.42" stop-color="#ead0a2"/>
+      <stop offset="0.78" stop-color="#d3b17e"/><stop offset="1" stop-color="#b98f5b"/>
+    </linearGradient>
+    <linearGradient id="gWalnut" x1="0" y1="0" x2="0.85" y2="1">
+      <stop offset="0" stop-color="#83593a"/><stop offset="0.38" stop-color="#5a3a22"/>
+      <stop offset="0.76" stop-color="#3a2312"/><stop offset="1" stop-color="#241409"/>
+    </linearGradient>
+  </defs>
+  <symbol id="pcK" viewBox="0 0 100 100"><g class="pc"><path d="M46 5h8v9h9v8h-9v12h-8V22h-9v-8h9z"/><path d="M37 39h26l-3 8H40z"/><path d="M42 47h16c0 8 2 15 5 22 2 4 3 7 3 11H34c0-4 1-7 3-11 3-7 5-14 5-22z"/><path d="M34 80h32l2 8H32z"/><path d="M32 88h36v7H32z"/><path class="shine" d="M45 51c0 8-1 14-4 20-2 4-3 7-3 9h5c0-5 1-10 3-14 2-4 3-10 3-15z"/><path class="accent" d="M40 63h20M38 74h24"/></g></symbol>
+  <symbol id="pcQ" viewBox="0 0 100 100"><g class="pc"><circle cx="34" cy="24" r="3.6"/><circle cx="40" cy="17" r="3.6"/><circle cx="50" cy="13" r="3.6"/><circle cx="60" cy="17" r="3.6"/><circle cx="66" cy="24" r="3.6"/><path d="M34 29l6 21 10-23 10 23 6-21-3 31H37z"/><path d="M37 60h26l3 20H34z"/><path d="M34 80h32l2 8H32z"/><path d="M32 88h36v7H32z"/><path class="shine" d="M41 35l4 13 5-9 5 9 4-13 3 15-3 7H41z"/><path class="accent" d="M39 67h22M37 74h26"/></g></symbol>
+  <symbol id="pcB" viewBox="0 0 100 100"><g class="pc"><circle cx="50" cy="31" r="4.5"/><path d="M50 36c-10 7-15 18-12 27 2 7 7 12 12 15 5-3 10-8 12-15 3-9-2-20-12-27z"/><path d="M38 78h24l4 8H34z"/><path d="M34 86h32v8H34z"/><path class="accent" d="M50 47v17M44 52l12 9"/><path class="shine" d="M43 50c-3 6-4 12-3 17 1 4 3 7 5 9 1-9 1-18 2-26z"/></g></symbol>
+  <symbol id="pcN" viewBox="0 0 100 100"><g class="pc"><path d="M37 80c-1-11 1-20 7-28 3-4 3-8 1-12l-4 3-2-7 7-1 4-8 4 7 6-1 9 7c5 5 8 12 7 19l-2 9c-1 3 0 7 2 11z"/><path d="M36 80h28l3 8H33z"/><path d="M33 88h34v7H33z"/><circle class="eye" cx="60" cy="44" r="2.1"/><path class="accent" d="M45 55c6 2 12 6 16 12M61 39l6-4M49 36l-3-7"/><path class="shine" d="M42 66c-1 5-2 10-1 14h6c-1-6 0-11 3-16z"/></g></symbol>
+  <symbol id="pcR" viewBox="0 0 100 100"><g class="pc"><path d="M33 41h8v7h6v-7h6v7h6v-7h8v20H33z"/><path d="M37 61h26l-3 19H40z"/><path d="M37 80h26l4 8H33z"/><path d="M33 88h34v7H33z"/><path class="accent" d="M41 67h18M39 74h22"/><path class="shine" d="M38 64h5l-2 12h-5z"/></g></symbol>
+  <symbol id="pcP" viewBox="0 0 100 100"><g class="pc"><circle cx="50" cy="62" r="9"/><path d="M43 70h14l5 12H38z"/><path d="M40 82h20l4 7H36z"/><path d="M36 89h28v6H36z"/><path class="accent" d="M44 77h12"/><path class="shine" d="M45 56c-2 3-3 6-3 9 0 3 1 6 3 8 1-4 1-8 2-11z"/></g></symbol>
+</svg>
+
+<div class="stage">
+<div class="frame"></div>
+
+<!-- COVER -->
+<section class="scene scene-cover">
+  <div class="topline">
+    <div class="brand">
+      <div class="seal"><svg viewBox="0 0 100 100"><use href="#pcN"></use></svg></div>
+      <div>
+        <div class="kicker">CHESS PREMIUM · FIDE</div>
+        <div class="title">国际象棋<em> · 64 格</em></div>
+        <div class="sub">枫木与胡桃木 · 完整规则 · 三档 AI</div>
+      </div>
+    </div>
+    <div class="stats">
+      <span class="pill">2 人</span><span class="pill">64 格</span>
+      <span class="pill">32 枚</span><span class="pill">57mm 比赛格</span>
+    </div>
+  </div>
+  <div class="hero">
+    <div class="table-glow"></div>
+    <div class="boardframe"><div class="board" id="coverBoard" data-count="64"></div></div>
+  </div>
+  <div class="bottom">
+    <div class="caption">
+      <b>白方先行，将死取胜。</b>王车易位、吃过路兵、兵升变全部按 FIDE 判定；<br>
+      浅色枫木与深色胡桃木棋格，每格 57 毫米，开局 32 枚棋子整装待发。
+      <div class="footnote">局面由代码合成 · 单材质 img-gen 素材 · 零外链</div>
+    </div>
+    <div class="swatches">
+      <div class="sw"><i class="maple"></i><span>浅枫木</span></div>
+      <div class="sw"><i class="walnut"></i><span>深胡桃</span></div>
+      <div class="sw"><i class="felt"></i><span>羊毛桌布</span></div>
+      <div class="sw"><i class="edge"></i><span>木框边</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- OG -->
+<section class="scene scene-og">
+  <div class="topline">
+    <div class="brand">
+      <div class="seal"><svg viewBox="0 0 100 100"><use href="#pcN"></use></svg></div>
+      <div>
+        <div class="kicker">CHESS PREMIUM · FIDE</div>
+        <div class="title">国际象棋<em> · 64 格</em></div>
+        <div class="sub">枫木与胡桃木 · 完整规则 · 三档 AI</div>
+      </div>
+    </div>
+  </div>
+  <div class="og-grid">
+    <div class="og-copy">
+      <div class="caption"><b>白方先行，将死取胜。</b><br>王车易位、吃过路兵、兵升变、三次重复与五十回合全部按 FIDE 判定。</div>
+      <div class="stats" style="display:flex;justify-content:flex-start;max-width:none;margin-top:12px">
+        <span class="pill">2 人</span><span class="pill">64 格</span><span class="pill">32 枚</span><span class="pill">57mm</span>
+      </div>
+      <div class="footnote" style="margin-top:12px">深色方为胡桃木，浅色方为枫木 · 原局面 32 枚</div>
+    </div>
+    <div class="boardframe"><div class="board" id="ogBoard"></div></div>
+  </div>
+</section>
+
+<!-- DETAIL 1: real piece dimensions -->
+<section class="scene scene-detail1">
+  <div class="topline">
+    <div class="brand">
+      <div class="seal"><svg viewBox="0 0 100 100"><use href="#pcK"></use></svg></div>
+      <div>
+        <div class="kicker">真实尺寸 · Tournament Set</div>
+        <div class="title">王 95mm，<em>兵 45mm</em></div>
+        <div class="sub">六种棋子按真实高度比例绘制，底座直径统一在 30–35mm</div>
+      </div>
+    </div>
+  </div>
+  <div class="detail-body">
+    <div class="lineup">
+      <div class="lineup-row" id="lineupTop"></div>
+      <div class="baseline"></div>
+      <div class="lineup-row" id="lineupBottom"></div>
+    </div>
+  </div>
+  <div class="bottom">
+    <div class="caption"><b>比例核对：</b>王 / 兵 = 95 / 45 ≈ 2.11 倍。棋子轮廓由代码绘制，浅色为枫木、深色为胡桃木；每枚棋子都带底座与颈部收腰，避免「同一最长边缩放」导致王与兵一样高。</div>
+    <div class="swatches">
+      <div class="sw"><i class="maple"></i><span>浅枫木</span></div>
+      <div class="sw"><i class="walnut"></i><span>深胡桃</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- DETAIL 2: legal Najdorf position -->
+<section class="scene scene-detail2">
+  <div class="topline">
+    <div class="brand">
+      <div class="seal"><svg viewBox="0 0 100 100"><use href="#pcB"></use></svg></div>
+      <div>
+        <div class="kicker">真实局面 · Najdorf</div>
+        <div class="title">一个<em>合法</em>的中局</div>
+        <div class="sub">1.e4 c5 2.Nf3 d6 3.d4 cxd4 4.Nxd4 Nf6 5.Nc3 a6</div>
+      </div>
+    </div>
+  </div>
+  <div class="detail2-grid">
+    <div class="boardframe"><div class="board" id="detailBoard"></div></div>
+    <div class="detail-copy">
+      <div class="rule">30 枚棋子，双方各少一兵</div>
+      <p>这是纳伊多夫体系的真实开局局面：白方 e 兵已到 e4，黑方 c 兵在 cxd4 后消失，白方马从 f3 吃回 d4，黑方走了 a6。棋盘上还剩 30 枚棋子，其余子力完整，轮到白方。</p>
+      <div class="moves"><span>1. e4 c5</span><span>2. Nf3 d6</span><span>3. d4 cxd4</span><span>4. Nxd4 Nf6</span><span>5. Nc3 a6</span></div>
+      <div class="rulebox"><b>特殊走法</b>王车易位双方仍保留；吃过路兵只在本步有效；兵到底线必须升变为后 / 车 / 象 / 马。</div>
+      <div class="rulebox"><b>FEN</b>rnbqkb1r/1p2pppp/p2p1n2/8/3NP3/2N5/PPP2PPP/R1BQKB1R w KQkq - 0 6</div>
+      <div class="materialbar">
+        <div class="sw"><i class="maple"></i><span>枫木</span></div>
+        <div class="sw"><i class="walnut"></i><span>胡桃木</span></div>
+        <div class="sw"><i class="felt"></i><span>羊毛呢</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="footnote" style="margin-top:6px">局面由 FEN 解析并由代码逐格合成 · 32 枚中的 30 枚 · 零外链</div>
+</section>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var FILES = 'abcdefgh';
+  var START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+  var NAJDORF = 'rnbqkb1r/1p2pppp/p2p1n2/8/3NP3/2N5/PPP2PPP/R1BQKB1R w KQkq - 0 6';
+
+  function parse(fen) {
+    var rows = fen.split(' ')[0].split('/'), board = new Array(64).fill(null);
+    for (var r = 0; r < 8; r++) {
+      var f = 0;
+      for (var i = 0; i < rows[r].length; i++) {
+        var c = rows[r].charAt(i);
+        if (c >= '1' && c <= '8') f += Number(c);
+        else board[r * 8 + (f++)] = c;
+      }
+    }
+    return board;
+  }
+
+  function pieceHtml(p) {
+    var white = p === p.toUpperCase();
+    return '<span class="piece ' + (white ? 'w' : 'b') + '"><svg viewBox="0 0 100 100">' +
+      '<use href="#pc' + p.toUpperCase() + '"></use></svg></span>';
+  }
+
+  function buildBoard(el, fen) {
+    if (!el) return;
+    var board = parse(fen);
+    el.innerHTML = '';
+    for (var i = 0; i < 64; i++) {
+      var r = (i / 8) | 0, f = i & 7;
+      var sq = document.createElement('div');
+      sq.className = 'sq ' + (((r + f) % 2 === 0) ? 'light' : 'dark');
+      sq.setAttribute('data-sq', String(i));
+      sq.style.setProperty('--r', String(r));
+      sq.style.setProperty('--c', String(f));
+      var html = board[i] ? pieceHtml(board[i]) : '';
+      if (r === 7) html += '<span class="co f">' + FILES.charAt(f) + '</span>';
+      if (f === 0) html += '<span class="co r">' + (8 - r) + '</span>';
+      sq.innerHTML = html;
+      el.appendChild(sq);
+    }
+  }
+
+  var lineup = [
+    { code: 'K', zh: '王', mm: 95, base: 35, h: 330 },
+    { code: 'Q', zh: '后', mm: 82, base: 34, h: 285 },
+    { code: 'B', zh: '象', mm: 70, base: 32, h: 243 },
+    { code: 'N', zh: '马', mm: 62, base: 32, h: 216 },
+    { code: 'R', zh: '车', mm: 55, base: 33, h: 191 },
+    { code: 'P', zh: '兵', mm: 45, base: 30, h: 156 }
+  ];
+  function buildLineup() {
+    var target = document.getElementById('lineupTop');
+    lineup.forEach(function (item) {
+      var cell = document.createElement('div');
+      cell.className = 'pcell r1';
+      cell.style.height = '360px';
+      var stage = document.createElement('div');
+      stage.className = 'pstage';
+      stage.style.height = '330px';
+      var svg = '<svg class="psvg" viewBox="0 0 100 100" style="width:' + item.h + 'px;height:' + item.h + 'px">' +
+        '<use href="#pc' + item.code + '"></use></svg>';
+      stage.innerHTML = svg;
+      var label = document.createElement('div');
+      label.className = 'plabel';
+      label.innerHTML = '<b>' + item.zh + ' · ' + item.mm + 'mm</b><span>底座 Ø' + item.base + 'mm</span>';
+      cell.appendChild(stage);
+      cell.appendChild(label);
+      target.appendChild(cell);
+    });
+  }
+
+  buildBoard(document.getElementById('coverBoard'), START);
+  buildBoard(document.getElementById('ogBoard'), START);
+  buildBoard(document.getElementById('detailBoard'), NAJDORF);
+  buildLineup();
+
+  var shot = new URLSearchParams(location.search).get('shot') || 'cover';
+  if (shot === 'detail-1') shot = 'detail1';
+  if (shot === 'detail-2') shot = 'detail2';
+  if (['cover', 'og', 'detail1', 'detail2'].indexOf(shot) === -1) shot = 'cover';
+  document.body.setAttribute('data-shot', shot);
+
+  // Mark the count for DOM assertions without relying on pixels.
+  var cover = document.getElementById('coverBoard');
+  if (cover) cover.setAttribute('data-pieces', String(cover.querySelectorAll('.piece').length));
+  var og = document.getElementById('ogBoard');
+  if (og) og.setAttribute('data-pieces', String(og.querySelectorAll('.piece').length));
+  var detail = document.getElementById('detailBoard');
+  if (detail) detail.setAttribute('data-pieces', String(detail.querySelectorAll('.piece').length));
+})();
+</script>
+</body>
+</html>

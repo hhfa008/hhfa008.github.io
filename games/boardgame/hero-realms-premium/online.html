@@ -1,0 +1,615 @@
+<!doctype html>
+<!--
+  英雄领域 Hero Realms 精品版 — 联机大厅与双人牌桌。
+  服务端权威 HTTP/JSON 轮询；房间 / 邀请 / 重连 / 超时托管 / 排行榜来自
+  games/shared/online-room-server.mjs。客户端只渲染自己的公共视图。
+-->
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14110c">
+<meta name="description" content="英雄领域 Hero Realms 联机房间：两个座位、隐藏手牌、服务端权威判定、邀请码、断线重连、超时 AI 托管与结算榜。">
+<title>英雄领域 HERO REALMS · 联机房间</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2314110c'/%3E%3Cpath d='M20 12h8l4 22 4-22h8L36 52h-8z' fill='%23e2b85e'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --art-mat:url("../../assets/art/premium/hero-realms/leather-mat.webp");
+    --art-stone:url("../../assets/art/premium/hero-realms/stone-table.webp");
+    --art-parchment:url("../../assets/art/premium/hero-realms/parchment.webp");
+    --art-gold:url("../../assets/art/premium/hero-realms/gold-coin.webp");
+    --art-dagger:url("../../assets/art/premium/hero-realms/dagger.webp");
+    --serif:"Songti SC","Iowan Old Style","Palatino Linotype",Georgia,serif;
+    --sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    --bg:#12100b;--bg2:#1d1811;--panel:rgba(39,34,25,.94);--panel2:rgba(54,46,33,.72);
+    --line:#5b4d33;--line2:rgba(233,190,102,.28);--ink:#f8f1df;--muted:#b9ac90;
+    --gold:#e9be66;--gold2:#ffd98c;--combat:#ff8b72;--heal:#79d5a4;--draw:#87b8ff;
+    --imp:#6f9fe0;--guild:#e0b45c;--necros:#cf6f92;--wild:#9ccb76;--basic:#a99a7d;
+    --danger:#ff8b7d;--shadow:0 20px 48px rgba(0,0,0,.44);--radius:16px;--tap:46px;
+    --card-face:#efe2c4;--card-ink:#2b2116;--card-edge:#c9b189;
+  }
+  html[data-theme="light"]{
+    --bg:#efe6d3;--bg2:#f8f1e2;--panel:rgba(255,251,241,.95);--panel2:rgba(247,238,221,.9);
+    --line:#cbb994;--line2:rgba(150,108,34,.28);--ink:#2b2217;--muted:#6d604c;
+    --gold:#946411;--gold2:#7b5208;--combat:#b8432d;--heal:#1f8d63;--draw:#2f6fae;
+    --imp:#2f63a8;--guild:#9a6b13;--necros:#a13d61;--wild:#4d7a2c;--basic:#77684f;
+    --danger:#b33f35;--shadow:0 18px 40px rgba(91,68,42,.2);
+    --card-face:#fffaf0;--card-ink:#2b2217;--card-edge:#d6c3a0;
+  }
+  *{box-sizing:border-box}
+  html,body{max-width:100%;overflow-x:hidden}
+  body{margin:0;color:var(--ink);font:15px/1.45 var(--sans);background-color:var(--bg);
+    background:radial-gradient(900px 520px at 50% -14%,rgba(70,56,32,.8),transparent 64%),linear-gradient(170deg,var(--bg2),var(--bg) 62%)}
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.14;background:var(--art-stone) center/cover no-repeat;z-index:0}
+  .wrap{position:relative;z-index:1;max-width:900px;margin:0 auto;padding:8px 10px 38px}
+  .top{display:flex;align-items:center;gap:7px;padding:3px 0 10px}
+  .top h1{margin:0;flex:1;text-align:center;font-family:var(--serif);font-size:19px;letter-spacing:.4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .icon-btn{display:inline-flex;align-items:center;justify-content:center;min-width:var(--tap);min-height:44px;padding:0 11px;border-radius:11px;border:1px solid var(--line);background:var(--panel);color:var(--ink);text-decoration:none;font:inherit;font-size:13px;font-weight:800;cursor:pointer}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:13px;box-shadow:var(--shadow);backdrop-filter:blur(5px)}
+  .panel+.panel{margin-top:10px}
+  h2{margin:0 0 9px;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
+  .field{display:grid;gap:5px;margin-bottom:9px}
+  .field label{font-size:12px;color:var(--muted);font-weight:800}
+  input{font:inherit;font-size:16px;min-height:48px;padding:9px 12px;border-radius:11px;border:1px solid var(--line);background:rgba(0,0,0,.22);color:var(--ink);width:100%}
+  button{font:inherit;font-size:14px;font-weight:900;min-height:var(--tap);padding:9px 14px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);cursor:pointer;touch-action:manipulation}
+  button:active{transform:translateY(1px)}
+  button:disabled{opacity:.4;cursor:default}
+  button.primary{background:linear-gradient(160deg,var(--gold),#a9780b);color:#2a1a04;border:0}
+  button.coral{background:linear-gradient(160deg,var(--combat),#b4432f);color:#2b0d07;border:0}
+  button.ghost{background:transparent}
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  .row>button{flex:1;min-width:124px}
+  .muted{color:var(--muted);font-size:12.5px}
+  .err{color:var(--danger);font-size:13px;font-weight:800;min-height:18px;margin-top:5px}
+  .roombar{display:flex;align-items:center;justify-content:space-between;gap:7px;flex-wrap:wrap;margin-bottom:8px}
+  .chip{display:inline-flex;align-items:center;min-height:30px;padding:2px 11px;border-radius:999px;background:rgba(0,0,0,.24);border:1px solid var(--line2);font-size:12px;font-weight:800;color:var(--gold2)}
+  .seats{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:8px}
+  .seat{position:relative;border:1px solid var(--line);border-radius:13px;padding:8px 9px;background:var(--panel2);min-width:0}
+  .seat.turn{border-color:var(--gold);box-shadow:inset 0 0 0 1px var(--gold)}
+  .seat.you{border-color:rgba(233,190,102,.55)}
+  .seat .name{font-family:var(--serif);font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .seat .meta{display:flex;justify-content:space-between;gap:4px;margin-top:2px;font-size:12px;color:var(--muted)}
+  .hp{height:12px;border-radius:999px;background:rgba(0,0,0,.35);border:1px solid var(--line);overflow:hidden;margin-top:4px}
+  .hp i{display:block;height:100%;background:linear-gradient(90deg,#8f3a33,var(--combat) 50%,var(--heal));transition:width .3s ease}
+  .seat .hpnum{display:flex;justify-content:space-between;font-size:12px;font-weight:800;margin-top:2px}
+  .seat .piles{display:flex;flex-wrap:wrap;gap:4px;margin-top:3px;font-size:12px;color:var(--muted)}
+  .seat .champs{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;min-height:0}
+  .mini-champ{font-size:12px;padding:2px 5px;border-radius:5px;border:1px solid var(--card-edge);background:var(--card-face);color:var(--card-ink);font-weight:800}
+  .mini-champ.dead{opacity:.45}
+  .board{position:relative;border:1px solid var(--line);border-radius:17px;padding:10px;background:linear-gradient(160deg,rgba(31,26,18,.9),rgba(15,12,8,.95)),var(--art-mat) center/cover no-repeat;box-shadow:var(--shadow);overflow:hidden}
+  .board::before{content:"";position:absolute;inset:7px;border:1px dashed rgba(233,190,102,.18);border-radius:12px;pointer-events:none}
+  .board-top{display:flex;justify-content:space-between;gap:7px;font-size:12px;color:var(--muted);font-weight:800;margin-bottom:7px;position:relative;z-index:1}
+  .market{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;position:relative;z-index:1}
+  .card{position:relative;min-width:0;min-height:116px;padding:6px;border-radius:10px;border:1px solid var(--card-edge);text-align:left;font:inherit;color:var(--card-ink);cursor:pointer;
+    background:radial-gradient(circle at 22% 14%,rgba(255,255,255,.85),transparent 38%),linear-gradient(158deg,rgba(255,252,243,.97),rgba(238,224,196,.96)),var(--art-parchment) center/cover no-repeat;
+    box-shadow:0 4px 0 rgba(0,0,0,.2);display:flex;flex-direction:column;gap:2px}
+  .card:disabled{opacity:.55;cursor:default}
+  .card .cost{position:absolute;right:4px;top:4px;min-width:22px;height:22px;padding:0 3px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 34% 28%,#fff7c9,#c58a19 70%);color:#3a2506;border:1px solid #8a5c10;font-size:12px;font-weight:900}
+  .card .fdot{width:9px;height:9px;border-radius:50%;background:var(--basic)}
+  .card .cname{font-family:var(--serif);font-weight:700;font-size:13px;line-height:1.15;padding-right:18px;word-break:break-word}
+  .card .ctext{font-size:12px;line-height:1.25;color:#4a3b28;word-break:break-word}
+  .card .ctype{font-size:12px;font-weight:800;color:#7b6648;margin-top:auto}
+  .card.f-imperial{border-color:var(--imp)}.card.f-guild{border-color:var(--guild)}.card.f-necros{border-color:var(--necros)}.card.f-wild{border-color:var(--wild)}
+  .card.f-imperial .fdot{background:var(--imp)}.card.f-guild .fdot{background:var(--guild)}.card.f-necros .fdot{background:var(--necros)}.card.f-wild .fdot{background:var(--wild)}
+  .hand{display:flex;justify-content:center;align-items:flex-end;gap:0;padding:10px 0 2px;min-height:138px;position:relative;z-index:1}
+  .hand .card{width:118px;flex:0 0 118px;min-height:154px;margin:0 -8px}
+  .hand .card:nth-child(1){transform:rotate(-4deg) translateY(3px)}
+  .hand .card:nth-child(2){transform:rotate(-1.5deg)}
+  .hand .card:nth-child(3){transform:rotate(1.5deg)}
+  .hand .card:nth-child(4){transform:rotate(4deg) translateY(3px)}
+  .hand .card:nth-child(n+5){transform:rotate(0)}
+  .hint{min-height:18px;font-size:12px;color:var(--muted);margin-top:7px;position:relative;z-index:1}
+  .hint b{color:var(--gold2)}
+  .actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px;position:relative;z-index:1}
+  .actions button{flex:1 1 122px;min-height:50px}
+  .champs-row{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;position:relative;z-index:1}
+  .champ-btn{position:relative;min-height:52px;min-width:104px;padding:5px 7px;border-radius:9px;border:1px solid var(--card-edge);background:var(--card-face);color:var(--card-ink);font:inherit;text-align:left;cursor:pointer}
+  .champ-btn:disabled{opacity:.55;cursor:default}
+  .champ-btn b{display:block;font-size:12px;font-family:var(--serif)}
+  .champ-btn span{font-size:12px;font-weight:800}
+  .champ-btn .d{position:absolute;right:5px;top:5px;font-size:12px;font-weight:900;color:#fff;background:#5a4326;border-radius:6px;padding:0 4px}
+  .champ-btn.foe .d{background:#7a2339}
+  .champ-btn.target{outline:2px solid var(--combat)}
+  .log{margin-top:9px;border:1px solid var(--line);border-radius:13px;background:var(--panel);padding:8px 10px}
+  .log ul{list-style:none;margin:0;padding:0;max-height:132px;overflow:auto;display:grid;gap:1px}
+  .log li{font-size:12px;color:var(--muted);padding:2px 0;border-bottom:1px dashed rgba(150,130,96,.16)}
+  .log li:last-child{color:var(--ink)}
+  .log li::before{content:"›";color:var(--gold);margin-right:5px;font-weight:900}
+  .finale{margin-top:9px;border:1px solid rgba(121,213,164,.42);background:rgba(121,213,164,.1);border-radius:13px;padding:11px;text-align:center}
+  .finale h3{margin:0 0 3px;font-family:var(--serif);font-size:20px}
+  .lb{display:grid;gap:4px}
+  .lbrow{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:6px 8px;border-radius:8px;background:rgba(0,0,0,.14)}
+  .lbrow b{color:var(--gold2)}
+  .boardview{display:none}
+  .boardview.on{display:block}
+  @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+  @media (max-width:620px){
+    .wrap{padding:6px 8px 28px}
+    .market{grid-template-columns:repeat(auto-fit,minmax(86px,1fr))}
+    .hand{display:grid;grid-template-columns:repeat(auto-fit,minmax(94px,1fr));gap:6px;justify-content:stretch;min-height:0}
+    .hand .card{width:auto;flex:none;min-height:140px;margin:0;transform:none!important}
+    .top h1{font-size:17px}
+  }
+  @media (max-width:360px){
+    .market{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .hand{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .seats{grid-template-columns:1fr}
+    .card{min-height:108px}
+  }
+/* safe-area: keep the original bottom padding, clear the iOS home indicator */
+body{padding-bottom:env(safe-area-inset-bottom)}
+</style>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/hero-realms-premium/online.html">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="icon-btn" href="index.html">← 单机</a>
+    <h1>英雄领域 · 联机</h1>
+    <a class="icon-btn" href="rules.html">规则</a>
+  </header>
+
+  <main>
+    <section class="panel" id="lobby" aria-label="联机大厅">
+      <h2>创建或加入双人房间</h2>
+      <div class="field">
+        <label for="nickname">昵称</label>
+        <input id="nickname" maxlength="16" placeholder="房主 / 挑战者" autocomplete="nickname">
+      </div>
+      <div class="row">
+        <button class="primary" id="createBtn" type="button">创建房间</button>
+        <button id="joinBtn" type="button">加入房间</button>
+      </div>
+      <div class="field" id="joinFields" hidden style="margin-top:9px">
+        <label for="roomCode">房间号 / 邀请码</label>
+        <input id="roomCode" maxlength="64" placeholder="粘贴房间号或邀请码" autocomplete="off">
+        <label for="joinPassword">房间密码（可选）</label>
+        <input id="joinPassword" type="password" maxlength="64" placeholder="无密码可留空" autocomplete="off">
+      </div>
+      <div class="err" id="lobbyErr" role="alert"></div>
+      <p class="muted">恰好两个座位；只有一个真人时，另一个座位由 AI 接管。服务端权威判定，客户端只能看到自己的手牌；掉线 15 秒自动托管，重连即恢复。</p>
+    </section>
+
+    <section class="panel boardview" id="board" aria-label="联机牌桌">
+      <div class="roombar">
+        <div>
+          <div class="muted">ROOM</div>
+          <div class="chip" id="roomChip">—</div>
+        </div>
+        <div class="row" style="flex:0 1 auto">
+          <button class="ghost" id="inviteBtn" type="button">复制邀请</button>
+          <button class="ghost" id="startBtn" type="button">开始 / AI 补位</button>
+        </div>
+      </div>
+      <div class="err" id="boardErr" role="alert"></div>
+      <div class="seats" id="seats"></div>
+
+      <div class="board">
+        <div class="board-top">
+          <span>MARKET · 5 张公开市场</span>
+          <span id="deckChip">补牌堆 —</span>
+        </div>
+        <div class="market" id="market" aria-label="市场"></div>
+        <div class="hint" id="note" aria-live="polite"></div>
+        <div class="actions">
+          <button class="coral" id="attackBtn" type="button">攻击对手英雄</button>
+          <button class="primary" id="endBtn" type="button">结束回合</button>
+        </div>
+        <div class="champs-row" id="champions" aria-label="冠军区"></div>
+        <div class="hand" id="handFan" aria-label="你的手牌"></div>
+      </div>
+
+      <div class="log" aria-label="战斗日志"><ul id="logList"></ul></div>
+
+      <div class="finale" id="finale" hidden>
+        <h3 id="finaleTitle">结算</h3>
+        <p class="muted" id="finaleSub"></p>
+        <div id="finaleRows"></div>
+        <div class="row" style="margin-top:9px">
+          <button class="primary" id="restartBtn" type="button">再来一局</button>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:9px">
+        <button class="ghost" id="leaveBtn" type="button">离开房间</button>
+        <a class="icon-btn" href="index.html" style="flex:0 0 auto">返回单机</a>
+      </div>
+    </section>
+
+    <section class="panel" aria-label="排行榜">
+      <h2>结算榜</h2>
+      <div class="lb" id="leaderboard"><p class="muted">还没有结算记录。</p></div>
+    </section>
+  </main>
+</div>
+
+<script src="data.js"></script>
+<script>
+(function () {
+  'use strict';
+  var D = window.HeroRealmsPremiumData;
+  var cardMap = {};
+  D.cards.forEach(function (c) { cardMap[c.id] = c; });
+  var $ = function (id) { return document.getElementById(id); };
+  var params = new URLSearchParams(location.search);
+  var roomKey = params.get('room') || '';
+  var invite = params.get('code') || '';
+  var session = params.get('session') || '';
+  var playerId = params.get('player') || '';
+  var nickname = '';
+  var timer = null;
+  var lastVersion = -1;
+  var latest = null;
+
+  try {
+    if (!session) session = sessionStorage.getItem('hr-online-session') || '';
+    if (!playerId) playerId = sessionStorage.getItem('hr-online-player') || '';
+  } catch (e) {}
+
+  function esc(v) {
+    return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+    });
+  }
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+  function api(method, route, body) {
+    return fetch(route, {
+      method: method,
+      headers: { 'content-type': 'application/json' },
+      body: body == null ? undefined : JSON.stringify(body)
+    }).then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (data) {
+        return { status: res.status, body: data };
+      });
+    });
+  }
+  function errText(r) { return (r.body && r.body.error && r.body.error.message) || ('HTTP ' + r.status); }
+  function toast(msg) { $('boardErr').textContent = msg || ''; }
+
+  function remember(nextRoom, nextSession, nextPlayer) {
+    roomKey = nextRoom || roomKey;
+    session = nextSession || session;
+    playerId = nextPlayer || playerId;
+    try {
+      sessionStorage.setItem('hr-online-session', session);
+      sessionStorage.setItem('hr-online-player', playerId);
+    } catch (e) {}
+    var url = location.pathname + '?room=' + encodeURIComponent(roomKey) + '&session=' + encodeURIComponent(session) + '&player=' + encodeURIComponent(playerId);
+    try { history.replaceState(null, '', url); } catch (e) {}
+  }
+  function saveNick() {
+    nickname = ($('nickname').value || '').trim() || ('玩家-' + Math.random().toString(36).slice(2, 6));
+    try { sessionStorage.setItem('hr-online-nick', nickname); } catch (e) {}
+    return nickname;
+  }
+  try { $('nickname').value = sessionStorage.getItem('hr-online-nick') || ''; } catch (e) {}
+  function newPlayerId() { return 'hr-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6); }
+  function showBoard(on) {
+    $('lobby').hidden = on;
+    $('board').classList.toggle('on', on);
+  }
+
+  function createRoom() {
+    saveNick();
+    $('lobbyErr').textContent = '';
+    api('POST', '/api/rooms', { playerId: newPlayerId(), nickname: nickname })
+      .then(function (r) {
+        if (!r.body || !r.body.roomId) throw new Error(errText(r));
+        remember(r.body.roomId, r.body.session, r.body.playerId);
+        invite = r.body.inviteToken || '';
+        showBoard(true);
+        poll();
+      })
+      .catch(function (e) { $('lobbyErr').textContent = e.message; });
+  }
+
+  function joinRoom() {
+    saveNick();
+    var key = ($('roomCode').value || '').trim();
+    if (!key) { $('lobbyErr').textContent = '请填写房间号或邀请码。'; return; }
+    $('lobbyErr').textContent = '';
+    var payload = { playerId: newPlayerId(), nickname: nickname };
+    payload.inviteCode = key;
+    if ($('joinPassword').value) payload.password = $('joinPassword').value;
+    api('POST', '/api/rooms/' + encodeURIComponent(key) + '/join', payload)
+      .then(function (r) {
+        if (!r.body || !r.body.session) throw new Error(errText(r));
+        remember(r.body.roomId, r.body.session, r.body.playerId);
+        showBoard(true);
+        poll();
+      })
+      .catch(function (e) { $('lobbyErr').textContent = e.message; });
+  }
+
+  function actionFor(pred) {
+    if (!latest || !latest.legalActions) return null;
+    for (var i = 0; i < latest.legalActions.length; i += 1) {
+      if (pred(latest.legalActions[i])) return latest.legalActions[i];
+    }
+    return null;
+  }
+  function hasType(type) { return !!actionFor(function (a) { return a.type === type; }); }
+
+  function sideInfo(view) {
+    var sides = view.state ? view.state.sides : { player: {}, ai: {} };
+    var me = view.you === 0 ? sides.player : sides.ai;
+    var foe = view.you === 0 ? sides.ai : sides.player;
+    return { me: me, foe: foe };
+  }
+
+  function renderSeat(seat, view) {
+    var isMe = view.you != null && seat.index === view.you;
+    var isTurn = view.state && view.state.turnSeat === seat.index && !view.over;
+    var side = view.state ? (seat.index === 0 ? view.state.sides.player : view.state.sides.ai)
+      : { hp: 50, maxHp: 50, gold: 0, combat: 0, handCount: 0, deckCount: 0, discardCount: 0, champions: [] };
+    var box = el('div', 'seat' + (isTurn ? ' turn' : '') + (isMe ? ' you' : ''));
+    var nm = el('div', 'name', seat.name + (seat.ai ? ' · AI' : '') + (isMe ? ' · 你' : ''));
+    box.appendChild(nm);
+    var meta = el('div', 'meta');
+    meta.appendChild(el('span', null, seat.isHost ? '房主' : (seat.connected ? '在线' : '离线')));
+    meta.appendChild(el('span', null, '手牌 ' + (isMe ? side.handCount : side.handCount)));
+    box.appendChild(meta);
+    var hp = el('div', 'hp');
+    var fill = el('i');
+    fill.style.width = Math.max(0, Math.min(100, side.hp / side.maxHp * 100)) + '%';
+    hp.appendChild(fill);
+    box.appendChild(hp);
+    var hpnum = el('div', 'hpnum');
+    hpnum.appendChild(el('span', null, 'HP ' + side.hp + ' / ' + side.maxHp));
+    hpnum.appendChild(el('span', null, '金币 ' + side.gold + ' · 战斗 ' + side.combat));
+    box.appendChild(hpnum);
+    var piles = el('div', 'piles');
+    piles.appendChild(el('span', null, '牌库 ' + side.deckCount));
+    piles.appendChild(el('span', null, '弃牌 ' + side.discardCount));
+    box.appendChild(piles);
+    var champs = el('div', 'champs');
+    side.champions.forEach(function (ch) {
+      var c = cardMap[ch.cardId];
+      champs.appendChild(el('span', 'mini-champ', c.name + ' ' + Math.max(0, ch.hp)));
+    });
+    box.appendChild(champs);
+    return box;
+  }
+
+  function cardButton(cardId, opts) {
+    var card = cardMap[cardId];
+    var b = el('button', 'card f-' + card.faction);
+    b.type = 'button';
+    b.setAttribute('aria-label', (opts.label || card.name) + ' · ' + card.text);
+    if (opts.disabled) b.disabled = true;
+    b.appendChild(el('span', 'cost', String(card.cost)));
+    b.appendChild(el('span', 'fdot'));
+    b.appendChild(el('span', 'cname', card.name));
+    b.appendChild(el('span', 'ctext', card.text));
+    b.appendChild(el('span', 'ctype', (D.typeLabels[card.type] || '') + ' · ' + (D.factionLabels[card.faction] || '')));
+    return b;
+  }
+
+  function render() {
+    var view = latest;
+    if (!view) return;
+    $('roomChip').textContent = '房间 ' + (view.code || view.roomId) + ' · ' + (view.started ? (view.over ? '已结束' : '进行中') : '等待玩家') + ' · ' + view.playerCount + ' 人';
+    $('startBtn').hidden = view.started;
+    $('startBtn').disabled = !view.seats.some(function (seat) { return seat.isYou && seat.isHost; });
+    $('inviteBtn').disabled = !view.seats.some(function (seat) { return seat.isYou && seat.isHost; });
+
+    var seats = $('seats');
+    seats.innerHTML = '';
+    view.seats.forEach(function (seat) { seats.appendChild(renderSeat(seat, view)); });
+
+    if (!view.state) {
+      $('market').innerHTML = '';
+      $('handFan').innerHTML = '';
+      $('champions').innerHTML = '';
+      $('deckChip').textContent = '补牌堆 —';
+      $('attackBtn').disabled = true;
+      $('endBtn').disabled = true;
+      $('note').textContent = '等待房主开始对局…';
+      $('logList').innerHTML = '';
+      $('finale').hidden = true;
+      $('leaveBtn').hidden = true;
+      return;
+    }
+    var info = sideInfo(view);
+    $('deckChip').textContent = '补牌堆 ' + view.state.marketDeckCount + ' · 市场 ' + view.state.market.length;
+    var market = $('market');
+    market.innerHTML = '';
+    view.state.market.forEach(function (cardId, index) {
+      var act = actionFor(function (a) { return a.type === 'buy' && a.marketIndex === index; });
+      var b = cardButton(cardId, {
+        disabled: !act,
+        label: '购买' + cardMap[cardId].name + '，花费 ' + cardMap[cardId].cost + ' 金币'
+      });
+      if (act) b.addEventListener('click', function () { send(act); });
+      market.appendChild(b);
+    });
+
+    var hand = $('handFan');
+    hand.innerHTML = '';
+    var myHand = info.me.hand || [];
+    if (!myHand.length) {
+      hand.appendChild(el('div', 'muted', view.over ? '对局结束。' : (view.state.turnSeat === view.you ? '手牌已空，可以结束回合。' : '等待对手行动…')));
+    } else {
+      myHand.forEach(function (cardId, index) {
+        var act = actionFor(function (a) { return a.type === 'play' && a.handIndex === index; });
+        var b = cardButton(cardId, { disabled: !act, label: '打出' + cardMap[cardId].name });
+        if (act) b.addEventListener('click', function () { send(act); });
+        hand.appendChild(b);
+      });
+    }
+
+    var champRow = $('champions');
+    champRow.innerHTML = '';
+    info.foe.champions.forEach(function (ch) {
+      var c = cardMap[ch.cardId];
+      var act = actionFor(function (a) {
+        return a.type === 'attack' && a.target.kind === 'champion' && a.target.uid === ch.uid;
+      });
+      var b = el('button', 'champ-btn foe' + (act ? ' target' : ''));
+      b.type = 'button';
+      b.disabled = !act;
+      b.setAttribute('aria-label', '攻击对手冠军' + c.name + '，剩余防御 ' + ch.hp);
+      b.appendChild(el('b', null, c.name));
+      b.appendChild(el('span', null, '防御 ' + Math.max(0, ch.hp)));
+      b.appendChild(el('span', 'd', String(Math.max(0, ch.hp))));
+      if (act) b.addEventListener('click', function () { send(act); });
+      champRow.appendChild(b);
+    });
+    info.me.champions.forEach(function (ch) {
+      var c = cardMap[ch.cardId];
+      var act = actionFor(function (a) { return a.type === 'activate' && a.uid === ch.uid; });
+      var b = el('button', 'champ-btn' + (act ? ' target' : ''));
+      b.type = 'button';
+      b.disabled = !act;
+      b.setAttribute('aria-label', '激活冠军' + c.name + (ch.used ? '，本回合已激活' : ''));
+      b.appendChild(el('b', null, c.name));
+      b.appendChild(el('span', null, ch.used ? '已激活' : '防御 ' + Math.max(0, ch.hp)));
+      b.appendChild(el('span', 'd', String(Math.max(0, ch.hp))));
+      if (act) b.addEventListener('click', function () { send(act); });
+      champRow.appendChild(b);
+    });
+
+    var heroAttack = actionFor(function (a) { return a.type === 'attack' && a.target.kind === 'player'; });
+    $('attackBtn').disabled = !heroAttack;
+    $('endBtn').disabled = !hasType('endTurn');
+    $('attackBtn').textContent = info.me.combat > 0 && heroAttack ? '攻击对手英雄（' + info.me.combat + '）' : '攻击对手英雄';
+
+    if (view.over) $('note').textContent = '对局结束。';
+    else if (view.state.turnSeat === view.you) $('note').textContent = '轮到你：点击手牌打出，金币足够时点击市场购买。';
+    else $('note').textContent = '等待 ' + esc(view.state.turnName || '对手') + ' 行动…';
+
+    var logList = $('logList');
+    logList.innerHTML = '';
+    (view.state.log || []).slice(-14).forEach(function (row) { logList.appendChild(el('li', row.side ? 'side-' + row.side : '', row.text)); });
+
+    var finale = $('finale');
+    if (view.over && view.result) {
+      finale.hidden = false;
+      var mine = view.result.winnerSeat === view.you;
+      $('finaleTitle').textContent = mine ? '你赢了！' : ((view.result.winnerName || '对手') + ' 获胜');
+      $('finaleSub').textContent = '50 点生命归零 · 第 ' + (view.result.turns || 0) + ' 回合 · HP ' + view.result.scores.join(' / ');
+      var rows = $('finaleRows');
+      rows.innerHTML = '';
+      (view.result.losers || []).forEach(function (row) {
+        rows.appendChild(el('div', 'lbrow')).innerHTML = '<span>' + esc(row.name) + '</span><b>HP ' + row.score + '</b>';
+      });
+      $('restartBtn').hidden = !view.canRestart;
+    } else {
+      finale.hidden = true;
+    }
+    $('leaveBtn').hidden = !view.started;
+  }
+
+  function send(action) {
+    if (!session || !action) return;
+    toast('');
+    api('POST', '/api/rooms/' + encodeURIComponent(roomKey) + '/actions', {
+      session: session, playerId: playerId, action: action
+    }).then(function (r) {
+      if (r.status >= 400) throw new Error(errText(r));
+      lastVersion = -1;
+      return fetchRoom();
+    }).catch(function (e) { toast(e.message); });
+  }
+
+  function fetchRoom() {
+    if (!roomKey || !session) { showBoard(false); return Promise.resolve(null); }
+    return api('GET', '/api/rooms/' + encodeURIComponent(roomKey) + '?session=' + encodeURIComponent(session) + '&playerId=' + encodeURIComponent(playerId))
+      .then(function (r) {
+        if (r.status === 401) {
+          return api('POST', '/api/rooms/' + encodeURIComponent(roomKey) + '/reconnect', { session: session, playerId: playerId })
+            .then(function (rr) {
+              if (!rr.body || !rr.body.ok) throw new Error('房间已失效，请重新创建。');
+              return rr;
+            });
+        }
+        if (r.status >= 400) throw new Error(errText(r));
+        return r;
+      })
+      .then(function (r) {
+        if (!r) return;
+        var view = r.body || {};
+        showBoard(true);
+        latest = view;
+        if (view.inviteCode) invite = view.inviteCode;
+        render();
+        lastVersion = view.stateVersion;
+      })
+      .catch(function (e) { toast(e.message); });
+  }
+
+  function poll() {
+    if (timer) clearInterval(timer);
+    fetchRoom();
+    timer = setInterval(fetchRoom, 700);
+  }
+
+  $('createBtn').addEventListener('click', createRoom);
+  $('joinBtn').addEventListener('click', function () {
+    $('joinFields').hidden = false;
+    joinRoom();
+  });
+  $('attackBtn').addEventListener('click', function () {
+    var act = actionFor(function (a) { return a.type === 'attack' && a.target.kind === 'player'; });
+    if (act) send(act);
+  });
+  $('endBtn').addEventListener('click', function () {
+    var act = actionFor(function (a) { return a.type === 'endTurn'; });
+    if (act) send(act);
+  });
+  $('startBtn').addEventListener('click', function () {
+    api('POST', '/api/rooms/' + encodeURIComponent(roomKey) + '/start', { session: session, playerId: playerId })
+      .then(function (r) { if (r.status >= 400) throw new Error(errText(r)); lastVersion = -1; return fetchRoom(); })
+      .catch(function (e) { toast(e.message); });
+  });
+  $('restartBtn').addEventListener('click', function () {
+    api('POST', '/api/rooms/' + encodeURIComponent(roomKey) + '/restart', { session: session, playerId: playerId })
+      .then(function (r) { if (r.status >= 400) throw new Error(errText(r)); lastVersion = -1; return fetchRoom(); })
+      .catch(function (e) { toast(e.message); });
+  });
+  $('leaveBtn').addEventListener('click', function () {
+    api('POST', '/api/rooms/' + encodeURIComponent(roomKey) + '/leave', { session: session, playerId: playerId })
+      .then(function () { showBoard(false); if (timer) clearInterval(timer); })
+      .catch(function () { showBoard(false); });
+  });
+  $('inviteBtn').addEventListener('click', function () {
+    var done = function () { toast('邀请链接已复制。'); };
+    var make = function (code) {
+      var url = location.origin + '/boardgame/hero-realms-premium/online.html?room=' + encodeURIComponent(roomKey) + '&code=' + encodeURIComponent(code || '');
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done).catch(done);
+      else done();
+    };
+    api('POST', '/api/rooms/' + encodeURIComponent(roomKey) + '/invite', { session: session, playerId: playerId })
+      .then(function (r) {
+        var code = (r.body && (r.body.inviteCode || r.body.inviteToken)) || invite;
+        if (code) invite = code;
+        make(code);
+      })
+      .catch(function () { make(invite); });
+  });
+
+  function loadLeaderboard() {
+    api('GET', '/api/leaderboard?game=hero-realms-premium').then(function (r) {
+      var entries = (r.body && r.body.entries) || [];
+      $('leaderboard').innerHTML = entries.length
+        ? entries.slice(0, 12).map(function (e) {
+          return '<div class="lbrow"><span>' + esc(e.name) + (e.ai ? ' · AI' : '') + '</span><b>' + (e.winner ? '胜 · ' : '') + (e.score == null ? '' : 'HP ' + e.score) + '</b></div>';
+        }).join('')
+        : '<p class="muted">还没有结算记录。</p>';
+    }).catch(function () {});
+  }
+  loadLeaderboard();
+  setInterval(loadLeaderboard, 5000);
+
+  if (roomKey && session) { showBoard(true); poll(); }
+  else if (roomKey && invite) { showBoard(false); $('joinFields').hidden = false; $('roomCode').value = invite; }
+})();
+</script>
+</body>
+</html>

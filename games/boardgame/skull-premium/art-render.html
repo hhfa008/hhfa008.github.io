@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="骷髅牌 Skull 精品单机版：3–6 人、每人 3 玫瑰 1 骷髅，放置、叫价、翻牌，先赢两次挑战。含 AI、规则页与联机房间，纯前端本地素材。">
+<title>Skull art composition</title>
+<style>
+:root { --font-serif: "Iowan Old Style", "Palatino Linotype", "Songti SC", "Noto Serif SC", Georgia, serif; --font-sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", sans-serif; --art-coaster: url("../../assets/art/premium/skull/coaster.webp"); --art-wood: url("../../assets/art/premium/skull/table-wood.webp"); --art-mat: url("../../assets/art/premium/skull/bar-mat.webp"); --brass: #c9a25e; --brass-2: #f0d79a; --ink: #f4e8d4; --ink-dim: #c4ae90; --rose: #b84a5a; --danger: #e07a6b; --coaster: #e7dcc6; --coaster-ink: #3a2f24; }
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: #0b0805; }
+body { width: 1200px; min-height: 630px; overflow: hidden; color: var(--ink); font-family: var(--font-sans); }
+.stage { position: relative; width: 1200px; height: 1200px; overflow: hidden; background: radial-gradient(950px 720px at 12% -6%, rgba(120,84,42,.4), transparent 62%), radial-gradient(800px 700px at 94% 8%, rgba(201,162,94,.14), transparent 58%), linear-gradient(150deg, #1c150e, #080503 74%); }
+.stage::before { content: ""; position: absolute; inset: 0; background: var(--art-wood) center / cover no-repeat; opacity: .68; filter: saturate(.8) contrast(1.06); }
+.stage::after { content: ""; position: absolute; inset: 0; background: var(--art-mat) center / cover no-repeat; opacity: .18; mix-blend-mode: soft-light; }
+.scene { position: absolute; inset: 0; display: none; z-index: 2; }
+body[data-shot="cover"] .scene-cover { display: block; }
+body[data-shot="og"] .scene-og { display: block; }
+body[data-shot="detail1"] .scene-detail1 { display: block; }
+body[data-shot="detail2"] .scene-detail2 { display: block; }
+.eyebrow { font-size: 16px; letter-spacing: .48em; color: var(--brass); text-transform: uppercase; }
+.title { font-family: var(--font-serif); font-weight: 700; line-height: .98; }
+.subtitle { font-family: var(--font-serif); color: var(--brass-2); }
+.rule { height: 1px; background: linear-gradient(90deg, transparent, var(--brass), transparent); }
+
+.coaster { position: relative; width: 160px; height: 160px; border-radius: 50%; background: var(--art-coaster) center / cover no-repeat, var(--coaster); border: 7px solid var(--ring, var(--brass)); box-shadow: 0 18px 34px rgba(0,0,0,.55), inset 0 0 0 8px rgba(58,47,36,.16); display: grid; place-items: center; color: var(--coaster-ink); }
+.coaster::before { content: ""; position: absolute; inset: 15px; border-radius: 50%; border: 2px dashed rgba(58,47,36,.3); }
+.coaster svg { position: relative; z-index: 1; width: 84px; height: 84px; }
+.coaster.skull { color: #6b1f22; }
+.coaster.rose { color: #8d2a38; }
+.coaster.small { width: 96px; height: 96px; border-width: 5px; }
+.coaster.small svg { width: 50px; height: 50px; }
+.coaster.small::before { inset: 9px; }
+.coaster.back { color: transparent; }
+.coaster.back::after { content: ""; position: absolute; inset: 28px; border-radius: 50%; border: 3px solid var(--ring, var(--brass)); opacity: .55; }
+.stack { position: relative; width: 160px; height: 190px; }
+.stack .coaster { position: absolute; left: 0; }
+.stack .coaster:nth-child(1) { top: 96px; }
+.stack .coaster:nth-child(2) { top: 68px; }
+.stack .coaster:nth-child(3) { top: 40px; }
+.stack .coaster:nth-child(4) { top: 12px; }
+
+.cover-top { position: absolute; left: 76px; top: 64px; right: 76px; text-align: center; }
+.cover-top .title { font-size: 150px; letter-spacing: .12em; margin-top: 16px; color: #f7ecda; text-shadow: 0 6px 0 rgba(60,42,20,.5), 0 24px 60px rgba(0,0,0,.6); }
+.cover-top .subtitle { font-size: 25px; letter-spacing: .46em; margin-top: 12px; }
+.cover-top .rule { width: 540px; margin: 24px auto 0; }
+.cover-set { position: absolute; left: 50%; top: 424px; transform: translateX(-50%); display: flex; gap: 26px; align-items: flex-start; }
+.cover-set .coaster:nth-child(1) { transform: rotate(-8deg) translateY(14px); }
+.cover-set .coaster:nth-child(2) { transform: rotate(2deg) translateY(-8px); }
+.cover-set .coaster:nth-child(3) { transform: rotate(7deg) translateY(10px); }
+.cover-set .coaster.skull { transform: rotate(-4deg) translateY(26px); }
+.cover-foot { position: absolute; left: 0; right: 0; bottom: 106px; text-align: center; font-size: 20px; letter-spacing: .16em; color: var(--ink-dim); }
+.cover-note { position: absolute; left: 0; right: 0; bottom: 72px; text-align: center; font-size: 14px; letter-spacing: .2em; color: rgba(196,174,144,.7); }
+
+.og-left { position: absolute; left: 70px; top: 84px; width: 540px; }
+.og-left .title { font-size: 104px; letter-spacing: .08em; margin-top: 14px; }
+.og-left .subtitle { font-size: 20px; letter-spacing: .38em; margin-top: 10px; }
+.og-left .desc { margin-top: 26px; font-size: 19px; line-height: 1.7; color: var(--ink-dim); }
+.og-left .rule { width: 400px; margin: 22px 0; }
+.og-set { position: absolute; right: 40px; top: 78px; display: flex; gap: 12px; flex-wrap: wrap; width: 560px; justify-content: center; }
+.og-set .coaster { width: 150px; height: 150px; }
+.og-set .coaster:nth-child(1) { transform: rotate(-9deg); }
+.og-set .coaster:nth-child(2) { transform: rotate(4deg) translateY(12px); }
+.og-set .coaster:nth-child(3) { transform: rotate(-3deg) translateY(6px); }
+.og-set .coaster:nth-child(4) { transform: rotate(8deg) translateY(20px); }
+
+.detail-head { position: absolute; left: 70px; right: 70px; top: 54px; }
+.detail-head .eyebrow { font-size: 15px; letter-spacing: .42em; }
+.detail-head .title { font-size: 56px; margin-top: 8px; letter-spacing: .05em; }
+.detail-head .sub { position: absolute; right: 0; bottom: 8px; font-size: 17px; color: var(--ink-dim); }
+.detail-rule { position: absolute; left: 70px; right: 70px; top: 174px; height: 1px; background: linear-gradient(90deg, var(--brass), transparent); }
+.set-row { position: absolute; left: 70px; right: 70px; top: 228px; display: flex; gap: 34px; align-items: flex-start; justify-content: center; }
+.set-item { text-align: center; }
+.set-item .cap { margin-top: 14px; font-size: 17px; color: var(--ink-soft); }
+.set-item .cap b { color: var(--brass-2); font-size: 22px; }
+.player-grid { position: absolute; left: 70px; right: 70px; top: 540px; display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; }
+.player-col { text-align: center; }
+.player-col .nm { font-size: 13px; color: var(--ink-dim); margin-bottom: 8px; }
+
+.detail2-left { position: absolute; left: 70px; top: 80px; width: 480px; }
+.detail2-left .title { font-size: 52px; letter-spacing: .04em; }
+.detail2-left .p { margin-top: 22px; font-size: 18px; line-height: 1.8; color: var(--ink-dim); }
+.detail2-left .legend { margin-top: 26px; display: grid; gap: 10px; }
+.detail2-left .legend .row { display: flex; align-items: center; gap: 12px; font-size: 16px; color: var(--ink-soft); }
+.detail2-left .legend .mini { width: 54px; height: 54px; border-radius: 50%; background: var(--art-coaster) center / cover no-repeat, var(--coaster); border: 3px solid var(--brass); display: grid; place-items: center; color: var(--coaster-ink); }
+.detail2-left .legend svg { width: 32px; height: 32px; }
+.detail2-right { position: absolute; right: 40px; top: 70px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 26px 10px; width: 620px; }
+.table-stack { text-align: center; }
+.table-stack .nm { font-size: 13px; color: var(--ink-dim); margin-bottom: 8px; }
+.table-stack .stack { margin: 0 auto; width: 120px; height: 140px; }
+.table-stack .stack .coaster { width: 120px; height: 120px; border-width: 5px; }
+.table-stack .stack .coaster svg { width: 62px; height: 62px; }
+.table-stack .stack .coaster:nth-child(1) { top: 66px; }
+.table-stack .stack .coaster:nth-child(2) { top: 46px; }
+.table-stack .stack .coaster:nth-child(3) { top: 26px; }
+.table-stack .stack .coaster:nth-child(4) { top: 6px; }
+</style>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/skull-premium/art-render.html">
+</head>
+<body>
+<div class="stage">
+
+  <div class="scene scene-cover">
+    <div class="cover-top">
+      <div class="eyebrow">Premium Edition · 3–6 Players</div>
+      <div class="title">骷髅牌</div>
+      <div class="subtitle">SKULL</div>
+      <div class="rule"></div>
+    </div>
+    <div class="cover-set">
+      <div class="coaster rose" style="--ring:#a14b36" data-icon="rose"></div>
+      <div class="coaster rose" style="--ring:#4f6b4a" data-icon="rose"></div>
+      <div class="coaster rose" style="--ring:#34506e" data-icon="rose"></div>
+      <div class="coaster skull" style="--ring:#6d3a5c" data-icon="skull"></div>
+    </div>
+    <div class="cover-foot">每人 3 玫瑰 + 1 骷髅 · 先赢 2 次挑战</div>
+    <div class="cover-note">PLACE · BID · REVEAL</div>
+  </div>
+
+  <div class="scene scene-og">
+    <div class="og-left">
+      <div class="eyebrow">Premium Edition</div>
+      <div class="title">骷髅牌</div>
+      <div class="subtitle">SKULL</div>
+      <div class="rule"></div>
+      <div class="desc">把骷髅藏在玫瑰下面。<br>叫一个数字，翻开它。</div>
+    </div>
+    <div class="og-set">
+      <div class="coaster rose" style="--ring:#a14b36" data-icon="rose"></div>
+      <div class="coaster rose" style="--ring:#4f6b4a" data-icon="rose"></div>
+      <div class="coaster rose" style="--ring:#34506e" data-icon="rose"></div>
+      <div class="coaster skull" style="--ring:#25262b" data-icon="skull"></div>
+    </div>
+  </div>
+
+  <div class="scene scene-detail1">
+    <div class="detail-head">
+      <div class="eyebrow">EVERY PLAYER · 4 COASTERS</div>
+      <div class="title">三朵玫瑰，一个骷髅</div>
+      <div class="sub">4 枚杯垫 / 人 · 背面用玩家颜色区分</div>
+    </div>
+    <div class="detail-rule"></div>
+    <div class="set-row">
+      <div class="set-item"><div class="coaster rose" style="--ring:#a14b36" data-icon="rose"></div><div class="cap">玫瑰 <b>×3</b></div></div>
+      <div class="set-item"><div class="coaster rose" style="--ring:#a14b36;transform:rotate(6deg)" data-icon="rose"></div><div class="cap">安全牌</div></div>
+      <div class="set-item"><div class="coaster rose" style="--ring:#a14b36;transform:rotate(-5deg)" data-icon="rose"></div><div class="cap">安全牌</div></div>
+      <div class="set-item"><div class="coaster skull" style="--ring:#a14b36;transform:rotate(9deg)" data-icon="skull"></div><div class="cap">骷髅 <b>×1</b></div></div>
+    </div>
+    <div class="player-grid" id="playerGrid"></div>
+  </div>
+
+  <div class="scene scene-detail2">
+    <div class="detail2-left">
+      <div class="eyebrow" style="font-size:15px;letter-spacing:.42em">THE TABLE · SIX STACKS</div>
+      <div class="title">牌堆与翻牌</div>
+      <div class="p">每名玩家把自己的牌堆叠在面前，背面朝上。<br>叫价者先翻任意牌堆的最上面一张，再决定是否<br>继续翻自己的下一张。翻到骷髅，挑战立即失败。</div>
+      <div class="legend">
+        <div class="row"><span class="mini" data-icon="rose"></span><div>玫瑰：安全，凑够叫价即成功</div></div>
+        <div class="row"><span class="mini" data-icon="skull"></span><div>骷髅：翻开即失败，失去一枚牌</div></div>
+      </div>
+    </div>
+    <div class="detail2-right" id="tableStacks"></div>
+  </div>
+
+</div>
+<script>
+var ROSE = '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.8"><path d="M32 28c-4-4-4-9 0-12 4 3 4 8 0 12z"/><path d="M32 28c-6 0-10-3-10-8 5-2 9 1 10 8z"/><path d="M32 28c6 0 10-3 10-8-5-2-9 1-10 8z"/><path d="M32 28c-5 2-7 6-5 11 5 0 7-4 5-11z"/><path d="M32 28c5 2 7 6 5 11-5 0-7-4-5-11z"/><path d="M32 30v22M32 42c-5-1-8-3-9-7M32 46c5-1 8-3 9-7"/></svg>';
+var SKULL = '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.8"><path d="M32 12c-10 0-16 7-16 16 0 6 3 10 7 12v8h18v-8c4-2 7-6 7-12 0-9-6-16-16-16z"/><circle cx="25" cy="29" r="3.4" fill="currentColor"/><circle cx="39" cy="29" r="3.4" fill="currentColor"/><path d="M29 39h6v6h-6zM26 48v4M32 48v5M38 48v4"/></svg>';
+document.querySelectorAll('[data-icon]').forEach(function (n) { n.innerHTML = n.dataset.icon === 'rose' ? ROSE : SKULL; });
+
+var COLORS = ['#25262b', '#a14b36', '#4f6b4a', '#34506e', '#6d3a5c', '#96702a'];
+var grid = document.getElementById('playerGrid');
+COLORS.forEach(function (hex, i) {
+  var col = document.createElement('div');
+  col.className = 'player-col';
+  col.innerHTML = '<div class="nm">玩家 ' + (i + 1) + '</div>' +
+    '<div class="stack">' +
+    '<div class="coaster back" style="--ring:' + hex + '"></div>' +
+    '<div class="coaster back" style="--ring:' + hex + '"></div>' +
+    '<div class="coaster rose" style="--ring:' + hex + '"></div>' +
+    '</div>';
+  grid.appendChild(col);
+});
+
+var stacks = [2, 1, 3, 1, 2, 4];
+var host = document.getElementById('tableStacks');
+stacks.forEach(function (count, i) {
+  var box = document.createElement('div');
+  box.className = 'table-stack';
+  var html = '<div class="nm">玩家 ' + (i + 1) + ' · ' + count + ' 枚</div><div class="stack">';
+  for (var d = 0; d < count; d++) {
+    var top = d === count - 1;
+    html += '<div class="coaster ' + (top ? 'back' : 'back') + '" style="--ring:' + COLORS[i] + '"></div>';
+  }
+  html += '</div>';
+  box.innerHTML = html;
+  host.appendChild(box);
+});
+
+var shot = new URLSearchParams(location.search).get('shot') || 'cover';
+document.body.dataset.shot = shot;
+</script>
+</body>
+</html>

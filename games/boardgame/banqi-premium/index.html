@@ -1,0 +1,637 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#15130f">
+<meta name="description" content="暗棋（翻棋）精品版：4×8 棋盘、32 枚中国象棋扣放，翻开或走子二选一。完整等级吃子、兵吃帥、炮隔一子吃，三档 AI、提示、悔棋与双人联机房间。">
+<meta property="og:title" content="暗棋 · 翻棋 · 32 枚棋子全部扣放">
+<meta property="og:description" content="翻开或走子，等级吃子、兵吃帥、炮隔子吃。三档 AI 与 2 人联机，4×8 木盘上的信息博弈。">
+<meta property="og:type" content="website">
+<meta property="og:image" content="assets/og.webp">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<title>暗棋 · 翻棋 · 精品桌游</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23241c13'/%3E%3Crect x='7' y='7' width='50' height='50' rx='10' fill='%23c89a5b'/%3E%3Ccircle cx='24' cy='24' r='10' fill='%23f2e4c8'/%3E%3Ctext x='24' y='29' font-size='13' text-anchor='middle' fill='%23b23a2c' font-family='serif'%3E馬%3C/text%3E%3Ccircle cx='42' cy='42' r='10' fill='%231b1712'/%3E%3Ctext x='42' y='47' font-size='13' text-anchor='middle' fill='%23efe2c8' font-family='serif'%3E卒%3C/text%3E%3C/svg%3E">
+<style>
+  :root{
+    --art-board:url("../../assets/art/premium/banqi/board-wood.webp");
+    --art-back:url("../../assets/art/premium/banqi/piece-back.webp");
+    --art-face:url("../../assets/art/premium/banqi/piece-face.webp");
+    --art-cloth:url("../../assets/art/premium/banqi/table-cloth.webp");
+    --font-serif:"Songti SC","Iowan Old Style","Palatino Linotype",Georgia,serif;
+    --font-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    --bg:#15130f;--bg2:#211c15;--panel:rgba(38,32,24,.92);--panel2:rgba(51,42,31,.78);
+    --line:rgba(198,155,96,.3);--line2:rgba(198,155,96,.55);
+    --ink:#f6ead6;--muted:#c3b096;--soft:#92805f;
+    --red:#e05a48;--red2:#a93225;--black:#2b241c;--blackInk:#15110c;
+    --gold:#e8c07a;--green:#6fd0a4;--sky:#8cc6ff;--danger:#ff8d78;
+    --wood:#b98348;--wood2:#8d5d2e;--ivory:#f0e1c4;--ivory2:#d8c19a;
+    --shadow:0 20px 46px rgba(0,0,0,.46);--radius:18px;--tap:52px;
+  }
+  *{box-sizing:border-box}
+  html,body{min-height:100%}
+  body{
+    margin:0;color:var(--ink);font:16px/1.5 var(--font-sans);
+    background:
+      radial-gradient(900px 520px at 50% -18%,rgba(94,66,36,.55),transparent 64%),
+      radial-gradient(700px 420px at 8% 108%,rgba(56,42,27,.8),transparent 62%),
+      linear-gradient(168deg,var(--bg2),var(--bg) 62%);
+    background-color:var(--bg);background-attachment:fixed;
+    -webkit-tap-highlight-color:transparent;
+  }
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.12;
+    background:var(--art-cloth) center/cover no-repeat;
+    mix-blend-mode:soft-light;
+  }
+  a{color:var(--gold);text-decoration:none}
+  button{font:inherit;color:inherit}
+  .wrap{position:relative;z-index:1;max-width:780px;margin:0 auto;padding:10px 12px 40px}
+  .top{display:flex;align-items:center;gap:8px;padding:2px 0 10px}
+  .top .brand{flex:1;min-width:0;text-align:center}
+  .brand h1{margin:0;font-family:var(--font-serif);font-weight:700;font-size:20px;letter-spacing:.14em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .brand p{margin:1px 0 0;font-size:12px;color:var(--muted);letter-spacing:.08em}
+  .icon-btn{
+    display:inline-flex;align-items:center;justify-content:center;min-width:var(--tap);min-height:var(--tap);
+    padding:0 13px;border-radius:13px;border:1px solid var(--line);background:var(--panel);
+    color:var(--ink);font-size:13.5px;font-weight:700;cursor:pointer;text-decoration:none;
+    box-shadow:0 4px 0 rgba(0,0,0,.22);touch-action:manipulation;
+  }
+  .icon-btn:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(0,0,0,.22)}
+  .icon-btn:focus-visible,button:focus-visible,.cell:focus-visible{outline:3px solid var(--sky);outline-offset:2px}
+
+  .strip{
+    display:flex;align-items:center;gap:10px;margin:0 0 8px;padding:9px 11px;border-radius:15px;
+    border:1px solid var(--line);background:linear-gradient(160deg,var(--panel),rgba(0,0,0,.14));
+    box-shadow:0 7px 16px rgba(0,0,0,.16);min-width:0;
+  }
+  .strip.turn{border-color:var(--line2);box-shadow:inset 0 0 0 1px rgba(232,192,122,.35),0 7px 16px rgba(0,0,0,.2)}
+  .drop{
+    width:38px;height:38px;flex:none;border-radius:50%;display:grid;place-items:center;
+    font-family:var(--font-serif);font-weight:700;font-size:17px;line-height:1;
+    background:radial-gradient(circle at 34% 27%,rgba(255,255,255,.55),transparent 36%),linear-gradient(150deg,var(--ivory),var(--ivory2));
+    color:var(--red2);border:1px solid rgba(120,80,35,.55);
+    box-shadow:0 3px 0 rgba(88,55,20,.5),inset 0 1px 0 rgba(255,255,255,.7);
+  }
+  .strip.black .drop{background:radial-gradient(circle at 34% 27%,rgba(255,255,255,.35),transparent 36%),linear-gradient(150deg,#4a3b2b,#251d15);color:var(--ivory)}
+  .who{min-width:0;flex:1}
+  .who strong{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .who span{display:block;margin-top:1px;font-size:12px;color:var(--muted)}
+  .who span b{color:var(--ink)}
+  .badge{
+    flex:none;display:inline-flex;align-items:center;min-height:30px;padding:2px 11px;border-radius:999px;
+    border:1px solid var(--line);background:rgba(0,0,0,.2);font-size:12px;font-weight:800;color:var(--gold);
+  }
+  .badge.turn{color:var(--green);border-color:rgba(111,208,164,.42);background:rgba(111,208,164,.1)}
+  .badge.over{color:var(--sky)}
+
+  .board-shell{
+    position:relative;border-radius:22px;padding:12px;border:1px solid rgba(232,192,122,.34);
+    background:
+      linear-gradient(155deg,rgba(78,52,28,.62),rgba(28,21,14,.82)),
+      var(--art-board) center/cover no-repeat;
+    box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,.16),inset 0 -2px 0 rgba(0,0,0,.42);
+    overflow:hidden;
+  }
+  .board-shell::before{content:"";position:absolute;inset:7px;border:1px solid rgba(232,192,122,.18);border-radius:16px;pointer-events:none}
+  .board{
+    position:relative;display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(4,1fr);
+    gap:3px;aspect-ratio:2/1;width:100%;isolation:isolate;
+  }
+  .cell{
+    position:relative;display:flex;align-items:center;justify-content:center;min-width:0;
+    border-radius:7px;border:1px solid rgba(70,45,20,.38);
+    background:linear-gradient(150deg,rgba(206,158,98,.16),rgba(54,36,19,.18));
+    box-shadow:inset 0 1px 0 rgba(255,235,200,.14),inset 0 -1px 0 rgba(40,25,10,.24);
+    cursor:pointer;touch-action:manipulation;user-select:none;-webkit-user-select:none;
+  }
+  .cell::after{content:"";position:absolute;inset:0;border-radius:7px;pointer-events:none;transition:box-shadow .16s,background .16s}
+  .cell.last::after{box-shadow:inset 0 0 0 2px rgba(232,192,122,.55)}
+  .cell.hint::after{box-shadow:inset 0 0 0 2px rgba(140,198,255,.75)}
+  .cell.sel::after{box-shadow:inset 0 0 0 3px var(--green)}
+  .cell.dest::after{background:radial-gradient(circle,rgba(111,208,164,.55) 0 18%,transparent 20%)}
+  .cell.dest.cap::after{background:radial-gradient(circle,rgba(224,90,72,.62) 0 20%,transparent 22%)}
+  .cell:focus-visible{z-index:4}
+  .piece{
+    position:relative;width:86%;aspect-ratio:1;border-radius:50%;display:grid;place-items:center;
+    font-family:var(--font-serif);font-weight:700;line-height:1;z-index:2;
+    background:
+      radial-gradient(circle at 34% 27%,rgba(255,255,255,.62),transparent 37%),
+      radial-gradient(circle at 50% 62%,rgba(255,255,255,.16),transparent 58%),
+      linear-gradient(148deg,var(--ivory),var(--ivory2) 72%),
+      var(--art-face) center/cover no-repeat;
+    border:1px solid rgba(120,82,40,.55);
+    box-shadow:0 4px 0 rgba(80,52,22,.55),0 7px 12px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.75),inset 0 -2px 3px rgba(120,80,40,.22);
+    transition:transform .15s ease,box-shadow .15s ease;
+    font-size:clamp(15px,5.2vw,30px);
+  }
+  .piece::before{content:"";position:absolute;inset:9%;border-radius:50%;border:1px solid rgba(120,82,40,.26);pointer-events:none}
+  .piece.red{color:var(--red2);text-shadow:0 1px 0 rgba(255,255,255,.8),0 2px 1px rgba(140,40,28,.18)}
+  .piece.black{color:var(--blackInk);text-shadow:0 1px 0 rgba(255,255,255,.65)}
+  .piece.hidden{
+    color:transparent;border-color:rgba(72,47,22,.7);
+    background:
+      radial-gradient(circle at 34% 27%,rgba(255,242,214,.34),transparent 38%),
+      radial-gradient(circle at 50% 50%,transparent 0 23%,rgba(60,38,16,.32) 24% 25.5%,transparent 26% 45%,rgba(60,38,16,.24) 46% 47.5%,transparent 48%),
+      linear-gradient(148deg,#a9763f,#7a4f25 66%,#5d3a19),
+      var(--art-back) center/cover no-repeat;
+    box-shadow:0 4px 0 rgba(58,36,14,.62),0 7px 12px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,230,190,.42),inset 0 -2px 4px rgba(40,22,8,.4);
+  }
+  .cell:active .piece{transform:translateY(2px);box-shadow:0 2px 0 rgba(80,52,22,.55),0 4px 7px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.7)}
+  .flag{position:absolute;top:2px;right:4px;font-size:11px;font-weight:900;color:rgba(255,232,190,.9);text-shadow:0 1px 2px rgba(0,0,0,.6);z-index:3;line-height:1}
+
+  .status{
+    display:flex;align-items:center;gap:8px;min-height:46px;margin:9px 0 0;padding:8px 11px;border-radius:13px;
+    border:1px solid var(--line);background:var(--panel);font-size:13px;font-weight:700;
+  }
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--green);flex:none;box-shadow:0 0 0 4px rgba(111,208,164,.16);animation:pulse 1.9s ease-in-out infinite}
+  .dot.wait{background:var(--gold);box-shadow:0 0 0 4px rgba(232,192,122,.14);animation:none}
+  .dot.over{background:var(--sky);box-shadow:0 0 0 4px rgba(140,198,255,.14);animation:none}
+  .status span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .status b{color:var(--gold)}
+
+  .controls{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:10px}
+  .controls button{
+    min-height:52px;border-radius:13px;border:1px solid var(--line);background:linear-gradient(160deg,var(--panel2),var(--panel));
+    font-size:13.5px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;
+    box-shadow:0 4px 0 rgba(0,0,0,.22);touch-action:manipulation;padding:0 6px;
+  }
+  .controls button:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(0,0,0,.22)}
+  .controls button.primary{background:linear-gradient(160deg,var(--gold),#bd8f45);color:#241708;border-color:transparent}
+  .controls button:disabled{opacity:.42;cursor:default;transform:none}
+
+  .options{display:flex;flex-wrap:wrap;gap:8px;margin-top:9px;align-items:center}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:11px;overflow:hidden;background:rgba(0,0,0,.16)}
+  .seg button{min-height:44px;padding:0 12px;border:0;background:transparent;color:var(--muted);font-size:12.5px;font-weight:800;cursor:pointer}
+  .seg button[aria-pressed="true"]{background:var(--gold);color:#241708}
+  .opt-label{font-size:12px;color:var(--muted);font-weight:800;margin-right:2px}
+
+  .lower{display:grid;grid-template-columns:1.06fr .94fr;gap:10px;margin-top:11px}
+  .card{border:1px solid var(--line);border-radius:15px;background:var(--panel);padding:10px 12px;min-width:0}
+  .card h2{margin:0 0 7px;font-size:12px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase}
+  .log{list-style:none;margin:0;padding:0;max-height:144px;overflow:auto;display:grid;gap:1px}
+  .log li{font-size:12.5px;color:var(--muted);padding:3px 0;border-bottom:1px dashed rgba(198,155,96,.16)}
+  .log li:last-child{color:var(--ink);border-bottom:0}
+  .log li::before{content:"›";color:var(--gold);margin-right:5px;font-weight:900}
+  .tips{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+  .tips li{font-size:12.5px;color:var(--muted);padding-left:15px;position:relative}
+  .tips li::before{content:"·";position:absolute;left:3px;top:-1px;color:var(--gold);font-size:19px;line-height:1}
+  .legend{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;margin-top:2px}
+  .legend div{font-size:12px;color:var(--muted);display:flex;justify-content:space-between;gap:6px;border-bottom:1px dashed rgba(198,155,96,.14);padding:2px 0}
+  .legend b{color:var(--ink);font-weight:700}
+
+  .banner{
+    margin-top:11px;padding:12px 14px;border-radius:16px;text-align:center;
+    border:1px solid rgba(232,192,122,.4);background:linear-gradient(160deg,rgba(232,192,122,.16),rgba(38,32,24,.9));
+  }
+  .banner[hidden]{display:none}
+  .banner h3{margin:0 0 3px;font-family:var(--font-serif);font-size:22px;letter-spacing:.08em}
+  .banner p{margin:0;font-size:13px;color:var(--muted)}
+  .banner .row{display:flex;gap:8px;justify-content:center;margin-top:9px;flex-wrap:wrap}
+  .banner button{min-height:46px;padding:0 16px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);font-weight:800;font-size:13.5px;cursor:pointer}
+
+  .foot{margin-top:14px;font-size:12px;color:var(--soft);text-align:center;line-height:1.7}
+  .foot a{display:inline-flex;align-items:center;min-height:44px;padding:0 8px;font-weight:700}
+
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+  @media (prefers-reduced-motion: reduce){*{animation-duration:.01ms !important;transition-duration:.01ms !important}}
+  @media (max-width:420px){
+    .wrap{padding:8px 9px 30px}
+    .brand h1{font-size:18px}
+    .board-shell{padding:9px}
+    .piece{font-size:clamp(14px,5.4vw,24px)}
+    .lower{grid-template-columns:1fr}
+  }
+  @media (max-width:350px){
+    .controls{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .icon-btn{min-width:48px;padding:0 9px;font-size:12.5px}
+    .who strong{font-size:13px}
+  }
+/* safe-area: keep the original bottom padding, clear the iOS home indicator */
+body{padding-bottom:env(safe-area-inset-bottom)}
+</style>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/banqi-premium/">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="icon-btn" href="../../index.html" aria-label="返回游戏大厅">← 大厅</a>
+    <div class="brand">
+      <h1>暗 棋 · 翻 棋</h1>
+      <p>4×8 · 32 枚扣放 · 等级吃子</p>
+    </div>
+    <a class="icon-btn" href="online.html" aria-label="进入联机房间">联机</a>
+  </header>
+
+  <main>
+<div style="display:flex;justify-content:flex-end;margin:0 0 8px"><button class="primary" type="button" style="min-height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(255,255,255,.18);background:linear-gradient(160deg,#e8c07a,#bd8f45);color:#241708;font-weight:800;font-size:14px" onclick="var b=document.getElementById('newBtn');if(b)b.click();">新对局</button></div>
+
+    <section class="strip black" id="blackStrip" aria-label="黑方状态">
+      <div class="drop" aria-hidden="true">將</div>
+      <div class="who">
+        <strong id="blackName">黑方</strong>
+        <span>棋子 <b id="blackPieces">16</b> · 明子 <b id="blackVisible">0</b> · 已吃 <b id="blackCaptured">0</b></span>
+      </div>
+      <span class="badge" id="blackBadge">后手</span>
+    </section>
+
+    <section class="board-shell" aria-label="暗棋棋盘">
+      <div class="board" id="board" role="grid" aria-label="4 行 8 列暗棋棋盘"></div>
+    </section>
+
+    <div class="status" aria-live="polite">
+      <i class="dot" id="turnDot"></i>
+      <span id="statusText">红方先行：翻开任意一枚暗棋，或移动明子。</span>
+    </div>
+
+    <section class="strip turn" id="redStrip" aria-label="红方状态">
+      <div class="drop" aria-hidden="true">帥</div>
+      <div class="who">
+        <strong id="redName">红方（你）</strong>
+        <span>棋子 <b id="redPieces">16</b> · 明子 <b id="redVisible">0</b> · 已吃 <b id="redCaptured">0</b></span>
+      </div>
+      <span class="badge turn" id="redBadge">当前行动</span>
+    </section>
+
+    <section class="controls" aria-label="对局操作">
+      <button id="hintBtn" type="button">提示</button>
+      <button id="undoBtn" type="button">悔棋</button>
+      <button id="soundBtn" type="button" aria-pressed="true">音效 开</button>
+      <button id="newBtn" class="primary" type="button">新对局</button>
+    </section>
+
+    <div class="options">
+      <span class="opt-label">AI 难度</span>
+      <div class="seg" role="group" aria-label="AI 难度">
+        <button type="button" data-level="1" aria-pressed="false">入门</button>
+        <button type="button" data-level="2" aria-pressed="true">标准</button>
+        <button type="button" data-level="3" aria-pressed="false">高手</button>
+      </div>
+    </div>
+
+    <section class="lower">
+      <div class="card">
+        <h2>对局记录</h2>
+        <ul class="log" id="log"></ul>
+      </div>
+      <div class="card">
+        <h2>等级与吃子</h2>
+        <div class="legend" id="legend"></div>
+      </div>
+    </section>
+
+    <div class="banner" id="banner" hidden>
+      <h3 id="bannerTitle">红方获胜</h3>
+      <p id="bannerText"></p>
+      <div class="row">
+        <button id="bannerNew" type="button">再来一局</button>
+        <a class="icon-btn" href="online.html" style="min-height:46px">去联机</a>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:11px">
+      <h2>三条实战原则</h2>
+      <ul class="tips" id="tips"></ul>
+    </div>
+  </main>
+
+  <footer class="foot">
+    <a href="rules.html">完整规则与常见问题</a> · <a href="online.html">2 人联机</a><br>
+    纯前端本地素材 · 无外部请求 · 进度只存本机
+  </footer>
+</div>
+
+<script src="../../shared/shuffle.js"></script>
+<script src="../../shared/sfx.js"></script>
+<script src="../../shared/store.js"></script>
+<script src="engine.js"></script>
+<script src="data.js"></script>
+<script>
+(function () {
+  'use strict';
+  var E = window.BanqiPremiumEngine;
+  var D = window.BanqiPremiumData;
+  var $ = function (id) { return document.getElementById(id); };
+  var board = $('board');
+  var state = null;
+  var level = 2;
+  var selected = null;
+  var dests = [];
+  var hint = null;
+  var lastMove = null;
+  var history = [];
+  var aiTimer = null;
+  var soundOn = true;
+  var over = false;
+
+  function safeGet(key, fallback) {
+    try {
+      var v = window.localStorage.getItem(key);
+      return v == null ? fallback : v;
+    } catch (e) { return fallback; }
+  }
+  function safeSet(key, value) {
+    try { window.localStorage.setItem(key, value); } catch (e) { /* private mode */ }
+  }
+  function beep(name) {
+    if (!soundOn || !window.Sfx || typeof window.Sfx.play !== 'function') return;
+    try { window.Sfx.play(name); } catch (e) { /* audio unavailable */ }
+  }
+  function randomSeed() {
+    try {
+      var a = new Uint32Array(1);
+      window.crypto.getRandomValues(a);
+      return a[0] >>> 0;
+    } catch (e) { return (Date.now() ^ 0x9e3779b9) >>> 0; }
+  }
+  function sideName(s) { return s === E.RED ? '红方' : '黑方'; }
+  function sideOfPlayer(player) { return player === 0 ? E.RED : E.BLACK; }
+
+  function buildBoard() {
+    board.innerHTML = '';
+    for (var i = 0; i < E.N; i++) {
+      var cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.setAttribute('role', 'gridcell');
+      cell.setAttribute('tabindex', '0');
+      cell.setAttribute('data-i', String(i));
+      cell.setAttribute('aria-label', '第 ' + (E.rowOf(i) + 1) + ' 行第 ' + (E.colOf(i) + 1) + ' 列');
+      board.appendChild(cell);
+    }
+    board.addEventListener('click', onBoardClick);
+    board.addEventListener('keydown', onBoardKey);
+  }
+
+  function pieceEl(piece) {
+    var el = document.createElement('span');
+    el.className = 'piece' + (piece.h ? ' hidden' : (piece.s === E.RED ? ' red' : ' black'));
+    if (!piece.h) el.textContent = E.glyphOf(piece);
+    return el;
+  }
+
+  function render() {
+    if (!state) return;
+    var cells = board.children;
+    for (var i = 0; i < cells.length; i++) {
+      var cell = cells[i];
+      var piece = state.cells[i];
+      cell.className = 'cell';
+      cell.innerHTML = '';
+      if (piece) {
+        cell.appendChild(pieceEl(piece));
+        cell.setAttribute('aria-label',
+          (E.rowOf(i) + 1) + ' 行 ' + (E.colOf(i) + 1) + ' 列：' +
+          (piece.h ? '暗棋' : E.pieceName(piece)));
+      } else {
+        cell.setAttribute('aria-label', (E.rowOf(i) + 1) + ' 行 ' + (E.colOf(i) + 1) + ' 列：空');
+      }
+      if (lastMove && (lastMove.from === i || lastMove.to === i)) cell.classList.add('last');
+      if (hint && (hint.from === i || hint.to === i)) cell.classList.add('hint');
+      if (selected === i) cell.classList.add('sel');
+      if (dests.indexOf(i) >= 0) cell.classList.add(piece && !piece.h ? 'dest cap' : 'dest');
+    }
+
+    var red = state.players[0], black = state.players[1];
+    $('redPieces').textContent = String(E.count(state, E.RED));
+    $('blackPieces').textContent = String(E.count(state, E.BLACK));
+    $('redVisible').textContent = String(E.visibleCount(state, E.RED));
+    $('blackVisible').textContent = String(E.visibleCount(state, E.BLACK));
+    $('redCaptured').textContent = String(16 - E.count(state, E.RED));
+    $('blackCaptured').textContent = String(16 - E.count(state, E.BLACK));
+    $('redName').textContent = red.name + '（你）';
+    $('blackName').textContent = black.name;
+
+    var redTurn = state.phase === 'playing' && state.turn === E.RED;
+    var blackTurn = state.phase === 'playing' && state.turn === E.BLACK;
+    $('redStrip').classList.toggle('turn', redTurn);
+    $('blackStrip').classList.toggle('turn', blackTurn);
+    $('redBadge').textContent = state.phase === 'over' ? '对局结束' : (redTurn ? '当前行动' : '等待');
+    $('redBadge').className = 'badge' + (redTurn ? ' turn' : (state.phase === 'over' ? ' over' : ''));
+    $('blackBadge').textContent = state.phase === 'over' ? '对局结束' : (blackTurn ? '当前行动' : '等待');
+    $('blackBadge').className = 'badge' + (blackTurn ? ' turn' : (state.phase === 'over' ? ' over' : ''));
+
+    $('turnDot').className = 'dot' + (state.phase === 'over' ? ' over' : (redTurn ? '' : ' wait'));
+    if (state.phase === 'over') {
+      $('statusText').textContent = state.winner === 0 ? '和棋：双方都无法取得决定性优势。' : (sideName(state.winner) + '获胜。');
+    } else if (redTurn) {
+      $('statusText').textContent = '轮到你：翻开任意暗棋，或移动一枚明子。';
+    } else {
+      $('statusText').textContent = '黑方思考中…（' + (level === 1 ? '入门' : level === 2 ? '标准' : '高手') + '）';
+    }
+
+    $('undoBtn').disabled = !history.length;
+    var logs = state.log.slice(-14).reverse();
+    $('log').innerHTML = logs.map(function (line) { return '<li>' + escapeHtml(line) + '</li>'; }).join('');
+
+    over = state.phase === 'over';
+    if (over) {
+      var title = state.winner === 0 ? '和棋' : sideName(state.winner) + '获胜';
+      var why = state.reason === 'all' ? '对方棋子已被全部吃掉。' :
+        state.reason === 'stuck' ? '对方已无合法着法。' :
+          state.reason === 'draw' ? '连续 120 手无吃子，判和。' : '';
+      $('banner').hidden = false;
+      $('bannerTitle').textContent = title;
+      $('bannerText').textContent = why;
+      beep(state.winner === E.RED ? 'win' : (state.winner === 0 ? 'click' : 'lose'));
+    } else {
+      $('banner').hidden = true;
+    }
+  }
+
+  function escapeHtml(text) {
+    return String(text).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+
+  function snapshot() {
+    return E.clone(state);
+  }
+  function pushHistory() {
+    history.push(snapshot());
+    if (history.length > 24) history.shift();
+    safeSet('banqi-premium:level', String(level));
+  }
+
+  function humanTurn() {
+    return state && state.phase === 'playing' && state.turn === E.RED;
+  }
+
+  function clearSelection() {
+    selected = null;
+    dests = [];
+    hint = null;
+  }
+
+  function onBoardClick(event) {
+    var cell = event.target.closest ? event.target.closest('.cell') : null;
+    if (!cell) return;
+    act(Number(cell.getAttribute('data-i')));
+  }
+  function onBoardKey(event) {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    var cell = event.target.closest ? event.target.closest('.cell') : null;
+    if (!cell) return;
+    event.preventDefault();
+    act(Number(cell.getAttribute('data-i')));
+  }
+
+  function act(index) {
+    if (!state || over || !humanTurn()) return;
+    var piece = state.cells[index];
+    if (selected != null && dests.indexOf(index) >= 0) {
+      pushHistory();
+      apply({ k: 'move', from: selected, to: index });
+      return;
+    }
+    if (!piece) { clearSelection(); render(); return; }
+    if (piece.h) {
+      pushHistory();
+      apply({ k: 'flip', to: index });
+      return;
+    }
+    if (piece.s === E.RED) {
+      selected = index;
+      dests = E.movesFor(state, index);
+      hint = null;
+      render();
+      beep('click');
+      return;
+    }
+    clearSelection();
+    render();
+  }
+
+  function apply(action) {
+    var res = E.applyAction(state, action);
+    if (!res.ok) { beep('error'); return; }
+    lastMove = action.k === 'move' ? { from: action.from, to: action.to } : { to: action.to };
+    clearSelection();
+    beep(action.k === 'flip' ? 'deal' : (res.capture ? 'capture' : 'move'));
+    render();
+    if (state.phase === 'playing' && state.turn === E.BLACK) scheduleAi();
+  }
+
+  function scheduleAi() {
+    if (aiTimer) clearTimeout(aiTimer);
+    aiTimer = setTimeout(function () {
+      aiTimer = null;
+      if (!state || state.phase !== 'playing' || state.turn !== E.BLACK) return;
+      var action = E.aiAction(state, level);
+      if (!action) { render(); return; }
+      var res = E.applyAction(state, action);
+      if (res.ok) {
+        lastMove = action.k === 'move' ? { from: action.from, to: action.to } : { to: action.to };
+        beep(action.k === 'flip' ? 'deal' : (res.capture ? 'capture' : 'move'));
+      }
+      render();
+    }, 520 + Math.floor(level * 90));
+  }
+
+  function newGame(seed) {
+    if (aiTimer) clearTimeout(aiTimer);
+    state = E.createGame({ seed: seed == null ? randomSeed() : seed, names: ['红方', '黑方'] });
+    history = [];
+    selected = null;
+    dests = [];
+    hint = null;
+    lastMove = null;
+    over = false;
+    render();
+  }
+
+  function undo() {
+    if (!history.length || aiTimer) return;
+    var prev = history.pop();
+    // Undo the full exchange (human move + AI reply) when possible.
+    if (history.length && prev.turn === E.RED && prev.phase === 'playing') {
+      // prev is the state after the AI reply, so restore it directly.
+    }
+    state = prev;
+    selected = null;
+    dests = [];
+    hint = null;
+    lastMove = null;
+    render();
+    beep('click');
+  }
+
+  function showHint() {
+    if (!state || !humanTurn() || over) return;
+    var action = E.aiAction(state, 3);
+    if (!action) return;
+    hint = action.k === 'move' ? { from: action.from, to: action.to } : { to: action.to };
+    render();
+    beep('click');
+  }
+
+  function setLevel(next) {
+    level = next;
+    var buttons = document.querySelectorAll('.seg button');
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].setAttribute('aria-pressed', String(Number(buttons[i].getAttribute('data-level')) === level));
+    }
+    safeSet('banqi-premium:level', String(level));
+    render();
+  }
+
+  var viewState = null;
+
+  function wire() {
+    $('newBtn').addEventListener('click', function () { newGame(); });
+    $('bannerNew').addEventListener('click', function () { newGame(); });
+    $('undoBtn').addEventListener('click', undo);
+    $('hintBtn').addEventListener('click', showHint);
+    $('soundBtn').addEventListener('click', function () {
+      soundOn = !soundOn;
+      this.textContent = '音效 ' + (soundOn ? '开' : '关');
+      this.setAttribute('aria-pressed', String(soundOn));
+      if (soundOn) beep('click');
+      safeSet('banqi-premium:sound', soundOn ? '1' : '0');
+    });
+    var seg = document.querySelectorAll('.seg button');
+    for (var i = 0; i < seg.length; i++) {
+      seg[i].addEventListener('click', function () {
+        setLevel(Number(this.getAttribute('data-level')));
+      });
+    }
+    $('legend').innerHTML = D.ROSTER.map(function (r) {
+      return '<div><b>' + r.label + '</b><span>' + r.count + ' 枚 · 级 ' + r.rank + '</span></div>';
+    }).join('');
+    $('tips').innerHTML = D.TIPS.slice(0, 3).map(function (t) { return '<li>' + t + '</li>'; }).join('');
+  }
+
+  try {
+    var savedSound = safeGet('banqi-premium:sound', '1');
+    soundOn = savedSound !== '0';
+    $('soundBtn').textContent = '音效 ' + (soundOn ? '开' : '关');
+    $('soundBtn').setAttribute('aria-pressed', String(soundOn));
+    var savedLevel = Number(safeGet('banqi-premium:level', '2'));
+    if (savedLevel >= 1 && savedLevel <= 3) level = savedLevel;
+  } catch (e) { /* ignore */ }
+
+  buildBoard();
+  wire();
+  setLevelInitial();
+  function setLevelInitial() {
+    var buttons = document.querySelectorAll('.seg button');
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].setAttribute('aria-pressed', String(Number(buttons[i].getAttribute('data-level')) === level));
+    }
+  }
+  newGame();
+
+  // Expose a tiny read-only handle for the browser E2E and smoke checks.
+  window.BanqiPremiumPage = {
+    getState: function () { return state ? E.publicView(state, E.RED) : null; },
+    getLevel: function () { return level; },
+    newGame: newGame,
+    act: act,
+    isOver: function () { return !!(state && state.phase === 'over'); }
+  };
+})();
+</script>
+</body>
+</html>

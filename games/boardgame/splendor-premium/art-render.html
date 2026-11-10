@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Splendor 美术合成页：本地生成的素材在浏览器中的渲染预览。">
+<title>Splendor art composition</title>
+<script src="../../shared/shuffle.js"></script>
+<script src="data.js"></script>
+<script src="engine.js"></script>
+<style>
+:root{
+  --serif:"Songti SC","Noto Serif SC",Georgia,"Times New Roman",serif;
+  --sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --gold:#c9a35e;--gold-2:#e8cc92;--gold-3:#8d6a33;
+  --ink:#f4ecdc;--dim:#b8ac98;
+  --art-table:url("../../assets/art/premium/splendor/table-walnut.webp");
+  --art-felt:url("../../assets/art/premium/splendor/velvet.webp");
+  --art-linen:url("../../assets/art/premium/splendor/card-linen.webp");
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:#0c0a07}
+body{width:1200px;overflow:hidden;color:var(--ink);font-family:var(--sans)}
+.stage{position:relative;width:1200px;overflow:hidden;background:
+  radial-gradient(1000px 720px at 12% -8%,rgba(201,163,94,.2),transparent 62%),
+  radial-gradient(820px 640px at 96% 4%,rgba(255,255,255,.07),transparent 60%),
+  linear-gradient(155deg,#17120d,#0c0a07 72%)}
+.stage::before{content:"";position:absolute;inset:0;background:var(--art-table) center/cover no-repeat;opacity:.34;filter:saturate(.72) contrast(1.06);pointer-events:none}
+.stage::after{content:"";position:absolute;inset:0;background:var(--art-felt) center/cover no-repeat;opacity:.22;mix-blend-mode:soft-light;pointer-events:none}
+.frame{position:absolute;inset:26px;border:1px solid rgba(201,163,94,.5);border-radius:26px;box-shadow:inset 0 0 0 6px rgba(201,163,94,.06),0 30px 90px rgba(0,0,0,.5);pointer-events:none;z-index:3}
+.frame::before,.frame::after{content:"";position:absolute;width:58px;height:58px;border:2px solid rgba(201,163,94,.55)}
+.frame::before{left:14px;top:14px;border-right:0;border-bottom:0;border-radius:16px 0 0 0}
+.frame::after{right:14px;bottom:14px;border-left:0;border-top:0;border-radius:0 0 16px 0}
+.content{position:absolute;inset:64px;z-index:2;display:flex;flex-direction:column}
+.brand{display:flex;align-items:center;gap:18px}
+.logo{width:64px;height:64px;border-radius:18px;display:grid;place-items:center;background:linear-gradient(145deg,#f0d9a4,#8d6a33);color:#1b150e;font-family:var(--serif);font-weight:700;font-size:34px;transform:rotate(-3deg);box-shadow:0 14px 32px rgba(0,0,0,.38)}
+.kicker{font-family:var(--mono);font-size:14px;letter-spacing:.28em;color:var(--gold-2);text-transform:uppercase}
+.title{margin:4px 0 0;font-family:var(--serif);font-weight:700;font-size:64px;line-height:1.02;letter-spacing:.03em}
+.title span{color:var(--gold-2)}
+.sub{margin:8px 0 0;font-size:17px;letter-spacing:.08em;color:var(--dim)}
+.scene{position:relative;flex:1;min-height:0;margin-top:26px}
+.footer{display:flex;justify-content:space-between;gap:20px;align-items:flex-end;margin-top:18px;font-size:14px;color:var(--dim);letter-spacing:.04em}
+.footer b{color:var(--gold-2);font-weight:700}
+.row{display:flex;gap:12px;align-items:center}
+.card{position:relative;border-radius:14px;padding:10px;background-color:var(--card-base,#f0e2c5);background-image:var(--art-linen),linear-gradient(150deg,#fff8e8,#e7d6b5);background-size:cover,auto;background-blend-mode:multiply,normal;color:#2a2117;border:1px solid #c2ac82;box-shadow:0 10px 22px rgba(0,0,0,.32);display:flex;flex-direction:column;gap:6px}
+.pip{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:30px;border-radius:9px;font-family:var(--mono);font-size:14px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6)}
+.noble{border-radius:14px;padding:10px;background:linear-gradient(160deg,#fbf4e3,#dccba8);border:1px solid #c2ac82;color:#302416;box-shadow:0 10px 22px rgba(0,0,0,.3);display:flex;flex-direction:column;gap:6px}
+.noble b{font-family:var(--serif);font-size:26px;line-height:1}
+.token{display:grid;place-items:center;border-radius:50%;border:2px solid rgba(255,255,255,.35);box-shadow:0 8px 16px rgba(0,0,0,.36),inset 0 2px 3px rgba(255,255,255,.4);font-family:var(--mono);font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6)}
+.grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;background:#0f0c08;padding:7px;border-radius:14px;box-shadow:0 16px 34px rgba(0,0,0,.4)}
+.cell{position:relative;aspect-ratio:1;border-radius:7px;background-size:cover;background-position:center;display:grid;place-items:center;color:#fff;font-family:var(--mono);font-weight:700;font-size:17px;text-shadow:0 1px 3px rgba(0,0,0,.8);border:1px solid rgba(255,255,255,.1)}
+.cell.castle{background:linear-gradient(145deg,#d9c492,#8d6a33);color:#241a0c;font-size:26px}
+.cell.empty{background:#211b13;border:1px dashed #3c3225}
+.draft-tile{border-radius:12px;padding:7px;background:var(--art-tile),linear-gradient(150deg,#efe3c8,#d9c499);background-size:cover,auto;background-blend-mode:multiply,normal;border:1px solid #b9a276;color:#2a2114;box-shadow:0 8px 18px rgba(0,0,0,.3);display:flex;flex-direction:column;gap:5px;font-family:var(--mono);font-weight:700}
+.half{display:flex;align-items:center;justify-content:space-between;padding:5px 7px;border-radius:7px;background-size:cover;background-position:center;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);font-size:13px}
+.cube{width:34px;height:34px;border-radius:6px;background-size:cover;background-position:center;border:1px solid rgba(255,255,255,.24);box-shadow:0 5px 10px rgba(0,0,0,.35),inset 0 2px 2px rgba(255,255,255,.3)}
+.coin{width:38px;height:38px;border-radius:50%;background-size:cover;background-position:center;border:1px solid rgba(255,255,255,.3);box-shadow:0 6px 12px rgba(0,0,0,.35)}
+.bowl{width:120px;height:120px;border-radius:50%;background:var(--art-bowl) center/cover no-repeat;border:1px solid rgba(255,255,255,.2);box-shadow:0 12px 24px rgba(0,0,0,.4);display:grid;place-items:center}
+.bowl .cubes{display:flex;flex-wrap:wrap;gap:3px;justify-content:center;width:70%}
+.bowl .cube{width:20px;height:20px;border-radius:4px}
+.stat{display:flex;flex-direction:column;gap:2px;padding:8px 14px;border:1px solid rgba(201,163,94,.36);border-radius:12px;background:rgba(20,15,10,.55)}
+.stat b{font-family:var(--serif);font-size:26px;color:var(--gold-2)}
+.stat span{font-size:12px;color:var(--dim);letter-spacing:.08em}
+.caption{position:absolute;left:0;bottom:0;font-size:15px;letter-spacing:.04em;color:var(--dim)}
+.caption b{color:var(--gold-2)}
+.title{font-size:74px}
+</style>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/splendor-premium/art-render.html">
+<style>
+/* site-quality: fixed-size art composition must not create page overflow */
+html{overflow-x:hidden}
+body{width:100%!important;max-width:100vw!important;overflow-x:hidden}
+.stage,#stage{max-width:100vw;overflow:hidden}
+</style>
+</head>
+<body>
+<div class="stage" id="stage"><div class="frame"></div><div class="content" id="content"></div></div>
+<script>
+(function(){
+  'use strict';
+  var E=window.SplendorEngine, D=window.SplendorData;
+  var Q=new URLSearchParams(location.search); var shot=Q.get('shot')||'cover';
+  var content=document.getElementById('content');
+  var stage=document.getElementById('stage');
+  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function brand(kicker,title,sub){
+    return '<div class="brand"><div class="logo">宝</div><div><div class="kicker">'+esc(kicker)+'</div><h1 class="title">'+title+'</h1><p class="sub">'+esc(sub)+'</p></div></div>';
+  }
+  function footer(left,right){
+    return '<div class="footer"><span>'+left+'</span><span>'+right+'</span></div>';
+  }
+
+  var state=E.createGame({seed:20261110});
+  var COLORS=E.COLORS;
+  function colorMeta(k){return D.COLOR_BY_KEY[k]||{label:k,face:'#888',ink:'#fff'};}
+  function pip(k,n,sz){var c=colorMeta(k);return '<span class="pip" style="background:'+c.face+';color:'+c.ink+';min-width:'+(sz||30)+'px;height:'+(sz||30)+'px;font-size:'+Math.round((sz||30)*0.44)+'px">'+n+'</span>';}
+  function cardEl(c,t,wide){
+    var cost=COLORS.map(function(col){var n=c.cost&&c.cost[col.key];return n?pip(col.key,n,24):'';}).join('');
+    return '<div class="card" style="width:'+(wide||132)+'px;min-height:'+(wide?176:158)+'px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;font-family:var(--mono);font-size:12px;color:#7a5c24"><span>'+t+' 级</span><span>'+(c.points?'<b style="font-family:var(--serif);font-size:30px;color:#3d2a10">'+c.points+'</b>':'')+'</span></div>'+
+      '<div style="font-family:var(--serif);font-size:'+(wide?17:14)+'px;font-weight:700;line-height:1.2">'+esc(c.name)+'</div>'+
+      '<div style="margin-top:auto;display:flex;flex-wrap:wrap;gap:3px">'+cost+'</div></div>';
+  }
+  function nobleEl(n){
+    return '<div class="noble" style="width:150px"><div style="display:flex;justify-content:space-between;align-items:center"><b>3</b><span style="font-size:12px;color:#7a5c24">贵族</span></div><div style="font-family:var(--serif);font-size:16px;font-weight:700">'+esc(n.name)+'</div><div style="display:flex;gap:3px;flex-wrap:wrap">'+Object.keys(n.need||{}).map(function(k){return n.need[k]?pip(k,n.need[k],22):'';}).join('')+'</div></div>';
+  }
+  function gemRow(size){
+    return COLORS.map(function(c){
+      return '<div style="display:flex;flex-direction:column;align-items:center;gap:4px"><div class="token" style="width:'+size+'px;height:'+size+'px;background:radial-gradient(circle at 32% 28%,'+c.glow+','+c.face+' 42%,'+c.edge+' 100%);font-size:'+Math.round(size*.3)+'px">'+sizeText(c.key)+'</div><span style="font-size:12px;color:var(--dim);letter-spacing:.06em">'+esc(c.label)+'</span></div>';
+    }).join('');
+  }
+  function sizeText(k){return {white:'4',blue:'4',green:'4',red:'4',black:'4'}[k]||'';}
+  function tierBlock(t,cardW){
+    var row=(state.faceUp[t]||[]).filter(Boolean).slice(0,4);
+    return '<div style="display:flex;flex-direction:column;gap:8px"><div style="font-family:var(--mono);font-size:13px;letter-spacing:.22em;color:var(--gold-2)">TIER '+t+' · '+({3:'III',2:'II',1:'I'}[t])+'</div><div class="row" style="gap:10px">'+row.map(function(c){return cardEl(c,t,cardW);}).join('')+'</div></div>';
+  }
+  function marketScene(cardW){
+    return '<div style="display:flex;flex-direction:column;gap:18px">'+[3,2,1].map(function(t){return tierBlock(t,cardW);}).join('')+'</div>';
+  }
+  function renderShot(shot){
+    if(shot==='cover'){
+      return brand('SPLENDOR · 2 PLAYERS','璀璨宝石<span> · SPLENDOR</span>','90 张发展卡 · 10 位贵族 · 五色宝石与黄金')+
+        '<div class="scene" style="display:flex;flex-direction:column;gap:20px;align-items:center">'+
+        '<div class="row" style="gap:14px">'+state.nobles.map(nobleEl).join('')+'</div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;align-items:start">'+
+        [3,2,1].map(function(t){var row=(state.faceUp[t]||[]).filter(Boolean).slice(0,4);return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+row.map(function(c){return cardEl(c,t,144);}).join('')+'</div>';}).join('')+'</div>'+
+        '<div class="row" style="gap:22px;margin-top:4px">'+gemRow(62)+'</div>'+
+        '</div>'+
+        footer('<b>15 声望</b> 触发最后一轮','本地 + 联机 · 2 人 · 零外部请求');
+    }
+    if(shot==='og'){
+      return '<div style="display:grid;grid-template-columns:400px 1fr;gap:30px;height:100%">'+
+        '<div style="display:flex;flex-direction:column;justify-content:center">'+brand('SPLENDOR · 2 PLAYERS','璀璨宝石<span> · SPLENDOR</span>','90 张发展卡与 10 位贵族')+
+        '<div style="display:flex;gap:10px;margin-top:26px;flex-wrap:wrap"><span class="stat"><b>90</b><span>发展卡</span></span><span class="stat"><b>10</b><span>贵族</span></span><span class="stat"><b>15</b><span>声望终局</span></span></div>'+
+        '<p style="margin-top:22px;color:var(--dim);font-size:15px;line-height:1.6">拿筹码、买发展卡、积累永久折扣，请贵族到访。两人局使用 3 位贵族与每色 4 枚宝石。</p></div>'+
+        '<div style="display:flex;align-items:center;justify-content:center">'+marketScene(112)+'</div></div>';
+    }
+    if(shot==='detail1'){
+      return brand('MARKET & NOBLES','市场与贵族','三级发展卡各 4 张明牌 · 贵族达标 +3 声望')+
+        '<div class="scene" style="display:flex;flex-direction:column;gap:22px;justify-content:center">'+
+        '<div class="row" style="gap:18px;justify-content:center">'+state.nobles.map(function(n){return nobleEl(n).replace('width:150px','width:210px');}).join('')+'</div>'+
+        '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">'+[3,2,1].map(function(t){var row=(state.faceUp[t]||[]).filter(Boolean).slice(0,2);return '<div style="display:flex;gap:12px">'+row.map(function(c){return cardEl(c,t,176);}).join('')+'</div>';}).join('')+'</div>'+
+        '<div class="caption"><b>真实牌表</b> · 费用、声望与奖励色均来自 90 张发展卡数据表</div></div>';
+    }
+    return brand('GEM BANK & HOLDINGS','宝石银行与永久加成','五色筹码各 4 枚 + 黄金 5 枚 · 筹码上限 10')+
+      '<div class="scene" style="display:flex;flex-direction:column;gap:26px;justify-content:center">'+
+      '<div class="row" style="gap:34px;justify-content:center">'+gemRow(92)+'<div style="display:flex;flex-direction:column;align-items:center;gap:4px"><div class="token" style="width:92px;height:92px;background:radial-gradient(circle at 32% 28%,#fff3c4,#d9a620 45%,#8a6408)">5</div><span style="font-size:12px;color:var(--dim)">黄金</span></div></div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">'+
+      '<div class="noble" style="padding:18px"><div style="font-family:var(--serif);font-size:24px;font-weight:700">你的永久加成</div><div class="row" style="gap:8px;margin-top:12px">'+COLORS.map(function(c){return '<div style="display:flex;flex-direction:column;align-items:center;gap:4px">'+pip(c.key,3,44)+'<span style="font-size:12px;color:#6b5327">'+esc(c.label)+'</span></div>';}).join('')+'</div></div>'+
+      '<div class="noble" style="padding:18px"><div style="font-family:var(--serif);font-size:24px;font-weight:700">筹码上限</div><div style="font-family:var(--serif);font-size:86px;line-height:1;color:#3d2a10;margin-top:6px">10</div><div style="font-size:14px;color:#6b5327">超出不能继续拿取；黄金只能通过预留获得。</div></div></div>'+
+      '<div class="caption">卡面费用先用永久加成抵扣，再用同色筹码，最后用黄金补足。</div></div>';
+  }
+  window.__artShot=shot;
+  var sizes={cover:[1200,1200],og:[1200,630],detail1:[1200,800],detail2:[1200,800]};
+  var size=sizes[shot]||sizes.cover;
+  stage.style.height=size[1]+'px';
+  document.body.style.height=size[1]+'px';
+  var html=renderShot(shot);
+  content.innerHTML=html;
+})();
+</script>
+</body>
+</html>

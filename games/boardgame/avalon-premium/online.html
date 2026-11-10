@@ -1,0 +1,872 @@
+<!doctype html>
+<!--
+  Avalon premium — online lobby and room board.
+  Server-authoritative HTTP/JSON polling over games/shared/online-room-server.mjs.
+  Hidden roles: the server sends each seat only that seat's publicView, so this
+  page renders its own role and the role knowledge it is allowed to have.
+  No external requests, no CDN.
+-->
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b1220">
+<meta name="description" content="Avalon 阿瓦隆联机房间：创建/加入房间、邀请码、AI 补齐到 5 人、隐藏身份、断线重连与超时托管。">
+<title>AVALON 阿瓦隆 · 联机房间</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230b1220'/%3E%3Ccircle cx='32' cy='34' r='19' fill='none' stroke='%23e9c36a' stroke-width='3'/%3E%3Cpath d='M32 15l4.2 10.8L47 27l-8 7.4 2 11.6-9-5.8-9 5.8 2-11.6-8-7.4 10.8-1.2z' fill='%23e9c36a'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --art-table:url("../../assets/art/premium/avalon/round-table-felt.webp");
+    --art-parchment:url("../../assets/art/premium/avalon/parchment.webp");
+    --art-stone:url("../../assets/art/premium/avalon/quest-stone.webp");
+    --font-serif:"Songti SC","Iowan Old Style","Palatino Linotype",Georgia,serif;
+    --font-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    --bg:#0b1220; --bg2:#111b2f; --table:#173a3b; --table2:#0b2324;
+    --panel:rgba(20,31,50,.94); --panel-solid:#17233a; --panel2:rgba(31,46,71,.8); --line:rgba(126,150,196,.34);
+    --ink:#eef3ff; --muted:#a6b3cf; --soft:#7f8fb5;
+    --gold:#e9c36a; --gold2:#b98f34; --good:#68d6b0; --evil:#ea6d7a;
+    --violet:#a99bff; --sky:#76c6ff; --parch:#f2e7d0; --parch-ink:#2b2418;
+    --shadow:0 20px 48px rgba(0,0,0,.44); --radius:18px; --tap:52px;
+  }
+  :root[data-theme="light"]{
+    --bg:#ece3d2; --bg2:#f7f0e2; --table:#cfd8c0; --table2:#b8c7a9;
+    --panel:rgba(255,251,241,.95); --panel-solid:#fffbf1; --panel2:rgba(246,238,224,.85); --line:#cbbca1;
+    --ink:#282216; --muted:#6c6250; --soft:#978a72;
+    --gold:#946408; --gold2:#6f4a05; --good:#1a8667; --evil:#b93b4a;
+    --violet:#5d4bb4; --sky:#2a6fa9; --parch:#fffaf0; --parch-ink:#282216;
+    --shadow:0 18px 40px rgba(92,74,44,.22);
+  }
+  *{box-sizing:border-box}
+  html,body{min-height:100%}
+  body{
+    margin:0; color:var(--ink); font:16px/1.5 var(--font-sans);
+    background:
+      radial-gradient(1000px 620px at 50% -18%, var(--table), transparent 64%),
+      radial-gradient(820px 520px at 8% 112%, var(--table2), transparent 60%),
+      linear-gradient(168deg, var(--bg2), var(--bg) 60%),
+      var(--art-table) center/cover no-repeat fixed;
+    background-color:var(--bg);
+  }
+  a{color:var(--gold)}
+  .wrap{max-width:860px; margin:0 auto; padding:10px 12px 40px}
+  .top{display:flex; align-items:center; gap:8px; padding:4px 0 12px}
+  .top h1{margin:0; font-family:var(--font-serif); font-weight:700; font-size:19px; letter-spacing:.4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; text-align:center}
+  .icon-btn{
+    display:inline-flex; align-items:center; justify-content:center; min-height:44px; min-width:var(--tap);
+    padding:0 12px; border-radius:12px; background:var(--panel); border:1px solid var(--line);
+    color:var(--ink); text-decoration:none; font-size:13px; font-weight:700; cursor:pointer; touch-action:manipulation;
+  }
+  .panel{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:14px; box-shadow:var(--shadow); backdrop-filter:blur(6px); margin-bottom:12px}
+  h2{margin:0 0 10px; font-size:12px; letter-spacing:1.6px; text-transform:uppercase; color:var(--muted)}
+  .field{display:grid; gap:5px; margin-bottom:10px}
+  .field label{font-size:12px; color:var(--muted); font-weight:700}
+  input{font:inherit; font-size:16px; min-height:48px; padding:10px 12px; border-radius:12px; border:1px solid var(--line); background:rgba(0,0,0,.22); color:var(--ink); width:100%}
+  button{font:inherit; font-size:15px; font-weight:800; min-height:var(--tap); padding:10px 16px; border-radius:13px; border:1px solid var(--line); background:var(--panel2); color:var(--ink); cursor:pointer; touch-action:manipulation}
+  button:active{transform:translateY(1px)}
+  button:disabled{opacity:.4; cursor:default}
+  button.primary{background:linear-gradient(160deg,var(--good),#2fa77c); color:#062019; border:0}
+  button.coral{background:linear-gradient(160deg,var(--evil),#b23c4a); color:#2b080d; border:0}
+  button.gold{background:linear-gradient(160deg,var(--gold),var(--gold2)); color:#2b1f05; border:0}
+  button.ghost{background:transparent}
+  .row{display:flex; gap:8px; flex-wrap:wrap}
+  .row > button{flex:1; min-width:130px}
+  .muted{color:var(--muted); font-size:12.5px}
+  .err{color:var(--evil); font-size:13px; font-weight:700; min-height:18px; margin-top:6px}
+  .roombar{display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; margin-bottom:10px}
+  .roomeyebrow{font-size:12px; letter-spacing:2px; color:var(--muted); text-transform:uppercase}
+  .chip{display:inline-flex; align-items:center; min-height:32px; padding:2px 12px; border-radius:999px; background:rgba(0,0,0,.22); border:1px solid var(--line); font-size:12.5px; font-weight:800; color:var(--gold)}
+  .board{display:none}
+  .board.on{display:block}
+
+  .rolecard{
+    position:relative; overflow:hidden; display:flex; gap:11px; align-items:center; padding:11px 12px;
+    border-radius:16px; border:1px solid var(--line); background:linear-gradient(150deg, var(--panel-solid), var(--panel)); margin-bottom:10px;
+  }
+  .rolecard::after{content:""; position:absolute; inset:6px; border-radius:12px; border:1px solid rgba(233,195,106,.22); pointer-events:none}
+  .sigil{width:54px; height:72px; flex:0 0 54px; border-radius:9px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+    background:repeating-linear-gradient(118deg, rgba(120,84,40,.05) 0 1px, transparent 1px 5px), linear-gradient(152deg, #fffaf0, var(--parch) 58%, #e8d9bc), var(--art-parchment) center/cover no-repeat;
+    color:var(--parch-ink); border:1px solid #cdb98f; box-shadow:0 8px 16px rgba(0,0,0,.26), inset 0 0 0 4px rgba(255,255,255,.5)}
+  .sigil .icon{font-size:24px; line-height:1; font-weight:900}
+  .sigil .lbl{font-size:12px; font-weight:800; color:#70521f}
+  .sigil.evil .icon,.sigil.evil .lbl{color:#9c2d3c}
+  .rolebody{flex:1; min-width:0}
+  .rolebody .kicker{font-size:12px; letter-spacing:1.4px; color:var(--gold); font-weight:800; text-transform:uppercase}
+  .rolebody h2{margin:1px 0 2px; font-size:19px; line-height:1.2; font-family:var(--font-serif); font-weight:700; text-transform:none; letter-spacing:0; color:var(--ink)}
+  .rolebody h2 #roleSide{font-family:var(--font-sans); font-size:12px; font-weight:800; margin-left:6px; padding:1px 8px; border-radius:999px; background:rgba(104,214,176,.16); color:var(--good); border:1px solid rgba(104,214,176,.4)}
+  .rolebody h2 #roleSide.evil{background:rgba(234,109,122,.16); color:var(--evil); border-color:rgba(234,109,122,.42)}
+  .rolebody p{margin:0; font-size:12px; color:var(--muted); line-height:1.5}
+  .knowledge{display:flex; flex-wrap:wrap; gap:4px; margin-top:5px}
+  .know{font-size:12px; line-height:18px; padding:0 8px; border-radius:999px; background:rgba(234,109,122,.14); color:var(--evil); border:1px solid rgba(234,109,122,.35)}
+  .know.good{background:rgba(104,214,176,.12); color:var(--good); border-color:rgba(104,214,176,.3)}
+  .know.magic{background:rgba(169,155,255,.14); color:var(--violet); border-color:rgba(169,155,255,.35)}
+  .know.muted{background:rgba(255,255,255,.05); color:var(--muted); border-color:var(--line)}
+
+  .questboard{display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:5px; margin-bottom:6px}
+  .quest{position:relative; overflow:hidden; border-radius:12px; border:1px solid var(--line); padding:5px 2px; min-height:70px; text-align:center;
+    background:linear-gradient(155deg, rgba(255,255,255,.07), transparent 55%), var(--art-stone) center/cover no-repeat, linear-gradient(155deg, var(--panel), rgba(0,0,0,.18))}
+  .quest .qno{font-size:12px; color:var(--muted); font-weight:800}
+  .quest .qsize{font-size:12px; color:var(--soft)}
+  .quest .qstate{font-size:12px; font-weight:900; color:var(--soft); margin-top:2px}
+  .quest.good{border-color:rgba(104,214,176,.55)}
+  .quest.good .qstate{color:var(--good)}
+  .quest.evil{border-color:rgba(234,109,122,.55)}
+  .quest.evil .qstate{color:var(--evil)}
+  .quest.current{border-color:var(--gold); box-shadow:0 0 0 1px var(--gold)}
+  .rejectbar{display:flex; align-items:center; justify-content:center; gap:7px; margin:0 0 8px; font-size:12px; color:var(--muted)}
+  .rejectbar .dots{display:inline-flex; gap:4px}
+  .rejectbar i{width:8px; height:8px; border-radius:50%; background:var(--line); display:block}
+  .rejectbar i.on{background:var(--evil)}
+
+  .arena{position:relative; width:100%; max-width:390px; margin:0 auto 10px; aspect-ratio:1/1}
+  .table-round{position:absolute; inset:11%; border-radius:50%; border:2px solid rgba(233,195,106,.46);
+    background:radial-gradient(circle at 40% 28%, rgba(255,255,255,.16), transparent 45%), linear-gradient(160deg, rgba(18,58,56,.9), rgba(8,30,31,.94)), var(--art-table) center/cover no-repeat;
+    box-shadow:var(--shadow), inset 0 0 0 8px rgba(233,195,106,.06)}
+  .table-round::before{content:""; position:absolute; inset:9%; border-radius:50%; border:1px dashed rgba(233,195,106,.26)}
+  .table-core{position:absolute; left:50%; top:50%; width:56%; min-height:42%; transform:translate(-50%,-50%); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; text-align:center; z-index:2; color:#f3f8f4; padding:6px}
+  .phase-badge{font-size:12px; letter-spacing:1.6px; text-transform:uppercase; color:var(--gold); font-weight:900}
+  .table-text{font-size:12.5px; font-weight:700; line-height:1.35}
+  .table-sub{font-size:12px; color:rgba(240,248,242,.78); line-height:1.3}
+  .seat-ring{position:absolute; inset:0; z-index:3}
+  .seat{position:absolute; width:80px; min-height:56px; transform:translate(-50%,-50%); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; padding:4px 3px; border-radius:13px; border:1px solid var(--line); background:linear-gradient(155deg, var(--panel-solid), var(--panel)); box-shadow:0 7px 16px rgba(0,0,0,.28); color:var(--ink); font:inherit; overflow:hidden}
+  .seat.pos0{left:50%; top:89%}
+  .seat.pos1{left:14%; top:69%}
+  .seat.pos2{left:23%; top:19%}
+  .seat.pos3{left:77%; top:19%}
+  .seat.pos4{left:86%; top:69%}
+  .seat.selectable{cursor:pointer; touch-action:manipulation}
+  .seat.leader{border-color:var(--gold); box-shadow:0 0 0 1px var(--gold) inset}
+  .seat.onTeam{border-color:var(--good); box-shadow:0 0 0 1px var(--good) inset}
+  .seat.picked{border-color:var(--gold); background:linear-gradient(155deg, rgba(233,195,106,.24), var(--panel))}
+  .seat.me{background:linear-gradient(155deg, rgba(118,198,255,.16), var(--panel))}
+  .seat .s-ava{width:20px; height:20px; border-radius:50%; display:grid; place-items:center; font-size:12px; font-weight:900; color:#16232a; background:radial-gradient(circle at 34% 28%, #fff9, transparent 40%), linear-gradient(150deg, var(--gold), var(--gold2))}
+  .seat[data-tone="percival"] .s-ava{background:radial-gradient(circle at 34% 28%, #fff9, transparent 40%), linear-gradient(150deg, var(--violet), #5b49a4)}
+  .seat[data-tone="loyal"] .s-ava{background:radial-gradient(circle at 34% 28%, #fff9, transparent 40%), linear-gradient(150deg, var(--good), #2c8f6c)}
+  .seat[data-tone="assassin"] .s-ava{background:radial-gradient(circle at 34% 28%, #fff9, transparent 40%), linear-gradient(150deg, var(--evil), #9d2c3a)}
+  .seat[data-tone="morgana"] .s-ava{background:radial-gradient(circle at 34% 28%, #fff9, transparent 40%), linear-gradient(150deg, #d98adf, #8c3f9b)}
+  .seat .s-name{font-size:12px; font-weight:800; line-height:1.15; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .seat .s-meta{font-size:12px; line-height:1.15; color:var(--muted); max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .seat .s-meta.evil{color:var(--evil); font-weight:800}
+  .seat .s-meta.magic{color:var(--violet); font-weight:800}
+  .seat .s-meta.good{color:var(--good); font-weight:800}
+
+  .panel p{font-size:13px; color:var(--muted); line-height:1.55; margin:0}
+  .panel p b{color:var(--ink)}
+  .actions{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:9px}
+  .actions .wide{grid-column:1/-1}
+  button.act{min-height:54px; font-size:14px; display:flex; align-items:center; justify-content:center; gap:6px; padding:7px 9px}
+  .targetGrid{display:grid; grid-template-columns:1fr 1fr; gap:7px; width:100%}
+  .voteResult,.missionResult{margin-top:9px; padding:9px 11px; border-radius:11px; border:1px solid var(--line); background:rgba(0,0,0,.1); font-size:12.5px; color:var(--muted); display:none}
+  .voteResult.show,.missionResult.show{display:block}
+  .voteResult.pass,.missionResult.good{border-color:rgba(104,214,176,.45); color:var(--good)}
+  .voteResult.fail,.missionResult.evil{border-color:rgba(234,109,122,.45); color:var(--evil)}
+  .voteResult b,.missionResult b{color:var(--ink)}
+  .history,.log{margin-top:10px; border:1px solid var(--line); border-radius:14px; background:var(--panel); padding:9px 11px}
+  .history h3,.log h3{margin:0 0 5px; font-size:12px; letter-spacing:1.5px; color:var(--muted); font-weight:800; text-transform:uppercase}
+  .history ul,.log ul{list-style:none; margin:0; padding:0; display:grid; gap:2px; max-height:132px; overflow:auto}
+  .history li{font-size:12px; color:var(--muted); border-bottom:1px dashed rgba(128,150,160,.2); padding:3px 0}
+  .log li{font-size:12px; color:var(--muted); line-height:1.45}
+  .log li::before{content:"›"; color:var(--gold); margin-right:5px; font-weight:900}
+  .finale{position:fixed; inset:0; z-index:30; display:none; align-items:center; justify-content:center; padding:16px; background:radial-gradient(circle at 50% 34%, rgba(12,22,42,.8), rgba(4,7,14,.96)); backdrop-filter:blur(4px)}
+  .finale.show{display:flex}
+  .finale-card{width:100%; max-width:380px; max-height:92vh; overflow:auto; border-radius:22px; padding:19px 17px; text-align:center; background:linear-gradient(165deg, var(--panel-solid), var(--panel)); border:1px solid var(--line); box-shadow:var(--shadow)}
+  .finale-card .crest{font-size:34px; line-height:1; color:var(--gold)}
+  .finale-card h2{margin:6px 0 2px; font-size:22px; font-family:var(--font-serif); text-transform:none; letter-spacing:0; color:var(--ink)}
+  .finale-card p{margin:2px 0 12px; color:var(--muted); font-size:13px; line-height:1.5}
+  .finale-table{display:grid; gap:5px; margin:0 0 14px}
+  .finale-row{display:flex; align-items:center; justify-content:space-between; gap:8px; padding:7px 10px; border-radius:9px; background:rgba(0,0,0,.12); font-size:12.5px}
+  .finale-row.good{border:1px solid rgba(104,214,176,.4); background:rgba(104,214,176,.1)}
+  .finale-row.evil{border:1px solid rgba(234,109,122,.4); background:rgba(234,109,122,.1)}
+  .finale-row .role{font-weight:900; color:var(--gold)}
+  .leaderboard{display:grid; gap:4px}
+  .lbrow{display:flex; justify-content:space-between; gap:8px; font-size:13px; padding:6px 8px; border-radius:8px; background:rgba(0,0,0,.12)}
+  .lbrow b{color:var(--gold)}
+  @media (max-width:430px){
+    .wrap{padding:8px 8px 30px}
+    .top h1{font-size:17px}
+    .seat{width:76px; min-height:54px}
+    .quest{min-height:66px}
+    .row > button{min-width:110px}
+  }
+/* safe-area: keep the original bottom padding, clear the iOS home indicator */
+body{padding-bottom:env(safe-area-inset-bottom)}
+</style>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/avalon-premium/online.html">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="icon-btn" href="index.html">← 单机</a>
+    <h1>AVALON 阿瓦隆 · 联机</h1>
+    <button class="icon-btn" id="themeBtn" type="button" aria-label="切换主题">◐</button>
+  </header>
+
+  <main>
+    <section class="panel" id="lobby" aria-label="联机大厅">
+      <h2>创建或加入房间</h2>
+      <div class="field">
+        <label for="nickname">昵称</label>
+        <input id="nickname" maxlength="16" placeholder="房主 / 玩家" autocomplete="nickname">
+      </div>
+      <div class="row">
+        <button class="primary" id="createBtn" type="button">创建房间</button>
+        <button id="joinBtn" type="button">加入房间</button>
+      </div>
+      <div class="field" id="joinFields" hidden style="margin-top:10px">
+        <label for="roomCode">房间号 / 邀请码</label>
+        <input id="roomCode" maxlength="64" placeholder="粘贴房间号或邀请码" autocomplete="off">
+        <label for="joinPassword">房间密码（可选）</label>
+        <input id="joinPassword" type="password" maxlength="64" placeholder="无密码可留空" autocomplete="off">
+      </div>
+      <div class="err" id="lobbyErr" role="alert"></div>
+      <p class="muted">官方 5 人局：两名真人 + 三名 AI 补齐。每名玩家只会收到自己的身份与允许知道的情报；掉线 15 秒后自动托管，重连即恢复。</p>
+    </section>
+
+    <section class="panel board" id="board" aria-label="房间牌桌">
+      <div class="roombar">
+        <div>
+          <div class="roomeyebrow">Room</div>
+          <div class="chip" id="roomChip">—</div>
+        </div>
+        <div class="row" style="flex:0 1 auto">
+          <button class="ghost" id="inviteBtn" type="button">复制邀请</button>
+          <button class="ghost" id="startBtn" type="button">开始 / AI 补位</button>
+        </div>
+      </div>
+      <div class="err" id="boardErr" role="alert"></div>
+
+      <div class="rolecard" id="roleCard">
+        <div class="sigil" id="sigil"><span class="icon" id="roleIcon">✦</span><span class="lbl" id="roleLbl">身份</span></div>
+        <div class="rolebody">
+          <div class="kicker">仅你可见 · YOUR ROLE</div>
+          <h2><span id="roleName">等待发牌</span><span id="roleSide"></span></h2>
+          <p id="roleAbility">房主开始后，你会在这里看到自己的身份。</p>
+          <div class="knowledge" id="knowledge"></div>
+        </div>
+      </div>
+
+      <section class="questboard" id="questTrack" aria-label="任务进度"></section>
+      <div class="rejectbar"><span>连续否决</span><span class="dots" id="rejectDots"></span><span id="rejectText">0 / 5</span></div>
+
+      <section class="arena" aria-label="五人圆桌">
+        <div class="table-round"></div>
+        <div class="table-core">
+          <div class="phase-badge" id="phaseBadge" aria-live="polite">等待开始</div>
+          <div class="table-text" id="tableText"></div>
+          <div class="table-sub" id="tableSub"></div>
+        </div>
+        <div class="seat-ring" id="seats"></div>
+      </section>
+
+      <section aria-label="行动区">
+        <h2 id="actionTitle">行动</h2>
+        <p id="actionText" aria-live="polite"></p>
+        <div class="actions" id="actions"></div>
+        <div class="voteResult" id="voteResult"></div>
+        <div class="missionResult" id="missionResult"></div>
+      </section>
+
+      <div class="history" aria-label="投票与任务记录"><h3>投票与任务记录</h3><ul id="historyList"></ul></div>
+      <div class="log" aria-label="对局日志"><h3>对局日志</h3><ul id="logList"></ul></div>
+      <div class="row" style="margin-top:10px">
+        <button class="ghost" id="leaveBtn" type="button">离开房间</button>
+        <a class="icon-btn" href="index.html" style="flex:0 0 auto">返回单机</a>
+      </div>
+    </section>
+
+    <section class="panel" aria-label="排行榜">
+      <h2>结算榜</h2>
+      <div class="leaderboard" id="leaderboard"><p class="muted">还没有结算记录。</p></div>
+    </section>
+  </main>
+
+  <div class="finale" id="finale" role="dialog" aria-modal="true" aria-labelledby="finaleTitle">
+    <div class="finale-card">
+      <div class="crest" aria-hidden="true">♛</div>
+      <h2 id="finaleTitle">结算</h2>
+      <p id="finaleSub"></p>
+      <div class="finale-table" id="finaleTable"></div>
+      <button class="act gold" id="restartBtn" type="button" style="width:100%">再来一局</button>
+    </div>
+  </div>
+</div>
+
+<script src="../../shared/sfx.js"></script>
+<script src="data.js"></script>
+<script>
+(function () {
+  'use strict';
+  var D = window.AvalonPremiumData;
+  var Sfx = window.Sfx;
+  var $ = function (id) { return document.getElementById(id); };
+  var params = new URLSearchParams(location.search);
+  var roomKey = params.get('room') || params.get('code') || '';
+  var invite = params.get('code') || '';
+  var session = params.get('session') || '';
+  var playerId = params.get('player') || '';
+  var nickname = '';
+  var timer = null;
+  var lastVersion = -1;
+  var selectedTeam = [];
+
+  try {
+    if (!session) session = sessionStorage.getItem('avalon-online-session') || '';
+    if (!playerId) playerId = sessionStorage.getItem('avalon-online-player') || '';
+    if (!nickname) nickname = sessionStorage.getItem('avalon-online-nick') || '';
+  } catch (e) {}
+
+  function play(name) { try { if (Sfx) Sfx.play(name); } catch (e) {} }
+
+  function esc(v) {
+    return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+    });
+  }
+  function remember(nextRoom, nextSession, nextPlayer) {
+    roomKey = nextRoom || roomKey;
+    session = nextSession || session;
+    playerId = nextPlayer || playerId;
+    try {
+      sessionStorage.setItem('avalon-online-session', session);
+      sessionStorage.setItem('avalon-online-player', playerId);
+      sessionStorage.setItem('avalon-online-nick', nickname);
+    } catch (e) {}
+    var url = location.pathname + '?room=' + encodeURIComponent(roomKey) + '&session=' + encodeURIComponent(session) + '&player=' + encodeURIComponent(playerId);
+    try { history.replaceState(null, '', url); } catch (e) {}
+  }
+  function api(method, route, body) {
+    return fetch(route, {
+      method: method,
+      headers: { 'content-type': 'application/json' },
+      body: body == null ? undefined : JSON.stringify(body)
+    }).then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (data) {
+        return { status: res.status, body: data };
+      });
+    });
+  }
+  function errText(r) {
+    return (r.body && r.body.error && r.body.error.message) || ('HTTP ' + r.status);
+  }
+  function toast(msg) { $('boardErr').textContent = msg || ''; }
+
+  function saveNick() {
+    nickname = ($('nickname').value || '').trim() || ('玩家-' + Math.random().toString(36).slice(2, 6));
+    return nickname;
+  }
+  try { $('nickname').value = nickname; } catch (e) {}
+
+  function showBoard(on) {
+    $('lobby').hidden = on;
+    $('board').classList.toggle('on', on);
+  }
+
+  function createRoom() {
+    saveNick();
+    $('lobbyErr').textContent = '';
+    api('POST', '/api/rooms', { playerId: 'av-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6), nickname: nickname })
+      .then(function (r) {
+        if (!r.body || !r.body.roomId) throw new Error(errText(r));
+        remember(r.body.roomId, r.body.session, r.body.playerId);
+        invite = r.body.inviteToken || '';
+        showBoard(true);
+        poll();
+      })
+      .catch(function (e) { $('lobbyErr').textContent = e.message; });
+  }
+
+  function joinRoom() {
+    saveNick();
+    var key = ($('roomCode').value || '').trim();
+    if (!key) { $('lobbyErr').textContent = '请填写房间号或邀请码。'; return; }
+    $('lobbyErr').textContent = '';
+    var payload = { playerId: 'av-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6), nickname: nickname, inviteCode: key };
+    if ($('joinPassword').value) payload.password = $('joinPassword').value;
+    api('POST', '/api/rooms/' + encodeURIComponent(key) + '/join', payload)
+      .then(function (r) {
+        if (!r.body || !r.body.session) throw new Error(errText(r));
+        remember(r.body.roomId, r.body.session, r.body.playerId);
+        showBoard(true);
+        poll();
+      })
+      .catch(function (e) { $('lobbyErr').textContent = e.message; });
+  }
+
+  function roleLabel(view, i) {
+    if (view.phase === 'over' && view.players[i].revealedRole) {
+      return { text: D.roles[view.players[i].revealedRole].name, cls: view.players[i].revealedSide === 'evil' ? 'evil' : 'good' };
+    }
+    var k = view.roleKnowledge[i].role;
+    if (k === 'evil') return { text: '邪恶', cls: 'evil' };
+    if (k === 'magic') return { text: '魔法师', cls: 'magic' };
+    if (k === 'evil-ally') return { text: '同伙', cls: 'evil' };
+    if (k === 'you') return { text: '你', cls: 'good' };
+    return { text: '身份未知', cls: '' };
+  }
+
+  function renderRole(view) {
+    if (!view) return;
+    var meta = D.roles[view.yourRole];
+    if (!meta) return;
+    $('sigil').className = 'sigil' + (meta.side === 'evil' ? ' evil' : '');
+    $('roleIcon').textContent = meta.icon;
+    $('roleLbl').textContent = meta.name;
+    $('roleName').textContent = meta.name;
+    var side = $('roleSide');
+    side.textContent = meta.side === 'evil' ? '邪恶' : '正义';
+    side.className = meta.side === 'evil' ? 'evil' : '';
+    $('roleAbility').textContent = meta.ability;
+    var kbox = $('knowledge');
+    kbox.innerHTML = '';
+    var any = false;
+    view.players.forEach(function (p, i) {
+      var k = view.roleKnowledge[i].role;
+      if (i === view.yourSeat) return;
+      var item = null;
+      if (k === 'evil') item = { text: p.name + ' · 邪恶', cls: '' };
+      else if (k === 'magic') item = { text: p.name + ' · 魔法师', cls: 'magic' };
+      else if (k === 'evil-ally') item = { text: p.name + ' · 同伙', cls: '' };
+      if (!item) return;
+      any = true;
+      var span = document.createElement('span');
+      span.className = 'know ' + item.cls;
+      span.textContent = item.text;
+      kbox.appendChild(span);
+    });
+    if (!any) {
+      var none = document.createElement('span');
+      none.className = 'know muted';
+      none.textContent = '无特殊情报';
+      kbox.appendChild(none);
+    }
+  }
+
+  function renderQuests(view) {
+    var box = $('questTrack');
+    box.innerHTML = '';
+    if (!view) return;
+    view.questSizes.forEach(function (size, i) {
+      var res = view.quests[i] && view.quests[i].result;
+      var current = view.phase !== 'over' && view.phase !== 'assassin' && i === view.questIndex;
+      var q = document.createElement('div');
+      q.className = 'quest' + (res ? (res === 'success' ? ' good' : ' evil') : '') + (current ? ' current' : '');
+      q.innerHTML = '<div class="qno">任务 ' + (i + 1) + '</div><div class="qsize">需 ' + size + ' 人</div><div class="qstate">' +
+        (res ? (res === 'success' ? '成功 ✓' : '失败 ✕') : (current ? '进行中' : '待执行')) + '</div>';
+      box.appendChild(q);
+    });
+    var dots = $('rejectDots');
+    dots.innerHTML = '';
+    for (var d = 0; d < view.maxRejects; d++) {
+      var dot = document.createElement('i');
+      if (d < view.rejects) dot.className = 'on';
+      dots.appendChild(dot);
+    }
+    $('rejectText').textContent = view.rejects + ' / ' + view.maxRejects;
+  }
+
+  function renderSeats(r) {
+    var view = r.state;
+    var box = $('seats');
+    box.innerHTML = '';
+    if (!view) return;
+    var you = view.yourSeat;
+    var canSelect = view.phase === 'propose' && view.leader === you;
+    view.players.forEach(function (p, i) {
+      var label = roleLabel(view, i);
+      var selected = selectedTeam.indexOf(i) >= 0;
+      var seat = document.createElement(canSelect ? 'button' : 'div');
+      seat.className = 'seat pos' + i +
+        (view.leader === i && view.phase !== 'over' ? ' leader' : '') +
+        (p.onTeam ? ' onTeam' : '') +
+        (i === you ? ' me' : '') +
+        (canSelect ? ' selectable' : '') +
+        (selected ? ' picked' : '');
+      seat.setAttribute('data-tone', D.seats[i].tone);
+      seat.setAttribute('aria-label', p.name + '，' + label.text + (view.leader === i ? '，队长' : '') + (p.onTeam ? '，任务队伍' : ''));
+      if (canSelect) {
+        seat.type = 'button';
+        seat.setAttribute('aria-pressed', selected ? 'true' : 'false');
+        seat.addEventListener('click', function () { toggleMember(i); });
+      }
+      var ava = document.createElement('span');
+      ava.className = 's-ava';
+      ava.textContent = D.seats[i].avatar;
+      seat.appendChild(ava);
+      var nm = document.createElement('span');
+      nm.className = 's-name';
+      nm.textContent = p.name + (i === you ? ' · 你' : '');
+      seat.appendChild(nm);
+      var meta = document.createElement('span');
+      meta.className = 's-meta ' + label.cls;
+      meta.textContent = label.text;
+      seat.appendChild(meta);
+      box.appendChild(seat);
+    });
+  }
+
+  function teamNames(view, team) {
+    return team.map(function (i) { return view.players[i].name; }).join('、');
+  }
+
+  function renderActions(r) {
+    var view = r.state;
+    var box = $('actions');
+    box.innerHTML = '';
+    var title = $('actionTitle');
+    var text = $('actionText');
+    $('voteResult').className = 'voteResult';
+    $('missionResult').className = 'missionResult';
+    if (!view) {
+      title.textContent = '等待开局';
+      text.textContent = '房主点击「开始 / AI 补位」后，三人 AI 会补满五个座位。';
+      return;
+    }
+    if (!r.started) {
+      title.textContent = '等待房主开始';
+      text.textContent = '当前 ' + r.playerCount + ' / 5 座。开始后空位由 AI 补齐。';
+      return;
+    }
+    var me = view.players[view.yourSeat];
+
+    if (view.phase === 'over') {
+      title.textContent = '对局结束';
+      text.textContent = view.winReason;
+      return;
+    }
+
+    if (view.phase === 'propose') {
+      if (view.leader === view.yourSeat) {
+        title.textContent = '你是队长';
+        text.innerHTML = '请选择 <b>' + view.teamSize + '</b> 名玩家（已选 ' + selectedTeam.length + ' 人）。';
+        var b = document.createElement('button');
+        b.className = 'act gold wide';
+        b.id = 'confirmTeamBtn';
+        b.type = 'button';
+        b.textContent = '确认队伍（' + selectedTeam.length + '/' + view.teamSize + '）';
+        b.disabled = selectedTeam.length !== view.teamSize;
+        b.addEventListener('click', proposeTeam);
+        box.appendChild(b);
+      } else {
+        title.textContent = '队长提名';
+        text.innerHTML = '等待 <b>' + esc(view.players[view.leader].name) + '</b> 提名 ' + view.teamSize + ' 人队伍…';
+      }
+      return;
+    }
+
+    if (view.phase === 'vote') {
+      title.textContent = '队伍投票';
+      text.innerHTML = '队伍：<b>' + esc(teamNames(view, view.team)) + '</b>。5 人局至少 3 票赞成，平票视为否决。';
+      if (me.voted) {
+        text.innerHTML += ' 你已投票，等待其他人…';
+      } else {
+        var yes = document.createElement('button');
+        yes.className = 'act good';
+        yes.id = 'approveBtn';
+        yes.type = 'button';
+        yes.textContent = '赞成 ✓';
+        yes.addEventListener('click', function () { act({ type: 'vote', approve: true }); });
+        var no = document.createElement('button');
+        no.className = 'act evil';
+        no.id = 'rejectBtn';
+        no.type = 'button';
+        no.textContent = '反对 ✕';
+        no.addEventListener('click', function () { act({ type: 'vote', approve: false }); });
+        box.appendChild(yes);
+        box.appendChild(no);
+      }
+      return;
+    }
+
+    if (view.phase === 'mission') {
+      title.textContent = '秘密任务';
+      text.innerHTML = '任务队伍：<b>' + esc(teamNames(view, view.team)) + '</b>。任务卡内容在结算前不会公开。';
+      if (view.team.indexOf(view.yourSeat) >= 0 && !me.missionVoted) {
+        var ok = document.createElement('button');
+        ok.className = 'act good' + (view.yourSide === 'evil' ? '' : ' wide');
+        ok.id = 'missionSuccessBtn';
+        ok.type = 'button';
+        ok.textContent = '任务成功 ✓';
+        ok.addEventListener('click', function () { act({ type: 'mission', fail: false }); });
+        box.appendChild(ok);
+        if (view.yourSide === 'evil') {
+          var bad = document.createElement('button');
+          bad.className = 'act evil';
+          bad.id = 'missionFailBtn';
+          bad.type = 'button';
+          bad.textContent = '破坏任务 ✕';
+          bad.addEventListener('click', function () { act({ type: 'mission', fail: true }); });
+          box.appendChild(bad);
+        }
+      } else if (view.team.indexOf(view.yourSeat) >= 0) {
+        text.innerHTML += ' 你已提交任务卡，等待结算…';
+      } else {
+        text.innerHTML += ' 你不在队伍中，等待任务结算…';
+      }
+      return;
+    }
+
+    if (view.phase === 'assassin') {
+      title.textContent = '刺客的最后一刀';
+      if (view.yourRole === 'assassin') {
+        text.innerHTML = '正义方赢下三次任务。请选择一名玩家暗杀；若命中 <b>梅林</b>，邪恶方立刻获胜。';
+        var grid = document.createElement('div');
+        grid.className = 'targetGrid';
+        view.players.forEach(function (p, i) {
+          if (i === view.yourSeat) return;
+          var t = document.createElement('button');
+          t.className = 'act ghost targetBtn';
+          t.id = 'target-' + i;
+          t.type = 'button';
+          t.textContent = '暗杀 ' + p.name + (view.roleKnowledge[i].role === 'evil-ally' ? '（同伙）' : '');
+          t.addEventListener('click', function () { act({ type: 'assassinate', target: i }); });
+          grid.appendChild(t);
+        });
+        box.appendChild(grid);
+      } else {
+        text.innerHTML = '刺客正在选择目标…';
+      }
+    }
+  }
+
+  function renderHistory(view) {
+    var box = $('historyList');
+    box.innerHTML = '';
+    if (!view || !view.history.length) {
+      box.innerHTML = '<li>尚无投票记录。</li>';
+      return;
+    }
+    view.history.slice(-8).forEach(function (h) {
+      var li = document.createElement('li');
+      var yes = h.votes ? h.votes.filter(function (v) { return v === true; }).length : null;
+      li.textContent = '任务 ' + (h.quest + 1) + ' · 队伍 ' + teamNames(view, h.team) + ' · ' +
+        (h.approved == null ? '投票中' : (h.approved ? '通过' : '否决')) +
+        (yes == null ? '' : '（' + yes + '/' + h.votes.length + ' 赞成）') +
+        (h.failCount == null ? '' : ' · 破坏 ' + h.failCount + ' 张');
+      box.appendChild(li);
+    });
+  }
+
+  function renderVoteResult(view) {
+    if (!view || !view.lastVote || view.phase === 'vote') return;
+    var box = $('voteResult');
+    var yes = view.lastVote.votes ? view.lastVote.votes.filter(function (v) { return v === true; }).length : 0;
+    var total = view.lastVote.votes ? view.lastVote.votes.length : 5;
+    box.className = 'voteResult show ' + (view.lastVote.approved ? 'pass' : 'fail');
+    box.innerHTML = '上次投票：<b>' + yes + ' / ' + total + ' 赞成</b> · ' + (view.lastVote.approved ? '队伍通过' : '队伍被否决');
+  }
+
+  function renderMissionResult(view) {
+    if (!view || view.phase === 'vote') return;
+    var last = null;
+    view.history.forEach(function (h) { if (h.failCount != null) last = h; });
+    if (!last) return;
+    var box = $('missionResult');
+    box.className = 'missionResult show ' + (last.result === 'success' ? 'good' : 'evil');
+    box.innerHTML = '最近任务：<b>第 ' + (last.quest + 1) + ' 次</b> · ' + (last.result === 'success' ? '成功' : '失败') + ' · 破坏 ' + last.failCount + ' 张';
+  }
+
+  function renderFinale(r) {
+    if (!r.over || !r.result) {
+      $('finale').classList.remove('show');
+      return;
+    }
+    $('finale').classList.add('show');
+    var result = r.result;
+    var mine = r.state && r.state.yourSide === result.winnerSide;
+    $('finaleTitle').textContent = (mine ? '你所在的阵营获胜！' : '你所在的阵营落败') + ' · ' + (result.winnerSide === 'good' ? '正义方胜利' : '邪恶方胜利');
+    $('finaleSub').textContent = (result.reason || '') + (result.assassinTarget == null ? '' : ' · 暗杀目标：' + (result.losers[result.assassinTarget] || {}).name);
+    var table = $('finaleTable');
+    table.innerHTML = '';
+    (result.losers || []).forEach(function (row) {
+      var div = document.createElement('div');
+      div.className = 'finale-row ' + (row.side === 'evil' ? 'evil' : 'good');
+      div.innerHTML = '<span></span><span class="role"></span>';
+      div.firstChild.textContent = row.name + (r.state && row.seat === r.state.yourSeat ? '（你）' : '');
+      div.lastChild.textContent = D.roles[row.role] ? D.roles[row.role].name : row.role;
+      table.appendChild(div);
+    });
+    $('restartBtn').hidden = !r.canRestart;
+  }
+
+  function renderTable(r) {
+    var view = r.state;
+    if (!view) {
+      $('phaseBadge').textContent = r.started ? '进行中' : '等待开始';
+      $('tableText').textContent = '';
+      $('tableSub').textContent = '';
+      return;
+    }
+    var names = { propose: '队长提名', vote: '全体投票', mission: '秘密任务', assassin: '刺客暗杀', over: '对局结束' };
+    $('phaseBadge').textContent = names[view.phase] || view.phase;
+    if (view.phase === 'over') {
+      $('tableText').textContent = view.winReason;
+      $('tableSub').textContent = '五个任务 · 三次获胜 · 一次暗杀';
+    } else if (view.phase === 'assassin') {
+      $('tableText').textContent = '正义方完成三次任务';
+      $('tableSub').textContent = '刺客正在选择目标…';
+    } else if (view.phase === 'propose') {
+      $('tableText').textContent = view.players[view.leader].name + ' 提名 ' + view.teamSize + ' 人';
+      $('tableSub').textContent = '连续否决 ' + view.rejects + ' / ' + view.maxRejects;
+    } else if (view.phase === 'vote') {
+      $('tableText').textContent = '投票决定队伍';
+      $('tableSub').textContent = '已投 ' + view.votedCount + ' / 5 票';
+    } else {
+      $('tableText').textContent = '任务队伍秘密表决';
+      $('tableSub').textContent = '已提交 ' + view.missionVotedCount + ' / ' + view.team.length + ' 张';
+    }
+  }
+
+  function render(r) {
+    if (!r) return;
+    var view = r.state;
+    $('roomChip').textContent = '房间 ' + (r.code || r.roomId) + ' · ' +
+      (r.started ? (r.over ? '已结束' : '进行中') : '等待玩家') + ' · ' + r.playerCount + ' 人';
+    $('startBtn').hidden = r.started;
+    $('startBtn').disabled = !r.seats.some(function (s) { return s.isYou && s.isHost; });
+    $('inviteBtn').disabled = !r.seats.some(function (s) { return s.isYou && s.isHost; });
+    if (view) {
+      if (view.phase !== 'propose' || view.leader !== view.yourSeat) selectedTeam = [];
+      renderRole(view);
+      renderQuests(view);
+      renderSeats(r);
+      renderTable(r);
+      renderActions(r);
+      renderVoteResult(view);
+      renderMissionResult(view);
+      renderHistory(view);
+      $('logList').innerHTML = (view.log || []).slice(-10).map(function (line) { return '<li>' + esc(line) + '</li>'; }).join('');
+    }
+    renderFinale(r);
+    $('leaveBtn').hidden = !r.started;
+  }
+
+  function fetchRoom() {
+    if (!roomKey || !session) { showBoard(false); return Promise.resolve(null); }
+    return api('GET', '/api/rooms/' + encodeURIComponent(roomKey) + '?session=' + encodeURIComponent(session) + '&playerId=' + encodeURIComponent(playerId))
+      .then(function (r) {
+        if (r.status === 401) {
+          return api('POST', '/api/rooms/' + encodeURIComponent(roomKey) + '/reconnect', { session: session, playerId: playerId })
+            .then(function (rr) {
+              if (!rr.body || rr.body.ok === false) throw new Error('房间已失效，请重新创建。');
+              return rr;
+            });
+        }
+        if (r.status >= 400) throw new Error(errText(r));
+        return r;
+      })
+      .then(function (r) {
+        if (!r) return;
+        var view = r.body || {};
+        showBoard(true);
+        if (view.stateVersion !== lastVersion) {
+          lastVersion = view.stateVersion;
+          render(view);
+        } else if (view.state) {
+          renderSeats(view);
+          renderTable(view);
+        }
+        if (view.inviteCode) invite = view.inviteCode;
+      })
+      .catch(function (e) { toast(e.message); });
+  }
+
+  function poll() {
+    if (timer) clearInterval(timer);
+    fetchRoom();
+    timer = setInterval(fetchRoom, 700);
+  }
+
+  function toggleMember(i) {
+    var r = null;
+    // The selection length is bounded by the current team size in the last render.
+    var size = (window.__avalonLastView && window.__avalonLastView.teamSize) || 2;
+    var idx = selectedTeam.indexOf(i);
+    if (idx >= 0) selectedTeam.splice(idx, 1);
+    else if (selectedTeam.length < size) selectedTeam.push(i);
+    else { selectedTeam.shift(); selectedTeam.push(i); }
+    play('click');
+    if (window.__avalonLastView) {
+      renderSeats({ state: window.__avalonLastView });
+      renderActions({ state: window.__avalonLastView, started: true, playerCount: 5, seats: [] });
+    }
+    return r;
+  }
+
+  function act(action) {
+    if (!session) return;
+    toast('');
+    api('POST', '/api/rooms/' + encodeURIComponent(roomKey) + '/actions', {
+      session: session, playerId: playerId, action: action
+    }).then(function (r) {
+      if (r.status >= 400) throw new Error(errText(r));
+      lastVersion = -1;
+      return fetchRoom();
+    }).catch(function (e) { toast(e.message); });
+  }
+
+  function proposeTeam() {
+    var view = window.__avalonLastView;
+    if (!view || selectedTeam.length !== view.teamSize) return;
+    var team = selectedTeam.slice();
+    selectedTeam = [];
+    act({ type: 'propose', team: team });
+  }
+
+  $('createBtn').addEventListener('click', createRoom);
+  $('joinBtn').addEventListener('click', function () {
+    $('joinFields').hidden = false;
+    joinRoom();
+  });
+  $('startBtn').addEventListener('click', function () {
+    api('POST', '/api/rooms/' + encodeURIComponent(roomKey) + '/start', { session: session, playerId: playerId })
+      .then(function (r) { if (r.status >= 400) throw new Error(errText(r)); lastVersion = -1; return fetchRoom(); })
+      .catch(function (e) { toast(e.message); });
+  });
+  $('restartBtn').addEventListener('click', function () {
+    api('POST', '/api/rooms/' + encodeURIComponent(roomKey) + '/restart', { session: session, playerId: playerId })
+      .then(function (r) { if (r.status >= 400) throw new Error(errText(r)); lastVersion = -1; selectedTeam = []; return fetchRoom(); })
+      .catch(function (e) { toast(e.message); });
+  });
+  $('leaveBtn').addEventListener('click', function () {
+    api('POST', '/api/rooms/' + encodeURIComponent(roomKey) + '/leave', { session: session, playerId: playerId })
+      .then(function () { showBoard(false); if (timer) clearInterval(timer); })
+      .catch(function () { showBoard(false); });
+  });
+  $('inviteBtn').addEventListener('click', function () {
+    var url = location.origin + '/boardgame/avalon-premium/online.html?room=' + encodeURIComponent(roomKey) + '&code=' + encodeURIComponent(invite || '');
+    var done = function () { toast('邀请链接已复制：' + url); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done).catch(done);
+    else done();
+  });
+  $('themeBtn').addEventListener('click', function () {
+    var next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', next);
+    play('click');
+  });
+
+  function loadLeaderboard() {
+    api('GET', '/api/leaderboard?game=avalon-premium').then(function (r) {
+      var entries = (r.body && r.body.entries) || [];
+      $('leaderboard').innerHTML = entries.length
+        ? entries.slice(0, 12).map(function (e) {
+          return '<div class="lbrow"><span>' + esc(e.name) + (e.ai ? ' · AI' : '') + '</span><b>' + (e.winner ? '胜' : '') + '</b></div>';
+        }).join('')
+        : '<p class="muted">还没有结算记录。</p>';
+    }).catch(function () {});
+  }
+  loadLeaderboard();
+  setInterval(loadLeaderboard, 5000);
+
+  // Keep the latest server view for seat-click re-renders without a request.
+  var originalRender = render;
+  render = function (r) {
+    window.__avalonLastView = r && r.state ? r.state : null;
+    originalRender(r);
+  };
+
+  if (roomKey && session) { showBoard(true); poll(); }
+  else if (roomKey && invite) { showBoard(false); $('joinFields').hidden = false; $('roomCode').value = invite; }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/draughts-premium/online.html">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="国际跳棋联机房间：创建房间、邀请好友、2 人同局、空位 AI 补位、断线重连、超时托管与结果榜。">
+<meta name="theme-color" content="#141a16">
+<title>国际跳棋 · 联机房间</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='29' fill='%23f0dcb8' stroke='%23a5241b' stroke-width='4'/%3E%3Ctext x='32' y='45' font-size='36' font-family='Songti SC,serif' font-weight='700' text-anchor='middle' fill='%23a5241b'%3E%E5%B8%85%3C/text%3E%3C/svg%3E">
+<style>
+:root{--bg:#101512;--panel:rgba(33,43,36,.82);--panel2:rgba(45,58,49,.7);--ink:#f3e7d2;--dim:#b79d80;--gold:#d8b26a;--gold2:#f2d69a;--line:rgba(216,178,106,.24);--ivory:#e2c79b;--ok:#8fd0a6;--danger:#ef8c78;--serif:"Songti SC","STSong","Noto Serif SC",serif;--sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;min-height:100dvh;background:radial-gradient(900px 620px at 8% -10%,rgba(74,47,27,.34),transparent 60%),radial-gradient(760px 520px at 100% 2%,rgba(216,178,106,.12),transparent 60%),linear-gradient(160deg,#101512,#1c241e 58%,#0c100d);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.6;overflow-x:hidden}
+a{color:var(--gold2)}
+button,input,select{font:inherit}
+:focus-visible{outline:2px solid var(--gold2);outline-offset:3px;border-radius:8px}
+.topbar{max-width:1080px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:max(16px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) 10px max(14px,env(safe-area-inset-left))}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.crest{width:50px;height:50px;flex:none;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 34% 26%,#fff4d8,#e8c98f 42%,#c89a5a 72%,#8d6130);color:#4a2f1b;font-family:var(--serif);font-weight:700;font-size:25px;border:2px solid rgba(120,54,28,.55);box-shadow:0 10px 26px rgba(0,0,0,.4)}
+.brand h1{margin:0;font-family:var(--serif);font-weight:700;font-size:clamp(21px,3vw,28px);letter-spacing:.12em;line-height:1.1}
+.brand p{margin:3px 0 0;font-size:12px;letter-spacing:.18em;color:var(--dim)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:44px;min-width:44px;padding:0 15px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);color:#ddc9aa;text-decoration:none;font-size:13.5px;cursor:pointer;transition:border-color .15s,color .15s}
+.btn:hover{border-color:var(--gold);color:var(--ink)}
+.btn.primary{background:linear-gradient(145deg,var(--gold2),var(--gold));color:#2a1808;border-color:transparent;font-weight:700}
+.btn.ghost{background:transparent}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.shell{max-width:1080px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:16px;align-items:start;padding:4px max(14px,env(safe-area-inset-right)) max(42px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left))}
+.panel{border:1px solid var(--line);border-radius:18px;background:linear-gradient(160deg,var(--panel),rgba(21,13,8,.86));box-shadow:0 20px 50px rgba(0,0,0,.35);padding:clamp(14px,2.4vw,22px);min-width:0}
+.panel h2{margin:0 0 4px;font-family:var(--serif);font-weight:700;font-size:clamp(21px,3vw,27px);letter-spacing:.06em}
+.panel h3{margin:16px 0 8px;font-size:12px;letter-spacing:.14em;color:var(--dim);text-transform:uppercase}
+.lede{margin:0 0 14px;color:var(--dim);font-size:13px;line-height:1.7}
+.section{border-top:1px solid rgba(216,178,106,.12);padding-top:14px;margin-top:14px}
+.section:first-of-type{border-top:0;padding-top:0;margin-top:0}
+.field{display:grid;gap:5px;margin-bottom:10px;min-width:0}
+.field label{font-size:12px;color:var(--dim);letter-spacing:.05em}
+.field input,.field select{width:100%;min-height:44px;padding:0 11px;border-radius:10px;border:1px solid var(--line);background:rgba(12,7,4,.66);color:var(--ink);font-size:16px;appearance:none}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.form-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:6px}
+.form-actions .btn{flex:1 1 140px}
+.status{min-height:20px;margin:10px 0 0;font-size:12.5px;color:var(--dim);line-height:1.6}
+.status.error{color:var(--danger)}.status.ok{color:var(--ok)}
+.room-panel{margin-top:4px}
+.room-code{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0 12px}
+.room-code b{font-family:var(--mono);font-size:clamp(20px,4vw,28px);letter-spacing:.18em;color:var(--gold2)}
+.seats{display:grid;gap:8px;margin:8px 0 12px}
+.seat{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--line);border-radius:11px;padding:9px 11px;background:rgba(16,10,6,.5);font-size:13px;min-height:46px}
+.seat span{min-width:0;overflow-wrap:anywhere}
+.seat .tag{font-size:11.5px;letter-spacing:.1em;color:var(--dim);border:1px solid var(--line);border-radius:999px;padding:2px 8px;white-space:nowrap}
+.seat .tag.ai{color:var(--gold2)}
+.invite-box{border:1px dashed rgba(216,178,106,.4);border-radius:10px;padding:9px 11px;margin:8px 0 12px;font-family:var(--mono);font-size:12px;color:#e6d2b4;overflow-wrap:anywhere;line-height:1.6}
+.board-list{display:grid;gap:7px;margin:6px 0 0;padding:0;list-style:none;max-height:300px;overflow-y:auto;overscroll-behavior:contain}
+.board-list li{border:1px solid rgba(216,178,106,.14);border-radius:10px;padding:8px 10px;font-size:12.5px;color:#d8c4a6;line-height:1.55;background:rgba(16,10,6,.4)}
+.board-list b{color:var(--gold2);font-weight:600}
+.empty-note{margin:6px 0;font-size:12.5px;color:#8d7660}
+.foot{max-width:1080px;margin:0 auto;padding:0 max(14px,env(safe-area-inset-right)) max(26px,env(safe-area-inset-bottom));color:#8d7660;font-size:12px;display:flex;gap:14px;flex-wrap:wrap;justify-content:space-between}
+@media (max-width:860px){
+  .shell{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:420px){
+  .form-row{grid-template-columns:1fr}
+  .crest{width:45px;height:45px;font-size:22px}
+  /* 320px: 主 CTA（创建房间）必须留在首屏；建局按钮排到表单字段之前。 */
+  #createSection{display:flex;flex-direction:column}
+  #createSection>*{order:2}
+  #createSection>h3{order:0}
+  #createSection>.form-row:has(#createBtn){order:1;margin-bottom:10px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="crest" aria-hidden="true">跳</div>
+    <div><h1>国际跳棋 · 联机</h1><p>ROOM · 2 人同局 · AI 补位</p></div>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <a class="btn" href="index.html">返回棋盘</a>
+    <a class="btn ghost" href="rules.html">规则</a>
+  </div>
+</header>
+
+<main class="shell">
+  <section class="panel">
+    <h2>创建或加入房间</h2>
+    <p class="lede">房间为 2 个座位：房主执白，客人执黑。没人加入时，空位由 AI 补位；对局中断线可重连，超时座位自动托管。</p>
+
+    <div class="section" id="createSection">
+      <h3>创建房间</h3>
+      <div class="form-row">
+        <div class="field"><label for="createName">你的名字</label><input id="createName" maxlength="24" autocomplete="nickname" placeholder="例如：白棋"></div>
+        <div class="field"><label for="createPassword">房间密码（可选）</label><input id="createPassword" type="password" maxlength="64" autocomplete="new-password" placeholder="4–64 位"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label for="createVisibility">可见性</label><select id="createVisibility"><option value="public">公开房间</option><option value="private">私密房间</option></select></div>
+        <div class="field"><label>&nbsp;</label><button class="btn primary" id="createBtn" type="button">创建房间</button></div>
+      </div>
+      <p class="status" id="createStatus"></p>
+    </div>
+
+    <div class="section" id="joinSection">
+      <h3>加入房间</h3>
+      <div class="form-row">
+        <div class="field"><label for="joinCode">房间码</label><input id="joinCode" maxlength="12" autocapitalize="characters" placeholder="6 位房间码"></div>
+        <div class="field"><label for="joinName">你的名字</label><input id="joinName" maxlength="24" autocomplete="nickname" placeholder="例如：黑棋"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label for="joinInvite">邀请 token（可选）</label><input id="joinInvite" maxlength="64" placeholder="invite token"></div>
+        <div class="field"><label for="joinPassword">房间密码（可选）</label><input id="joinPassword" type="password" maxlength="64" placeholder="私密房密码"></div>
+      </div>
+      <div class="form-actions"><button class="btn primary" id="joinBtn" type="button">加入房间</button></div>
+      <p class="status" id="joinStatus"></p>
+    </div>
+
+    <div class="section" id="reconnectSection" hidden>
+      <h3>上次房间</h3>
+      <p class="status" id="reconnectText">检测到上次未结束的房间。</p>
+      <div class="form-actions">
+        <button class="btn" id="reconnectBtn" type="button">重连上次房间</button>
+        <button class="btn ghost" id="forgetBtn" type="button">清除记录</button>
+      </div>
+    </div>
+
+    <div class="section room-panel" id="roomPanel" hidden>
+      <h3>当前房间</h3>
+      <div class="room-code"><span>房间码</span><b id="roomCode">—</b><span class="tag" id="roomStatus">等待中</span></div>
+      <div class="seats" id="seats"></div>
+      <div class="invite-box" id="inviteBox" hidden>邀请 token：<span id="inviteToken">—</span></div>
+      <div class="form-actions">
+        <button class="btn primary" id="startBtn" type="button">开始对局</button>
+        <button class="btn" id="enterBtn" type="button">进入棋盘</button>
+        <button class="btn ghost" id="inviteBtn" type="button">刷新邀请</button>
+        <button class="btn ghost" id="leaveBtn" type="button">离开房间</button>
+      </div>
+      <p class="status" id="roomStatusText"></p>
+    </div>
+  </section>
+
+  <aside style="display:grid;gap:16px;min-width:0">
+    <section class="panel">
+      <h2>结果榜</h2>
+      <p class="lede">最近的联机结算记录；刷新页面即可更新。</p>
+      <ul class="board-list" id="leaderboard"><li class="empty-note">还没有结算记录。</li></ul>
+    </section>
+    <section class="panel">
+      <h2>联机说明</h2>
+      <ul class="board-list" id="notes">
+        <li><b>2 人房</b>：房主白方先行，客人黑方。</li>
+        <li><b>AI 补位</b>：房主可直接开始，空位由 AI 接手。</li>
+        <li><b>重连</b>：同一浏览器会记住房间与会话；断线后回到本页重连。</li>
+        <li><b>托管</b>：约 15 秒无操作，座位转为 AI；重连后收回。</li>
+      </ul>
+    </section>
+  </aside>
+</main>
+<footer class="foot">
+  <span>国际跳棋 · 联机房间 · 无外部请求</span>
+  <span><a href="index.html">棋盘</a> · <a href="../index.html">桌游大厅</a></span>
+</footer>
+
+<script>
+window.__LOBBY_CONFIG = {
+  game: 'draughts',
+  lastKey: 'draughts-online-last-v1',
+  nameKey: 'draughts-name',
+  enterUrl: 'index.html',
+  seatNames: ['白方', '黑方'],
+  names: ['白棋', '黑棋', '飞王', '连吃', '升王', '双吃', '边路', '中路']
+};
+</script>
+<script src="../../shared/online-lobby.js"></script>
+</body>
+</html>

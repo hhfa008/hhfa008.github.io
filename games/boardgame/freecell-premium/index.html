@@ -1,0 +1,1108 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>空当接龙 · FreeCell 精品版</title>
+<meta name="description" content="空当接龙 FreeCell 精品单人版：微软局号复现、4 个自由空位、超级搬运、自动安全收牌、提示与撤销；午夜蓝毛毡牌桌，390/320 手机适配，离线可玩。">
+<meta name="theme-color" content="#070d1a">
+<meta property="og:title" content="空当接龙 · FreeCell 精品版">
+<meta property="og:description" content="午夜蓝毛毡与银蓝牌背：微软局号、四空位、超级搬运与自动收牌。">
+<meta property="og:image" content="assets/og.webp">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://hhfa008.github.io/games/boardgame/freecell-premium/">
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/freecell-premium/">
+<link rel="icon" href="assets/cover.webp">
+<style>
+:root{
+  --bg:#070d1a; --bg2:#0b1730; --panel:#0c1932; --panel2:#122244; --panel3:#18305a;
+  --felt:#061a4a; --felt-deep:#040f2c;
+  --ivory:#f8f2e1; --ivory2:#e7dcc1; --ink:#edf2ff; --ink-dim:#aebad8; --ink-faint:#7f8dae;
+  --gold:#d8b26a; --gold2:#f4dda2; --gold-dark:#8d692a; --line:rgba(216,178,106,.32);
+  --red:#b2271f; --black:#1b2233; --danger:#e38472; --ok:#8bc99c;
+  --font-display:"Songti SC","STSong","Noto Serif SC",Georgia,serif;
+  --font-body:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --felt-img:url("../../assets/art/premium/freecell/felt.webp");
+  --back-img:url("../../assets/art/premium/freecell/card-back.webp");
+  --step:clamp(14px,4.35vw,24px);
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+html[data-theme="light"]{
+  --bg:#efe6d1; --bg2:#e6dcc3; --panel:#f7f0de; --panel2:#efe4ca; --panel3:#e6d8b8;
+  --ink:#1d2740; --ink-dim:#4e5b78; --ink-faint:#6b7690;
+  --gold:#9a7226; --gold2:#b98b34; --gold-dark:#6f5016; --line:rgba(122,91,35,.28);
+  --ivory:#fffdf7; --ivory2:#f0e6ce;
+}
+*{box-sizing:border-box}
+html{background:var(--bg);-webkit-text-size-adjust:100%}
+body{
+  margin:0;min-height:100dvh;overflow-x:hidden;color:var(--ink);
+  font-family:var(--font-body);font-size:14px;line-height:1.4;
+  background:
+    radial-gradient(120% 70% at 50% -10%,rgba(35,74,140,.40),transparent 60%),
+    radial-gradient(90% 60% at 50% 110%,rgba(5,20,50,.75),transparent 65%),
+    linear-gradient(180deg,var(--bg2),var(--bg) 55%,#030814);
+  background-attachment:fixed;
+  padding:calc(8px + var(--safe-top)) 8px calc(10px + var(--safe-bottom));
+  -webkit-tap-highlight-color:transparent;
+}
+html[data-theme="light"] body{
+  background:
+    radial-gradient(120% 70% at 50% -10%,rgba(216,178,106,.28),transparent 62%),
+    linear-gradient(180deg,#f4ecd9,#e9dec4 60%,#ded0b0);
+}
+.app{max-width:980px;margin:0 auto}
+.sprite{position:absolute;width:0;height:0;overflow:hidden}
+
+/* ------------------------------------------------------------- header */
+.topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:2px 2px 8px}
+.brand{min-width:0}
+.title-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+h1{
+  margin:0;font-family:var(--font-display);font-weight:700;
+  font-size:clamp(20px,5.6vw,30px);line-height:1.15;letter-spacing:.06em;
+  color:var(--gold2);
+  background:linear-gradient(180deg,var(--gold2),var(--gold) 62%,#a97f34);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  text-shadow:0 1px 0 rgba(0,0,0,.18);
+}
+.badge{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-height:22px;padding:2px 9px;border-radius:999px;
+  font-size:12px;font-weight:700;letter-spacing:.12em;
+  color:#201705;background:linear-gradient(180deg,#f6e2ae,#d3a84f);
+  border:1px solid #f8e7b6;box-shadow:0 2px 8px rgba(0,0,0,.35);
+}
+.tagline{margin:4px 0 0;font-size:12px;color:var(--ink-dim);letter-spacing:.04em}
+.stats{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.stat{
+  min-width:64px;padding:4px 9px;border-radius:10px;border:1px solid var(--line);
+  background:linear-gradient(180deg,rgba(18,34,68,.86),rgba(9,20,43,.86));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 4px 12px rgba(0,0,0,.25);
+  text-align:center;
+}
+html[data-theme="light"] .stat{background:linear-gradient(180deg,#fbf5e6,#efe3c8)}
+.stat .k{display:block;font-size:12px;color:var(--ink-faint);letter-spacing:.08em}
+.stat .v{display:block;font-size:15px;font-weight:700;color:var(--gold2);font-variant-numeric:tabular-nums}
+html[data-theme="light"] .stat .v{color:#7a5716}
+
+/* ------------------------------------------------------------ toolbar */
+.toolbar{display:flex;flex-wrap:wrap;gap:6px;padding:0 0 8px}
+.tbtn{
+  display:inline-flex;align-items:center;justify-content:center;gap:5px;
+  min-height:44px;min-width:44px;padding:0 11px;border-radius:11px;
+  font-family:var(--font-body);font-size:13px;font-weight:600;letter-spacing:.03em;
+  color:var(--ink);background:linear-gradient(180deg,rgba(24,48,90,.92),rgba(10,23,48,.94));
+  border:1px solid var(--line);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 3px 10px rgba(0,0,0,.3);
+  cursor:pointer;text-decoration:none;line-height:1.1;flex:none;
+  transition:border-color .15s,transform .12s,box-shadow .15s,background .15s;
+}
+.tbtn:hover{border-color:rgba(244,221,162,.7)}
+.tbtn:active{transform:translateY(1px)}
+.tbtn:disabled{opacity:.45;cursor:default}
+.tbtn.primary{background:linear-gradient(180deg,#f0d79a,#cfa64f);color:#221805;border-color:#f6e6ba;font-weight:700}
+.tbtn .kbd{
+  display:inline-flex;align-items:center;justify-content:center;min-width:17px;height:17px;
+  padding:0 3px;border-radius:4px;font-size:12px;font-weight:700;
+  background:rgba(0,0,0,.28);color:var(--gold2);border:1px solid rgba(216,178,106,.35);
+}
+.tbtn.primary .kbd{background:rgba(90,60,0,.18);color:#3d2a06;border-color:rgba(90,60,0,.3)}
+.sfx-toggle{color:var(--ink)}
+html[data-theme="light"] .tbtn{background:linear-gradient(180deg,#fcf7ea,#efe3c8);color:#27324c}
+html[data-theme="light"] .sfx-toggle{color:#27324c}
+
+/* ------------------------------------------------------------ deal bar */
+.dealbar{display:flex;flex-wrap:wrap;align-items:center;gap:7px;padding:0 0 8px}
+.dealbar label{font-size:12px;color:var(--ink-dim);letter-spacing:.08em}
+#dealInput{
+  width:94px;height:44px;padding:0 8px;border-radius:10px;text-align:center;
+  font-family:var(--font-body);font-size:16px;font-weight:700;font-variant-numeric:tabular-nums;
+  color:var(--gold2);background:rgba(4,12,30,.72);border:1px solid var(--line);
+  box-shadow:inset 0 1px 6px rgba(0,0,0,.45);-moz-appearance:textfield;
+}
+#dealInput::-webkit-outer-spin-button,#dealInput::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+html[data-theme="light"] #dealInput{background:#fffdf6;color:#6f5016}
+.statusline{flex:1 1 100%;min-height:20px;display:flex;align-items:center;gap:8px}
+#statusText{font-size:13px;color:var(--ink-dim);min-width:0}
+#hintText{font-size:12px;color:var(--gold2);font-weight:600}
+
+/* --------------------------------------------------------------- board */
+.board{
+  position:relative;padding:8px;border-radius:18px;
+  background:
+    linear-gradient(180deg,rgba(3,9,24,.42),rgba(3,9,24,.68)),
+    var(--felt-img) center/cover;
+  border:1px solid rgba(216,178,106,.26);
+  box-shadow:
+    0 18px 50px rgba(0,0,0,.55),
+    inset 0 1px 0 rgba(255,255,255,.10),
+    inset 0 0 60px rgba(0,8,28,.6);
+}
+.board::after{
+  content:"";position:absolute;inset:0;border-radius:18px;pointer-events:none;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.04);
+}
+.toprow{display:flex;gap:8px;margin-bottom:8px;position:relative;z-index:1}
+.zonegroup{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;flex:1;min-width:0}
+div.slot{
+  position:relative;aspect-ratio:63/88;min-width:0;border-radius:6px;
+  border:1px dashed rgba(216,178,106,.36);
+  background:rgba(3,10,28,.30);
+  cursor:pointer;outline:none;
+  transition:box-shadow .15s,border-color .15s,transform .12s;
+}
+div.slot.empty{
+  background-image:
+    linear-gradient(180deg,rgba(5,16,42,.38),rgba(4,12,32,.60)),
+    var(--back-img);
+  background-size:cover;background-position:center;
+  border-style:solid;border-color:rgba(216,178,106,.40);
+  box-shadow:inset 0 0 16px rgba(0,0,0,.55);
+}
+div.slot .slot-mark{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  color:rgba(216,178,106,.55);pointer-events:none;
+}
+div.slot .slot-mark svg{width:44%;height:44%;fill:currentColor}
+div.slot .slot-mark.free-mark::before{
+  content:"";width:36%;aspect-ratio:1;border:1px dashed currentColor;border-radius:50%;
+  opacity:.6;box-shadow:0 0 0 3px rgba(216,178,106,.06);
+}
+div.slot .slot-count{
+  position:absolute;right:3px;bottom:2px;font-size:12px;font-weight:700;
+  color:var(--gold2);opacity:.8;pointer-events:none;
+}
+div.slot.legal{border-color:var(--gold2);box-shadow:0 0 0 2px rgba(244,221,162,.72),0 0 18px rgba(244,221,162,.5)}
+div.slot.hint-to{animation:slotpulse 1s ease-in-out infinite}
+div.slot:focus-visible{border-color:var(--gold2);box-shadow:0 0 0 2px rgba(244,221,162,.8)}
+
+.tableau{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;position:relative;z-index:1}
+div.tcol{
+  position:relative;min-width:0;min-height:calc(var(--step) * 6 + 54px);
+  border-radius:6px;outline:none;cursor:pointer;
+  background:linear-gradient(180deg,rgba(4,12,32,.16),rgba(4,12,32,.30));
+  border:1px solid rgba(216,178,106,.10);
+}
+div.tcol.legal{border-color:rgba(244,221,162,.6);background:rgba(244,221,162,.10)}
+div.tcol.hint-to{animation:slotpulse 1s ease-in-out infinite}
+div.tcol:focus-visible{box-shadow:0 0 0 2px rgba(244,221,162,.6) inset}
+
+/* --------------------------------------------------------------- cards */
+.card{
+  position:relative;display:block;width:100%;aspect-ratio:63/88;border-radius:7%;
+  background:
+    radial-gradient(120% 90% at 20% 0%,#fffef9,rgba(255,254,249,0) 58%),
+    linear-gradient(155deg,#fffdf5 0%,var(--ivory) 46%,var(--ivory2) 100%);
+  color:var(--black);
+  box-shadow:
+    0 2px 5px rgba(0,0,0,.42),
+    0 1px 0 rgba(255,255,255,.65) inset,
+    0 0 0 1px rgba(70,56,30,.24);
+  overflow:hidden;cursor:pointer;outline:none;user-select:none;
+  transition:transform .13s ease,box-shadow .14s ease,filter .14s ease;
+  font-family:var(--font-display);
+}
+.card.red{color:var(--red)}
+.card::before{
+  content:"";position:absolute;inset:0;border-radius:7%;pointer-events:none;
+  background:repeating-linear-gradient(120deg,rgba(120,95,45,.045) 0 1px,transparent 1px 4px);
+  opacity:.7;
+}
+.card .corner{
+  position:absolute;display:flex;flex-direction:column;align-items:center;
+  line-height:.86;pointer-events:none;z-index:2;
+}
+.card .corner.tl{left:5.5%;top:4%}
+.card .corner.br{right:5.5%;bottom:4%;transform:rotate(180deg)}
+.card .rank{
+  display:block;font-size:clamp(12px,3.35vw,15px);font-weight:700;line-height:.9;
+  letter-spacing:-.02em;
+}
+.card .suit-ico{display:block;width:clamp(7px,1.7vw,10px);height:auto;margin-top:1px;fill:currentColor}
+.card .pips{position:absolute;left:18%;top:13.5%;width:64%;height:73%;pointer-events:none;z-index:1}
+.card .pips use{fill:currentColor}
+.card .ace{position:absolute;inset:20% 24%;display:flex;align-items:center;justify-content:center;z-index:1}
+.card .ace svg{width:74%;height:74%;fill:currentColor;filter:drop-shadow(0 1px 0 rgba(255,255,255,.7))}
+.card .ace::after{
+  content:"";position:absolute;inset:4%;border-radius:50%;
+  border:1px solid currentColor;opacity:.22;
+  box-shadow:0 0 0 3px rgba(176,146,82,.12);
+}
+.card .court{position:absolute;inset:14% 15%;z-index:1;border:1px solid currentColor;border-radius:4px;opacity:.94;overflow:hidden}
+.card .court::before,.card .court::after{
+  content:"";position:absolute;left:8%;right:8%;height:1px;background:currentColor;opacity:.38;
+}
+.card .court::before{top:22%}
+.card .court::after{bottom:22%}
+.card .court .mono{
+  position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);
+  text-align:center;font-weight:700;font-size:clamp(19px,6.2vw,34px);line-height:1;
+  letter-spacing:.02em;text-shadow:0 1px 0 rgba(255,255,255,.75);
+}
+.card .court .mono.mirror{
+  top:auto;bottom:3%;transform:rotate(180deg);font-size:clamp(12px,3.2vw,15px);opacity:.62;
+}
+.card .court .fili{position:absolute;inset:0;width:100%;height:100%;color:currentColor;opacity:.4}
+.card .court .fili path,.card .court .fili circle{fill:none;stroke:currentColor;stroke-width:1.1}
+.card.selected{
+  transform:translateY(-3px) scale(1.015);
+  box-shadow:0 0 0 3px var(--gold2),0 10px 26px rgba(0,0,0,.55),0 0 24px rgba(244,221,162,.6);
+  z-index:9;
+}
+.card.hint-from{animation:cardpulse 1s ease-in-out infinite;z-index:9}
+.card.dragging{opacity:.65;transform:scale(.98)}
+.card:focus-visible{box-shadow:0 0 0 3px var(--gold2),0 6px 18px rgba(0,0,0,.5)}
+div.tcol > .card + .card{margin-top:calc(var(--step) - 139.6825%)}
+
+@keyframes cardpulse{0%,100%{box-shadow:0 0 0 2px rgba(244,221,162,.75),0 6px 18px rgba(0,0,0,.5)}50%{box-shadow:0 0 0 4px rgba(244,221,162,1),0 10px 28px rgba(244,221,162,.5)}}
+@keyframes slotpulse{0%,100%{box-shadow:0 0 0 1px rgba(244,221,162,.45)}50%{box-shadow:0 0 0 3px rgba(244,221,162,.9),0 0 18px rgba(244,221,162,.5)}}
+
+/* --------------------------------------------------------------- footer */
+.foot{display:flex;flex-wrap:wrap;gap:6px 14px;justify-content:space-between;padding:9px 3px 0;font-size:12px;color:var(--ink-faint)}
+.foot b{color:var(--ink-dim);font-weight:600}
+.foot .keys{letter-spacing:.02em}
+
+/* ---------------------------------------------------------------- toast */
+.toast{
+  position:fixed;left:50%;bottom:calc(18px + var(--safe-bottom));transform:translate(-50%,16px);
+  max-width:min(92vw,440px);padding:10px 16px;border-radius:12px;z-index:60;
+  font-size:13px;font-weight:600;color:#211705;
+  background:linear-gradient(180deg,#f7e5b4,#d5ab55);border:1px solid #f9edc8;
+  box-shadow:0 12px 34px rgba(0,0,0,.55);
+  opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;
+}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+/* ---------------------------------------------------------------- modal */
+.modal{
+  position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;
+  padding:16px;background:rgba(3,7,18,.74);backdrop-filter:blur(4px);
+}
+.modal[hidden]{display:none}
+.modal-card{
+  width:min(92vw,420px);border-radius:18px;padding:18px 18px 16px;
+  background:
+    radial-gradient(120% 80% at 50% 0%,rgba(52,92,160,.34),transparent 60%),
+    linear-gradient(180deg,var(--panel2),var(--panel));
+  border:1px solid rgba(216,178,106,.5);
+  box-shadow:0 24px 70px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.1);
+  text-align:center;
+}
+.modal-card h2{margin:0 0 4px;font-family:var(--font-display);font-size:24px;color:var(--gold2);letter-spacing:.08em}
+.modal-card p{margin:0 0 12px;font-size:13px;color:var(--ink-dim)}
+.result-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:0 0 14px}
+.result-grid .cell{padding:8px 4px;border-radius:10px;background:rgba(4,12,30,.55);border:1px solid var(--line)}
+.result-grid .k{display:block;font-size:12px;color:var(--ink-faint)}
+.result-grid .v{display:block;font-size:17px;font-weight:700;color:var(--gold2);font-variant-numeric:tabular-nums}
+.modal-actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.modal-actions .tbtn{flex:1 1 44%}
+html[data-theme="light"] .modal-card{background:linear-gradient(180deg,#fbf5e5,#efe2c6)}
+html[data-theme="light"] .result-grid .cell{background:#fffdf7}
+
+@media (max-width:360px){
+  :root{--step:clamp(13px,4.35vw,16px)}
+  body{padding-left:6px;padding-right:6px}
+  .board{padding:6px;border-radius:14px}
+  .toprow{gap:6px}
+  .toolbar{gap:5px}
+  .tbtn{padding:0 9px;font-size:12px}
+  .stat{min-width:58px;padding:3px 6px}
+  .foot{justify-content:flex-start}
+}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+}
+</style>
+</head>
+<body>
+<svg class="sprite" aria-hidden="true" focusable="false" width="0" height="0">
+  <defs>
+    <symbol id="suit-0" viewBox="0 0 24 24">
+      <circle cx="12" cy="6.7" r="4.1"/><circle cx="6.9" cy="13.3" r="4.1"/><circle cx="17.1" cy="13.3" r="4.1"/>
+      <path d="M10.8 14.7h2.4c-.15 3.1-.55 5.4-1.2 7.3-.65-1.9-1.05-4.2-1.2-7.3Z"/>
+    </symbol>
+    <symbol id="suit-1" viewBox="0 0 24 24"><path d="M12 1.6 21.4 12 12 22.4 2.6 12Z"/></symbol>
+    <symbol id="suit-2" viewBox="0 0 24 24">
+      <path d="M12 21.7C10.1 20 3 14.8 3 9.6 3 6.4 5.3 4.1 8.2 4.1c1.6 0 3 .8 3.8 2 .8-1.2 2.2-2 3.8-2 2.9 0 5.2 2.3 5.2 5.5 0 5.2-7.1 10.4-9 12.1Z"/>
+    </symbol>
+    <symbol id="suit-3" viewBox="0 0 24 24">
+      <path d="M12 1.7c-.7 1.6-2.6 3.4-4.5 5.1C5.5 8.5 4 10.4 4 12.6c0 2.5 1.8 4.3 4.2 4.3 1.5 0 2.9-.8 3.6-2v3.7c0 1.2-.7 2-1.9 2.2v1.2h4.2v-1.2c-1.2-.2-1.9-1-1.9-2.2v-3.7c.7 1.2 2.1 2 3.6 2 2.4 0 4.2-1.8 4.2-4.3 0-2.2-1.5-4.1-3.5-5.8-1.9-1.7-3.8-3.5-4.5-5.1Z"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="app game">
+  <header class="topbar">
+    <div class="brand">
+      <div class="title-row">
+        <h1>空当接龙</h1>
+        <span class="badge" id="singleBadge">单人</span>
+      </div>
+      <p class="tagline">FreeCell · 微软局号 · 四空位 · 超级搬运</p>
+    </div>
+    <div class="stats" aria-label="对局数据">
+      <div class="stat"><span class="k">局号</span><b class="v" id="dealStat">—</b></div>
+      <div class="stat"><span class="k">步数</span><b class="v" id="moveStat">0</b></div>
+      <div class="stat"><span class="k">用时</span><b class="v" id="timeStat">00:00</b></div>
+    </div>
+  </header>
+
+  <nav class="toolbar" aria-label="游戏操作">
+    <button class="tbtn primary" id="newBtn" type="button">新局 <span class="kbd">N</span></button>
+    <button class="tbtn" id="undoBtn" type="button">撤销 <span class="kbd">U</span></button>
+    <button class="tbtn" id="hintBtn" type="button">提示 <span class="kbd">H</span></button>
+    <button class="tbtn" id="autoBtn" type="button">自动收牌 <span class="kbd">A</span></button>
+    <button class="tbtn" id="themeBtn" type="button">主题</button>
+    <button class="tbtn sfx-toggle" id="muteBtn" type="button" aria-label="静音"></button>
+    <a class="tbtn" href="rules.html">规则</a>
+  </nav>
+
+  <div class="dealbar">
+    <label for="dealInput">局号 1–1000000</label>
+    <input id="dealInput" type="number" min="1" max="1000000" step="1" inputmode="numeric" value="1" aria-label="输入微软局号">
+    <button class="tbtn" id="dealBtn" type="button">发牌</button>
+    <button class="tbtn" id="randomBtn" type="button">随机局</button>
+    <div class="statusline" role="status" aria-live="polite">
+      <span id="statusText">点选一张牌，再点目标空位、空列或基础堆。</span>
+      <span id="hintText"></span>
+    </div>
+  </div>
+
+  <main class="board" id="board" aria-label="空当接龙牌桌">
+    <section class="toprow" aria-label="自由空位与基础堆">
+      <div class="zonegroup" id="freeGroup" aria-label="四个自由空位"></div>
+      <div class="zonegroup" id="foundGroup" aria-label="四个基础堆"></div>
+    </section>
+    <section class="tableau" id="tableau" aria-label="八列牌桌"></section>
+  </main>
+
+  <footer class="foot">
+    <span class="keys">快捷键：<b>N</b> 新局 · <b>U</b> 撤销 · <b>H</b> 提示 · <b>A</b> 自动收牌 · <b>R</b> 随机局</span>
+    <span id="recordLine">胜局 0 · 最少步数 — · 最快 —</span>
+  </footer>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<div class="modal" id="winModal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="winTitle">
+    <h2 id="winTitle">牌局完成</h2>
+    <p id="winNote">四堆基础堆全部收齐。</p>
+    <div class="result-grid">
+      <div class="cell"><span class="k">步数</span><span class="v" id="winMoves">0</span></div>
+      <div class="cell"><span class="k">用时</span><span class="v" id="winTime">00:00</span></div>
+      <div class="cell"><span class="k">局号</span><span class="v" id="winDeal">1</span></div>
+    </div>
+    <p id="winBest">最少步数 — · 最快 —</p>
+    <div class="modal-actions">
+      <button class="tbtn primary" id="againBtn" type="button">再来一局</button>
+      <button class="tbtn" id="nextBtn" type="button">下一局号</button>
+      <button class="tbtn" id="closeWin" type="button">查看牌桌</button>
+    </div>
+  </div>
+</div>
+
+<script src="../../shared/shuffle.js"></script>
+<script src="../../shared/sfx.js"></script>
+<script src="../../shared/store.js"></script>
+<script src="engine.js"></script>
+<script src="data.js"></script>
+<script>
+(function () {
+  'use strict';
+  var E = window.FreeCellEngine;
+  var D = window.FreeCellData;
+  var STATS_KEY = 'fc-premium-stats-v1';
+  var THEME_KEY = 'fc-premium-theme-v1';
+  var $ = function (id) { return document.getElementById(id); };
+  var root = document.documentElement;
+
+  var state = null;
+  var selected = null;     // {zone:'tableau',col,index} | {zone:'free',cell} | {zone:'foundation',suit}
+  var hintMove = null;
+  var history = [];        // serialized snapshots for undo
+  var tickTimer = null;
+  var hintTimer = null;
+  var toastTimer = null;
+
+  /* ------------------------------------------------------------- helpers */
+  function clone(v) { return JSON.parse(JSON.stringify(v)); }
+  function reducedMotion() {
+    try { return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
+    catch (err) { return false; }
+  }
+  function toast(text) {
+    var el = $('toast');
+    el.textContent = text;
+    el.classList.add('show');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove('show'); }, 2400);
+  }
+  function formatTime(ms) {
+    var total = Math.max(0, Math.floor(ms / 1000));
+    var m = Math.floor(total / 60);
+    var s = total % 60;
+    return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+  }
+  function randomDealNumber() {
+    var rng = window.Shuffle.createRng();
+    return 1 + Math.floor(rng() * E.MAX_DEAL_NUMBER);
+  }
+  function suitMarkup(suit) {
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><use href="#suit-' + suit + '"></use></svg>';
+  }
+  function suitGlyph(card) {
+    return '<svg class="suit-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#suit-' + card.suit + '"></use></svg>';
+  }
+
+  var PIP_LAYOUT = {
+    2: [[50, 26], [50, 114]],
+    3: [[50, 26], [50, 70], [50, 114]],
+    4: [[26, 30], [74, 30], [26, 110], [74, 110]],
+    5: [[26, 30], [74, 30], [50, 70], [26, 110], [74, 110]],
+    6: [[26, 26], [74, 26], [26, 70], [74, 70], [26, 114], [74, 114]],
+    7: [[26, 26], [74, 26], [50, 48], [26, 70], [74, 70], [26, 114], [74, 114]],
+    8: [[26, 26], [74, 26], [50, 48], [26, 70], [74, 70], [50, 92], [26, 114], [74, 114]],
+    9: [[26, 22], [74, 22], [26, 58], [74, 58], [50, 70], [26, 82], [74, 82], [26, 118], [74, 118]],
+    10: [[26, 22], [74, 22], [50, 44], [26, 58], [74, 58], [26, 82], [74, 82], [50, 96], [26, 118], [74, 118]]
+  };
+  function pipMarkup(card) {
+    var layout = PIP_LAYOUT[card.rank];
+    if (!layout) return '';
+    var use = '<use href="#suit-' + card.suit + '" x="-11" y="-11" width="22" height="22"';
+    var parts = layout.map(function (p) {
+      var rot = p[1] >= 70 ? ' rotate(180)' : '';
+      return use + ' transform="translate(' + p[0] + ' ' + p[1] + ')' + rot + '"></use>';
+    });
+    return '<svg class="pips" viewBox="0 0 100 140" aria-hidden="true">' + parts.join('') + '</svg>';
+  }
+  function filigreeMarkup() {
+    return '<svg class="fili" viewBox="0 0 100 140" aria-hidden="true">' +
+      '<path d="M12 26c10 4 16 10 20 20M88 26c-10 4-16 10-20 20M12 114c10-4 16-10 20-20M88 114c-10-4-16-10-20-20"/>' +
+      '<circle cx="50" cy="70" r="16"/><path d="M50 48v44M34 70h32"/></svg>';
+  }
+  function cardMarkup(card, attrs, cls) {
+    var red = card.color === 'red';
+    var rank = E.rankLabel(card.rank);
+    var corner = '<span class="corner tl"><span class="rank">' + rank + '</span>' + suitGlyph(card) + '</span>' +
+      '<span class="corner br"><span class="rank">' + rank + '</span>' + suitGlyph(card) + '</span>';
+    var center = '';
+    if (card.rank === 1) {
+      center = '<span class="ace"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#suit-' + card.suit + '"></use></svg></span>';
+    } else if (card.rank >= 11) {
+      center = '<span class="court">' + filigreeMarkup() +
+        '<span class="mono">' + rank + '</span>' +
+        '<span class="mono mirror">' + rank + '</span></span>';
+    } else {
+      center = pipMarkup(card);
+    }
+    return '<div class="card ' + (red ? 'red' : 'black') + (cls ? ' ' + cls : '') + '" tabindex="0" draggable="true" ' +
+      'data-card="' + card.id + '" aria-label="' + card.label + '"' + (attrs || '') + '>' +
+      corner + center + '</div>';
+  }
+
+  /* ------------------------------------------------------------- timer */
+  function elapsed() {
+    if (!state || !state.startedAt) return 0;
+    return Math.max(0, Date.now() - state.startedAt);
+  }
+  function startTimer() {
+    if (tickTimer) return;
+    tickTimer = setInterval(function () {
+      var el = $('timeStat');
+      if (el) el.textContent = formatTime(elapsed());
+    }, 500);
+  }
+  function stopTimer() {
+    if (tickTimer) { clearInterval(tickTimer); tickTimer = null; }
+    var el = $('timeStat');
+    if (el) el.textContent = formatTime(elapsed());
+  }
+
+  /* ------------------------------------------------------------- stats */
+  function loadStats() {
+    var rec = window.Store.getJSON(STATS_KEY, null);
+    if (!rec || typeof rec !== 'object') rec = {};
+    if (typeof rec.plays !== 'number') rec.plays = 0;
+    if (typeof rec.wins !== 'number') rec.wins = 0;
+    if (typeof rec.streak !== 'number') rec.streak = 0;
+    if (typeof rec.bestMoves !== 'number') rec.bestMoves = null;
+    if (typeof rec.bestTimeMs !== 'number') rec.bestTimeMs = null;
+    return rec;
+  }
+  function saveStats(rec) { window.Store.setJSON(STATS_KEY, rec); }
+  function renderRecord(rec) {
+    rec = rec || loadStats();
+    $('recordLine').textContent = '胜局 ' + rec.wins + ' · 最少步数 ' + (rec.bestMoves == null ? '—' : rec.bestMoves) +
+      ' · 最快 ' + (rec.bestTimeMs == null ? '—' : formatTime(rec.bestTimeMs));
+  }
+
+  /* --------------------------------------------------------- url/deal */
+  function readUrlDeal() {
+    try {
+      var q = new URLSearchParams(window.location.search);
+      var raw = q.get('deal');
+      if (raw == null) return null;
+      return E.normalizeDealNumber(raw);
+    } catch (err) { return null; }
+  }
+  function writeUrlDeal(dealNumber) {
+    if (location.protocol === 'file:') return; // keep file:// click smoke free of URL changes
+    try {
+      var url = new URL(window.location.href);
+      if (dealNumber == null) url.searchParams.delete('deal');
+      else url.searchParams.set('deal', String(dealNumber));
+      window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+    } catch (err) { /* file:// or restricted */ }
+  }
+
+  /* ------------------------------------------------------- game lifecycle */
+  function startGame(opts) {
+    opts = opts || {};
+    var dealNumber = null;
+    var seed = null;
+    if (opts.dealNumber != null) dealNumber = E.normalizeDealNumber(opts.dealNumber);
+    else if (opts.seed != null) seed = String(opts.seed);
+    else dealNumber = randomDealNumber();
+
+    var old = state;
+    if (old && old.status !== 'won' && old.moves > 0) {
+      var recLoss = loadStats();
+      recLoss.streak = 0;
+      saveStats(recLoss);
+    }
+    var rec = loadStats();
+    rec.plays += 1;
+    saveStats(rec);
+
+    state = E.createGame({ dealNumber: dealNumber, seed: seed, now: 0 });
+    selected = null;
+    hintMove = null;
+    history = [];
+    stopTimer();
+    $('winModal').hidden = true;
+    $('dealStat').textContent = String(state.dealNumber == null ? '种子' : state.dealNumber);
+    $('dealInput').value = state.dealNumber == null ? '' : String(state.dealNumber);
+    $('timeStat').textContent = '00:00';
+    $('moveStat').textContent = '0';
+    writeUrlDeal(state.dealNumber);
+    render();
+    renderRecord(rec);
+    window.Sfx.play('deal');
+  }
+
+  function pushHistory() {
+    history.push(E.serialize(state));
+    if (history.length > 200) history.shift();
+  }
+
+  function doMove(key) {
+    if (!state || state.status === 'won') return false;
+    if (!state.startedAt) { state.startedAt = Date.now(); startTimer(); }
+    pushHistory();
+    var next;
+    try { next = E.applyMove(state, key, { now: Date.now() }); }
+    catch (err) {
+      history.pop();
+      toast(err && err.message ? err.message : '这步不能走');
+      window.Sfx.play('error');
+      return false;
+    }
+    var auto = E.autoSafeSend(next, { now: Date.now() });
+    state = auto.state;
+    selected = null;
+    hintMove = null;
+    if (auto.sent.length) {
+      toast('自动收牌 +' + auto.sent.length);
+    }
+    if (state.status === 'won') {
+      finishGame();
+    } else {
+      window.Sfx.play(auto.sent.length ? 'capture' : 'move');
+    }
+    render();
+    return true;
+  }
+
+  function finishGame() {
+    stopTimer();
+    var ms = elapsed();
+    var moves = state.moves;
+    var rec = loadStats();
+    rec.wins += 1;
+    rec.streak += 1;
+    if (rec.bestMoves == null || moves < rec.bestMoves) rec.bestMoves = moves;
+    if (rec.bestTimeMs == null || ms < rec.bestTimeMs) rec.bestTimeMs = ms;
+    saveStats(rec);
+    $('winMoves').textContent = String(moves);
+    $('winTime').textContent = formatTime(ms);
+    $('winDeal').textContent = String(state.dealNumber == null ? '种子' : state.dealNumber);
+    $('winNote').textContent = '四堆基础堆全部收齐，牌局完成。';
+    $('winBest').textContent = '最少步数 ' + (rec.bestMoves == null ? '—' : rec.bestMoves) +
+      ' · 最快 ' + (rec.bestTimeMs == null ? '—' : formatTime(rec.bestTimeMs));
+    $('winModal').hidden = false;
+    renderRecord(rec);
+    window.Sfx.play('win');
+    setTimeout(function () {
+      var btn = $('againBtn');
+      if (btn && !$('winModal').hidden) { try { btn.focus(); } catch (err) {} }
+    }, 50);
+  }
+
+  function undo() {
+    if (!history.length) { toast('没有可撤销的步骤'); return; }
+    var snap = history.pop();
+    try { state = E.deserialize(snap); }
+    catch (err) { toast('无法撤销'); return; }
+    selected = null;
+    hintMove = null;
+    $('winModal').hidden = true;
+    render();
+    if (state.status !== 'won' && state.startedAt) startTimer();
+    window.Sfx.play('click');
+  }
+
+  function autoSend() {
+    if (!state || state.status === 'won') { toast('牌局已经完成'); return; }
+    if (!state.startedAt) { state.startedAt = Date.now(); startTimer(); }
+    var snapshot = E.serialize(state);
+    var res = E.autoSafeSend(state, { now: Date.now() });
+    if (!res.sent.length) { toast('当前没有安全可收的牌'); window.Sfx.play('click'); return; }
+    history.push(snapshot);
+    state = res.state;
+    selected = null;
+    hintMove = null;
+    toast('自动收牌 +' + res.sent.length);
+    if (state.status === 'won') finishGame();
+    else window.Sfx.play('capture');
+    render();
+  }
+
+  function showHint() {
+    if (!state || state.status === 'won') { toast('牌局已经完成'); return; }
+    var h = E.hint(state);
+    if (!h) { toast('当前没有可用动作'); return; }
+    hintMove = h;
+    $('hintText').textContent = '提示：' + h.reason;
+    toast(h.reason);
+    window.Sfx.play('click');
+    render();
+    if (hintTimer) clearTimeout(hintTimer);
+    hintTimer = setTimeout(function () {
+      if (hintMove === h) {
+        hintMove = null;
+        $('hintText').textContent = '';
+        render();
+      }
+    }, 6500);
+  }
+
+  /* ---------------------------------------------------------- selection */
+  function sameSource(a, b) {
+    if (!a || !b) return false;
+    if (a.zone !== b.zone) return false;
+    if (a.zone === 'tableau') return a.col === b.col && a.index === b.index;
+    if (a.zone === 'free') return a.cell === b.cell;
+    return a.suit === b.suit;
+  }
+  function elementSource(el) {
+    if (!el || !el.dataset) return null;
+    if (el.dataset.zone === 'tableau' && el.dataset.card) {
+      return { zone: 'tableau', col: Number(el.dataset.col), index: Number(el.dataset.idx) };
+    }
+    if (el.dataset.zone === 'free') {
+      var cell = Number(el.dataset.cell);
+      if (state.freeCells[cell]) return { zone: 'free', cell: cell };
+    }
+    if (el.dataset.zone === 'foundation') {
+      var suit = Number(el.dataset.suit);
+      if (state.foundations[suit] && state.foundations[suit].length) return { zone: 'foundation', suit: suit };
+    }
+    return null;
+  }
+  function elementDestination(el) {
+    if (!el || !el.dataset) return null;
+    if (el.dataset.zone === 'tableau') return { zone: 'tableau', col: Number(el.dataset.col) };
+    if (el.dataset.zone === 'free') return { zone: 'free', cell: Number(el.dataset.cell) };
+    if (el.dataset.zone === 'foundation') return { zone: 'foundation', suit: Number(el.dataset.suit) };
+    return null;
+  }
+  function moveFromMatches(m, sel) {
+    if (!m || !sel) return false;
+    return sameSource(m.from, sel);
+  }
+  function destinationMatches(m, dest) {
+    if (!m || !dest) return false;
+    if (m.to.zone !== dest.zone) return false;
+    if (dest.zone === 'tableau') return m.to.col === dest.col;
+    if (dest.zone === 'free') return m.to.cell === dest.cell;
+    return m.to.suit === dest.suit;
+  }
+  function findMove(sel, dest) {
+    var moves = E.getLegalMoves(state);
+    for (var i = 0; i < moves.length; i++) {
+      if (moveFromMatches(moves[i], sel) && destinationMatches(moves[i], dest)) return moves[i];
+    }
+    return null;
+  }
+  function destinationKey(to) {
+    if (!to) return '';
+    if (to.zone === 'tableau') return 'T' + to.col;
+    if (to.zone === 'free') return 'C' + to.cell;
+    return 'F' + to.suit;
+  }
+  function legalDestinations() {
+    var set = {};
+    if (!selected) return set;
+    E.getLegalMoves(state).forEach(function (m) {
+      if (moveFromMatches(m, selected)) set[destinationKey(m.to)] = true;
+    });
+    return set;
+  }
+  function selectSource(sel, el) {
+    if (sel.zone === 'tableau') {
+      var col = state.tableau[sel.col];
+      if (!col || sel.index < 0 || sel.index >= col.length) return;
+      if (!E.isValidRun(col, sel.index)) {
+        toast('这串牌点数或颜色不连续，不能整体搬动');
+        window.Sfx.play('error');
+        return;
+      }
+    } else if (sel.zone === 'free') {
+      if (!state.freeCells[sel.cell]) return;
+    } else if (sel.zone === 'foundation') {
+      if (!state.foundations[sel.suit].length) return;
+    }
+    selected = sel;
+    window.Sfx.play('click');
+    render();
+    try { if (el && el.focus) el.focus({ preventScroll: true }); } catch (err) {}
+  }
+
+  function handlePointerClick(event) {
+    if (!state) return;
+    var cardEl = event.target.closest ? event.target.closest('.card') : null;
+    var el = cardEl || (event.target.closest ? event.target.closest('[data-zone]') : null);
+    if (!el) return;
+
+    var src = elementSource(cardEl || el);
+    var dest = elementDestination(el);
+
+    if (selected) {
+      if (src && sameSource(src, selected)) { selected = null; render(); return; }
+      if (dest) {
+        var move = findMove(selected, dest);
+        if (move) { doMove(move.key); return; }
+      }
+      if (src) { selectSource(src, cardEl); return; }
+      if (dest) { toast('这一步不合法'); window.Sfx.play('error'); return; }
+    }
+    if (src) { selectSource(src, cardEl); return; }
+    if (el.classList && el.classList.contains('tcol') && state.tableau[Number(el.dataset.col)].length === 0) {
+      toast('先选一张牌，再选目标列');
+    }
+  }
+
+  function autoTargetForCard(el) {
+    if (!state || state.status === 'won') return;
+    var src = elementSource(el);
+    if (!src) return;
+    var moves = E.getLegalMoves(state).filter(function (m) { return moveFromMatches(m, src); });
+    if (!moves.length) { toast('这张牌暂时没有可走的位置'); window.Sfx.play('error'); return; }
+    var preferred = moves.filter(function (m) { return m.to.zone === 'foundation'; })[0] ||
+      moves.filter(function (m) { return m.to.zone === 'tableau' && !m.toEmpty; })[0] ||
+      moves.filter(function (m) { return m.to.zone === 'free'; })[0] || moves[0];
+    doMove(preferred.key);
+  }
+
+  /* ------------------------------------------------------------- render */
+  function cardAttrsFor(card, zone, extra) {
+    var attrs = ' data-zone="' + zone.zone + '"';
+    if (zone.zone === 'tableau') attrs += ' data-col="' + zone.col + '" data-idx="' + zone.index + '"';
+    if (zone.zone === 'free') attrs += ' data-cell="' + zone.cell + '"';
+    if (zone.zone === 'foundation') attrs += ' data-suit="' + zone.suit + '"';
+    return attrs + (extra || '');
+  }
+  function isSelected(zone) {
+    return selected && sameSource(selected, zone);
+  }
+  function isHintFrom(zone) {
+    return hintMove && sameSource(hintMove.from, zone);
+  }
+  function renderFreeCells() {
+    var legal = legalDestinations();
+    var html = '';
+    for (var i = 0; i < 4; i++) {
+      var card = state.freeCells[i];
+      var zone = { zone: 'free', cell: i };
+      var cls = 'slot' + (card ? '' : ' empty') +
+        (legal['C' + i] ? ' legal' : '') +
+        (hintMove && hintMove.to.zone === 'free' && hintMove.to.cell === i ? ' hint-to' : '');
+      var inner = card
+        ? cardMarkup(card, cardAttrsFor(card, zone), (isSelected(zone) ? ' selected' : '') + (isHintFrom(zone) ? ' hint-from' : ''))
+        : '<span class="slot-mark free-mark" aria-hidden="true"></span>';
+      html += '<div class="' + cls + '" id="free-' + i + '" data-zone="free" data-cell="' + i + '" tabindex="0" ' +
+        'aria-label="空位 ' + (i + 1) + (card ? '，' + card.label : '，空') + '">' + inner + '</div>';
+    }
+    $('freeGroup').innerHTML = html;
+  }
+  function renderFoundations() {
+    var legal = legalDestinations();
+    var html = '';
+    for (var s = 0; s < 4; s++) {
+      var pile = state.foundations[s];
+      var top = pile.length ? pile[pile.length - 1] : null;
+      var zone = { zone: 'foundation', suit: s };
+      var cls = 'slot' + (top ? '' : ' empty') +
+        (legal['F' + s] ? ' legal' : '') +
+        (hintMove && hintMove.to.zone === 'foundation' && hintMove.to.suit === s ? ' hint-to' : '');
+      var inner = top
+        ? cardMarkup(top, cardAttrsFor(top, zone), (isSelected(zone) ? ' selected' : '') + (isHintFrom(zone) ? ' hint-from' : ''))
+        : '<span class="slot-mark" aria-hidden="true">' + suitMarkup(s) + '</span>';
+      if (pile.length) inner += '<span class="slot-count">' + pile.length + '</span>';
+      html += '<div class="' + cls + '" id="found-' + s + '" data-zone="foundation" data-suit="' + s + '" data-count="' + pile.length + '" tabindex="0" ' +
+        'aria-label="' + E.SUITS[s].zh + '基础堆，' + pile.length + ' 张' + (top ? '，顶牌 ' + top.label : '，空') + '">' + inner + '</div>';
+    }
+    $('foundGroup').innerHTML = html;
+  }
+  function renderTableau() {
+    var legal = legalDestinations();
+    var html = '';
+    for (var c = 0; c < 8; c++) {
+      var col = state.tableau[c];
+      var cls = 'tcol' + (legal['T' + c] ? ' legal' : '') +
+        (hintMove && hintMove.to.zone === 'tableau' && hintMove.to.col === c ? ' hint-to' : '');
+      var cards = '';
+      for (var i = 0; i < col.length; i++) {
+        var zone = { zone: 'tableau', col: c, index: i };
+        cards += cardMarkup(col[i], cardAttrsFor(col[i], zone), (isSelected(zone) ? ' selected' : '') + (isHintFrom(zone) ? ' hint-from' : ''));
+      }
+      html += '<div class="' + cls + '" data-zone="tableau" data-col="' + c + '" tabindex="0" ' +
+        'aria-label="第 ' + (c + 1) + ' 列，' + col.length + ' 张">' + cards + '</div>';
+    }
+    $('tableau').innerHTML = html;
+  }
+  function renderStatus() {
+    var selText = '';
+    if (selected) {
+      var card = E.cardAt(state, selected);
+      if (selected.zone === 'tableau' && card) {
+        var n = state.tableau[selected.col].length - selected.index;
+        selText = '已选 ' + card.label + (n > 1 ? ' 及下面 ' + (n - 1) + ' 张' : '') + '。';
+      } else if (card) {
+        selText = '已选 ' + card.label + '。';
+      }
+    }
+    var base = state.status === 'won'
+      ? '牌局完成！四堆基础堆全部到 K。'
+      : (selText ? selText + '点高亮位置放下，或再点一张牌换选。' : '点选一张牌，再点目标空位、空列或基础堆。');
+    $('statusText').textContent = base;
+    $('moveStat').textContent = String(state.moves);
+    $('timeStat').textContent = formatTime(elapsed());
+    $('dealStat').textContent = String(state.dealNumber == null ? '种子' : state.dealNumber);
+    $('undoBtn').disabled = history.length === 0;
+    if (state.status === 'won' && $('hintText').textContent.indexOf('提示') === 0) $('hintText').textContent = '';
+  }
+  function render() {
+    if (!state) return;
+    renderFreeCells();
+    renderFoundations();
+    renderTableau();
+    renderStatus();
+  }
+
+  /* -------------------------------------------------------------- theme */
+  function applyTheme(theme) {
+    root.setAttribute('data-theme', theme === 'light' ? 'light' : 'dark');
+    window.Store.set(THEME_KEY, theme === 'light' ? 'light' : 'dark');
+  }
+  function toggleTheme() {
+    applyTheme(root.getAttribute('data-theme') === 'light' ? 'dark' : 'light');
+    window.Sfx.play('click');
+  }
+
+  /* ------------------------------------------------------------- wiring */
+  $('newBtn').addEventListener('click', function () { startGame({ dealNumber: randomDealNumber() }); });
+  $('undoBtn').addEventListener('click', undo);
+  $('hintBtn').addEventListener('click', showHint);
+  $('autoBtn').addEventListener('click', autoSend);
+  $('themeBtn').addEventListener('click', toggleTheme);
+  $('randomBtn').addEventListener('click', function () { startGame({ dealNumber: randomDealNumber() }); });
+  $('dealBtn').addEventListener('click', function () {
+    try { startGame({ dealNumber: E.normalizeDealNumber($('dealInput').value) }); }
+    catch (err) { toast('局号必须是 1–1000000 的整数'); window.Sfx.play('error'); }
+  });
+  $('dealInput').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); $('dealBtn').click(); }
+  });
+  $('againBtn').addEventListener('click', function () { startGame({ dealNumber: randomDealNumber() }); });
+  $('nextBtn').addEventListener('click', function () {
+    var n = state && state.dealNumber != null ? (state.dealNumber % E.MAX_DEAL_NUMBER) + 1 : 1;
+    startGame({ dealNumber: n });
+  });
+  $('closeWin').addEventListener('click', function () { $('winModal').hidden = true; });
+
+  $('board').addEventListener('click', handlePointerClick);
+  $('board').addEventListener('dblclick', function (e) {
+    var cardEl = e.target.closest ? e.target.closest('.card') : null;
+    if (cardEl) autoTargetForCard(cardEl);
+  });
+
+  // Drag where sensible: desktop HTML5 drag, touch still uses tap-to-select.
+  $('board').addEventListener('dragstart', function (e) {
+    var cardEl = e.target.closest ? e.target.closest('.card') : null;
+    if (!cardEl || !state || state.status === 'won') { e.preventDefault(); return; }
+    var src = elementSource(cardEl);
+    if (!src) { e.preventDefault(); return; }
+    selected = src;
+    try { e.dataTransfer.setData('text/plain', cardEl.dataset.card || ''); } catch (err) {}
+    e.dataTransfer.effectAllowed = 'move';
+    cardEl.classList.add('dragging', 'selected');
+  });
+  $('board').addEventListener('dragover', function (e) {
+    if (!selected) return;
+    var el = e.target.closest ? e.target.closest('[data-zone]') : null;
+    if (!el) return;
+    e.preventDefault();
+    try { e.dataTransfer.dropEffect = 'move'; } catch (err) {}
+  });
+  $('board').addEventListener('drop', function (e) {
+    var el = e.target.closest ? e.target.closest('[data-zone]') : null;
+    if (!el || !selected) return;
+    e.preventDefault();
+    var dest = elementDestination(el);
+    var move = findMove(selected, dest);
+    if (move) doMove(move.key);
+    else { toast('这一步不合法'); window.Sfx.play('error'); }
+  });
+  $('board').addEventListener('dragend', function () {
+    var dragging = document.querySelectorAll('.dragging');
+    for (var i = 0; i < dragging.length; i++) dragging[i].classList.remove('dragging');
+    selected = null;
+    render();
+  });
+
+  document.addEventListener('keydown', function (e) {
+    var tag = e.target && e.target.tagName ? e.target.tagName.toLowerCase() : '';
+    if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+    var key = e.key;
+    var lower = key.toLowerCase();
+    if (key === 'Escape') {
+      if (selected) { selected = null; render(); }
+      else if (!$('winModal').hidden) $('winModal').hidden = true;
+      return;
+    }
+    if (key === 'Enter' || key === ' ') {
+      if (e.target && e.target.classList && e.target.classList.contains('card')) {
+        e.preventDefault();
+        e.target.click();
+        return;
+      }
+      if (e.target && e.target.classList && e.target.classList.contains('slot')) {
+        e.preventDefault();
+        e.target.click();
+        return;
+      }
+    }
+    if (lower === 'n') { e.preventDefault(); startGame({ dealNumber: randomDealNumber() }); }
+    else if (lower === 'u') { e.preventDefault(); undo(); }
+    else if (lower === 'h') { e.preventDefault(); showHint(); }
+    else if (lower === 'a') { e.preventDefault(); autoSend(); }
+    else if (lower === 'r') { e.preventDefault(); startGame({ dealNumber: randomDealNumber() }); }
+    else if (lower === 't') { e.preventDefault(); toggleTheme(); }
+  });
+
+  // Focus navigation across the board with arrow keys.
+  $('board').addEventListener('keydown', function (e) {
+    var dir = 0;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') dir = 1;
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') dir = -1;
+    else return;
+    var focusables = Array.prototype.slice.call($('board').querySelectorAll('.card, .slot, .tcol'));
+    var index = focusables.indexOf(document.activeElement);
+    if (index === -1) return;
+    e.preventDefault();
+    var target = focusables[(index + dir + focusables.length) % focusables.length];
+    try { target.focus({ preventScroll: true }); } catch (err) {}
+  });
+
+  /* ------------------------------------------------------ service worker */
+  if (location.protocol === 'http:' || location.protocol === 'https:') {
+    window.addEventListener('load', function () {
+      if (!navigator.serviceWorker || !navigator.serviceWorker.register) return;
+      navigator.serviceWorker.register('./sw.js').catch(function () { /* offline cache is optional */ });
+    });
+  }
+
+  /* --------------------------------------------------------- test API */
+  window.__freecell = Object.freeze({
+    engine: E,
+    data: D,
+    newGame: function (opts) { startGame(opts || {}); return JSON.parse(E.serialize(state)); },
+    state: function () { return JSON.parse(E.serialize(state)); },
+    getState: function () { return JSON.parse(E.serialize(state)); },
+    setState: function (input) {
+      var next;
+      if (typeof input === 'string') next = E.deserialize(input);
+      else next = E.deserialize(JSON.parse(JSON.stringify(input)));
+      state = next;
+      selected = null;
+      hintMove = null;
+      history = [];
+      stopTimer();
+      $('winModal').hidden = true;
+      if (state.dealNumber != null) {
+        $('dealInput').value = String(state.dealNumber);
+        $('dealStat').textContent = String(state.dealNumber);
+      }
+      render();
+      return JSON.parse(E.serialize(state));
+    },
+    legalMoves: function () { return E.getLegalMoves(state); },
+    playMove: function (key) { return doMove(key); },
+    undo: undo,
+    hint: function () {
+      var h = E.hint(state);
+      if (h) { hintMove = h; render(); }
+      return h;
+    },
+    autoSend: autoSend,
+    autoFinish: function () {
+      if (!state) return null;
+      var res = E.autoSafeSend(state, { now: Date.now() });
+      state = res.state;
+      if (state.status === 'won') finishGame(); else render();
+      return { sent: res.sent, won: state.status === 'won' };
+    },
+    result: function () {
+      var ms = elapsed();
+      return {
+        won: !!state && state.status === 'won',
+        moves: state ? state.moves : 0,
+        elapsedMs: ms,
+        foundation: state ? E.foundationCards(state) : 0,
+        cards: state ? E.allCards(state).length : 0,
+        dealNumber: state ? state.dealNumber : null,
+        best: loadStats()
+      };
+    },
+    dealDeck: E.dealDeck,
+    loadDeal: function (n) { startGame({ dealNumber: n }); return JSON.parse(E.serialize(state)); },
+    select: function (sel) { selected = sel; render(); },
+    clearSelection: function () { selected = null; render(); },
+    over: function () { return !!state && state.status === 'won'; }
+  });
+
+  /* ---------------------------------------------------------------- boot */
+  try { applyTheme(window.Store.get(THEME_KEY, 'dark')); } catch (err) { applyTheme('dark'); }
+  if (window.Sfx && window.Sfx.syncButtons) window.Sfx.syncButtons();
+  renderRecord(loadStats());
+  var bootDeal = readUrlDeal();
+  if (bootDeal == null) bootDeal = randomDealNumber();
+  startGame({ dealNumber: bootDeal });
+})();
+</script>
+</body>
+</html>

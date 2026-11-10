@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>东京妖都 · 联机房间</title>
+<meta name="description" content="东京妖都联机房间：创建/加入房间、邀请码、服务端权威状态同步、空位 AI 补位、断线重连与超时托管、结果榜。">
+<meta name="theme-color" content="#070b16">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23070b16'/%3E%3Cpath d='M16 4l3 8 8 4-8 4-3 8-3-8-8-4 8-4z' fill='%23ffcc66'/%3E%3C/svg%3E">
+<style>
+:root{--bg:#070b16;--panel:#0e1930;--panel2:#12213c;--ink:#f5f1e6;--muted:#a6b6d4;--dim:#7285a8;--line:#283d63;--gold:#ffcc66;--gold2:#ffe6ad;--cyan:#4fe0ff;--pink:#ff5fa2;--green:#79f0b4;--red:#ff6f6f;
+--sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;--serif:"Songti SC","Noto Serif SC",Georgia,serif;--mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace}
+*{box-sizing:border-box}[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{margin:0;min-height:100vh;min-height:100dvh;background:radial-gradient(900px 520px at 12% -8%,#1b2f5a 0%,transparent 58%),radial-gradient(760px 460px at 90% 4%,#3a1442 0%,transparent 55%),linear-gradient(180deg,#070b16,#050912 78%);color:var(--ink);font:16px/1.55 var(--sans);overflow-x:hidden;padding:0 env(safe-area-inset-right) calc(24px + env(safe-area-inset-bottom)) env(safe-area-inset-left);-webkit-font-smoothing:antialiased}
+a{color:var(--cyan);text-underline-offset:3px}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+button:disabled{cursor:not-allowed;opacity:.42}
+:focus-visible{outline:3px solid var(--cyan);outline-offset:2px}
+.wrap{width:100%;max-width:860px;margin:0 auto;padding:0 14px}
+header{position:sticky;top:0;z-index:30;background:rgba(5,9,18,.86);border-bottom:1px solid #1d2e4d;backdrop-filter:blur(10px);padding-top:env(safe-area-inset-top)}
+.bar{min-height:58px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.brand{display:inline-flex;align-items:center;gap:8px;min-height:44px;text-decoration:none;color:var(--ink);font-weight:800}
+.brand i{width:25px;height:25px;border-radius:8px;background:linear-gradient(135deg,var(--gold2),var(--gold) 55%,#b07a26);clip-path:polygon(50% 0,62% 34%,98% 50%,62% 66%,50% 100%,38% 66%,2% 50%,38% 34%)}
+.nav{display:flex;gap:2px}
+.nav a{display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:44px;padding:0 9px;border-radius:9px;text-decoration:none;color:var(--muted);font-size:12px;font-weight:700}
+.nav a:hover{background:#162947;color:var(--ink)}
+main{padding:18px 0 10px}
+.hero h1{font-family:var(--serif);font-weight:700;font-size:clamp(1.7rem,6vw,2.6rem);line-height:1.05;margin:0;background:linear-gradient(100deg,#fff8e5,var(--gold2) 45%,var(--pink));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{color:var(--muted);font-size:12.5px;margin:7px 0 0;max-width:62ch}
+.panel{margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(180deg,rgba(18,33,60,.96),rgba(10,18,36,.98));box-shadow:0 24px 60px rgba(0,0,0,.35);min-width:0}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end}
+.field{display:flex;flex-direction:column;gap:4px;font-size:10.5px;font-weight:800;color:var(--muted);min-width:0;flex:1}
+.field input,.field select{min-height:44px;width:100%;border:1px solid #35517c;border-radius:10px;background:#0d1930;color:var(--ink);padding:0 10px;font-size:13px}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:46px;min-width:44px;padding:0 12px;border:1px solid #3d5b88;border-radius:12px;background:linear-gradient(180deg,#1a2e4f,#14243f);color:var(--ink);font-size:12.5px;font-weight:800;text-align:center;line-height:1.25}
+.btn:hover:not(:disabled){border-color:#5d81b8;background:linear-gradient(180deg,#21395f,#182c4d)}
+.btn.primary{background:linear-gradient(180deg,var(--gold2),var(--gold));border-color:var(--gold);color:#2a1e08}
+.btn.cyan{background:linear-gradient(180deg,#1d5b73,#123c50);border-color:#3fb6d6;color:#dcfaff}
+.btn.danger{background:linear-gradient(180deg,#5a2332,#3e1723);border-color:#a84b63;color:#ffdbe2}
+.btn.small{min-height:44px;font-size:11px;padding:0 9px}
+.status{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:2px 2px 9px;border-bottom:1px solid #1c2c4b;min-width:0}
+.status>div{min-width:0;flex:1}
+.status b{display:block;font-size:14px;color:var(--gold2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.status small{display:block;font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.pill{display:inline-flex;align-items:center;justify-content:center;min-height:28px;padding:0 9px;border:1px solid #35517c;border-radius:999px;background:#0e1c35;color:var(--cyan);font-family:var(--mono);font-size:9px;font-weight:800;flex:none;letter-spacing:.06em}
+.seat-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:9px}
+.seat{display:flex;align-items:center;gap:8px;padding:8px;border:1px solid #263e64;border-radius:12px;background:#0c172c;min-width:0}
+.seat.current{border-color:var(--gold);box-shadow:inset 0 0 0 1px rgba(255,204,102,.16)}
+.seat.ai{opacity:.78}
+.seat img{width:42px;height:42px;object-fit:contain;flex:none;filter:drop-shadow(0 3px 5px rgba(0,0,0,.5))}
+.seat div{min-width:0;flex:1}
+.seat b{display:block;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.seat span{display:block;font-size:9px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.seat em{font-style:normal;font-size:8px;color:var(--gold);border:1px solid #6b5224;border-radius:999px;padding:1px 5px;flex:none}
+.invite{margin-top:9px;padding:9px;border:1px dashed #4b5f83;border-radius:11px;background:#0a1426;font-family:var(--mono);font-size:10px;color:#bcd0ef;overflow-wrap:anywhere}
+.invite b{color:var(--gold2)}
+.actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:7px;margin-top:9px}
+.waiting{grid-column:1/-1;display:flex;align-items:center;justify-content:center;min-height:46px;border:1px dashed #35517c;border-radius:12px;color:var(--muted);font-size:11px;font-weight:700}
+.players{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}
+.pcard{padding:8px;border:1px solid #263e64;border-radius:13px;background:#0c172c;min-width:0}
+.pcard.current{border-color:var(--gold)}
+.pcard.dead{opacity:.52}
+.phead{display:flex;align-items:center;gap:6px;min-width:0}
+.phead img{width:38px;height:38px;object-fit:contain;flex:none}
+.phead b{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.phead span{display:block;font-size:8.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pstats{display:grid;grid-template-columns:44px 1fr 38px;gap:6px;align-items:center;margin-top:5px;font-size:9px}
+.score{display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:conic-gradient(var(--gold) calc(var(--p)*1%),rgba(255,255,255,.08) 0);position:relative}
+.score::before{content:"";position:absolute;inset:4px;border-radius:50%;background:#0b1528}
+.score b{position:relative;font-size:15px;color:var(--gold2)}
+.hp{height:7px;border-radius:999px;background:#0a1324;border:1px solid #263e64;overflow:hidden;margin-top:4px}
+.hp i{display:block;height:100%;background:linear-gradient(90deg,var(--green),#d7ff7a)}
+.hp.red i{background:linear-gradient(90deg,#ff8a5c,var(--red))}
+.meta{font-size:8.5px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dice{display:flex;justify-content:center;gap:5px;flex-wrap:wrap;margin-top:9px}
+.die{width:48px;height:48px;min-width:44px;min-height:44px;border:1px solid #4c6390;border-radius:10px;background:url("../../assets/art/premium/kot/die-face.webp") center/cover,linear-gradient(145deg,#fffdf4,#e9e3d3 60%,#c9c1ad);color:#182238;display:grid;place-items:center;position:relative;padding:0}
+.die.locked{outline:3px solid var(--gold);transform:translateY(-3px)}
+.die .num{font-family:var(--serif);font-weight:700;font-size:24px}
+.die svg{width:24px;height:24px}
+.die .lock{position:absolute;top:-5px;right:-4px;background:var(--gold);color:#2a1e08;font-size:8px;font-weight:900;border-radius:999px;padding:1px 4px}
+.shop{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:9px}
+@media(max-width:620px){.shop{grid-template-columns:1fr}.players{grid-template-columns:1fr}.seat-grid{grid-template-columns:1fr}}
+.card{padding:8px;border:1px solid #334d78;border-radius:11px;background:linear-gradient(160deg,#172947,#101d35);min-width:0;display:flex;flex-direction:column;gap:4px}
+.card h3{font-size:11px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card p{font-size:10px;line-height:1.45;color:#a9bbd8;margin:0;flex:1}
+.cost{font-family:var(--mono);font-size:9px;color:var(--gold2)}
+.log{margin-top:9px;padding:8px;border:1px solid #263e64;border-radius:11px;background:#0a1426;max-height:150px;overflow:auto;font-size:10.5px;color:#b8c8e4;display:flex;flex-direction:column;gap:3px}
+.log div{border-left:2px solid #35517c;padding-left:6px;line-height:1.4}
+.log div.attack,.log div.eliminate{border-color:var(--red);color:#ffd0d0}
+.log div.heal{border-color:var(--green);color:#ccffe2}
+.log div.buy,.log div.enter,.log div.vp{border-color:var(--gold);color:#ffe9b8}
+.toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:120;max-width:calc(100vw - 28px);padding:9px 13px;border:1px solid #6d4c54;border-radius:11px;background:rgba(40,15,24,.95);color:#ffdbe2;font-size:11px;font-weight:700;box-shadow:0 8px 26px rgba(0,0,0,.45)}
+.overlay{position:fixed;inset:0;z-index:100;display:grid;place-items:center;padding:18px;background:rgba(3,6,14,.82);backdrop-filter:blur(7px)}
+.result{width:min(430px,100%);padding:20px 16px;border:1px solid #7a5f2b;border-radius:20px;background:linear-gradient(160deg,#221d10,#14192b 48%,#0c1221);text-align:center}
+.result h2{font-family:var(--serif);font-weight:700;color:var(--gold2);margin:4px 0 0;font-size:1.5rem}
+.result p{font-size:11px;color:#c9bb96;margin:7px 0 0}
+.leader{margin-top:10px;font-size:10.5px;color:var(--muted)}
+.leader div{display:grid;grid-template-columns:1fr auto auto;gap:7px;padding:5px 6px;border-bottom:1px solid #1c2c4b}
+.leader b{color:#e8eefb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.footer{color:var(--dim);font-size:9.5px;text-align:center;padding:18px 10px 8px;line-height:1.6}
+@media(max-width:620px){
+  .field,.status small,.seat b,.seat span,.seat em,.invite,.waiting,.phead b,.phead span,
+  .pstats,.meta,.cost,.card h3,.card p,.log,.leader,.footer,.result p,.btn.small,.pill,
+  .die .lock{font-size:12px!important}
+}
+@media(max-width:620px){.field input,.field select{font-size:16px!important}}
+@media(max-width:360px){.wrap{padding:0 8px}.panel{padding:9px}.actions{grid-template-columns:1fr 1fr}.btn{font-size:12px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;transition:none!important}}
+</style>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/kot-premium/online.html">
+</head>
+<body>
+<header><div class="wrap bar">
+  <a class="brand" href="/online.html"><i aria-hidden="true"></i>东京妖都 · 联机</a>
+  <nav class="nav"><a href="/games/boardgame/kot-premium/index.html">本地牌桌</a><a href="/games/boardgame/kot-premium/rules.html">规则</a></nav>
+</div></header>
+<main class="wrap">
+  <div class="hero"><h1>东京妖都 · 联机房间</h1><p>Node HTTP 权威房间：创建/加入、邀请码、空位 AI 补位、断线重连、超时托管、结果榜。联机页面需要先启动 <code>online-server.mjs</code>。</p></div>
+
+  <section id="lobby" class="panel" aria-label="联机大厅">
+    <div class="status"><div><b>联机大厅</b><small>2 名真人即可开局，空位由 AI 补足到 4 人</small></div><span class="pill" id="serverPill">CHECKING</span></div>
+    <div class="row" style="margin-top:9px">
+      <label class="field">昵称<input id="nick" maxlength="12" autocomplete="nickname" value="玩家" aria-label="昵称"></label>
+      <label class="field">房间密码（可选）<input id="password" maxlength="64" placeholder="4–64 位"></label>
+      <label class="field">可见性<select id="visibility"><option value="public">公开</option><option value="private">私有</option></select></label>
+      <button class="btn primary" id="createBtn" type="button">创建房间</button>
+    </div>
+    <div class="row" style="margin-top:9px">
+      <label class="field">房间 ID 或邀请码<input id="roomCode" placeholder="room_... 或 6 位邀请码"></label>
+      <label class="field">邀请 token（可选）<input id="inviteToken" placeholder="从邀请链接粘贴"></label>
+      <label class="field">密码（可选）<input id="joinPassword" placeholder="私密房密码"></label>
+      <button class="btn cyan" id="joinBtn" type="button">加入房间</button>
+    </div>
+    <p id="lobbyMsg" class="meta" role="status" aria-live="polite"></p>
+    <div class="leader" id="leaderboard" aria-label="结果榜"><div><b>结果榜</b><span>—</span><span>—</span></div></div>
+  </section>
+
+  <section id="room" class="panel" aria-label="联机房间" hidden>
+    <div class="status"><div><b id="roomTitle">房间</b><small id="roomSub">等待玩家</small></div><span class="pill" id="roomPill">WAITING</span></div>
+    <div class="seat-grid" id="seats"></div>
+    <div class="invite" id="inviteBox"></div>
+    <div class="actions" id="roomActions"></div>
+    <div id="gameArea" hidden>
+      <div class="status" style="margin-top:10px"><div><b id="gameStatus">对局</b><small id="gameSub"></small></div><span class="pill" id="turnPill">TURN</span></div>
+      <div class="players" id="players"></div>
+      <div class="dice" id="dice" role="group" aria-label="骰子"></div>
+      <div class="actions" id="gameActions"></div>
+      <div class="shop" id="shop"></div>
+      <div class="log" id="log" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <footer class="footer">联机服务只监听 127.0.0.1；无外部请求、无追踪。对局状态由服务端引擎裁决。</footer>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<div class="overlay" id="resultOverlay" hidden><div class="result" role="dialog" aria-modal="true" aria-labelledby="resultTitle">
+  <div style="font-family:var(--serif);font-size:30px;color:var(--gold)">♛</div>
+  <h2 id="resultTitle">终局</h2>
+  <p id="resultText"></p>
+  <div class="actions" style="margin-top:12px"><button class="btn primary" id="restartBtn" type="button">再来一局（房主）</button><button class="btn" id="closeResult" type="button">查看牌桌</button></div>
+</div></div>
+
+<script src="../../shared/sfx.js"></script>
+<script src="data.js"></script>
+<script>
+(function(){
+'use strict';
+var $=function(s,r){return (r||document).querySelector(s);};
+var S={view:null,roomId:null,playerId:null,session:null,poll:null,nick:'玩家',lastRoom:null};
+var els={lobby:$('#lobby'),serverPill:$('#serverPill'),nick:$('#nick'),password:$('#password'),visibility:$('#visibility'),createBtn:$('#createBtn'),roomCode:$('#roomCode'),inviteToken:$('#inviteToken'),joinPassword:$('#joinPassword'),joinBtn:$('#joinBtn'),lobbyMsg:$('#lobbyMsg'),leaderboard:$('#leaderboard'),room:$('#room'),roomTitle:$('#roomTitle'),roomSub:$('#roomSub'),roomPill:$('#roomPill'),seats:$('#seats'),inviteBox:$('#inviteBox'),roomActions:$('#roomActions'),gameArea:$('#gameArea'),gameStatus:$('#gameStatus'),gameSub:$('#gameSub'),turnPill:$('#turnPill'),players:$('#players'),dice:$('#dice'),gameActions:$('#gameActions'),shop:$('#shop'),log:$('#log'),toast:$('#toast'),resultOverlay:$('#resultOverlay'),resultTitle:$('#resultTitle'),resultText:$('#resultText'),restartBtn:$('#restartBtn'),closeResult:$('#closeResult')};
+var toastTimer=null;
+function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function toast(msg){els.toast.textContent=msg;els.toast.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(function(){els.toast.hidden=true;},2600);}
+function sfx(name){try{window.Sfx&&Sfx.play(name||'click');}catch(e){}}
+function errText(r){return (r&&r.error&&r.error.message)||(r&&r.error&&r.error.code)||'请求失败';}
+function api(method,route,body){
+  return fetch(route,{method:method,headers:{'content-type':'application/json'},body:body?JSON.stringify(body):undefined,credentials:'omit'}).then(function(res){
+    return res.text().then(function(text){var data=null;try{data=JSON.parse(text);}catch(e){} return {status:res.status,body:data};});
+  });
+}
+function randomNick(){return '玩家'+Math.floor(Math.random()*9000+1000);}
+function playerId(){return S.playerId||('guest_'+Math.random().toString(36).slice(2,10));}
+function remember(){
+  try{localStorage.setItem('kot-online-session',JSON.stringify({roomId:S.roomId,playerId:S.playerId,session:S.session,nick:S.nick}));}catch(e){}
+}
+function forget(){try{localStorage.removeItem('kot-online-session');}catch(e){}}
+function restore(){
+  try{var raw=localStorage.getItem('kot-online-session');if(!raw)return false;var d=JSON.parse(raw);if(!d.roomId||!d.session)return false;S.roomId=d.roomId;S.playerId=d.playerId;S.session=d.session;S.nick=d.nick||S.nick;return true;}catch(e){return false;}
+}
+function openRoom(view){
+  S.view=view;S.roomId=view.roomId;S.playerId=(view.you&&view.you.playerId)||S.playerId;S.nick=(view.you&&view.you.nickname)||S.nick;
+  remember();els.lobby.hidden=true;els.room.hidden=false;render();schedulePoll();
+}
+function leaveLocal(){if(S.poll)clearInterval(S.poll);S.poll=null;S.view=null;S.roomId=null;S.session=null;forget();els.room.hidden=true;els.lobby.hidden=false;els.gameArea.hidden=true;loadLeaderboard();}
+function schedulePoll(){if(S.poll)clearInterval(S.poll);S.poll=setInterval(poll,900);}
+function poll(){
+  if(!S.roomId||!S.session)return;
+  api('GET','/api/rooms/'+encodeURIComponent(S.roomId)+'?session='+encodeURIComponent(S.session)).then(function(r){
+    if(r.status===200&&r.body&&r.body.ok){S.view=r.body;render();}
+    else if(r.status===404||r.status===403){toast('房间已关闭或会话失效');leaveLocal();}
+  }).catch(function(){});
+}
+function post(route,body){
+  if(!S.roomId||!S.session)return Promise.resolve(null);
+  return api('POST','/api/rooms/'+encodeURIComponent(S.roomId)+route,Object.assign({session:S.session,playerId:S.playerId},body||{})).then(function(r){
+    if(r.body&&r.body.ok){S.view=r.body;render();}
+    else toast(errText(r.body));
+    return r;
+  });
+}
+function monsterSrc(index){
+  var m=window.DATA&&DATA.MONSTERS&&DATA.MONSTERS[index];
+  return m&&m.art?('/assets/art/premium/kot/'+m.art):'';
+}
+function monsterName(index){var m=window.DATA&&DATA.MONSTERS&&DATA.MONSTERS[index];return m?m.name:'怪兽 '+(index+1);}
+function cardName(id){var c=window.DATA&&DATA.cardById&&DATA.cardById(id);return c?c.name:id;}
+function cardText(id){var c=window.DATA&&DATA.cardById&&DATA.cardById(id);return c?c.text:'';}
+var FACES=['1','2','3','claw','heart','energy'];
+function faceIcon(f){
+  if(f==='claw')return '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M8 5 Q10 15 12 27M16 4 Q17 15 18 27M24 5 Q23 15 22 27" fill="none" stroke="#7c2b30" stroke-width="3.2" stroke-linecap="round"/></svg>';
+  if(f==='heart')return '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 27S5 20 5 12.4C5 8.9 7.8 6 11.4 6c2 0 3.7.9 4.6 2.4C16.9 6.9 18.6 6 20.6 6 24.2 6 27 8.9 27 12.4 27 20 16 27 16 27z" fill="#c93654"/></svg>';
+  if(f==='energy')return '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M18 2 7 18h8l-1 12 11-16h-8z" fill="#a06a12"/></svg>';
+  return '<span class="num">'+f+'</span>';
+}
+function renderSeats(){
+  var v=S.view;if(!v)return;
+  els.seats.innerHTML=v.seats.map(function(s){
+    var me=v.you&&v.you.index===s.index;
+    return '<div class="seat '+(s.current?'current ':'')+(s.ai?'ai ':'')+'">'+
+      '<img src="'+monsterSrc(s.index)+'" alt="">'+
+      '<div><b>'+esc(s.nickname)+(me?'（你）':'')+'</b><span>'+esc(monsterName(s.index))+(s.ai?' · AI':' · 真人')+(s.takeover?' · 托管':'')+'</span></div>'+
+      (s.current?'<em>当前</em>':'')+'</div>';
+  }).join('');
+  var invite=v.inviteToken?('<b>邀请码：</b>'+esc(v.inviteCode)+'　<b>Token：</b>'+esc(v.inviteToken)+'<br><b>邀请链接：</b>'+esc(location.origin+'/online.html?room='+encodeURIComponent(v.roomId)+'&invite='+encodeURIComponent(v.inviteToken))):('<b>邀请码：</b>'+esc(v.inviteCode)+'（房主可刷新 token）');
+  els.inviteBox.innerHTML=invite;
+}
+function renderRoomActions(){
+  var v=S.view;if(!v)return;
+  var html='';
+  if(!v.started){
+    if(v.you&&v.you.playerId===v.hostId) html+='<button class="btn primary" data-act="start" '+(v.seats.filter(function(s){return !s.ai;}).length>=2?'':'disabled')+'>开始对局（至少 2 名真人）</button>';
+    if(v.you&&v.you.playerId===v.hostId) html+='<button class="btn" data-act="invite">刷新邀请</button>';
+    html+='<button class="btn danger" data-act="leave">离开房间</button>';
+  }else{
+    html+='<button class="btn" data-act="leave">离开（AI 托管）</button>';
+    if(v.you&&v.you.playerId===v.hostId&&v.status==='finished') html+='<button class="btn primary" data-act="restart">再来一局</button>';
+  }
+  els.roomActions.innerHTML=html;
+  els.roomTitle.textContent='房间 '+v.roomCode;
+  els.roomSub.textContent=v.started?(v.status==='finished'?'对局结束':'对局进行中 · 第 '+v.state.round+' 轮'):(v.seats.filter(function(s){return !s.ai;}).length+' 名真人 · 空位 AI');
+  els.roomPill.textContent=v.started?(v.status==='finished'?'FINISHED':'PLAYING'):'WAITING';
+}
+function renderGame(){
+  var v=S.view;if(!v||!v.state){els.gameArea.hidden=true;return;}
+  els.gameArea.hidden=false;
+  var st=v.state,cur=st.players[v.currentIndex];
+  els.gameStatus.textContent='第 '+st.round+' 轮 · '+(cur?cur.name:'')+' 的回合';
+  els.gameSub.textContent=(v.yourTurn?'轮到你了':'等待 '+ (cur?cur.name:'AI'))+' · 已掷 '+st.rollCount+'/3 · 牌库 '+st.deck.length+' 张';
+  els.turnPill.textContent=v.yourTurn?'YOUR TURN':(v.currentSeatIsAI?'AI':'WAIT');
+  els.players.innerHTML=st.players.map(function(p,i){
+    var seat=v.seats[i]||{},pct=Math.max(0,Math.min(100,p.hp/p.maxHp*100)),vp=Math.max(0,Math.min(100,p.vp/20*100));
+    var loc=!p.alive?'淘汰':(p.location?(p.location==='city'?'东京城':'东京湾'):'城外');
+    return '<div class="pcard '+(i===v.currentIndex?'current ':'')+(p.alive?'':'dead')+'">'+
+      '<div class="phead"><img src="'+monsterSrc(i)+'" alt=""><div><b>'+esc(p.name)+'</b><span>'+esc(monsterName(i))+' · '+esc(loc)+'</span></div></div>'+
+      '<div class="pstats"><div class="score" style="--p:'+vp+'"><b>'+p.vp+'</b></div><div><div style="display:flex;justify-content:space-between"><span>生命</span><b>'+p.hp+'/'+p.maxHp+'</b></div><div class="hp '+(p.hp<=p.maxHp*.35?'red':'')+'"><i style="width:'+pct+'%"></i></div><div class="meta">能量 '+p.energy+' · '+(p.cards.length?p.cards.map(cardName).join('、'):'无卡牌')+'</div></div><div class="cost">'+(seat.ai?'AI':(seat.takeover?'托管':'真人'))+'</div></div>'+
+    '</div>';
+  }).join('');
+  els.dice.innerHTML=st.dice.map(function(d,i){
+    var can=v.yourTurn&&v.legalMoves.some(function(m){return m.type==='toggleLock'&&m.index===i;});
+    return '<button class="die '+(d.locked?'locked':'')+'" type="button" data-die="'+i+'" '+(can?'':'disabled')+' aria-label="第 '+(i+1)+' 颗：'+esc(d.face)+(d.locked?'，已锁定':'')+'" aria-pressed="'+d.locked+'">'+faceIcon(d.face)+(d.locked?'<span class="lock">锁</span>':'')+'</button>';
+  }).join('');
+  var html='';
+  v.legalMoves.forEach(function(m){
+    if(m.type==='toggleLock'||m.type==='buyCard')return;
+    if(m.type==='roll')html+='<button class="btn primary" data-move="roll">'+(st.rollCount===0?'掷骰':'再掷 · 剩 '+st.rollsLeft+' 次')+'</button>';
+    else if(m.type==='resolveRoll')html+='<button class="btn cyan" data-move="resolveRoll">结算骰面</button>';
+    else if(m.type==='enterTokyo')html+='<button class="btn primary" data-move="enterTokyo" data-slot="'+m.slot+'">进入'+(m.slot==='city'?'东京城':'东京湾')+'</button>';
+    else if(m.type==='skipEnter')html+='<button class="btn" data-move="skipEnter">留在城外</button>';
+    else if(m.type==='yieldDecision')html+='<button class="btn '+(m.leave?'danger':'primary')+'" data-move="yieldDecision" data-leave="'+(m.leave?'1':'0')+'">'+(m.leave?'撤离东京':'坚守东京')+'</button>';
+    else if(m.type==='endTurn')html+='<button class="btn primary" data-move="endTurn">结束回合</button>';
+  });
+  els.gameActions.innerHTML=html||'<div class="waiting">'+(v.yourTurn?'没有可用动作':'等待其他玩家 / AI…')+'</div>';
+  var buys=v.legalMoves.filter(function(m){return m.type==='buyCard';});
+  var canSweep=v.legalMoves.some(function(m){return m.type==='sweep';});
+  els.shop.innerHTML=st.shop.map(function(id){
+    if(!id)return '<div class="card"><h3>牌库已空</h3></div>';
+    var buy=buys.filter(function(m){return m.cardId===id;})[0];
+    return '<div class="card"><div class="cost">⚡ '+((window.DATA&&DATA.cardById&&DATA.cardById(id)||{}).cost||'?')+'</div><h3>'+esc(cardName(id))+'</h3><p>'+esc(cardText(id))+'</p>'+
+      '<button class="btn small '+(buy?'primary':'')+'" type="button" data-buy="'+esc(id)+'" '+(buy?'':'disabled')+'>'+(buy?'购买':'能量不足')+'</button></div>';
+  }).join('')+(canSweep?'<div class="card"><h3>刷新市场</h3><p>弃掉 3 张明牌，重翻 3 张。</p><button class="btn small cyan" type="button" data-move="sweep">刷新 · 2 能量</button></div>':'');
+  els.log.innerHTML=st.log.slice(-12).reverse().map(function(e){return '<div class="'+esc(e.type)+'">'+esc(e.text)+'</div>';}).join('');
+  if(st.gameOver)showResult(st,v);
+}
+function showResult(st,v){
+  var won=!!(v.you&&v.winnerId===('p'+v.you.index));
+  els.resultTitle.textContent=won?'你成为东京之王！':(v.winner||'终局');
+  els.resultText.textContent=(v.winReason==='points'?'达到 20 分':'最后存活')+' · 房间 '+v.roomCode+' · 第 '+st.round+' 轮';
+  els.resultOverlay.hidden=false;
+  els.restartBtn.hidden=!(v.you&&v.you.playerId===v.hostId);
+  sfx(won?'win':'lose');
+}
+function render(){
+  var v=S.view;if(!v)return;
+  renderSeats();renderRoomActions();renderGame();
+  if(v.status==='finished'&&v.state&&v.state.gameOver)showResult(v.state,v);
+  els.serverPill.textContent='ONLINE';els.serverPill.style.color='var(--green)';
+}
+function loadLeaderboard(){
+    if (location.pathname.indexOf('/games/') === 0) return; // static site: no room API
+  api('GET','/api/leaderboard?limit=5').then(function(r){
+    if(r.status!==200||!r.body||!r.body.entries)return;
+    var rows=r.body.entries.map(function(e){
+      return '<div><b>'+esc(e.winner||'—')+'</b><span>'+esc(e.winReason==='last'?'最后存活':'20 分')+'</span><span>'+esc(e.roomCode||'')+'</span></div>';
+    }).join('');
+    els.leaderboard.innerHTML='<div><b>结果榜</b><span>胜者</span><span>房间</span></div>'+(rows||'<div><b>暂无结果</b><span>—</span><span>—</span></div>');
+  }).catch(function(){});
+}
+function checkServer(){
+  if (location.pathname.indexOf('/games/') === 0) { els.serverPill.textContent='OFFLINE'; els.serverPill.style.color='var(--red)'; return; } // static site: no room API
+  api('GET','/health').then(function(r){
+    if(r.status===200&&r.body&&r.body.ok){els.serverPill.textContent='ONLINE';els.serverPill.style.color='var(--green)';document.title='东京妖都 · 联机房间 · ONLINE';}
+    else {els.serverPill.textContent='OFFLINE';els.serverPill.style.color='var(--red)';document.title='东京妖都 · 联机房间 · OFFLINE';}
+  }).catch(function(){els.serverPill.textContent='OFFLINE';els.serverPill.style.color='var(--red)';document.title='东京妖都 · 联机房间 · OFFLINE';});
+}
+function createRoom(){
+  var nick=els.nick.value.trim()||randomNick();S.nick=nick;S.playerId='guest_'+Math.random().toString(36).slice(2,10);
+  api('POST','/api/rooms',{playerId:S.playerId,nickname:nick,password:els.password.value||null,visibility:els.visibility.value}).then(function(r){
+    if(r.status!==201||!r.body||!r.body.ok){toast(errText(r.body));return;}
+    S.session=r.body.playerSession;S.roomId=r.body.roomId;openRoom(r.body);sfx('notify');
+  }).catch(function(){toast('无法连接联机服务');});
+}
+function joinRoom(){
+  var code=els.roomCode.value.trim();if(!code){toast('请输入房间 ID 或邀请码');return;}
+  var nick=els.nick.value.trim()||randomNick();S.nick=nick;S.playerId='guest_'+Math.random().toString(36).slice(2,10);
+  api('POST','/api/rooms/'+encodeURIComponent(code)+'/join',{playerId:S.playerId,nickname:nick,password:els.joinPassword.value||null,inviteToken:els.inviteToken.value.trim()||null,inviteCode:els.inviteToken.value.trim()||null}).then(function(r){
+    if(r.status!==200||!r.body||!r.body.ok){toast(errText(r.body));return;}
+    S.session=r.body.playerSession;S.roomId=r.body.roomId;openRoom(r.body);sfx('notify');
+  }).catch(function(){toast('无法连接联机服务');});
+}
+function reconnect(){
+  if(!S.roomId||!S.session)return Promise.resolve(false);
+  return api('POST','/api/rooms/'+encodeURIComponent(S.roomId)+'/reconnect',{token:S.session,playerId:S.playerId}).then(function(r){
+    if(r.status===200&&r.body&&r.body.ok){openRoom(r.body);return true;}
+    forget();return false;
+  }).catch(function(){return false;});
+}
+function act(move){
+  if(!move)return;
+  post('/actions',move).then(function(r){if(r&&r.status===200)sfx(move.type==='resolveRoll'?'dice':'click');});
+}
+function roomAction(type){
+  if(type==='leave'){post('/leave',{}).then(function(){leaveLocal();});return;}
+  if(type==='start'){post('/start',{}).then(function(r){if(r&&r.status===200)sfx('win');});return;}
+  if(type==='invite'){post('/invite',{}).then(function(r){if(r&&r.body&&r.body.ok){toast('邀请已刷新');sfx('notify');}});return;}
+  if(type==='restart'){post('/restart',{}).then(function(r){if(r&&r.status===200){els.resultOverlay.hidden=true;sfx('win');}});return;}
+}
+document.addEventListener('click',function(ev){
+  var b=ev.target.closest('button');if(!b)return;
+  if(b.dataset.act){roomAction(b.dataset.act);return;}
+  if(b.dataset.move){
+    var m={type:b.dataset.move};
+    if(b.dataset.slot)m.slot=b.dataset.slot;
+    if(b.dataset.leave!=null)m.leave=b.dataset.leave==='1';
+    act(m);return;
+  }
+  if(b.dataset.die!=null){act({type:'toggleLock',index:Number(b.dataset.die)});return;}
+  if(b.dataset.buy){act({type:'buyCard',cardId:b.dataset.buy});return;}
+});
+els.createBtn.addEventListener('click',createRoom);
+els.joinBtn.addEventListener('click',joinRoom);
+els.restartBtn.addEventListener('click',function(){roomAction('restart');});
+els.closeResult.addEventListener('click',function(){els.resultOverlay.hidden=true;});
+els.nick.value=randomNick();
+function selfCheck(){
+  var de=document.documentElement;
+  var small=[];
+  var nodes=document.querySelectorAll('p,span,li,a,button,label,div,small,strong,em,h1,h2,h3');
+  for(var i=0;i<nodes.length;i++){
+    var n=nodes[i], direct=false;
+    for(var c=0;c<n.childNodes.length;c++){var ch=n.childNodes[c];if(ch.nodeType===3&&ch.nodeValue&&ch.nodeValue.trim().length>1){direct=true;break;}}
+    if(!direct)continue;
+    var st=getComputedStyle(n);if(st.display==='none'||st.visibility==='hidden'||parseFloat(st.opacity)===0)continue;
+    var r=n.getBoundingClientRect();if(r.width<=0||r.height<=0)continue;
+    var fs=parseFloat(st.fontSize)||0;if(fs&&fs<12)small.push(n.tagName.toLowerCase()+':'+fs);
+  }
+  document.title='东京妖都 · 联机房间 · ONLINE · '+(de.scrollWidth>de.clientWidth+1?'OVERFLOW':'NOOVERFLOW')+' · '+(small.length?('FONTLOW:'+small.slice(0,4).join(',')):'FONTOK');
+}
+checkServer();loadLeaderboard();setTimeout(selfCheck,450);
+var params=new URLSearchParams(location.search);
+if(params.get('room'))els.roomCode.value=params.get('room');
+if(params.get('invite'))els.inviteToken.value=params.get('invite');
+if(restore())reconnect().then(function(ok){if(!ok){els.lobby.hidden=false;els.room.hidden=true;}});
+})();
+</script>
+</body>
+</html>

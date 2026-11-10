@@ -1,0 +1,161 @@
+{
+  "slug": "doudizhu-premium",
+  "name": {
+    "zh": "斗地主 · 精品版",
+    "en": "Dou Dizhu (Fight the Landlord) Premium"
+  },
+  "type": "boardgame",
+  "status": "shipped",
+  "statusReason": "五项门禁全过：run-all 全过（单测覆盖 54 张牌堆、17/17/17+3 发牌、叫分、14 种牌型、压牌、炸弹王炸、两家不要重置、胜负、倍数、三档 AI、公开视图遮罩、性能、页面静态与预缓存版本）；双客户端联机 E2E 57 条断言全过且 --control exit 1；封面 1200×1200、OG 1200×630、两张详情 1200×800 由本地代码合成；realism 六类校验通过；390×844 与 320×568 真浏览器冒烟无横向溢出、主触控 ≥44px、可见字号 ≥12px。",
+  "entry": "index.html",
+  "rules": "rules.html",
+  "design": "DESIGN.md",
+  "acceptance": "ACCEPTANCE.md",
+  "playerCount": 3,
+  "e2e": {
+    "script": "test-online.js",
+    "record": "E2E.md",
+    "command": "node games/boardgame/doudizhu-premium/test-online.js",
+    "control": "node games/boardgame/doudizhu-premium/test-online.js --control  # exit 1, intentional failure",
+    "runAll": "auto-discovered by node games/tests/run-all.js",
+    "evidence": "online-e2e.json"
+  },
+  "singlePlayer": false,
+  "modeLabel": "3 人 · 单机 AI / 联机 2 人 + AI 补位",
+  "players": {
+    "min": 3,
+    "max": 3,
+    "best": [
+      3
+    ]
+  },
+  "playTime": {
+    "min": 5,
+    "max": 15
+  },
+  "age": 8,
+  "designer": "中国民间纸牌游戏",
+  "year": "20th century",
+  "online": {
+    "status": "ready",
+    "entry": "online.html",
+    "server": "online-server.mjs",
+    "client": "online.html",
+    "sharedRoomStore": "../../shared/online-room-server.mjs",
+    "seats": {
+      "min": 3,
+      "max": 3
+    },
+    "invite": true,
+    "passwordRooms": true,
+    "stateSync": "HTTP polling, server-authoritative; other hands and the bottom identity never leave the server",
+    "aiFillEmptySeats": true,
+    "rulesSimplified": false,
+    "reconnect": true,
+    "timeoutTakeover": true,
+    "leaderboard": true,
+    "rematch": true,
+    "twoClientE2E": "test-online.js",
+    "evidence": "online-e2e.json",
+    "recognizedByGate": true,
+    "features": {
+      "rooms": "3 seats; room id + 6-char code + single-use invite token",
+      "invite": "inviteUrl opens /boardgame/doudizhu-premium/online.html?room=&code=",
+      "sync": "stateVersion + lastAction; both clients receive the same public view",
+      "aiFill": "empty seats are AI-filled from the same engine/AI; 2 humans + 1 AI or 1 human + 2 AI",
+      "reconnect": "session token + POST /api/rooms/:id/reconnect; reconnect clears takeover",
+      "timeoutTakeover": "no session request for the idle timeout → server AI plays that seat",
+      "leaderboard": "GET /api/leaderboard?game=doudizhu-premium; AI participants included; raw playerId hashed",
+      "idempotency": "per-player idempotencyKey cached before the turn guard"
+    },
+    "assessment": "复用 games/shared/online-room-server.mjs 的房间/邀请/密码/TTL/托管/榜单能力；本目录只提供 3 人斗地主 adapter，其他两家手牌与底牌身份仅在服务端状态中存在。"
+  },
+  "shared": {
+    "shuffle": "games/shared/shuffle.js — engine.js require + index.html/online.html/art-render.html script tag; seeded Fisher–Yates",
+    "sfx": "games/shared/sfx.js — index.html/online.html script tag; no per-game AudioContext",
+    "store": "games/shared/store.js — level/sound preferences with safe fallback",
+    "rules": "N/A — Doudizhu rules live in engine.js",
+    "physics": "N/A — no physics simulation",
+    "leaderboard": "shared room server keeps an anonymous in-memory board; no copy"
+  },
+  "assets": {
+    "cover": "assets/cover.webp",
+    "coverMaster": "assets/cover.png",
+    "og": "assets/og.webp",
+    "ogMaster": "assets/og.png",
+    "detailImages": [
+      "assets/detail-1.webp",
+      "assets/detail-2.webp"
+    ],
+    "detailMasters": [
+      "assets/detail-1.png",
+      "assets/detail-2.png"
+    ],
+    "singleObject": [
+      "../../assets/art/premium/doudizhu/card-paper.webp",
+      "../../assets/art/premium/doudizhu/card-back.webp",
+      "../../assets/art/premium/doudizhu/table-felt.webp",
+      "../../assets/art/premium/doudizhu/chip.webp"
+    ],
+    "compositionSource": "art-render.html",
+    "compositionScript": "render-art.mjs",
+    "localOnly": true
+  },
+  "realism": {
+    "status": "pass",
+    "deck": 54,
+    "hands": [
+      17,
+      17,
+      17
+    ],
+    "bottom": 3,
+    "landlordHand": 20,
+    "handTypes": 14,
+    "cardMillimetres": {
+      "width": 63,
+      "height": 88
+    },
+    "paperGsm": 300,
+    "font": "Songti SC Bold(700)",
+    "lighting": "top-left softbox key + right fill",
+    "materials": [
+      "300gsm ivory card paper",
+      "crimson and gold card back",
+      "emerald wool table felt",
+      "39mm clay poker chip"
+    ],
+    "rulesChecked": [
+      "54 cards: 13 ranks × 4 suits + small/big joker",
+      "17/17/17 hands + 3 bottom cards",
+      "bidding 1/2/3; highest bid takes the bottom and reaches 20 cards",
+      "14 hand types from single to plane+wings, bomb and rocket",
+      "same type and length, higher main rank; bomb and rocket exceptions",
+      "two passes reset the table and the last player leads freely",
+      "score = base × bid × 2^(bombs+rockets); landlord settles double"
+    ],
+    "sources": [
+      "https://www.bilibili.com/video/BV1o8wYeEE8E",
+      "https://www.bilibili.com/video/BV1ka411t7Yh",
+      "https://www.bilibili.com/video/BV1MBTV6gE5T",
+      "games/ART-GUIDE.md"
+    ],
+    "pass": true,
+    "checks": 6,
+    "kinds": [
+      "count",
+      "dimension",
+      "proportion",
+      "color",
+      "material",
+      "rule"
+    ]
+  },
+  "performance": {
+    "engineCreateGame500Ms": 2000,
+    "engineLegalActions300Ms": 2500,
+    "engineAiDecision30Ms": 3000,
+    "uiDealMs": 150,
+    "browserLoadMs": 5000
+  }
+}

@@ -1,0 +1,2673 @@
+<!doctype html>
+<!--
+  AZUL premium — 真实件数与绘制口径（遵循 games/ART-GUIDE.md）
+  · 5 色 × 20 枚 = 100 枚花砖；每个圆盘 4 枚；2/3/4 人分别 5/7/9 个圆盘。
+  · 每位玩家：5 条花纹行（容量 1..5）、5×5 瓷砖墙、7 格地板。
+  · 单物件材质（5 色釉面砖、木质圆盘、绒布/木纹桌面）来自本地 img-gen 素材；
+    完整局面、件数与摆法由 CSS/JS 代码合成，不加载外部字体、CDN 或追踪。
+  · 中文标题字体使用 Songti SC Bold(700)，不使用 900（900 缺常用字形）。
+-->
+
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Azul 花砖物语精品版：单人 AI 工坊 + 2–4 人跨设备联机房间。5 色花砖、圆盘取砖、模式线、瓷砖墙连片计分、AI 补位与断线托管。">
+<meta name="color-scheme" content="dark light">
+<meta property="og:title" content="AZUL · 花砖物语 · 精品桌游">
+<meta property="og:description" content="2–4 人花砖物语：单人 AI 工坊与跨设备联机房间，圆盘取砖、模式线、瓷砖墙连片计分，AI 补位、重连与超时托管。">
+<meta property="og:type" content="website">
+<meta property="og:image" content="assets/og.webp">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preload" as="image" href="../../assets/art/premium/azul/tile-blue.webp">
+<link rel="preload" as="image" href="../../assets/art/premium/azul/tile-yellow.webp">
+<link rel="preload" as="image" href="../../assets/art/premium/azul/tile-red.webp">
+<link rel="preload" as="image" href="../../assets/art/premium/azul/tile-black.webp">
+<link rel="preload" as="image" href="../../assets/art/premium/azul/tile-white.webp">
+<link rel="preload" as="image" href="../../assets/art/premium/azul/factory-wood.webp">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230b1a2b'/%3E%3Crect x='11' y='11' width='19' height='19' rx='4' fill='%232f6fb5'/%3E%3Crect x='34' y='11' width='19' height='19' rx='4' fill='%23d9a620'/%3E%3Crect x='11' y='34' width='19' height='19' rx='4' fill='%23b94a3f'/%3E%3Crect x='34' y='34' width='19' height='19' rx='4' fill='%23ece2cf'/%3E%3C/svg%3E">
+<title>AZUL · 花砖物语 · 精品桌游</title>
+<style>
+:root {
+  --font-serif: "Iowan Old Style", "Palatino Linotype", "Songti SC", "Noto Serif SC", Georgia, serif;
+  --font-sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --c0: #2f6fb5;
+  --c1: #d9a620;
+  --c2: #b94a3f;
+  --c3: #2b2e37;
+  --c4: #ece2cf;
+  --tile-radius: 20%;
+  --art-blue: url("../../assets/art/premium/azul/tile-blue.webp");
+  --art-yellow: url("../../assets/art/premium/azul/tile-yellow.webp");
+  --art-red: url("../../assets/art/premium/azul/tile-red.webp");
+  --art-black: url("../../assets/art/premium/azul/tile-black.webp");
+  --art-white: url("../../assets/art/premium/azul/tile-white.webp");
+  --art-factory: url("../../assets/art/premium/azul/factory-wood.webp");
+  --art-felt: url("../../assets/art/premium/azul/table-felt.webp");
+  --art-wood: url("../../assets/art/premium/azul/table-wood.webp");
+}
+:root, html[data-theme="dark"] {
+  --bg: #07111d;
+  --bg-2: #0a1a2b;
+  --bg-3: #0f2439;
+  --panel: rgba(13, 34, 54, .86);
+  --panel-2: rgba(18, 45, 70, .66);
+  --panel-3: rgba(7, 20, 33, .72);
+  --ink: #f4ecdc;
+  --ink-soft: #d2dee8;
+  --ink-dim: #90a7ba;
+  --gold: #d8b66f;
+  --gold-2: #f4dda2;
+  --gold-dim: rgba(216, 182, 111, .26);
+  --line: rgba(216, 182, 111, .22);
+  --line-soft: rgba(216, 182, 111, .12);
+  --board: #f0e7d4;
+  --board-2: #e4d9c0;
+  --board-ink: #26313d;
+  --board-dim: #7e7666;
+  --slot: rgba(38, 49, 61, .07);
+  --slot-line: rgba(38, 49, 61, .18);
+  --shadow: 0 30px 80px rgba(0, 0, 0, .48);
+  --shadow-soft: 0 12px 30px rgba(0, 0, 0, .28);
+  --glow: rgba(216, 182, 111, .46);
+  --danger: #e07a6b;
+  --ok: #8fd0ae;
+  --focus: #f7e2a8;
+  --scrim: rgba(3, 9, 16, .72);
+}
+html[data-theme="light"] {
+  --bg: #e9e2d3;
+  --bg-2: #f5efe3;
+  --bg-3: #ded4c0;
+  --panel: rgba(255, 252, 245, .82);
+  --panel-2: rgba(255, 252, 245, .62);
+  --panel-3: rgba(246, 239, 226, .78);
+  --ink: #22303c;
+  --ink-soft: #344655;
+  --ink-dim: #6f7d88;
+  --gold: #9c7326;
+  --gold-2: #c49a45;
+  --gold-dim: rgba(156, 115, 38, .22);
+  --line: rgba(120, 88, 30, .22);
+  --line-soft: rgba(120, 88, 30, .12);
+  --board: #fbf6ea;
+  --board-2: #f1e8d5;
+  --board-ink: #26313d;
+  --board-dim: #857c6a;
+  --slot: rgba(38, 49, 61, .055);
+  --slot-line: rgba(38, 49, 61, .16);
+  --shadow: 0 30px 70px rgba(80, 60, 30, .18);
+  --shadow-soft: 0 12px 28px rgba(80, 60, 30, .13);
+  --glow: rgba(196, 154, 69, .4);
+  --danger: #b33f35;
+  --ok: #2f7d5e;
+  --focus: #8a5f0d;
+  --scrim: rgba(56, 44, 22, .34);
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  color: var(--ink);
+  font-family: var(--font-sans);
+  background: var(--bg);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  text-rendering: optimizeLegibility;
+}
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background:
+    radial-gradient(1100px 760px at 12% -8%, rgba(47, 111, 181, .22), transparent 62%),
+    radial-gradient(860px 680px at 96% 8%, rgba(216, 182, 111, .13), transparent 60%),
+    radial-gradient(1000px 900px at 54% 118%, rgba(185, 74, 63, .11), transparent 62%),
+    linear-gradient(160deg, var(--bg), var(--bg-2) 52%, var(--bg-3));
+}
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: .4;
+  background-image:
+    radial-gradient(circle at 50% 50%, transparent 0 17%, var(--gold-dim) 18% 18.6%, transparent 19% 33%, var(--gold-dim) 34% 34.6%, transparent 35%),
+    radial-gradient(circle at 50% 0, transparent 0 17%, var(--gold-dim) 18% 18.6%, transparent 19% 33%, var(--gold-dim) 34% 34.6%, transparent 35%);
+  background-size: 96px 96px, 96px 96px;
+  background-position: 0 0, 48px 48px;
+  mask-image: linear-gradient(to bottom, rgba(0,0,0,.55), transparent 82%);
+  -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,.55), transparent 82%);
+}
+.table-texture {
+  position: fixed;
+  inset: 0;
+  z-index: -3;
+  pointer-events: none;
+  background: var(--art-felt) center / cover no-repeat;
+  opacity: .56;
+  filter: saturate(.72) contrast(1.06);
+}
+.table-texture::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--art-wood) center / cover no-repeat;
+  mix-blend-mode: soft-light;
+  opacity: .30;
+}
+html[data-theme="light"] .table-texture {
+  opacity: .28;
+  filter: saturate(.62) brightness(1.12);
+}
+
+::selection { background: var(--gold-dim); color: var(--ink); }
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+button, a { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+button { font: inherit; color: inherit; }
+a { color: var(--gold-2); }
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+
+/* ---------------------------------------------------------------- */
+/* Header                                                           */
+/* ---------------------------------------------------------------- */
+
+.topbar {
+  max-width: 1380px;
+  margin: 0 auto;
+  padding: max(20px, env(safe-area-inset-top)) max(clamp(16px, 3vw, 34px), env(safe-area-inset-right)) 12px max(clamp(16px, 3vw, 34px), env(safe-area-inset-left));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  min-width: 0;
+}
+.brand-mark {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+  padding: 5px;
+  border-radius: 14px;
+  background: linear-gradient(145deg, rgba(255,255,255,.12), rgba(0,0,0,.18));
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-soft), inset 0 1px 0 rgba(255,255,255,.16);
+  transform: rotate(-3deg);
+}
+.brand-mark i {
+  display: block;
+  border-radius: 4px;
+  box-shadow: inset 0 1px 1px rgba(255,255,255,.7), inset 0 -2px 3px rgba(0,0,0,.3);
+}
+.brand-mark i:nth-child(1) { background: linear-gradient(145deg, #9cc9f2, #2f6fb5 60%, #123f70); }
+.brand-mark i:nth-child(2) { background: linear-gradient(145deg, #f7dc84, #d9a620 60%, #9b6f08); }
+.brand-mark i:nth-child(3) { background: linear-gradient(145deg, #ef9a8d, #b94a3f 60%, #7c251c); }
+.brand-mark i:nth-child(4) { background: linear-gradient(145deg, #fffdf7, #ece2cf 55%, #b8ab92); }
+.brand-copy { min-width: 0; }
+.brand-title {
+  font-family: var(--font-serif);
+  font-size: clamp(24px, 3vw, 34px);
+  letter-spacing: .16em;
+  line-height: 1;
+  margin: 0;
+  color: var(--ink);
+  text-shadow: 0 2px 18px rgba(0,0,0,.25);
+}
+.brand-title span { color: var(--gold-2); }
+.brand-sub {
+  margin: 5px 0 0;
+  font-size: 11px;
+  letter-spacing: .34em;
+  color: var(--ink-dim);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.top-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.icon-btn, .text-btn {
+  min-height: 44px;
+  min-width: 44px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: linear-gradient(160deg, var(--panel-2), var(--panel-3));
+  color: var(--ink-soft);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 13px;
+  cursor: pointer;
+  font-size: 13px;
+  letter-spacing: .04em;
+  text-decoration: none;
+  transition: border-color .2s ease, transform .2s ease, background .2s ease, color .2s ease;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+.icon-btn:hover, .text-btn:hover {
+  border-color: var(--gold-dim);
+  color: var(--ink);
+  transform: translateY(-1px);
+  background: linear-gradient(160deg, var(--panel), var(--panel-2));
+}
+.icon-btn svg { width: 18px; height: 18px; flex: none; }
+.text-btn.primary {
+  background: linear-gradient(160deg, var(--gold-2), var(--gold));
+  color: #1c1608;
+  border-color: transparent;
+  font-weight: 700;
+  box-shadow: 0 8px 20px rgba(156, 115, 38, .22);
+}
+html[data-theme="light"] .text-btn.primary { color: #fffdf6; }
+.text-btn.primary:hover { color: #120e05; filter: brightness(1.04); }
+html[data-theme="light"] .text-btn.primary:hover { color: #fff; }
+.icon-btn[aria-pressed="true"] { border-color: var(--gold); color: var(--gold-2); }
+
+.player-seg {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--panel-3);
+  gap: 2px;
+}
+.player-seg button {
+  min-height: 44px;
+  min-width: 44px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--ink-dim);
+  cursor: pointer;
+  font-size: 12px;
+  letter-spacing: .04em;
+  transition: background .2s ease, color .2s ease;
+}
+.player-seg button[aria-pressed="true"] {
+  background: var(--gold-dim);
+  color: var(--gold-2);
+  box-shadow: inset 0 0 0 1px var(--gold-dim);
+}
+
+/* ---------------------------------------------------------------- */
+/* Layout                                                           */
+/* ---------------------------------------------------------------- */
+
+.shell {
+  max-width: 1380px;
+  margin: 0 auto;
+  padding: 8px max(clamp(16px, 3vw, 34px), env(safe-area-inset-right)) max(50px, env(safe-area-inset-bottom)) max(clamp(16px, 3vw, 34px), env(safe-area-inset-left));
+}
+.game-grid {
+  display: grid;
+  grid-template-columns: minmax(0, .94fr) minmax(0, 1.06fr);
+  gap: clamp(14px, 2vw, 24px);
+  align-items: start;
+}
+.panel {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background:
+    linear-gradient(155deg, rgba(255,255,255,.045), transparent 32%),
+    linear-gradient(160deg, var(--panel), var(--panel-3));
+  box-shadow: var(--shadow);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+}
+.workshop {
+  padding: clamp(14px, 2vw, 22px);
+  overflow: hidden;
+}
+.workshop::before {
+  content: "";
+  position: absolute;
+  width: 260px; height: 260px;
+  right: -90px; top: -120px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--gold-dim), transparent 68%);
+  pointer-events: none;
+}
+
+.round-strip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.round-badge, .stat-chip, .turn-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--panel-3);
+  color: var(--ink-soft);
+  font-size: 12px;
+  letter-spacing: .04em;
+  white-space: nowrap;
+}
+.round-badge b { color: var(--gold-2); font-size: 15px; }
+.turn-badge { margin-left: auto; border-color: var(--gold-dim); color: var(--gold-2); }
+.turn-badge::before {
+  content: "";
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 10px currentColor;
+}
+.turn-badge.ai::before { animation: pulseDot 1.3s ease-in-out infinite; }
+.turn-badge.over::before { background: var(--ink-dim); box-shadow: none; }
+.turn-badge.busy::before { animation: pulseDot .7s ease-in-out infinite; }
+.stat-chip b { color: var(--ink); font-weight: 600; }
+.stat-chip .sep { color: var(--ink-dim); }
+
+/* ---------------------------------------------------------------- */
+/* Factory ring                                                     */
+/* ---------------------------------------------------------------- */
+
+.factory-ring {
+  position: relative;
+  width: 100%;
+  max-width: 600px;
+  aspect-ratio: 1 / 1;
+  margin: 2px auto 0;
+}
+.factory-layer { position: absolute; inset: 0; }
+.factory {
+  position: absolute;
+  width: clamp(112px, 23.5%, 136px);
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  transition: transform .22s ease;
+}
+.factory-disc {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  padding: 6.5%;
+  background-color: #0b1a2b;
+  background-image:
+    radial-gradient(circle at 34% 28%, rgba(255,255,255,.16), transparent 38%),
+    var(--art-factory),
+    radial-gradient(circle at 50% 58%, #183149 0%, #0b1a2b 62%, #06101b 100%);
+  background-size: 100% 100%, 124% 124%, 100% 100%;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-blend-mode: screen, multiply, normal;
+  border: 1px solid var(--gold-dim);
+  box-shadow:
+    inset 0 0 0 5px rgba(216, 182, 111, .09),
+    inset 0 12px 22px rgba(255,255,255,.05),
+    inset 0 -14px 24px rgba(0,0,0,.55),
+    0 16px 30px rgba(0,0,0,.34);
+  position: relative;
+}
+html[data-theme="light"] .factory-disc {
+  background-color: #e2d5bd;
+  background-image:
+    radial-gradient(circle at 34% 28%, rgba(255,255,255,.9), transparent 40%),
+    var(--art-factory),
+    radial-gradient(circle at 50% 58%, #f7eedd 0%, #e2d5bd 62%, #c9b996 100%);
+  background-size: 100% 100%, 124% 124%, 100% 100%;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-blend-mode: screen, multiply, normal;
+  box-shadow:
+    inset 0 0 0 5px rgba(156, 115, 38, .10),
+    inset 0 10px 18px rgba(255,255,255,.7),
+    inset 0 -12px 20px rgba(90, 70, 35, .18),
+    0 16px 30px rgba(80, 60, 30, .18);
+}
+.factory-disc::after {
+  content: "";
+  position: absolute;
+  inset: 3%;
+  border-radius: 50%;
+  border: 1px dashed rgba(216, 182, 111, .2);
+  pointer-events: none;
+}
+.factory-tiles {
+  position: absolute;
+  inset: 6.5%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-auto-rows: 1fr;
+  gap: 4%;
+  place-items: center;
+}
+.factory-label {
+  font-size: 10px;
+  letter-spacing: .16em;
+  color: var(--ink-dim);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.factory.is-empty .factory-label { opacity: .55; }
+.factory.is-empty .factory-disc { opacity: .55; }
+
+.tile-btn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 24%;
+  background: transparent;
+  cursor: pointer;
+  transition: transform .18s ease, filter .18s ease, opacity .18s ease;
+}
+.tile-btn:hover { transform: translateY(-2px) scale(1.04); filter: brightness(1.08); }
+.tile-btn:active { transform: scale(.97); }
+.tile-btn.selected { transform: translateY(-2px) scale(1.07); filter: brightness(1.14); }
+.tile-btn.selected::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 28%;
+  border: 2px solid var(--gold-2);
+  box-shadow: 0 0 16px var(--glow);
+  pointer-events: none;
+  animation: pulseRing 1.4s ease-in-out infinite;
+}
+.tile-btn.dim { opacity: .34; filter: saturate(.55); }
+.tile-btn .tile { width: 100%; height: 100%; }
+
+.center-zone {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 35%;
+  min-width: 164px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background:
+    radial-gradient(circle at 42% 32%, rgba(255,255,255,.10), transparent 42%),
+    radial-gradient(circle at 50% 46%, #13283d, #081524 72%);
+  border: 1px solid var(--line);
+  box-shadow:
+    inset 0 0 0 6px rgba(216, 182, 111, .06),
+    inset 0 14px 30px rgba(0,0,0,.35),
+    0 18px 36px rgba(0,0,0,.3);
+}
+html[data-theme="light"] .center-zone {
+  background:
+    radial-gradient(circle at 42% 32%, rgba(255,255,255,.95), transparent 44%),
+    radial-gradient(circle at 50% 46%, #f9f1e0, #e0d2b7 72%);
+  box-shadow:
+    inset 0 0 0 6px rgba(156, 115, 38, .07),
+    inset 0 14px 26px rgba(120, 90, 40, .10),
+    0 18px 36px rgba(80, 60, 30, .14);
+}
+.center-head {
+  font-size: 10px;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  white-space: nowrap;
+}
+.center-tiles {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 100%;
+}
+.center-tile {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+}
+.center-tile .count-badge {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: var(--gold-2);
+  color: #1c1608;
+  font-size: 10px;
+  font-weight: 800;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,.35);
+}
+.center-empty { font-size: 11px; color: var(--ink-dim); letter-spacing: .12em; }
+.first-marker {
+  position: absolute;
+  right: -2px;
+  top: -2px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-serif);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  color: #2a1d06;
+  background:
+    radial-gradient(circle at 32% 26%, #fff6d8, transparent 34%),
+    linear-gradient(145deg, #f6dda0, #d8b66f 52%, #9c7326);
+  border: 1px solid rgba(255,255,255,.55);
+  box-shadow: 0 4px 12px rgba(0,0,0,.35), inset 0 1px 1px rgba(255,255,255,.8);
+  transform: rotate(-9deg);
+}
+.first-marker[hidden] { display: none; }
+
+/* ---------------------------------------------------------------- */
+/* Action dock                                                      */
+/* ---------------------------------------------------------------- */
+
+.action-dock {
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 58px;
+  padding: 9px 12px 9px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--gold-dim);
+  background:
+    linear-gradient(120deg, var(--gold-dim), transparent 38%),
+    var(--panel-3);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+}
+.dock-text { min-width: 0; flex: 1; }
+.dock-title {
+  font-size: 13px;
+  color: var(--ink);
+  letter-spacing: .02em;
+  line-height: 1.35;
+}
+.dock-sub {
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--ink-dim);
+  line-height: 1.35;
+}
+.dock-sub em { color: var(--gold-2); font-style: normal; }
+.dock-actions { display: flex; gap: 8px; flex: none; }
+.dock-actions .text-btn { min-height: 44px; padding: 0 12px; font-size: 12px; }
+body.is-busy .action-dock { opacity: .82; }
+
+.journal {
+  margin-top: 14px;
+  border-top: 1px solid var(--line-soft);
+  padding-top: 10px;
+}
+.journal-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 10px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  margin-bottom: 6px;
+}
+.journal-head span { letter-spacing: .04em; text-transform: none; font-size: 10px; }
+.journal-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 94px;
+  overflow: auto;
+  display: grid;
+  gap: 3px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--gold-dim) transparent;
+}
+.journal-list li {
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--ink-dim);
+  padding-left: 12px;
+  position: relative;
+  overflow-wrap: anywhere;
+}
+.journal-list li::before {
+  content: "";
+  position: absolute;
+  left: 0; top: .58em;
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: var(--gold);
+  opacity: .7;
+}
+.journal-list li.marker::before { background: var(--c1); }
+.journal-list li.score::before { background: var(--c0); }
+.journal-list li.end::before { background: var(--c2); }
+
+/* ---------------------------------------------------------------- */
+/* Player board                                                     */
+/* ---------------------------------------------------------------- */
+
+.board-panel { padding: clamp(12px, 1.6vw, 18px); }
+.player-board {
+  position: relative;
+  border-radius: 20px;
+  padding: clamp(14px, 2vw, 22px);
+  color: var(--board-ink);
+  background:
+    radial-gradient(900px 300px at 12% -10%, rgba(255,255,255,.7), transparent 60%),
+    linear-gradient(150deg, var(--board), var(--board-2));
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.55),
+    inset 0 0 40px rgba(120, 90, 40, .07),
+    var(--shadow-soft);
+  overflow: hidden;
+}
+.player-board::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: .20;
+  background-image:
+    radial-gradient(circle at 0 0, transparent 0 16%, rgba(80, 60, 30, .18) 17% 18%, transparent 19%),
+    radial-gradient(circle at 100% 100%, transparent 0 16%, rgba(80, 60, 30, .18) 17% 18%, transparent 19%);
+  background-size: 52px 52px;
+  mix-blend-mode: multiply;
+}
+.player-board > * { position: relative; z-index: 1; }
+.board-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.board-id { display: flex; align-items: center; gap: 11px; min-width: 0; }
+.avatar {
+  width: 44px; height: 44px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-serif);
+  font-size: 18px;
+  font-weight: 700;
+  color: #1c1608;
+  background: linear-gradient(145deg, var(--gold-2), var(--gold));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 5px 12px rgba(80,60,30,.18);
+  flex: none;
+}
+.board-id h2 {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: clamp(18px, 2.2vw, 23px);
+  font-weight: 700;
+  letter-spacing: .08em;
+  color: var(--board-ink);
+  line-height: 1.1;
+}
+.board-id p {
+  margin: 4px 0 0;
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--board-dim);
+}
+.board-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(120, 88, 30, .25);
+  font-size: 9px;
+  letter-spacing: .12em;
+  color: var(--board-dim);
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.score-orb {
+  flex: none;
+  min-width: 92px;
+  padding: 6px 14px 8px;
+  border-radius: 16px;
+  text-align: right;
+  background: rgba(38, 49, 61, .07);
+  border: 1px solid rgba(38, 49, 61, .12);
+  box-shadow: inset 0 1px 2px rgba(255,255,255,.5);
+}
+.score-orb .score-label {
+  display: block;
+  font-size: 9px;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--board-dim);
+}
+.score-orb strong {
+  display: block;
+  font-family: var(--font-serif);
+  font-size: clamp(26px, 3.4vw, 38px);
+  line-height: 1;
+  color: var(--board-ink);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.score-orb small { font-size: 9px; color: var(--board-dim); letter-spacing: .08em; }
+
+.board-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, .92fr);
+  gap: clamp(14px, 2vw, 22px);
+  align-items: start;
+}
+.lines-wrap, .wall-wrap { min-width: 0; }
+.section-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 2px 7px;
+  font-size: 9px;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--board-dim);
+}
+.section-label span { letter-spacing: .04em; text-transform: none; font-size: 9px; }
+
+.pattern-lines { display: grid; gap: 3px; }
+.pattern-row {
+  display: grid;
+  grid-template-columns: 25px 1fr auto;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  min-height: 44px;
+  padding: 3px 5px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--board-ink);
+  cursor: pointer;
+  text-align: left;
+  transition: background .18s ease, border-color .18s ease, transform .18s ease, opacity .18s ease;
+}
+.pattern-row:hover { background: rgba(38, 49, 61, .055); }
+.pattern-row.legal {
+  border-color: rgba(156, 115, 38, .52);
+  background: linear-gradient(90deg, rgba(216,182,111,.20), rgba(216,182,111,.04));
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.35), 0 0 16px rgba(196,154,69,.12);
+}
+.pattern-row.blocked { opacity: .42; }
+.pattern-row.complete { background: linear-gradient(90deg, rgba(216,182,111,.22), transparent); }
+.pattern-row.flash { animation: rowDeny .38s ease; }
+.row-no {
+  width: 23px; height: 23px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  color: var(--board-dim);
+  border: 1px solid rgba(38,49,61,.18);
+  background: rgba(255,255,255,.28);
+  font-variant-numeric: tabular-nums;
+}
+.pattern-row.complete .row-no { border-color: var(--gold); color: #7a5610; background: rgba(216,182,111,.24); }
+.slots { display: flex; gap: clamp(3px, .7vw, 6px); justify-content: flex-end; min-width: 0; }
+.slot {
+  width: clamp(26px, 5.4vw, 37px);
+  aspect-ratio: 1 / 1;
+  border-radius: 22%;
+  border: 1px dashed rgba(38,49,61,.22);
+  background: rgba(38,49,61,.045);
+  box-shadow: inset 0 1px 3px rgba(80,60,30,.10);
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+.slot.filled { border: 0; background: transparent; box-shadow: none; }
+.slot .tile { width: 100%; height: 100%; }
+.row-tip, .row-badge {
+  font-size: 9px;
+  letter-spacing: .04em;
+  color: var(--board-dim);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.row-badge {
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(216,182,111,.22);
+  color: #6d4d0d;
+  font-weight: 700;
+}
+.pattern-row.blocked .row-badge { display: none; }
+
+.wall {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: clamp(3px, .6vw, 5px);
+  padding: 5px;
+  border-radius: 12px;
+  background: rgba(38,49,61,.055);
+  box-shadow: inset 0 1px 3px rgba(80,60,30,.10);
+  border: 1px solid rgba(38,49,61,.09);
+}
+.wall-cell {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: 17%;
+  border: 1px solid rgba(38,49,61,.13);
+  background-color: rgba(255,255,255,.28);
+  background-image: radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--tc) 20%, transparent) 0 16%, transparent 18%);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.wall-cell.filled { border-color: transparent; background: transparent; }
+.wall-cell .tile { width: 88%; height: 88%; }
+.wall-cell.fresh { box-shadow: 0 0 0 2px rgba(216,182,111,.55), 0 0 18px rgba(216,182,111,.35); }
+
+.floor-wrap { margin-top: 12px; }
+.floor-line {
+  display: flex;
+  gap: clamp(3px, .7vw, 5px);
+  width: 100%;
+  min-height: 52px;
+  padding: 5px 6px;
+  border-radius: 12px;
+  border: 1px dashed rgba(38,49,61,.22);
+  background: rgba(38,49,61,.045);
+  cursor: pointer;
+  color: var(--board-ink);
+  align-items: stretch;
+  transition: background .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+.floor-line:hover { background: rgba(38,49,61,.07); }
+.floor-line.legal {
+  border-color: rgba(156,115,38,.55);
+  background: linear-gradient(90deg, rgba(216,182,111,.18), rgba(216,182,111,.04));
+  box-shadow: 0 0 16px rgba(196,154,69,.12);
+}
+.floor-slot {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  aspect-ratio: 1 / 1;
+  max-width: 48px;
+  border-radius: 16%;
+  border: 1px dashed rgba(38,49,61,.20);
+  display: grid;
+  place-items: center;
+  background: rgba(255,255,255,.18);
+}
+.floor-slot .pen {
+  position: absolute;
+  top: 1px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 8px;
+  font-style: normal;
+  color: var(--board-dim);
+  letter-spacing: .02em;
+  z-index: 2;
+}
+.floor-slot .tile { width: 76%; height: 76%; margin-top: 5px; }
+.floor-slot.marker {
+  border-color: rgba(156,115,38,.38);
+  background: radial-gradient(circle at 50% 50%, rgba(216,182,111,.26), rgba(216,182,111,.05) 70%);
+}
+.marker-token {
+  width: 72%;
+  height: 72%;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-serif);
+  font-size: 8px;
+  font-weight: 700;
+  color: #2a1d06;
+  background:
+    radial-gradient(circle at 32% 26%, #fff6d8, transparent 34%),
+    linear-gradient(145deg, #f6dda0, #d8b66f 52%, #9c7326);
+  border: 1px solid rgba(255,255,255,.55);
+  box-shadow: 0 2px 7px rgba(0,0,0,.22), inset 0 1px 1px rgba(255,255,255,.8);
+}
+
+/* ---------------------------------------------------------------- */
+/* Rivals                                                           */
+/* ---------------------------------------------------------------- */
+
+.rivals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(196px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+.rival {
+  position: relative;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid var(--line-soft);
+  background: linear-gradient(160deg, var(--panel-2), var(--panel-3));
+  box-shadow: var(--shadow-soft);
+  overflow: hidden;
+  transition: border-color .25s ease, box-shadow .25s ease, transform .25s ease;
+}
+.rival.active {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold-dim), 0 12px 30px rgba(0,0,0,.26), 0 0 26px var(--glow);
+  transform: translateY(-1px);
+}
+.rival::before {
+  content: "";
+  position: absolute;
+  inset: -40% -30% auto auto;
+  width: 130px; height: 130px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--gold-dim), transparent 68%);
+  opacity: .5;
+  pointer-events: none;
+}
+.rival > * { position: relative; }
+.rival-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.rival-avatar {
+  width: 28px; height: 28px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  color: #1c1608;
+  background: linear-gradient(145deg, var(--gold-2), var(--gold));
+  flex: none;
+}
+.rival-name {
+  font-size: 12px;
+  color: var(--ink-soft);
+  letter-spacing: .03em;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rival-score {
+  margin-left: auto;
+  font-family: var(--font-serif);
+  font-size: 22px;
+  color: var(--gold-2);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.mini-wall {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 3px;
+  max-width: 190px;
+}
+.mini-wall-cell {
+  aspect-ratio: 1 / 1;
+  border-radius: 3px;
+  border: 1px solid rgba(255,255,255,.08);
+  background-color: rgba(255,255,255,.035);
+  background-image: radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--tc) 30%, transparent) 0 16%, transparent 18%);
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+.mini-wall-cell.filled {
+  background-color: var(--t);
+  background-image: var(--art), linear-gradient(145deg, var(--tl), var(--t) 55%, var(--td));
+  background-size: 146% 146%, 100% 100%;
+  background-position: center;
+  background-repeat: no-repeat;
+  border-color: rgba(255,255,255,.24);
+  box-shadow: inset 0 1px 1px rgba(255,255,255,.4), inset 0 -1px 2px rgba(0,0,0,.35);
+}
+.mini-wall-cell.fresh { animation: miniPop .4s ease; }
+.mini-lines { display: grid; gap: 3px; margin: 8px 0 7px; }
+.mini-line { display: flex; gap: 3px; align-items: center; }
+.mini-line i {
+  display: block;
+  width: 8px; height: 5px;
+  border-radius: 2px;
+  background: rgba(255,255,255,.10);
+}
+.mini-line i.on { background: linear-gradient(90deg, var(--gold-2), var(--gold)); }
+.rival-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 10px;
+  color: var(--ink-dim);
+  letter-spacing: .03em;
+}
+.rival-foot b { color: var(--ink-soft); font-weight: 600; }
+.thinking {
+  display: inline-flex;
+  gap: 3px;
+  margin-left: auto;
+  align-items: center;
+}
+.thinking i {
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: var(--gold-2);
+  animation: thinking 1.1s ease-in-out infinite;
+}
+.thinking i:nth-child(2) { animation-delay: .14s; }
+.thinking i:nth-child(3) { animation-delay: .28s; }
+
+/* ---------------------------------------------------------------- */
+/* Tiles                                                            */
+/* ---------------------------------------------------------------- */
+
+.tile {
+  position: relative;
+  display: block;
+  aspect-ratio: 1 / 1;
+  border-radius: var(--tile-radius);
+  background-color: var(--t);
+  background-image:
+    radial-gradient(circle at 30% 23%, rgba(255,255,255,.92) 0 3%, rgba(255,255,255,.38) 10%, transparent 27%),
+    var(--art, linear-gradient(145deg, var(--tl) 0%, var(--t) 46%, var(--td) 100%)),
+    linear-gradient(145deg, var(--tl) 0%, var(--t) 46%, var(--td) 100%);
+  background-size: 100% 100%, 146% 146%, 100% 100%;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-blend-mode: normal, normal, normal;
+  border: 1px solid rgba(255,255,255,.36);
+  box-shadow:
+    inset 0 1px 1px rgba(255,255,255,.82),
+    inset 0 -2px 4px rgba(0,0,0,.36),
+    0 2px 5px rgba(0,0,0,.28);
+  overflow: hidden;
+  transform: translateZ(0);
+}
+.tile::before {
+  content: "";
+  position: absolute;
+  inset: 15%;
+  pointer-events: none;
+  opacity: .32;
+  mix-blend-mode: soft-light;
+  background:
+    radial-gradient(circle at 50% 50%, transparent 0 17%, rgba(255,255,255,.55) 18% 21%, transparent 22% 33%, rgba(255,255,255,.28) 34% 37%, transparent 38%),
+    conic-gradient(from 45deg at 50% 50%,
+      transparent 0 12.5%, rgba(255,255,255,.38) 12.5% 17%, transparent 17% 37.5%,
+      rgba(255,255,255,.38) 37.5% 42%, transparent 42% 62.5%,
+      rgba(255,255,255,.38) 62.5% 67%, transparent 67% 87.5%,
+      rgba(255,255,255,.38) 87.5% 92%, transparent 92%);
+}
+.tile::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(118deg, transparent 28%, rgba(255,255,255,.26) 36%, transparent 45%);
+  opacity: .55;
+}
+.c0 { --t: #2f6fb5; --tl: #9cc9f2; --td: #123f70; --art: var(--art-blue); }
+.c1 { --t: #d9a620; --tl: #f7dc84; --td: #9b6f08; --art: var(--art-yellow); }
+.c2 { --t: #b94a3f; --tl: #ef9a8d; --td: #7c251c; --art: var(--art-red); }
+.c3 { --t: #2b2e37; --tl: #6d7383; --td: #111318; --art: var(--art-black); }
+.c4 { --t: #e4d8c0; --tl: #fffdf7; --td: #a99a7e; --art: var(--art-white); }
+.c4.tile { border-color: rgba(90,70,35,.24); }
+.c4::before { mix-blend-mode: multiply; opacity: .22; }
+
+.ghost-tile {
+  position: fixed;
+  z-index: 90;
+  pointer-events: none;
+  border-radius: var(--tile-radius);
+  will-change: transform, opacity;
+}
+.just-arrived { animation: tilePop .42s cubic-bezier(.2, .8, .25, 1) both; }
+.tile.just-arrived, .wall-cell .tile.just-arrived { animation: tilePop .42s cubic-bezier(.2, .8, .25, 1) both; }
+
+.score-pop {
+  position: fixed;
+  z-index: 95;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  font-family: var(--font-serif);
+  font-size: clamp(15px, 2vw, 20px);
+  font-weight: 700;
+  letter-spacing: .02em;
+  text-shadow: 0 2px 10px rgba(0,0,0,.45);
+  animation: scoreFloat 1.05s cubic-bezier(.2,.7,.3,1) both;
+  white-space: nowrap;
+}
+.score-pop.gain { color: var(--gold-2); }
+.score-pop.loss { color: var(--danger); }
+
+/* ---------------------------------------------------------------- */
+/* Modal / result                                                   */
+/* ---------------------------------------------------------------- */
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  padding: max(18px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
+  background: var(--scrim);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  opacity: 0;
+  transition: opacity .3s ease;
+}
+.modal[hidden] { display: none; }
+.modal.show { opacity: 1; }
+.modal-card {
+  width: min(660px, 100%);
+  max-height: min(88vh, 780px);
+  max-height: min(88dvh, 780px);
+  overflow: auto;
+  border-radius: 24px;
+  border: 1px solid var(--line);
+  background:
+    radial-gradient(700px 300px at 12% -10%, rgba(216,182,111,.16), transparent 60%),
+    linear-gradient(155deg, var(--panel), var(--panel-3));
+  box-shadow: 0 40px 100px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.08);
+  padding: clamp(20px, 4vw, 34px);
+  position: relative;
+  transform: translateY(14px) scale(.98);
+  transition: transform .35s cubic-bezier(.2,.8,.25,1);
+}
+.modal.show .modal-card { transform: none; }
+.result-crest {
+  width: 60px;
+  height: 60px;
+  border-radius: 18px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+  padding: 7px;
+  margin-bottom: 14px;
+  background: rgba(216,182,111,.12);
+  border: 1px solid var(--line);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.1);
+  transform: rotate(-3deg);
+}
+.result-crest i { border-radius: 4px; }
+.result-crest i:nth-child(1) { background: linear-gradient(145deg, #9cc9f2, #2f6fb5 60%, #123f70); }
+.result-crest i:nth-child(2) { background: linear-gradient(145deg, #f7dc84, #d9a620 60%, #9b6f08); }
+.result-crest i:nth-child(3) { background: linear-gradient(145deg, #ef9a8d, #b94a3f 60%, #7c251c); }
+.result-crest i:nth-child(4) { background: linear-gradient(145deg, #fffdf7, #ece2cf 55%, #b8ab92); }
+.modal h2 {
+  font-family: var(--font-serif);
+  font-size: clamp(30px, 5vw, 46px);
+  letter-spacing: .12em;
+  margin: 0 0 6px;
+  color: var(--gold-2);
+  line-height: 1.05;
+}
+.modal .result-sub {
+  margin: 0 0 18px;
+  color: var(--ink-dim);
+  font-size: 12px;
+  letter-spacing: .04em;
+  line-height: 1.6;
+}
+.result-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin: 0 0 16px;
+}
+.result-table th {
+  text-align: right;
+  font-weight: 500;
+  color: var(--ink-dim);
+  font-size: 9px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  padding: 7px 6px;
+  border-bottom: 1px solid var(--line);
+}
+.result-table th:first-child, .result-table td:first-child { text-align: left; }
+.result-table td {
+  padding: 9px 6px;
+  text-align: right;
+  color: var(--ink-soft);
+  border-bottom: 1px solid var(--line-soft);
+  font-variant-numeric: tabular-nums;
+}
+.result-table tr.winner td { color: var(--gold-2); }
+.result-table tr.winner td:first-child::before {
+  content: "♛ ";
+  color: var(--gold);
+}
+.result-table td.total { font-family: var(--font-serif); font-size: 19px; color: var(--ink); }
+.result-table tr.winner td.total { color: var(--gold-2); }
+.result-note {
+  font-size: 10px;
+  line-height: 1.6;
+  color: var(--ink-dim);
+  border-left: 2px solid var(--gold-dim);
+  padding-left: 10px;
+  margin: 0 0 20px;
+}
+.modal-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.modal-actions .text-btn { min-height: 46px; padding: 0 20px; }
+.confetti-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 130;
+  pointer-events: none;
+  overflow: hidden;
+}
+.confetti {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  will-change: transform, opacity;
+  box-shadow: inset 0 1px 1px rgba(255,255,255,.6);
+}
+
+.footer {
+  max-width: 1380px;
+  margin: 0 auto;
+  padding: 0 max(clamp(16px, 3vw, 34px), env(safe-area-inset-right)) max(28px, env(safe-area-inset-bottom)) max(clamp(16px, 3vw, 34px), env(safe-area-inset-left));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  color: var(--ink-dim);
+  font-size: 10px;
+  letter-spacing: .04em;
+}
+.footer a { display: inline-flex; align-items: center; min-height: 44px; color: var(--ink-dim); text-decoration: none; border-bottom: 1px dotted var(--line); }
+.footer a:hover { color: var(--gold-2); }
+
+/* ---------------------------------------------------------------- */
+/* Animations                                                       */
+/* ---------------------------------------------------------------- */
+
+@keyframes tilePop {
+  0% { transform: scale(.58) rotate(-8deg); opacity: .2; }
+  58% { transform: scale(1.09) rotate(2deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+@keyframes miniPop {
+  0% { transform: scale(.55); opacity: .4; }
+  60% { transform: scale(1.12); }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes scoreFloat {
+  0% { transform: translate(-50%, -30%) scale(.8); opacity: 0; }
+  18% { transform: translate(-50%, -60%) scale(1.06); opacity: 1; }
+  70% { opacity: 1; }
+  100% { transform: translate(-50%, -150%) scale(1); opacity: 0; }
+}
+@keyframes pulseRing {
+  0%, 100% { opacity: .72; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.04); }
+}
+@keyframes pulseDot {
+  0%, 100% { opacity: .35; transform: scale(.8); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
+@keyframes thinking {
+  0%, 60%, 100% { transform: translateY(0); opacity: .35; }
+  30% { transform: translateY(-3px); opacity: 1; }
+}
+@keyframes rowDeny {
+  0%, 100% { transform: translateX(0); border-color: transparent; }
+  20% { transform: translateX(-4px); border-color: rgba(185,74,63,.6); }
+  55% { transform: translateX(4px); border-color: rgba(185,74,63,.6); }
+  80% { transform: translateX(-2px); }
+}
+@keyframes markerFloat {
+  0%, 100% { transform: rotate(-9deg) translateY(0); }
+  50% { transform: rotate(-7deg) translateY(-3px); }
+}
+.first-marker { animation: markerFloat 4.5s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .first-marker { animation: none; }
+}
+
+/* ---------------------------------------------------------------- */
+/* Responsive                                                       */
+/* ---------------------------------------------------------------- */
+
+@media (max-width: 1040px) {
+  .game-grid { grid-template-columns: 1fr; }
+  .factory-ring { max-width: 560px; }
+  .board-panel { max-width: 760px; margin: 0 auto; width: 100%; }
+  .workshop { max-width: 760px; margin: 0 auto; width: 100%; }
+}
+@media (max-width: 720px), (hover: none) {
+  .panel, .icon-btn, .text-btn, .modal, .player-seg { -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .tile-btn:hover { transform: none; filter: none; }
+  .icon-btn:hover, .text-btn:hover { transform: none; }
+}
+@media (max-width: 720px) {
+  .topbar { align-items: flex-start; }
+  .top-actions { width: 100%; justify-content: flex-start; }
+  .brand-mark { width: 42px; height: 42px; }
+  .brand-sub { letter-spacing: .24em; }
+  .factory-ring {
+    aspect-ratio: auto;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 9px;
+    padding: 4px 0 2px;
+  }
+  .factory-layer { position: static; display: contents; }
+  .factory {
+    position: static;
+    width: auto;
+    transform: none;
+    gap: 3px;
+  }
+  .factory-disc { padding: 5.5%; }
+  .factory-tiles { inset: 5.5%; gap: 3%; }
+  .factory-label { font-size: 9px; letter-spacing: .08em; }
+  .center-zone {
+    position: static;
+    transform: none;
+    grid-column: 1 / -1;
+    width: 100%;
+    min-width: 0;
+    aspect-ratio: auto;
+    min-height: 96px;
+    border-radius: 18px;
+    order: -1;
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding: 12px 16px;
+    gap: 10px;
+  }
+  .center-head { width: 100%; text-align: center; }
+  .center-tiles { flex: 1; }
+  .first-marker { top: 8px; right: 10px; width: 34px; height: 34px; font-size: 9px; }
+  .round-strip { gap: 7px; }
+  .round-badge, .stat-chip, .turn-badge { min-height: 31px; padding: 0 10px; font-size: 11px; }
+  .turn-badge { margin-left: 0; }
+  .action-dock { align-items: flex-start; }
+  .journal-list { max-height: 78px; }
+  .board-grid { grid-template-columns: 1fr; gap: 14px; }
+  .floor-line { min-height: 48px; }
+  .floor-slot { max-width: none; }
+  .slot { width: clamp(30px, 8.4vw, 42px); }
+  .pattern-row { grid-template-columns: 24px 1fr auto; }
+  .rivals { grid-template-columns: 1fr; }
+  .mini-wall { max-width: none; }
+  .mini-wall-cell { border-radius: 4px; }
+  .modal-card { max-height: 92vh; max-height: 92dvh; }
+  .footer { font-size: 9px; }
+}
+@media (max-width: 420px) {
+  .shell { padding-left: max(12px, env(safe-area-inset-left)); padding-right: max(12px, env(safe-area-inset-right)); }
+  .topbar { padding-left: max(12px, env(safe-area-inset-left)); padding-right: max(12px, env(safe-area-inset-right)); }
+  .footer { padding-left: max(12px, env(safe-area-inset-left)); padding-right: max(12px, env(safe-area-inset-right)); }
+  .top-actions { gap: 6px; }
+  .icon-btn, .text-btn { padding: 0 10px; font-size: 12px; }
+  .player-seg button { min-width: 44px; }
+  .factory-ring { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .factory-disc { padding: 4.5%; }
+  .center-zone { min-height: 88px; padding: 10px 12px; }
+  .center-tile { width: 44px; height: 44px; }
+  .pattern-row { gap: 5px; padding: 3px 2px; }
+  .row-no { width: 21px; height: 21px; font-size: 9px; }
+  .slot { width: clamp(28px, 8vw, 36px); }
+  .floor-slot .pen { font-size: 7px; }
+  .score-orb { min-width: 78px; padding: 5px 10px 7px; }
+  .board-head { gap: 8px; }
+  .avatar { width: 40px; height: 40px; }
+}
+@media (max-width: 360px) {
+  .factory-ring { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .brand-title { font-size: 22px; }
+  .brand-sub { letter-spacing: .16em; }
+  .top-actions { gap: 5px; }
+  .round-badge, .stat-chip { padding: 0 8px; }
+  .action-dock { padding: 8px 8px 8px 12px; }
+  .dock-title { font-size: 12px; }
+  .result-table th, .result-table td { padding: 6px 3px; font-size: 10px; }
+}
+</style>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/azul-premium/">
+</head>
+<body>
+<div class="table-texture" aria-hidden="true"></div>
+<a class="sr-only" href="#main">跳到主内容</a>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+    <div class="brand-copy">
+      <h1 class="brand-title">AZ<span>U</span>L</h1>
+      <p class="brand-sub">花砖物语 · 单人 AI 工坊 · 联机房间</p>
+    </div>
+  </div>
+  <div class="top-actions">
+    <div class="player-seg" role="group" aria-label="玩家人数">
+      <button type="button" data-count="2" aria-pressed="true">2 人</button>
+      <button type="button" data-count="3" aria-pressed="false">3 人</button>
+      <button type="button" data-count="4" aria-pressed="false">4 人</button>
+    </div>
+    <a class="text-btn" href="online.html" title="跨设备联机房间：邀请、AI 补位、断线重连、超时托管">联机</a>
+    <a class="text-btn" href="rules.html" title="阅读中文规则">规则</a>
+    <button class="icon-btn" id="soundBtn" type="button" aria-pressed="false" aria-label="开启音效" title="音效：关">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M4 9v6h4l5 4V5L8 9H4z"></path>
+        <path id="soundOnPath" d="M16 8.5a4.5 4.5 0 0 1 0 7" opacity="0"></path>
+        <path id="soundOffPath" d="M17 9l4 6M21 9l-4 6" opacity="1"></path>
+      </svg>
+    </button>
+    <button class="icon-btn" id="themeBtn" type="button" aria-label="切换深色 / 浅色主题" title="切换主题">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="4"></circle>
+        <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path>
+      </svg>
+    </button>
+    <button class="text-btn primary" id="newBtn" type="button">新对局</button>
+  </div>
+</header>
+
+<main class="shell" id="main">
+  <div class="game-grid">
+    <section class="panel workshop" aria-label="圆盘与取砖区">
+      <div class="round-strip">
+        <span class="round-badge">第 <b id="roundNo">1</b> 轮</span>
+        <span class="stat-chip">砖袋 <b id="bagCount">0</b> <span class="sep">·</span> 弃砖 <b id="discardCount">0</b></span>
+        <span class="stat-chip">单人 AI · 联机 2–4 人</span>
+        <span class="turn-badge you" id="turnBadge" aria-live="polite">轮到你</span>
+      </div>
+
+      <div class="factory-ring" id="factoryRing">
+        <div class="factory-layer" id="factoryLayer"></div>
+        <div class="center-zone" id="centerZone">
+          <div class="center-head">中央工坊 · Centre</div>
+          <div class="center-tiles" id="centerTiles"></div>
+          <div class="first-marker" id="firstMarker" title="先手标记">先手</div>
+        </div>
+      </div>
+
+      <div class="action-dock" id="actionDock">
+        <div class="dock-text">
+          <div class="dock-title" id="dockTitle">点击圆盘或中央区的花砖开始</div>
+          <div class="dock-sub" id="dockSub">同一颜色的花砖会被一起取走，其余砖进入中央区。</div>
+        </div>
+        <div class="dock-actions">
+          <button class="text-btn" id="cancelBtn" type="button" hidden>取消 <span aria-hidden="true">Esc</span></button>
+        </div>
+      </div>
+
+      <div class="journal">
+        <div class="journal-head">对局记录 <span>最近 6 条</span></div>
+        <ol class="journal-list" id="journalList" aria-live="polite"></ol>
+      </div>
+    </section>
+
+    <section class="panel board-panel" aria-label="玩家工坊">
+      <div class="player-board" id="humanBoard"></div>
+      <div class="rivals" id="rivals"></div>
+    </section>
+  </div>
+</main>
+
+<footer class="footer">
+  <span>AZUL · 花砖物语 · 纯前端复刻 · 零外部请求</span>
+  <span><a href="rules.html">中文规则与 B 站教程来源</a> · 声音由 WebAudio 实时合成</span>
+</footer>
+
+<div class="modal" id="resultModal" hidden role="dialog" aria-modal="true" aria-labelledby="resultTitle">
+  <div class="modal-card">
+    <div class="result-crest" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+    <h2 id="resultTitle">对局结束</h2>
+    <p class="result-sub" id="resultSubtitle"></p>
+    <div id="resultTable"></div>
+    <p class="result-note" id="resultNote"></p>
+    <div class="modal-actions">
+      <button class="text-btn primary" id="againBtn" type="button">再来一局</button>
+      <a class="text-btn" href="rules.html">查看规则</a>
+      <button class="text-btn" id="closeResult" type="button">看看终局</button>
+    </div>
+  </div>
+</div>
+<div class="confetti-layer" id="confettiLayer" aria-hidden="true"></div>
+<div class="sr-only" id="announcer" role="status" aria-live="polite"></div>
+
+<script src="../../shared/shuffle.js"></script>
+<script src="../../shared/sfx.js"></script>
+<script src="engine.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var Engine = window.AzulEngine;
+  if (!Engine) {
+    document.getElementById('main').innerHTML = '<p style="padding:2rem">规则引擎加载失败，请确认 engine.js 与 index.html 位于同一目录。</p>';
+    return;
+  }
+
+  var PLAYER_COUNT = 2;
+  var state = null;
+  var selection = null;
+  var busy = false;
+  var aiTimer = null;
+  var animationCounts = { take: 0, wall: 0, score: 0, result: 0 };
+  var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  var soundOn = false;
+  var lastAnnouncement = '';
+  var el = {};
+
+  function $(id) { return document.getElementById(id); }
+  function q(sel, root) { return (root || document).querySelector(sel); }
+  function qa(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+  function delay(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
+  function esc(value) {
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+    });
+  }
+  function colorName(color) { return Engine.COLORS[color] ? Engine.COLORS[color].name : String(color); }
+  function tileHTML(color, extraClass) {
+    return '<span class="tile c' + color + (extraClass ? ' ' + extraClass : '') + '" aria-hidden="true"></span>';
+  }
+  function prefersReduced() { return reducedMotion.matches; }
+  function humanPlayer() { return state.players[0]; }
+  function humanTurn() {
+    return !!(state && !state.over && !state.pendingRound && !busy && state.current === 0 && !state.players[0].isAI);
+  }
+
+  function announce(text) {
+    if (!text || text === lastAnnouncement) return;
+    lastAnnouncement = text;
+    el.announcer.textContent = text;
+  }
+
+  function readLocal(key, fallback) {
+    try {
+      var value = localStorage.getItem(key);
+      return value == null ? fallback : value;
+    } catch (err) { return fallback; }
+  }
+  function writeLocal(key, value) {
+    try { localStorage.setItem(key, value); } catch (err) { /* storage can be unavailable */ }
+  }
+
+  /* -------------------------------------------------------------- */
+  /* Sound                                                           */
+  /* -------------------------------------------------------------- */
+
+  // 复用 games/shared/sfx.js；本文件不再自建 AudioContext / 合成器。
+  var SFX_MAP = {
+    select: 'click',
+    place: 'move',
+    take: 'move',
+    score: 'notify',
+    penalty: 'error',
+    round: 'click',
+    shuffle: 'deal',
+    deny: 'error',
+    win: 'win',
+    lose: 'lose'
+  };
+
+  function sfx(name) {
+    if (!soundOn || !window.Sfx) return;
+    try { window.Sfx.play(SFX_MAP[name] || 'click'); } catch (err) { /* audio is optional */ }
+  }
+
+  function setSound(on) {
+    soundOn = !!on;
+    if (window.Sfx) {
+      try { window.Sfx.mute(!soundOn); } catch (err) { /* audio is optional */ }
+    }
+    if (soundOn) sfx('select');
+    el.soundBtn.setAttribute('aria-pressed', soundOn ? 'true' : 'false');
+    el.soundBtn.setAttribute('aria-label', soundOn ? '关闭音效' : '开启音效');
+    el.soundBtn.title = '音效：' + (soundOn ? '开' : '关');
+    var onPath = $('soundOnPath');
+    var offPath = $('soundOffPath');
+    if (onPath) onPath.setAttribute('opacity', soundOn ? '1' : '0');
+    if (offPath) offPath.setAttribute('opacity', soundOn ? '0' : '1');
+    writeLocal('azul-sound', soundOn ? 'on' : 'off');
+  }
+
+  /* -------------------------------------------------------------- */
+  /* Theme                                                           */
+  /* -------------------------------------------------------------- */
+
+  function setTheme(theme, persist) {
+    document.documentElement.setAttribute('data-theme', theme);
+    el.themeBtn.title = theme === 'dark' ? '切换到浅色主题' : '切换到深色主题';
+    el.themeBtn.setAttribute('aria-label', el.themeBtn.title);
+    if (persist !== false) writeLocal('azul-theme', theme);
+  }
+  function initTheme() {
+    var saved = readLocal('azul-theme', '');
+    if (saved === 'dark' || saved === 'light') setTheme(saved, false);
+    else setTheme(window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark', false);
+  }
+
+  /* -------------------------------------------------------------- */
+  /* Game lifecycle                                                  */
+  /* -------------------------------------------------------------- */
+
+  function randomSeed() {
+    try {
+      var arr = new Uint32Array(1);
+      window.crypto.getRandomValues(arr);
+      return arr[0] >>> 0;
+    } catch (err) {
+      return (Date.now() & 0x7fffffff) >>> 0;
+    }
+  }
+
+  function startNewGame(opts) {
+    opts = opts || {};
+    if (opts.playerCount) PLAYER_COUNT = opts.playerCount;
+    clearTimeout(aiTimer);
+    aiTimer = null;
+    busy = false;
+    selection = null;
+    state = Engine.createGame({
+      seed: opts.seed == null ? randomSeed() : opts.seed,
+      playerCount: PLAYER_COUNT
+    });
+    qa('.player-seg button').forEach(function (btn) {
+      btn.setAttribute('aria-pressed', String(Number(btn.getAttribute('data-count')) === PLAYER_COUNT));
+    });
+    hideResult();
+    render();
+    sfx('shuffle');
+    announce('新对局开始。第 1 轮，轮到你。');
+    maybeAI();
+  }
+
+  function maybeAI() {
+    clearTimeout(aiTimer);
+    aiTimer = null;
+    if (!state || state.over || state.pendingRound || busy) return;
+    if (!state.players[state.current].isAI) {
+      if (state.current === 0) announce('轮到你。选择一种花砖，再选择花纹行或地板。');
+      return;
+    }
+    renderTop();
+    renderRivals();
+    aiTimer = setTimeout(function () {
+      if (!state || state.over || state.pendingRound || busy) return;
+      if (!state.players[state.current].isAI) return;
+      var move;
+      try {
+        move = Engine.chooseAIMove(state);
+      } catch (err) {
+        announce('AI 无法行动：' + (err && err.message ? err.message : String(err)));
+        return;
+      }
+      performMove(move, { ai: true });
+    }, 620);
+  }
+
+  /* -------------------------------------------------------------- */
+  /* Rendering                                                       */
+  /* -------------------------------------------------------------- */
+
+  function render() {
+    if (!state) return;
+    var active = document.activeElement;
+    var focusKey = active && active.getAttribute ? active.getAttribute('data-focus-key') : null;
+    renderTop();
+    renderFactories();
+    renderCenter();
+    renderBoard();
+    renderRivals();
+    renderJournal();
+    renderDock();
+    if (focusKey) {
+      var next = document.querySelector('[data-focus-key="' + focusKey.replace(/"/g, '\\"') + '"]');
+      if (next && next.focus) {
+        try { next.focus({ preventScroll: true }); } catch (err) { next.focus(); }
+      }
+    }
+  }
+
+  function renderTop() {
+    el.roundNo.textContent = state.round;
+    el.bagCount.textContent = state.bag.length;
+    el.discardCount.textContent = state.discard.length;
+    var text = '轮到你';
+    var cls = 'you';
+    if (state.over) { text = '对局结束'; cls = 'over'; }
+    else if (busy) { text = '落砖中…'; cls = 'busy'; }
+    else if (state.pendingRound) { text = '本轮结算'; cls = 'busy'; }
+    else if (state.players[state.current].isAI) { text = state.players[state.current].name + ' 思考中…'; cls = 'ai'; }
+    el.turnBadge.textContent = text;
+    el.turnBadge.className = 'turn-badge ' + cls;
+    document.body.classList.toggle('is-busy', busy);
+  }
+
+  function selectionMatches(source, fi, color) {
+    return !!(selection && selection.source === source && selection.factoryIndex === fi && selection.color === color);
+  }
+
+  function legalMap() {
+    var map = {};
+    if (!humanTurn() || !selection) return map;
+    Engine.getLegalMoves(state).forEach(function (move) {
+      if (move.source !== selection.source) return;
+      if (move.source === 'factory' && move.factoryIndex !== selection.factoryIndex) return;
+      if (move.color !== selection.color) return;
+      map[move.row] = true;
+    });
+    return map;
+  }
+
+  function renderFactories() {
+    var html = '';
+    state.factories.forEach(function (tiles, fi) {
+      var buttons = '';
+      if (tiles.length) {
+        tiles.forEach(function (color, idx) {
+          var selected = selectionMatches('factory', fi, color);
+          var dim = selection && !selected;
+          buttons += '<button type="button" class="tile-btn' + (selected ? ' selected' : '') + (dim ? ' dim' : '') +
+            '" data-source="factory" data-fi="' + fi + '" data-color="' + color + '" data-focus-key="ft-' + fi + '-' + idx +
+            '" aria-pressed="' + (selected ? 'true' : 'false') + '" aria-label="圆盘 ' + (fi + 1) + '：取走 ' + countColor(tiles, color) + ' 枚' + colorName(color) + '。">' +
+            tileHTML(color) + '</button>';
+        });
+      }
+      html += '<div class="factory' + (tiles.length ? '' : ' is-empty') + '" data-fi="' + fi + '">' +
+        '<div class="factory-disc"><div class="factory-tiles">' + buttons + '</div></div>' +
+        '<span class="factory-label">圆盘 ' + (fi + 1) + '</span></div>';
+    });
+    el.factoryLayer.innerHTML = html;
+    layoutFactories();
+  }
+
+  function layoutFactories() {
+    var nodes = qa('.factory', el.factoryLayer);
+    var mobile = window.matchMedia('(max-width: 720px)').matches;
+    if (mobile) {
+      nodes.forEach(function (node) {
+        node.style.left = '';
+        node.style.top = '';
+        node.style.transform = '';
+      });
+      return;
+    }
+    var count = nodes.length;
+    var radius = 38.5;
+    nodes.forEach(function (node, i) {
+      var angle = -Math.PI / 2 + (i * Math.PI * 2 / count);
+      node.style.left = (50 + Math.cos(angle) * radius) + '%';
+      node.style.top = (50 + Math.sin(angle) * radius) + '%';
+      node.style.transform = 'translate(-50%, -50%)';
+    });
+  }
+
+  function countColor(tiles, color) {
+    var count = 0;
+    for (var i = 0; i < tiles.length; i++) if (tiles[i] === color) count += 1;
+    return count;
+  }
+
+  function renderCenter() {
+    var counts = Engine.colorCounts(state.center);
+    var html = '';
+    for (var color = 0; color < counts.length; color++) {
+      if (!counts[color]) continue;
+      var selected = selectionMatches('center', -1, color);
+      var dim = selection && !selected;
+      html += '<button type="button" class="tile-btn center-tile' + (selected ? ' selected' : '') + (dim ? ' dim' : '') +
+        '" data-source="center" data-fi="-1" data-color="' + color + '" data-focus-key="ct-' + color +
+        '" aria-pressed="' + (selected ? 'true' : 'false') + '" aria-label="中央工坊：取走 ' + counts[color] + ' 枚' + colorName(color) + '。">' +
+        tileHTML(color) + '<span class="count-badge">' + counts[color] + '</span></button>';
+    }
+    el.centerTiles.innerHTML = html || '<span class="center-empty">暂无花砖</span>';
+    el.firstMarker.hidden = !state.centerMarker;
+    el.centerZone.classList.toggle('has-selection', !!(selection && selection.source === 'center'));
+  }
+
+  function displayScore(player, totalMode) {
+    if (state.over && state.result) {
+      for (var i = 0; i < state.result.scores.length; i++) {
+        if (state.result.scores[i].index === player.index) {
+          return totalMode === false ? state.result.scores[i].base : state.result.scores[i].total;
+        }
+      }
+    }
+    return player.score;
+  }
+
+  function renderBoard() {
+    var player = state.players[0];
+    var legal = legalMap();
+    var selecting = !!selection && humanTurn();
+    var selectedInfo = selecting ? getSelectionInfo() : null;
+    var firstBadge = state.firstPlayer === 0 ? '<span class="board-badge">先手</span>' : '';
+    var rowsHtml = '';
+    for (var r = 0; r < Engine.WALL_SIZE; r++) {
+      var line = player.lines[r];
+      var capacity = r + 1;
+      var filled = line.length;
+      var isComplete = filled === capacity;
+      var badges = '';
+      if (selecting) {
+        if (legal[r]) {
+          var preview = rowPreview(r, selectedInfo);
+          badges = '<span class="row-badge">放 ' + preview.placed + (preview.overflow ? ' · 溢 ' + preview.overflow : '') + '</span>';
+        } else {
+          badges = '<span class="row-tip">不可放</span>';
+        }
+      } else if (isComplete) {
+        badges = '<span class="row-tip">完成</span>';
+      } else {
+        badges = '<span class="row-tip">' + filled + ' / ' + capacity + '</span>';
+      }
+      var slots = '';
+      for (var s = 0; s < capacity; s++) {
+        var isFilled = s >= capacity - filled;
+        slots += '<span class="slot' + (isFilled ? ' filled' : '') + '">' +
+          (isFilled ? tileHTML(line[s - (capacity - filled)]) : '') + '</span>';
+      }
+      var rowClass = 'pattern-row';
+      if (isComplete) rowClass += ' complete';
+      if (selecting) rowClass += legal[r] ? ' legal' : ' blocked';
+      rowsHtml += '<button type="button" class="' + rowClass + '" data-row="' + r + '" data-focus-key="row-' + r +
+        '" aria-disabled="' + (selecting && !legal[r] ? 'true' : 'false') +
+        '" aria-label="第 ' + (r + 1) + ' 条花纹行，容量 ' + capacity + '，已有 ' + filled + ' 枚' +
+        (selecting ? (legal[r] ? '，可以放置' : '，当前不可放置') : '') + '。">' +
+        '<span class="row-no">' + (r + 1) + '</span><span class="slots">' + slots + '</span>' + badges + '</button>';
+    }
+
+    var wallHtml = '';
+    for (var wr = 0; wr < Engine.WALL_SIZE; wr++) {
+      for (var wc = 0; wc < Engine.WALL_SIZE; wc++) {
+        var target = Engine.wallColorAt(wr, wc);
+        var placed = player.wall[wr][wc];
+        wallHtml += '<div class="wall-cell' + (placed !== null ? ' filled' : '') +
+          '" data-row="' + wr + '" data-col="' + wc + '" style="--tc: var(--c' + target + ')" role="gridcell" ' +
+          'aria-label="第 ' + (wr + 1) + ' 行第 ' + (wc + 1) + ' 列，' + colorName(target) + '，' +
+          (placed !== null ? '已放置 ' + colorName(placed) : '空') + '。">' +
+          (placed !== null ? tileHTML(placed) : '') + '</div>';
+      }
+    }
+
+    var floorHtml = '';
+    for (var f = 0; f < Engine.FLOOR_SIZE; f++) {
+      var floorTile = player.floor[f];
+      var isMarker = floorTile === Engine.MARKER;
+      floorHtml += '<span class="floor-slot' + (isMarker ? ' marker' : '') + '">' +
+        '<i class="pen">-' + Engine.FLOOR_PENALTY[f] + '</i>' +
+        (isMarker ? '<span class="marker-token" aria-label="先手标记">先手</span>' : (floorTile != null ? tileHTML(floorTile) : '')) +
+        '</span>';
+    }
+
+    var floorClass = 'floor-line' + (selecting ? ' legal' : '');
+    var floorLabel = selecting ? '地板 · 点击放入' : '地板 · 罚分 ' + Engine.floorPenalty(player.floor);
+    var score = displayScore(player);
+    var scoreNote = state.over ? '终局总分' : '当前得分';
+    var name = player.name;
+    el.humanBoard.innerHTML =
+      '<div class="board-head">' +
+        '<div class="board-id"><span class="avatar">你</span><div><h2>你的工坊' + firstBadge + '</h2>' +
+        '<p>Pattern lines · Wall · Floor</p></div></div>' +
+        '<div class="score-orb"><span class="score-label">' + scoreNote + '</span><strong class="player-score">' + score + '</strong><small>' + (state.over ? '含终局奖励' : '分') + '</small></div>' +
+      '</div>' +
+      '<div class="board-grid">' +
+        '<div class="lines-wrap"><div class="section-label">花纹行 <span>Pattern Lines</span></div><div class="pattern-lines">' + rowsHtml + '</div></div>' +
+        '<div class="wall-wrap"><div class="section-label">瓷砖墙 <span>Wall</span></div><div class="wall" role="grid" aria-rowcount="5" aria-colcount="5" aria-label="你的瓷砖墙">' + wallHtml + '</div></div>' +
+      '</div>' +
+      '<div class="floor-wrap"><div class="section-label">地板 <span>' + floorLabel + '</span></div>' +
+        '<button type="button" class="' + floorClass + '" data-floor="1" data-focus-key="floor" aria-label="把选中的花砖放入地板，当前罚分 ' + Engine.floorPenalty(player.floor) + '。">' + floorHtml + '</button>' +
+      '</div>';
+  }
+
+  function renderRivals() {
+    var html = '';
+    for (var pi = 1; pi < state.players.length; pi++) {
+      var player = state.players[pi];
+      var active = state.current === pi && !state.over;
+      var thinking = active && player.isAI && !busy && !state.pendingRound;
+      var wall = '';
+      for (var r = 0; r < Engine.WALL_SIZE; r++) {
+        for (var c = 0; c < Engine.WALL_SIZE; c++) {
+          var target = Engine.wallColorAt(r, c);
+          var placed = player.wall[r][c];
+          wall += '<div class="mini-wall-cell' + (placed !== null ? ' filled c' + placed : '') +
+            '" data-row="' + r + '" data-col="' + c + '" style="--tc: var(--c' + target + ')" ' +
+            'title="' + (placed !== null ? colorName(placed) : '空') + '"></div>';
+        }
+      }
+      var lines = '';
+      for (var lr = 0; lr < Engine.WALL_SIZE; lr++) {
+        var line = player.lines[lr];
+        var pips = '';
+        for (var k = 0; k < lr + 1; k++) {
+          pips += '<i class="' + (k < line.length ? 'on' : '') + '"></i>';
+        }
+        lines += '<span class="mini-line" data-row="' + lr + '" title="第 ' + (lr + 1) + ' 行：' + line.length + ' / ' + (lr + 1) + '">' + pips + '</span>';
+      }
+      var score = displayScore(player);
+      var scoreLabel = state.over ? '总分' : '分';
+      html += '<article class="rival' + (active ? ' active' : '') + '" data-player="' + pi + '">' +
+        '<div class="rival-head"><span class="rival-avatar">AI</span><span class="rival-name">' + esc(player.name) + '</span>' +
+        (thinking ? '<span class="thinking" aria-label="AI 正在思考"><i></i><i></i><i></i></span>' : '') +
+        '<span class="rival-score" aria-label="' + score + ' 分">' + score + '</span></div>' +
+        '<div class="mini-wall" role="img" aria-label="' + esc(player.name) + ' 的瓷砖墙">' + wall + '</div>' +
+        '<div class="mini-lines" aria-label="模式线进度">' + lines + '</div>' +
+        '<div class="rival-foot"><span>地板 <b>' + player.floor.length + '</b></span>' +
+        '<span>模式线 <b>' + player.lines.reduce(function (n, line) { return n + line.length; }, 0) + '</b></span>' +
+        '<span>' + scoreLabel + '</span></div>' +
+      '</article>';
+    }
+    el.rivals.innerHTML = html;
+  }
+
+  function renderJournal() {
+    var entries = state.log.slice(-6).reverse();
+    el.journalList.innerHTML = entries.map(function (entry) {
+      return '<li class="' + esc(entry.type) + '">' + esc(entry.text) + '</li>';
+    }).join('');
+  }
+
+  function getSelectionInfo() {
+    if (!selection) return null;
+    var tiles = selection.source === 'factory'
+      ? (state.factories[selection.factoryIndex] || [])
+      : state.center;
+    var taken = countColor(tiles, selection.color);
+    var sourceLabel = selection.source === 'factory'
+      ? '圆盘 ' + (selection.factoryIndex + 1)
+      : '中央工坊';
+    return {
+      taken: taken,
+      color: selection.color,
+      sourceLabel: sourceLabel,
+      rows: legalMap()
+    };
+  }
+
+  function rowPreview(row, info) {
+    if (!info) return { placed: 0, overflow: 0 };
+    var line = humanPlayer().lines[row];
+    var free = (row + 1) - line.length;
+    var placed = Math.min(info.taken, free);
+    return { placed: placed, overflow: info.taken - placed };
+  }
+
+  function renderDock() {
+    if (state.over) {
+      el.dockTitle.textContent = '对局结束 · 查看终局结算';
+      el.dockSub.textContent = '可以查看终局的瓷砖墙与奖励明细，或点击“新对局”再来一盘。';
+      el.cancelBtn.hidden = true;
+      return;
+    }
+    if (busy) {
+      el.dockTitle.textContent = state.pendingRound ? '本轮结算中…' : '花砖正在落位…';
+      el.dockSub.textContent = '正在把花砖移入瓷砖墙并计算连片得分。';
+      el.cancelBtn.hidden = true;
+      return;
+    }
+    if (state.players[state.current].isAI) {
+      el.dockTitle.textContent = state.players[state.current].name + ' 正在挑选花砖…';
+      el.dockSub.textContent = 'AI 会从合法动作中选择；你可以趁这段时间观察它的墙面。';
+      el.cancelBtn.hidden = true;
+      return;
+    }
+    if (!selection) {
+      el.dockTitle.textContent = '点击圆盘或中央区的花砖开始';
+      el.dockSub.textContent = '同一颜色的花砖会被一起取走，其余砖进入中央区。';
+      el.cancelBtn.hidden = true;
+      return;
+    }
+    var info = getSelectionInfo();
+    var rows = Object.keys(info.rows).filter(function (key) { return key !== '-1'; });
+    el.dockTitle.textContent = '已选 ' + info.taken + ' 枚' + colorName(info.color) + ' · 来自' + info.sourceLabel;
+    el.dockSub.innerHTML = '选择花纹行：' + (rows.length ? rows.map(function (key) {
+      var preview = rowPreview(Number(key), info);
+      return '<em>第 ' + (Number(key) + 1) + ' 行</em> 放 ' + preview.placed + (preview.overflow ? '、溢 ' + preview.overflow : '');
+    }).join(' · ') : '<em>没有可用花纹行</em>') +
+      ' · 也可以点地板，罚分 <em>-' + Engine.floorPenalty(humanPlayer().floor) + '</em> 起。';
+    el.cancelBtn.hidden = false;
+  }
+
+  /* -------------------------------------------------------------- */
+  /* Selection and moves                                             */
+  /* -------------------------------------------------------------- */
+
+  function selectSource(source, factoryIndex, color) {
+    if (busy || !humanTurn() || state.over || state.pendingRound) return;
+    if (selectionMatches(source, factoryIndex, color)) {
+      selection = null;
+      sfx('select');
+      announce('已取消选择。');
+    } else {
+      selection = { source: source, factoryIndex: factoryIndex, color: color };
+      sfx('select');
+      var tiles = source === 'factory' ? state.factories[factoryIndex] : state.center;
+      announce('已选择 ' + countColor(tiles, color) + ' 枚' + colorName(color) + '。请选择花纹行或地板。');
+    }
+    render();
+  }
+
+  function invalidReason(row) {
+    if (!selection) return '请先选择花砖。';
+    var line = humanPlayer().lines[row];
+    if (!line) return '花纹行不存在。';
+    if (line.length >= row + 1) return '第 ' + (row + 1) + ' 条花纹行已满。';
+    if (line.length > 0 && line[0] !== selection.color) return '第 ' + (row + 1) + ' 条花纹行已有其他颜色。';
+    if (Engine.wallColFor(row, selection.color) !== undefined) {
+      var col = Engine.wallColFor(row, selection.color);
+      if (humanPlayer().wall[row][col] !== null) return '墙面第 ' + (row + 1) + ' 行已有' + colorName(selection.color) + ' 色砖。';
+    }
+    return '这里不能放这组花砖。';
+  }
+
+  function chooseRow(row) {
+    if (busy || !humanTurn()) return;
+    if (!selection) {
+      announce('请先点击一种花砖。');
+      return;
+    }
+    var move = {
+      source: selection.source,
+      factoryIndex: selection.source === 'factory' ? selection.factoryIndex : -1,
+      color: selection.color,
+      row: row
+    };
+    var legal = Engine.getLegalMoves(state).some(function (candidate) {
+      return candidate.source === move.source && candidate.factoryIndex === move.factoryIndex &&
+        candidate.color === move.color && candidate.row === move.row;
+    });
+    if (!legal) {
+      sfx('deny');
+      if (row >= 0) {
+        var rowEl = q('.pattern-row[data-row="' + row + '"]');
+        if (rowEl) {
+          rowEl.classList.remove('flash');
+          void rowEl.offsetWidth;
+          rowEl.classList.add('flash');
+        }
+      }
+      announce(row >= 0 ? invalidReason(row) : '这组花砖无法放入地板。');
+      return;
+    }
+    performMove(move);
+  }
+
+  function captureSourceRects(move) {
+    var nodes = [];
+    if (move.source === 'factory') {
+      nodes = qa('.factory[data-fi="' + move.factoryIndex + '"] .tile-btn[data-color="' + move.color + '"]');
+    } else {
+      nodes = qa('.center-tile[data-color="' + move.color + '"]');
+    }
+    var rects = nodes.map(function (node) { return node.getBoundingClientRect(); })
+      .filter(function (rect) { return rect && rect.width > 0 && rect.height > 0; });
+    if (!rects.length) {
+      var fallback = q('#centerZone') || q('.factory-ring');
+      if (fallback) rects.push(fallback.getBoundingClientRect());
+    }
+    return rects;
+  }
+
+  function collectTakeTargets(action) {
+    var targets = [];
+    if (!action) return targets;
+    if (action.row >= 0 && action.placed > 0) {
+      var rowTiles = qa('.player-board .pattern-row[data-row="' + action.row + '"] .slot .tile');
+      var start = Math.max(0, rowTiles.length - action.placed);
+      for (var i = start; i < rowTiles.length; i++) {
+        var node = rowTiles[i];
+        targets.push({ el: node, rect: node.getBoundingClientRect() });
+      }
+    }
+    if (action.overflow > 0) {
+      var floorTiles = qa('.player-board .floor-slot .tile');
+      var from = Math.max(0, floorTiles.length - action.overflow);
+      for (var f = from; f < floorTiles.length; f++) {
+        var fnode = floorTiles[f];
+        targets.push({ el: fnode, rect: fnode.getBoundingClientRect() });
+      }
+    }
+    return targets.filter(function (target) { return target.rect && target.rect.width > 0; });
+  }
+
+  function flyGhost(originRect, targetRect, color, delayMs, durationMs) {
+    return new Promise(function (resolve) {
+      if (!originRect || !targetRect || !originRect.width) { resolve(); return; }
+      var width = Math.max(18, originRect.width);
+      var height = Math.max(18, originRect.height);
+      var ghost = document.createElement('span');
+      ghost.className = 'ghost-tile tile c' + color;
+      ghost.style.left = originRect.left + 'px';
+      ghost.style.top = originRect.top + 'px';
+      ghost.style.width = width + 'px';
+      ghost.style.height = height + 'px';
+      document.body.appendChild(ghost);
+      var dx = (targetRect.left + targetRect.width / 2) - (originRect.left + width / 2);
+      var dy = (targetRect.top + targetRect.height / 2) - (originRect.top + height / 2);
+      var scale = Math.max(0.18, Math.min(1.5, targetRect.width / width));
+      var midX = dx * 0.56;
+      var midY = dy * 0.38 - Math.min(60, Math.abs(dx) * 0.08 + 24);
+      var anim = ghost.animate([
+        { transform: 'translate(0px, 0px) scale(1) rotate(0deg)', opacity: 1, offset: 0 },
+        { transform: 'translate(' + midX + 'px,' + midY + 'px) scale(.94) rotate(78deg)', opacity: 1, offset: .56 },
+        { transform: 'translate(' + dx + 'px,' + dy + 'px) scale(' + scale + ') rotate(168deg)', opacity: .94, offset: 1 }
+      ], {
+        duration: durationMs || 520,
+        delay: delayMs || 0,
+        easing: 'cubic-bezier(.22,.8,.24,1)',
+        fill: 'both'
+      });
+      var done = function () {
+        if (ghost.parentNode) ghost.parentNode.removeChild(ghost);
+        resolve();
+      };
+      anim.onfinish = done;
+      anim.oncancel = done;
+      if (anim.finished && anim.finished.catch) anim.finished.catch(function () {});
+    });
+  }
+
+  async function animateTake(sourceRects, move, stateAfter) {
+    var action = stateAfter.lastAction;
+    if (!action) return;
+    var targets = collectTakeTargets(action);
+    if (!targets.length) return;
+    animationCounts.take += 1;
+    var count = Math.min(6, targets.length);
+    var promises = [];
+    for (var i = 0; i < count; i++) {
+      var target = targets[i];
+      var origin = sourceRects[Math.min(i, sourceRects.length - 1)];
+      if (!origin) continue;
+      target.el.style.visibility = 'hidden';
+      promises.push(flyGhost(origin, target.rect, move.color, i * 55, 510));
+    }
+    sfx('take');
+    await Promise.all(promises);
+    targets.forEach(function (target) {
+      target.el.style.visibility = '';
+      target.el.classList.add('just-arrived');
+    });
+    await delay(90);
+  }
+
+  function captureRoundSources(stateBefore) {
+    var map = [];
+    stateBefore.players.forEach(function (player, pi) {
+      var rows = {};
+      for (var r = 0; r < Engine.WALL_SIZE; r++) {
+        if (player.lines[r].length !== r + 1) continue;
+        var node = pi === 0
+          ? qa('.player-board .pattern-row[data-row="' + r + '"] .slot .tile').pop()
+          : q('.rival[data-player="' + pi + '"] .mini-line[data-row="' + r + '"]');
+        if (node) rows[r] = node.getBoundingClientRect();
+      }
+      map.push(rows);
+    });
+    return map;
+  }
+
+  function scorePopup(rect, text, kind) {
+    if (!rect) return;
+    var pop = document.createElement('span');
+    pop.className = 'score-pop ' + kind;
+    pop.textContent = text;
+    pop.style.left = (rect.left + rect.width / 2) + 'px';
+    pop.style.top = (rect.top + rect.height / 2) + 'px';
+    document.body.appendChild(pop);
+    animationCounts.score += 1;
+    setTimeout(function () {
+      if (pop.parentNode) pop.parentNode.removeChild(pop);
+    }, 1150);
+  }
+
+  async function animateRound(roundSources, stateAfter) {
+    var round = stateAfter.lastRound;
+    if (!round) return;
+    animationCounts.wall += 1;
+    var tasks = [];
+    round.players.forEach(function (event) {
+      var sourceMap = (roundSources && roundSources[event.index]) || {};
+      event.placements.forEach(function (placement, index) {
+        var targetEl = event.index === 0
+          ? q('.player-board .wall-cell[data-row="' + placement.row + '"][data-col="' + placement.col + '"] .tile')
+          : q('.rival[data-player="' + event.index + '"] .mini-wall-cell[data-row="' + placement.row + '"][data-col="' + placement.col + '"]');
+        if (!targetEl) return;
+        var targetRect = targetEl.getBoundingClientRect();
+        var origin = sourceMap[placement.row];
+        if (!origin) {
+          var anchor = event.index === 0 ? q('.player-board') : q('.rival[data-player="' + event.index + '"]');
+          if (!anchor) return;
+          origin = anchor.getBoundingClientRect();
+        }
+        targetEl.style.visibility = 'hidden';
+        tasks.push({
+          targetEl: targetEl,
+          targetRect: targetRect,
+          origin: origin,
+          color: placement.color,
+          points: placement.points,
+          delay: index * 105
+        });
+      });
+    });
+    if (!tasks.length) return;
+    await Promise.all(tasks.map(function (task) {
+      return flyGhost(task.origin, task.targetRect, task.color, task.delay, 470).then(function () {
+        task.targetEl.style.visibility = '';
+        task.targetEl.classList.add('just-arrived');
+        if (task.points > 0) scorePopup(task.targetRect, '+' + task.points, 'gain');
+      });
+    }));
+    round.players.forEach(function (event) {
+      if (!event.penalty) return;
+      var anchor = event.index === 0
+        ? q('.player-score')
+        : q('.rival[data-player="' + event.index + '"] .rival-score');
+      if (anchor) {
+        scorePopup(anchor.getBoundingClientRect(), '-' + event.penalty, 'loss');
+      }
+    });
+    if (round.players.some(function (event) { return event.penalty > 0; })) sfx('penalty');
+    await delay(280);
+  }
+
+  async function performMove(move, opts) {
+    opts = opts || {};
+    if (busy || state.over || state.pendingRound) return;
+    var animate = opts.animate !== false && !prefersReduced();
+    busy = true;
+    var sourceRects = animate ? captureSourceRects(move) : [];
+    selection = null;
+    render();
+    try {
+      state = Engine.applyMove(state, move, { deferResolve: true });
+    } catch (err) {
+      busy = false;
+      render();
+      announce('动作未执行：' + (err && err.message ? err.message : String(err)));
+      return;
+    }
+    sfx('place');
+    render();
+    if (animate) await animateTake(sourceRects, move, state);
+
+    if (state.pendingRound) {
+      var roundSources = animate ? captureRoundSources(state) : null;
+      state = Engine.resolvePendingRound(state);
+      render();
+      if (animate) {
+        await animateRound(roundSources, state);
+      }
+      if (state.lastRound && state.lastRound.players.some(function (p) { return p.placements.length > 0; })) {
+        sfx('score');
+      } else {
+        sfx('round');
+      }
+    }
+
+    busy = false;
+    render();
+    if (state.over) {
+      await delay(380);
+      showResult();
+      return;
+    }
+    maybeAI();
+  }
+
+  /* -------------------------------------------------------------- */
+  /* Result                                                          */
+  /* -------------------------------------------------------------- */
+
+  function hideResult() {
+    el.resultModal.hidden = true;
+    el.resultModal.classList.remove('show');
+  }
+
+  function reasonText() {
+    var reason = state.overReason || '对局结束';
+    if (/一整行/.test(reason)) return '有玩家完成了整行瓷砖墙，触发终局。';
+    if (/耗尽/.test(reason)) return '砖袋与弃砖区耗尽，按当前得分结算。';
+    if (/回合上限/.test(reason)) return '达到安全回合上限，按当前得分结算。';
+    return reason;
+  }
+
+  function showResult() {
+    if (!state.over || !state.result) return;
+    var result = state.result;
+    var title;
+    var tone;
+    if (result.tied) { title = '平分秋色'; tone = 'tie'; }
+    else if (result.winner === 0) { title = '你赢了'; tone = 'win'; }
+    else { title = 'AI 获胜'; tone = 'lose'; }
+    el.resultTitle.textContent = title;
+    el.resultSubtitle.textContent = '第 ' + result.round + ' 轮 · ' + reasonText();
+
+    var sorted = result.scores.slice().sort(function (a, b) {
+      if (b.total !== a.total) return b.total - a.total;
+      return a.index - b.index;
+    });
+    var rows = sorted.map(function (score) {
+      var winner = result.tied ? result.winners.indexOf(score.index) !== -1 : result.winner === score.index;
+      return '<tr class="' + (winner ? 'winner' : '') + '">' +
+        '<td>' + esc(score.name) + (score.isAI ? ' <small>AI</small>' : '') + '</td>' +
+        '<td>' + score.base + '</td>' +
+        '<td>' + score.rowBonus + '</td>' +
+        '<td>' + score.columnBonus + '</td>' +
+        '<td>' + score.colorBonus + '</td>' +
+        '<td class="total">' + score.total + '</td>' +
+        '</tr>';
+    }).join('');
+    el.resultTable.innerHTML =
+      '<table class="result-table"><thead><tr><th>玩家</th><th>基础</th><th>行 +2</th><th>列 +7</th><th>色 +10</th><th>总分</th></tr></thead><tbody>' +
+      rows + '</tbody></table>';
+    el.resultNote.textContent = '终局奖励：每条完整横排 +2，每条完整竖列 +7，每种颜色集齐 5 枚 +10。平分时先比完整横排数量；仍相同则共享胜利。';
+    el.resultModal.hidden = false;
+    requestAnimationFrame(function () { el.resultModal.classList.add('show'); });
+    animationCounts.result += 1;
+    if (tone === 'win') {
+      sfx('win');
+      confetti();
+    } else if (tone === 'lose') {
+      sfx('lose');
+    } else {
+      sfx('score');
+    }
+    announce(title + '。' + sorted.map(function (score) { return score.name + ' ' + score.total + ' 分'; }).join('，') + '。');
+  }
+
+  function confetti() {
+    if (prefersReduced()) return;
+    var colors = ['#2f6fb5', '#d9a620', '#b94a3f', '#2b2e37', '#ece2cf'];
+    for (var i = 0; i < 30; i++) {
+      var piece = document.createElement('span');
+      piece.className = 'confetti';
+      piece.style.left = (8 + Math.random() * 84) + 'vw';
+      piece.style.top = '-16px';
+      piece.style.background = colors[i % colors.length];
+      piece.style.borderRadius = (i % 3 === 0 ? '50%' : '2px');
+      el.confettiLayer.appendChild(piece);
+      var anim = piece.animate([
+        { transform: 'translate(0,0) rotate(0deg)', opacity: 1 },
+        { transform: 'translate(' + (Math.random() * 160 - 80) + 'px, ' + (window.innerHeight + 60) + 'px) rotate(' + (Math.random() * 720 - 360) + 'deg)', opacity: .9 }
+      ], {
+        duration: 1500 + Math.random() * 1200,
+        delay: Math.random() * 320,
+        easing: 'cubic-bezier(.2,.6,.4,1)',
+        fill: 'both'
+      });
+      (function (node) {
+        anim.onfinish = function () { if (node.parentNode) node.parentNode.removeChild(node); };
+      })(piece);
+    }
+  }
+
+  /* -------------------------------------------------------------- */
+  /* Event wiring                                                    */
+  /* -------------------------------------------------------------- */
+
+  function wire() {
+    el.soundBtn.addEventListener('click', function () { setSound(!soundOn); });
+    el.themeBtn.addEventListener('click', function () {
+      var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      setTheme(next, true);
+      sfx('select');
+    });
+    el.newBtn.addEventListener('click', function () { startNewGame(); });
+    el.cancelBtn.addEventListener('click', function () {
+      if (busy) return;
+      selection = null;
+      render();
+      announce('已取消选择。');
+    });
+    el.againBtn.addEventListener('click', function () { startNewGame(); });
+    el.closeResult.addEventListener('click', function () { hideResult(); });
+
+    qa('.player-seg button').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var count = Number(btn.getAttribute('data-count'));
+        if (count === PLAYER_COUNT && state && !state.over) return;
+        startNewGame({ playerCount: count });
+      });
+    });
+
+    el.factoryLayer.addEventListener('click', function (event) {
+      var btn = event.target.closest('.tile-btn');
+      if (!btn) return;
+      selectSource('factory', Number(btn.getAttribute('data-fi')), Number(btn.getAttribute('data-color')));
+    });
+    el.centerTiles.addEventListener('click', function (event) {
+      var btn = event.target.closest('.tile-btn');
+      if (!btn) return;
+      selectSource('center', -1, Number(btn.getAttribute('data-color')));
+    });
+    el.humanBoard.addEventListener('click', function (event) {
+      var floor = event.target.closest('.floor-line');
+      if (floor) { chooseRow(-1); return; }
+      var row = event.target.closest('.pattern-row');
+      if (row) chooseRow(Number(row.getAttribute('data-row')));
+    });
+    el.humanBoard.addEventListener('pointerover', function (event) {
+      if (!selection || busy || !humanTurn()) return;
+      var row = event.target.closest('.pattern-row');
+      if (!row) return;
+      var index = Number(row.getAttribute('data-row'));
+      var map = legalMap();
+      if (!map[index]) return;
+      var info = getSelectionInfo();
+      var preview = rowPreview(index, info);
+      el.dockSub.innerHTML = '预览 <em>第 ' + (index + 1) + ' 行</em>：放入 ' + preview.placed + ' 枚' +
+        (preview.overflow ? '，溢出 ' + preview.overflow + ' 枚到地板' : '，不会溢出') +
+        '。点击确认。';
+    });
+    el.humanBoard.addEventListener('pointerout', function (event) {
+      if (!selection) return;
+      if (event.relatedTarget && el.humanBoard.contains(event.relatedTarget)) return;
+      renderDock();
+    });
+
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') {
+        if (!el.resultModal.hidden) { hideResult(); return; }
+        if (selection) {
+          selection = null;
+          render();
+          announce('已取消选择。');
+        }
+        return;
+      }
+      if (!humanTurn() || !selection) return;
+      if (/^[1-5]$/.test(event.key)) {
+        event.preventDefault();
+        chooseRow(Number(event.key) - 1);
+      } else if (event.key === '0' || event.key === 'x' || event.key === 'X') {
+        event.preventDefault();
+        chooseRow(-1);
+      }
+    });
+
+
+    var resizeTimer = null;
+    window.addEventListener('resize', function () {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(layoutFactories, 100);
+    });
+    if (reducedMotion.addEventListener) {
+      reducedMotion.addEventListener('change', function () { /* CSS + performMove read it live */ });
+    }
+  }
+
+  /* -------------------------------------------------------------- */
+  /* Boot                                                            */
+  /* -------------------------------------------------------------- */
+
+  function boot() {
+    el = {
+      roundNo: $('roundNo'),
+      bagCount: $('bagCount'),
+      discardCount: $('discardCount'),
+      turnBadge: $('turnBadge'),
+      factoryRing: $('factoryRing'),
+      factoryLayer: $('factoryLayer'),
+      centerZone: $('centerZone'),
+      centerTiles: $('centerTiles'),
+      firstMarker: $('firstMarker'),
+      dockTitle: $('dockTitle'),
+      dockSub: $('dockSub'),
+      cancelBtn: $('cancelBtn'),
+      journalList: $('journalList'),
+      humanBoard: $('humanBoard'),
+      rivals: $('rivals'),
+      soundBtn: $('soundBtn'),
+      themeBtn: $('themeBtn'),
+      newBtn: $('newBtn'),
+      resultModal: $('resultModal'),
+      resultTitle: $('resultTitle'),
+      resultSubtitle: $('resultSubtitle'),
+      resultTable: $('resultTable'),
+      resultNote: $('resultNote'),
+      againBtn: $('againBtn'),
+      closeResult: $('closeResult'),
+      confettiLayer: $('confettiLayer'),
+      announcer: $('announcer')
+    };
+    initTheme();
+    soundOn = readLocal('azul-sound', 'off') === 'on';
+    setSound(soundOn);
+    wire();
+    startNewGame({ playerCount: 2, seed: 20261110 });
+    if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('sw.js').catch(function () { /* offline cache is optional */ });
+      });
+    }
+  }
+
+  // Small, read-only debug surface used by the browser E2E harness.
+  window.__azul = {
+    version: Engine.VERSION,
+    getState: function () { return JSON.parse(JSON.stringify(state)); },
+    legalMoves: function () { return Engine.getLegalMoves(state); },
+    animationCounts: function () { return Object.assign({}, animationCounts); },
+    reducedMotion: function () { return prefersReduced(); },
+    selection: function () { return selection ? Object.assign({}, selection) : null; },
+    isBusy: function () { return busy; },
+    audioUnlocked: function () { return !!(window.Sfx && window.Sfx.stats && window.Sfx.stats().unlocked); },
+    assets: [
+      '../../assets/art/premium/azul/tile-blue.webp',
+      '../../assets/art/premium/azul/tile-yellow.webp',
+      '../../assets/art/premium/azul/tile-red.webp',
+      '../../assets/art/premium/azul/tile-black.webp',
+      '../../assets/art/premium/azul/tile-white.webp',
+      '../../assets/art/premium/azul/factory-wood.webp',
+      '../../assets/art/premium/azul/table-felt.webp',
+      '../../assets/art/premium/azul/table-wood.webp'
+    ],
+    playMove: function (move, opts) {
+      return performMove(move, Object.assign({ animate: false }, opts || {}));
+    },
+    setState: function (next) {
+      state = JSON.parse(JSON.stringify(next));
+      busy = false;
+      selection = null;
+      clearTimeout(aiTimer);
+      hideResult();
+      render();
+      maybeAI();
+      return true;
+    },
+    newGame: function (opts) { startNewGame(opts || {}); return true; },
+    autoPlayToEnd: function (limit) {
+      var guard = 0;
+      var max = limit || 400;
+      while (state && !state.over && guard < max) {
+        if (state.pendingRound) state = Engine.resolvePendingRound(state);
+        var moves = Engine.getLegalMoves(state);
+        if (!moves.length) break;
+        var move = Engine.chooseAIMove(state);
+        state = Engine.applyMove(state, move, { deferResolve: true });
+        if (state.pendingRound) state = Engine.resolvePendingRound(state);
+        guard += 1;
+      }
+      busy = false;
+      selection = null;
+      render();
+      if (state && state.over) showResult();
+      return { over: !!(state && state.over), turns: guard, result: state && state.result };
+    }
+  };
+
+  boot();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,904 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/chess-premium/">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#17130f">
+<meta name="description" content="国际象棋精品版：FIDE 完整规则、三档 Alpha-Beta AI、王车易位、吃过路兵、兵升变、三次重复、五十回合与子力不足判定。枫木与胡桃木棋盘，390/320 手机可用，本地素材零外链。">
+<meta property="og:title" content="国际象棋 · Chess Premium">
+<meta property="og:description" content="枫木与胡桃木的 64 格战场。FIDE 完整规则、三档 AI 与联机房间。">
+<meta property="og:type" content="website">
+<meta property="og:image" content="assets/og.webp">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2317130f'/%3E%3Crect x='10' y='10' width='22' height='22' fill='%23e8d3a9'/%3E%3Crect x='32' y='32' width='22' height='22' fill='%23e8d3a9'/%3E%3Ccircle cx='38' cy='26' r='7' fill='%23e8d3a9'/%3E%3Cpath d='M28 52h20l4 6H24z' fill='%23e8d3a9'/%3E%3C/svg%3E">
+<title>国际象棋 · Chess Premium · 完整 FIDE 规则</title>
+<style>
+  :root{
+    --art-maple:url("../../assets/art/premium/chess/light-maple.webp");
+    --art-walnut:url("../../assets/art/premium/chess/dark-walnut.webp");
+    --art-felt:url("../../assets/art/premium/chess/felt-cloth.webp");
+    --art-edge:url("../../assets/art/premium/chess/board-edge.webp");
+    --font-serif:"Songti SC","Iowan Old Style","Palatino Linotype",Georgia,serif;
+    --font-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    --bg:#100d0a;--bg2:#1b1611;--panel:#211a13;--panel2:#2b2219;
+    --line:#4c3b28;--line2:#6a5238;--ink:#f5ead8;--muted:#c3ae91;--dim:#9b866b;
+    --gold:#e3b25f;--gold2:#f6d79c;--coral:#d7653f;--mint:#8fd0a8;--sky:#8ec3e8;
+    --light-sq:#e8d3a9;--dark-sq:#6b4a2f;--board-frame:#3d2717;
+    --danger:#ff9b84;
+    --shadow:0 22px 54px rgba(0,0,0,.5);--radius:18px;--tap:46px;
+  }
+  :root[data-theme="light"]{
+    --bg:#efe5d4;--bg2:#f8f0e2;--panel:#fffaf1;--panel2:#f3e8d5;
+    --line:#cfba99;--line2:#b79b74;--ink:#2b2117;--muted:#6b5943;--dim:#8c795f;
+    --gold:#99651a;--gold2:#7b4f0d;--coral:#b74a2a;--mint:#227a55;--sky:#2d6f9e;
+    --danger:#a93a2b;--shadow:0 18px 38px rgba(92,65,35,.2);
+  }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){
+      --bg:#efe5d4;--bg2:#f8f0e2;--panel:#fffaf1;--panel2:#f3e8d5;
+      --line:#cfba99;--line2:#b79b74;--ink:#2b2117;--muted:#6b5943;--dim:#8c795f;
+      --gold:#99651a;--gold2:#7b4f0d;--coral:#b74a2a;--mint:#227a55;--sky:#2d6f9e;
+      --danger:#a93a2b;--shadow:0 18px 38px rgba(92,65,35,.2);
+    }
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;color:var(--ink);font:16px/1.5 var(--font-sans);min-height:100vh;
+    background:
+      radial-gradient(1000px 640px at 50% -18%,rgba(115,78,42,.42),transparent 62%),
+      radial-gradient(760px 500px at 4% 106%,rgba(56,84,64,.26),transparent 58%),
+      linear-gradient(166deg,var(--bg2),var(--bg) 64%);
+    background-color:var(--bg);
+    -webkit-tap-highlight-color:transparent;
+  }
+  body::before{
+    content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.18;
+    background-image:
+      repeating-linear-gradient(114deg,rgba(255,255,255,.06) 0 1px,transparent 1px 9px),
+      repeating-linear-gradient(24deg,rgba(0,0,0,.15) 0 1px,transparent 1px 11px);
+    mix-blend-mode:soft-light;
+  }
+  .wrap{position:relative;z-index:1;max-width:720px;margin:0 auto;padding:10px 12px 34px}
+  button,select,input{font:inherit;color:inherit}
+  button{touch-action:manipulation}
+  a{color:var(--gold)}
+  [hidden]{display:none!important}
+  .top{display:flex;align-items:center;gap:6px;padding:2px 0 11px;min-width:0}
+  .brand{flex:1;min-width:0;text-align:center}
+  .brand h1{
+    margin:0;font-family:var(--font-serif);font-weight:700;font-size:21px;line-height:1.15;
+    letter-spacing:.4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .brand h1 span{font-family:var(--font-sans);font-size:12px;letter-spacing:2.4px;color:var(--gold);vertical-align:2px;margin-left:4px}
+  .brand p{margin:2px 0 0;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .icon-btn{
+    display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;
+    min-width:46px;min-height:46px;padding:0 10px;border-radius:13px;border:1px solid var(--line);
+    background:linear-gradient(160deg,var(--panel2),var(--panel));color:var(--ink);
+    font-size:13px;font-weight:700;text-decoration:none;cursor:pointer;
+    box-shadow:0 4px 0 rgba(0,0,0,.24);transition:transform .12s ease,background .2s ease;
+  }
+  .icon-btn:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(0,0,0,.24)}
+  .icon-btn[aria-pressed="true"]{border-color:var(--gold);color:var(--gold2)}
+  button:focus-visible,select:focus-visible,input:focus-visible,.board:focus-visible,a:focus-visible{
+    outline:3px solid var(--sky);outline-offset:2px;
+  }
+
+  .toolbar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:8px}
+  .seg{display:flex;gap:4px;padding:4px;border-radius:14px;background:rgba(0,0,0,.24);border:1px solid var(--line)}
+  .seg button{
+    min-height:44px;min-width:66px;padding:0 12px;border:0;border-radius:10px;background:transparent;
+    color:var(--muted);font-size:14px;font-weight:800;cursor:pointer;
+  }
+  .seg button[aria-pressed="true"]{background:linear-gradient(160deg,var(--gold2),var(--gold));color:#2a1a07}
+  .level-wrap{display:inline-flex;align-items:center;gap:6px;margin-left:auto}
+  .level-wrap label{font-size:12px;color:var(--muted);font-weight:700;letter-spacing:.5px}
+  select#level{
+    min-height:46px;min-width:92px;padding:0 8px;border-radius:13px;border:1px solid var(--line);
+    background:var(--panel);color:var(--ink);font-size:16px;font-weight:700;cursor:pointer;
+  }
+
+  .statusbar{
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 11px;margin-bottom:9px;
+    border:1px solid var(--line);border-radius:14px;background:linear-gradient(160deg,var(--panel2),var(--panel));
+    box-shadow:0 5px 16px rgba(0,0,0,.16);
+  }
+  .turn-dot{width:14px;height:14px;flex:0 0 14px;border-radius:50%;border:1px solid var(--line2);
+    box-shadow:0 0 0 4px rgba(227,178,95,.12)}
+  .turn-dot.w{background:radial-gradient(circle at 34% 28%,#fff8e6,#e8d3a9 70%)}
+  .turn-dot.b{background:radial-gradient(circle at 34% 28%,#7c5a3a,#2c1c10 72%)}
+  .status{flex:1;min-width:120px;font-size:15px;font-weight:800;line-height:1.3;letter-spacing:.2px}
+  .status.alert{color:var(--danger)}
+  .status.good{color:var(--mint)}
+  .status.think{color:var(--gold2)}
+  .status-tools{display:flex;gap:6px}
+  .status-tools button{
+    min-height:44px;min-width:58px;padding:0 11px;border-radius:11px;border:1px solid var(--line);
+    background:rgba(0,0,0,.16);color:var(--ink);font-size:13px;font-weight:800;cursor:pointer;
+  }
+  .status-tools button:active{transform:translateY(1px)}
+  .status-tools button:disabled{opacity:.38;cursor:default}
+
+  .tray{
+    display:flex;align-items:center;gap:6px;min-height:34px;padding:3px 9px;border-radius:11px;
+    border:1px solid rgba(255,255,255,.08);background:rgba(0,0,0,.2);margin:0 2px;
+  }
+  .tray.top{margin-bottom:6px}
+  .tray.bottom{margin-top:6px}
+  .tray .tlabel{font-size:12px;font-weight:800;color:var(--muted);white-space:nowrap}
+  .tray .tmini{display:flex;align-items:center;gap:1px;flex-wrap:wrap;min-width:0;min-height:24px;flex:1}
+  .tray .adv{font-size:12px;font-weight:900;color:var(--gold2);white-space:nowrap;min-width:30px;text-align:right}
+  .mini{width:21px;height:25px;display:inline-block;flex:0 0 auto}
+  .mini svg{display:block;width:100%;height:100%}
+  .tray .empty{font-size:12px;color:var(--dim)}
+
+  .boardframe{
+    position:relative;width:100%;max-width:580px;margin:0 auto;padding:11px;border-radius:16px;
+    background:
+      linear-gradient(150deg,rgba(255,222,166,.14),rgba(0,0,0,.3)),
+      var(--art-edge) center/cover no-repeat, var(--board-frame);
+    box-shadow:0 12px 28px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,235,200,.34),inset 0 0 0 1px rgba(0,0,0,.5);
+  }
+  .boardframe::after{
+    content:"";position:absolute;inset:7px;border-radius:10px;pointer-events:none;
+    box-shadow:inset 0 0 0 1px rgba(20,10,4,.7),inset 0 0 22px rgba(0,0,0,.34);
+  }
+  .board{
+    position:relative;display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr);
+    width:100%;aspect-ratio:1;border-radius:6px;overflow:hidden;touch-action:manipulation;
+    user-select:none;-webkit-user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.36);
+  }
+  .sq{
+    position:relative;min-width:0;min-height:0;overflow:hidden;cursor:pointer;
+    background-color:var(--sq-base);background-image:linear-gradient(var(--sq-color),var(--sq-color)),var(--sq-tex);
+    background-size:100% 100%,800% 800%;
+    background-position:0 0,calc(var(--c) * 100% / 7) calc(var(--r) * 100% / 7);
+    background-blend-mode:multiply,normal;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .sq.light{--sq-color:var(--light-sq);--sq-tex:var(--art-maple);--sq-base:var(--light-sq)}
+  .sq.dark{--sq-color:var(--dark-sq);--sq-tex:var(--art-walnut);--sq-base:var(--dark-sq)}
+  .sq.light{border:0}
+  .sq.dark{border:0}
+  .sq::after{
+    content:"";position:absolute;inset:0;z-index:2;pointer-events:none;border-radius:0;
+    background:transparent;
+  }
+  .sq.last{box-shadow:inset 0 0 0 3px rgba(236,182,86,.62)}
+  .sq.sel{box-shadow:inset 0 0 0 4px rgba(255,231,166,.95),0 0 0 1px rgba(60,35,12,.5)}
+  .sq.check::after{background:radial-gradient(circle at 50% 50%,rgba(211,61,44,.9),rgba(211,61,44,.28) 52%,transparent 74%)}
+  .sq.last.check{box-shadow:inset 0 0 0 3px rgba(211,61,44,.72)}
+  .sq .dot{
+    position:absolute;left:50%;top:50%;z-index:3;width:26%;height:26%;border-radius:50%;
+    transform:translate(-50%,-50%);background:rgba(37,26,16,.38);pointer-events:none;
+    box-shadow:0 1px 2px rgba(255,255,255,.18);
+  }
+  .sq.dark .dot{background:rgba(248,232,202,.62);box-shadow:0 1px 2px rgba(0,0,0,.36)}
+  .sq .cap-ring{
+    position:absolute;inset:8%;z-index:5;border-radius:50%;border:3px solid rgba(178,57,38,.72);
+    pointer-events:none;
+  }
+  .sq.dark .cap-ring{border-color:rgba(255,188,148,.86)}
+  .sq .piece{
+    position:absolute;left:5%;right:5%;top:4%;bottom:3%;z-index:4;display:block;pointer-events:none;
+    filter:drop-shadow(0 2px 2px rgba(0,0,0,.4));
+  }
+  .sq .piece svg{display:block;width:100%;height:100%;overflow:visible}
+  .piece .pc{stroke-linejoin:round;stroke-linecap:round;stroke-width:2.4}
+  .piece.w .pc{fill:url(#gMaple);stroke:#5b3c22}
+  .piece.b .pc{fill:url(#gWalnut);stroke:#180d06}
+  .piece .shine{fill:#fff9e9;opacity:.3;stroke:none}
+  .piece .accent{fill:none;stroke:#6b4527;stroke-width:2;opacity:.62;stroke-linecap:round}
+  .piece.b .accent{stroke:#d0a878;opacity:.38}
+  .piece .eye{fill:#201208;stroke:none}
+  .piece.b .eye{fill:#e6c79b}
+  .sq .co{
+    position:absolute;z-index:5;font-size:12px;font-weight:800;line-height:1;pointer-events:none;
+    font-family:var(--font-sans);letter-spacing:0;
+  }
+  .sq .co.f{right:3px;bottom:2px}
+  .sq .co.r{left:3px;top:3px}
+  .sq.light .co{color:#67502f;opacity:.92}
+  .sq.dark .co{color:#f1dfbd;opacity:.9}
+  .sq.kbd-cursor{outline:3px solid var(--sky);outline-offset:-3px}
+
+  .hint{min-height:20px;margin:8px 2px 0;text-align:center;font-size:13px;font-weight:700;color:var(--muted)}
+
+  .panel{
+    margin-top:11px;border:1px solid var(--line);border-radius:15px;background:linear-gradient(160deg,var(--panel2),var(--panel));
+    padding:10px 12px;box-shadow:0 6px 18px rgba(0,0,0,.14);
+  }
+  .panel h2{margin:0 0 7px;font-size:12px;letter-spacing:1.8px;text-transform:uppercase;color:var(--muted);font-weight:800}
+  .history{max-height:168px;overflow:auto;overscroll-behavior:contain}
+  .history ol{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:2px 12px}
+  .history li{
+    display:flex;align-items:baseline;gap:6px;min-width:0;padding:3px 2px;font-size:12px;color:var(--muted);
+    border-bottom:1px dashed rgba(160,132,96,.2);
+  }
+  .history li b{font-size:12px;color:var(--dim);font-weight:800;flex:0 0 auto}
+  .history li span{font-size:12px;color:var(--ink);font-weight:700;letter-spacing:.3px}
+  .history li span.blank{color:var(--dim);font-weight:600}
+  .history .none{font-size:12px;color:var(--dim);margin:0}
+  .fenbox{margin-top:9px;border-top:1px dashed var(--line);padding-top:7px}
+  .fenbox summary{font-size:12px;font-weight:800;color:var(--muted);cursor:pointer;min-height:28px;display:flex;align-items:center}
+  .fenrow{display:flex;gap:6px;align-items:stretch;margin-top:5px;flex-wrap:wrap}
+  .fenrow input{
+    flex:1 1 150px;min-width:0;min-height:44px;padding:7px 9px;border-radius:10px;border:1px solid var(--line);
+    background:rgba(0,0,0,.16);font-size:16px;font-family:ui-monospace,Menlo,Consolas,monospace;
+  }
+  .fenrow button{min-height:44px;min-width:56px;padding:0 10px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);font-size:13px;font-weight:800;cursor:pointer}
+  .foot{text-align:center;margin-top:14px;font-size:12px;color:var(--dim);display:flex;justify-content:center;gap:4px;flex-wrap:wrap}
+  .foot a{display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:64px;padding:0 8px;text-decoration:none;color:var(--muted);font-weight:700}
+  .foot a:hover{color:var(--gold)}
+
+  .promo{
+    position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;padding:16px;
+    background:rgba(12,8,4,.72);backdrop-filter:blur(3px);
+  }
+  .promo-card{
+    width:100%;max-width:360px;border-radius:20px;border:1px solid var(--line2);padding:16px;
+    background:linear-gradient(160deg,var(--panel2),var(--panel));box-shadow:var(--shadow);text-align:center;
+  }
+  .promo-card h2{margin:0 0 3px;font-family:var(--font-serif);font-size:21px;font-weight:700}
+  .promo-card p{margin:0 0 12px;font-size:13px;color:var(--muted)}
+  .promo-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:10px}
+  .promo-grid button{
+    min-height:76px;padding:5px 2px;border-radius:12px;border:1px solid var(--line);background:rgba(0,0,0,.16);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;
+  }
+  .promo-grid button:hover{border-color:var(--gold)}
+  .promo-grid .promo-piece{width:38px;height:44px;display:block}
+  .promo-grid .promo-piece svg{display:block;width:100%;height:100%}
+  .promo-grid em{font-style:normal;font-size:12px;font-weight:800;color:var(--muted)}
+  .promo-card .cancel{min-height:44px;min-width:96px;border-radius:11px;border:1px solid var(--line);background:transparent;font-size:13px;font-weight:800;color:var(--muted);cursor:pointer}
+
+  @keyframes pieceIn{from{transform:scale(.72);opacity:0}to{transform:none;opacity:1}}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  .sq .piece.enter{animation:pieceIn .18s cubic-bezier(.2,1.2,.5,1) both}
+  .promo{animation:fadeIn .16s ease both}
+  @media (prefers-reduced-motion: reduce){
+    *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+  }
+  @media (max-width:430px){
+    .wrap{padding:8px 9px 28px}
+    .brand h1{font-size:18px}
+    .brand p{display:none}
+    .icon-btn{min-width:44px;min-height:44px;padding:0 8px;font-size:12px}
+    .boardframe{padding:7px;border-radius:13px}
+    .status{padding:0;font-size:14px}
+    .status-tools button{min-width:52px;padding:0 9px}
+    .seg button{min-width:60px;padding:0 9px;font-size:13px}
+    .level-wrap{margin-left:0}
+    select#level{min-width:84px}
+    .history{max-height:140px}
+  }
+  @media (max-width:340px){
+    .brand h1{font-size:16px}
+    .brand h1 span{font-size:12px;letter-spacing:1.4px}
+    .wrap{padding:7px 7px 26px}
+    .status-tools button{min-width:48px;font-size:12px}
+    .toolbar{gap:5px}
+    .seg button{min-width:54px;padding:0 7px;font-size:12px}
+    .history ol{grid-template-columns:1fr}
+  }
+/* safe-area: keep the original bottom padding, clear the iOS home indicator */
+body{padding-bottom:env(safe-area-inset-bottom)}
+</style>
+</head>
+<body>
+
+<svg class="defs" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0;overflow:hidden">
+  <defs>
+    <linearGradient id="gMaple" x1="0" y1="0" x2="0.9" y2="1">
+      <stop offset="0" stop-color="#fff3d9"/>
+      <stop offset="0.42" stop-color="#ead0a2"/>
+      <stop offset="0.78" stop-color="#d3b17e"/>
+      <stop offset="1" stop-color="#b98f5b"/>
+    </linearGradient>
+    <linearGradient id="gWalnut" x1="0" y1="0" x2="0.85" y2="1">
+      <stop offset="0" stop-color="#83593a"/>
+      <stop offset="0.38" stop-color="#5a3a22"/>
+      <stop offset="0.76" stop-color="#3a2312"/>
+      <stop offset="1" stop-color="#241409"/>
+    </linearGradient>
+  </defs>
+
+  <symbol id="pcK" viewBox="0 0 100 100"><g class="pc"><path d="M46 5h8v9h9v8h-9v12h-8V22h-9v-8h9z"/><path d="M37 39h26l-3 8H40z"/><path d="M42 47h16c0 8 2 15 5 22 2 4 3 7 3 11H34c0-4 1-7 3-11 3-7 5-14 5-22z"/><path d="M34 80h32l2 8H32z"/><path d="M32 88h36v7H32z"/><path class="shine" d="M45 51c0 8-1 14-4 20-2 4-3 7-3 9h5c0-5 1-10 3-14 2-4 3-10 3-15z"/><path class="accent" d="M40 63h20M38 74h24"/></g></symbol>
+  <symbol id="pcQ" viewBox="0 0 100 100"><g class="pc"><circle cx="34" cy="24" r="3.6"/><circle cx="40" cy="17" r="3.6"/><circle cx="50" cy="13" r="3.6"/><circle cx="60" cy="17" r="3.6"/><circle cx="66" cy="24" r="3.6"/><path d="M34 29l6 21 10-23 10 23 6-21-3 31H37z"/><path d="M37 60h26l3 20H34z"/><path d="M34 80h32l2 8H32z"/><path d="M32 88h36v7H32z"/><path class="shine" d="M41 35l4 13 5-9 5 9 4-13 3 15-3 7H41z"/><path class="accent" d="M39 67h22M37 74h26"/></g></symbol>
+  <symbol id="pcB" viewBox="0 0 100 100"><g class="pc"><circle cx="50" cy="31" r="4.5"/><path d="M50 36c-10 7-15 18-12 27 2 7 7 12 12 15 5-3 10-8 12-15 3-9-2-20-12-27z"/><path d="M38 78h24l4 8H34z"/><path d="M34 86h32v8H34z"/><path class="accent" d="M50 47v17M44 52l12 9"/><path class="shine" d="M43 50c-3 6-4 12-3 17 1 4 3 7 5 9 1-9 1-18 2-26z"/></g></symbol>
+  <symbol id="pcN" viewBox="0 0 100 100"><g class="pc"><path d="M37 80c-1-11 1-20 7-28 3-4 3-8 1-12l-4 3-2-7 7-1 4-8 4 7 6-1 9 7c5 5 8 12 7 19l-2 9c-1 3 0 7 2 11z"/><path d="M36 80h28l3 8H33z"/><path d="M33 88h34v7H33z"/><circle class="eye" cx="60" cy="44" r="2.1"/><path class="accent" d="M45 55c6 2 12 6 16 12M61 39l6-4M49 36l-3-7"/><path class="shine" d="M42 66c-1 5-2 10-1 14h6c-1-6 0-11 3-16z"/></g></symbol>
+  <symbol id="pcR" viewBox="0 0 100 100"><g class="pc"><path d="M33 41h8v7h6v-7h6v7h6v-7h8v20H33z"/><path d="M37 61h26l-3 19H40z"/><path d="M37 80h26l4 8H33z"/><path d="M33 88h34v7H33z"/><path class="accent" d="M41 67h18M39 74h22"/><path class="shine" d="M38 64h5l-2 12h-5z"/></g></symbol>
+  <symbol id="pcP" viewBox="0 0 100 100"><g class="pc"><circle cx="50" cy="62" r="9"/><path d="M43 70h14l5 12H38z"/><path d="M40 82h20l4 7H36z"/><path d="M36 89h28v6H36z"/><path class="accent" d="M44 77h12"/><path class="shine" d="M45 56c-2 3-3 6-3 9 0 3 1 6 3 8 1-4 1-8 2-11z"/></g></symbol>
+</svg>
+
+<div class="wrap">
+  <header class="top">
+    <a class="icon-btn" href="../index.html" aria-label="返回桌游目录">← 目录</a>
+    <div class="brand">
+      <h1>国际象棋 <span>CHESS</span></h1>
+      <p>枫木 · 胡桃木 · FIDE 完整规则</p>
+    </div>
+    <a class="icon-btn" href="rules.html">规则</a>
+    <a class="icon-btn" href="online.html">联机</a>
+  </header>
+
+  <main>
+    <section class="toolbar" aria-label="对局设置">
+      <div class="seg" role="group" aria-label="对局模式">
+        <button type="button" data-mode="ai" aria-pressed="true">人机</button>
+        <button type="button" data-mode="local" aria-pressed="false">双人</button>
+      </div>
+      <div class="level-wrap">
+        <label for="level">AI 强度</label>
+        <select id="level" aria-label="AI 强度">
+          <option value="1">入门</option>
+          <option value="2" selected>进阶</option>
+          <option value="3">高手</option>
+        </select>
+      </div>
+      <button class="icon-btn" id="themeBtn" type="button" aria-label="切换深色或浅色主题">◐</button>
+      <button class="icon-btn" id="muteBtn" type="button" aria-label="静音或开启音效" aria-pressed="false">♪</button>
+    </section>
+
+    <section class="statusbar" aria-label="对局状态">
+      <span class="turn-dot w" id="turnDot" aria-hidden="true"></span>
+      <span class="status" id="status" role="status" aria-live="polite">白方走棋</span>
+      <div class="status-tools">
+        <button type="button" id="undoBtn">悔棋</button>
+        <button type="button" id="newBtn">新局</button>
+      </div>
+    </section>
+
+    <section class="tray top" id="trayTop" aria-label="黑方被吃棋子">
+      <span class="tlabel">白方吃子</span>
+      <span class="tmini" id="trayTopMini"></span>
+      <span class="adv" id="advTop">0</span>
+    </section>
+
+    <div class="boardframe" id="boardFrame">
+      <div class="board" id="board" role="grid" tabindex="0" aria-label="8 行 8 列国际象棋棋盘，白方视角，点击棋子后再点目标格" aria-rowcount="8" aria-colcount="8"></div>
+    </div>
+
+    <section class="tray bottom" id="trayBottom" aria-label="白方被吃棋子">
+      <span class="tlabel">黑方吃子</span>
+      <span class="tmini" id="trayBottomMini"></span>
+      <span class="adv" id="advBottom">0</span>
+    </section>
+
+    <p class="hint" id="hint">点自己的棋子查看合法落点，再点目标格落子。</p>
+
+    <section class="panel" aria-label="棋谱记录">
+      <h2>棋谱 · SAN</h2>
+      <div class="history" id="historyBox"><p class="none">还没有着法。</p></div>
+      <details class="fenbox" id="fenBox">
+        <summary>FEN 局面导入 / 导出</summary>
+        <div class="fenrow">
+          <input id="fenInput" aria-label="FEN 字符串" spellcheck="false" autocomplete="off">
+          <button type="button" id="fenLoadBtn">载入</button>
+          <button type="button" id="fenCopyBtn">复制</button>
+        </div>
+      </details>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <a href="rules.html">完整规则</a>
+    <a href="online.html">联机房间</a>
+    <a href="../index.html">更多桌游</a>
+  </footer>
+</div>
+
+<div class="promo" id="promo" role="dialog" aria-modal="true" aria-labelledby="promoTitle" hidden>
+  <div class="promo-card">
+    <h2 id="promoTitle">选择升变棋子</h2>
+    <p>兵到达底线，必须升变为后、车、象或马。</p>
+    <div class="promo-grid" id="promoGrid"></div>
+    <button class="cancel" type="button" id="promoCancel">取消</button>
+  </div>
+</div>
+
+<script src="../../shared/sfx.js"></script>
+<script src="data.js"></script>
+<script src="engine.js"></script>
+<script>
+(function () {
+  'use strict';
+  var E = window.ChessPremiumEngine;
+  var D = window.ChessPremiumData;
+  var $ = function (id) { return document.getElementById(id); };
+  var FILES = 'abcdefgh';
+  var VAL = { P: 1, N: 3, B: 3, R: 5, Q: 9, K: 0 };
+  var PNAME = { P: '兵', N: '马', B: '象', R: '车', Q: '后', K: '王' };
+
+  var game = null;
+  var mode = 'ai';
+  var level = 2;
+  var humanColor = 'w';
+  var selected = null;
+  var legalCache = [];
+  var pendingPromo = null;
+  var aiThinking = false;
+  var aiToken = 0;
+  var flipped = false;
+  var kbdSq = 60;
+  var animSq = -1;
+
+  function safeGet(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
+  function safeSet(key, v) { try { localStorage.setItem(key, v); } catch (e) {} }
+
+  // ---- theme -------------------------------------------------------------
+  var theme = safeGet('chess-premium-theme');
+  if (theme === 'light' || theme === 'dark') document.documentElement.setAttribute('data-theme', theme);
+  function isLightTheme() {
+    var attr = document.documentElement.getAttribute('data-theme');
+    if (attr === 'light') return true;
+    if (attr === 'dark') return false;
+    return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches);
+  }
+  function updateThemeLabel() {
+    $('themeBtn').setAttribute('aria-label', isLightTheme() ? '切换到深色主题' : '切换到浅色主题');
+  }
+  updateThemeLabel();
+
+  // ---- shared sfx --------------------------------------------------------
+  var Sfx = window.Sfx;
+  var muted = safeGet('chess-premium-muted') === '1';
+  if (Sfx && muted) Sfx.mute(true);
+  function paintMute() {
+    $('muteBtn').setAttribute('aria-pressed', muted ? 'true' : 'false');
+    $('muteBtn').textContent = muted ? '×' : '♪';
+  }
+  paintMute();
+  function sfx(name) { if (!muted && Sfx) Sfx.play(name); }
+  $('muteBtn').addEventListener('click', function () {
+    muted = !muted;
+    safeSet('chess-premium-muted', muted ? '1' : '0');
+    if (Sfx) Sfx.mute(muted);
+    paintMute();
+    if (!muted) sfx('click');
+  });
+  $('themeBtn').addEventListener('click', function () {
+    var next = isLightTheme() ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', next);
+    safeSet('chess-premium-theme', next);
+    updateThemeLabel();
+    sfx('click');
+  });
+
+  // ---- board construction ------------------------------------------------
+  var squares = [];
+  function buildBoard() {
+    var board = $('board');
+    board.innerHTML = '';
+    squares = new Array(64);
+    for (var i = 0; i < 64; i++) {
+      var actual = flipped ? 63 - i : i;
+      var r = (actual / 8) | 0, f = actual & 7;
+      var sq = document.createElement('div');
+      sq.className = 'sq ' + (((r + f) % 2 === 0) ? 'light' : 'dark');
+      sq.setAttribute('role', 'gridcell');
+      sq.setAttribute('data-sq', String(actual));
+      sq.setAttribute('aria-rowindex', String(Math.floor(i / 8) + 1));
+      sq.setAttribute('aria-colindex', String((i & 7) + 1));
+      sq.style.setProperty('--r', String(flipped ? 7 - r : r));
+      sq.style.setProperty('--c', String(flipped ? 7 - f : f));
+      if (Math.floor(i / 8) === 7) {
+        var file = document.createElement('span');
+        file.className = 'co f';
+        file.textContent = FILES.charAt(f);
+        sq.appendChild(file);
+      }
+      if ((flipped ? 7 - (i & 7) : f) === 0) {
+        var rank = document.createElement('span');
+        rank.className = 'co r';
+        rank.textContent = String(8 - r);
+        sq.appendChild(rank);
+      }
+      board.appendChild(sq);
+      squares[actual] = sq;
+    }
+  }
+
+  function pieceHtml(code, color, cls) {
+    return '<span class="piece ' + color + (cls ? ' ' + cls : '') + '" aria-hidden="true"><svg viewBox="0 0 100 100">' +
+      '<use href="#pc' + code.toUpperCase() + '"></use></svg></span>';
+  }
+  function miniHtml(code, color) {
+    return '<span class="mini " aria-hidden="true"><svg viewBox="0 0 100 100" class="piece ' + color + '">' +
+      '<use href="#pc' + code.toUpperCase() + '"></use></svg></span>';
+  }
+
+  function sqLabel(i) {
+    var p = game.pos.board[i];
+    var base = FILES.charAt(i & 7) + String(8 - ((i / 8) | 0));
+    if (!p) return base + '，空格';
+    return base + '，' + (E.isWhitePiece(p) ? '白' : '黑') + PNAME[p.toUpperCase()];
+  }
+
+  function render() {
+    if (!game) return;
+    legalCache = game.status.over ? [] : E.legalMoves(game.pos);
+    var targets = {};
+    if (selected !== null) {
+      for (var i = 0; i < legalCache.length; i++) {
+        var m = legalCache[i];
+        if (m.from === selected) targets[m.to] = (m.captured || m.ep) ? 'cap-ring' : 'dot';
+      }
+    }
+    var checkSq = game.status.check ? E.kingSquare(game.pos, game.pos.turn) : -1;
+    var last = game.pos.lastMove;
+    for (var s = 0; s < 64; s++) {
+      var cell = squares[s];
+      if (!cell) continue;
+      var p = game.pos.board[s];
+      cell.className = 'sq ' + (((((s / 8) | 0) + (s & 7)) % 2 === 0) ? 'light' : 'dark') +
+        (selected === s ? ' sel' : '') +
+        (last && (last.from === s || last.to === s) ? ' last' : '') +
+        (s === checkSq ? ' check' : '') +
+        (s === kbdSq ? ' kbd-cursor' : '');
+      cell.setAttribute('aria-label', sqLabel(s));
+      cell.setAttribute('aria-selected', selected === s ? 'true' : 'false');
+      var html = '';
+      if (p) {
+        html += pieceHtml(p.toUpperCase(), E.isWhitePiece(p) ? 'w' : 'b', s === animSq ? 'enter' : '');
+      }
+      if (targets[s]) html += '<i class="' + targets[s] + '"></i>';
+      var row = (s / 8) | 0, file = s & 7;
+      if ((!flipped && row === 7) || (flipped && row === 0)) html += '<span class="co f">' + FILES.charAt(file) + '</span>';
+      if ((!flipped && file === 0) || (flipped && file === 7)) html += '<span class="co r">' + (8 - row) + '</span>';
+      if (cell.innerHTML !== html) cell.innerHTML = html;
+    }
+    animSq = -1;
+    renderTrays();
+    renderStatus();
+    renderHistory();
+    $('fenInput').value = E.toFEN(game.pos);
+  }
+
+  function renderTrays() {
+    var whiteTaken = game.captured.w || [];
+    var blackTaken = game.captured.b || [];
+    $('trayTopMini').innerHTML = whiteTaken.length
+      ? whiteTaken.map(function (p) { return miniHtml(p, 'b'); }).join('')
+      : '<span class="empty">尚未吃子</span>';
+    $('trayBottomMini').innerHTML = blackTaken.length
+      ? blackTaken.map(function (p) { return miniHtml(p, 'w'); }).join('')
+      : '<span class="empty">尚未吃子</span>';
+    var wScore = whiteTaken.reduce(function (a, p) { return a + (VAL[p.toUpperCase()] || 0); }, 0);
+    var bScore = blackTaken.reduce(function (a, p) { return a + (VAL[p.toUpperCase()] || 0); }, 0);
+    $('advTop').textContent = wScore - bScore > 0 ? '+' + (wScore - bScore) : (wScore - bScore === 0 ? '0' : String(wScore - bScore));
+    $('advBottom').textContent = bScore - wScore > 0 ? '+' + (bScore - wScore) : (bScore - wScore === 0 ? '0' : String(bScore - wScore));
+  }
+
+  function resultText(st) {
+    if (st.result === 'checkmate') return st.winner === 'w' ? '将死 · 白方胜' : '将死 · 黑方胜';
+    if (st.result === 'stalemate') return '逼和 · 和棋';
+    if (st.result === 'fifty') return '五十回合规则 · 和棋';
+    if (st.result === 'repetition') return '三次重复局面 · 和棋';
+    if (st.result === 'insufficient') return '子力不足 · 和棋';
+    return '对局结束';
+  }
+
+  function renderStatus() {
+    var st = game.status, dot = $('turnDot'), status = $('status'), hint = $('hint');
+    dot.className = 'turn-dot ' + (game.pos.turn === 'w' ? 'w' : 'b');
+    if (st.over) {
+      status.textContent = resultText(st);
+      status.className = 'status ' + (st.result === 'checkmate' ? 'good' : '');
+      hint.textContent = '按「新局」再来一盘，或用「悔棋」回看。';
+    } else if (aiThinking) {
+      status.textContent = 'AI 思考中…';
+      status.className = 'status think';
+      hint.textContent = 'AI 正在计算合法着法，最多 400 毫秒。';
+    } else {
+      var side = game.pos.turn === 'w' ? '白方' : '黑方';
+      status.textContent = side + '走棋' + (st.check ? ' · 将军！' : '');
+      status.className = 'status ' + (st.check ? 'alert' : '');
+      if (st.check) hint.textContent = '你正被将军：必须应将，不能让自己的王留在被攻击状态。';
+      else if (selected !== null) hint.textContent = '点高亮圆点落子；点选中的棋子可取消。';
+      else hint.textContent = '点自己的棋子查看合法落点，再点目标格落子。';
+    }
+    $('undoBtn').disabled = game.history.length === 0;
+    $('level').value = String(level);
+    var segs = document.querySelectorAll('[data-mode]');
+    for (var i = 0; i < segs.length; i++) segs[i].setAttribute('aria-pressed', segs[i].getAttribute('data-mode') === mode ? 'true' : 'false');
+    $('level').disabled = mode !== 'ai';
+  }
+
+  function renderHistory() {
+    var box = $('historyBox');
+    var san = game.sanList;
+    if (!san.length) {
+      box.innerHTML = '<p class="none">还没有着法。</p>';
+      return;
+    }
+    var startFull = 1;
+    var rows = '';
+    var first = game.history.length ? game.history[0] : null;
+    if (first && first.move.piece) {
+      var color = first.move.piece === first.move.piece.toUpperCase() ? 'w' : 'b';
+      if (color === 'b') startFull = 1;
+    }
+    for (var i = 0; i < san.length; i += 2) {
+      var no = startFull + (i >> 1);
+      var white = san[i] || '';
+      var black = san[i + 1] || '';
+      rows += '<li><b>' + no + '.</b><span>' + esc(white) + '</span><span' + (black ? '' : ' class="blank"') + '>' + esc(black || '…') + '</span></li>';
+    }
+    box.innerHTML = '<ol>' + rows + '</ol>';
+    box.scrollTop = box.scrollHeight;
+  }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
+
+  // ---- game flow ---------------------------------------------------------
+  function newGame(fen) {
+    aiToken++;
+    aiThinking = false;
+    pendingPromo = null;
+    selected = null;
+    $('promo').hidden = true;
+    var grid = $('promoGrid');
+    if (grid) grid.innerHTML = '';
+    game = E.newGame(fen || E.START_FEN);
+    animSq = -1;
+    kbdSq = humanColor === 'w' ? 60 : 4;
+    render();
+    sfx('deal');
+  }
+
+  function canHuman() {
+    if (!game || game.status.over || aiThinking) return false;
+    return mode === 'local' || game.pos.turn === humanColor;
+  }
+
+  function isOwnPiece(sq) {
+    var p = game.pos.board[sq];
+    return !!p && E.pieceColor(p) === game.pos.turn;
+  }
+
+  function movesFromTo(from, to) {
+    var out = [];
+    for (var i = 0; i < legalCache.length; i++) {
+      if (legalCache[i].from === from && legalCache[i].to === to) out.push(legalCache[i]);
+    }
+    return out;
+  }
+
+  function tap(sq) {
+    if (!canHuman()) return;
+    kbdSq = sq;
+    if (selected !== null) {
+      if (sq === selected) { selected = null; render(); return; }
+      var options = movesFromTo(selected, sq);
+      if (options.length) { attempt(selected, sq, options); return; }
+    }
+    if (isOwnPiece(sq)) { selected = sq; render(); }
+    else { selected = null; render(); }
+  }
+
+  function attempt(from, to, options) {
+    options = options || movesFromTo(from, to);
+    if (!options.length) return;
+    if (options.length > 1) {
+      pendingPromo = { from: from, to: to, moves: options };
+      showPromo();
+      return;
+    }
+    commit(options[0]);
+  }
+
+  function commit(m) {
+    var wasCapture = !!m.captured || m.ep;
+    var result = E.applyMove(game, m);
+    if (!result.ok) { sfx('error'); return; }
+    selected = null;
+    pendingPromo = null;
+    $('promo').hidden = true;
+    $('promoGrid').innerHTML = '';
+    animSq = m.to;
+    render();
+    if (game.status.over) sfx('win');
+    else if (game.status.check) sfx('notify');
+    else sfx(wasCapture ? 'capture' : 'move');
+    if (!game.status.over && mode === 'ai' && game.pos.turn !== humanColor) scheduleAI();
+  }
+
+  function scheduleAI() {
+    if (mode !== 'ai' || game.status.over || game.pos.turn === humanColor) return;
+    var token = ++aiToken;
+    aiThinking = true;
+    renderStatus();
+    setTimeout(function () {
+      if (token !== aiToken || !game || game.status.over || mode !== 'ai') { aiThinking = false; renderStatus(); return; }
+      var cfg = D.levels[Math.min(3, Math.max(1, level)) - 1] || D.levels[1];
+      var move = E.aiMove(game.pos, { level: level, timeMs: Math.min(400, cfg.timeMs), seed: 7 });
+      if (token !== aiToken) { aiThinking = false; return; }
+      aiThinking = false;
+      if (!move) { render(); return; }
+      var wasCapture = !!move.captured || move.ep;
+      var applied = E.applyMove(game, move);
+      if (!applied.ok) { render(); return; }
+      animSq = move.to;
+      render();
+      if (game.status.over) sfx('win');
+      else if (game.status.check) sfx('notify');
+      else sfx(wasCapture ? 'capture' : 'move');
+    }, 70);
+  }
+
+  function undo() {
+    if (!game || !game.history.length) return;
+    aiToken++;
+    aiThinking = false;
+    pendingPromo = null;
+    $('promo').hidden = true;
+    selected = null;
+    E.undoMove(game);
+    if (mode === 'ai') {
+      while (game.history.length && game.pos.turn !== humanColor) E.undoMove(game);
+    }
+    render();
+    sfx('click');
+  }
+
+  function showPromo() {
+    var grid = $('promoGrid');
+    grid.innerHTML = '';
+    var color = pendingPromo && game.pos.board[pendingPromo.from] && E.isWhitePiece(game.pos.board[pendingPromo.from]) ? 'w' : 'b';
+    var order = ['Q', 'R', 'B', 'N'];
+    order.forEach(function (kind) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.setAttribute('aria-label', '升变为' + PNAME[kind]);
+      b.innerHTML = '<span class="promo-piece">' + pieceHtml(kind, color) + '</span><em>' + PNAME[kind] + '</em>';
+      b.addEventListener('click', function () {
+        if (!pendingPromo) return;
+        var chosen = null;
+        for (var i = 0; i < pendingPromo.moves.length; i++) if (pendingPromo.moves[i].promo === kind) chosen = pendingPromo.moves[i];
+        if (chosen) commit(chosen);
+      });
+      grid.appendChild(b);
+    });
+    $('promo').hidden = false;
+    var first = grid.querySelector('button');
+    if (first) first.focus();
+  }
+
+  function setMode(next) {
+    if (next === mode) return;
+    mode = next;
+    humanColor = 'w';
+    flipped = false;
+    if (mode === 'local') { buildBoard(); }
+    newGame();
+  }
+
+  function loadFEN(fen) {
+    try {
+      newGame(fen);
+      if (mode === 'ai' && !game.status.over && game.pos.turn !== humanColor) scheduleAI();
+      return true;
+    } catch (e) {
+      $('hint').textContent = 'FEN 无效：' + e.message;
+      return false;
+    }
+  }
+
+  // ---- input -------------------------------------------------------------
+  var board = $('board');
+  board.addEventListener('click', function (ev) {
+    var cell = ev.target && ev.target.closest ? ev.target.closest('.sq') : null;
+    if (!cell) return;
+    tap(parseInt(cell.getAttribute('data-sq'), 10));
+  });
+  board.addEventListener('keydown', function (ev) {
+    if (ev.key === 'Escape') { selected = null; render(); return; }
+    if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); tap(kbdSq); return; }
+    var dr = 0, df = 0;
+    if (ev.key === 'ArrowUp') dr = -1;
+    else if (ev.key === 'ArrowDown') dr = 1;
+    else if (ev.key === 'ArrowLeft') df = flipped ? 1 : -1;
+    else if (ev.key === 'ArrowRight') df = flipped ? -1 : 1;
+    else return;
+    ev.preventDefault();
+    var r = (kbdSq / 8) | 0, f = kbdSq & 7;
+    var nr = Math.max(0, Math.min(7, r + dr)), nf = Math.max(0, Math.min(7, f + df));
+    kbdSq = nr * 8 + nf;
+    render();
+    board.focus();
+  });
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key === 'Escape' && !$('promo').hidden) {
+      pendingPromo = null;
+      selected = null;
+      $('promo').hidden = true;
+      $('promoGrid').innerHTML = '';
+      render();
+    }
+  });
+
+  $('newBtn').addEventListener('click', function () { newGame(); });
+  $('undoBtn').addEventListener('click', undo);
+  $('promoCancel').addEventListener('click', function () {
+    pendingPromo = null;
+    selected = null;
+    $('promo').hidden = true;
+    $('promoGrid').innerHTML = '';
+    render();
+  });
+  $('level').addEventListener('change', function () {
+    level = Math.max(1, Math.min(3, parseInt(this.value, 10) || 2));
+    safeSet('chess-premium-level', String(level));
+    sfx('click');
+  });
+  var modeButtons = document.querySelectorAll('[data-mode]');
+  for (var mb = 0; mb < modeButtons.length; mb++) {
+    modeButtons[mb].addEventListener('click', function () { setMode(this.getAttribute('data-mode')); });
+  }
+  $('fenLoadBtn').addEventListener('click', function () {
+    var fen = $('fenInput').value.trim();
+    if (fen) loadFEN(fen); else $('hint').textContent = '请填写 FEN。';
+  });
+  $('fenCopyBtn').addEventListener('click', function () {
+    var fen = E.toFEN(game.pos);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(fen).then(function () { $('hint').textContent = 'FEN 已复制。'; }).catch(function () { $('hint').textContent = fen; });
+    } else {
+      $('hint').textContent = fen;
+    }
+  });
+
+  // ---- boot --------------------------------------------------------------
+  var storedLevel = parseInt(safeGet('chess-premium-level') || '2', 10);
+  if (storedLevel >= 1 && storedLevel <= 3) level = storedLevel;
+  buildBoard();
+  newGame();
+
+  // Public, read-only test/debug hook. No hidden information exists in chess.
+  window.__premium = {
+    state: function () {
+      return {
+        fen: E.toFEN(game.pos),
+        turn: game.pos.turn,
+        status: game.status.result || (game.status.over ? 'over' : 'playing'),
+        over: !!game.status.over,
+        check: !!game.status.check,
+        moveCount: game.sanList.length,
+        sanList: game.sanList.slice(),
+        captured: { w: game.captured.w.slice(), b: game.captured.b.slice() },
+        pieceCount: game.pos.board.filter(Boolean).length,
+        aiThinking: aiThinking,
+        level: level,
+        mode: mode,
+        selected: selected,
+        legalMoves: legalCache.map(function (m) { return E.uciOf(m); }),
+        castleRights: game.pos.castling,
+        half: game.pos.half,
+        full: game.pos.full
+      };
+    },
+    over: function () { return !!game.status.over; },
+    start: function () { newGame(); },
+    newGame: newGame,
+    undo: undo,
+    setLevel: function (n) { level = Math.max(1, Math.min(3, Number(n) || 2)); safeSet('chess-premium-level', String(level)); render(); },
+    setMode: function (m) { setMode(m === 'local' ? 'local' : 'ai'); },
+    tap: function (sq) { tap(Number(sq)); },
+    playUci: function (uci) {
+      if (!game || game.status.over) return false;
+      var m = E.moveFromUCI(game.pos, uci);
+      if (!m) return false;
+      commit(m);
+      return true;
+    },
+    loadFEN: loadFEN,
+    perft: function (d) { return E.perft(game.pos, d); }
+  };
+})();
+</script>
+</body>
+</html>

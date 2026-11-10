@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="车票之旅 美术合成页：本地生成的素材在浏览器中的渲染预览。">
+<link rel="icon" href="../../assets/icons/pioneers.svg">
+<title>车票之旅 · 局面合成</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;padding:0;background:#1c2734;overflow:hidden}
+body{font-family:-apple-system,"PingFang SC",sans-serif;color:#20242a}
+#stage{position:relative;overflow:hidden;background:
+  radial-gradient(900px 600px at 16% 8%,rgba(227,198,140,.20),transparent 60%),
+  radial-gradient(700px 500px at 92% 100%,rgba(60,102,140,.22),transparent 60%),
+  linear-gradient(155deg,#e9dfca,#cdbfa6 55%,#b9aa8e)}
+#stage::before{content:"";position:absolute;inset:0;background:url('../../assets/art/premium/ticket-to-ride/board.webp') center/760px;opacity:.20;mix-blend-mode:multiply}
+.frame{position:absolute;inset:24px;border:1px solid rgba(45,58,72,.32);border-radius:22px;box-shadow:inset 0 0 0 7px rgba(255,251,241,.20)}
+.titleblock{position:absolute;z-index:6;color:#f6ecd6}
+.kicker{font-size:16px;letter-spacing:.3em;color:#e3c68c;font-weight:700}
+.titleblock h1{font-family:"Songti SC","STSong",serif;font-weight:700;margin:9px 0 6px;font-size:76px;line-height:1.02;color:#fbf4e6;text-shadow:0 6px 26px rgba(18,24,32,.4)}
+.titleblock p{margin:0;font-size:18px;line-height:1.6;color:#eadfc8;max-width:430px}
+.seal{display:inline-flex;align-items:center;gap:8px;padding:7px 13px;border:1px solid rgba(227,198,140,.55);border-radius:999px;font-size:14px;color:#f1e2bf;letter-spacing:.07em;background:rgba(25,35,48,.38)}
+.mapcard{position:absolute;z-index:4;padding:14px;border-radius:18px;background:linear-gradient(160deg,rgba(250,244,230,.98),rgba(230,218,196,.98));box-shadow:0 34px 80px rgba(18,24,32,.44),inset 0 0 0 1px rgba(255,255,255,.5)}
+.mapcard svg{display:block;width:100%;height:100%}
+.city{fill:#2f3a46;stroke:#fffdf7;stroke-width:1.3}
+.lbl{font-family:-apple-system,"PingFang SC",sans-serif;font-size:12px;font-weight:700;fill:#2c3742;paint-order:stroke;stroke:rgba(255,253,247,.95);stroke-width:2.8px;stroke-linejoin:round}
+.route{stroke-linecap:round}
+.sidecard{position:absolute;z-index:5;padding:15px;border-radius:16px;background:linear-gradient(180deg,rgba(255,251,241,.98),rgba(240,230,211,.98));box-shadow:0 24px 60px rgba(20,26,34,.32);border:1px solid rgba(45,58,72,.20)}
+.sidecard h2{font-family:"Songti SC","STSong",serif;font-size:24px;margin:0 0 10px;color:#2c3742}
+.market{display:grid;grid-template-columns:repeat(5,1fr);gap:9px}
+.tcard{position:relative;height:112px;border-radius:9px;border:1px solid rgba(30,35,42,.28);background:#fffdf8;padding:5px;box-shadow:0 8px 16px rgba(40,30,18,.14);display:flex;flex-direction:column;gap:4px}
+.tcard .sw{flex:1;border-radius:5px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.35)}
+.tcard .nm{font-size:12px;font-weight:800;text-align:center;color:#2c3440}
+.tcard[data-c="red"] .sw{background:#b34336}.tcard[data-c="blue"] .sw{background:#3c668c}.tcard[data-c="green"] .sw{background:#4c7357}.tcard[data-c="yellow"] .sw{background:#d0a83c}.tcard[data-c="black"] .sw{background:#252b33}.tcard[data-c="wild"] .sw{background:linear-gradient(135deg,#242b36,#4d5a6b 45%,#b58a45 46%,#e3c68c 55%,#242b36 56%)}
+.ticketcard{position:absolute;z-index:6;width:210px;height:130px;border-radius:10px;background:linear-gradient(160deg,#fdf7e7,#eadcc0);border:1px solid rgba(70,52,30,.28);box-shadow:0 18px 36px rgba(30,22,12,.32);padding:13px;transform:rotate(-7deg)}
+.ticketcard::before{content:"";position:absolute;left:0;right:0;top:0;height:12px;border-radius:10px 10px 0 0;background:repeating-linear-gradient(90deg,#b34336 0 10px,#fdf7e7 10px 18px)}
+.ticketcard .tk{font-size:12px;letter-spacing:.14em;color:#8a6a3a;font-weight:700;margin-top:10px}
+.ticketcard .dest{font-family:"Songti SC","STSong",serif;font-size:18px;font-weight:700;margin-top:5px;color:#2f3a46}
+.ticketcard .val{position:absolute;right:13px;bottom:10px;font-size:22px;font-weight:800;color:#b34336}
+.train-obj{position:absolute;z-index:7;width:250px;height:160px;background:url('../../assets/art/premium/ticket-to-ride/train-car.webp') center/contain no-repeat;filter:drop-shadow(0 18px 22px rgba(20,22,28,.34))}
+.wood-obj{position:absolute;z-index:7;width:130px;height:110px;background:url('../../assets/art/premium/ticket-to-ride/wood-train.webp') center/contain no-repeat;filter:drop-shadow(0 12px 16px rgba(20,22,28,.3));transform:rotate(8deg)}
+.brass-obj{position:absolute;z-index:7;width:92px;height:92px;background:url('../../assets/art/premium/ticket-to-ride/brass-marker.webp') center/contain no-repeat;filter:drop-shadow(0 10px 14px rgba(20,22,28,.3))}
+.ticket-obj{position:absolute;z-index:7;width:190px;height:150px;background:url('../../assets/art/premium/ticket-to-ride/ticket.webp') center/contain no-repeat;filter:drop-shadow(0 16px 20px rgba(20,22,28,.3));transform:rotate(12deg)}
+#stage[data-shot="cover"]{width:1200px;height:1200px}
+#stage[data-shot="cover"] .titleblock{left:76px;top:82px;width:500px}
+#stage[data-shot="cover"] .mapcard{right:64px;bottom:90px;width:690px;height:620px;transform:rotate(-1.8deg)}
+#stage[data-shot="cover"] .sidecard{left:76px;bottom:108px;width:470px}
+#stage[data-shot="cover"] .train-obj{right:190px;top:84px}
+#stage[data-shot="cover"] .wood-obj{right:66px;top:220px}
+#stage[data-shot="cover"] .brass-obj{left:470px;bottom:96px}
+#stage[data-shot="cover"] .ticketcard{left:84px;bottom:500px}
+#stage[data-shot="cover"] .ticket-obj{right:520px;top:70px}
+#stage[data-shot="og"]{width:1200px;height:630px}
+#stage[data-shot="og"] .titleblock{left:62px;top:58px;width:420px}
+#stage[data-shot="og"] .titleblock h1{font-size:58px}
+#stage[data-shot="og"] .mapcard{right:48px;top:54px;width:560px;height:500px;transform:rotate(-1.4deg)}
+#stage[data-shot="og"] .sidecard{left:62px;bottom:50px;width:390px}
+#stage[data-shot="og"] .train-obj{right:560px;top:60px;width:210px;height:140px}
+#stage[data-shot="og"] .wood-obj{left:60px;top:46px;width:100px;height:86px}
+#stage[data-shot="og"] .brass-obj{display:none}
+#stage[data-shot="og"] .ticketcard{left:62px;bottom:250px;width:190px;height:118px}
+#stage[data-shot="og"] .ticket-obj{display:none}
+#stage[data-shot="detail1"],#stage[data-shot="detail2"]{width:1200px;height:800px}
+#stage[data-shot="detail1"] .titleblock,#stage[data-shot="detail2"] .titleblock{left:62px;top:54px;width:380px}
+#stage[data-shot="detail1"] .titleblock h1,#stage[data-shot="detail2"] .titleblock h1{font-size:56px}
+#stage[data-shot="detail1"] .mapcard{right:48px;top:64px;width:640px;height:640px;transform:rotate(1.4deg)}
+#stage[data-shot="detail2"] .mapcard{right:60px;top:40px;width:650px;height:650px;transform:rotate(-2.4deg)}
+#stage[data-shot="detail1"] .sidecard{left:62px;bottom:58px;width:350px}
+#stage[data-shot="detail2"] .sidecard{left:62px;bottom:48px;width:350px}
+#stage[data-shot="detail1"] .train-obj{left:448px;bottom:80px;width:210px;height:140px}
+#stage[data-shot="detail2"] .train-obj{left:430px;top:80px;width:210px;height:140px}
+#stage[data-shot="detail1"] .wood-obj{left:470px;top:52px}
+#stage[data-shot="detail2"] .wood-obj{left:450px;bottom:44px}
+#stage[data-shot="detail1"] .brass-obj{left:66px;bottom:198px}
+#stage[data-shot="detail2"] .brass-obj{left:66px;top:198px}
+#stage[data-shot="detail1"] .ticketcard{left:62px;top:238px;width:190px;height:118px}
+#stage[data-shot="detail2"] .ticketcard{left:62px;top:238px;width:190px;height:118px}
+#stage[data-shot="detail1"] .ticket-obj,#stage[data-shot="detail2"] .ticket-obj{display:none}
+</style>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/ticket-to-ride-premium/art-render.html">
+<style>
+/* site-quality: fixed-size art composition must not create page overflow */
+html{overflow-x:hidden}
+body{width:100%!important;max-width:100vw!important;overflow-x:hidden}
+.stage,#stage{max-width:100vw;overflow:hidden}
+</style>
+</head>
+<body>
+<div aria-hidden="true" style="position:absolute;width:1px;height:1px;overflow:hidden;opacity:0">
+  <img src="../../assets/art/premium/ticket-to-ride/train-car.webp" alt="">
+  <img src="../../assets/art/premium/ticket-to-ride/card-stock.webp" alt="">
+  <img src="../../assets/art/premium/ticket-to-ride/board.webp" alt="">
+  <img src="../../assets/art/premium/ticket-to-ride/ticket.webp" alt="">
+  <img src="../../assets/art/premium/ticket-to-ride/brass-marker.webp" alt="">
+  <img src="../../assets/art/premium/ticket-to-ride/wood-train.webp" alt="">
+</div>
+<div id="stage" data-shot="cover">
+  <div class="frame"></div>
+  <div class="titleblock"><div class="kicker">TICKET TO RIDE · USA</div><h1>车票<br>之旅</h1><p>铺设铁路，连通城市，<br>把目的地任务变成分数。</p><div class="seal">36 城美国网 · 110 张车厢卡 · 10 分最长路线</div></div>
+  <div class="mapcard"><svg id="map" viewBox="0 0 290 200"></svg></div>
+  <div class="sidecard"><h2>明牌区</h2><div class="market" id="market"></div></div>
+  <div class="train-obj"></div><div class="wood-obj"></div><div class="brass-obj"></div><div class="ticket-obj"></div>
+  <div class="ticketcard"><div class="tk">DESTINATION TICKET</div><div class="dest">纽约 → 迈阿密</div><div class="val">20</div></div>
+</div>
+<script>
+(function () {
+  'use strict';
+  var CITIES = [[34,20,'西雅图'],[32,48,'波特兰'],[20,92,'旧金山'],[38,128,'洛杉矶'],[74,134,'菲尼克斯'],[116,96,'丹佛'],[148,140,'达拉斯'],[186,72,'芝加哥'],[250,62,'纽约'],[202,130,'亚特兰大'],[242,178,'迈阿密'],[74,72,'盐湖城'],[146,170,'休斯敦'],[158,94,'堪萨斯城'],[186,102,'圣路易斯'],[184,162,'新奥尔良'],[232,94,'华盛顿'],[266,46,'波士顿'],[158,54,'明尼阿波利斯'],[142,76,'奥马哈']];
+  var ROUTES = [[0,11,'#d0a83c',2],[0,1,'#3c668c',1],[1,2,'#4c7357',3],[2,3,'#b47c9a',2],[3,4,'#c06e35',2],[4,5,'#b9af9f',3],[5,11,'#b9af9f',2],[5,6,'#b34336',2],[6,9,'#b9af9f',2],[9,10,'#3c668c',5],[9,8,'#c06e35',2],[7,8,'#252b33',2],[7,6,'#4c7357',3],[7,11,'#b34336',3],[1,11,'#ece6d8',2],[0,7,'#ece6d8',4],[3,6,'#3c668c',3],[8,10,'#4c7357',4],[2,5,'#d0a83c',4],[7,9,'#252b33',2],[4,6,'#c06e35',3],[6,12,'#b9af9f',1],[12,15,'#b9af9f',2],[15,9,'#d0a83c',4],[15,10,'#b34336',6],[14,7,'#4c7357',2],[14,13,'#3c668c',2],[13,5,'#252b33',4],[13,19,'#b9af9f',1],[19,18,'#b9af9f',2],[18,7,'#b34336',3],[18,5,'#b47c9a',4],[5,19,'#b47c9a',4],[14,6,'#b9af9f',2],[14,9,'#b9af9f',3],[16,9,'#d0a83c',4],[16,8,'#c06e35',2],[16,7,'#ece6d8',3],[17,8,'#d0a83c',2],[17,7,'#b34336',3]];
+  var shot = new URLSearchParams(location.search).get('shot') || 'cover';
+  document.getElementById('stage').setAttribute('data-shot', shot);
+  var svg = '';
+  ROUTES.forEach(function (r) {
+    var a = CITIES[r[0]], b = CITIES[r[1]];
+    svg += '<line class="route" x1="' + a[0] + '" y1="' + a[1] + '" x2="' + b[0] + '" y2="' + b[1] + '" stroke="' + r[2] + '" stroke-width="' + (r[3] >= 5 ? 4.4 : r[3] >= 3 ? 3.8 : 3.2) + '" stroke-dasharray="' + (r[2] === '#b9af9f' ? '4 3' : 'none') + '"></line>';
+  });
+  CITIES.forEach(function (c) {
+    svg += '<circle class="city" cx="' + c[0] + '" cy="' + c[1] + '" r="2.7"></circle><text class="lbl" x="' + (c[0] + 4) + '" y="' + (c[1] - 4) + '">' + c[2] + '</text>';
+  });
+  document.getElementById('map').innerHTML = svg;
+  var cards = [['red','红'],['blue','蓝'],['green','绿'],['yellow','黄'],['wild','机车']];
+  document.getElementById('market').innerHTML = cards.map(function (c) {
+    return '<div class="tcard" data-c="' + c[0] + '"><div class="sw"></div><div class="nm">' + c[1] + '</div></div>';
+  }).join('');
+  var imgs = Array.from(document.images), pending = imgs.filter(function (i) { return !i.complete; });
+  Promise.all(pending.map(function (i) { return new Promise(function (r) { i.onload = i.onerror = r; }); })).then(function () {
+    requestAnimationFrame(function () { document.body.setAttribute('data-ready', 'true'); });
+  });
+  if (!pending.length) requestAnimationFrame(function () { document.body.setAttribute('data-ready', 'true'); });
+})();
+</script>
+</body>
+</html>

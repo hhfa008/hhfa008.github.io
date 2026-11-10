@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Kot E2E 浏览器自动化测试页。">
+<title>Kot E2E Harness</title>
+<style>
+html,body{margin:0;background:#000;color:#9fe;font:14px/1.4 monospace;overflow:hidden}
+#stage{position:fixed;inset:0;opacity:.001;pointer-events:none;z-index:-1;overflow:visible}
+#stage iframe{position:absolute;left:0;top:0;border:0;background:#070b16}
+#out{position:fixed;left:8px;top:8px;white-space:pre-wrap;max-width:90vw;max-height:90vh;overflow:auto}
+</style>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/kot-premium/e2e-harness.html">
+</head>
+<body>
+<div id="stage"></div>
+<pre id="out">running…</pre>
+<script>
+(function () {
+  'use strict';
+  var params = new URLSearchParams(location.search);
+  var mode = params.get('mode') || 'desktop';
+  var results = [];
+  var failures = [];
+  var timings = {};
+  var flags = {};
+  var viewports = {};
+  var stage = document.getElementById('stage');
+  var out = document.getElementById('out');
+  var sleep = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
+
+  function chk(section, name, cond, detail) {
+    var ok = !!cond;
+    results.push({ section: section, name: name, ok: ok });
+    if (!ok) {
+      var msg = section + ' / ' + name + (detail == null ? '' : ' — ' + String(detail).slice(0, 140));
+      failures.push(msg);
+      console.log('E2E_FAIL ' + msg);
+    }
+    return ok;
+  }
+
+  async function loadFrame(width, height, query) {
+    var f = document.createElement('iframe');
+    f.style.width = width + 'px';
+    f.style.height = height + 'px';
+    f.setAttribute('title', 'kot frame ' + width + 'x' + height);
+    f.src = '/games/boardgame/kot-premium/index.html?' + query;
+    stage.appendChild(f);
+    for (var i = 0; i < 240; i++) {
+      try {
+        var w = f.contentWindow;
+        if (w && w.KOT_PREMIUM && w.KOT_PREMIUM.bootMs != null) return f;
+      } catch (e) { /* loading */ }
+      await sleep(50);
+    }
+    throw new Error('frame timeout ' + width + 'x' + height);
+  }
+
+  function frameMetrics(f) {
+    var doc = f.contentDocument;
+    var win = f.contentWindow;
+    var de = doc.documentElement;
+    var over = [];
+    doc.querySelectorAll('body *').forEach(function (el) {
+      if (el.namespaceURI !== 'http://www.w3.org/1999/xhtml') return;
+      var s = win.getComputedStyle(el);
+      if (s.position === 'fixed' || s.position === 'sticky') return;
+      var r = el.getBoundingClientRect();
+      if (r.width > 0 && (r.right > de.clientWidth + 1 || r.left < -1)) {
+        over.push({ tag: el.tagName, cls: String(el.className || '').slice(0, 40) });
+      }
+    });
+    return {
+      innerWidth: win.innerWidth, clientWidth: de.clientWidth, scrollWidth: de.scrollWidth,
+      bodyScrollWidth: doc.body ? doc.body.scrollWidth : 0,
+      bodyMinHeight: win.getComputedStyle(doc.body).minHeight,
+      bodyPadBottom: win.getComputedStyle(doc.body).paddingBottom,
+      overflow: over.slice(0, 8)
+    };
+  }
+
+  function touchTargets(f) {
+    var doc = f.contentDocument;
+    var win = f.contentWindow;
+    var nodes = doc.querySelectorAll('header button, header a, main button, main select, .info-link, #actionDock button');
+    var bad = [];
+    nodes.forEach(function (el) {
+      var s = win.getComputedStyle(el);
+      if (el.offsetParent === null && s.position !== 'fixed') return;
+      var r = el.getBoundingClientRect();
+      if (r.width <= 0 || r.height <= 0) return;
+      if (r.height < 43.5 || r.width < 43.5) {
+        bad.push({ tag: el.tagName, cls: String(el.className || '').slice(0, 40), w: Math.round(r.width), h: Math.round(r.height) });
+      }
+    });
+    return bad;
+  }
+
+  function fontSizes(f) {
+    var win = f.contentWindow;
+    var doc = f.contentDocument;
+    function size(sel) {
+      var el = doc.querySelector(sel);
+      return el ? parseFloat(win.getComputedStyle(el).fontSize) : null;
+    }
+    function visible(el) {
+      var s = win.getComputedStyle(el);
+      if (s.display === 'none' || s.visibility === 'hidden' || parseFloat(s.opacity) === 0) return false;
+      var r = el.getBoundingClientRect();
+      return r.width > 0 && r.height > 0;
+    }
+    var nodes = doc.querySelectorAll('p, span, li, a, button, label, td, th, h1, h2, h3, h4, h5, h6, div, small, strong, em');
+    var smallText = [];
+    var minVisible = 999;
+    for (var i = 0; i < nodes.length && smallText.length < 40; i++) {
+      var n = nodes[i];
+      if (!visible(n)) continue;
+      var direct = false;
+      for (var c = 0; c < n.childNodes.length; c++) {
+        var ch = n.childNodes[c];
+        if (ch.nodeType === 3 && ch.nodeValue && ch.nodeValue.trim().length > 1) { direct = true; break; }
+      }
+      if (!direct) continue;
+      var fs = parseFloat(win.getComputedStyle(n).fontSize) || 0;
+      if (fs && fs < minVisible) minVisible = fs;
+      if (fs && fs < 12) {
+        smallText.push({ tag: n.tagName.toLowerCase(), fontSize: fs, text: (n.textContent || '').trim().slice(0, 32) });
+      }
+    }
+    return {
+      body: parseFloat(win.getComputedStyle(doc.body).fontSize),
+      status: size('.status-text'), sub: size('.status-sub'), btn: size('.btn'),
+      dock: size('#actionDock .btn'), power: size('.power-card p'), log: size('.log-list li'),
+      minVisible: minVisible === 999 ? null : minVisible, smallText: smallText
+    };
+  }
+
+  function dockInfo(f) {
+    var win = f.contentWindow;
+    var doc = f.contentDocument;
+    var dock = doc.querySelector('#actionDock');
+    if (!dock) return { visible: false };
+    var r = dock.getBoundingClientRect();
+    var btns = Array.prototype.map.call(dock.querySelectorAll('button'), function (b) {
+      var br = b.getBoundingClientRect();
+      return { text: b.textContent.trim().slice(0, 18), w: Math.round(br.width), h: Math.round(br.height), bottom: Math.round(br.bottom) };
+    });
+    return {
+      visible: !dock.hidden && win.getComputedStyle(dock).display !== 'none',
+      position: win.getComputedStyle(dock).position,
+      top: Math.round(r.top), bottom: Math.round(r.bottom), height: Math.round(r.height), buttons: btns
+    };
+  }
+
+  function tap(f, selector, fixed) {
+    var doc = f.contentDocument;
+    var win = f.contentWindow;
+    var el = doc.querySelector(selector);
+    if (!el) throw new Error('missing tap target ' + selector);
+    if (!fixed) {
+      try { el.scrollIntoView({ block: 'center', inline: 'center' }); } catch (e) { el.scrollIntoView(); }
+    }
+    var r = el.getBoundingClientRect();
+    var x = r.left + r.width / 2;
+    var y = r.top + r.height / 2;
+    var touch;
+    try {
+      touch = new win.Touch({
+        identifier: 1, target: el, clientX: x, clientY: y, pageX: x, pageY: y,
+        screenX: x, screenY: y, radiusX: 2, radiusY: 2, force: 1
+      });
+    } catch (e) {
+      touch = null;
+    }
+    var opts = { bubbles: true, cancelable: true, composed: true };
+    function fireTouch(type, touches, changed) {
+      try {
+        el.dispatchEvent(new win.TouchEvent(type, Object.assign({}, opts, {
+          touches: touches, targetTouches: touches, changedTouches: changed || touches
+        })));
+      } catch (e) { /* TouchEvent unavailable */ }
+    }
+    function firePointer(type) {
+      try {
+        el.dispatchEvent(new win.PointerEvent(type, Object.assign({}, opts, {
+          pointerType: 'touch', isPrimary: true, clientX: x, clientY: y
+        })));
+      } catch (e) { /* PointerEvent unavailable */ }
+    }
+    fireTouch('touchstart', touch ? [touch] : [], touch ? [touch] : []);
+    firePointer('pointerdown');
+    firePointer('pointerup');
+    fireTouch('touchend', [], touch ? [touch] : []);
+    el.dispatchEvent(new win.MouseEvent('click', Object.assign({}, opts, {
+      clientX: x, clientY: y, button: 0, buttons: 0
+    })));
+    return { x: x, y: y, w: Math.round(r.width), h: Math.round(r.height) };
+  }
+
+  async function loadAssets(f) {
+    var win = f.contentWindow;
+    var dir = '/games/assets/art/premium/kot/';
+    var names = [
+      'monster-emberwyrm.webp', 'monster-tideback.webp', 'monster-lunamantis.webp',
+      'monster-rustfang.webp', 'monster-frosthorn.webp', 'monster-sporecolossus.webp',
+      'die-face.webp', 'tokyo-night.webp', 'cover.webp', 'og.webp', 'detail.webp'
+    ];
+    var loaded = [];
+    for (var i = 0; i < names.length; i++) {
+      loaded.push(await new Promise(function (resolve) {
+        var img = new win.Image();
+        var done = false;
+        var timer = setTimeout(function () { if (!done) { done = true; resolve({ name: names[i], ok: false }); } }, 6000);
+        img.onload = function () {
+          if (done) return; done = true; clearTimeout(timer);
+          resolve({ name: names[i], ok: true, w: img.naturalWidth, h: img.naturalHeight });
+        };
+        img.onerror = function () {
+          if (done) return; done = true; clearTimeout(timer);
+          resolve({ name: names[i], ok: false });
+        };
+        img.src = dir + names[i];
+      }));
+    }
+    return loaded;
+  }
+
+  async function runFlow(section, width, height, seed, queryExtra) {
+    var f = await loadFrame(width, height, 'seed=' + seed + '&fast=1' + (queryExtra || ''));
+    var win = f.contentWindow;
+    var doc = f.contentDocument;
+    var K = win.KOT_PREMIUM;
+    var started = win.performance.now();
+
+    var initial = {
+      players: K.getState().players.length,
+      dice: doc.querySelectorAll('.die').length,
+      phase: K.getState().phase,
+      bootMs: K.bootMs,
+      simple: K.isSimpleDice(),
+      ios: K.isIOS(),
+      dom: doc.getElementsByTagName('*').length,
+      shared: K.shared()
+    };
+    chk(section, '初始 2 人 / 6 骰', initial.players === 2 && initial.dice === 6, JSON.stringify(initial));
+    chk(section, 'shared shuffle/sfx/rewards/leaderboard 已加载',
+      initial.shared.shuffle && initial.shared.sfx && initial.shared.rewards && initial.shared.leaderboard,
+      JSON.stringify(initial.shared));
+    chk(section, 'boot ≤120ms', initial.bootMs <= 120, initial.bootMs.toFixed(1) + 'ms');
+    chk(section, 'DOM ≤1200', initial.dom <= 1200, initial.dom);
+    timings[section + '.bootMs'] = Math.round(initial.bootMs * 10) / 10;
+
+    var m = frameMetrics(f);
+    chk(section, '无横向滚动', m.scrollWidth <= m.clientWidth + 1 && m.bodyScrollWidth <= m.clientWidth + 1 && m.overflow.length === 0, JSON.stringify(m));
+    chk(section, '100dvh/min-height 生效', m.bodyMinHeight !== 'auto' && parseFloat(m.bodyMinHeight) >= height - 1, m.bodyMinHeight + ' / ' + height);
+    chk(section, 'safe-area padding 生效', parseFloat(m.bodyPadBottom) >= 80, m.bodyPadBottom);
+    var targets = touchTargets(f);
+    chk(section, '触控目标 ≥44px', targets.length === 0, JSON.stringify(targets));
+    var fonts = fontSizes(f);
+    chk(section, '字号可读（所有直接文本 ≥12px）', fonts.body >= 14 && fonts.status >= 13 && fonts.minVisible >= 12, JSON.stringify(fonts));
+    viewports[section] = { width: width, height: height, metrics: m, fonts: fonts, targetIssues: targets.length };
+
+    var dock = dockInfo(f);
+    chk(section, '单手 dock 贴底且可见', dock.visible && dock.position === 'fixed' && dock.bottom <= height && dock.top >= height * 0.62 && dock.buttons.length > 0, JSON.stringify(dock));
+    chk(section, 'dock 按钮 ≥44px', dock.buttons.length > 0 && dock.buttons.every(function (b) { return b.h >= 44 && b.w >= 44; }), JSON.stringify(dock.buttons));
+    flags[section + '.dock'] = dock;
+
+    tap(f, '#actionDock [data-act="roll"]', true);
+    var roll1 = {
+      rollCount: K.getState().rollCount,
+      rollsLeft: K.getState().rollsLeft,
+      anims: Array.prototype.reduce.call(doc.querySelectorAll('.die .cube'), function (n, c) { return n + c.getAnimations().length; }, 0),
+      flat: doc.querySelectorAll('.die.rolling-flat').length,
+      simple: K.isSimpleDice(),
+      audio: K.audio.isUnlocked(),
+      faces: K.getState().dice.map(function (d) { return d.face; })
+    };
+    chk(section, '触屏掷骰成功', roll1.rollCount === 1 && roll1.rollsLeft === 2, JSON.stringify(roll1));
+    chk(section, '首次触摸解锁音效', roll1.audio === true, roll1.audio);
+    if (!initial.simple) chk(section, '3D 骰子动画存在', roll1.anims > 0, roll1.anims);
+    if (initial.simple) chk(section, '平面骰子降级生效', roll1.flat > 0 || roll1.anims === 0, JSON.stringify(roll1));
+    timings[section + '.rollAnims'] = roll1.anims;
+
+    tap(f, '.die');
+    var lock = { locked: K.getState().dice[0].locked, pressed: doc.querySelectorAll('.die')[0].getAttribute('aria-pressed') };
+    chk(section, '触屏锁定骰子', lock.locked === true && lock.pressed === 'true', JSON.stringify(lock));
+
+    tap(f, '#actionDock [data-act="roll"]', true);
+    chk(section, '触屏第二次掷骰', K.getState().rollCount === 2, K.getState().rollCount);
+    tap(f, '#actionDock [data-act="resolveRoll"]', true);
+    var afterResolve = {
+      phase: K.getState().phase,
+      pending: K.getState().pending && K.getState().pending.type,
+      enter: !!doc.querySelector('#actionDock [data-act="enterTokyo"]'),
+      yield: !!doc.querySelector('#actionDock [data-act="yieldDecision"]'),
+      log: K.getState().log.map(function (e) { return e.type; })
+    };
+    var entered = false;
+    var arrive = false;
+    if (afterResolve.enter) {
+      tap(f, '#actionDock [data-act="enterTokyo"]', true);
+      entered = !!K.getState().players[0].location;
+      arrive = !!doc.querySelector('.tokyo-scene .monster-token.arrive');
+      chk(section, '触屏进入东京', entered && K.getState().players[0].vp >= 1, JSON.stringify({ loc: K.getState().players[0].location, vp: K.getState().players[0].vp }));
+      chk(section, '进入东京动效存在', arrive === true);
+    } else if (afterResolve.yield) {
+      tap(f, '#actionDock [data-act="yieldDecision"][data-leave="0"]', true);
+    }
+    if (!entered) entered = !!K.getState().players[0].location;
+    chk(section, '本局已进入东京', entered || afterResolve.log.indexOf('enter') !== -1, JSON.stringify(afterResolve));
+
+    var attackSeen = false;
+    var shakeSeen = false;
+    var floatSeen = false;
+    var buyReady = false;
+    for (var i = 0; i < 600; i++) {
+      K.stopAI();
+      var st = K.getState();
+      if (!st || st.gameOver) break;
+      var humanBuy = !st.pending && st.current === 0 && st.phase === 'buy' &&
+        st.players[0].energy >= 3 && K.legalMoves().some(function (mv) { return mv.type === 'buyCard'; });
+      if (humanBuy) { buyReady = true; break; }
+      var mv = K.autoMove();
+      if (!mv) break;
+      var before = st.logSeq;
+      K.dispatch(mv);
+      K.stopAI();
+      var ns = K.getState();
+      var types = ns.log.filter(function (e) { return e.seq > before; }).map(function (e) { return e.type; });
+      if (types.indexOf('attack') !== -1) {
+        attackSeen = true;
+        if (doc.querySelector('#tokyoScene').classList.contains('shake')) shakeSeen = true;
+        if (doc.querySelectorAll('.fx-float.dmg').length) floatSeen = true;
+      }
+    }
+    chk(section, '到达人类购卡阶段', buyReady);
+
+    var bought = false;
+    var buyAnimated = false;
+    if (buyReady) {
+      var beforeBuy = { energy: K.getState().players[0].energy, cards: K.getState().players[0].cards.slice() };
+      tap(f, '#actionDock [data-buy]', true);
+      var afterBuy = {
+        energy: K.getState().players[0].energy, cards: K.getState().players[0].cards.slice(),
+        pulse: doc.querySelector('#shopPanel').classList.contains('pulse'),
+        float: doc.querySelectorAll('.fx-float.buy').length
+      };
+      bought = afterBuy.cards.length > beforeBuy.cards.length && afterBuy.energy < beforeBuy.energy;
+      buyAnimated = afterBuy.pulse && afterBuy.float > 0;
+      chk(section, '触屏购卡扣能量并入手', bought, JSON.stringify({ beforeBuy: beforeBuy, afterBuy: afterBuy }));
+      chk(section, '购卡脉冲/浮动动效', buyAnimated, JSON.stringify(afterBuy));
+    }
+
+    /* 若购卡前还没出现爪击，继续自动推进，直到出现攻击或终局。 */
+    if (!attackSeen && !K.getState().gameOver) {
+      for (var j = 0; j < 320 && !attackSeen && !K.getState().gameOver; j++) {
+        K.stopAI();
+        var st2 = K.getState();
+        if (!st2 || st2.gameOver) break;
+        var mv2 = K.autoMove();
+        if (!mv2) break;
+        var before2 = st2.logSeq;
+        K.dispatch(mv2);
+        K.stopAI();
+        var ns2 = K.getState();
+        var types2 = ns2.log.filter(function (e) { return e.seq > before2; }).map(function (e) { return e.type; });
+        if (types2.indexOf('attack') !== -1) {
+          attackSeen = true;
+          if (doc.querySelector('#tokyoScene').classList.contains('shake')) shakeSeen = true;
+          if (doc.querySelectorAll('.fx-float.dmg').length) floatSeen = true;
+        }
+      }
+    }
+    chk(section, '出现爪击伤害', attackSeen);
+    chk(section, '攻击震动/浮动', shakeSeen && floatSeen);
+
+    var finish = K.simulate(6000);
+    var finalState = K.getState();
+    chk(section, '到达终局并显示结果', finalState.gameOver && !doc.querySelector('#resultOverlay').hidden, JSON.stringify({ steps: finish.steps, winner: finalState.winner, reason: finalState.winReason }));
+    chk(section, '终局庆祝动效存在', doc.querySelectorAll('#confetti i').length > 0 && doc.querySelectorAll('.result-rays').length > 0);
+    chk(section, 'shared Rewards 展示 XP', doc.querySelector('#resultXp').textContent.indexOf('XP') !== -1, doc.querySelector('#resultXp').textContent);
+    chk(section, 'shared Leaderboard 展示挑战码', !doc.querySelector('#resultChallenge').hidden && /挑战码/.test(doc.querySelector('#resultChallenge').textContent), doc.querySelector('#resultChallenge').textContent);
+    tap(f, '#resultRestart', true);
+    var reset = {
+      overlay: !doc.querySelector('#resultOverlay').hidden,
+      turn: K.getState().turn, gameOver: K.getState().gameOver,
+      hp: K.getState().players.map(function (p) { return p.hp; }),
+      vp: K.getState().players.map(function (p) { return p.vp; }),
+      loc: K.getState().players.map(function (p) { return p.location; }),
+      dice: K.getState().dice.length
+    };
+    chk(section, '触屏重开并重置', reset.overlay === false && reset.turn === 1 && reset.gameOver === false &&
+      reset.hp.every(function (h) { return h === 10; }) && reset.vp.every(function (v) { return v === 0; }) &&
+      reset.loc.every(function (l) { return l === null; }) && reset.dice === 6, JSON.stringify(reset));
+
+    var t0 = win.performance.now();
+    K.stopAI();
+    K.dispatch({ type: 'roll' });
+    K.stopAI();
+    var rollRenderMs = win.performance.now() - t0;
+    K.restart();
+    chk(section, '单次掷骰渲染 ≤100ms', rollRenderMs <= 100, rollRenderMs.toFixed(1) + 'ms');
+    timings[section + '.rollRenderMs'] = Math.round(rollRenderMs * 10) / 10;
+    timings[section + '.domNodes'] = doc.getElementsByTagName('*').length;
+
+    flags[section + '.attack'] = attackSeen;
+    flags[section + '.bought'] = bought;
+    flags[section + '.entered'] = entered;
+    flags[section + '.audioUnlocked'] = roll1.audio;
+    flags[section + '.simpleDice'] = roll1.simple;
+    flags[section + '.ios'] = initial.ios;
+    flags[section + '.shared'] = initial.shared;
+    flags[section + '.elapsedMs'] = Math.round(win.performance.now() - started);
+
+    var resources = win.performance.getEntriesByType('resource').map(function (e) { return e.name; });
+    var external = resources.filter(function (url) {
+      return /^https?:/.test(url) && url.indexOf('http://127.0.0.1:8765/') !== 0;
+    });
+    chk(section, 'iframe 无外部资源请求', external.length === 0, JSON.stringify(external.slice(0, 5)));
+
+    var assets = await loadAssets(f);
+    chk(section, '11 个本地美术资源加载', assets.every(function (a) { return a.ok; }), JSON.stringify(assets.filter(function (a) { return !a.ok; })));
+
+    f.remove();
+    return { attackSeen: attackSeen, bought: bought, entered: entered };
+  }
+
+  async function smoke(width, height, seed) {
+    var section = width + 'x' + height;
+    var f = await loadFrame(width, height, 'seed=' + seed + '&fast=1');
+    var m = frameMetrics(f);
+    chk(section, '无横向滚动', m.scrollWidth <= m.clientWidth + 1 && m.overflow.length === 0, JSON.stringify(m));
+    var targets = touchTargets(f);
+    chk(section, '触控目标 ≥44px', targets.length === 0, JSON.stringify(targets));
+    var b = f.contentDocument.querySelector('[data-act="roll"]');
+    if (!b) { chk(section, '存在掷骰按钮', false); f.remove(); return; }
+    b.scrollIntoView({ block: 'center' });
+    var r = b.getBoundingClientRect();
+    chk(section, '主按钮 ≥44px', r.height >= 44 && r.width >= 44, JSON.stringify({ w: r.width, h: r.height }));
+    tap(f, '[data-act="roll"]');
+    chk(section, '触屏掷骰', f.contentWindow.KOT_PREMIUM.getState().rollCount === 1, f.contentWindow.KOT_PREMIUM.getState().rollCount);
+    f.remove();
+  }
+
+  async function main() {
+    try {
+      if (mode === 'ios') {
+        await runFlow('ios-390x844', 390, 844, 20261114, '');
+      } else {
+        await runFlow('390x844', 390, 844, 20261110, '');
+        await runFlow('320x568', 320, 568, 20261111, '');
+
+        await smoke(844, 390, 20261112);
+        await smoke(768, 1024, 20261113);
+        await smoke(1024, 768, 20261113);
+
+        var reduced = await loadFrame(390, 844, 'seed=20261115&fast=1&reduce=1');
+        var rw = reduced.contentWindow;
+        var rd = reduced.contentDocument;
+        chk('reduced-motion', 'forced reduce 生效', rw.KOT_PREMIUM.isSimpleDice() === true && rd.documentElement.classList.contains('simple-dice'));
+        tap(reduced, '#actionDock [data-act="roll"]', true);
+        var ra = {
+          rollCount: rw.KOT_PREMIUM.getState().rollCount,
+          anims: Array.prototype.reduce.call(rd.querySelectorAll('.die .cube'), function (n, c) { return n + c.getAnimations().length; }, 0),
+          flat: rd.querySelectorAll('.die.rolling-flat').length
+        };
+        chk('reduced-motion', '可掷骰且无 3D 动效', ra.rollCount === 1 && ra.anims === 0, JSON.stringify(ra));
+        chk('reduced-motion', '保留平面降级', ra.flat > 0 || ra.anims === 0, JSON.stringify(ra));
+        reduced.remove();
+      }
+    } catch (err) {
+      chk('harness', '未捕获异常', false, err && err.message ? err.message : String(err));
+    }
+
+    var passed = results.filter(function (r) { return r.ok; }).length;
+    var failed = results.length - passed;
+    var report = {
+      mode: mode,
+      pass: passed,
+      fail: failed,
+      viewports: viewports,
+      timings: timings,
+      flags: flags,
+      failures: failures.slice(0, 16)
+    };
+    document.title = 'E2E_RESULT::' + JSON.stringify(report);
+    out.textContent = JSON.stringify(report, null, 2);
+    console.log('E2E_SUMMARY ' + JSON.stringify({
+      mode: mode, pass: passed, fail: failed,
+      v390: flags['390x844.attack'] === true,
+      v320: flags['320x568.attack'] === true,
+      ios: mode === 'ios' ? flags['ios-390x844.audioUnlocked'] === true : undefined,
+      boot: timings['390x844.bootMs'],
+      roll: timings['390x844.rollRenderMs'],
+      dom: timings['390x844.domNodes']
+    }));
+    if (failed) failures.slice(0, 16).forEach(function (f) { console.log('E2E_FAIL ' + f); });
+  }
+
+  main();
+})();
+</script>
+</body>
+</html>

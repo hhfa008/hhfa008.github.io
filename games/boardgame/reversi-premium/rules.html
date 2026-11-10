@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="黑白棋 Reversi 完整规则：8×8 棋盘、夹击翻面、跳过、终局计分、占角与行动力策略，附开局图示。">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#12100c">
+<title>黑白棋规则 · Reversi Rules</title>
+<style>
+:root{
+  --serif:"Songti SC","Iowan Old Style","Palatino Linotype","Noto Serif SC",Georgia,serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --bg:#12100c;--panel:#211b13;--panel-2:#2a2218;--ink:#f3e9d6;--dim:#b9a98e;
+  --gold:#d8b26c;--gold-2:#f1d9a5;--line:rgba(216,178,108,.26);--felt:#2f6046;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;color:var(--ink);font:16px/1.7 var(--sans);background:linear-gradient(160deg,#12100c,#1b1711 70%,#12100c);overflow-x:hidden}
+a{color:var(--gold-2);text-underline-offset:3px}
+.wrap{max-width:860px;margin:0 auto;padding:max(18px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(40px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.mark{width:46px;height:46px;border-radius:12px;flex:none;position:relative;background:linear-gradient(145deg,#3f2f1c,#17120b);border:1px solid var(--line)}
+.mark::before,.mark::after{content:"";position:absolute;width:21px;height:21px;border-radius:50%;border:1px solid rgba(216,178,108,.55)}
+.mark::before{left:5px;top:6px;background:radial-gradient(circle at 34% 30%,#4b535b,#0a0c0e)}
+.mark::after{right:5px;bottom:5px;background:radial-gradient(circle at 34% 30%,#fffdf6,#d4cbb9)}
+h1{margin:0;font-family:var(--serif);font-weight:700;font-size:clamp(25px,5vw,38px);letter-spacing:.08em;line-height:1.1}
+.sub{font-size:12px;letter-spacing:.22em;color:var(--dim);margin-top:4px}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:44px;padding:0 15px;border-radius:12px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);text-decoration:none;font-size:13px}
+.panel{border:1px solid var(--line);border-radius:18px;background:linear-gradient(160deg,var(--panel),#16120d);padding:clamp(16px,3vw,28px);margin-bottom:16px;box-shadow:0 20px 50px rgba(0,0,0,.32)}
+h2{margin:0 0 12px;font-family:var(--serif);font-weight:700;font-size:23px;letter-spacing:.05em;color:var(--gold-2)}
+h3{margin:18px 0 8px;font-size:16px;color:var(--gold-2)}
+p,li{font-size:14px;color:var(--dim);line-height:1.8}
+ul,ol{padding-left:1.25em;margin:8px 0}
+li{margin:4px 0}
+strong{color:var(--ink)}
+.lead{font-size:15px;color:var(--ink-soft)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.card{border:1px solid var(--line);border-radius:14px;background:rgba(0,0,0,.16);padding:14px;min-width:0}
+.card h3{margin-top:0}
+.board-demo{display:grid;grid-template-columns:repeat(8,1fr);width:100%;max-width:340px;aspect-ratio:1;background:linear-gradient(145deg,#2f6046,#244d38);border:1px solid rgba(216,178,108,.35);border-radius:12px;padding:4px;gap:1px;margin:10px auto}
+.cell{position:relative;aspect-ratio:1;border-radius:3px;background:rgba(0,0,0,.06);box-shadow:inset 0 0 0 1px rgba(0,0,0,.18)}
+.cell.b::after,.cell.w::after{content:"";position:absolute;inset:7%;border-radius:50%;box-shadow:0 2px 3px rgba(0,0,0,.45)}
+.cell.b::after{background:radial-gradient(circle at 34% 30%,#4b535b,#0a0c0e 72%)}
+.cell.w::after{background:radial-gradient(circle at 34% 30%,#fffdf6,#d4cbb9 72%)}
+.cell.legal::before{content:"";position:absolute;left:50%;top:50%;width:24%;height:24%;transform:translate(-50%,-50%);border-radius:50%;background:rgba(241,217,165,.6)}
+.cell.ring{box-shadow:inset 0 0 0 2px rgba(241,217,165,.7)}
+.caption{font-size:12px;color:var(--dim);text-align:center;margin-top:6px}
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13px}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;color:var(--dim)}
+th{color:var(--gold-2);font-weight:700;background:rgba(216,178,108,.06)}
+.source{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.source li{padding:9px 11px;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.14);font-size:13px}
+.tag{display:inline-flex;align-items:center;min-height:28px;padding:0 9px;border-radius:999px;border:1px solid var(--line);font-size:12px;color:var(--gold-2);margin:2px 4px 2px 0}
+.footer{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--dim);margin-top:18px}
+.footer a{color:var(--dim);text-decoration:none}
+.footer a:hover{color:var(--gold-2)}
+@media (max-width:700px){.grid{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.001ms!important;transition-duration:.001ms!important}}
+</style>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/reversi-premium/rules.html">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="mark" aria-hidden="true"></div>
+      <div><h1>黑白棋规则</h1><div class="sub">REVERSI · OTHELLO · 8×8</div></div>
+    </div>
+    <div><a class="btn" href="index.html">返回棋盘</a> <a class="btn" href="online.html">联机房间</a></div>
+  </header>
+
+  <section class="panel">
+    <h2>一句话规则</h2>
+    <p class="lead">黑棋先行。每次落子必须在横、竖或斜线上夹住至少一枚白棋；被夹住的棋子全部翻成黑棋。轮到白棋时同理。没有合法落点就跳过；双方都无子可下时，棋子多者获胜。</p>
+    <div>
+      <span class="tag">8×8 棋盘</span><span class="tag">黑先</span><span class="tag">八方向夹击</span><span class="tag">跳过</span><span class="tag">终局数子</span>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>开局与翻面</h2>
+    <div class="grid">
+      <div>
+        <h3>标准开局</h3>
+        <p>棋盘中央四格交叉摆放：d4 白、e4 黑、d5 黑、e5 白。黑棋先行，初始双方各 2 子。下表用坐标表示（列 a–h，行 1–8）。</p>
+        <table>
+          <tr><th>格子</th><th>棋子</th></tr>
+          <tr><td>d4</td><td>白</td></tr>
+          <tr><td>e4</td><td>黑</td></tr>
+          <tr><td>d5</td><td>黑</td></tr>
+          <tr><td>e5</td><td>白</td></tr>
+        </table>
+        <p>黑棋的四个合法首着是 c4、e6、f5、d3（坐标随行列约定可能旋转，但相对位置固定）。</p>
+      </div>
+      <div>
+        <div class="board-demo" aria-label="标准开局图示">
+          <span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span>
+          <span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span>
+          <span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span>
+          <span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell w"></span><span class="cell b"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span>
+          <span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell b"></span><span class="cell w"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span>
+          <span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span>
+          <span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span>
+          <span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span>
+        </div>
+        <div class="caption">标准开局：中央四子交叉，黑先</div>
+      </div>
+    </div>
+    <h3>翻面判定</h3>
+    <ol>
+      <li>落子格必须是空位。</li>
+      <li>从落子格沿八个方向出发，先遇到连续的一枚或多枚对方棋子。</li>
+      <li>如果这条线的尽头是己方棋子，则中间所有对方棋子翻面。</li>
+      <li>多个方向可以同时成立，所有被夹住的棋子一起翻。</li>
+      <li>如果没有任何方向成立，这个点不是合法落点。</li>
+    </ol>
+  </section>
+
+  <section class="panel">
+    <h2>跳过与终局</h2>
+    <ul>
+      <li><strong>跳过：</strong>轮到某方但棋盘上没有合法落点时，该方必须跳过，由对方继续。跳过不改变棋子数量。</li>
+      <li><strong>终局：</strong>当双方都没有合法落点时对局结束。通常发生在棋盘填满，也可能提前发生。</li>
+      <li><strong>计分：</strong>终局时分别数黑白棋子。多者胜；数量相同为平局。</li>
+      <li><strong>连续跳过：</strong>如果一方跳过、另一方落子后再次无子可下，会继续跳过；双方都无法行动时立即终局。</li>
+    </ul>
+    <p>本作严格按上述标准规则判定，不做“必须吃子最多”或“角位特权”等额外简化。</p>
+  </section>
+
+  <section class="panel">
+    <h2>本作实现细则</h2>
+    <p>棋盘固定为 8×8 共 64 格，初始四枚棋子按对角线交错摆放，黑方先行。每次落子必须夹住至少一枚对方的连续棋子，被夹住的棋子全部翻面；引擎按八个方向检查夹击，只有能翻面的空位才会显示为合法落点。终局计分只数棋盘上的黑白棋子，空格不计入任何一方，双方数量相同即为平局，棋盘上的空格不会得分。</p>
+    <p>人机模式提供 easy、normal、hard 三档；困难档会综合角位权重、行动力与棋子数量评估落点。悔棋会连同 AI 的应手一起撤销。联机房间由服务端使用同一份引擎裁决，断线重连后恢复原座位，超时未操作时由 AI 托管，保证两名玩家的棋盘状态始终一致。对局结束后点击“再来一局”，棋盘会回到初始四子状态并重新由黑方先行。</p>
+  </section>
+
+  <section class="panel">
+    <h2>策略：角与行动力</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>四角最稳</h3>
+        <p>角上的棋子不可能被夹住翻面，是全局最稳定的资产。角旁紧邻的 X 位（例如 a2、b1）一旦落子，常把角送给对手，开局尤其要避免。</p>
+      </div>
+      <div class="card">
+        <h3>少给对手选择</h3>
+        <p>中盘的目标不是一时多吃几子，而是压缩对手的合法落点。对手可选位置越少，你越能控制节奏。边线与内圈要留“桥”，不要过早把自己封死。</p>
+      </div>
+      <div class="card">
+        <h3>终局数空位</h3>
+        <p>进入最后十手前，先数双方剩余空位与可翻棋子。有时主动放弃几子，换取最后一手连翻，才是赢棋方式。</p>
+      </div>
+      <div class="card">
+        <h3>难度对应</h3>
+        <p>简单 AI 偏好吃子与随机；普通 AI 会看两层并重视位置权重；困难 AI 用四层剪枝、行动力与角位评估，适合练习终局计算。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>操作说明</h2>
+    <ul>
+      <li><strong>落子：</strong>轻触亮起的空位；亮起的点都是当前合法落点。</li>
+      <li><strong>悔棋：</strong>人机模式会连同 AI 的应手一起撤销；双人同屏撤销一手。</li>
+      <li><strong>跳过：</strong>没有合法落点时按钮出现；人机模式会自动跳过。</li>
+      <li><strong>联机：</strong>创建 2 人房间，邀请码单次使用；断线可重连，超时由 AI 托管。</li>
+      <li><strong>材质：</strong>双面棋子为 img-gen 单物件材质，棋盘由代码合成，标题 Songti SC 700。</li>
+    </ul>
+  </section>
+
+  <section class="panel">
+    <h2>参考与来源</h2>
+    <ul class="source">
+      <li><strong>BV1CuxQ6EExW</strong> · 《黑白棋》规则 · HullQin · 基本落子、夹击与翻面规则</li>
+      <li><strong>BV1Bs4y1c7Y9</strong> · 黑白棋进阶课 1 开局的下法 · 康康老师的黑白棋课堂 · 开局与角位策略</li>
+      <li><strong>BV1UC411L7vj</strong> · 【拉老师】黑白棋必胜法 · 八神太萌 · 行动力与终局思路</li>
+      <li><strong>BV1Hjz9BUEAY</strong> · 黑白棋基础：消除手数 · 八神太萌 · 限制对手行动力</li>
+      <li><strong>games/ART-GUIDE.md</strong> · 单物件材质、代码合成局面、Songti SC 700 与真实尺寸规范</li>
+    </ul>
+  </section>
+
+  <footer class="footer">
+    <span>黑白棋 Reversi · 标准 8×8 · 本地运行</span>
+    <span><a href="index.html">棋盘</a> · <a href="online.html">联机</a></span>
+  </footer>
+</div>
+</body>
+</html>

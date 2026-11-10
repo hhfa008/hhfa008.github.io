@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Century Spice Road 美术合成页：本地生成的素材在浏览器中的渲染预览。">
+<title>Century Spice Road art composition</title>
+<script src="../../shared/shuffle.js"></script>
+<script src="data.js"></script>
+<script src="engine.js"></script>
+<style>
+:root{
+  --serif:"Songti SC","Noto Serif SC",Georgia,"Times New Roman",serif;
+  --sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --gold:#c9a35e;--gold-2:#e8cc92;--gold-3:#8d6a33;
+  --ink:#f4ecdc;--dim:#b8ac98;
+  --art-table:url("../../assets/art/premium/century-spice-road/table-walnut.webp");
+  --art-felt:none;
+  --art-linen:url("../../assets/art/premium/century-spice-road/parchment.webp");
+  --art-bowl:url("../../assets/art/premium/century-spice-road/caravan-bowl.webp");
+  --art-gold:url("../../assets/art/premium/century-spice-road/coin-gold.webp");
+  --art-silver:url("../../assets/art/premium/century-spice-road/coin-silver.webp");
+  --art-turmeric:url("../../assets/art/premium/century-spice-road/spice-turmeric.webp");
+  --art-saffron:url("../../assets/art/premium/century-spice-road/spice-saffron.webp");
+  --art-cardamom:url("../../assets/art/premium/century-spice-road/spice-cardamom.webp");
+  --art-cinnamon:url("../../assets/art/premium/century-spice-road/spice-cinnamon.webp");
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:#0c0a07}
+body{width:1200px;overflow:hidden;color:var(--ink);font-family:var(--sans)}
+.stage{position:relative;width:1200px;overflow:hidden;background:
+  radial-gradient(1000px 720px at 12% -8%,rgba(201,163,94,.2),transparent 62%),
+  radial-gradient(820px 640px at 96% 4%,rgba(255,255,255,.07),transparent 60%),
+  linear-gradient(155deg,#17120d,#0c0a07 72%)}
+.stage::before{content:"";position:absolute;inset:0;background:var(--art-table) center/cover no-repeat;opacity:.34;filter:saturate(.72) contrast(1.06);pointer-events:none}
+.stage::after{content:"";position:absolute;inset:0;background:var(--art-felt) center/cover no-repeat;opacity:.22;mix-blend-mode:soft-light;pointer-events:none}
+.frame{position:absolute;inset:26px;border:1px solid rgba(201,163,94,.5);border-radius:26px;box-shadow:inset 0 0 0 6px rgba(201,163,94,.06),0 30px 90px rgba(0,0,0,.5);pointer-events:none;z-index:3}
+.frame::before,.frame::after{content:"";position:absolute;width:58px;height:58px;border:2px solid rgba(201,163,94,.55)}
+.frame::before{left:14px;top:14px;border-right:0;border-bottom:0;border-radius:16px 0 0 0}
+.frame::after{right:14px;bottom:14px;border-left:0;border-top:0;border-radius:0 0 16px 0}
+.content{position:absolute;inset:64px;z-index:2;display:flex;flex-direction:column}
+.brand{display:flex;align-items:center;gap:18px}
+.logo{width:64px;height:64px;border-radius:18px;display:grid;place-items:center;background:linear-gradient(145deg,#f0d9a4,#8d6a33);color:#1b150e;font-family:var(--serif);font-weight:700;font-size:34px;transform:rotate(-3deg);box-shadow:0 14px 32px rgba(0,0,0,.38)}
+.kicker{font-family:var(--mono);font-size:14px;letter-spacing:.28em;color:var(--gold-2);text-transform:uppercase}
+.title{margin:4px 0 0;font-family:var(--serif);font-weight:700;font-size:64px;line-height:1.02;letter-spacing:.03em}
+.title span{color:var(--gold-2)}
+.sub{margin:8px 0 0;font-size:17px;letter-spacing:.08em;color:var(--dim)}
+.scene{position:relative;flex:1;min-height:0;margin-top:26px}
+.footer{display:flex;justify-content:space-between;gap:20px;align-items:flex-end;margin-top:18px;font-size:14px;color:var(--dim);letter-spacing:.04em}
+.footer b{color:var(--gold-2);font-weight:700}
+.row{display:flex;gap:12px;align-items:center}
+.card{position:relative;border-radius:14px;padding:10px;background-color:var(--card-base,#f0e2c5);background-image:var(--art-linen),linear-gradient(150deg,#fff8e8,#e7d6b5);background-size:cover,auto;background-blend-mode:multiply,normal;color:#2a2117;border:1px solid #c2ac82;box-shadow:0 10px 22px rgba(0,0,0,.32);display:flex;flex-direction:column;gap:6px}
+.pip{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:30px;border-radius:9px;font-family:var(--mono);font-size:14px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6)}
+.noble{border-radius:14px;padding:10px;background:linear-gradient(160deg,#fbf4e3,#dccba8);border:1px solid #c2ac82;color:#302416;box-shadow:0 10px 22px rgba(0,0,0,.3);display:flex;flex-direction:column;gap:6px}
+.noble b{font-family:var(--serif);font-size:26px;line-height:1}
+.token{display:grid;place-items:center;border-radius:50%;border:2px solid rgba(255,255,255,.35);box-shadow:0 8px 16px rgba(0,0,0,.36),inset 0 2px 3px rgba(255,255,255,.4);font-family:var(--mono);font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6)}
+.grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;background:#0f0c08;padding:7px;border-radius:14px;box-shadow:0 16px 34px rgba(0,0,0,.4)}
+.cell{position:relative;aspect-ratio:1;border-radius:7px;background-size:cover;background-position:center;display:grid;place-items:center;color:#fff;font-family:var(--mono);font-weight:700;font-size:17px;text-shadow:0 1px 3px rgba(0,0,0,.8);border:1px solid rgba(255,255,255,.1)}
+.cell.castle{background:linear-gradient(145deg,#d9c492,#8d6a33);color:#241a0c;font-size:26px}
+.cell.empty{background:#211b13;border:1px dashed #3c3225}
+.draft-tile{border-radius:12px;padding:7px;background:var(--art-tile),linear-gradient(150deg,#efe3c8,#d9c499);background-size:cover,auto;background-blend-mode:multiply,normal;border:1px solid #b9a276;color:#2a2114;box-shadow:0 8px 18px rgba(0,0,0,.3);display:flex;flex-direction:column;gap:5px;font-family:var(--mono);font-weight:700}
+.half{display:flex;align-items:center;justify-content:space-between;padding:5px 7px;border-radius:7px;background-size:cover;background-position:center;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);font-size:13px}
+.cube{width:34px;height:34px;border-radius:6px;background-size:cover;background-position:center;border:1px solid rgba(255,255,255,.24);box-shadow:0 5px 10px rgba(0,0,0,.35),inset 0 2px 2px rgba(255,255,255,.3)}
+.coin{width:38px;height:38px;border-radius:50%;background-size:cover;background-position:center;border:1px solid rgba(255,255,255,.3);box-shadow:0 6px 12px rgba(0,0,0,.35)}
+.bowl{width:120px;height:120px;border-radius:50%;background:var(--art-bowl) center/cover no-repeat;border:1px solid rgba(255,255,255,.2);box-shadow:0 12px 24px rgba(0,0,0,.4);display:grid;place-items:center}
+.bowl .cubes{display:flex;flex-wrap:wrap;gap:3px;justify-content:center;width:70%}
+.bowl .cube{width:20px;height:20px;border-radius:4px}
+.stat{display:flex;flex-direction:column;gap:2px;padding:8px 14px;border:1px solid rgba(201,163,94,.36);border-radius:12px;background:rgba(20,15,10,.55)}
+.stat b{font-family:var(--serif);font-size:26px;color:var(--gold-2)}
+.stat span{font-size:12px;color:var(--dim);letter-spacing:.08em}
+.caption{position:absolute;left:0;bottom:0;font-size:15px;letter-spacing:.04em;color:var(--dim)}
+.caption b{color:var(--gold-2)}
+.title{font-size:66px}
+</style>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/century-spice-road-premium/art-render.html">
+<style>
+/* site-quality: fixed-size art composition must not create page overflow */
+html{overflow-x:hidden}
+body{width:100%!important;max-width:100vw!important;overflow-x:hidden}
+.stage,#stage{max-width:100vw;overflow:hidden}
+</style>
+</head>
+<body>
+<div class="stage" id="stage"><div class="frame"></div><div class="content" id="content"></div></div>
+<script>
+(function(){
+  'use strict';
+  var E=window.CenturySpiceRoadEngine, D=window.CenturySpiceRoadData;
+  var Q=new URLSearchParams(location.search); var shot=Q.get('shot')||'cover';
+  var content=document.getElementById('content');
+  var stage=document.getElementById('stage');
+  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function brand(kicker,title,sub){
+    return '<div class="brand"><div class="logo">香</div><div><div class="kicker">'+esc(kicker)+'</div><h1 class="title">'+title+'</h1><p class="sub">'+esc(sub)+'</p></div></div>';
+  }
+  function footer(left,right){
+    return '<div class="footer"><span>'+left+'</span><span>'+right+'</span></div>';
+  }
+
+  var state=E.createGame(20261110);
+  function spice(i){return D.SPICES[i];}
+  function cube(i,n){var s=spice(i);return '<span class="pip" style="background:'+s.face+';color:'+s.ink+';min-width:26px;height:26px;font-size:12px">'+(n==null?'':n)+'</span>';}
+  function costHtml(cost){return (cost||[]).map(function(n,i){return n?cube(i,n):'';}).join('');}
+  function effectText(card){
+    var e=card.effect||{};
+    function vec(v){return (v||[]).map(function(n,i){return n?spice(i).name+'×'+n:'';}).filter(Boolean).join('、')||'—';}
+    if(e.type==='create')return '生产：获得 '+vec(e.gain);
+    if(e.type==='trade')return '转换：支付 '+vec(e.cost)+' → 获得 '+vec(e.gain);
+    if(e.type==='upgrade')return '升级：将 '+e.count+' 个香料各升一级';
+    return card.text||'';
+  }
+  function pointCard(c,i){
+    var coin=i===0?'gold':i===1?'silver':null;
+    return '<div class="card" style="width:150px;min-height:190px"><div style="display:flex;justify-content:space-between;align-items:flex-start"><span style="font-family:var(--mono);font-size:12px;color:#7a5c24">'+(coin?coin.toUpperCase():'POINTS')+'</span>'+(coin?'<span class="coin" style="width:28px;height:28px;background-image:var(--art-'+coin+')"></span>':'')+'</div><div style="font-family:var(--serif);font-size:42px;font-weight:700;line-height:1;color:#3d2a10">'+c.points+'</div><div style="margin-top:auto;display:flex;gap:3px;flex-wrap:wrap">'+costHtml(c.cost)+'</div></div>';
+  }
+  function merchantCard(c,i){
+    return '<div class="card" style="width:154px;min-height:172px"><div style="font-family:var(--mono);font-size:12px;color:#7a5c24">'+(i?'付 '+i+' 个香料':'免费')+'</div><div style="font-family:var(--serif);font-size:16px;font-weight:700;line-height:1.3">'+esc(effectText(c))+'</div><div style="margin-top:auto;font-size:12px;color:#6b5327">'+esc(c.name)+'</div></div>';
+  }
+  function bowl(i,count){
+    var s=spice(i);var n=Math.min(count,9);
+    var cubes='';for(var j=0;j<n;j++)cubes+='<div class="cube" style="width:20px;height:20px;background-image:var(--art-'+s.key+')"></div>';
+    return '<div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div class="bowl" style="background-image:var(--art-bowl),linear-gradient(145deg,#3a2a1b,#1b130c)"><div class="cubes">'+cubes+'</div></div><span style="font-size:12px;color:var(--dim)">'+esc(s.name)+' · '+count+'</span></div>';
+  }
+  function renderShot(shot){
+    if(shot==='cover'){
+      return brand('CENTURY · SPICE ROAD','香料之路<span> · CENTURY</span>','36 张得分卡 · 43 张商人卡 · 四种香料 · 商队上限 10')+
+        '<div class="scene" style="display:flex;flex-direction:column;gap:18px;justify-content:center">'+
+        '<div class="row" style="gap:14px;justify-content:center">'+state.merchantMarket.slice(0,4).map(merchantCard).join('')+'</div>'+
+        '<div class="row" style="gap:14px;justify-content:center">'+state.pointMarket.slice(0,4).map(pointCard).join('')+'</div>'+
+        '<div class="row" style="gap:26px;justify-content:center;margin-top:6px">'+bowl(0,9)+bowl(1,7)+bowl(2,5)+bowl(3,4)+'<div style="display:flex;flex-direction:column;gap:8px;align-items:center"><div class="coin" style="background-image:var(--art-gold)"></div><div class="coin" style="background-image:var(--art-silver)"></div><span style="font-size:12px;color:var(--dim)">金币 3 · 银币 1</span></div></div>'+
+        '</div>'+
+        footer('<b>第 6 张得分卡</b> 触发最后一轮','本地 + 联机 · 2 人 · 零外部请求');
+    }
+    if(shot==='og'){
+      return '<div style="display:grid;grid-template-columns:410px 1fr;gap:26px;height:100%">'+
+        '<div style="display:flex;flex-direction:column;justify-content:center">'+brand('CENTURY · SPICE ROAD','香料之路<span> · CENTURY</span>','商队的取舍')+
+        '<div style="display:flex;gap:10px;margin-top:24px;flex-wrap:wrap"><span class="stat"><b>36</b><span>得分卡</span></span><span class="stat"><b>43</b><span>商人卡</span></span><span class="stat"><b>105</b><span>香料</span></span></div>'+
+        '<p style="margin-top:20px;color:var(--dim);font-size:15px;line-height:1.6">每回合四选一：打出商人卡、获取新卡、休息收回、交付香料领取得分卡。商队最多 10 个香料。</p></div>'+
+        '<div style="display:flex;flex-direction:column;gap:12px;justify-content:center">'+
+        '<div class="row" style="gap:10px">'+state.merchantMarket.slice(0,4).map(merchantCard).join('')+'</div>'+
+        '<div class="row" style="gap:10px">'+state.pointMarket.slice(0,4).map(pointCard).join('')+'</div>'+
+        '<div class="row" style="gap:18px;justify-content:center">'+bowl(0,7)+bowl(1,5)+bowl(2,4)+bowl(3,3)+'</div></div></div>';
+    }
+    if(shot==='detail1'){
+      return brand('MERCHANT & POINT CARDS','商人卡与得分卡','6 张商人市场 · 5 张得分卡市场 · 前两位带金币/银币')+
+        '<div class="scene" style="display:flex;flex-direction:column;gap:22px;justify-content:center">'+
+        '<div class="row" style="gap:16px;justify-content:center">'+state.merchantMarket.map(merchantCard).join('')+'</div>'+
+        '<div class="row" style="gap:16px;justify-content:center">'+state.pointMarket.map(pointCard).join('')+'</div>'+
+        '<div class="caption">获取商人卡时，向左侧每张卡各放 1 个香料；被放上的香料归卡主所有。</div></div>';
+    }
+    return brand('CARAVAN & COINS','商队与钱币','四种香料 · 商队上限 10 · 金币 3 分 / 银币 1 分')+
+      '<div class="scene" style="display:flex;flex-direction:column;gap:26px;justify-content:center;align-items:center">'+
+      '<div class="row" style="gap:26px">'+bowl(0,9)+bowl(1,8)+bowl(2,6)+bowl(3,5)+'</div>'+
+      '<div class="row" style="gap:30px;align-items:center">'+
+      '<div style="display:flex;flex-direction:column;gap:8px;align-items:center"><div class="coin" style="width:64px;height:64px;background-image:var(--art-gold)"></div><span style="font-size:13px;color:var(--dim)">金币 · 3 分</span></div>'+
+      '<div style="display:flex;flex-direction:column;gap:8px;align-items:center"><div class="coin" style="width:64px;height:64px;background-image:var(--art-silver)"></div><span style="font-size:13px;color:var(--dim)">银币 · 1 分</span></div>'+
+      '<p style="max-width:380px;font-size:15px;line-height:1.65;color:var(--dim)">剩余非姜黄香料每枚 1 分。升级链：姜黄→藏红花→豆蔻→肉桂；商队超过 10 个时从最低等级开始退回银行。</p></div>'+
+      '<div class="caption">两人局：第 6 张得分卡触发最后一轮，同分时最后行动者获胜。</div></div>';
+  }
+  window.__artShot=shot;
+  var sizes={cover:[1200,1200],og:[1200,630],detail1:[1200,800],detail2:[1200,800]};
+  var size=sizes[shot]||sizes.cover;
+  stage.style.height=size[1]+'px';
+  document.body.style.height=size[1]+'px';
+  var html=renderShot(shot);
+  content.innerHTML=html;
+})();
+</script>
+</body>
+</html>

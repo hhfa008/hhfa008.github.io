@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#243447">
+<meta name="description" content="车票之旅 Ticket to Ride 高级版：36 城美国铁路网、110 张车厢卡、目的地任务、最长连续路线与双人联机。">
+<meta property="og:title" content="车票之旅 · Ticket to Ride Premium">
+<meta property="og:description" content="铺设铁路、完成任务、争夺最长路线。">
+<meta property="og:type" content="website">
+<meta property="og:image" content="assets/og.webp">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="assets/og.webp">
+<link rel="icon" href="../../assets/icons/pioneers.svg">
+<title>车票之旅 · Ticket to Ride Premium</title>
+<style>
+:root{
+  --ink:#20242a; --ink-2:#3f4650; --muted:#6f7884;
+  --paper:#f4efe4; --paper-2:#e9e1d1; --card:#fffdf7;
+  --navy:#243447; --navy-2:#172333; --brass:#b58a45; --brass-l:#e3c68c;
+  --red:#b34336; --blue:#3c668c; --green:#4c7357; --gold:#c49a4f;
+  --line:rgba(36,45,58,.20); --line-2:rgba(36,45,58,.10);
+  --shadow:0 14px 36px rgba(24,30,38,.18), 0 2px 6px rgba(24,30,38,.10);
+  --radius:14px; --touch:44px;
+  --leather:url('../../assets/art/premium/ticket-to-ride/board.webp');
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{min-height:100dvh;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;background:
+  radial-gradient(1100px 600px at 12% -10%,rgba(181,138,69,.20),transparent 60%),
+  radial-gradient(900px 500px at 100% 0%,rgba(60,102,140,.18),transparent 55%),
+  linear-gradient(160deg,#f7f2e7,#ece4d4 55%,#e3d9c5)}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.10;background:var(--leather) center/780px;mix-blend-mode:multiply}
+h1,h2,h3,.serif{font-family:"Songti SC","STSong","Noto Serif SC",serif;font-weight:700;letter-spacing:.02em}
+button{font:inherit;color:inherit} a{color:inherit}
+.wrap{position:relative;max-width:1200px;margin:0 auto;padding:0 14px calc(28px + env(safe-area-inset-bottom))}
+.top{display:flex;align-items:center;gap:12px;padding:16px 0 12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:11px;min-width:0}
+.mark{width:46px;height:46px;border-radius:12px;flex:none;background:linear-gradient(145deg,#2d4359,#172333);display:grid;place-items:center;box-shadow:var(--shadow);border:1px solid rgba(227,198,140,.4)}
+.mark svg{width:30px;height:30px}
+.brand h1{margin:0;font-size:clamp(21px,4.4vw,30px);line-height:1.08}
+.brand p{margin:3px 0 0;font-size:12px;color:var(--muted);letter-spacing:.13em;text-transform:uppercase}
+.nav{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.nav a,.nav button{min-height:var(--touch);padding:0 14px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:999px;background:rgba(255,253,247,.78);text-decoration:none;font-size:13px;font-weight:700;cursor:pointer}
+.nav .online{background:var(--navy);border-color:var(--navy-2);color:#f6ecd4}
+.scores{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:4px 0 14px}
+.player{position:relative;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius);background:linear-gradient(180deg,rgba(255,253,247,.95),rgba(247,240,226,.95));border:1px solid var(--line);box-shadow:var(--shadow);overflow:hidden}
+.player::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--blue)}
+.player.ai::before{background:var(--red)}
+.player.active{outline:2px solid var(--brass);outline-offset:2px}
+.turn-marker{width:18px;height:18px;flex:none;display:inline-block;background:url('../../assets/art/premium/ticket-to-ride/brass-marker.webp') center/contain no-repeat;filter:drop-shadow(0 2px 2px rgba(30,20,10,.25))}
+.turn-indicator{display:inline-flex;align-items:center;gap:5px;color:var(--brass);font-weight:700}
+.wood-train{display:block;width:30px;height:16px;margin:0 auto 1px;background:url('../../assets/art/premium/ticket-to-ride/wood-train.webp') center/contain no-repeat;filter:drop-shadow(0 2px 2px rgba(30,20,10,.22))}
+.player .who strong{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.player .who span{font-size:12px;color:var(--muted)}
+.player .stats{margin-left:auto;display:flex;gap:9px;align-items:center}
+.stat{text-align:center;min-width:42px}
+.stat b{display:block;font-size:17px;font-variant-numeric:tabular-nums;line-height:1.15}
+.stat i{font-style:normal;font-size:12px;color:var(--muted)}
+.stat.score b{color:var(--red)}
+.train-ico{width:44px;height:44px;flex:none;background:url('../../assets/art/premium/ticket-to-ride/train-car.webp') center/contain no-repeat;filter:drop-shadow(0 4px 4px rgba(30,20,10,.22))}
+.layout{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,.65fr);gap:16px;align-items:start}
+.panel{min-width:0;background:linear-gradient(180deg,rgba(255,253,247,.96),rgba(248,241,228,.96));border:1px solid var(--line);border-radius:calc(var(--radius) + 4px);box-shadow:var(--shadow);padding:13px}
+.panel-head{display:flex;align-items:baseline;gap:9px;margin-bottom:9px;flex-wrap:wrap}
+.panel-head h2{margin:0;font-size:18px}
+.panel-head .sub{font-size:12px;color:var(--muted)}
+.panel-head .right{margin-left:auto;font-size:12px;color:var(--muted)}
+.map-frame{border-radius:12px;background:linear-gradient(160deg,#f8f0dd,#e5d8be);border:1px solid rgba(36,45,58,.24);box-shadow:inset 0 0 0 6px rgba(255,255,255,.35),inset 0 10px 30px rgba(80,60,30,.10);padding:6px;overflow:hidden}
+.map{display:block;width:100%;height:auto;touch-action:manipulation}
+.route{stroke-linecap:round;cursor:pointer;transition:opacity .12s ease, stroke-width .12s ease}
+.route-hit{stroke:transparent;stroke-width:13;fill:none;cursor:pointer}
+.route-group:hover .route{stroke-width:5.2}
+.route-group:hover .route-hit{stroke:rgba(255,255,255,.35)}
+.route.claimed-0{stroke:#3c668c}
+.route.claimed-1{stroke:#b34336}
+.city{fill:#2f3a46;stroke:#fffdf7;stroke-width:1.3}
+.city-label{font-family:-apple-system,"PingFang SC",sans-serif;font-size:12px;font-weight:700;fill:#2c3742;paint-order:stroke;stroke:rgba(255,253,247,.92);stroke-width:2.6px;stroke-linejoin:round}
+.map-legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--muted);align-items:center}
+.legend-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:4px;vertical-align:-1px}
+.side{display:flex;flex-direction:column;gap:14px;min-width:0}
+.market{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px}
+.train-card{position:relative;min-height:88px;border-radius:9px;border:1px solid rgba(30,35,42,.28);background:#fffdf8 url('../../assets/art/premium/ticket-to-ride/card-stock.webp') center/cover no-repeat;padding:5px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;cursor:pointer;box-shadow:0 4px 10px rgba(40,30,18,.14);overflow:hidden}
+.train-card::before{content:"";position:absolute;inset:0;background:linear-gradient(160deg,rgba(255,255,255,.35),transparent 45%,rgba(0,0,0,.12))}
+.train-card .swatch{width:100%;flex:1;border-radius:5px;position:relative;box-shadow:inset 0 0 0 1px rgba(255,255,255,.35)}
+.train-card .lbl{font-size:12px;font-weight:800;margin-top:4px;position:relative;z-index:1;color:#2c3440;text-shadow:0 1px 0 rgba(255,255,255,.5)}
+.train-card.wild .swatch{background:linear-gradient(135deg,#242b36,#4d5a6b 45%,#b58a45 46%,#e3c68c 55%,#242b36 56%)}
+.train-card:disabled{opacity:.55;cursor:not-allowed}
+.train-card[data-color="red"] .swatch{background:#b34336}.train-card[data-color="blue"] .swatch{background:#3c668c}
+.train-card[data-color="green"] .swatch{background:#4c7357}.train-card[data-color="yellow"] .swatch{background:#d0a83c}
+.train-card[data-color="black"] .swatch{background:#252b33}.train-card[data-color="white"] .swatch{background:#ece6d8}
+.train-card[data-color="orange"] .swatch{background:#c06e35}.train-card[data-color="pink"] .swatch{background:#b47c9a}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.btn{min-height:46px;min-width:44px;padding:8px 12px;border-radius:11px;border:1px solid var(--line);background:#fffdf7;font-weight:700;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 2px 0 rgba(40,30,18,.08)}
+.btn.primary{background:linear-gradient(180deg,#35506b,#24374c);border-color:#1c2b3c;color:#f8efd9}
+.btn.brass{background:linear-gradient(180deg,#c69a52,#a97a35);border-color:#8a6128;color:#241a0c}
+.btn.ghost{background:rgba(255,253,247,.6)}
+.btn:disabled{opacity:.44;cursor:not-allowed;box-shadow:none}
+.btn.wide{width:100%}
+.hand{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+.hand-chip{border-radius:9px;border:1px solid var(--line);background:#fffdf7;padding:6px;text-align:center;min-height:58px;display:flex;flex-direction:column;justify-content:center;gap:2px}
+.hand-chip b{font-size:17px;font-variant-numeric:tabular-nums}
+.hand-chip span{font-size:12px;color:var(--muted)}
+.hand-chip .cd{width:100%;height:7px;border-radius:3px;background:#ccc;margin-bottom:2px}
+.tickets{display:flex;flex-direction:column;gap:6px;max-height:200px;overflow:auto}
+.ticket-row{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:9px;background:rgba(60,102,140,.07);border:1px solid var(--line-2);font-size:13px}
+.ticket-face{width:34px;height:24px;flex:none;border-radius:4px;background:url('../../assets/art/premium/ticket-to-ride/ticket.webp') center/contain no-repeat;filter:drop-shadow(0 2px 3px rgba(30,20,10,.25))}
+.ticket-row b{margin-left:auto;font-variant-numeric:tabular-nums;color:var(--green)}
+.ticket-row.fail b{color:var(--red)}
+.ticket-row .tag{font-size:12px;padding:1px 6px;border-radius:999px;background:rgba(76,115,87,.15);color:#36543f;font-weight:700}
+.log{list-style:none;margin:0;padding:0;font-size:13px;line-height:1.55;max-height:150px;overflow:auto}
+.log li{padding:5px 0;border-bottom:1px dashed var(--line-2);color:var(--ink-2)}
+.hint{margin:9px 0 0;font-size:13px;color:var(--muted);min-height:20px}
+.overlay{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:18px;background:rgba(20,26,34,.58);backdrop-filter:blur(4px)}
+.overlay[hidden]{display:none}
+.modal{width:min(470px,100%);max-height:90dvh;overflow:auto;border-radius:18px;padding:20px;background:linear-gradient(180deg,#fffdf7,#f3ecdd);border:1px solid var(--line);box-shadow:0 30px 80px rgba(16,22,30,.38)}
+.modal h2{margin:0 0 6px;font-size:23px}
+.modal p{margin:0 0 12px;color:var(--ink-2);font-size:14px;line-height:1.6}
+.ticket-pick{display:grid;gap:8px;margin:12px 0}
+.ticket-pick label{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:#fffdf7;font-size:14px;min-height:44px;cursor:pointer}
+.ticket-pick input{width:24px;height:24px}
+.result-rows{display:grid;gap:8px;margin:10px 0 14px}
+.result-row{display:flex;gap:9px;align-items:center;padding:9px 11px;border-radius:10px;background:rgba(60,102,140,.08);font-size:14px}
+.result-row b{margin-left:auto;font-variant-numeric:tabular-nums}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media (max-width:900px){.layout{grid-template-columns:1fr}.side{display:grid;grid-template-columns:1fr 1fr;align-items:start}.side .panel:first-child{grid-column:1/-1}}
+@media (max-width:430px){
+  .wrap{padding-left:9px;padding-right:9px}
+  .brand h1{font-size:22px}.mark{width:40px;height:40px}
+  .nav a,.nav button{padding:0 10px;font-size:12px}
+  .player{padding:9px;gap:7px}.player .stats{gap:5px}.stat{min-width:34px}.stat b{font-size:15px}
+  .train-ico{display:none}
+  .panel{padding:10px;border-radius:14px}
+  .market{gap:5px}.train-card{min-height:76px;padding:4px}.train-card .lbl{font-size:12px}
+  .side{grid-template-columns:1fr}
+  .hand{grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
+  .btn{padding:7px;font-size:12px}
+  .map-frame{padding:3px}
+}
+@media (max-width:350px){.brand p{display:none}.player .who span{display:none}.stat.minor{display:none}.train-card .lbl{font-size:12px}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important;scroll-behavior:auto!important}}
+</style>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/ticket-to-ride-premium/">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="mark" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M7 22h18v4H7z" fill="#b58a45"/><path d="M9 12h14l3 8H6z" fill="#e3c68c"/><circle cx="11" cy="26" r="2.3" fill="#f4efe4"/><circle cx="21" cy="26" r="2.3" fill="#f4efe4"/><path d="M13 14h6v5h-6z" fill="#243447"/></svg></div>
+      <div><h1>车票之旅</h1><p>TICKET TO RIDE · 2 PLAYERS</p></div>
+    </div>
+    <nav class="nav" aria-label="页面导航">
+      <a href="rules.html">玩法</a><a class="online" href="online.html">联机</a>
+      <button class="sfx-toggle" type="button" aria-pressed="false">声音</button>
+    </nav>
+  </header>
+
+  <section class="scores" aria-label="比分">
+    <div class="player active" id="player0">
+      <div class="who"><strong>你</strong><span id="p0meta">车厢 45 · 手牌 4 · 任务 3</span></div>
+      <div class="stats">
+        <div class="stat"><span class="wood-train" aria-hidden="true"></span><b id="p0trains">45</b><i>车厢</i></div>
+        <div class="stat"><b id="p0hand">4</b><i>手牌</i></div>
+        <div class="stat minor"><b id="p0tickets">3</b><i>任务</i></div>
+        <div class="stat score"><b id="p0score">0</b><i>分数</i></div>
+      </div>
+      <div class="train-ico" aria-hidden="true"></div>
+    </div>
+    <div class="player ai" id="player1">
+      <div class="who"><strong id="p1name">AI · 铁路大亨</strong><span id="p1meta">车厢 45 · 手牌 4 · 任务 3</span></div>
+      <div class="stats">
+        <div class="stat"><span class="wood-train" aria-hidden="true"></span><b id="p1trains">45</b><i>车厢</i></div>
+        <div class="stat"><b id="p1hand">4</b><i>手牌</i></div>
+        <div class="stat minor"><b id="p1tickets">3</b><i>任务</i></div>
+        <div class="stat score"><b id="p1score">0</b><i>分数</i></div>
+      </div>
+      <div class="train-ico" aria-hidden="true"></div>
+    </div>
+  </section>
+
+  <main>
+    <div class="layout">
+      <section class="panel" aria-labelledby="mapTitle">
+        <div class="panel-head"><h2 id="mapTitle">美国铁路网</h2><span class="sub" id="mapSub">20 城 · 40 条路线</span><span class="right" id="mapRight">灰色路线任意单色</span></div>
+        <div class="map-frame"><svg class="map" id="map" viewBox="0 0 290 200" role="group" aria-label="铁路地图"></svg></div>
+        <div class="map-legend">
+          <span class="turn-indicator"><i class="turn-marker" aria-hidden="true"></i><b id="turnWho">你的回合</b></span>
+          <span><i class="legend-dot" style="background:#3c668c"></i>你的铁路</span>
+          <span><i class="legend-dot" style="background:#b34336"></i>对手铁路</span>
+          <span><i class="legend-dot" style="background:#b9af9f"></i>未占领</span>
+          <span>点击可支付的路线直接占领</span>
+        </div>
+        <p class="hint" id="hint" role="status" aria-live="polite">从明牌区或牌堆摸 2 张车厢卡，或占领一条路线。</p>
+      </section>
+
+      <aside class="side">
+        <section class="panel" aria-labelledby="marketTitle">
+          <div class="panel-head"><h2 id="marketTitle">明牌区</h2><span class="sub" id="deckCount">牌堆 --</span><button class="btn ghost" type="button" id="restart" style="margin-left:auto">重开</button></div>
+          <div class="market" id="market"></div>
+          <div class="row" style="margin-top:9px">
+            <button class="btn primary" type="button" id="drawDeck">摸牌堆</button>
+            <button class="btn brass" type="button" id="drawTickets">抽任务</button>
+          </div>
+          <p class="hint" id="actionHint" style="margin-top:6px">本回合还可摸 <b id="drawsLeft">2</b> 张。</p>
+        </section>
+
+        <section class="panel" aria-labelledby="handTitle">
+          <div class="panel-head"><h2 id="handTitle">你的手牌</h2><span class="sub">8 色 + 机车</span></div>
+          <div class="hand" id="hand"></div>
+        </section>
+
+        <section class="panel" aria-labelledby="ticketTitle">
+          <div class="panel-head"><h2 id="ticketTitle">目的地任务</h2><span class="sub" id="ticketSub">完成 +分值 / 未完成 −分值</span></div>
+          <div class="tickets" id="tickets"></div>
+        </section>
+
+        <section class="panel" aria-labelledby="logTitle">
+          <div class="panel-head"><h2 id="logTitle">对局记录</h2></div>
+          <ol class="log" id="log" aria-label="对局记录"></ol>
+        </section>
+      </aside>
+    </div>
+  </main>
+</div>
+
+<div class="overlay" id="ticketOverlay" hidden><div class="modal">
+  <h2>保留目的地任务</h2><p>抽取了 3 张任务，至少保留 1 张。未完成的任务会在终局扣分。</p>
+  <div class="ticket-pick" id="ticketPick"></div>
+  <div class="row"><button class="btn primary wide" type="button" id="keepTickets">确认保留</button></div>
+</div></div>
+
+<div class="overlay" id="resultOverlay" hidden><div class="modal">
+  <h2 id="resultTitle">对局结束</h2><p id="resultText"></p>
+  <div class="result-rows" id="resultRows"></div>
+  <div class="row"><button class="btn primary wide" type="button" id="again">再来一局</button><button class="btn wide" type="button" id="closeResult">查看地图</button></div>
+</div></div>
+
+<script src="../../shared/sfx.js"></script>
+<script src="engine.js"></script>
+<script>
+(function () {
+  'use strict';
+  var E = window.TicketToRideEngine;
+  var $ = function (id) { return document.getElementById(id); };
+  var mapEl = $('map'), marketEl = $('market'), handEl = $('hand'), logEl = $('log');
+  var state = null, aiTimer = null, selectedTicketKeep = [];
+  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var COLOR_HEX = { red:'#b34336', blue:'#3c668c', green:'#4c7357', yellow:'#d0a83c', black:'#252b33', white:'#ece6d8', orange:'#c06e35', pink:'#b47c9a', wild:'#4d4a42', gray:'#b9af9f' };
+
+  function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]; }); }
+  function sound(n) { try { if (window.Sfx && !reduced) window.Sfx.play(n, { volume: .55 }); } catch (e) {} }
+  function handTotal(p) { return p.wilds + E.COLORS.reduce(function (n, c) { return n + p.hand[c]; }, 0); }
+  function currentPlayer() { return state.players[state.turn]; }
+  function locked() { return !state || state.over || state.turn !== 0; }
+  function ticketText(t) { return E.CITIES[t.a].name + ' → ' + E.CITIES[t.b].name; }
+
+  function newGame(seed) {
+    if (aiTimer) { clearTimeout(aiTimer); aiTimer = null; }
+    var s = seed == null ? ((Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0) || 1 : seed;
+    state = E.createGame({ seed: s, humanFirst: true });
+    selectedTicketKeep = [];
+    $('ticketOverlay').hidden = true;
+    $('resultOverlay').hidden = true;
+    hint('新开一局：双方 45 节车厢、4 张车厢卡、3 张任务。你先手。');
+    render();
+  }
+  function hint(text) { $('hint').textContent = text; }
+
+  function drawCard(move) {
+    if (locked() || state.phase === 'ticketSelect') return;
+    try {
+      state = E.applyMove(state, move);
+      sound('deal');
+      render();
+      if (state.over) { showResult(); return; }
+      if (state.turn === 1) scheduleAI();
+    } catch (err) { sound('error'); hint('无法摸牌：' + (err && err.message ? err.message : err)); }
+  }
+  function drawTickets() {
+    if (locked()) return;
+    try {
+      state = E.applyMove(state, { type: 'drawTickets' });
+      selectedTicketKeep = state.pendingTickets.map(function (_, i) { return i; });
+      renderTicketPick();
+      $('ticketOverlay').hidden = false;
+      sound('deal');
+    } catch (err) { sound('error'); hint('无法抽任务：' + (err && err.message ? err.message : err)); }
+  }
+  function renderTicketPick() {
+    $('ticketPick').innerHTML = state.pendingTickets.map(function (ti, i) {
+      var t = E.TICKETS[ti];
+      return '<label><input type="checkbox" data-ticket="' + i + '" ' + (selectedTicketKeep.indexOf(i) !== -1 ? 'checked' : '') + ' aria-label="保留任务 ' + esc(ticketText(t)) + '"><span>' + esc(ticketText(t)) + '</span><b style="margin-left:auto">+' + t.value + '</b></label>';
+    }).join('');
+    $('ticketPick').querySelectorAll('input').forEach(function (input) {
+      input.addEventListener('change', function () {
+        var i = Number(input.getAttribute('data-ticket'));
+        if (input.checked) { if (selectedTicketKeep.indexOf(i) === -1) selectedTicketKeep.push(i); }
+        else selectedTicketKeep = selectedTicketKeep.filter(function (x) { return x !== i; });
+      });
+    });
+  }
+  function keepTickets() {
+    if (!state || state.phase !== 'ticketSelect') return;
+    if (!selectedTicketKeep.length) { hint('至少保留 1 张任务。'); return; }
+    try {
+      state = E.applyMove(state, { type: 'keepTickets', keep: selectedTicketKeep.slice().sort(function (a, b) { return a - b; }) });
+      $('ticketOverlay').hidden = true;
+      sound('click');
+      render();
+      if (state.over) { showResult(); return; }
+      if (state.turn === 1) scheduleAI();
+    } catch (err) { hint('任务选择无效：' + (err && err.message ? err.message : err)); }
+  }
+  function claimRoute(routeId) {
+    if (locked() || state.phase === 'ticketSelect') return;
+    var route = E.routeById(routeId);
+    var pay = E.paymentFor(currentPlayer(), route);
+    if (!pay) { sound('error'); hint('手牌不足：需要 ' + route.length + ' 张' + (route.color === 'gray' ? '任意同色' : E.COLOR_NAMES[route.color]) + '卡（机车可替代）。'); return; }
+    try {
+      state = E.applyMove(state, { type: 'claimRoute', routeId: routeId });
+      sound('capture');
+      render();
+      hint('占领 ' + E.CITIES[route.a].name + '–' + E.CITIES[route.b].name + '：' + E.ROUTE_POINTS[route.length] + ' 分。');
+      if (state.over) { showResult(); return; }
+      if (state.turn === 1) scheduleAI();
+    } catch (err) { sound('error'); hint('无法占领：' + (err && err.message ? err.message : err)); }
+  }
+  function scheduleAI() {
+    if (aiTimer) clearTimeout(aiTimer);
+    if (!state || state.over || state.turn !== 1) return;
+    aiTimer = setTimeout(function () {
+      aiTimer = null;
+      if (!state || state.over || state.turn !== 1) return;
+      try {
+        state = E.applyMove(state, E.aiMove(state));
+        sound('move');
+        render();
+        if (state.over) { showResult(); return; }
+        if (state.turn === 0) hint('AI 结束回合，轮到你了。');
+        else scheduleAI();
+      } catch (err) { hint('AI 行动失败：' + (err && err.message ? err.message : err)); }
+    }, reduced ? 30 : 620);
+  }
+
+  function renderScores() {
+    var sc = E.score(state);
+    state.players.forEach(function (p, i) {
+      $('p' + i + 'trains').textContent = p.trains;
+      $('p' + i + 'hand').textContent = handTotal(p);
+      $('p' + i + 'tickets').textContent = p.tickets.length;
+      $('p' + i + 'score').textContent = i === 0 ? sc.human : sc.ai;
+      $('p' + i + 'meta').textContent = '车厢 ' + p.trains + ' · 手牌 ' + handTotal(p) + ' · 任务 ' + p.tickets.length;
+      $('player' + i).classList.toggle('active', !state.over && state.turn === i);
+    });
+    $('p1name').textContent = state.players[1].name;
+    $('turnWho').textContent = state.over ? '对局结束' : state.turn === 0 ? '你的回合' : 'AI 回合';
+  }
+
+  function renderMap() {
+    var svg = '';
+    E.ROUTES.forEach(function (r) {
+      var a = E.CITIES[r.a], b = E.CITIES[r.b];
+      var owner = state.routes[r.id];
+      var color = owner === 0 ? '#3c668c' : owner === 1 ? '#b34336' : COLOR_HEX[r.color] || '#b9af9f';
+      var dash = r.color === 'gray' && owner === null ? '4 3' : 'none';
+      svg += '<g class="route-group" data-route="' + r.id + '">' +
+        '<line class="route-hit" x1="' + a.x + '" y1="' + a.y + '" x2="' + b.x + '" y2="' + b.y + '"></line>' +
+        '<line class="route' + (owner != null ? ' claimed-' + owner : '') + '" x1="' + a.x + '" y1="' + a.y + '" x2="' + b.x + '" y2="' + b.y + '" stroke="' + color + '" stroke-width="' + (r.length >= 5 ? 4.4 : r.length >= 3 ? 3.8 : 3.2) + '" stroke-dasharray="' + dash + '"></line>' +
+        '<title>' + esc(E.CITIES[r.a].name + '–' + E.CITIES[r.b].name + ' · ' + r.length + ' 段 · ' + (r.color === 'gray' ? '任意色' : E.COLOR_NAMES[r.color])) + '</title></g>';
+    });
+    E.CITIES.forEach(function (c) {
+      svg += '<circle class="city" cx="' + c.x + '" cy="' + c.y + '" r="2.7"></circle>' +
+        '<text class="city-label" x="' + (c.x + 4) + '" y="' + (c.y - 4) + '">' + esc(c.name) + '</text>';
+    });
+    mapEl.innerHTML = svg;
+    $('mapSub').textContent = E.CITIES.length + ' 城 · ' + E.ROUTES.length + ' 条路线';
+  }
+
+  function renderMarket() {
+    marketEl.innerHTML = state.market.map(function (card, i) {
+      var label = E.COLOR_NAMES[card] || '未知';
+      return '<button class="train-card' + (card === 'wild' ? ' wild' : '') + '" type="button" data-market="' + i + '" data-color="' + card + '" ' + (locked() || state.phase === 'ticketSelect' ? 'disabled' : '') + ' aria-label="从明牌区拿 ' + label + ' 卡">' +
+        '<span class="swatch" aria-hidden="true"></span><span class="lbl">' + label + '</span></button>';
+    }).join('');
+    $('deckCount').textContent = '牌堆 ' + state.deck.length + ' · 弃牌 ' + state.discard.length;
+    $('actionHint').innerHTML = state.phase === 'ticketSelect' ? '请选择要保留的任务。' : (state.drawsLeft > 0 ? '本回合还可摸 <b id="drawsLeft">' + state.drawsLeft + '</b> 张。' : '本回合还剩 1 次行动：摸 2 张或占路 / 抽任务。');
+    $('drawDeck').disabled = locked() || state.phase === 'ticketSelect' || !state.deck.length;
+    $('drawTickets').disabled = locked() || state.phase === 'ticketSelect' || !state.ticketDeck.length;
+  }
+
+  function renderHand() {
+    var p = state.players[0];
+    var cards = E.COLORS.map(function (c) { return { color: c, n: p.hand[c] }; });
+    cards.push({ color: 'wild', n: p.wilds });
+    cards.sort(function (a, b) { return b.n - a.n; });
+    handEl.innerHTML = cards.map(function (x) {
+      return '<div class="hand-chip"><span class="cd" style="background:' + (COLOR_HEX[x.color] || '#ccc') + '"></span><b>' + x.n + '</b><span>' + E.COLOR_NAMES[x.color] + '</span></div>';
+    }).join('');
+  }
+
+  function renderTickets() {
+    var p = state.players[0];
+    $('tickets').innerHTML = p.tickets.map(function (ti) {
+      var t = E.TICKETS[ti];
+      var done = E.connected(state, 0, t.a, t.b);
+      return '<div class="ticket-row' + (done ? '' : ' fail') + '"><span class="ticket-face" aria-hidden="true"></span><span>' + esc(ticketText(t)) + '</span><span class="tag">' + (done ? '已连通' : '未连通') + '</span><b>' + (done ? '+' : '−') + t.value + '</b></div>';
+    }).join('') || '<p class="sub">还没有任务。</p>';
+    $('ticketSub').textContent = '完成 +分值 / 未完成 −分值';
+  }
+
+  function renderLog() {
+    logEl.innerHTML = state.log.slice(-16).map(function (row) { return '<li>' + esc(row) + '</li>'; }).join('');
+  }
+
+  function render() {
+    if (!state) return;
+    renderScores(); renderMap(); renderMarket(); renderHand(); renderTickets(); renderLog();
+    $('restart').disabled = false;
+    if (state.over) hint('对局结束：' + (E.winner(state) === 'human' ? '你赢了！' : E.winner(state) === 'ai' ? 'AI 获胜。' : '平局。'));
+  }
+
+  function showResult() {
+    if (!state || !state.over) return;
+    var sc = E.score(state);
+    var w = E.winner(state);
+    $('resultTitle').textContent = w === 'human' ? '你赢了' : w === 'ai' ? 'AI 获胜' : '平局';
+    $('resultText').textContent = '路线分 + 任务分 + 最长连续路线奖励（10 分）。';
+    $('resultRows').innerHTML = [
+      { name: '你', d: sc.humanDetail, total: sc.human },
+      { name: state.players[1].name, d: sc.aiDetail, total: sc.ai }
+    ].map(function (row) {
+      return '<div class="result-row"><span>' + esc(row.name) + '</span><span>路线 ' + row.d.routePts + ' · 任务 ' + row.d.ticketPts + ' · 最长 ' + row.d.longest + ' 节</span><b>' + row.total + '</b></div>';
+    }).join('');
+    $('resultOverlay').hidden = false;
+    $('again').focus();
+    sound(w === 'human' ? 'win' : w === 'ai' ? 'lose' : 'notify');
+  }
+
+  marketEl.addEventListener('click', function (event) {
+    var card = event.target.closest('[data-market]');
+    if (!card || locked()) return;
+    drawCard({ type: 'drawCard', source: 'market', marketIndex: Number(card.getAttribute('data-market')) });
+  });
+  mapEl.addEventListener('click', function (event) {
+    var group = event.target.closest('[data-route]');
+    if (!group) return;
+    claimRoute(Number(group.getAttribute('data-route')));
+  });
+  $('drawDeck').addEventListener('click', function () { drawCard({ type: 'drawCard', source: 'deck' }); });
+  $('drawTickets').addEventListener('click', drawTickets);
+  $('keepTickets').addEventListener('click', keepTickets);
+  $('restart').addEventListener('click', function () { newGame(); });
+  $('again').addEventListener('click', function () { newGame(); });
+  $('closeResult').addEventListener('click', function () { $('resultOverlay').hidden = true; });
+  document.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape') { if (!$('ticketOverlay').hidden && state.phase === 'ticketSelect') return; $('resultOverlay').hidden = true; }
+  });
+
+  if (!E) { hint('引擎加载失败。'); return; }
+  window.__ttr = {
+    engine: E,
+    newGame: function (seed) { newGame(seed); return this.getState(); },
+    getState: function () { return state; },
+    legalMoves: function () { return state && !state.over ? E.legalMoves(state) : []; },
+    playMove: function (move) {
+      if (!state || state.over) return state;
+      state = E.applyMove(state, move); render();
+      if (state.over) showResult(); else if (state.turn === 1) scheduleAI();
+      return state;
+    },
+    setState: function (next) { state = next; selectedTicketKeep = []; $('ticketOverlay').hidden = true; $('resultOverlay').hidden = true; render(); return state; },
+    isBusy: function () { return !!aiTimer; },
+    winner: function () { return state ? E.winner(state) : null; },
+    result: function () { return state ? E.score(state) : null; },
+    autoPlayToEnd: function (maxMoves) {
+      var guard = 0, limit = maxMoves || 6000;
+      while (state && !state.over && guard < limit) {
+        if (state.phase === 'ticketSelect') {
+          state = E.applyMove(state, { type: 'keepTickets', keep: [0] });
+        } else {
+          state = E.applyMove(state, E.aiMove(state));
+        }
+        guard += 1;
+      }
+      render();
+      if (state.over) showResult();
+      return { moves: guard, over: state.over, scores: E.score(state) };
+    },
+    reducedMotion: reduced
+  };
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+    navigator.serviceWorker.register('../../sw.js', { scope: '../../' }).catch(function () {});
+  }
+  newGame();
+})();
+</script>
+</body>
+</html>

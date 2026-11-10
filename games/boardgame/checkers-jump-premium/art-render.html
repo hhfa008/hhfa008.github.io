@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta name="description" content="跳棋 premium 内部美术合成页：真实棋盘、材质与局面的渲染源。">
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/checkers-jump-premium/art-render.html">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Chinese Checkers 美术合成页：本地生成的素材在浏览器中的渲染预览。">
+<title>Chinese Checkers art render</title>
+<style>
+:root{--felt:url("../../assets/art/premium/shared/table-felt.webp");--gold:#d8b26a;--ivory:#f2e7d2;--serif:"Songti SC","STSong","Noto Serif SC",serif;--sans:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0b100d}
+body{font-family:var(--sans);color:var(--ivory)}
+.scene{position:relative;width:100vw;height:100vh;overflow:hidden;background:radial-gradient(900px 700px at 16% 0%,rgba(63,143,95,.2),transparent 62%),radial-gradient(1000px 760px at 92% 8%,rgba(216,178,106,.14),transparent 60%),linear-gradient(155deg,#16201a,#0e1511 62%,#070b08)}
+.scene::before{content:"";position:absolute;inset:0;background:var(--felt) center/cover no-repeat;opacity:.4;filter:saturate(.72) contrast(1.06)}
+.vignette{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 46%,transparent 34%,rgba(4,7,5,.64) 100%);pointer-events:none}
+.grain{position:absolute;inset:0;opacity:.06;mix-blend-mode:overlay;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");pointer-events:none}
+.stage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+.board3d{position:relative;transform-style:preserve-3d;filter:drop-shadow(0 54px 60px rgba(0,0,0,.66)) drop-shadow(0 10px 18px rgba(0,0,0,.5))}
+.board3d svg{display:block;width:100%;height:auto}
+.cover .board3d{width:72%;transform:perspective(1600px) rotateX(46deg) rotateZ(-10deg) translateY(2%)}
+.og .board3d{width:55%;transform:perspective(1600px) rotateX(50deg) rotateZ(-12deg);margin-left:auto}
+.detail1 .board3d{width:64%;transform:perspective(1700px) rotateX(34deg) rotateZ(-6deg)}
+.title{position:absolute;z-index:3;pointer-events:none}
+.cover .title{left:6.5%;top:8%;max-width:45%}
+.og .title{left:6.5%;top:17%;width:38%}
+.title .eyebrow{font-size:clamp(12px,1.1vw,15px);letter-spacing:.42em;color:var(--gold);margin:0 0 10px;font-weight:600}
+.title h1{margin:0;font-family:var(--serif);font-weight:700;font-size:clamp(52px,7vw,90px);letter-spacing:.12em;line-height:1.04;text-shadow:0 4px 26px rgba(0,0,0,.62)}
+.title h1 em{display:block;font-style:normal;font-size:.42em;letter-spacing:.36em;color:#e9cfa0;margin-top:14px}
+.title .rule{width:118px;height:2px;background:linear-gradient(90deg,var(--gold),transparent);margin:18px 0 14px}
+.title p{margin:0;max-width:430px;font-size:clamp(13px,1.25vw,17px);line-height:1.8;color:#d9c3a2;letter-spacing:.03em}
+.macro{position:relative;width:68%;display:flex;align-items:center;justify-content:center;gap:3%}
+.bigmarble{position:relative;border-radius:50%;background:radial-gradient(circle at 32% 26%,rgba(255,255,255,.85),rgba(255,255,255,.18) 30%,transparent 46%),url("../../assets/art/premium/checkers-jump/marble-glass.webp") center/cover;box-shadow:0 30px 48px rgba(0,0,0,.6),inset 0 -14px 26px rgba(0,0,0,.35);border:2px solid rgba(255,255,255,.16);overflow:hidden}
+.bigmarble::before{content:"";position:absolute;inset:0;background:var(--c);opacity:.62;mix-blend-mode:multiply}
+.bigmarble::after{content:"";position:absolute;left:18%;top:12%;width:34%;height:22%;border-radius:50%;background:rgba(255,255,255,.55);filter:blur(2px);transform:rotate(-24deg)}
+.macro .bigmarble:nth-child(1){--c:#c0392b;width:26%;aspect-ratio:1;transform:rotate(-7deg)}
+.macro .bigmarble:nth-child(2){--c:#c9922e;width:38%;aspect-ratio:1;transform:translateY(-4%) rotate(3deg)}
+.macro .bigmarble:nth-child(3){--c:#2f6fb0;width:26%;aspect-ratio:1;transform:rotate(9deg)}
+.macro .halo{position:absolute;width:70%;height:16%;bottom:-7%;border-radius:50%;background:radial-gradient(ellipse,rgba(0,0,0,.58),transparent 70%);filter:blur(14px)}
+.detail2 .caption{position:absolute;left:7%;bottom:8%;z-index:4;max-width:48%}
+.detail2 .caption h2{font-family:var(--serif);font-size:clamp(24px,2.6vw,36px);margin:0 0 8px;letter-spacing:.1em}
+.detail2 .caption p{margin:0;color:#c9b190;font-size:clamp(12px,1.1vw,15px);line-height:1.8}
+</style>
+</head>
+<body>
+<div class="scene" id="scene">
+  <div class="vignette"></div>
+  <div class="grain"></div>
+  <div class="stage" id="stage"></div>
+  <div class="title" id="title" hidden>
+    <p class="eyebrow">CHINESE CHECKERS · 121 HOLES</p>
+    <h1>中国跳棋<em>星阵 · 连跳</em></h1>
+    <div class="rule"></div>
+    <p>121 孔星形棋盘，六色玻璃弹珠；单步、连跳、方向自由。2 / 4 / 6 人，木质星盘与弹珠由代码逐孔合成。</p>
+  </div>
+</div>
+<script>
+(function () {
+  'use strict';
+  var q = new URLSearchParams(location.search);
+  var shot = q.get('shot') || 'cover';
+  document.body.className = shot;
+  var scene = document.getElementById('scene');
+  var stage = document.getElementById('stage');
+  var title = document.getElementById('title');
+  var VIEW = 560, CENTER = 280, SPAN = 516, ROT = Math.PI / 6;
+  var DIRS = [[1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]];
+  var COLORS = ['#c0392b', '#2f6fb0', '#3f8f5f', '#c9922e', '#7a4fa0', '#c96b2c'];
+
+  var COORDS = [], KEY = {}, ZONES = [];
+  (function build() {
+    var east = [], qq, rr, k, all = {};
+    for (qq = 5; qq <= 8; qq++) for (rr = -4; rr <= 4 - qq; rr++) east.push([qq, rr]);
+    ZONES[0] = east;
+    for (k = 1; k < 6; k++) ZONES[k] = ZONES[k - 1].map(function (c) { return [-c[1], c[0] + c[1]]; });
+    for (qq = -4; qq <= 4; qq++) for (rr = -4; rr <= 4; rr++) if (Math.abs(qq + rr) <= 4) all[qq + ',' + rr] = [qq, rr];
+    ZONES.forEach(function (z) { z.forEach(function (c) { all[c[0] + ',' + c[1]] = [c[0], c[1]]; }); });
+    Object.keys(all).forEach(function (key) { KEY[key] = COORDS.length; COORDS.push({ q: all[key][0], r: all[key][1] }); });
+    ZONES = ZONES.map(function (z) { return z.map(function (c) { return KEY[c[0] + ',' + c[1]]; }); });
+  })();
+
+  var pts = COORDS.map(function (c) {
+    var x = 1.5 * c.q, y = Math.sqrt(3) * (c.r + c.q / 2);
+    return { x: x * Math.cos(ROT) - y * Math.sin(ROT), y: x * Math.sin(ROT) + y * Math.cos(ROT) };
+  });
+  var minX = Math.min.apply(null, pts.map(function (p) { return p.x; }));
+  var maxX = Math.max.apply(null, pts.map(function (p) { return p.x; }));
+  var minY = Math.min.apply(null, pts.map(function (p) { return p.y; }));
+  var maxY = Math.max.apply(null, pts.map(function (p) { return p.y; }));
+  var scale = SPAN / Math.max(maxX - minX, maxY - minY);
+  var ox = CENTER - (minX + maxX) / 2 * scale, oy = CENTER - (minY + maxY) / 2 * scale;
+  var XY = pts.map(function (p) { return { x: ox + p.x * scale, y: oy + p.y * scale }; });
+
+  function starPoints() {
+    var out = [], inner = 4 * Math.sqrt(3) * scale + 10, outer = 12 * scale + 12;
+    for (var k = 0; k < 12; k++) {
+      var ang = k * Math.PI / 6, rad = (k % 2 === 0) ? inner : outer;
+      out.push((CENTER + Math.cos(ang) * rad).toFixed(1) + ',' + (CENTER + Math.sin(ang) * rad).toFixed(1));
+    }
+    return out.join(' ');
+  }
+
+  function boardSvg(uid) {
+    var out = '<svg viewBox="0 0 560 560" xmlns="http://www.w3.org/2000/svg">';
+    out += '<defs><pattern id="b' + uid + '" patternUnits="userSpaceOnUse" width="520" height="520"><image href="../../assets/art/premium/checkers-jump/board-birch.webp" width="520" height="520" preserveAspectRatio="xMidYMid slice"/></pattern>' +
+      '<pattern id="m' + uid + '" patternUnits="userSpaceOnUse" width="40" height="40"><image href="../../assets/art/premium/checkers-jump/marble-glass.webp" width="40" height="40" preserveAspectRatio="xMidYMid slice"/></pattern>' +
+      '<radialGradient id="h' + uid + '" cx="50%" cy="38%" r="60%"><stop offset="0" stop-color="#3a2815"/><stop offset="1" stop-color="#1d1208"/></radialGradient>' +
+      '<filter id="s' + uid + '" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="1" dy="2" stdDeviation="1.7" flood-color="#0a0603" flood-opacity=".55"/></filter></defs>';
+    out += '<rect x="4" y="4" width="552" height="552" rx="22" fill="#0d1210"/>';
+    out += '<polygon points="' + starPoints() + '" fill="url(#b' + uid + ')" stroke="#6f4a24" stroke-width="2.6" stroke-linejoin="round"/>';
+    for (var i = 0; i < XY.length; i++) {
+      out += '<circle cx="' + XY[i].x.toFixed(1) + '" cy="' + XY[i].y.toFixed(1) + '" r="' + (scale * 0.47).toFixed(1) + '" fill="url(#h' + uid + ')" stroke="rgba(40,24,10,.75)" stroke-width="1"/>';
+    }
+    for (var z = 0; z < 6; z++) {
+      ZONES[z].forEach(function (h) {
+        var p = XY[h], col = COLORS[z];
+        out += '<g transform="translate(' + p.x.toFixed(1) + ',' + p.y.toFixed(1) + ')">' +
+          '<ellipse cx="0" cy="' + (scale * 0.34).toFixed(1) + '" rx="' + (scale * 0.54).toFixed(1) + '" ry="' + (scale * 0.19).toFixed(1) + '" fill="rgba(8,5,2,.42)"/>' +
+          '<circle r="' + (scale * 0.70).toFixed(1) + '" fill="url(#m' + uid + ')" filter="url(#s' + uid + ')"/>' +
+          '<circle r="' + (scale * 0.70).toFixed(1) + '" fill="' + col + '" fill-opacity=".62" stroke="rgba(30,18,8,.48)" stroke-width="1"/>' +
+          '<circle r="' + (scale * 0.52).toFixed(1) + '" fill="none" stroke="rgba(255,255,255,.34)" stroke-width="1"/>' +
+          '<ellipse cx="' + (-scale * 0.20).toFixed(1) + '" cy="' + (-scale * 0.24).toFixed(1) + '" rx="' + (scale * 0.24).toFixed(1) + '" ry="' + (scale * 0.16).toFixed(1) + '" fill="rgba(255,255,255,.5)"/>' +
+          '</g>';
+      });
+    }
+    out += '</svg>';
+    return out;
+  }
+
+  if (shot === 'cover' || shot === 'og' || shot === 'detail1') {
+    if (shot !== 'detail1') title.hidden = false;
+    var wrap = document.createElement('div');
+    wrap.className = 'board3d';
+    wrap.innerHTML = boardSvg(shot.charAt(0));
+    stage.appendChild(wrap);
+  } else if (shot === 'detail2') {
+    var macro = document.createElement('div');
+    macro.className = 'macro';
+    ['red', 'amber', 'blue'].forEach(function () {
+      var d = document.createElement('div');
+      d.className = 'bigmarble';
+      macro.appendChild(d);
+    });
+    var halo = document.createElement('div');
+    halo.className = 'halo';
+    macro.appendChild(halo);
+    stage.appendChild(macro);
+    var caption = document.createElement('div');
+    caption.className = 'caption';
+    caption.innerHTML = '<h2>玻璃 · 十六毫米</h2><p>弹珠直径 16mm，六色玻璃；星盘由代码绘制 121 个孔位，木质纹理取自本地材质图。</p>';
+    scene.appendChild(caption);
+  }
+})();
+</script>
+</body>
+</html>

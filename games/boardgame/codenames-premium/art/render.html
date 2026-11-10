@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Codenames Premium 美术合成页：本地生成的素材在浏览器中的渲染预览。">
+<title>Codenames Premium — local art composition</title>
+<style>
+:root{
+  --ink:#f5f1e6;--muted:#b9b2a4;--gold:#e9c56a;--red:#d94d48;--blue:#4b85d4;
+  --neutral:#b7a071;--assassin:#17171d;
+  --paper:url("../../../assets/art/premium/codenames/card-paper.webp");
+  --back:url("../../../assets/art/premium/codenames/card-back.webp");
+  --felt:url("../../../assets/art/premium/codenames/table-felt.webp");
+  --song:"Songti SC","STSong","SimSun",serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:#0a0d18;color:var(--ink);font-family:var(--song);overflow:hidden}
+body[data-view="cover"]{width:1024px;height:1024px}
+body[data-view="og"]{width:1200px;height:630px}
+body[data-view="detail-board"]{width:1200px;height:800px}
+body[data-view="detail-cards"]{width:1200px;height:800px}
+.stage{position:relative;width:100%;height:100%;overflow:hidden;
+  background:
+    radial-gradient(circle at 18% 8%,rgba(255,255,255,.14),transparent 40%),
+    radial-gradient(circle at 88% 96%,rgba(0,0,0,.42),transparent 48%),
+    var(--felt) center/145% 145% no-repeat,
+    linear-gradient(150deg,#263159,#11182b 70%,#0a0e18)}
+.stage::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(115deg,rgba(255,255,255,.09),transparent 32%,rgba(0,0,0,.2) 100%)}
+.kicker{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-weight:700;
+  font-size:13px;letter-spacing:.32em;color:var(--gold);text-transform:uppercase}
+h1{margin:0;font-family:var(--song);font-weight:700;line-height:1;letter-spacing:.06em}
+.sub{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-weight:700;
+  letter-spacing:.34em;color:var(--muted)}
+.meta{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--muted);font-size:14px}
+.board{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px}
+.card{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:5px;border-radius:12px;overflow:hidden;text-align:center;border:1px solid rgba(255,255,255,.18);
+  background:linear-gradient(135deg,rgba(255,255,255,.22),transparent 38%),
+    linear-gradient(315deg,rgba(0,0,0,.28),transparent 44%),
+    linear-gradient(165deg,#fffdf7,#ece6d8);
+  color:#1b1b1b;box-shadow:inset 1px 1px 0 rgba(255,255,255,.55),
+    inset -1px -1px 0 rgba(0,0,0,.2),0 6px 12px rgba(0,0,0,.34);isolation:isolate}
+.card::before{content:"";position:absolute;inset:0;z-index:0;
+  background:var(--paper) center/cover no-repeat;mix-blend-mode:multiply;opacity:.55}
+.card::after{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:linear-gradient(112deg,transparent 38%,rgba(255,255,255,.32) 50%,transparent 62%);
+  opacity:.22}
+.card > *{position:relative;z-index:1}
+.card .word{font-family:var(--song);font-weight:700;line-height:1.15;letter-spacing:.02em;
+  text-shadow:0 1px 0 rgba(255,255,255,.35)}
+.card .key-dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto;opacity:.9}
+.card .role{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:9px;font-weight:800;letter-spacing:.18em;opacity:.9}
+.card.is-red{background:linear-gradient(135deg,rgba(255,255,255,.2),transparent 38%),
+  linear-gradient(315deg,rgba(0,0,0,.28),transparent 44%),linear-gradient(158deg,#d9544e,#8d2b28);
+  color:#fff;border-color:rgba(255,180,170,.5)}
+.card.is-blue{background:linear-gradient(135deg,rgba(255,255,255,.2),transparent 38%),
+  linear-gradient(315deg,rgba(0,0,0,.28),transparent 44%),linear-gradient(158deg,#4b86d8,#274f8c);
+  color:#fff;border-color:rgba(160,200,255,.5)}
+.card.is-neutral{background:linear-gradient(135deg,rgba(255,255,255,.24),transparent 38%),
+  linear-gradient(315deg,rgba(0,0,0,.22),transparent 44%),linear-gradient(158deg,#b8a377,#7a6b4b);
+  color:#221b0e;border-color:rgba(230,210,160,.5)}
+.card.is-assassin{background:linear-gradient(135deg,rgba(255,255,255,.1),transparent 38%),
+  linear-gradient(315deg,rgba(0,0,0,.34),transparent 44%),linear-gradient(158deg,#24242e,#08080c);
+  color:#fff;border-color:rgba(255,255,255,.22)}
+.card.is-red::before,.card.is-blue::before,.card.is-neutral::before,.card.is-assassin::before{
+  background:var(--back) center/cover no-repeat;mix-blend-mode:soft-light;opacity:.3}
+.dot-red{background:var(--red);box-shadow:0 0 7px var(--red)}
+.dot-blue{background:var(--blue);box-shadow:0 0 7px var(--blue)}
+.dot-neutral{background:var(--neutral)}
+.dot-assassin{background:#fff;box-shadow:0 0 7px #fff}
+.team-row{display:flex;gap:10px;align-items:stretch}
+.team{border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:9px 12px;
+  background:rgba(10,14,24,.4);min-width:130px}
+.team.red{border-color:rgba(217,77,72,.55)}
+.team.blue{border-color:rgba(75,133,212,.55)}
+.team b{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:11px;
+  letter-spacing:.14em;color:var(--muted);font-weight:700}
+.team strong{display:block;font-size:26px;line-height:1.1;margin-top:2px}
+.team small{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--muted);font-size:10px}
+.chip{display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(255,255,255,.2);
+  border-radius:999px;padding:7px 12px;background:rgba(10,14,24,.42);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:12px;color:var(--muted)}
+.chip b{color:var(--gold);font-size:14px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:11px;color:var(--muted)}
+.legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px}
+.lg-red{background:var(--red)}.lg-blue{background:var(--blue)}.lg-neutral{background:var(--neutral)}
+.lg-assassin{background:#111;border:1px solid #777}
+
+/* cover */
+.cover-stage{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+  padding:54px 64px 42px;gap:24px}
+.cover-stage h1{font-size:104px}
+.cover-stage .sub{font-size:22px;margin-top:8px}
+.cover-stage .meta{font-size:14px;letter-spacing:.04em}
+.cover-stage .board{width:820px;gap:10px}
+.cover-stage .card{height:136px}
+.cover-stage .card .word{font-size:22px}
+.cover-stage .hero-head{text-align:center}
+.cover-stage .hero-foot{display:flex;gap:14px;align-items:center}
+
+/* og */
+.og-stage{display:grid;grid-template-columns:520px 1fr;gap:24px;padding:48px 52px;align-items:center}
+.og-stage h1{font-size:86px}
+.og-stage .sub{font-size:19px;margin-top:8px}
+.og-stage .board{width:540px;gap:7px;transform:perspective(1600px) rotateX(10deg) rotateZ(-3deg)}
+.og-stage .card{height:92px}
+.og-stage .card .word{font-size:15px}
+.og-copy .lead{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:14px;
+  line-height:1.6;color:var(--muted);margin:18px 0 14px;max-width:420px}
+.og-chips{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+.og-chips .chip{padding:6px 10px;font-size:11px}
+
+/* detail board */
+.detail-stage{display:grid;grid-template-columns:330px 1fr;height:100%;padding:42px;gap:18px;
+  align-items:center;perspective:1600px}
+.detail-copy h1{font-size:64px}
+.detail-copy .sub{font-size:15px;margin-top:6px}
+.detail-copy .lead{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:13px;
+  line-height:1.6;color:var(--muted);margin:16px 0}
+.detail-copy .team-row{flex-direction:column;gap:8px;margin-top:16px}
+.detail-copy .team{min-width:0}
+.camera{transform-style:preserve-3d;transform:rotateX(52deg) rotateZ(-14deg);transform-origin:50% 50%}
+.table-plane{position:relative;border-radius:20px;padding:30px;
+  background:radial-gradient(circle at 18% 8%,rgba(255,255,255,.16),transparent 42%),
+    radial-gradient(circle at 86% 94%,rgba(0,0,0,.4),transparent 48%),
+    var(--felt) center/cover no-repeat,linear-gradient(150deg,#263159,#11182b);
+  box-shadow:0 50px 90px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.12)}
+.detail-board{width:760px;gap:8px}
+.detail-board .card{height:124px}
+.detail-board .card .word{font-size:20px}
+.detail-foot{position:absolute;left:42px;bottom:32px;display:flex;gap:10px;align-items:center}
+
+/* detail cards */
+.cards-stage{position:relative;display:grid;grid-template-columns:1fr 360px;gap:20px;
+  padding:56px 54px;align-items:center}
+.fan{position:relative;height:520px;perspective:1400px}
+.big-card{position:absolute;width:220px;height:300px;border-radius:18px;overflow:hidden;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+  border:1px solid rgba(255,255,255,.2);box-shadow:0 26px 44px rgba(0,0,0,.45);
+  background:linear-gradient(135deg,rgba(255,255,255,.28),transparent 38%),
+    linear-gradient(315deg,rgba(0,0,0,.26),transparent 44%),
+    linear-gradient(165deg,#fffdf7,#e9e2d2);color:#1b1b1b}
+.big-card::before{content:"";position:absolute;inset:0;background:var(--paper) center/cover no-repeat;
+  mix-blend-mode:multiply;opacity:.6}
+.big-card > *{position:relative;z-index:1}
+.big-card .word{font-family:var(--song);font-weight:700;font-size:34px}
+.big-card .role{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:11px;
+  letter-spacing:.22em;font-weight:800;opacity:.85}
+.big-card.c1{left:0;top:110px;transform:rotate(-13deg)}
+.big-card.c2{left:150px;top:74px;transform:rotate(-6deg)}
+.big-card.c3{left:300px;top:48px;transform:rotate(2deg)}
+.big-card.c4{left:450px;top:74px;transform:rotate(8deg)}
+.big-card.c5{left:600px;top:110px;transform:rotate(14deg)}
+.big-card.is-red{background:linear-gradient(135deg,rgba(255,255,255,.2),transparent 38%),
+  linear-gradient(315deg,rgba(0,0,0,.28),transparent 44%),linear-gradient(158deg,#d9544e,#8d2b28);color:#fff}
+.big-card.is-blue{background:linear-gradient(135deg,rgba(255,255,255,.2),transparent 38%),
+  linear-gradient(315deg,rgba(0,0,0,.28),transparent 44%),linear-gradient(158deg,#4b86d8,#274f8c);color:#fff}
+.big-card.is-red::before,.big-card.is-blue::before{background:var(--back) center/cover no-repeat;
+  mix-blend-mode:soft-light;opacity:.32}
+.cards-copy h2{font-family:var(--song);font-weight:700;font-size:52px;margin:0 0 8px;line-height:1.1}
+.cards-copy .lead{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:14px;
+  line-height:1.7;color:var(--muted);margin:16px 0}
+.spec{display:flex;flex-direction:column;gap:7px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:12px;color:var(--muted)}
+.spec b{color:var(--gold);font-weight:700}
+.spec span{border-top:1px solid rgba(255,255,255,.12);padding-top:7px}
+.stamp{position:absolute;right:46px;bottom:34px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:11px;letter-spacing:.18em;color:rgba(255,255,255,.5)}
+</style>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/codenames-premium/art/render.html">
+<style>
+/* site-quality: fixed-size art composition must not create page overflow */
+html{overflow-x:hidden}
+body{width:100%!important;max-width:100vw!important;overflow-x:hidden}
+.stage,#stage{max-width:100vw;overflow:hidden}
+</style>
+</head>
+<body data-view="cover">
+<div class="stage" id="stage"></div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="icon-flag" viewBox="0 0 24 24"><path d="M5 3v18M5 4.2h13.2l-2.4 4.1 2.4 4.1H5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="icon-diamond" viewBox="0 0 24 24"><path d="M12 2.8 21.2 12 12 21.2 2.8 12Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+  <symbol id="icon-skull" viewBox="0 0 24 24"><path d="M12 3c4.4 0 7.5 2.9 7.5 6.8 0 2.5-1.2 4.2-2.7 5.3v2.1c0 .8-.6 1.4-1.4 1.4h-1.2v1.2c0 .5-.4.9-.9.9h-2.6c-.5 0-.9-.4-.9-.9v-1.2H8.6c-.8 0-1.4-.6-1.4-1.4v-2.1C5.7 14 4.5 12.3 4.5 9.8 4.5 5.9 7.6 3 12 3Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="9.3" cy="10" r="1.5" fill="currentColor"/><circle cx="14.7" cy="10" r="1.5" fill="currentColor"/></symbol>
+</defs></svg>
+<script src="../../../shared/shuffle.js"></script>
+<script src="../words.js"></script>
+<script src="../engine.js"></script>
+<script>
+(function () {
+  'use strict';
+  var params = new URLSearchParams(location.search);
+  var view = params.get('view') || 'cover';
+  document.body.dataset.view = view;
+  var g = window.CodenamesEngine.createGame({ seed: 20261110 });
+  var role = { red: '红队', blue: '蓝队', neutral: '平民', assassin: '刺客' };
+  var icon = { red: 'icon-flag', blue: 'icon-flag', neutral: 'icon-diamond', assassin: 'icon-skull' };
+  var dotClass = { red: 'dot-red', blue: 'dot-blue', neutral: 'dot-neutral', assassin: 'dot-assassin' };
+
+  function pickReveals(seed) {
+    var out = { red: [], blue: [], neutral: [], assassin: [] };
+    g.words.forEach(function (w, i) { out[w.color].push(i); });
+    var want = seed || { red: 3, blue: 2, neutral: 1, assassin: 1 };
+    var set = [];
+    Object.keys(want).forEach(function (c) {
+      out[c].slice(0, want[c]).forEach(function (i) { set.push(i); });
+    });
+    return set;
+  }
+
+  function boardHTML(reveals) {
+    var set = {};
+    reveals.forEach(function (i) { set[i] = true; });
+    return g.words.map(function (w, i) {
+      var revealed = !!set[i];
+      var cls = 'card' + (revealed ? ' is-' + w.color : '');
+      var inner = '<span class="key-dot ' + dotClass[w.color] + '"></span>' +
+        '<span class="word">' + w.text + '</span>' +
+        (revealed ? '<span class="role">' + role[w.color] + '</span>' : '');
+      return '<div class="' + cls + '">' + inner + '</div>';
+    }).join('');
+  }
+
+  var stage = document.getElementById('stage');
+  if (view === 'cover') {
+    stage.className = 'stage cover-stage';
+    stage.innerHTML =
+      '<div class="hero-head"><div class="kicker">PREMIUM · 单机中文版</div>' +
+      '<h1>行动代号</h1><div class="sub">CODENAMES</div>' +
+      '<div class="meta">275 词中文词库 · 红 9 / 蓝 8 / 中立 7 / 刺客 1 · 2–8 人</div></div>' +
+      '<div class="board">' + boardHTML(pickReveals({ red: 3, blue: 2, neutral: 1, assassin: 1 })) + '</div>' +
+      '<div class="hero-foot"><span class="chip"><b>一词</b> 线索 + 数字</span>' +
+      '<span class="chip"><b>5×5</b> 真实局面</span>' +
+      '<span class="chip"><b>刺客</b> 一票判负</span></div>';
+  } else if (view === 'og') {
+    stage.className = 'stage og-stage';
+    stage.innerHTML =
+      '<div class="og-copy"><div class="kicker">CODENAMES · PREMIUM</div>' +
+      '<h1>行动代号</h1><div class="sub">中文豪华单机版</div>' +
+      '<p class="lead">队长给出一个词与数字，队员在 5×5 词卡中找出己方颜色。避开对方、平民与刺客，先找齐 9/8 张词获胜。</p>' +
+      '<div class="og-chips"><span class="chip"><b>275</b> 词</span><span class="chip"><b>红 9</b> 蓝 8</span>' +
+      '<span class="chip"><b>中立 7</b> 刺客 1</span><span class="chip"><b>2–8</b> 人</span></div>' +
+      '<div class="legend"><span><i class="lg-red"></i>红队</span><span><i class="lg-blue"></i>蓝队</span>' +
+      '<span><i class="lg-neutral"></i>平民</span><span><i class="lg-assassin"></i>刺客</span></div></div>' +
+      '<div class="board">' + boardHTML(pickReveals({ red: 3, blue: 2, neutral: 1, assassin: 0 })) + '</div>';
+  } else if (view === 'detail-board') {
+    stage.className = 'stage detail-stage';
+    stage.innerHTML =
+      '<div class="detail-copy"><div class="kicker">REAL 5×5 KEY</div>' +
+      '<h1>行动代号</h1><div class="sub">CODENAMES</div>' +
+      '<p class="lead">完整 25 张词卡由代码合成：红 9、蓝 8、中立 7、刺客 1。卡面使用本地 img-gen 纸纤维素材，文字用 Songti SC Bold(700) 渲染。</p>' +
+      '<div class="chip"><b>「水果」</b> 2</div>' +
+      '<div class="team-row"><div class="team red"><b>红队</b><strong>4 / 9</strong><small>剩余 5</small></div>' +
+      '<div class="team blue"><b>蓝队</b><strong>3 / 8</strong><small>剩余 5</small></div></div></div>' +
+      '<div class="camera"><div class="table-plane"><div class="board detail-board">' +
+      boardHTML(pickReveals({ red: 4, blue: 3, neutral: 2, assassin: 1 })) + '</div></div></div>';
+  } else if (view === 'detail-cards') {
+    stage.className = 'stage cards-stage';
+    var words = g.words;
+    stage.innerHTML =
+      '<div class="fan">' +
+      '<div class="big-card c1"><span class="word">' + words[0].text + '</span></div>' +
+      '<div class="big-card c2"><span class="word">' + words[1].text + '</span></div>' +
+      '<div class="big-card c3 is-red"><span class="word">' + words[2].text + '</span><span class="role">红队</span></div>' +
+      '<div class="big-card c4 is-blue"><span class="word">' + words[3].text + '</span><span class="role">蓝队</span></div>' +
+      '<div class="big-card c5"><span class="word">' + words[4].text + '</span></div></div>' +
+      '<div class="cards-copy"><div class="kicker">MATERIAL STUDY</div><h2>纸纤维与左上主光</h2>' +
+      '<p class="lead">词卡纸面、卡背与桌面绒布均由 img-gen 生成单物件素材；页面以本地 WebP 引用，零外链。角色标记与 UI 图标为内联标准 SVG。</p>' +
+      '<div class="spec"><span><b>纸面</b> 300gsm 棉质卡纸，可见纤维与轻微压纹</span>' +
+      '<span><b>卡背</b> 深靛蓝亚麻压纹卡纸，柔和边缘磨损</span>' +
+      '<span><b>桌面</b> 深青蓝羊毛毡，细密绒毛与柔光</span>' +
+      '<span><b>光照</b> 左上大面积柔光箱 + 右侧补光</span></div></div>' +
+      '<div class="stamp">LOCAL ASSETS · SONGTI SC BOLD 700</div>';
+  }
+}());
+</script>
+</body>
+</html>

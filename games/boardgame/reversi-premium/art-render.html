@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1200">
+<meta name="description" content="黑白棋 Reversi 精美版：8×8 标准规则、双面棋子材质、翻面动画、三档 AI、悔棋与 2 人联机房间。本地运行，零外部请求。">
+<title>Reversi premium art composition</title>
+<style>
+:root{
+  --serif:"Songti SC","Noto Serif SC","Palatino Linotype",Georgia,serif;
+  --sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+  --gold:#d8b26c;--gold2:#f3d9a5;--ink:#f5ecd9;--dim:#cdbb9d;
+  --felt:url("../../assets/art/premium/reversi/table-felt.webp");
+  --wood:url("../../assets/art/premium/reversi/table-wood.webp");
+  --black:url("../../assets/art/premium/reversi/disc-black.webp");
+  --white:url("../../assets/art/premium/reversi/disc-white.webp");
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:#0b0906;overflow:hidden}
+body{width:1200px;height:1200px;font-family:var(--sans);color:var(--ink)}
+.stage{position:relative;width:1200px;height:1200px;overflow:hidden;
+  background:radial-gradient(900px 700px at 12% 0%,rgba(216,178,108,.2),transparent 62%),
+    radial-gradient(900px 700px at 96% 100%,rgba(47,96,70,.4),transparent 64%),
+    linear-gradient(150deg,#18130c,#090705 78%)}
+.stage::before{content:"";position:absolute;inset:0;background:var(--wood) center/cover;opacity:.46;filter:saturate(.8) contrast(1.06)}
+.stage::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(6,4,2,.18),rgba(6,4,2,.74))}
+.frame{position:absolute;inset:28px;border:1px solid rgba(216,178,108,.55);border-radius:26px;z-index:2;
+  box-shadow:inset 0 0 0 7px rgba(216,178,108,.06),0 40px 100px rgba(0,0,0,.55)}
+.frame::before,.frame::after{content:"";position:absolute;width:58px;height:58px;border:2px solid rgba(216,178,108,.65)}
+.frame::before{left:14px;top:14px;border-right:0;border-bottom:0;border-radius:16px 0 0 0}
+.frame::after{right:14px;bottom:14px;border-left:0;border-top:0;border-radius:0 0 16px 0}
+.content{position:absolute;inset:66px;z-index:4;display:flex;flex-direction:column}
+.brand{display:flex;align-items:flex-start;gap:20px;max-width:470px}
+.crest{width:86px;height:86px;border-radius:20px;flex:none;position:relative;overflow:hidden;
+  background:linear-gradient(145deg,#5c4528,#1b140b);border:1px solid rgba(216,178,108,.55);
+  box-shadow:0 18px 40px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.18)}
+.crest i{position:absolute;width:38px;height:38px;border-radius:50%;background-size:contain;background-repeat:no-repeat}
+.crest i.b{left:8px;top:10px;background-image:var(--black)}
+.crest i.w{right:8px;bottom:9px;background-image:var(--white)}
+h1{margin:0;font-family:var(--serif);font-weight:700;font-size:92px;line-height:.9;letter-spacing:.1em;text-shadow:0 14px 40px rgba(0,0,0,.55)}
+h1 span{color:var(--gold2)}
+.tag{margin:14px 0 0;font-size:18px;letter-spacing:.28em;color:var(--dim);font-weight:600}
+.rule{height:2px;background:linear-gradient(90deg,var(--gold),transparent);margin:20px 0 0;width:470px}
+.chips{display:flex;gap:10px;margin-top:22px;flex-wrap:wrap;max-width:470px}
+.chip{display:inline-flex;align-items:center;height:40px;padding:0 16px;border-radius:999px;
+  border:1px solid rgba(216,178,108,.45);background:rgba(10,7,4,.55);color:var(--gold2);font-size:15px;letter-spacing:.06em}
+.desc{max-width:430px;margin-top:26px;font-size:16px;line-height:1.9;color:var(--dim)}
+.sources{position:absolute;left:70px;bottom:58px;font-size:12px;letter-spacing:.16em;color:rgba(245,236,217,.62);z-index:6;line-height:1.8}
+
+.boardWrap{position:absolute;right:52px;bottom:74px;width:650px;z-index:5;transform:rotate(-1.2deg)}
+.board{position:relative;width:100%;aspect-ratio:1;border-radius:20px;padding:26px;
+  background:linear-gradient(145deg,#6a4b2a,#2b1d0e);box-shadow:0 34px 70px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.16)}
+.board::before{content:"";position:absolute;inset:20px;border-radius:12px;
+  background:var(--felt) center/cover,linear-gradient(145deg,#2f6046,#244d38);
+  box-shadow:inset 0 0 0 2px rgba(216,178,108,.4),inset 0 14px 30px rgba(0,0,0,.35)}
+.grid{position:relative;display:grid;grid-template-columns:repeat(8,1fr);width:100%;aspect-ratio:1;padding:6px;gap:2px;z-index:2}
+.cell{position:relative;aspect-ratio:1;border-radius:4px;background:rgba(0,0,0,.07);box-shadow:inset 0 0 0 1px rgba(0,0,0,.2)}
+.cell i{position:absolute;inset:5%;border-radius:50%;background-size:contain;background-repeat:no-repeat;background-position:center;
+  filter:drop-shadow(0 4px 4px rgba(0,0,0,.55))}
+.cell i.b{background-image:var(--black)}
+.cell i.w{background-image:var(--white)}
+.cell.last{box-shadow:inset 0 0 0 2px rgba(243,217,165,.8)}
+.coordX{position:absolute;left:26px;right:26px;bottom:4px;display:grid;grid-template-columns:repeat(8,1fr);font-family:var(--serif);font-size:13px;color:var(--gold2);text-align:center;letter-spacing:.08em;z-index:3}
+.coordY{position:absolute;top:26px;bottom:26px;left:4px;display:grid;grid-template-rows:repeat(8,1fr);font-family:var(--serif);font-size:13px;color:var(--gold2);text-align:center;align-items:center;z-index:3}
+.score{position:absolute;left:52px;top:74px;display:flex;gap:12px;z-index:6}
+.scoreBox{display:flex;align-items:center;gap:10px;min-width:150px;padding:10px 15px;border-radius:14px;
+  border:1px solid rgba(216,178,108,.4);background:rgba(10,7,4,.6)}
+.scoreBox i{width:26px;height:26px;border-radius:50%;background-size:contain;background-repeat:no-repeat}
+.scoreBox i.b{background-image:var(--black)}.scoreBox i.w{background-image:var(--white)}
+.scoreBox b{font-family:var(--serif);font-size:27px;color:var(--gold2)}
+.scoreBox span{font-size:13px;color:var(--dim)}
+
+/* OG */
+body[data-shot="og"]{width:1200px;height:630px}
+body[data-shot="og"] .stage{width:1200px;height:630px}
+body[data-shot="og"] .content{inset:44px 56px}
+body[data-shot="og"] h1{font-size:70px}
+body[data-shot="og"] .tag{font-size:14px;margin-top:8px}
+body[data-shot="og"] .crest{width:64px;height:64px}
+body[data-shot="og"] .crest i{width:28px;height:28px}
+body[data-shot="og"] .chips{margin-top:14px}
+body[data-shot="og"] .chip{height:34px;font-size:13px;padding:0 12px}
+body[data-shot="og"] .desc{display:none}
+body[data-shot="og"] .rule{width:390px;margin-top:12px}
+body[data-shot="og"] .sources{left:56px;bottom:34px;font-size:12px}
+body[data-shot="og"] .boardWrap{right:20px;bottom:14px;width:470px;transform:none}
+body[data-shot="og"] .board{padding:18px}
+body[data-shot="og"] .board::before{inset:14px}
+body[data-shot="og"] .score{left:56px;top:52px;transform:scale(.82);transform-origin:left top}
+
+/* Detail */
+body[data-shot="detail"]{width:1536px;height:1024px}
+body[data-shot="detail"] .stage{width:1536px;height:1024px}
+body[data-shot="detail"] .content{inset:56px 64px}
+body[data-shot="detail"] h1{font-size:82px}
+body[data-shot="detail"] .tag{font-size:16px}
+body[data-shot="detail"] .desc{max-width:470px;font-size:15px}
+body[data-shot="detail"] .boardWrap{right:64px;bottom:60px;width:700px;transform:rotate(-1deg)}
+body[data-shot="detail"] .sources{left:64px;bottom:40px}
+body[data-shot="detail"] .score{left:64px;top:70px;transform:scale(.9);transform-origin:left top}
+</style>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/reversi-premium/art-render.html">
+</head>
+<body>
+<script>
+(function () {
+  var shot = new URLSearchParams(location.search).get('shot') || 'cover';
+  document.body.setAttribute('data-shot', shot);
+})();
+</script>
+<div class="stage">
+  <div class="frame"></div>
+  <div class="score" id="score"></div>
+  <div class="content">
+    <div class="brand">
+      <div class="crest" aria-hidden="true"><i class="b"></i><i class="w"></i></div>
+      <div>
+        <h1>黑白棋<br><span>REVERSI</span></h1>
+        <p class="tag">8×8 · 夹击翻面 · 占角为王</p>
+        <div class="rule"></div>
+        <div class="chips">
+          <span class="chip">标准规则</span>
+          <span class="chip">三档 AI</span>
+          <span class="chip">双人联机</span>
+        </div>
+      </div>
+    </div>
+    <p class="desc">黑棋先行，夹住对方棋子即可翻面。八方向同时结算，无子可下则跳过，终局棋子多者胜。绿呢桌面与 30mm 双面棋子，复盘每一手翻转。</p>
+  </div>
+  <div class="boardWrap">
+    <div class="board">
+      <div class="grid" id="grid" role="img" aria-label="Reversi midgame position"></div>
+      <div class="coordX" id="coordX"></div>
+      <div class="coordY" id="coordY"></div>
+    </div>
+  </div>
+  <div class="sources" id="sources"></div>
+</div>
+<script src="engine.js"></script>
+<script>
+(function () {
+  'use strict';
+  var E = window.ReversiEngine;
+  var st = E.createGame({ seed: 20261110, aiLevel: 'normal', isAI: [true, true], names: ['黑', '白'] });
+  var guard = 0;
+  while (!st.over && st.moveCount < 34 && guard < 200) {
+    st = E.applyMove(st, E.chooseAIMove(st, 'normal'));
+    guard += 1;
+  }
+  var grid = document.getElementById('grid');
+  var last = st.lastMove ? st.lastMove.row * 8 + st.lastMove.col : -1;
+  for (var i = 0; i < 64; i += 1) {
+    var cell = document.createElement('div');
+    cell.className = 'cell' + (i === last ? ' last' : '');
+    if (st.board[i]) {
+      var d = document.createElement('i');
+      d.className = st.board[i] === E.BLACK ? 'b' : 'w';
+      cell.appendChild(d);
+    }
+    grid.appendChild(cell);
+  }
+  var x = document.getElementById('coordX');
+  for (var c = 0; c < 8; c += 1) x.innerHTML += '<span>' + 'abcdefgh'.charAt(c) + '</span>';
+  var y = document.getElementById('coordY');
+  for (var r = 1; r <= 8; r += 1) y.innerHTML += '<span>' + r + '</span>';
+  document.getElementById('score').innerHTML =
+    '<div class="scoreBox"><i class="b"></i><b>' + st.scores.black + '</b><span>黑棋</span></div>' +
+    '<div class="scoreBox"><i class="w"></i><b>' + st.scores.white + '</b><span>白棋</span></div>';
+  document.getElementById('sources').textContent =
+    'MIDGAME 第 ' + st.moveCount + ' 手 · 合法局面由 engine.js 自对弈生成 · B站 BV1CuxQ6EExW / BV1Bs4y1c7Y9';
+  window.__ART_READY__ = { moveCount: st.moveCount, black: st.scores.black, white: st.scores.white };
+})();
+</script>
+</body>
+</html>

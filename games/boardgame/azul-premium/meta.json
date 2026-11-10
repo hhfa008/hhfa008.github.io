@@ -1,0 +1,171 @@
+{
+  "slug": "azul-premium",
+  "name": {
+    "zh": "花砖物语",
+    "en": "Azul"
+  },
+  "type": "boardgame",
+  "status": "shipped",
+  "statusReason": "单机闭环、美术、性能、移动端与 E2E 已通过；联机房间/邀请/跨设备同步/AI 补位/断线重连/超时托管/排行榜/双端 E2E 全部接入并通过。",
+  "entry": "index.html",
+  "rules": "rules.html",
+  "design": "DESIGN.md",
+  "progress": "PROGRESS.md",
+  "e2e": {
+    "script": "e2e.mjs",
+    "record": "E2E.md",
+    "command": "node games/boardgame/azul-premium/e2e.mjs",
+    "assertions": 149,
+    "control": "node games/boardgame/azul-premium/e2e.mjs --control  # exit 1, intentional failure",
+    "environment": "resident audit Chrome via CDP 9222; chrome-ensure reuse; one tab opened and closed; no temp Chrome/profile",
+    "online": {
+      "script": "online-e2e.mjs",
+      "command": "node games/boardgame/azul-premium/online-e2e.mjs",
+      "assertions": 42,
+      "runAll": "node games/boardgame/azul-premium/test-online.js",
+      "environment": "resident Chrome via chrome-ensure + Playwright connectOverCDP; two isolated contexts; no browser.close()"
+    }
+  },
+  "singlePlayer": false,
+  "modeLabel": "2–4 人 · 联机 + AI 匹配 / 单人 AI",
+  "players": {
+    "min": 2,
+    "max": 4,
+    "best": [2, 3]
+  },
+  "playTime": {
+    "min": 30,
+    "max": 45
+  },
+  "age": 8,
+  "designer": "Michael Kiesling",
+  "year": 2017,
+  "awards": ["Spiel des Jahres 2018"],
+  "online": {
+    "status": "ready",
+    "required": [
+      "online-rooms",
+      "invite-flow",
+      "state-sync",
+      "reconnect",
+      "timeout-ai-takeover",
+      "leaderboard",
+      "dual-client-e2e-in-run-all"
+    ],
+    "entry": "online.html",
+    "server": "games/boardgame/app/server.mjs",
+    "transport": "HTTP/JSON + 700ms polling; server-authoritative; LAN-only by default",
+    "features": {
+      "rooms": "2–4 seats; room id + 6-char code + single-use invite token",
+      "invite": "inviteUrl uses the request Host; opens /boardgame/azul-premium/online.html?room=&code=",
+      "stateSync": "stateVersion + lastAction; every viewer gets players rotated so its own seat is 0",
+      "aiFill": "default 3s, configurable; fills empty seats to 2/3/4 with the same Azul engine and legal-move AI",
+      "reconnect": "session token + POST /api/rooms/:id/reconnect; reconnect clears the timeout autopilot flag",
+      "timeoutTakeover": "no session request for BOARDGAME_DISCONNECT_MS (default 15s) → server auto-plays; autoPlayed records reason=timeout",
+      "leaderboard": "GET /api/leaderboard?game=azul; anonymous sha256(playerId) only; AI participants included",
+      "idempotency": "per-player idempotencyKey is checked before the turn guard, so replays keep the original response"
+    },
+    "evidence": {
+      "http": "node games/boardgame/tests/azul-online.test.mjs — 290 assertions",
+      "browser": "node games/boardgame/azul-premium/online-e2e.mjs — 42 assertions, two Playwright CDP contexts",
+      "runAll": "games/boardgame/azul-premium/test-online.js is auto-discovered by node games/tests/run-all.js",
+      "reuse": "resident Chrome via chrome-ensure + connectOverCDP; no temp Chrome/profile; no browser.close()"
+    }
+  },
+  "shared": {
+    "shuffle": "games/shared/shuffle.js — engine.js require + index.html script tag; seeded Fisher-Yates reused",
+    "sfx": "games/shared/sfx.js — index.html script tag; AudioContext/合成器不再自建",
+    "rules": "N/A — games/shared/rules.js 只含五子棋/四子棋；Azul 规则在 engine.js",
+    "physics": "N/A — Azul 无物理模拟",
+    "rewards": "N/A — Azul 联机不引入积分/奖励层",
+    "leaderboard": "复用 games/boardgame/app/leaderboard.js 的 sha256Hex；服务端内存榜只存匿名摘要"
+  },
+  "assets": {
+    "cover": "assets/cover.webp",
+    "coverMaster": "assets/cover.png",
+    "og": "assets/og.webp",
+    "ogMaster": "assets/og.png",
+    "detailImages": [
+      "assets/detail-1.webp",
+      "assets/detail-2.webp"
+    ],
+    "detailMasters": [
+      "assets/detail-1.png",
+      "assets/detail-2.png"
+    ],
+    "singleObject": [
+      "../../assets/art/premium/azul/tile-blue.webp",
+      "../../assets/art/premium/azul/tile-yellow.webp",
+      "../../assets/art/premium/azul/tile-red.webp",
+      "../../assets/art/premium/azul/tile-black.webp",
+      "../../assets/art/premium/azul/tile-white.webp",
+      "../../assets/art/premium/azul/factory-wood.webp",
+      "../../assets/art/premium/azul/table-felt.webp",
+      "../../assets/art/premium/azul/table-wood.webp"
+    ],
+    "compositionSource": "art-render.html",
+    "compositionScript": "render-art.mjs",
+    "localOnly": true
+  },
+  "realism": {
+    "rules": {
+      "players": [2, 3, 4],
+      "factoryCounts": { "2": 5, "3": 7, "4": 9 },
+      "tilesPerFactory": 4,
+      "totalTiles": 100,
+      "colors": 5,
+      "tilesPerColor": 20,
+      "patternLines": [1, 2, 3, 4, 5],
+      "wall": [5, 5],
+      "floorSlots": 7,
+      "floorPenalty": [1, 1, 2, 2, 2, 3, 3],
+      "bonuses": { "row": 2, "column": 7, "color": 10 },
+      "tieBreak": "complete-horizontal-rows-then-shared"
+    },
+    "colors": [
+      { "key": "blue", "hex": "#2f6fb5", "zh": "湖蓝" },
+      { "key": "yellow", "hex": "#d9a620", "zh": "柠黄" },
+      { "key": "red", "hex": "#b94a3f", "zh": "朱红" },
+      { "key": "black", "hex": "#2b2e37", "zh": "墨黑" },
+      { "key": "white", "hex": "#ece2cf", "zh": "瓷白" }
+    ],
+    "dimensions": {
+      "boxMm": [260, 260, 70],
+      "playerBoardMm": [241, 241],
+      "tileMm": [22, 22, 6],
+      "note": "盒子与玩家板来自公开评测/BGG；花砖 22×22×6 mm 为社区实测，官方 Next Move 只标注 100 枚树脂砖。"
+    },
+    "materials": {
+      "officialTiles": "resin",
+      "officialFactories": "cardboard",
+      "scoringMarkers": "wood",
+      "artDirection": "glazed ceramic tile faces, walnut factory trays, wool felt table",
+      "deviation": "材质为 premium 视觉升级；规则、颜色、件数、比例严格按官方。"
+    },
+    "validation": {
+      "tileCount": "engine.js + test.js 守恒检查",
+      "factoryLayout": "2/3/4 人 5/7/9 圆盘，每盘 4 枚",
+      "wallLatinSquare": "每行每列五色各一次",
+      "bonusValues": "computeBonuses 全墙 = 95 (10 + 35 + 50)",
+      "artifacts": "封面/OG/详情图由 art-render.html 代码合成，单物件素材无文字"
+    }
+  },
+  "performanceBudgets": {
+    "fcpMs": 2500,
+    "loadEventEndMs": 4000,
+    "domNodes": 2500,
+    "fps": 30,
+    "newGameRenderMs": 200,
+    "materialBytes": 1572864,
+    "externalRequests": 0
+  },
+  "mobile": {
+    "viewports": ["390x844", "320x568", "844x390", "568x320"],
+    "touchTargetPx": 44,
+    "safeArea": true,
+    "dvh": true,
+    "offline": true,
+    "hoverDependent": false,
+    "backdropFilterOnTouch": false
+  }
+}
