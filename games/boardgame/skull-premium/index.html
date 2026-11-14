@@ -17,6 +17,7 @@
 <link rel="preload" as="image" href="../../assets/art/premium/skull/bar-mat.webp">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231b1712'/%3E%3Ccircle cx='32' cy='32' r='22' fill='%23d8c9ae'/%3E%3Cpath d='M32 16c-9 0-14 6-14 14 0 5 2 8 5 10v6h18v-6c3-2 5-5 5-10 0-8-5-14-14-14z' fill='%23352b22'/%3E%3Ccircle cx='26' cy='30' r='3' fill='%23d8c9ae'/%3E%3Ccircle cx='38' cy='30' r='3' fill='%23d8c9ae'/%3E%3Cpath d='M30 38h4v5h-4z' fill='%23d8c9ae'/%3E%3C/svg%3E">
 <title>骷髅牌 SKULL · 精品桌游</title>
+<link rel="stylesheet" href="../../shared/poker-ui.css">
 <style>
 :root { --font-serif: "Iowan Old Style", "Palatino Linotype", "Songti SC", "Noto Serif SC", Georgia, serif; --font-sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; --art-coaster: url("../../assets/art/premium/skull/coaster.webp"); --art-wood: url("../../assets/art/premium/skull/table-wood.webp"); --art-mat: url("../../assets/art/premium/skull/bar-mat.webp"); --bg: #0f0c09; --bg-2: #1a140f; --panel: rgba(38,29,21,.86); --panel-2: rgba(54,40,28,.62); --ink: #f4e8d4; --ink-soft: #ddcbb0; --ink-dim: #b39d80; --brass: #c9a25e; --brass-2: #f0d79a; --brass-dim: rgba(201,162,94,.24); --line: rgba(201,162,94,.26); --line-soft: rgba(201,162,94,.12); --rose: #b84a5a; --rose-2: #e88a96; --skull: #d9cbb4; --danger: #e07a6b; --ok: #8fd0ae; --focus: #f7e2a8; --coaster: #e7dcc6; --coaster-ink: #3a2f24; --radius: 16px; --shadow: 0 26px 70px rgba(0,0,0,.55); --shadow-soft: 0 12px 30px rgba(0,0,0,.35); }
 html[data-theme="light"] { --bg: #efe6d6; --bg-2: #e7dac4; --panel: rgba(255,250,240,.92); --panel-2: rgba(255,248,236,.7); --ink: #2c2118; --ink-soft: #4c3a2a; --ink-dim: #7a6450; --brass: #8d6228; --brass-2: #6f4a18; --line: rgba(141,98,40,.3); --line-soft: rgba(141,98,40,.14); --coaster: #f2e9d8; --coaster-ink: #3a2f24; --shadow: 0 22px 60px rgba(60,40,20,.2); --shadow-soft: 0 10px 24px rgba(60,40,20,.14); }
@@ -53,23 +54,26 @@ button { cursor: pointer; }
 .phase-pill { display: inline-flex; align-items: center; gap: 7px; min-height: 32px; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--line); background: rgba(18,13,9,.6); font-size: 12px; color: var(--ink-soft); }
 .phase-pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--brass); box-shadow: 0 0 10px var(--brass); }
 .phase-pill.waiting::before { background: var(--ink-dim); box-shadow: none; }
-.players { position: relative; display: grid; grid-template-columns: repeat(auto-fit, minmax(96px,1fr)); gap: 8px; padding: 12px; }
-@media (max-width: 420px) { .players { grid-template-columns: repeat(auto-fit, minmax(86px,1fr)); gap: 6px; padding: 10px; } }
-.player-box { position: relative; min-width: 0; border-radius: 13px; border: 1px solid var(--line-soft); background: rgba(15,10,7,.55); padding: 8px; transition: border-color .15s ease, background .15s ease, transform .15s ease; }
+.players { position: relative; display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; padding: 12px; }
+@media (min-width: 721px) { .players { grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); } }
+@media (max-width: 420px) { .players { gap: 6px; padding: 10px; } }
+.player-box { position: relative; min-width: 0; border-radius: 13px; border: 1px solid var(--line-soft); background: rgba(15,10,7,.55); padding: 7px 8px; transition: border-color .15s ease, background .15s ease, transform .15s ease; }
 .player-box.me { border-color: rgba(240,215,154,.4); background: rgba(90,64,30,.25); }
 .player-box.out { opacity: .45; filter: grayscale(.6); }
 .player-box .pname { font-family: var(--font-serif); font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink); }
 .player-box .psub { font-size: 12px; color: var(--ink-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
-.player-box .pscore { display: flex; gap: 3px; margin-top: 5px; min-height: 12px; }
+.player-box .pscore { display: flex; align-items: center; gap: 4px; min-height: 16px; }
+.pscore-lbl { font-size: 12px; line-height: 1; color: var(--ink-dim); }
+.pbot { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: 5px; }
 .score-dot { width: 12px; height: 12px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #f7e8b5, var(--brass)); border: 1px solid #6b4a1a; box-shadow: 0 1px 3px rgba(0,0,0,.5); }
-.stack-zone { position: relative; width: 100%; min-height: 58px; margin-top: 7px; border: 0; border-radius: 10px; background: transparent; padding: 0; display: grid; place-items: center; }
-.stack-zone.revealable { border: 1px solid var(--brass-2); box-shadow: 0 0 0 2px rgba(240,215,154,.18) inset, 0 0 22px rgba(201,162,94,.18); }
+.stack-zone { position: relative; width: 34px; flex: 0 0 34px; min-height: 34px; margin-top: 0; border: 0; border-radius: 10px; background: transparent; padding: 0; display: grid; place-items: center; }
+.stack-zone.revealable { width: 44px; flex-basis: 44px; min-height: 44px; border: 1px solid var(--brass-2); box-shadow: 0 0 0 2px rgba(240,215,154,.18) inset, 0 0 22px rgba(201,162,94,.18); }
 .stack-zone:disabled { cursor: default; }
-.stack { position: relative; width: 44px; height: 44px; }
-.stack .disc { position: absolute; left: 50%; width: 38px; height: 38px; margin-left: -19px; border-radius: 50%; background: var(--art-coaster) center / cover no-repeat, var(--coaster); border: 2px solid var(--ring, var(--brass)); box-shadow: 0 2px 4px rgba(0,0,0,.5); }
-.stack .disc:nth-child(1) { top: 12px; }
-.stack .disc:nth-child(2) { top: 8px; }
-.stack .disc:nth-child(3) { top: 4px; }
+.stack { position: relative; width: 34px; height: 34px; }
+.stack .disc { position: absolute; left: 50%; width: 28px; height: 28px; margin-left: -14px; border-radius: 50%; background: var(--art-coaster) center / cover no-repeat, var(--coaster); border: 2px solid var(--ring, var(--brass)); box-shadow: 0 2px 4px rgba(0,0,0,.5); }
+.stack .disc:nth-child(1) { top: 6px; }
+.stack .disc:nth-child(2) { top: 4px; }
+.stack .disc:nth-child(3) { top: 2px; }
 .stack .disc:nth-child(4) { top: 0; }
 .stack .disc::after { content: ""; position: absolute; inset: 5px; border-radius: 50%; border: 1px dashed rgba(58,47,36,.35); }
 .stack-count { position: absolute; right: -2px; bottom: -2px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 999px; display: grid; place-items: center; font-size: 12px; font-weight: 700; background: var(--brass-2); color: #3a2a12; border: 1px solid #6b4a1a; }
@@ -84,6 +88,7 @@ button { cursor: pointer; }
 .bid-box { text-align: right; }
 @media (max-width: 560px) { .bid-box { text-align: left; } }
 .bid-box .big { font-family: var(--font-serif); font-size: 28px; font-weight: 700; color: var(--brass-2); line-height: 1; }
+.bid-box .big:empty { display: none; }
 .bid-box .lbl { font-size: 12px; color: var(--ink-dim); }
 .log { position: relative; margin: 0 14px 12px; max-height: 104px; overflow-y: auto; border: 1px solid var(--line-soft); border-radius: 10px; background: rgba(8,5,3,.42); padding: 8px 10px; font-size: 12px; line-height: 1.65; color: var(--ink-soft); scrollbar-width: thin; }
 .log p { margin: 0 0 4px; }
@@ -171,6 +176,7 @@ button { cursor: pointer; }
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="../../shared/shuffle.js"></script>
 <script src="../../shared/sfx.js"></script>
+<script src="../../shared/poker-ui.js"></script>
 <script src="data.js"></script>
 <script src="engine.js"></script>
 <script>
@@ -202,19 +208,44 @@ button { cursor: pointer; }
     else { pill.textContent = phase; pill.className = 'phase-pill waiting'; }
     var host = $('players'); host.innerHTML = '';
     state.players.forEach(function (p) {
+      var handCount = p.handCount != null ? p.handCount : ((p.roses || 0) + (p.skull || 0));
+      var stackCount = p.stackCount != null ? p.stackCount : (p.stack ? p.stack.length : 0);
       var box = el('div', 'player-box' + (p.index === seat ? ' me' : '') + (p.out ? ' out' : ''));
       var color = colorOf(p.index); var top = el('div');
       var name = el('div', 'pname', p.name); name.style.color = 'var(--ink)'; name.title = color.name;
-      var sub = el('div', 'psub', p.out ? '已出局' : ('手牌 ' + p.handCount + ' · 牌堆 ' + p.stackCount + (p.passed && phase === 'placement' ? ' · 停手' : '')));
+      var sub = el('div', 'psub', p.out ? '已出局' : ('手牌 ' + handCount + ' · 牌堆 ' + stackCount + (p.passed && phase === 'placement' ? ' · 停手' : '')));
       top.appendChild(name); top.appendChild(sub); box.appendChild(top);
-      var score = el('div', 'pscore'); score.setAttribute('role', 'img'); score.setAttribute('aria-label', p.score + ' / ' + state.targetPoints + ' 分'); for (var s = 0; s < state.targetPoints; s++) { var dot = el('span', 'score-dot'); if (s >= p.score) dot.style.opacity = '.22'; score.appendChild(dot); } box.appendChild(score);
+      var score = el('div', 'pscore'); score.setAttribute('role', 'img'); score.setAttribute('aria-label', p.score + ' / ' + state.targetPoints + ' 分');
+      if (window.PokerUI && window.PokerUI.createChipStack) {
+        var chipScore = window.PokerUI.createChipStack({ value: state.targetPoints, denominations: [1], max: state.targetPoints, className: 'pscore', label: p.score + ' / ' + state.targetPoints + ' 分' });
+        if (chipScore) {
+          Array.prototype.forEach.call(chipScore.children, function (dot, si) {
+            dot.classList.add('score-dot');
+            if (si >= p.score) dot.style.opacity = '.22';
+          });
+          score = chipScore;
+        }
+      } else {
+        for (var s = 0; s < state.targetPoints; s++) { var dot = el('span', 'score-dot'); if (s >= p.score) dot.style.opacity = '.22'; score.appendChild(dot); }
+      }
+      score.insertBefore(el('span', 'pscore-lbl', '得分'), score.firstChild);
+      var bottom = el('div', 'pbot');
+      bottom.appendChild(score);
       var revealable = phase === 'reveal' && humanTurn() && E.getLegalMoves(state).some(function (m) { return m.type === 'reveal' && m.player === p.index; });
       var zone = el(revealable ? 'button' : 'div', 'stack-zone');
       if (revealable) { zone.type = 'button'; zone.setAttribute('aria-label', '翻开 ' + p.name + ' 的牌'); zone.classList.add('revealable'); zone.addEventListener('click', function () { doReveal(p.index); }); }
-      var stack = el('div', 'stack'); var count = Math.min(4, p.stackCount);
-      for (var i = 0; i < count; i++) { var disc = el('div', 'disc'); disc.style.setProperty('--ring', color.hex); stack.appendChild(disc); }
-      if (p.stackCount) stack.appendChild(el('span', 'stack-count', String(p.stackCount)));
-      zone.appendChild(stack); box.appendChild(zone); host.appendChild(box);
+      var stack = el('div', 'stack'); var count = Math.min(4, stackCount);
+      for (var i = 0; i < count; i++) {
+        var disc = window.PokerUI && window.PokerUI.createCardBack
+          ? window.PokerUI.createCardBack({ size: 'mini', tag: 'div', className: 'disc', ariaLabel: '暗置的杯垫' })
+          : el('div', 'disc');
+        if (!disc) disc = el('div', 'disc');
+        disc.innerHTML = '';
+        disc.style.setProperty('--ring', color.hex);
+        stack.appendChild(disc);
+      }
+      if (stackCount) stack.appendChild(el('span', 'stack-count', String(stackCount)));
+      zone.appendChild(stack); bottom.appendChild(zone); box.appendChild(bottom); host.appendChild(box);
     });
     var rev = $('revealed'); rev.innerHTML = '';
     if (state.reveal && state.reveal.flips.length) {
@@ -222,9 +253,9 @@ button { cursor: pointer; }
     } else rev.appendChild(el('span', 'empty', state.phase === 'reveal' ? '点击上方任意玩家牌堆的最上面一张翻牌。' : '已经翻开的牌会出现在这里。'));
     var bid = state.bid;
     if (bid && bid.highest > 0) { $('bidBig').textContent = bid.highest + ' 枚'; $('bidSub').textContent = playerName(bid.bidder) + ' 叫价 · 目标 ' + bid.highest; }
-    else if (state.phase === 'bidding') { $('bidBig').textContent = '—'; $('bidSub').textContent = '由 ' + playerName(state.current) + ' 开叫'; }
+    else if (state.phase === 'bidding') { $('bidBig').textContent = ''; $('bidSub').textContent = '由 ' + playerName(state.current) + ' 开叫'; }
     else if (state.reveal) { $('bidBig').textContent = state.reveal.flipped + ' / ' + state.reveal.target; $('bidSub').textContent = playerName(state.reveal.bidder) + ' 翻牌中'; }
-    else { $('bidBig').textContent = '—'; $('bidSub').textContent = '尚未开始'; }
+    else { $('bidBig').textContent = ''; $('bidSub').textContent = '尚未开始'; }
     var optRow = $('optionRow'); optRow.innerHTML = '<span class="label">叫价</span>'; optRow.classList.toggle('on', phase === 'bidding' && humanTurn());
     if (phase === 'bidding' && humanTurn()) E.getLegalMoves(state).filter(function (m) { return m.type === 'bid'; }).forEach(function (m) { var b = el('button', 'option' + (selectedBid === m.amount ? ' sel' : ''), String(m.amount)); b.type = 'button'; b.dataset.bid = String(m.amount); b.addEventListener('click', function () { selectedBid = m.amount; sfx('click'); render(); }); optRow.appendChild(b); });
     var logHost = $('log'); logHost.innerHTML = '';
@@ -250,8 +281,24 @@ button { cursor: pointer; }
     if (state.over) showResult();
   }
   function makeDiscButton(disc, count, enabled) {
-    var btn = el('button', 'disc-btn ' + disc + '-disc' + (selectedDisc === disc ? ' sel' : '')); btn.type = 'button'; btn.disabled = !enabled; btn.setAttribute('aria-label', (disc === 'rose' ? '玫瑰' : '骷髅') + '，剩 ' + count + ' 枚');
-    btn.innerHTML = (disc === 'rose' ? ROSE : SKULL) + '<span class="cnt">' + count + '</span>';
+    var cls = 'disc-btn ' + disc + '-disc' + (selectedDisc === disc ? ' sel' : '');
+    var label = (disc === 'rose' ? '玫瑰' : '骷髅') + '，剩 ' + count + ' 枚';
+    var html = (disc === 'rose' ? ROSE : SKULL) + '<span class="cnt">' + count + '</span>';
+    var btn = null;
+    if (window.PokerUI && window.PokerUI.createCard) {
+      btn = window.PokerUI.createCard(null, {
+        face: 'custom',
+        faceHtml: html,
+        className: cls,
+        tag: 'button',
+        ariaLabel: label,
+        disabled: !enabled
+      });
+    }
+    if (!btn) {
+      btn = el('button', cls); btn.type = 'button'; btn.disabled = !enabled; btn.setAttribute('aria-label', label);
+      btn.innerHTML = html;
+    }
     btn.addEventListener('click', function () { if (!enabled) return; if (selectedDisc === disc) { doMove({ type: 'place', disc: disc }); return; } selectedDisc = disc; sfx('click'); render(); });
     return btn;
   }

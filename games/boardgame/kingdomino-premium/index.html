@@ -323,6 +323,73 @@ body{background-image:linear-gradient(rgba(242,234,216,.93),rgba(242,234,216,.93
 .t-mine{background-image:var(--art-mine),linear-gradient(150deg,#5c5c66,#2b2b33);background-size:cover,auto;background-blend-mode:multiply,normal}
 .info-card{background-image:var(--art-tile),linear-gradient(var(--paper-2),var(--paper-2));background-size:cover,auto;background-blend-mode:multiply,normal}
 </style>
+<style id="ui-fix">
+/* Hero：米色底上强制深色字（暗色模式下 --ink 会变浅，但 premium-art 底图仍是米色） */
+.hero{padding:14px 0 8px}
+.hero .eyebrow{color:#7a5722;margin-bottom:5px;font-size:12px}
+.hero h1{color:#221d16;font-size:clamp(1.5rem,6vw,2.1rem);margin-bottom:4px}
+.hero h1 span{color:#5c5346;font-size:12px;letter-spacing:.06em;margin-top:3px}
+.hero-more{display:none}
+.hero-toggle{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.hero-toggle-label{display:inline-flex;align-items:center;gap:6px;min-height:32px;margin-top:6px;padding:0 10px;
+  border:1px solid #c2ac82;border-radius:999px;background:#fbf4e4;color:#4a3f2f;font-size:12px;font-weight:650;
+  cursor:pointer;-webkit-tap-highlight-color:transparent}
+.hero-toggle-label::after{content:"▾";font-size:11px;line-height:1;color:#7a6a50;transition:transform .15s}
+.hero-toggle:checked ~ .hero-toggle-label::after{transform:rotate(180deg)}
+.hero-toggle:checked ~ .hero-more{display:block}
+.hero-toggle:focus-visible ~ .hero-toggle-label{outline:2px solid #8d6a33;outline-offset:2px}
+.hero .lede{color:#4a4136;font-size:13px;line-height:1.55;max-width:66ch;margin-top:8px}
+.hero .hero-tags{margin-top:8px}
+.hero .tag{min-height:26px;padding:0 9px;font-size:12px;color:#4a4136;background:#fbf4e4;border-color:#c2ac82}
+.hero a.tag{min-height:32px;min-width:0}
+/* 种子行：四个小按钮收成 2×2 组，AI 演示与其它控件对齐 */
+.setup-row{gap:6px}
+.setup-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;flex:1 1 190px;min-width:180px}
+.setup-actions .mini-btn{width:100%;padding:0 8px;min-width:0}
+/* 中文标题不要字距，避免「本 轮 待 选」 */
+.panel-head h2{letter-spacing:0}
+/* 轮次条：统一为「序号 + 玩家名（+✓）」，不再混用小图标/纯文字 */
+.order-strip{gap:4px}
+.order-slot{justify-content:flex-start;gap:3px;padding:0 4px;min-height:26px;font-size:12px;
+  overflow:visible;text-overflow:clip;white-space:nowrap}
+.order-slot .o-no{font-family:var(--mono);font-size:12px;line-height:1.5;padding:0 3px;border-radius:4px;
+  background:#2b3224;color:#d8cfbd;flex:none}
+.order-slot.now .o-no{background:var(--gold-2);color:#241b08}
+.order-slot .order-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.order-slot .order-done{color:var(--gold-2);flex:none;font-weight:700}
+/* 瓦片右上编号：实底小牌保证压在任何地形上都清楚 */
+.draft-no{right:4px;top:3px;z-index:3;padding:0 3px;border-radius:5px;line-height:1.35;
+  background:#f6e8c8;border:1px solid #7a5f2c;color:#3a2c12}
+/* 已选瓦片：只淡化地形，编号与名牌保持对比 */
+.draft-tile.taken{opacity:1;filter:none}
+.draft-tile.taken .draft-halves{opacity:.45;filter:saturate(.5)}
+.draft-taken{left:3px;bottom:3px;max-width:none;overflow:visible;text-overflow:clip;
+  background:#f0d08a;border:1px solid #a07d3d;color:#3a2c12}
+.draft-half .crown-badge{background:#15130c;color:#ffe7ae;border:1px solid rgb(255 231 174 / .38);font-size:12px}
+/* 中文提示避免孤字/词内断行 */
+.hint{text-wrap:pretty}
+.action-btn:disabled{opacity:.55}
+/* 记录行号在深底上也保持可读 */
+.log .log-round{color:#a69d8c}
+@media(min-width:431px){
+  .hero{padding:22px 0 12px}
+  .hero .eyebrow{font-size:12px;margin-bottom:8px}
+  .hero h1{font-size:clamp(1.9rem,7vw,2.6rem);margin-bottom:8px}
+  .hero h1 span{font-size:12px;letter-spacing:.14em;margin-top:6px}
+  .hero-toggle-label{display:none}
+  .hero-more{display:block}
+  .hero .lede{font-size:15.5px;line-height:1.68;margin-top:0}
+  .hero .hero-tags{margin-top:12px}
+  .hero .tag{min-height:30px;padding:0 11px}
+  .hero a.tag{min-height:44px;min-width:44px}
+}
+@media(max-width:430px){
+  .setup-row{display:grid;grid-template-columns:auto minmax(0,1fr)}
+  .seed-label input{width:112px}
+  .setup-actions{min-width:0}
+  .round-info{display:none}
+}
+</style>
 <link rel="canonical" href="https://hhfa008.github.io/games/boardgame/kingdomino-premium/">
 </head>
 <body>
@@ -342,14 +409,18 @@ body{background-image:linear-gradient(rgba(242,234,216,.93),rgba(242,234,216,.93
   <section class="hero">
     <p class="eyebrow">Kingdomino · 2 Players</p>
     <h1>多米诺王国<span>Kingdomino · 5×5 领地的取舍</span></h1>
-    <p class="lede">48 张真实多米诺瓦片，两人局随机抽 24 张。每轮按顺序选牌，把瓦片接进自己的 5×5 王国：同地形必须相邻匹配，领地面积乘以皇冠数才计分。选强牌还是抢下一轮的先手，是每一轮都要做的取舍。</p>
-    <div class="hero-tags" aria-label="玩法要点">
-      <span class="tag">48 张真实瓦片</span>
-      <span class="tag">两人局 24 张</span>
-      <span class="tag">5×5 王国</span>
-      <span class="tag">地形匹配</span>
-      <span class="tag">单人 / 联机 · 2 人</span>
-      <a class="tag" href="online.html" style="text-decoration:none">联机房间</a>
+    <input type="checkbox" id="heroMore" class="hero-toggle" aria-controls="heroMoreBody">
+    <label class="hero-toggle-label" for="heroMore">玩法说明与标签</label>
+    <div class="hero-more" id="heroMoreBody">
+      <p class="lede">48 张真实多米诺瓦片，两人局随机抽 24 张。每轮按顺序选牌，把瓦片接进自己的 5×5 王国：同地形必须相邻匹配，领地面积乘以皇冠数才计分。选强牌还是抢下一轮的先手，是每一轮都要做的取舍。</p>
+      <div class="hero-tags" aria-label="玩法要点">
+        <span class="tag">48 张真实瓦片</span>
+        <span class="tag">两人局 24 张</span>
+        <span class="tag">5×5 王国</span>
+        <span class="tag">地形匹配</span>
+        <span class="tag">单人 / 联机 · 2 人</span>
+        <a class="tag" href="online.html" style="text-decoration:none">联机房间</a>
+      </div>
     </div>
   </section>
 
@@ -373,10 +444,12 @@ body{background-image:linear-gradient(rgba(242,234,216,.93),rgba(242,234,216,.93
       <label class="seed-label" for="seedInput">种子
         <input id="seedInput" type="number" inputmode="numeric" min="0" max="999999999" step="1" value="20261110" aria-label="随机种子，0 到 999999999">
       </label>
-      <button class="mini-btn" data-cta data-cta-dock="board" id="newSeed" type="button">换一局</button>
-      <button class="mini-btn" id="restart" type="button">重开</button>
-      <button class="mini-btn" id="muteBtn" type="button" aria-pressed="false">音效：开</button>
-      <button class="mini-btn" id="autoDemo" type="button">AI 演示</button>
+      <div class="setup-actions">
+        <button class="mini-btn" data-cta data-cta-dock="board" id="newSeed" type="button">换一局</button>
+        <button class="mini-btn" id="restart" type="button">重开</button>
+        <button class="mini-btn" id="muteBtn" type="button" aria-pressed="false">音效：开</button>
+        <button class="mini-btn" id="autoDemo" type="button">AI 演示</button>
+      </div>
       <span class="round-info" id="roundInfo">第 1 轮 · 牌堆 20</span>
     </div>
 
@@ -486,6 +559,9 @@ body{background-image:linear-gradient(rgba(242,234,216,.93),rgba(242,234,216,.93
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
+  /* 词内不断行：用 word joiner 连住短标签，避免「横向 / A|B」被拆到两行 */
+  function noBreak(value) { return String(value).split('').join(String.fromCharCode(0x2060)); }
+
   /* ----------------------------- 音效 ----------------------------- */
 
   /* 音效统一走 games/shared/sfx.js，页面不再复制合成器。 */
@@ -592,17 +668,20 @@ body{background-image:linear-gradient(rgba(242,234,216,.93),rgba(242,234,216,.93
       var pi = state.order[i];
       var now = i === state.pickIndex && !state.over;
       var entry = state.draft[i];
-      var mark = entry && entry.takenBy !== null ? '✓ ' : '';
-      var king = i === 0 ? '<span class="king-mark" role="img" aria-label="本轮先手"></span>' : '';
-      html += '<div class="order-slot' + (now ? ' now' : '') + '"><span class="o-no">' + (i + 1) + '</span>' + king +
-        (mark || esc(state.players[pi].name)) + '</div>';
+      var mark = entry && entry.takenBy !== null ? '<span class="order-done" aria-label="已选">✓</span>' : '';
+      html += '<div class="order-slot' + (now ? ' now' : '') + '"><span class="o-no">' + (i + 1) + '</span>' +
+        '<span class="order-name">' + esc(state.players[pi].name) + '</span>' + mark + '</div>';
     }
     byId('orderStrip').innerHTML = html;
     byId('draftHint').textContent = '第 ' + state.round + ' / 6 轮 · 选牌顺序 ' +
       state.order.map(function (pi) { return state.players[pi].name; }).join(' → ');
   }
 
+  var draftKey = '';
   function renderDraft() {
+    var key = state.draft.map(function (entry) { return entry.tileId; }).join(',');
+    var deal = key !== draftKey;
+    draftKey = key;
     var html = '';
     state.draft.forEach(function (entry, index) {
       var tile = E.getTile(entry.tileId);
@@ -614,12 +693,12 @@ body{background-image:linear-gradient(rgba(242,234,216,.93),rgba(242,234,216,.93
         '" aria-label="' + esc(entry.tileId + ' 号瓦片，' + E.terrainName(tile.a.terrain) +
         (tile.a.crowns ? ' ' + tile.a.crowns + ' 皇冠' : '') + ' 与 ' + E.terrainName(tile.b.terrain) +
         (tile.b.crowns ? ' ' + tile.b.crowns + ' 皇冠' : '') + '，队列第 ' + (index + 1) + ' 位') +
-        '" style="animation-delay:' + (index * 55) + 'ms"' + (enabled ? '' : ' disabled') + '>' +
+        '" style="' + (deal ? 'animation-delay:' + (index * 55) + 'ms' : 'animation:none') + '"' +
+        (enabled ? '' : ' disabled') + '>' +
         '<span class="draft-no">' + entry.tileId + '</span>' +
         '<span class="draft-halves">' + halfHtml(tile.a) + halfHtml(tile.b) + '</span>' +
-        (taken ? '<span class="draft-taken">' + esc(state.players[entry.takenBy].name) +
-          (state.players[entry.takenBy].lastMove && state.players[entry.takenBy].lastMove.tileId === entry.tileId ? ' 已放置' : ' 已选') +
-          '</span>' : '') + '</button>';
+        (taken ? '<span class="draft-taken" aria-label="' + esc(state.players[entry.takenBy].name) + '已选">' +
+          (entry.takenBy === 0 ? '你' : 'AI') + ' ✓</span>' : '') + '</button>';
     });
     byId('draft').innerHTML = html;
   }
@@ -632,7 +711,7 @@ body{background-image:linear-gradient(rgba(242,234,216,.93),rgba(242,234,216,.93
     byId('pickedText').textContent = '已选 ' + selectedTileId + ' 号：' +
       E.terrainName(tile.a.terrain) + (tile.a.crowns ? '×' + tile.a.crowns : '') + ' / ' +
       E.terrainName(tile.b.terrain) + (tile.b.crowns ? '×' + tile.b.crowns : '') +
-      ' · 当前朝向 ' + E.ORIENTATION_LABELS[orientation];
+      ' · ' + noBreak('当前朝向 ' + E.ORIENTATION_LABELS[orientation]);
     [0, 1, 2, 3].forEach(function (o) {
       byId('orient' + o).setAttribute('aria-pressed', String(o === orientation));
     });
@@ -727,7 +806,7 @@ body{background-image:linear-gradient(rgba(242,234,216,.93),rgba(242,234,216,.93
       text = '当前朝向没有合法位置，点「旋转」或换一个朝向。';
       tone = 'warn';
     } else {
-      text = '点棋盘上高亮的格子，作为瓦片左上角放置（朝向：' + E.ORIENTATION_LABELS[orientation] + '）。';
+      text = '点高亮格作为左上角放置（朝向：' + noBreak(E.ORIENTATION_LABELS[orientation]) + '）。';
     }
     el.textContent = text;
     el.className = 'hint' + (tone ? ' ' + tone : '');
@@ -921,6 +1000,7 @@ body{background-image:linear-gradient(rgba(242,234,216,.93),rgba(242,234,216,.93
   function newGame(seed) {
     clearAI();
     gameToken += 1;
+    draftKey = '';
     state = E.createGame({ seed: seed >>> 0 });
     selectedTileId = null;
     orientation = 0;
@@ -938,6 +1018,7 @@ body{background-image:linear-gradient(rgba(242,234,216,.93),rgba(242,234,216,.93
   function startDemo() {
     clearAI();
     gameToken += 1;
+    draftKey = '';
     var token = gameToken;
     state = E.createGame({ seed: parseSeed() });
     selectedTileId = null;

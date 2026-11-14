@@ -1,0 +1,1760 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>殖民火星 · Terraforming Mars 中文单机版</title>
+<meta name="description" content="殖民火星 Terraforming Mars 中文单机版：研发买卡、打出项目卡、在 9×5 火星地图放置海洋/绿化/城市、推进温度与氧气、认领里程碑，跑完整局并终局计分。">
+<meta name="theme-color" content="#0b0f18">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23c65a3d'/%3E%3Ccircle cx='11' cy='11' r='4' fill='%23e0805a' opacity='.8'/%3E%3Ccircle cx='21' cy='20' r='5' fill='%237d3527' opacity='.6'/%3E%3C/svg%3E">
+<style>
+:root{
+  --space:#080b12;--space-2:#0e131e;--panel:#111726;--panel-2:#161e2e;--panel-3:#1c2537;
+  --ink:#f3e9d6;--muted:#a8a191;--muted-2:#827d72;
+  --gold:#d8a64a;--gold-2:#f1d18c;--gold-3:#8d6a33;
+  --rust:#c65a3d;--rust-2:#e8825b;--mars:#a44a35;
+  --ocean:#2f86c9;--ocean-2:#7fdcff;--plant:#4f9f63;--plant-2:#9adfa4;
+  --city:#e0ad5f;--special:#a67bd8;
+  --p0:#ff9061;--p1:#62c9e8;
+  --line:#253047;--line-2:#33405b;
+  --serif:"Songti SC","Noto Serif SC",Georgia,"Times New Roman",serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%;overflow-x:hidden}
+body{margin:0;overflow-x:hidden;color:var(--ink);font:14px/1.55 var(--sans);
+  background:
+    radial-gradient(circle at 12% 4%,rgba(198,90,61,.16),transparent 42%),
+    radial-gradient(circle at 88% 0%,rgba(47,134,201,.13),transparent 38%),
+    radial-gradient(circle at 50% 120%,rgba(166,123,216,.10),transparent 50%),
+    var(--space);
+  background-attachment:fixed;
+  padding-bottom:calc(18px + env(safe-area-inset-bottom));
+  -webkit-font-smoothing:antialiased}
+body.place-active{padding-bottom:calc(130px + env(safe-area-inset-bottom))}
+body.modal-open{overflow:hidden}
+h1,h2,h3,p,ol,ul,figure{margin:0}
+button{font:inherit;color:inherit}
+a{color:inherit}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.wrap{width:100%;max-width:980px;margin:0 auto;padding:0 10px;min-width:0}
+.ic{width:1em;height:1em;display:inline-block;vertical-align:-.12em;fill:currentColor;flex:none}
+
+/* ---------- header ---------- */
+.site-header{background:linear-gradient(180deg,rgba(12,17,27,.96),rgba(8,11,18,.92));border-bottom:1px solid #1d273a;padding:5px 0;
+  position:relative;z-index:20;backdrop-filter:blur(8px)}
+.head-inner{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.brand{display:flex;align-items:center;gap:8px;text-decoration:none;min-height:44px;min-width:0}
+.brand-mark{width:28px;height:28px;border-radius:50%;flex:none;position:relative;
+  background:radial-gradient(circle at 34% 28%,#ffc19b,#d46845 42%,#8d3324 76%,#632319);
+  box-shadow:0 0 0 2px #080b12,0 0 14px rgba(232,130,91,.35)}
+.brand-mark::after{content:"";position:absolute;inset:7px 5px auto auto;width:7px;height:5px;border-radius:50%;background:rgba(90,30,20,.45)}
+.brand-text{display:flex;flex-direction:column;min-width:0;line-height:1.05}
+.brand-text b{font-family:var(--serif);font-size:17px;letter-spacing:.04em;white-space:nowrap}
+.brand-text small{font-family:var(--mono);font-size:12px;letter-spacing:.1em;color:var(--muted-2);white-space:nowrap;margin-top:1px}
+.head-actions{display:flex;align-items:center;gap:6px;flex:none}
+.mini-btn,.btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:44px;padding:0 12px;
+  border-radius:11px;border:1px solid var(--line-2);background:var(--panel-2);color:var(--ink);
+  font-size:13px;font-weight:650;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;white-space:nowrap}
+.mini-btn:hover:not(:disabled),.btn:hover:not(:disabled){background:var(--panel-3);border-color:#43536f}
+.mini-btn:focus-visible,.btn:focus-visible{outline:2px solid var(--gold-2);outline-offset:2px}
+.mini-btn:disabled,.btn:disabled{opacity:.38;cursor:default}
+.btn.primary{background:linear-gradient(180deg,#e5b963,#cb963b);border-color:#f3d795;color:#241a0b;text-shadow:0 1px 0 rgba(255,255,255,.2)}
+.btn.primary:hover:not(:disabled){background:linear-gradient(180deg,#f0c978,#d9a54a)}
+.btn.danger{border-color:#6d3a33;background:#2a1a19;color:#f2b3a4}
+.btn.danger:hover:not(:disabled){background:#3a2220}
+.btn.wide{width:100%}
+.btn.big{min-height:48px;font-size:14px}
+
+/* ---------- status strip ---------- */
+.top-strip{display:flex;flex-wrap:wrap;align-items:center;gap:5px;padding:8px 1px 3px;min-width:0}
+.badge{display:inline-flex;align-items:center;gap:5px;min-height:28px;padding:0 9px;border-radius:999px;
+  border:1px solid var(--line);background:rgba(17,23,38,.85);font-size:12px;color:var(--muted);white-space:nowrap}
+.badge b{font-family:var(--mono);font-size:12px;color:var(--ink);font-variant-numeric:tabular-nums}
+.badge.gold{border-color:#54431f;background:rgba(58,46,20,.55);color:var(--gold-2)}
+.badge.gold b{color:var(--gold-2)}
+.badge.turn{border-color:#4a3529;background:rgba(68,40,30,.55);color:#f3c1a7}
+.badge.seed{margin-left:auto;color:var(--muted-2);font-family:var(--mono);font-size:12px}
+.hint{min-height:30px;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 4px 4px;
+  font-size:12px;line-height:1.45;color:var(--muted)}
+.hint.warn{color:#f3b08f}
+.hint.good{color:#9adfa4}
+
+.game{position:relative;border-radius:18px;padding:8px;margin-top:4px;min-width:0;
+  background:radial-gradient(120% 90% at 50% -10%,rgba(53,72,108,.30),transparent 55%),linear-gradient(180deg,#101624,#0a0f18 60%);
+  border:1px solid #222d43;box-shadow:0 18px 44px rgba(0,0,0,.32)}
+.panel{margin-top:8px;background:rgba(15,21,34,.92);border:1px solid var(--line);border-radius:15px;padding:9px;min-width:0}
+.panel-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:7px;min-width:0}
+.panel-head h2{font-family:var(--mono);font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:650}
+.panel-head span{font-size:12px;color:var(--muted);min-width:0;text-align:right}
+
+/* ---------- map ---------- */
+.board-panel{padding:8px 8px 7px;background:
+  radial-gradient(90% 70% at 50% 0,rgba(148,72,47,.18),transparent 62%),rgba(13,19,31,.94)}
+.board-panel .panel-head{flex-wrap:wrap;row-gap:2px}
+.board-panel .panel-head h2{white-space:nowrap}
+#boardCount{white-space:nowrap}
+.board-panel .panel-head span{text-align:right}
+.map-frame{max-width:600px;margin:0 auto;min-width:0}
+.board{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:3px;min-width:0}
+.cell{position:relative;min-width:0;min-height:0;aspect-ratio:1;padding:0;border-radius:6px;border:1px solid rgba(255,168,120,.13);
+  display:grid;place-items:center;overflow:hidden;cursor:default;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+  background:
+    radial-gradient(circle at 30% 24%,rgba(255,178,130,.22),transparent 35%),
+    radial-gradient(circle at 72% 76%,rgba(0,0,0,.28),transparent 42%),
+    linear-gradient(150deg,#a75036,#8a3b28 55%,#6e2f22);
+  box-shadow:inset 0 1px 0 rgba(255,190,150,.16),inset 0 -4px 8px rgba(0,0,0,.30)}
+.cell::before{content:"";position:absolute;width:36%;height:22%;left:11%;top:17%;border-radius:50%;
+  background:radial-gradient(ellipse at 35% 35%,rgba(65,24,16,.5),rgba(40,14,10,.12) 70%,transparent);
+  box-shadow:inset 0 1px 2px rgba(255,170,120,.18);pointer-events:none}
+.cell:nth-child(3n+1)::before{left:48%;top:56%;width:28%;height:17%}
+.cell:nth-child(4n+2)::before{left:26%;top:62%;width:42%;height:20%}
+.cell:disabled{opacity:1}
+.cell .tile-ic{width:58%;height:58%;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5));position:relative;z-index:1}
+.cell.ocean{background:radial-gradient(circle at 30% 22%,rgba(160,235,255,.28),transparent 40%),linear-gradient(155deg,#2673ad,#154b80 58%,#0d3158);
+  border-color:rgba(127,220,255,.42);box-shadow:inset 0 1px 0 rgba(170,240,255,.25),inset 0 -5px 10px rgba(0,20,50,.42)}
+.cell.greenery{background:radial-gradient(circle at 30% 22%,rgba(190,255,190,.22),transparent 40%),linear-gradient(155deg,#4b9a5f,#2f7446 58%,#1f5632);
+  border-color:rgba(154,223,164,.44);box-shadow:inset 0 1px 0 rgba(190,255,200,.2),inset 0 -5px 10px rgba(0,40,15,.4)}
+.cell.city{background:radial-gradient(circle at 30% 22%,rgba(255,230,170,.25),transparent 40%),linear-gradient(155deg,#e0ac5c,#b67a30 58%,#85501d);
+  border-color:rgba(255,210,140,.5);box-shadow:inset 0 1px 0 rgba(255,235,190,.25),inset 0 -5px 10px rgba(70,35,0,.4)}
+.cell.special{background:radial-gradient(circle at 30% 22%,rgba(225,200,255,.24),transparent 40%),linear-gradient(155deg,#8a67bd,#624494 58%,#432f6d);
+  border-color:rgba(200,166,255,.5);box-shadow:inset 0 1px 0 rgba(235,215,255,.22),inset 0 -5px 10px rgba(30,10,60,.42)}
+.cell.ocean .tile-ic{color:#a9eaff}
+.cell.greenery .tile-ic{color:#c7f5c9}
+.cell.city .tile-ic{color:#fff0c8}
+.cell.special .tile-ic{color:#e8d4ff}
+.owner-dot{position:absolute;right:3px;top:3px;width:7px;height:7px;border-radius:50%;z-index:2;box-shadow:0 0 0 1.5px rgba(8,11,18,.85)}
+.owner-dot.o0{background:var(--p0)}
+.owner-dot.o1{background:var(--p1)}
+.cell.can-place{cursor:pointer;z-index:3;box-shadow:0 0 0 2px var(--gold-2),0 0 16px rgba(241,209,140,.55),inset 0 0 10px rgba(241,209,140,.2);
+  animation:placePulse 1.25s ease-in-out infinite}
+.cell.can-place:hover{filter:brightness(1.13)}
+.board-legend{display:flex;flex-wrap:wrap;align-items:center;gap:5px 10px;margin-top:7px;min-width:0}
+.legend-item{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);white-space:nowrap}
+.legend-swatch{width:12px;height:12px;border-radius:4px;border:1px solid rgba(255,255,255,.16);flex:none}
+.legend-swatch.ocean{background:linear-gradient(150deg,#2673ad,#0d3158)}
+.legend-swatch.greenery{background:linear-gradient(150deg,#4b9a5f,#1f5632)}
+.legend-swatch.city{background:linear-gradient(150deg,#e0ac5c,#85501d)}
+.legend-swatch.special{background:linear-gradient(150deg,#8a67bd,#432f6d)}
+.legend-note{margin-left:auto;font-size:12px;color:var(--muted-2);white-space:nowrap}
+
+/* ---------- parameters ---------- */
+.params{display:flex;flex-direction:column;gap:6px;padding:8px}
+.param{padding:6px 8px;border-radius:11px;border:1px solid #243049;background:linear-gradient(180deg,#121a2a,#0d1420);min-width:0;transition:border-color .2s,box-shadow .2s}
+.param.done{border-color:var(--gold);background:linear-gradient(180deg,#2a2414,#171306);box-shadow:0 0 18px rgba(216,166,74,.16)}
+.param-head{display:flex;align-items:baseline;gap:6px;min-width:0;flex-wrap:wrap}
+.param-label{font-size:12px;font-weight:700;color:var(--ink);letter-spacing:.03em}
+.param-val{font-family:var(--mono);font-size:14px;font-variant-numeric:tabular-nums;color:var(--gold-2);line-height:1.2}
+.param-target{font-size:12px;color:var(--muted-2)}
+.done-badge{margin-left:auto;font-size:12px;font-weight:700;color:#241a0b;background:linear-gradient(180deg,#f1d18c,#d8a64a);
+  border-radius:999px;padding:0 7px;line-height:18px;white-space:nowrap}
+.track{position:relative;height:12px;border-radius:999px;background:#070b12;margin-top:4px;overflow:hidden;
+  box-shadow:inset 0 1px 4px rgba(0,0,0,.8),inset 0 0 0 1px rgba(255,255,255,.04)}
+.fill{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#a44a2d,#e8825b);transition:width .35s ease}
+.param[data-param="oxygen"] .fill{background:linear-gradient(90deg,#2f7446,#7fd794)}
+.param[data-param="oceans"] .fill{background:linear-gradient(90deg,#154b80,#7fdcff)}
+.param.done .fill{background:linear-gradient(90deg,#b47d28,#ffe6a6)}
+.ticks{position:absolute;inset:0;display:flex;justify-content:space-between;pointer-events:none;padding:0 1px}
+.ticks i{width:1px;background:rgba(255,255,255,.10)}
+.param.done .ticks i{background:rgba(60,40,10,.28)}
+
+/* ---------- players ---------- */
+.players{display:grid;grid-template-columns:1fr;gap:7px}
+.player-card{background:linear-gradient(165deg,#182031,#101624);border:1px solid #29354c;border-radius:13px;padding:8px 9px;min-width:0;transition:border-color .2s,box-shadow .2s}
+.player-card.active{border-color:#7a5a2a;box-shadow:inset 0 0 0 1px rgba(241,209,140,.16),0 0 16px rgba(216,166,74,.08)}
+.player-card.you.active{border-color:var(--p0)}
+.player-card.ai.active{border-color:var(--p1)}
+.p-head{display:flex;align-items:center;gap:6px;min-width:0;margin-bottom:6px}
+.p-dot{width:9px;height:9px;border-radius:50%;flex:none;background:var(--p0);box-shadow:0 0 0 2px rgba(255,255,255,.10)}
+.player-card.ai .p-dot{background:var(--p1)}
+.p-head h3{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.tr-pill{margin-left:auto;font-family:var(--mono);font-size:12px;font-weight:700;color:#241a0b;
+  background:linear-gradient(180deg,#f1d18c,#d8a64a);border-radius:999px;padding:0 7px;line-height:19px;flex:none}
+.p-sub{font-size:12px;color:var(--muted-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:none}
+.res-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px}
+.res-item{display:flex;flex-direction:column;align-items:center;gap:0;padding:3px 0 2px;border-radius:8px;
+  background:#0b111b;border:1px solid #202b40;min-width:0}
+.res-item .ic{width:15px;height:15px;color:var(--gold-2)}
+.res-item[data-res="mc"] .ic{color:#f1d18c}
+.res-item[data-res="steel"] .ic{color:#b9c6d6}
+.res-item[data-res="titanium"] .ic{color:#8fd6e8}
+.res-item[data-res="plants"] .ic{color:#8fd39a}
+.res-item[data-res="energy"] .ic{color:#ffe08a}
+.res-item[data-res="heat"] .ic{color:#ff9a6b}
+.res-item b{font-family:var(--mono);font-size:14px;line-height:1.15;font-variant-numeric:tabular-nums;color:var(--ink)}
+.res-item span{font-size:12px;line-height:1.15;color:var(--muted-2);white-space:nowrap}
+.prod-line{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-top:5px;min-width:0}
+.prod-label{font-size:12px;color:var(--muted-2);flex:none;margin-right:1px}
+.prod-chip{display:inline-flex;align-items:center;gap:2px;padding:0 4px;min-height:20px;border-radius:6px;
+  background:#0b111b;border:1px solid #202b40;font-size:12px;color:var(--muted)}
+.prod-chip .ic{width:11px;height:11px;color:var(--muted)}
+.prod-chip b{font-family:var(--mono);font-size:12px;color:var(--gold-2);font-variant-numeric:tabular-nums}
+.prod-chip.zero{opacity:.55}
+
+/* ---------- cards ---------- */
+.card-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;min-width:0}
+.card{position:relative;display:flex;flex-direction:column;gap:3px;text-align:left;min-width:0;min-height:0;
+  border-radius:10px;padding:7px 7px 6px;border:1px solid #a98552;border-top-width:3px;
+  background:linear-gradient(155deg,#fbf1da 0%,#eddcb8 58%,#dcc69c 100%);color:#2b2318;
+  box-shadow:0 5px 12px rgba(0,0,0,.34),inset 0 0 0 1px rgba(255,255,255,.45);
+  overflow:hidden;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.card::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(circle at 12% 8%,rgba(255,255,255,.55),transparent 30%),
+    repeating-linear-gradient(112deg,rgba(120,90,40,.045) 0 2px,transparent 2px 7px)}
+.card>*{position:relative;z-index:1}
+.card.cat-bio{border-top-color:#4c8a4f}
+.card.cat-power{border-top-color:#b06a1f}
+.card.cat-building{border-top-color:#a3542f}
+.card.cat-space{border-top-color:#4c5fa5}
+.card.cat-science{border-top-color:#2f7f86}
+.card:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 8px 18px rgba(0,0,0,.42),inset 0 0 0 1px rgba(255,255,255,.55)}
+.card:focus-visible{outline:2px solid var(--gold-2);outline-offset:2px}
+.card.playable{border-color:#d8a64a;box-shadow:0 0 0 1px rgba(241,209,140,.45),0 6px 16px rgba(0,0,0,.36)}
+.card:disabled{cursor:default}
+.card.blocked{opacity:.56;filter:grayscale(.45) saturate(.65)}
+.card-top{display:flex;align-items:center;gap:4px;min-width:0}
+.cost-pill{display:inline-flex;align-items:center;gap:2px;padding:0 5px;border-radius:6px;background:#2a241b;color:#f8efdc;
+  font-family:var(--mono);font-size:13px;font-weight:700;line-height:20px;flex:none}
+.cost-pill .ic{width:12px;height:12px;color:#f1d18c}
+.cat-pill{font-size:12px;font-weight:700;padding:0 6px;border-radius:999px;line-height:19px;background:rgba(43,35,24,.08);
+  color:#4a3d2b;border:1px solid rgba(43,35,24,.18);white-space:nowrap;flex:none}
+.vp-pill{margin-left:auto;font-family:var(--mono);font-size:12px;font-weight:700;color:#7a5722;background:#f4e2b9;border:1px solid #c8a465;
+  border-radius:999px;padding:0 5px;line-height:18px;white-space:nowrap;flex:none}
+.card-name{font-family:var(--serif);font-weight:700;font-size:13.5px;line-height:1.22;color:#2f2516;overflow-wrap:anywhere}
+.tag-row{display:flex;flex-wrap:wrap;gap:3px;min-width:0}
+.tag-mini{font-size:12px;line-height:17px;padding:0 5px;border-radius:5px;background:rgba(70,55,30,.09);
+  border:1px solid rgba(70,55,30,.16);color:#5f503a;white-space:nowrap}
+.tag-mini.none{opacity:.55}
+.card-fx{font-size:12px;line-height:1.38;color:#4a3d2b;overflow-wrap:anywhere}
+.card-req{font-size:12px;line-height:1.35;color:#6b5735;overflow-wrap:anywhere}
+.card-req.bad{color:#a13a28;font-weight:650}
+.card-req.ok::before{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;background:#4c8a4f;margin-right:4px;vertical-align:1px}
+.card-req.bad::before{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;background:#a13a28;margin-right:4px;vertical-align:1px}
+.card-cta{margin-top:auto;display:flex;align-items:center;justify-content:flex-end;gap:4px;font-size:12px;font-weight:700;color:#6b5224}
+.card.blocked .card-cta{color:#7d6a50}
+.card-cta .lock{font-weight:650;color:#8a4a38}
+.card.playable:hover .card-cta{color:#8d5a16}
+
+/* research */
+.research-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.research-card{cursor:default}
+.research-card:hover{transform:none}
+.buy-card{margin-top:auto;width:100%;min-height:44px;border-radius:8px;border:1px solid #7a5a2a;
+  background:linear-gradient(180deg,#3a2e17,#241d0f);color:#f1d18c;font-size:13px;font-weight:700;cursor:pointer}
+.buy-card:hover:not(:disabled){background:linear-gradient(180deg,#4b3b1d,#2e2513);border-color:var(--gold)}
+.buy-card:disabled{opacity:.45;cursor:default}
+.buy-card:focus-visible{outline:2px solid var(--gold-2);outline-offset:1px}
+.research-foot{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap}
+.research-foot .note{font-size:12px;color:var(--muted);flex:1;min-width:130px;line-height:1.4}
+
+/* ---------- actions / standards ---------- */
+.std-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;min-width:0}
+.std-btn{display:flex;align-items:center;justify-content:space-between;gap:6px;min-height:44px;padding:0 9px;
+  border-radius:10px;border:1px solid #33405b;background:#141c2b;color:var(--ink);cursor:pointer;min-width:0;text-align:left}
+.std-btn:hover:not(:disabled){background:#1c2638;border-color:#465777}
+.std-btn b{font-size:12px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.std-btn span{font-family:var(--mono);font-size:12px;color:var(--gold-2);flex:none}
+.std-btn:disabled{opacity:.38;cursor:default}
+.std-btn:focus-visible{outline:2px solid var(--gold-2);outline-offset:1px}
+.sell-row{display:flex;align-items:center;gap:6px;margin-top:6px;min-width:0}
+.sell-row select{flex:1;min-width:0;min-height:44px;border-radius:10px;border:1px solid #33405b;background:#0c121d;color:var(--ink);
+  font:inherit;font-size:12px;padding:0 8px}
+.sell-row select:focus-visible{outline:2px solid var(--gold-2);outline-offset:1px}
+.sell-row .btn{flex:none;font-size:12px;padding:0 10px}
+.turn-foot{display:flex;align-items:center;gap:7px;margin-top:8px;flex-wrap:wrap}
+.turn-foot .note{flex:1;min-width:140px;font-size:12px;color:var(--muted);line-height:1.4}
+
+/* milestones / awards */
+.claim-grid{display:grid;grid-template-columns:1fr;gap:6px}
+.claim{display:flex;align-items:center;gap:7px;padding:6px 7px;border-radius:10px;border:1px solid #263147;
+  background:#0c121d;min-width:0;flex-wrap:wrap}
+.claim-main{flex:1 1 140px;min-width:0}
+.claim-main h3{font-size:12.5px;font-weight:700;display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.medal{width:28px;height:28px;flex:none;display:inline-block;filter:drop-shadow(0 2px 3px rgba(0,0,0,.55))}
+.claim-main p{font-size:12px;color:var(--muted);line-height:1.35}
+.claim-prog{font-family:var(--mono);font-size:12px;color:var(--gold-2);margin-top:1px}
+.claim-btn{min-height:44px;padding:0 10px;border-radius:9px;border:1px solid #54431f;background:#241d0f;color:var(--gold-2);
+  font-size:12px;font-weight:700;cursor:pointer;flex:none}
+.claim-btn:hover:not(:disabled){background:#332914;border-color:var(--gold)}
+.claim-btn:disabled{opacity:.38;cursor:default}
+.claim-btn:focus-visible{outline:2px solid var(--gold-2);outline-offset:1px}
+.claim-status{flex-basis:100%;font-size:12px;color:var(--muted-2);line-height:1.35}
+.claim-status.bad{color:#e2a08c}
+.claim.claimed{border-color:#3b4a35;background:#0f1712}
+.claim.claimed .claim-status{color:#9adfa4}
+.claim.mine{border-color:#6b5a2a;background:#171408}
+
+/* played */
+.played-list{display:flex;flex-wrap:wrap;gap:5px;min-width:0}
+.played-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 6px;border-radius:7px;border:1px solid #2b3850;
+  background:#0c121d;font-size:12px;color:var(--muted);min-width:0}
+.played-chip b{font-size:12px;color:var(--ink);font-weight:650}
+.played-chip .res-dot{font-family:var(--mono);font-size:12px;color:var(--gold-2)}
+.res-token{display:inline-flex;align-items:center;gap:1px;padding:0 3px;border-radius:6px;background:#111a28;border:1px solid #31405a}
+.res-token .ic{width:16px;height:16px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.5))}
+.res-token b{font-family:var(--mono);font-size:12px;color:#f1d18c;font-weight:700}
+.token-legend{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin:0 0 7px;min-width:0}
+.token-legend-label{font-size:12px;color:var(--muted-2)}
+.token-legend .res-token b{font-family:var(--sans);font-weight:600;color:var(--muted);font-size:12px}
+.played-chip button{min-height:44px;padding:0 7px;border-radius:6px;border:1px solid #54431f;background:#241d0f;color:var(--gold-2);
+  font-size:12px;font-weight:700;cursor:pointer}
+.played-chip button:hover{background:#332914}
+.played-empty{font-size:12px;color:var(--muted-2);line-height:1.4}
+details.played-details summary{cursor:pointer;font-size:12px;color:var(--muted);min-height:44px;display:flex;align-items:center;gap:5px}
+details.played-details summary:focus-visible{outline:2px solid var(--gold-2);outline-offset:2px}
+
+/* production / generation stage */
+.stage-card{background:linear-gradient(160deg,#1b2437,#101623);border:1px solid #35425d;border-radius:14px;padding:10px;margin-top:8px;min-width:0}
+.stage-card h2{font-size:14px;margin-bottom:4px;color:var(--good,#9adfa4)}
+.stage-card p{font-size:12px;line-height:1.5;color:var(--muted)}
+.stage-list{display:flex;flex-direction:column;gap:4px;margin-top:7px}
+.stage-row{display:flex;gap:6px;align-items:baseline;font-size:12px;color:var(--muted);flex-wrap:wrap}
+.stage-row b{color:var(--ink)}
+.stage-row .mono{font-family:var(--mono);color:var(--gold-2)}
+.stage-card .btn{margin-top:9px}
+
+/* log */
+.log{list-style:none;padding:0;display:flex;flex-direction:column;gap:4px;max-height:150px;overflow-y:auto}
+.log li{display:flex;gap:6px;align-items:flex-start;font-size:12px;line-height:1.4;color:var(--muted);min-width:0}
+.log .log-gen{font-family:var(--mono);font-size:12px;color:#77839a;flex:none;min-width:26px;padding-top:1px}
+.log .log-text{min-width:0;overflow-wrap:anywhere}
+.log li.hi .log-text{color:#e6d3a7}
+
+/* placement bar */
+.place-bar{position:fixed;left:0;right:0;bottom:0;z-index:70;background:linear-gradient(180deg,#1b2434,#0c111a);
+  border-top:1px solid #6b5426;box-shadow:0 -14px 34px rgba(0,0,0,.55);padding:7px 10px calc(7px + env(safe-area-inset-bottom))}
+.place-inner{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:5px;min-width:0}
+.place-top{display:flex;align-items:center;gap:8px;min-width:0}
+.place-title{flex:1;min-width:0;font-size:12.5px;font-weight:650;color:var(--gold-2);line-height:1.35}
+.place-chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;min-width:0}
+.place-chip{flex:none;min-width:48px;min-height:44px;border-radius:10px;border:1px solid #6b5426;background:#2a2416;color:var(--gold-2);
+  font-family:var(--mono);font-size:13px;font-weight:700;cursor:pointer}
+.place-chip:hover{background:#3a301c;border-color:var(--gold)}
+.place-chip:focus-visible{outline:2px solid var(--gold-2);outline-offset:1px}
+
+/* result */
+.overlay{position:fixed;inset:0;z-index:100;background:rgba(5,7,12,.82);display:flex;align-items:center;justify-content:center;
+  padding:14px;overflow-y:auto}
+.result-card{width:100%;max-width:460px;background:linear-gradient(165deg,#172033,#0d131f);border:1px solid #3b4a64;
+  border-radius:20px;padding:17px;box-shadow:0 30px 80px rgba(0,0,0,.6);margin:auto;min-width:0}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-2);margin-bottom:3px}
+.result-card h2{font-family:var(--serif);font-size:clamp(1.45rem,6vw,2rem);line-height:1.15;color:var(--ink)}
+.result-sub{margin-top:4px;font-size:12px;color:var(--muted);line-height:1.5}
+.result-rows{display:flex;flex-direction:column;gap:7px;margin-top:12px}
+.result-row{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:8px;align-items:center;padding:8px 9px;
+  border-radius:11px;border:1px solid #2a3650;background:#0d1420;min-width:0}
+.result-row.winner{border-color:var(--gold);background:#1d1a10;box-shadow:inset 0 0 0 1px rgba(241,209,140,.18)}
+.result-rank{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--muted);text-align:center;display:flex;align-items:center;justify-content:center;min-height:28px}
+.rank-medal{display:inline-flex;width:30px;height:30px;filter:drop-shadow(0 0 6px rgba(241,209,140,.38)) drop-shadow(0 2px 3px rgba(0,0,0,.55))}
+.rank-medal .ic{width:30px;height:30px}
+.result-row.winner .result-rank{color:var(--gold-2)}
+.result-name{min-width:0}
+.result-name b{display:block;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.result-name span{display:block;font-size:12px;color:var(--muted);line-height:1.4;overflow-wrap:anywhere}
+.result-total{font-family:var(--serif);font-size:25px;font-weight:700;color:var(--gold-2);line-height:1;white-space:nowrap}
+.result-total small{font-size:12px;font-family:var(--sans);font-weight:600;color:var(--muted);margin-left:2px}
+.result-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:13px}
+.result-actions .btn{min-height:48px}
+
+/* footer help */
+.help{display:grid;grid-template-columns:1fr;gap:7px;margin-top:14px}
+.help-card{background:rgba(15,21,34,.7);border:1px solid var(--line);border-radius:12px;padding:9px 10px;min-width:0}
+.help-card h3{font-size:12.5px;margin-bottom:3px;color:var(--ink)}
+.help-card p{font-size:12px;line-height:1.55;color:var(--muted)}
+.site-footer{max-width:980px;margin:10px auto 0;padding:10px 10px 16px;font-size:12px;color:var(--muted-2);
+  display:flex;flex-wrap:wrap;gap:6px 12px;line-height:1.5}
+
+.toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,14px);z-index:120;max-width:calc(100vw - 32px);
+  padding:9px 13px;border-radius:10px;background:#202a3d;border:1px solid #43536f;color:var(--ink);font-size:12.5px;
+  box-shadow:0 12px 30px rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;line-height:1.4}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.toast.bad{border-color:#7a4035;background:#2b1a18;color:#f2b3a4}
+
+@keyframes placePulse{0%,100%{box-shadow:0 0 0 2px var(--gold-2),0 0 12px rgba(241,209,140,.42),inset 0 0 8px rgba(241,209,140,.14)}
+  50%{box-shadow:0 0 0 2px #fff2c6,0 0 20px rgba(241,209,140,.68),inset 0 0 13px rgba(241,209,140,.26)}}
+@keyframes dealIn{from{opacity:0;transform:translateY(6px) scale(.98)}to{opacity:1;transform:none}}
+.card-grid .card{animation:dealIn .3s ease both}
+
+@media (min-width:560px){
+  .wrap{padding:0 14px}
+  .card-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .research-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .players{grid-template-columns:1fr 1fr}
+  .std-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .claim-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .help{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .board{gap:4px}
+}
+@media (max-width:430px){
+  .brand-text small{display:none}
+}
+@media (max-width:380px){
+  .wrap{padding:0 7px}
+  .game{padding:6px;border-radius:15px}
+  .panel{padding:7px 6px;border-radius:13px}
+  .card-grid{gap:5px}
+  .card{padding:6px 6px 5px}
+  .card-name{font-size:13px}
+  .head-actions{gap:4px}
+  .mini-btn{padding:0 9px;font-size:12px}
+  .badge{padding:0 7px}
+  .badge.seed{display:none}
+  .params{padding:7px 5px}
+  .param{padding:5px 7px}
+  .board{gap:2px}
+  .legend-note{display:none}
+  .res-grid{gap:3px}
+  .res-item .ic{width:13px;height:13px}
+  .res-item b{font-size:13px}
+  .prod-line{gap:3px}
+  .claim{padding:5px 6px}
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition:none!important;animation:none!important;scroll-behavior:auto!important}
+}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id="g-gold" x1="0" y1="0" x2="0.35" y2="1">
+      <stop offset="0" stop-color="#fff6cf"/><stop offset="0.38" stop-color="#f0cd7b"/>
+      <stop offset="0.72" stop-color="#c9973f"/><stop offset="1" stop-color="#8a5c16"/>
+    </linearGradient>
+    <radialGradient id="g-coin" cx="34%" cy="28%" r="78%">
+      <stop offset="0" stop-color="#fffbe0"/><stop offset="0.35" stop-color="#f3d287"/>
+      <stop offset="0.72" stop-color="#cf9d45"/><stop offset="1" stop-color="#805414"/>
+    </radialGradient>
+    <linearGradient id="g-steel" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#ffffff"/><stop offset="0.3" stop-color="#dbe5ef"/>
+      <stop offset="0.58" stop-color="#98a8ba"/><stop offset="0.82" stop-color="#677687"/>
+      <stop offset="1" stop-color="#3f4c5d"/>
+    </linearGradient>
+    <linearGradient id="g-ti" x1="0" y1="0" x2="0.55" y2="1">
+      <stop offset="0" stop-color="#f2ffff"/><stop offset="0.28" stop-color="#a9ecff"/>
+      <stop offset="0.62" stop-color="#59b6d8"/><stop offset="1" stop-color="#205f86"/>
+    </linearGradient>
+    <linearGradient id="g-plant" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#e6ffc4"/><stop offset="0.36" stop-color="#8fd47a"/>
+      <stop offset="0.72" stop-color="#3f9552"/><stop offset="1" stop-color="#1c5d33"/>
+    </linearGradient>
+    <linearGradient id="g-energy" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#fffde3"/><stop offset="0.34" stop-color="#ffe884"/>
+      <stop offset="0.7" stop-color="#f2b52c"/><stop offset="1" stop-color="#a96f08"/>
+    </linearGradient>
+    <linearGradient id="g-heat" x1="0" y1="0" x2="0.2" y2="1">
+      <stop offset="0" stop-color="#fff6cf"/><stop offset="0.3" stop-color="#ffb45c"/>
+      <stop offset="0.68" stop-color="#ef6a2b"/><stop offset="1" stop-color="#a32b16"/>
+    </linearGradient>
+    <radialGradient id="g-medal" cx="34%" cy="26%" r="82%">
+      <stop offset="0" stop-color="#fff9da"/><stop offset="0.3" stop-color="#f5d585"/>
+      <stop offset="0.62" stop-color="#d3a348"/><stop offset="0.86" stop-color="#9a6d21"/>
+      <stop offset="1" stop-color="#6d4810"/>
+    </radialGradient>
+    <radialGradient id="g-medal-face" cx="42%" cy="34%" r="72%">
+      <stop offset="0" stop-color="#fff4bd"/><stop offset="0.48" stop-color="#edcb78"/>
+      <stop offset="0.82" stop-color="#c2953e"/><stop offset="1" stop-color="#96681c"/>
+    </radialGradient>
+    <linearGradient id="g-silver" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#ffffff"/><stop offset="0.34" stop-color="#e4edf7"/>
+      <stop offset="0.66" stop-color="#a9b8c8"/><stop offset="1" stop-color="#647487"/>
+    </linearGradient>
+    <linearGradient id="g-copper" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#ffe2c4"/><stop offset="0.36" stop-color="#e9a36b"/>
+      <stop offset="0.7" stop-color="#bd6a35"/><stop offset="1" stop-color="#783518"/>
+    </linearGradient>
+    <linearGradient id="g-ribbon" x1="0" y1="0" x2="0.5" y2="1">
+      <stop offset="0" stop-color="#d95a4b"/><stop offset="0.5" stop-color="#a42f2c"/>
+      <stop offset="1" stop-color="#6c1719"/>
+    </linearGradient>
+    <radialGradient id="g-token" cx="36%" cy="28%" r="80%">
+      <stop offset="0" stop-color="#fff8dc"/><stop offset="0.4" stop-color="#ecd08b"/>
+      <stop offset="0.78" stop-color="#c79a46"/><stop offset="1" stop-color="#7e5616"/>
+    </radialGradient>
+    <radialGradient id="g-microbe" cx="36%" cy="28%" r="80%">
+      <stop offset="0" stop-color="#eafff0"/><stop offset="0.38" stop-color="#9fe6c0"/>
+      <stop offset="0.74" stop-color="#4aa77e"/><stop offset="1" stop-color="#1c5a45"/>
+    </radialGradient>
+    <radialGradient id="g-science" cx="36%" cy="28%" r="80%">
+      <stop offset="0" stop-color="#f4fdff"/><stop offset="0.4" stop-color="#a9dcf0"/>
+      <stop offset="0.76" stop-color="#4b8fb5"/><stop offset="1" stop-color="#1e4a6b"/>
+    </radialGradient>
+    <symbol id="i-ocean" viewBox="0 0 24 24">
+      <path d="M2 8.6c2.1 0 2.1 1.7 4.2 1.7S8.3 8.6 10.4 8.6s2.1 1.7 4.2 1.7 2.1-1.7 4.2-1.7 2.1 1.7 4.2 1.7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      <path d="M2 13.2c2.1 0 2.1 1.7 4.2 1.7s2.1-1.7 4.2-1.7 2.1 1.7 4.2 1.7 2.1-1.7 4.2-1.7 2.1 1.7 4.2 1.7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" opacity=".75"/>
+      <path d="M2 17.8c2.1 0 2.1 1.7 4.2 1.7s2.1-1.7 4.2-1.7 2.1 1.7 4.2 1.7 2.1-1.7 4.2-1.7 2.1 1.7 4.2 1.7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" opacity=".5"/>
+    </symbol>
+    <symbol id="i-greenery" viewBox="0 0 24 24">
+      <path d="M12 21v-7.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <path d="M12 14.8c-3.9.3-6.6-1.7-7.8-5.6 3.9-.4 6.7 1.4 7.8 5.6z" fill="currentColor" opacity=".9"/>
+      <path d="M12 13.2c.4-4 2.9-6.5 7.3-7.1.4 4.3-2.3 7-7.3 7.1z" fill="currentColor" opacity=".72"/>
+      <path d="M12 17.2c2.5-.1 4.5 1 5.9 3.3-2.9.2-4.8-.9-5.9-3.3z" fill="currentColor" opacity=".55"/>
+    </symbol>
+    <symbol id="i-city" viewBox="0 0 24 24">
+      <path d="M3 19h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none" opacity=".7"/>
+      <path d="M5 19v-4.6a7 7 0 0 1 14 0V19" fill="currentColor" opacity=".85"/>
+      <path d="M8.2 19v-4.2a3.8 3.8 0 0 1 7.6 0V19" fill="#3b2a14"/>
+      <path d="M12 4.5v3.2M10.4 6.1h3.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+      <circle cx="17.8" cy="15.2" r="1.1" fill="#3b2a14"/>
+      <circle cx="6.4" cy="15.4" r="1" fill="#3b2a14"/>
+    </symbol>
+    <symbol id="i-special" viewBox="0 0 24 24">
+      <path d="M12 2.8 20 9l-8 12.2L4 9z" fill="currentColor" opacity=".9"/>
+      <path d="M12 2.8 15.2 9 12 21.2 8.8 9z" fill="#f6ecff" opacity=".55"/>
+      <path d="M4 9h16" stroke="#f6ecff" stroke-width="1" opacity=".45"/>
+    </symbol>
+    <symbol id="i-mc" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10.2" fill="url(#g-coin)" stroke="#6f4a12" stroke-width="0.9"/>
+      <circle cx="12" cy="12" r="9.55" fill="none" stroke="#6f4a12" stroke-width="1.25" stroke-dasharray="0.7 1.4" opacity="0.55"/>
+      <circle cx="12" cy="12" r="8.35" fill="none" stroke="#fff1bd" stroke-width="0.8" opacity="0.7"/>
+      <path d="M5.5 8.4A7.9 7.9 0 0 1 11.8 4.3" fill="none" stroke="#fffbe1" stroke-width="1.25" stroke-linecap="round" opacity="0.9"/>
+      <path d="M12 6.5v11M8.8 9.35h4.75a1.95 1.95 0 0 1 0 3.9H8.95a1.9 1.9 0 0 0 0 3.8h5.1" fill="none" stroke="#7c5312" stroke-width="1.55" stroke-linecap="round"/>
+      <path d="M11.7 6.25v11M8.5 9.1h4.75a1.95 1.95 0 0 1 0 3.9H8.65a1.9 1.9 0 0 0 0 3.8h5.1" fill="none" stroke="#fff4c8" stroke-width="0.55" stroke-linecap="round" opacity="0.55"/>
+    </symbol>
+    <symbol id="i-steel" viewBox="0 0 24 24">
+      <path d="M3.6 15.5 9.4 4.4h5.2l5.8 11.1-2.5 3.9H6.1z" fill="url(#g-steel)" stroke="#344150" stroke-width="0.8"/>
+      <path d="M9.4 4.4 6.1 19.4M14.6 4.4l3.3 15" stroke="#2e3a48" stroke-width="0.9" opacity="0.45"/>
+      <path d="M7.7 8.7h8.6M6.4 12.4h11.2M5.5 16.1h13" stroke="#2a3542" stroke-width="0.9" opacity="0.42"/>
+      <path d="M9.4 4.4 8.1 8.7M14.6 4.4l1.3 4.3" stroke="#ffffff" stroke-width="1" opacity="0.75"/>
+      <path d="M3.9 15.1 9.2 4.9" stroke="#ffffff" stroke-width="1.1" opacity="0.55" stroke-linecap="round"/>
+      <circle cx="8.9" cy="15" r="0.62" fill="#eef6ff" opacity="0.8"/>
+      <circle cx="15.1" cy="15" r="0.62" fill="#eef6ff" opacity="0.8"/>
+    </symbol>
+    <symbol id="i-ti" viewBox="0 0 24 24">
+      <path d="M12 2.4 20.1 9.1 12 21.6 3.9 9.1z" fill="url(#g-ti)" stroke="#1d5574" stroke-width="0.8"/>
+      <path d="M12 2.4 15.8 9.1 12 21.6 8.2 9.1z" fill="#f2ffff" opacity="0.34"/>
+      <path d="M3.9 9.1h16.2M12 2.4v19.2" stroke="#e9fdff" stroke-width="0.8" opacity="0.55"/>
+      <path d="M12 4.4 9.3 8.9l2.7 9.8" fill="none" stroke="#ffffff" stroke-width="0.7" opacity="0.62"/>
+      <path d="M5.8 9.7 11.2 4.8" stroke="#ffffff" stroke-width="1.1" stroke-linecap="round" opacity="0.7"/>
+      <circle cx="16.4" cy="15.1" r="1.1" fill="#ffb3f0" opacity="0.5"/>
+    </symbol>
+    <symbol id="i-plant" viewBox="0 0 24 24">
+      <path d="M12 21.2V13.4" fill="none" stroke="#2b6b39" stroke-width="2" stroke-linecap="round"/>
+      <path d="M12 15.5C8.3 15.7 5.8 13.7 4.7 9.9c3.7-.4 6.2 1.5 7.3 5.6z" fill="url(#g-plant)" stroke="#1c5d33" stroke-width="0.6"/>
+      <path d="M12 13.8c.4-3.8 2.7-6.1 6.9-6.6.4 4-2.1 6.5-6.9 6.6z" fill="url(#g-plant)" stroke="#1c5d33" stroke-width="0.6"/>
+      <path d="M6.3 11.4c1.6.2 3.1 1.4 4.1 3.3M13.6 11.5c1.4-.5 2.8-1.6 3.9-3" fill="none" stroke="#f2ffd8" stroke-width="0.7" opacity="0.62" stroke-linecap="round"/>
+      <path d="M12 20.9v-7.2" stroke="#e9ffcf" stroke-width="0.55" opacity="0.55" stroke-linecap="round"/>
+      <circle cx="8.1" cy="17.2" r="1.2" fill="#8fd47a" opacity="0.42"/>
+    </symbol>
+    <symbol id="i-energy" viewBox="0 0 24 24">
+      <path d="M13.5 2.2 5.3 13.3h5.3l-1.3 8.7 8.5-11.5h-5.5z" fill="url(#g-energy)" stroke="#8f5d06" stroke-width="0.7"/>
+      <path d="M13.5 2.9 11.6 9.2h3.7z" fill="#fffde8" opacity="0.85"/>
+      <path d="M8.9 12.7h3.6" stroke="#fff8c9" stroke-width="0.75" opacity="0.7" stroke-linecap="round"/>
+      <path d="M11.2 15.7h2.9" stroke="#a96f08" stroke-width="0.65" opacity="0.5" stroke-linecap="round"/>
+      <circle cx="10.1" cy="6.3" r="0.7" fill="#fffbd0" opacity="0.65"/>
+    </symbol>
+    <symbol id="i-heat" viewBox="0 0 24 24">
+      <path d="M12.2 21.4c-4.1 0-7-2.6-7-6.3 0-2.5 1.3-4.6 3.7-6.5.2 1.9.9 3.1 2.2 3.9-.1-2.8 1-5.4 3.3-7.8.4 3 1.6 4.8 3.1 6.4 1.4 1.5 2 3 2 4.5 0 3.6-2.9 5.8-7.3 5.8z" fill="url(#g-heat)" stroke="#8f2612" stroke-width="0.7"/>
+      <path d="M12.4 20.2c-1.9 0-3.2-1.2-3.2-2.9 0-1.3.7-2.4 2.1-3.5.1 1 .5 1.7 1.2 2.2 0-1.4.6-2.7 1.7-3.9.8 1.4 1.4 2.5 1.4 3.8 0 2.4-1.4 4.3-3.2 4.3z" fill="#fff3c6" opacity="0.78"/>
+      <path d="M8.3 10.1c-.7.9-1.1 1.9-1.1 3" fill="none" stroke="#ffd28a" stroke-width="0.8" opacity="0.65" stroke-linecap="round"/>
+      <circle cx="8.4" cy="6.4" r="0.9" fill="#ffbe6e" opacity="0.55"/>
+    </symbol>
+    <symbol id="i-tr" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="8.6" fill="none" stroke="currentColor" stroke-width="1.6" opacity=".55"/>
+      <path d="M9 15.8V8.2l7.6 3.8z" fill="currentColor"/>
+    </symbol>
+    <symbol id="i-medal-terraformer" viewBox="0 0 32 32">
+      <path d="M10.8 1.4h4.4l1.6 7.6-3.8 1.8-3.7-1.8z" fill="url(#g-ribbon)" stroke="#541113" stroke-width="0.5"/>
+      <path d="M18.8 1.4h2.2l2.1 7.2-4-1.8z" fill="#7a1f20" stroke="#541113" stroke-width="0.5"/>
+      <circle cx="16" cy="19.2" r="10.1" fill="url(#g-medal)" stroke="#5f400e" stroke-width="0.8"/>
+      <circle cx="16" cy="19.2" r="9.25" fill="none" stroke="#7e5a1b" stroke-width="1.05" stroke-dasharray="0.75 1.45" opacity="0.8"/>
+      <circle cx="16" cy="19.2" r="7.85" fill="url(#g-medal-face)" stroke="#8b641d" stroke-width="0.65"/>
+      <path d="M7.7 15.5A9 9 0 0 1 15.1 9.4" fill="none" stroke="#fffbe0" stroke-width="1.15" stroke-linecap="round" opacity="0.9"/>
+      <circle cx="16" cy="19.2" r="3.45" fill="#8a5b17" stroke="#5c3c0b" stroke-width="0.5"/>
+      <ellipse cx="16" cy="19.2" rx="6.1" ry="2.2" fill="none" stroke="#6b4710" stroke-width="0.95" transform="rotate(-18 16 19.2)"/>
+      <path d="M13.1 16.5c.6-1.2 2-1.7 3.2-1" stroke="#ffe9a8" stroke-width="0.6" fill="none" opacity="0.72"/>
+      <circle cx="16" cy="19.2" r="8.7" fill="none" stroke="#fff2bd" stroke-width="0.5" opacity="0.45"/>
+    </symbol>
+    <symbol id="i-medal-mayor" viewBox="0 0 32 32">
+      <path d="M10.8 1.4h4.4l1.6 7.6-3.8 1.8-3.7-1.8z" fill="url(#g-ribbon)" stroke="#541113" stroke-width="0.5"/>
+      <path d="M18.8 1.4h2.2l2.1 7.2-4-1.8z" fill="#2f5182" stroke="#173052" stroke-width="0.5"/>
+      <circle cx="16" cy="19.2" r="10.1" fill="url(#g-medal)" stroke="#5f400e" stroke-width="0.8"/>
+      <circle cx="16" cy="19.2" r="9.25" fill="none" stroke="#7e5a1b" stroke-width="1.05" stroke-dasharray="0.75 1.45" opacity="0.8"/>
+      <circle cx="16" cy="19.2" r="7.85" fill="url(#g-medal-face)" stroke="#8b641d" stroke-width="0.65"/>
+      <path d="M7.7 15.5A9 9 0 0 1 15.1 9.4" fill="none" stroke="#fffbe0" stroke-width="1.15" stroke-linecap="round" opacity="0.9"/>
+      <path d="M10.5 22.7v-4.5h1.9v4.5M13.2 22.7v-6.6h2.5v6.6M16.5 22.7v-5.2h2v5.2M17 12.7v1.6M19.7 22.7v-3.6h1.8v3.6" fill="#7c5312"/>
+      <path d="M10.1 15.9h10.4" stroke="#6b4710" stroke-width="0.7"/>
+      <path d="M10.9 20.7h1M13.7 19.2h1.5M17 20.1h1M20.1 20.9h.9" stroke="#ffe9a8" stroke-width="0.55" opacity="0.7"/>
+      <circle cx="16" cy="19.2" r="8.7" fill="none" stroke="#fff2bd" stroke-width="0.5" opacity="0.45"/>
+    </symbol>
+    <symbol id="i-medal-gardener" viewBox="0 0 32 32">
+      <path d="M10.8 1.4h4.4l1.6 7.6-3.8 1.8-3.7-1.8z" fill="url(#g-ribbon)" stroke="#541113" stroke-width="0.5"/>
+      <path d="M18.8 1.4h2.2l2.1 7.2-4-1.8z" fill="#2c6b3a" stroke="#163f22" stroke-width="0.5"/>
+      <circle cx="16" cy="19.2" r="10.1" fill="url(#g-medal)" stroke="#5f400e" stroke-width="0.8"/>
+      <circle cx="16" cy="19.2" r="9.25" fill="none" stroke="#7e5a1b" stroke-width="1.05" stroke-dasharray="0.75 1.45" opacity="0.8"/>
+      <circle cx="16" cy="19.2" r="7.85" fill="url(#g-medal-face)" stroke="#8b641d" stroke-width="0.65"/>
+      <path d="M7.7 15.5A9 9 0 0 1 15.1 9.4" fill="none" stroke="#fffbe0" stroke-width="1.15" stroke-linecap="round" opacity="0.9"/>
+      <path d="M16 23.9v-6.3" fill="none" stroke="#6b4710" stroke-width="1.2" stroke-linecap="round"/>
+      <path d="M16 18.3c-2.8.2-4.6-1.1-5.3-3.9 2.8-.3 4.6 1 5.3 3.9z" fill="#7c5312"/>
+      <path d="M16 16.8c.3-2.6 1.9-4.2 4.8-4.6.3 2.8-1.5 4.5-4.8 4.6z" fill="#8a5b17"/>
+      <path d="M16.2 23.3c1.8 0 3.2.7 4.3 2.1-2.1.2-3.6-.5-4.3-2.1z" fill="#6b4710" opacity="0.85"/>
+      <circle cx="16" cy="19.2" r="8.7" fill="none" stroke="#fff2bd" stroke-width="0.5" opacity="0.45"/>
+    </symbol>
+    <symbol id="i-medal-landlord" viewBox="0 0 32 32">
+      <path d="M10.8 1.4h4.4l1.6 7.6-3.8 1.8-3.7-1.8z" fill="url(#g-ribbon)" stroke="#541113" stroke-width="0.5"/>
+      <path d="M18.8 1.4h2.2l2.1 7.2-4-1.8z" fill="#7a1f20" stroke="#541113" stroke-width="0.5"/>
+      <circle cx="16" cy="19.2" r="10.1" fill="url(#g-medal)" stroke="#5f400e" stroke-width="0.8"/>
+      <circle cx="16" cy="19.2" r="9.25" fill="none" stroke="#7e5a1b" stroke-width="1.05" stroke-dasharray="0.75 1.45" opacity="0.8"/>
+      <circle cx="16" cy="19.2" r="7.85" fill="url(#g-medal-face)" stroke="#8b641d" stroke-width="0.65"/>
+      <path d="M7.7 15.5A9 9 0 0 1 15.1 9.4" fill="none" stroke="#fffbe0" stroke-width="1.15" stroke-linecap="round" opacity="0.9"/>
+      <path d="M12.2 17.2l2.4-1.4 2.4 1.4v2.8l-2.4 1.4-2.4-1.4z" fill="#7c5312" stroke="#5c3c0b" stroke-width="0.45"/>
+      <path d="M17.6 19l2.4-1.4 2.4 1.4v2.8l-2.4 1.4-2.4-1.4z" fill="#8a5b17" stroke="#5c3c0b" stroke-width="0.45"/>
+      <path d="M12.2 22.6l2.4-1.4 2.4 1.4v2.8l-2.4 1.4-2.4-1.4z" fill="#6b4710" stroke="#5c3c0b" stroke-width="0.45"/>
+      <circle cx="14.6" cy="18.6" r="0.55" fill="#ffe9a8" opacity="0.8"/>
+      <circle cx="20" cy="20.4" r="0.55" fill="#ffe9a8" opacity="0.8"/>
+    </symbol>
+    <symbol id="i-medal-scientist" viewBox="0 0 32 32">
+      <path d="M10.8 1.4h4.4l1.6 7.6-3.8 1.8-3.7-1.8z" fill="#2f5182" stroke="#173052" stroke-width="0.5"/>
+      <path d="M18.8 1.4h2.2l2.1 7.2-4-1.8z" fill="#1d3a60" stroke="#173052" stroke-width="0.5"/>
+      <circle cx="16" cy="19.2" r="10.1" fill="url(#g-silver)" stroke="#3d4e63" stroke-width="0.8"/>
+      <circle cx="16" cy="19.2" r="9.25" fill="none" stroke="#5f7188" stroke-width="1.05" stroke-dasharray="0.75 1.45" opacity="0.8"/>
+      <circle cx="16" cy="19.2" r="7.85" fill="url(#g-science)" stroke="#2f5d7d" stroke-width="0.65"/>
+      <path d="M7.7 15.5A9 9 0 0 1 15.1 9.4" fill="none" stroke="#ffffff" stroke-width="1.15" stroke-linecap="round" opacity="0.9"/>
+      <ellipse cx="16" cy="19.2" rx="5.3" ry="2.2" fill="none" stroke="#e7fbff" stroke-width="0.8" opacity="0.9"/>
+      <ellipse cx="16" cy="19.2" rx="5.3" ry="2.2" fill="none" stroke="#e7fbff" stroke-width="0.8" opacity="0.9" transform="rotate(60 16 19.2)"/>
+      <ellipse cx="16" cy="19.2" rx="5.3" ry="2.2" fill="none" stroke="#e7fbff" stroke-width="0.8" opacity="0.9" transform="rotate(-60 16 19.2)"/>
+      <circle cx="16" cy="19.2" r="1.3" fill="#fff4bd"/>
+      <circle cx="16" cy="19.2" r="8.7" fill="none" stroke="#ffffff" stroke-width="0.5" opacity="0.4"/>
+    </symbol>
+    <symbol id="i-medal-thermalist" viewBox="0 0 32 32">
+      <path d="M10.8 1.4h4.4l1.6 7.6-3.8 1.8-3.7-1.8z" fill="url(#g-ribbon)" stroke="#541113" stroke-width="0.5"/>
+      <path d="M18.8 1.4h2.2l2.1 7.2-4-1.8z" fill="#7a3418" stroke="#4a1c0a" stroke-width="0.5"/>
+      <circle cx="16" cy="19.2" r="10.1" fill="url(#g-copper)" stroke="#5f2c12" stroke-width="0.8"/>
+      <circle cx="16" cy="19.2" r="9.25" fill="none" stroke="#8a4a22" stroke-width="1.05" stroke-dasharray="0.75 1.45" opacity="0.8"/>
+      <circle cx="16" cy="19.2" r="7.85" fill="url(#g-heat)" stroke="#7a2a12" stroke-width="0.65" opacity="0.9"/>
+      <path d="M7.7 15.5A9 9 0 0 1 15.1 9.4" fill="none" stroke="#ffe9c9" stroke-width="1.15" stroke-linecap="round" opacity="0.9"/>
+      <path d="M16 23.6c-2.6 0-4.4-1.6-4.4-3.9 0-1.6.8-2.9 2.3-4.1.1 1.2.6 1.9 1.4 2.4 0-1.7.6-3.3 2.1-4.8.2 1.9 1 3 1.9 4 .9.9 1.3 1.9 1.3 2.9 0 2.3-1.8 3.5-4.6 3.5z" fill="#fff2c0"/>
+      <path d="M16 22.1c-1.1 0-1.9-.7-1.9-1.7 0-.8.4-1.4 1.2-2.1.1.6.3 1 .7 1.3 0-.8.4-1.6 1-2.3.5.8.8 1.5.8 2.2 0 1.4-.8 2.6-1.8 2.6z" fill="#d95a2a" opacity="0.75"/>
+      <circle cx="16" cy="19.2" r="8.7" fill="none" stroke="#fff0d0" stroke-width="0.5" opacity="0.4"/>
+    </symbol>
+    <symbol id="i-token-animal" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10.4" fill="url(#g-token)" stroke="#6b4a12" stroke-width="0.8"/>
+      <circle cx="12" cy="12" r="8.35" fill="#f7e7c2" stroke="#a57a2c" stroke-width="0.65"/>
+      <path d="M7.5 9.2a1.55 1.55 0 1 1 3.1 0 1.55 1.55 0 0 1-3.1 0zM13.4 9.2a1.55 1.55 0 1 1 3.1 0 1.55 1.55 0 0 1-3.1 0zM5.9 12.7a1.35 1.35 0 1 1 2.7 0 1.35 1.35 0 0 1-2.7 0zM15.4 12.7a1.35 1.35 0 1 1 2.7 0 1.35 1.35 0 0 1-2.7 0z" fill="#6b4710"/>
+      <path d="M12 11.6c2.4 0 4.3 1.8 4.3 3.9 0 1.7-1.3 2.7-2.8 2.7h-3c-1.5 0-2.8-1-2.8-2.7 0-2.1 1.9-3.9 4.3-3.9z" fill="#7c5312"/>
+      <path d="M8 7.2A8.4 8.4 0 0 1 14.6 4" fill="none" stroke="#fffbe0" stroke-width="1" stroke-linecap="round" opacity="0.85"/>
+      <circle cx="12" cy="12" r="9.4" fill="none" stroke="#fff2bd" stroke-width="0.45" opacity="0.5"/>
+    </symbol>
+    <symbol id="i-token-microbe" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10.4" fill="url(#g-microbe)" stroke="#1c5a45" stroke-width="0.8"/>
+      <circle cx="12" cy="12" r="8.35" fill="#0d3428" stroke="#3f8f70" stroke-width="0.7"/>
+      <g fill="#9fe6c0" opacity="0.9">
+        <circle cx="9" cy="9.2" r="1.35"/><circle cx="14.2" cy="8.4" r="0.95"/>
+        <circle cx="15.4" cy="13" r="1.5"/><circle cx="9.2" cy="14.3" r="1.1"/>
+        <circle cx="12.1" cy="16.2" r="0.8"/><circle cx="12.5" cy="11.4" r="0.62"/>
+      </g>
+      <g fill="#eafff0" opacity="0.72">
+        <circle cx="8.8" cy="9" r="0.4"/><circle cx="15.2" cy="12.8" r="0.45"/>
+        <circle cx="9.1" cy="14.1" r="0.34"/>
+      </g>
+      <path d="M8 7.2A8.4 8.4 0 0 1 14.6 4" fill="none" stroke="#eafff0" stroke-width="1" stroke-linecap="round" opacity="0.8"/>
+      <circle cx="12" cy="12" r="9.4" fill="none" stroke="#c9ffe4" stroke-width="0.45" opacity="0.45"/>
+    </symbol>
+    <symbol id="i-token-science" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10.4" fill="url(#g-science)" stroke="#1e4a6b" stroke-width="0.8"/>
+      <circle cx="12" cy="12" r="8.35" fill="#0c2436" stroke="#4b8fb5" stroke-width="0.7"/>
+      <ellipse cx="12" cy="12" rx="5.8" ry="2.35" fill="none" stroke="#c9f2ff" stroke-width="0.85" opacity="0.9"/>
+      <ellipse cx="12" cy="12" rx="5.8" ry="2.35" fill="none" stroke="#c9f2ff" stroke-width="0.85" opacity="0.9" transform="rotate(60 12 12)"/>
+      <ellipse cx="12" cy="12" rx="5.8" ry="2.35" fill="none" stroke="#c9f2ff" stroke-width="0.85" opacity="0.9" transform="rotate(-60 12 12)"/>
+      <circle cx="12" cy="12" r="1.45" fill="#fff4bd"/>
+      <circle cx="12" cy="12" r="0.6" fill="#ffffff"/>
+      <path d="M8 7.2A8.4 8.4 0 0 1 14.6 4" fill="none" stroke="#f4fdff" stroke-width="1" stroke-linecap="round" opacity="0.82"/>
+      <circle cx="12" cy="12" r="9.4" fill="none" stroke="#d9f5ff" stroke-width="0.45" opacity="0.45"/>
+    </symbol>
+  </defs>
+</svg>
+
+<header class="site-header">
+  <div class="wrap head-inner">
+    <a class="brand" href="../index.html" aria-label="返回桌游目录">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-text"><b>殖民火星</b><small>TERRAFORMING MARS</small></span>
+    </a>
+    <div class="head-actions">
+      <button class="mini-btn" id="newGame" type="button">新局</button>
+      <button class="mini-btn" id="autoFinish" type="button" title="用内置 AI 从当前局面一路打到终局">自动终局</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="top-strip">
+    <span class="badge">世代 <b id="genNum">1</b></span>
+    <span class="badge" id="phaseBadge"><b id="phaseName">研发阶段</b></span>
+    <span class="badge turn">当前 <b id="turnName">—</b></span>
+    <span class="badge">剩余动作 <b id="actionsNum">—</b></span>
+    <span class="badge gold">TR <b id="trNum">20</b></span>
+    <span class="badge seed" id="seedTag">SEED 7</span>
+  </div>
+
+  <section class="game" id="game" aria-label="殖民火星对局">
+    <p class="hint" id="hint" role="status" aria-live="polite">准备开始。</p>
+
+    <section class="panel board-panel" aria-labelledby="boardTitle">
+      <div class="panel-head">
+        <h2 id="boardTitle">火星地图 · 9 × 5</h2>
+        <span id="boardCount">海洋 0/9 · 绿化 0 · 城市 0</span>
+      </div>
+      <div class="map-frame">
+        <div class="board" id="board" role="grid" aria-label="火星地图，9 列 5 行"></div>
+        <div class="board-legend">
+          <span class="legend-item"><i class="legend-swatch ocean"></i>海洋</span>
+          <span class="legend-item"><i class="legend-swatch greenery"></i>绿化</span>
+          <span class="legend-item"><i class="legend-swatch city"></i>城市</span>
+          <span class="legend-item"><i class="legend-swatch special"></i>特殊</span>
+          <span class="legend-note" id="legendNote">四邻接方格版图</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel params" id="params" aria-label="三大全球参数"></section>
+
+    <section class="panel" aria-labelledby="handTitle">
+      <div class="panel-head"><h2 id="handTitle">手牌</h2><span id="handMeta">0 张</span></div>
+      <div class="card-grid" id="hand"></div>
+      <div class="research-foot" id="researchFoot" hidden>
+        <span class="note" id="researchNote">购买想留下的项目卡；未购买的在结束研发时弃掉。</span>
+        <button class="btn primary" id="endResearch" type="button">结束研发</button>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="playersTitle">
+      <div class="panel-head"><h2 id="playersTitle">玩家面板 · 库存与产量</h2><span>产量每世代结算</span></div>
+      <div class="players" id="players"></div>
+    </section>
+
+    <section class="panel" id="actionPanel" aria-labelledby="actionTitle" hidden>
+      <div class="panel-head"><h2 id="actionTitle">行动阶段</h2><span id="actionMeta"></span></div>
+      <div class="std-grid" id="stdGrid"></div>
+      <div class="sell-row" id="sellRow">
+        <select id="sellSelect" aria-label="选择要出售的手牌"></select>
+        <button class="btn" id="sellBtn" type="button">出售 +3 MC</button>
+      </div>
+      <div class="turn-foot">
+        <span class="note" id="actionNote">每回合最多 2 个动作；打出卡牌、标准项目、资源转换、里程碑/奖励各占 1 个动作。</span>
+        <button class="btn danger" id="passBtn" type="button">结束行动（Pass）</button>
+      </div>
+    </section>
+
+    <section class="panel" id="milestonePanel" aria-labelledby="milestoneTitle">
+      <div class="panel-head"><h2 id="milestoneTitle">里程碑</h2><span id="milestoneMeta">2 人局各 1 个 · 每个 8 MC</span></div>
+      <div class="claim-grid" id="milestoneGrid"></div>
+    </section>
+
+    <section class="panel" id="awardPanel" aria-labelledby="awardTitle">
+      <div class="panel-head"><h2 id="awardTitle">奖励</h2><span id="awardMeta">2 人局各 1 个 · 资助 8 MC</span></div>
+      <div class="claim-grid" id="awardGrid"></div>
+    </section>
+
+    <section class="panel" id="playedPanel" aria-labelledby="playedTitle">
+      <div class="panel-head"><h2 id="playedTitle">已打出</h2><span id="playedMeta">0 张</span></div>
+      <div class="token-legend" aria-label="卡牌资源标记图例">
+        <span class="token-legend-label">卡牌标记</span>
+        <span class="res-token"><svg class="ic" aria-hidden="true"><use href="#i-token-animal"></use></svg><b>动物</b></span>
+        <span class="res-token"><svg class="ic" aria-hidden="true"><use href="#i-token-microbe"></use></svg><b>微生物</b></span>
+        <span class="res-token"><svg class="ic" aria-hidden="true"><use href="#i-token-science"></use></svg><b>科学</b></span>
+      </div>
+      <details class="played-details" id="playedDetails">
+        <summary>展开已打出的项目卡与蓝卡行动</summary>
+        <div class="played-list" id="playedList"></div>
+      </details>
+    </section>
+
+    <section class="stage-card" id="productionPanel" hidden>
+      <h2>生产阶段</h2>
+      <p>按产量收取 MC / 钢 / 钛 / 植物，能量全部转为热度；植物 ≥ 8 会自动放置一块绿化。</p>
+      <div class="stage-list" id="productionList"></div>
+      <button class="btn primary big" id="productionBtn" type="button">结算生产</button>
+    </section>
+
+    <section class="stage-card" id="generationPanel" hidden>
+      <h2>世代结束</h2>
+      <p id="generationSub">检查三大参数。</p>
+      <div class="stage-list" id="generationList"></div>
+      <button class="btn primary big" id="nextGenBtn" type="button">进入下一代</button>
+    </section>
+
+    <section class="panel" aria-labelledby="logTitle">
+      <div class="panel-head"><h2 id="logTitle">战报</h2><span>最近事件</span></div>
+      <ol class="log" id="log"></ol>
+    </section>
+  </section>
+
+  <section class="help" aria-label="玩法提示">
+    <article class="help-card"><h3>研发与买卡</h3><p>每世代先进入研发：第 1 世代 10 张、之后 4 张。每张花 3 MC 留下，未购买的在结束研发时弃掉。</p></article>
+    <article class="help-card"><h3>行动与放置</h3><p>每回合最多 2 个动作。带板块的卡会高亮合法格，点地图或底部坐标按钮放置；城市不能相邻，绿化要贴着已有板块。</p></article>
+    <article class="help-card"><h3>改造与终局</h3><p>温度 −30→+8°C、氧气 0→14%、海洋 0→9。三项全部达标后，本世代结束即终局，按 TR、绿化、城市、卡牌、里程碑与奖励计分。</p></article>
+  </section>
+
+  <footer class="site-footer">
+    <span>殖民火星 · 基础版规则引擎 + 单机 UI</span>
+    <span>9×5 方格版图</span>
+    <span>内置贪心 AI</span>
+  </footer>
+</main>
+
+<div class="place-bar" id="placeBar" hidden>
+  <div class="place-inner">
+    <div class="place-top">
+      <span class="place-title" id="placeTitle">选择放置格</span>
+      <button class="mini-btn" id="cancelPlace" type="button">取消</button>
+    </div>
+    <div class="place-chips" id="placeChips"></div>
+  </div>
+</div>
+
+<div class="overlay" id="resultOverlay" hidden>
+  <div class="result-card" role="dialog" aria-modal="true" aria-labelledby="resultTitle">
+    <p class="eyebrow">Game Over · 终局计分</p>
+    <h2 id="resultTitle">火星改造结算</h2>
+    <p class="result-sub" id="resultSub"></p>
+    <div class="result-rows" id="resultRows"></div>
+    <div class="result-actions">
+      <button class="btn primary" id="playAgain" type="button">再来一局</button>
+      <button class="btn" id="closeResult" type="button">查看棋盘</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script type="module">
+import {
+  createGame, legalActions, applyAction, score, currentPlayer, chooseGreedyAction, autoPlay,
+  CARDS_BY_ID, CATEGORIES, MILESTONES, AWARDS, STANDARD_PROJECTS,
+  TEMPERATURE_MIN, TEMPERATURE_MAX, TEMPERATURE_STEP, OXYGEN_MAX, OCEAN_MAX,
+  RESEARCH_COST, MILESTONE_COST, AWARD_COST, PLANT_GREENERY_COST, HEAT_TEMP_COST,
+  meetsRequirements, canPayCard, canonicalPayment, playerMetrics, tileCounts, tagCount,
+  cardVictoryPoints, isTerraformed, milestoneLimit, awardLimit
+} from './engine.js';
+
+const HUMAN = 0;
+const PLAYER_NAMES = ['你', 'AI 拓荒者'];
+const RES_KEYS = ['mc', 'steel', 'titanium', 'plants', 'energy', 'heat'];
+const RES_ZH = { mc: 'MC', steel: '钢', titanium: '钛', plants: '植物', energy: '能量', heat: '热度' };
+const RES_ICON = { mc: 'i-mc', steel: 'i-steel', titanium: 'i-ti', plants: 'i-plant', energy: 'i-energy', heat: 'i-heat' };
+const CAT_ZH = CATEGORIES;
+const CAT_CLASS = { bio: 'cat-bio', power: 'cat-power', building: 'cat-building', space: 'cat-space', science: 'cat-science' };
+const TAG_ZH = {
+  plant: '植物', microbe: '微生物', animal: '动物', jovian: '木星', earth: '地球',
+  city: '城市', power: '能源', building: '建筑', space: '太空', science: '科学',
+  bio: '生物'
+};
+const TILE_ZH = { ocean: '海洋', greenery: '绿化', city: '城市', special: '特殊' };
+const TILE_ICON = { ocean: 'i-ocean', greenery: 'i-greenery', city: 'i-city', special: 'i-special' };
+const CARD_RES_ZH = { animal: '动物', microbe: '微生物', science: '科学' };
+const PHASE_ZH = {
+  research: '研发阶段', action: '行动阶段', production: '生产阶段',
+  'generation-end': '世代结束', 'game-over': '终局'
+};
+const COLUMNS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
+
+const $ = (sel, root = document) => root.querySelector(sel);
+const icon = (name, cls = '') => `<svg class="ic ${cls}" aria-hidden="true" focusable="false"><use href="#${name}"></use></svg>`;
+
+function esc(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function nameOf(i) {
+  if (i === null || i === undefined) return '—';
+  return (state && state.players && state.players[i] && state.players[i].name) || PLAYER_NAMES[i] || ('P' + (i + 1));
+}
+function fmtTemp(v) {
+  return (v < 0 ? '−' + Math.abs(v) : '+' + v) + '°C';
+}
+function cellLabel(i) {
+  return COLUMNS[i % 9] + (Math.floor(i / 9) + 1);
+}
+function pct(v, min, max) {
+  return Math.max(0, Math.min(100, ((v - min) / (max - min)) * 100));
+}
+
+/* ---------------- state ---------------- */
+function seedFromUrl() {
+  try {
+    const n = Number(new URLSearchParams(location.search).get('seed'));
+    return Number.isFinite(n) && n > 0 ? Math.floor(n) : 7;
+  } catch (_) { return 7; }
+}
+let seed = seedFromUrl();
+let state = createGame({ seed, playerCount: 2, names: PLAYER_NAMES });
+let placement = null;
+let aiTimer = null;
+let autoBusy = false;
+let toastTimer = null;
+let legalCache = null;
+
+function newGame(nextSeed) {
+  clearTimeout(aiTimer);
+  aiTimer = null;
+  autoBusy = false;
+  placement = null;
+  seed = Number.isFinite(nextSeed) ? Math.floor(nextSeed) : seed + 1;
+  state = createGame({ seed, playerCount: 2, names: PLAYER_NAMES });
+  try {
+    const url = new URL(location.href);
+    url.searchParams.set('seed', String(seed));
+    history.replaceState(null, '', url);
+  } catch (_) { /* file:// */ }
+  $('#resultOverlay').hidden = true;
+  document.body.classList.remove('modal-open');
+  render();
+  scheduleAi();
+}
+
+/* ---------------- hints / toast ---------------- */
+function toast(msg, bad) {
+  const el = $('#toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (bad ? ' bad' : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = 'toast'; }, 2400);
+}
+function hintText() {
+  const cur = currentPlayer(state);
+  if (state.phase === 'game-over') return '终局已结算，可查看棋盘或再来一局。';
+  if (placement) return `放置${TILE_ZH[placement.kind]}：点地图高亮格，或点底部坐标按钮。`;
+  if (state.phase === 'research') {
+    return cur === HUMAN
+      ? `研发：每张 ${RESEARCH_COST} MC 购买想留下的牌，然后结束研发。`
+      : `${nameOf(cur)} 正在研发，请稍候…`;
+  }
+  if (state.phase === 'action') {
+    if (cur === HUMAN) {
+      return placement ? `放置${TILE_ZH[placement.kind]}：选择高亮格。`
+        : `你的回合：还可执行 ${state.actionsLeft} 个动作。点手牌打出，或使用标准项目。`;
+    }
+    return `${nameOf(cur)} 正在行动…`;
+  }
+  if (state.phase === 'production') return '生产阶段：结算全体产量，能量将转为热度。';
+  if (state.phase === 'generation-end') return '世代结束：检查温度、氧气、海洋是否三项达标。';
+  return '';
+}
+function setHint(text, cls) {
+  const el = $('#hint');
+  el.textContent = text;
+  el.className = 'hint' + (cls ? ' ' + cls : '');
+}
+
+/* ---------------- derived helpers ---------------- */
+function currentLegal() {
+  if (!state || state.phase !== 'action' || currentPlayer(state) !== HUMAN) return [];
+  return legalActions(state, HUMAN);
+}
+function buildLegalMap(legal) {
+  const playByCard = new Map();
+  const cardActionByUid = new Map();
+  const standard = new Map();
+  const milestones = new Set();
+  const awards = new Set();
+  for (const a of legal) {
+    if (a.type === 'playCard') {
+      if (!playByCard.has(a.cardId)) playByCard.set(a.cardId, []);
+      playByCard.get(a.cardId).push(a);
+    } else if (a.type === 'cardAction') {
+      cardActionByUid.set(a.cardUid, a);
+    } else if (a.type === 'standard') {
+      if (!standard.has(a.project)) standard.set(a.project, []);
+      standard.get(a.project).push(a);
+    } else if (a.type === 'claimMilestone') {
+      milestones.add(a.milestone);
+    } else if (a.type === 'fundAward') {
+      awards.add(a.award);
+    }
+  }
+  return { playByCard, cardActionByUid, standard, milestones, awards, all: legal };
+}
+function requirementParts(req, playerIndex) {
+  if (!req) return [];
+  const p = state.players[playerIndex];
+  const metrics = playerMetrics(state, playerIndex);
+  const out = [];
+  if (req.oxygen !== undefined) out.push({ text: `氧气≥${req.oxygen}%`, cur: state.globals.oxygen, ok: state.globals.oxygen >= req.oxygen, unit: '%' });
+  if (req.temperature !== undefined) {
+    out.push({ text: `温度≥${fmtTemp(req.temperature)}`, cur: fmtTemp(state.globals.temperature), ok: state.globals.temperature >= req.temperature, unit: '' });
+  }
+  if (req.oceans !== undefined) out.push({ text: `海洋≥${req.oceans}`, cur: state.globals.oceans, ok: state.globals.oceans >= req.oceans, unit: '' });
+  if (req.tr !== undefined) out.push({ text: `TR≥${req.tr}`, cur: metrics.tr, ok: metrics.tr >= req.tr, unit: '' });
+  if (req.cities !== undefined) out.push({ text: `城市≥${req.cities}`, cur: metrics.cities, ok: metrics.cities >= req.cities, unit: '' });
+  if (req.production) {
+    for (const [res, need] of Object.entries(req.production)) {
+      const cur = p.production[res] || 0;
+      out.push({ text: `${RES_ZH[res] || res}产量≥${need}`, cur, ok: cur >= need, unit: '' });
+    }
+  }
+  if (req.tags) {
+    for (const [tag, need] of Object.entries(req.tags)) {
+      const cur = tagCount(state, playerIndex, tag);
+      out.push({ text: `${TAG_ZH[tag] || tag}标签≥${need}`, cur, ok: cur >= need, unit: '' });
+    }
+  }
+  return out;
+}
+function reqLine(req, playerIndex) {
+  const parts = requirementParts(req, playerIndex);
+  if (!parts.length) return { text: '前置：无', ok: true };
+  const ok = parts.every((p) => p.ok);
+  return {
+    text: '前置：' + parts.map((p) => `${p.text}（当前 ${p.cur}${p.unit}）`).join(' · '),
+    ok
+  };
+}
+function effectLine(e) {
+  switch (e.type) {
+    case 'prod': {
+      const sign = e.amount >= 0 ? '+' : '−';
+      return `${RES_ZH[e.res] || e.res}产量 ${sign}${Math.abs(e.amount)}`;
+    }
+    case 'res': {
+      const sign = e.amount >= 0 ? '获得' : '失去';
+      return `${sign} ${Math.abs(e.amount)} ${RES_ZH[e.res] || e.res}`;
+    }
+    case 'tr': return `TR +${e.amount}`;
+    case 'temperature': return `温度 +${e.steps} 步（+${e.steps * TEMPERATURE_STEP}°C）`;
+    case 'oxygen': return `氧气 +${e.steps}%`;
+    case 'ocean': return `放置 ${e.count} 块海洋`;
+    case 'tile': return `放置 1 块${TILE_ZH[e.tile] || e.tile}板块`;
+    case 'draw': return `抽 ${e.amount} 张牌`;
+    case 'cardResource': return `${CARD_RES_ZH[e.res] || e.res}标记 +${e.amount}`;
+    case 'prodPerTag': return `每个${TAG_ZH[e.tag] || e.tag}标签：${RES_ZH[e.res] || e.res}产量 +${e.amount}`;
+    case 'opponentProd': return `对手${RES_ZH[e.res] || e.res}产量 ${e.amount >= 0 ? '+' : '−'}${Math.abs(e.amount)}`;
+    case 'vp': return `VP +${e.amount}`;
+    default: return e.type;
+  }
+}
+function vpPerLine(card) {
+  if (!card.vpPer) return '';
+  const v = card.vpPer;
+  if (v.type === 'tag') return `每 ${TAG_ZH[v.tag] || v.tag} 标签 ${v.vp} VP`;
+  if (v.type === 'cities') return `每座城市 ${v.vp} VP`;
+  if (v.type === 'cardResource') return `每 ${v.per} 个${CARD_RES_ZH[v.res] || v.res} ${v.vp} VP`;
+  return '';
+}
+function effectSummary(card) {
+  const parts = (card.effects || []).map(effectLine);
+  if (!parts.length) parts.push('无一次性效果');
+  if (card.action) {
+    const cost = card.action.cost
+      ? '（付 ' + Object.entries(card.action.cost).map(([r, n]) => n + ' ' + (RES_ZH[r] || r)).join(' + ') + '）'
+      : '';
+    parts.push('行动' + cost + '：' + (card.action.effects || []).map(effectLine).join('、') + ' · 每世代一次');
+  }
+  if (card.onOcean && card.onOcean.type === 'res') {
+    parts.push(`任意海洋放置时：+${card.onOcean.amount} ${RES_ZH[card.onOcean.res] || card.onOcean.res}`);
+  }
+  const vp = vpPerLine(card);
+  if (vp) parts.push(vp);
+  return parts.join('；');
+}
+function paymentText(card) {
+  try {
+    if (!canPayCard(state, HUMAN, card)) return '';
+    const p = canonicalPayment(state, HUMAN, card);
+    const bits = [];
+    if (p.mc) bits.push(p.mc + ' MC');
+    if (p.steel) bits.push(p.steel + ' 钢');
+    if (p.titanium) bits.push(p.titanium + ' 钛');
+    return bits.join(' + ');
+  } catch (_) { return ''; }
+}
+function tagsHtml(card) {
+  const extras = (card.tags || []).filter((t) => t !== card.category);
+  if (!extras.length) return '<span class="tag-mini none">无额外标签</span>';
+  return extras.map((t) => `<span class="tag-mini">${esc(TAG_ZH[t] || t)}</span>`).join('');
+}
+function vpPill(card) {
+  if (card.vp) return `<span class="vp-pill">VP +${card.vp}</span>`;
+  if (card.vpPer) return '<span class="vp-pill">动态 VP</span>';
+  return '';
+}
+function cardResourcesHtml(card) {
+  const entries = Object.entries(card.resources || {}).filter(([, n]) => n > 0);
+  return entries.map(([r, n]) => `<span class="res-token" title="${esc(CARD_RES_ZH[r] || r)}标记">`
+    + `${icon('i-token-' + r)}<b>×${n}</b></span>`).join('');
+}
+
+/* ---------------- render: top ---------------- */
+function renderTop() {
+  const cur = currentPlayer(state);
+  $('#genNum').textContent = state.generation;
+  $('#phaseName').textContent = PHASE_ZH[state.phase] || state.phase;
+  $('#phaseBadge').className = 'badge' + (state.phase === 'game-over' ? ' gold' : '');
+  $('#turnName').textContent = cur === null ? '—' : nameOf(cur);
+  $('#actionsNum').textContent = state.phase === 'action' ? state.actionsLeft : '—';
+  $('#trNum').textContent = state.players[HUMAN].tr;
+  $('#seedTag').textContent = 'SEED ' + state.seed;
+  const hint = hintText();
+  setHint(hint, placement ? 'warn' : (state.phase === 'game-over' ? 'good' : ''));
+}
+
+/* ---------------- render: board ---------------- */
+function renderBoard() {
+  const legalCells = new Set(placement ? placement.cells : []);
+  let oceans = 0, greenery = 0, cities = 0, special = 0;
+  const cells = state.board.cells.map((cell, i) => {
+    const kind = cell ? cell.tile : 'empty';
+    if (kind === 'ocean') oceans += 1;
+    if (kind === 'greenery') greenery += 1;
+    if (kind === 'city') cities += 1;
+    if (kind === 'special') special += 1;
+    const can = legalCells.has(i);
+    const owner = cell && cell.owner !== null && cell.owner !== undefined ? cell.owner : null;
+    const label = cellLabel(i);
+    const tile = cell ? TILE_ZH[cell.tile] : '空地';
+    const ownerText = owner !== null ? ' · ' + nameOf(owner) : '';
+    const inner = cell ? icon(TILE_ICON[cell.tile], 'tile-ic') : '';
+    const dot = owner !== null ? `<span class="owner-dot o${owner}" aria-hidden="true"></span>` : '';
+    return `<div class="cell ${kind}${owner !== null ? ' owner' + owner : ''}${can ? ' can-place' : ''}"`
+      + ` data-cell="${i}" role="${can ? 'button' : 'gridcell'}"${can ? ' tabindex="0"' : ''}`
+      + ` aria-label="${can ? '放置在 ' : ''}${label} ${tile}${ownerText}"`
+      + ` title="${label} · ${tile}${ownerText}">${inner}${dot}</div>`;
+  }).join('');
+  $('#board').innerHTML = cells;
+  $('#boardCount').textContent = `海洋 ${oceans}/9 · 绿化 ${greenery} · 城市 ${cities} · 特殊 ${special}`;
+  $('#legendNote').textContent = placement ? '点击高亮格放置' : '四邻接方格版图';
+}
+
+/* ---------------- render: params ---------------- */
+function renderParams() {
+  const g = state.globals;
+  const tempSteps = Math.round((TEMPERATURE_MAX - TEMPERATURE_MIN) / TEMPERATURE_STEP);
+  const tempDone = g.temperature >= TEMPERATURE_MAX;
+  const oxDone = g.oxygen >= OXYGEN_MAX;
+  const ocDone = g.oceans >= OCEAN_MAX;
+  const rows = [
+    {
+      key: 'temperature', label: '温度', value: fmtTemp(g.temperature),
+      target: `目标 ${fmtTemp(TEMPERATURE_MAX)}`, pct: pct(g.temperature, TEMPERATURE_MIN, TEMPERATURE_MAX),
+      ticks: tempSteps, done: tempDone
+    },
+    {
+      key: 'oxygen', label: '氧气', value: `${g.oxygen}%`,
+      target: `目标 ${OXYGEN_MAX}%`, pct: pct(g.oxygen, 0, OXYGEN_MAX),
+      ticks: OXYGEN_MAX, done: oxDone
+    },
+    {
+      key: 'oceans', label: '海洋', value: `${g.oceans}/${OCEAN_MAX}`,
+      target: `目标 ${OCEAN_MAX} 块`, pct: pct(g.oceans, 0, OCEAN_MAX),
+      ticks: OCEAN_MAX, done: ocDone
+    }
+  ];
+  $('#params').innerHTML = rows.map((r) => `
+    <div class="param${r.done ? ' done' : ''}" data-param="${r.key}">
+      <div class="param-head">
+        <span class="param-label">${r.label}</span>
+        <b class="param-val" data-value="${r.key}">${r.value}</b>
+        <span class="param-target">${r.target}</span>
+        ${r.done ? '<span class="done-badge">达标</span>' : ''}
+      </div>
+      <div class="track" role="progressbar" aria-label="${r.label}" aria-valuemin="0" aria-valuemax="${r.ticks}"
+        aria-valuenow="${r.key === 'temperature' ? Math.round((g.temperature - TEMPERATURE_MIN) / TEMPERATURE_STEP) : r.key === 'oxygen' ? g.oxygen : g.oceans}">
+        <span class="fill" data-fill="${r.key}" style="width:${r.pct}%"></span>
+        <span class="ticks" aria-hidden="true">${'<i></i>'.repeat(r.ticks)}</span>
+      </div>
+    </div>`).join('');
+}
+
+/* ---------------- render: players ---------------- */
+function playerCard(p) {
+  const isHuman = p.index === HUMAN;
+  const active = currentPlayer(state) === p.index;
+  const res = RES_KEYS.map((k) => `
+    <div class="res-item" data-res="${k}" title="${RES_ZH[k]}">
+      ${icon(RES_ICON[k])}<b>${p[k]}</b><span>${RES_ZH[k]}</span>
+    </div>`).join('');
+  const prod = RES_KEYS.map((k) => `
+    <span class="prod-chip${p.production[k] ? '' : ' zero'}" title="${RES_ZH[k]}产量">${icon(RES_ICON[k])}<b>+${p.production[k]}</b></span>`).join('');
+  return `<article class="player-card ${isHuman ? 'you' : 'ai'}${active ? ' active' : ''}" aria-label="${esc(p.name)}的资源与产量">
+    <div class="p-head">
+      <span class="p-dot" aria-hidden="true"></span>
+      <h3>${esc(p.name)}</h3>
+      <span class="p-sub">${p.hand.length} 手牌 · ${p.played.length} 蓝卡</span>
+      <span class="tr-pill">TR ${p.tr}</span>
+    </div>
+    <div class="res-grid">${res}</div>
+    <div class="prod-line"><span class="prod-label">产量</span>${prod}</div>
+  </article>`;
+}
+function renderPlayers() {
+  $('#players').innerHTML = state.players.map(playerCard).join('');
+}
+
+/* ---------------- render: hand ---------------- */
+function handCard(card, legalMap, canAct) {
+  const playActions = legalMap.playByCard.get(card.uid) || [];
+  const req = reqLine(card.requirements, HUMAN);
+  const afford = canPayCard(state, HUMAN, card);
+  const hasTile = card.effects.some((e) => e.type === 'tile');
+  const playable = canAct && playActions.length > 0 && req.ok && afford;
+  let cta = '打出';
+  if (!canAct) cta = state.phase === 'action' ? '等待你的回合' : (state.phase === 'research' ? '研发中' : '暂不可打出');
+  else if (!req.ok) cta = '前置未满足';
+  else if (!afford) cta = '资金不足';
+  else if (hasTile) cta = '放置板块';
+  const pay = playable ? paymentText(card) : '';
+  const reason = !req.ok ? '前置条件未满足' : (!afford ? `资金不足（卡费 ${card.cost} MC）` : '');
+  return `<button type="button" class="card hand-card ${CAT_CLASS[card.category] || ''}${playable ? ' playable' : ' blocked'}"`
+    + ` data-uid="${card.uid}" ${playable ? '' : 'disabled'}`
+    + ` title="${esc(card.name + (reason ? ' · ' + reason : '') + (pay ? ' · 支付 ' + pay : ''))}">`
+    + `<div class="card-top"><span class="cost-pill">${icon('i-mc')}${card.cost}</span>`
+    + `<span class="cat-pill">${CAT_ZH[card.category] || card.category}</span>${vpPill(card)}</div>`
+    + `<h3 class="card-name">${esc(card.name)}</h3>`
+    + `<div class="tag-row">${tagsHtml(card)}</div>`
+    + `<p class="card-fx">${esc(effectSummary(card))}</p>`
+    + `<p class="card-req ${req.ok ? 'ok' : 'bad'}">${esc(req.text)}</p>`
+    + `<span class="card-cta">${pay ? '<span>' + esc(pay) + '</span>' : ''}<span class="${playable ? '' : 'lock'}">${cta}</span></span>`
+    + `</button>`;
+}
+function renderHand(legalMap) {
+  const ps = state.players[HUMAN];
+  const cur = currentPlayer(state);
+  const grid = $('#hand');
+  const foot = $('#researchFoot');
+  const title = $('#handTitle');
+
+  if (state.phase === 'research') {
+    title.textContent = '手牌 · 研发待购';
+    grid.classList.add('research-grid');
+    if (cur === HUMAN) {
+      const cards = ps.pendingResearch;
+      foot.hidden = false;
+      $('#handMeta').textContent = `${cards.length} 张待购 · 库存 ${ps.mc} MC`;
+      $('#researchNote').textContent = `每张 ${RESEARCH_COST} MC。未购买的在结束研发时弃掉；已购买的进入手牌。`;
+      $('#endResearch').disabled = false;
+      $('#endResearch').textContent = '结束研发';
+      grid.innerHTML = cards.length
+        ? cards.map((c) => researchCard(c, true, ps.mc >= RESEARCH_COST)).join('')
+        : '<p class="played-empty" style="grid-column:1/-1">本世代待购区为空，直接结束研发即可。</p>';
+      return;
+    }
+    foot.hidden = true;
+    $('#handMeta').textContent = `${ps.hand.length} 张手牌 · 库存 ${ps.mc} MC`;
+    grid.innerHTML = ps.hand.length
+      ? ps.hand.map((c) => handCard(c, legalMap, false)).join('')
+      : `<p class="played-empty" style="grid-column:1/-1">${esc(nameOf(cur))} 正在研发。研发结束后进入行动阶段，购买的卡会出现在这里。</p>`;
+    return;
+  }
+
+  title.textContent = '手牌';
+  foot.hidden = true;
+  grid.classList.remove('research-grid');
+  const cards = ps.hand;
+  $('#handMeta').textContent = `${cards.length} 张 · 库存 ${ps.mc} MC`;
+  if (!cards.length) {
+    grid.innerHTML = '<p class="played-empty" style="grid-column:1/-1">手牌为空。研发阶段购买的项目卡会进入手牌；打出的卡进入「已打出」。</p>';
+    return;
+  }
+  const canAct = state.phase === 'action' && cur === HUMAN && !placement;
+  grid.innerHTML = cards.map((c) => handCard(c, legalMap, canAct)).join('');
+}
+
+/* ---------------- render: research card ---------------- */
+function researchCard(card, canBuy, affordable) {
+  const req = reqLine(card.requirements, HUMAN);
+  const disabled = !canBuy || !affordable;
+  let label = `购买 · ${RESEARCH_COST} MC`;
+  if (!affordable) label = 'MC 不足';
+  else if (!canBuy) label = '等待研发回合';
+  return `<article class="card research-card ${CAT_CLASS[card.category] || ''}">`
+    + `<div class="card-top"><span class="cost-pill">${icon('i-mc')}${card.cost}</span>`
+    + `<span class="cat-pill">${CAT_ZH[card.category] || card.category}</span>${vpPill(card)}</div>`
+    + `<h3 class="card-name">${esc(card.name)}</h3>`
+    + `<div class="tag-row">${tagsHtml(card)}</div>`
+    + `<p class="card-fx">${esc(effectSummary(card))}</p>`
+    + `<p class="card-req ${req.ok ? 'ok' : 'bad'}">${esc(req.text)}</p>`
+    + `<button type="button" class="buy-card" data-uid="${card.uid}" ${disabled ? 'disabled' : ''}>${label}</button>`
+    + `</article>`;
+}
+
+/* ---------------- render: actions ---------------- */
+function stdButton(project, label, enabled, note) {
+  const def = STANDARD_PROJECTS[project];
+  return `<button type="button" class="std-btn" data-project="${project}" ${enabled ? '' : 'disabled'}`
+    + ` title="${esc(note || '')}"><b>${label}</b><span>${def && def.cost ? def.cost + ' MC' : '—'}</span></button>`;
+}
+function renderActions(legalMap) {
+  const panel = $('#actionPanel');
+  const cur = currentPlayer(state);
+  if (state.phase !== 'action') { panel.hidden = true; return; }
+  panel.hidden = false;
+  const mine = cur === HUMAN;
+  const std = legalMap.standard;
+  const has = (p) => mine && std.has(p);
+  $('#actionMeta').textContent = mine ? `你的回合 · 剩余 ${state.actionsLeft} 个动作` : `${nameOf(cur)} 行动中`;
+  const cellsFor = (p) => mine ? (std.get(p) || []).map((a) => a.cell).filter((c) => c !== undefined) : [];
+  const cities = cellsFor('city').length;
+  const greens = cellsFor('greenery').length;
+  const oceans = cellsFor('aquifer').length;
+  const grid = [
+    stdButton('powerPlant', '发电站 · 能量产量 +1', has('powerPlant'), '能量产量 +1'),
+    stdButton('asteroid', '小行星 · 温度 +1 步', has('asteroid'), '温度 +2°C，得 1 TR'),
+    stdButton('aquifer', '引水渠 · 放置海洋', has('aquifer') && oceans > 0, `${oceans} 个合法格 · 得 1 TR`),
+    stdButton('greenery', '绿化 · 放置绿化', has('greenery') && greens > 0, `${greens} 个合法格 · 氧气 +1%`),
+    stdButton('city', '城市 · 放置城市', has('city') && cities > 0, `${cities} 个合法格 · MC 产量 +1`),
+    `<button type="button" class="std-btn" data-convert="plants" ${has('convertPlants') ? '' : 'disabled'} title="需要 8 植物">`
+      + `<b>8 植物 → 绿化</b><span>8 植物</span></button>`,
+    `<button type="button" class="std-btn" data-convert="heat" ${has('convertHeat') ? '' : 'disabled'} title="需要 8 热度">`
+      + `<b>8 热度 → 升温</b><span>8 热度</span></button>`
+  ].join('');
+  $('#stdGrid').innerHTML = grid;
+
+  const hand = state.players[HUMAN].hand;
+  const sell = $('#sellSelect');
+  if (sell) {
+    sell.innerHTML = hand.length
+      ? hand.map((c) => `<option value="${c.uid}">${esc(c.name)} · 费用 ${c.cost}</option>`).join('')
+      : '<option value="">手牌为空</option>';
+    sell.disabled = !mine || !hand.length;
+  }
+  const sellBtn = $('#sellBtn');
+  if (sellBtn) sellBtn.disabled = !mine || !hand.length || !has('sellPatents');
+  const passBtn = $('#passBtn');
+  if (passBtn) passBtn.disabled = !mine;
+  $('#actionNote').textContent = mine
+    ? '每回合最多 2 个动作；打出卡牌、标准项目、资源转换、里程碑/奖励各占 1 个动作。Pass 后本世代不再行动。'
+    : `${nameOf(cur)} 正在行动，完成后自动轮到你。`;
+}
+
+/* ---------------- render: milestones / awards ---------------- */
+function milestoneMetric(def) {
+  const m = playerMetrics(state, HUMAN);
+  return m[def.metric];
+}
+function metricOf(playerIndex, metric) {
+  const m = playerMetrics(state, playerIndex);
+  return m[metric];
+}
+function renderClaims(legalMap) {
+  const metrics = playerMetrics(state, HUMAN);
+  const claimable = legalMap.milestones;
+  const awardable = legalMap.awards;
+  const mineTurn = state.phase === 'action' && currentPlayer(state) === HUMAN && !placement;
+  const humanMc = state.players[HUMAN].mc;
+  const mLimit = milestoneLimit(state);
+  const aLimit = awardLimit(state);
+  $('#milestoneMeta').textContent = `${state.playerCount} 人局最多 ${mLimit} 个 · 每个 ${MILESTONE_COST} MC`;
+  $('#awardMeta').textContent = `${state.playerCount} 人局最多 ${aLimit} 个 · 资助 ${AWARD_COST} MC`;
+  $('#milestoneGrid').innerHTML = Object.values(MILESTONES).map((def) => {
+    const claimed = state.milestones.find((m) => m.id === def.id);
+    const mine = claimed && claimed.player === HUMAN;
+    const cur = milestoneMetric(def);
+    const need = def.need;
+    const full = state.milestones.length >= mLimit;
+    const alreadyMine = state.milestones.some((m) => m.player === HUMAN);
+    let status = '';
+    let can = mineTurn && claimable.has(def.id);
+    if (claimed) status = mine ? '你已认领（+5 VP）' : `${nameOf(claimed.player)} 已认领`;
+    else if (!mineTurn) status = '等待你的行动回合';
+    else if (full) status = '名额已满';
+    else if (alreadyMine) status = '你已认领过里程碑';
+    else if (cur < need) status = `进度不足：${cur}/${need}`;
+    else if (humanMc < MILESTONE_COST) status = `需要 ${MILESTONE_COST} MC`;
+    else status = '可认领';
+    if (claimed) can = false;
+    const cond = def.metric === 'tr' ? `TR ≥ ${need}` : def.metric === 'cities' ? `城市 ≥ ${need}` : `绿化 ≥ ${need}`;
+    return `<div class="claim${claimed ? ' claimed' : ''}${mine ? ' mine' : ''}">
+      <div class="claim-main"><h3><span class="medal">${icon('i-medal-' + def.id)}</span>${def.name}<span class="claim-prog">${cur}/${need}</span></h3>
+        <p>${cond} · 5 VP</p></div>
+      <button type="button" class="claim-btn" data-milestone="${def.id}" ${can ? '' : 'disabled'}>认领 · ${MILESTONE_COST} MC</button>
+      <span class="claim-status${claimed ? '' : can ? '' : ' bad'}">${status}</span>
+    </div>`;
+  }).join('');
+  $('#awardGrid').innerHTML = Object.values(AWARDS).map((def) => {
+    const funded = state.awards.find((a) => a.id === def.id);
+    const mine = funded && funded.player === HUMAN;
+    const full = state.awards.length >= aLimit;
+    const alreadyMine = state.awards.some((a) => a.player === HUMAN);
+    const a = metricOf(0, def.metric);
+    const b = metricOf(1, def.metric);
+    let status = '';
+    let can = mineTurn && awardable.has(def.id);
+    if (funded) status = mine ? '你已资助（终局比较指标）' : `${nameOf(funded.player)} 已资助`;
+    else if (!mineTurn) status = '等待你的行动回合';
+    else if (full) status = '名额已满';
+    else if (alreadyMine) status = '你已资助过奖励';
+    else if (humanMc < AWARD_COST) status = `需要 ${AWARD_COST} MC`;
+    else status = '可资助';
+    if (funded) can = false;
+    const metricText = def.metric === 'tiles' ? '板块总数' : def.metric === 'scienceTags' ? '科学标签' : '热度库存';
+    return `<div class="claim${funded ? ' claimed' : ''}${mine ? ' mine' : ''}">
+      <div class="claim-main"><h3><span class="medal">${icon('i-medal-' + def.id)}</span>${def.name}<span class="claim-prog">你 ${a} · AI ${b}</span></h3>
+        <p>${metricText}最多 · 第一名 5 VP / 第二名 2 VP</p></div>
+      <button type="button" class="claim-btn" data-award="${def.id}" ${can ? '' : 'disabled'}>资助 · ${AWARD_COST} MC</button>
+      <span class="claim-status${funded ? '' : can ? '' : ' bad'}">${status}</span>
+    </div>`;
+  }).join('');
+}
+
+/* ---------------- render: played ---------------- */
+function renderPlayed(legalMap) {
+  const mineTurn = state.phase === 'action' && currentPlayer(state) === HUMAN && !placement;
+  const cards = state.players[HUMAN].played;
+  $('#playedMeta').textContent = `${cards.length} 张 · 终局卡面 VP ${cards.reduce((sum, c) => sum + cardVictoryPoints(state, HUMAN, c), 0)}`;
+  if (!cards.length) {
+    $('#playedList').innerHTML = '<p class="played-empty">还没有打出项目卡。手牌打出的卡会留在这里并持续计分。</p>';
+    return;
+  }
+  $('#playedList').innerHTML = cards.map((c) => {
+    const res = cardResourcesHtml(c);
+    const action = legalMap.cardActionByUid.get(c.uid);
+    const vp = cardVictoryPoints(state, HUMAN, c);
+    const btn = c.action
+      ? `<button type="button" class="card-action" data-card-action="${c.uid}" ${mineTurn && action ? '' : 'disabled'} title="${esc(effectSummary(c))}">行动</button>`
+      : '';
+    return `<span class="played-chip"><b>${esc(c.name)}</b>${vp ? `<span class="res-dot">${vp} VP</span>` : ''}`
+      + `${res}${btn}</span>`;
+  }).join('');
+}
+
+/* ---------------- render: production / generation ---------------- */
+function renderStages() {
+  const prodPanel = $('#productionPanel');
+  const genPanel = $('#generationPanel');
+  prodPanel.hidden = state.phase !== 'production';
+  genPanel.hidden = state.phase !== 'generation-end';
+  if (state.phase === 'production') {
+    $('#productionList').innerHTML = state.players.map((p) => {
+      const bits = RES_KEYS.map((k) => `${RES_ZH[k]} +${p.production[k]}`).join(' · ');
+      const autoGreen = p.plants + p.production.plants >= PLANT_GREENERY_COST ? ' · 植物≥8，将自动绿化' : '';
+      return `<div class="stage-row"><b>${esc(p.name)}</b><span class="mono">${bits}</span>`
+        + `<span>能量 ${p.energy}+${p.production.energy} 全部转热度${autoGreen}</span></div>`;
+    }).join('');
+  }
+  if (state.phase === 'generation-end') {
+    const done = isTerraformed(state);
+    $('#generationSub').textContent = done
+      ? '三项参数全部达标：温度 +8°C、氧气 14%、海洋 9 块。本世代结束即终局并计分。'
+      : '尚未全部达标：进入下一代，起始玩家轮转并重新研发。';
+    $('#generationList').innerHTML = [
+      ['温度', fmtTemp(state.globals.temperature), state.globals.temperature >= TEMPERATURE_MAX],
+      ['氧气', state.globals.oxygen + '%', state.globals.oxygen >= OXYGEN_MAX],
+      ['海洋', state.globals.oceans + '/9', state.globals.oceans >= OCEAN_MAX]
+    ].map(([label, v, ok]) => `<div class="stage-row"><b>${label}</b><span class="mono">${v}</span><span>${ok ? '已达标' : '未达标'}</span></div>`).join('');
+    $('#nextGenBtn').textContent = done ? '终局计分' : '进入下一代';
+  }
+}
+
+/* ---------------- render: log ---------------- */
+function eventText(e) {
+  const who = e.player !== undefined ? nameOf(e.player) : '—';
+  switch (e.type) {
+    case 'gameStart': return `开局 · 先手 ${nameOf(e.firstPlayer)}`;
+    case 'newGeneration': return `第 ${e.generation} 世代开始 · 先手 ${nameOf(e.firstPlayer)}`;
+    case 'actionPhase': return `第 ${e.generation} 世代进入行动阶段`;
+    case 'productionPhase': return '全员结束行动，进入生产阶段';
+    case 'researchBuy': return `${who} 购买 1 张研发卡（−3 MC）`;
+    case 'playCard': return `${who} 打出「${e.name}」`;
+    case 'standard': return `${who} 执行标准项目「${(STANDARD_PROJECTS[e.project] && STANDARD_PROJECTS[e.project].name) || e.project}」`;
+    case 'tile': return `${who} 在 ${cellLabel(e.cell)} 放置${TILE_ZH[e.tile] || e.tile}板块`;
+    case 'ocean': return `${who} 放置海洋（${e.oceans}/9）`;
+    case 'temperature': return `${who} 提升温度 ${e.steps} 步 → ${fmtTemp(e.value)}`;
+    case 'oxygen': return `${who} 提升氧气 ${e.steps}% → ${e.value}%`;
+    case 'tr': return `${who} TR +${e.amount} → ${e.tr}`;
+    case 'production': return `${who} 结算产量`;
+    case 'productionGreenery': return `${who} 植物自动绿化 @ ${cellLabel(e.cell)}`;
+    case 'convertPlants': return `${who} 用 8 植物放置绿化 @ ${cellLabel(e.cell)}`;
+    case 'convertHeat': return `${who} 用 8 热度升温`;
+    case 'milestone': return `${who} 认领里程碑「${MILESTONES[e.milestone].name}」`;
+    case 'award': return `${who} 资助奖励「${AWARDS[e.award].name}」`;
+    case 'pass': return `${who} 结束本世代行动`;
+    case 'cardAction': return `${who} 使用「${e.name}」的蓝卡行动`;
+    case 'trigger': return `${who} 触发海洋被动（+2 植物）`;
+    case 'gameOver': return `终局 · 第 ${e.generation} 世代 · ${e.terraformed ? '火星改造完成' : '达到世代上限'}`;
+    default: return String(e.type || '事件');
+  }
+}
+function renderLog() {
+  const events = state.events.slice(-16).reverse();
+  $('#log').innerHTML = events.map((e) => {
+    const hi = ['playCard', 'milestone', 'award', 'ocean', 'temperature', 'oxygen', 'gameOver'].includes(e.type);
+    return `<li class="${hi ? 'hi' : ''}"><span class="log-gen">G${e.generation || state.generation}</span>`
+      + `<span class="log-text">${esc(eventText(e))}</span></li>`;
+  }).join('');
+}
+
+/* ---------------- render: placement ---------------- */
+function renderPlacement() {
+  const bar = $('#placeBar');
+  if (!placement) {
+    bar.hidden = true;
+    document.body.classList.remove('place-active');
+    return;
+  }
+  bar.hidden = false;
+  document.body.classList.add('place-active');
+  const cells = placement.cells.slice().sort((a, b) => a - b);
+  $('#placeTitle').textContent = `放置${TILE_ZH[placement.kind]} · ${cells.length} 个合法格`;
+  $('#placeChips').innerHTML = cells.map((i) => `<button type="button" class="place-chip" data-cell="${i}" aria-label="放置在 ${cellLabel(i)}">${cellLabel(i)}</button>`).join('');
+}
+
+/* ---------------- render: result ---------------- */
+function renderResult() {
+  const overlay = $('#resultOverlay');
+  if (state.phase !== 'game-over') {
+    overlay.hidden = true;
+    document.body.classList.remove('modal-open');
+    return;
+  }
+  const final = score(state);
+  const winners = new Set(final.winner);
+  const youWin = winners.has(HUMAN);
+  $('#resultTitle').textContent = youWin
+    ? (winners.size > 1 ? '平局 · 你未被击败' : '你赢下了火星')
+    : (winners.has(1) ? 'AI 赢得了火星' : '终局结算');
+  $('#resultSub').textContent = `第 ${state.generation} 世代 · 温度 ${fmtTemp(state.globals.temperature)} · 氧气 ${state.globals.oxygen}% · 海洋 ${state.globals.oceans}/9`;
+  $('#resultRows').innerHTML = final.ranking.map((p, idx) => {
+    const win = winners.has(p.index);
+    const parts = [
+      `TR ${p.tr}`, `绿化 ${p.greeneryVp}`, `城市 ${p.cityVp}`, `卡牌 ${p.cardVp}`,
+      `里程碑 ${p.milestoneVp}`, `奖励 ${p.awardVp}`
+    ];
+    return `<div class="result-row${win ? ' winner' : ''}">
+      <span class="result-rank">${win ? `<span class="rank-medal">${icon('i-medal-terraformer')}</span>` : (idx + 1)}</span>
+      <span class="result-name"><b>${esc(p.name)}</b>
+        <span>${parts.join(' · ')}</span></span>
+      <span class="result-total">${p.vp}<small>VP</small></span>
+    </div>`;
+  }).join('');
+  overlay.hidden = false;
+  document.body.classList.add('modal-open');
+}
+
+/* ---------------- main render ---------------- */
+function render() {
+  if (!state) return;
+  legalCache = buildLegalMap(currentLegal());
+  renderTop();
+  renderBoard();
+  renderParams();
+  renderPlayers();
+  renderHand(legalCache);
+  renderActions(legalCache);
+  renderClaims(legalCache);
+  renderPlayed(legalCache);
+  renderStages();
+  renderLog();
+  renderPlacement();
+  renderResult();
+}
+
+/* ---------------- actions ---------------- */
+function applyAndRender(action) {
+  if (!action) return;
+  try {
+    state = applyAction(state, action);
+    placement = null;
+    render();
+    scheduleAi();
+  } catch (err) {
+    console.error(err);
+    toast(String(err.message || err), true);
+    render();
+  }
+}
+function enterPlacement(kind, source) {
+  if (!kind) return;
+  const legal = currentLegal();
+  const cells = [];
+  for (const a of legal) {
+    if (source.type === 'card' && a.type === 'playCard' && a.cardId === source.cardId && a.cell !== undefined) cells.push(a.cell);
+    if (source.type === 'standard' && a.type === 'standard' && a.project === source.project && a.cell !== undefined) cells.push(a.cell);
+    if (source.type === 'convertPlants' && a.type === 'convertPlants' && a.cell !== undefined) cells.push(a.cell);
+  }
+  const unique = [...new Set(cells)];
+  if (!unique.length) { toast('当前没有合法放置格。', true); return; }
+  placement = { kind, cells: unique, source };
+  render();
+}
+function actionForCell(cell) {
+  if (!placement) return null;
+  const source = placement.source;
+  if (source.type === 'standard') return { type: 'standard', project: source.project, cell };
+  if (source.type === 'convertPlants') return { type: 'convertPlants', cell };
+  if (source.type === 'card') {
+    const legal = currentLegal();
+    return legal.find((a) => a.type === 'playCard' && a.cardId === source.cardId && a.cell === cell) || null;
+  }
+  return null;
+}
+function playHandCard(uid) {
+  const card = state.players[HUMAN].hand.find((c) => c.uid === uid);
+  if (!card) return;
+  const legal = currentLegal();
+  const actions = legal.filter((a) => a.type === 'playCard' && a.cardId === uid);
+  if (!actions.length) return;
+  const tileEffect = card.effects.find((e) => e.type === 'tile');
+  if (tileEffect) {
+    enterPlacement(tileEffect.tile, { type: 'card', cardId: uid });
+    return;
+  }
+  const direct = actions.find((a) => a.cell === undefined) || actions[0];
+  applyAndRender(direct);
+}
+function useStandard(project) {
+  const legal = currentLegal();
+  const actions = legal.filter((a) => a.type === 'standard' && a.project === project);
+  if (!actions.length) return;
+  const kind = project === 'aquifer' ? 'ocean' : project === 'greenery' ? 'greenery' : project === 'city' ? 'city' : null;
+  if (kind) {
+    enterPlacement(kind, { type: 'standard', project });
+    return;
+  }
+  applyAndRender(actions[0]);
+}
+
+/* ---------------- AI ---------------- */
+function scheduleAi() {
+  clearTimeout(aiTimer);
+  aiTimer = null;
+  if (autoBusy || !state || state.phase === 'game-over') return;
+  if (state.phase !== 'research' && state.phase !== 'action') return;
+  const cur = currentPlayer(state);
+  if (cur === null || cur === HUMAN) return;
+  aiTimer = setTimeout(runAiStep, 360);
+}
+function runAiStep() {
+  if (autoBusy || !state) return;
+  if (state.phase !== 'research' && state.phase !== 'action') return;
+  if (currentPlayer(state) === HUMAN) return;
+  const legal = legalActions(state);
+  if (!legal.length) return;
+  const action = chooseGreedyAction(state, legal);
+  if (!action) return;
+  try {
+    state = applyAction(state, action);
+  } catch (err) {
+    console.error(err);
+    toast('AI 行动失败：' + err.message, true);
+    return;
+  }
+  placement = null;
+  render();
+  scheduleAi();
+}
+function autoFinish() {
+  if (autoBusy) return;
+  if (state.phase === 'game-over') { renderResult(); return; }
+  autoBusy = true;
+  clearTimeout(aiTimer);
+  aiTimer = null;
+  placement = null;
+  setHint('自动演示：内置 AI 正在把当前局面打到终局…', 'warn');
+  setTimeout(() => {
+    let result = null;
+    let error = null;
+    try {
+      result = autoPlay(state, { maxActions: 20000, allowIncomplete: true });
+    } catch (err) {
+      error = err;
+      console.error(err);
+    }
+    autoBusy = false;
+    if (result) state = result.state;
+    if (error) toast('自动终局失败：' + error.message, true);
+    else if (state.phase !== 'game-over') toast('自动演示结束时仍未终局。', true);
+    render();
+    scheduleAi();
+  }, 50);
+}
+
+/* ---------------- events ---------------- */
+document.addEventListener('click', (ev) => {
+  const cellEl = ev.target.closest('.cell.can-place[data-cell]');
+  if (cellEl) {
+    const cell = Number(cellEl.dataset.cell);
+    if (placement && placement.cells.includes(cell)) {
+      const action = actionForCell(cell);
+      if (action) applyAndRender(action);
+      else toast('该格当前不可放置。', true);
+    }
+    return;
+  }
+  const btn = ev.target.closest('button');
+  if (!btn || btn.disabled) return;
+
+  if (btn.id === 'newGame') { newGame(seed + 1); return; }
+  if (btn.id === 'autoFinish') { autoFinish(); return; }
+  if (btn.id === 'playAgain') { newGame(seed + 1); return; }
+  if (btn.id === 'closeResult') {
+    $('#resultOverlay').hidden = true;
+    document.body.classList.remove('modal-open');
+    return;
+  }
+  if (btn.id === 'endResearch') { applyAndRender({ type: 'researchEnd' }); return; }
+  if (btn.classList.contains('buy-card')) {
+    const uid = btn.dataset.uid;
+    const ps = state.players[HUMAN];
+    if (!ps.pendingResearch.some((c) => c.uid === uid)) return;
+    if (ps.mc < RESEARCH_COST) { toast('MC 不足，购买需要 3 MC。', true); return; }
+    applyAndRender({ type: 'researchBuy', cardId: uid });
+    return;
+  }
+  if (btn.classList.contains('hand-card')) { playHandCard(btn.dataset.uid); return; }
+  if (btn.classList.contains('std-btn')) {
+    if (btn.dataset.convert === 'plants') { enterPlacement('greenery', { type: 'convertPlants' }); return; }
+    if (btn.dataset.convert === 'heat') { applyAndRender({ type: 'convertHeat' }); return; }
+    useStandard(btn.dataset.project);
+    return;
+  }
+  if (btn.id === 'sellBtn') {
+    const uid = $('#sellSelect').value;
+    if (uid) applyAndRender({ type: 'standard', project: 'sellPatents', cardId: uid });
+    return;
+  }
+  if (btn.id === 'passBtn') { applyAndRender({ type: 'pass' }); return; }
+  if (btn.id === 'productionBtn') { applyAndRender({ type: 'resolveProduction' }); return; }
+  if (btn.id === 'nextGenBtn') { applyAndRender({ type: 'nextGeneration' }); return; }
+  if (btn.classList.contains('claim-btn')) {
+    if (btn.dataset.milestone) { applyAndRender({ type: 'claimMilestone', milestone: btn.dataset.milestone }); return; }
+    if (btn.dataset.award) { applyAndRender({ type: 'fundAward', award: btn.dataset.award }); return; }
+  }
+  if (btn.classList.contains('card-action')) {
+    const uid = btn.dataset.cardAction;
+    const legal = currentLegal();
+    const action = legal.find((a) => a.type === 'cardAction' && a.cardUid === uid);
+    if (action) applyAndRender(action);
+    return;
+  }
+  if (btn.id === 'cancelPlace') { placement = null; render(); return; }
+  if (btn.classList.contains('place-chip')) {
+    const cell = Number(btn.dataset.cell);
+    if (!placement || !placement.cells.includes(cell)) return;
+    const action = actionForCell(cell);
+    if (!action) { toast('该格当前不可放置。', true); return; }
+    applyAndRender(action);
+  }
+});
+
+document.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Escape' && placement) { placement = null; render(); return; }
+  if ((ev.key === 'Enter' || ev.key === ' ') && ev.target.classList && ev.target.classList.contains('cell') && ev.target.classList.contains('can-place')) {
+    ev.preventDefault();
+    const cell = Number(ev.target.dataset.cell);
+    if (placement && placement.cells.includes(cell)) {
+      const action = actionForCell(cell);
+      if (action) applyAndRender(action);
+    }
+  }
+});
+
+/* ---------------- boot ---------------- */
+render();
+scheduleAi();
+
+/* Expose a read-only view for automated checks and debugging. */
+window.__tmars = {
+  getState: () => state,
+  legal: () => legalActions(state),
+  currentPlayer: () => currentPlayer(state),
+  phase: () => state.phase,
+  human: HUMAN,
+  render
+};
+</script>
+</body>
+</html>

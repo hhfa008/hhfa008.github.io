@@ -219,8 +219,8 @@ a{color:var(--accent)}
       </form>
       <form id="joinForm" class="form" autocomplete="off">
         <strong>加入房间</strong>
-        <label for="joinRoom">房间号或邀请码</label>
-        <input id="joinRoom" maxlength="40" placeholder="room_... 或 6 位房间码" required>
+        <label for="joinRoom">房间号或邀请链接</label>
+        <input id="joinRoom" maxlength="200" placeholder="邀请链接或房间号" required>
         <label for="joinNick">昵称</label>
         <input id="joinNick" maxlength="20" placeholder="例如：蓝队队员" required>
         <div class="row">
@@ -307,6 +307,14 @@ a{color:var(--accent)}
     window.__pageErrors.push('unhandledrejection: ' + String(ev.reason && ev.reason.message || ev.reason));
   });
   var STORAGE_KEY = 'codenames.online.session.v1';
+  var SEATS = [
+    { index: 0, team: 'red', role: 'captain' },
+    { index: 1, team: 'red', role: 'operative' },
+    { index: 2, team: 'blue', role: 'captain' },
+    { index: 3, team: 'blue', role: 'operative' }
+  ];
+  var TEAM = { red: '红队', blue: '蓝队' };
+  var ROLE = { captain: '队长', operative: '队员' };
   var state = { session: null, view: null, poll: null, busy: false, lastBoardKey: '' };
   var $ = function (id) { return document.getElementById(id); };
   var els = {
@@ -327,9 +335,8 @@ a{color:var(--accent)}
     leaderboard: $('leaderboard'), overlay: $('overlay'), bannerTitle: $('bannerTitle'),
     bannerText: $('bannerText'), restartBtn: $('restartBtn'), backBtn: $('backBtn'), toast: $('toast')
   };
-  var TEAM = { red: '红队', blue: '蓝队' };
-  var ROLE = { captain: '队长', operative: '队员' };
 
+  function newPlayerId() { return 'cn_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); }
   function loadSession() {
     try {
       var raw = localStorage.getItem(STORAGE_KEY);
@@ -352,8 +359,25 @@ a{color:var(--accent)}
     clearTimeout(toast.timer);
     toast.timer = setTimeout(function () { els.toast.hidden = true; }, 2400);
   }
+  // Online API origin. Default: same origin. Override once with ?api=https://...,
+  // then it is remembered in localStorage ('games-online-api'; ?api= clears it).
+  var API_BASE = (function () {
+    try {
+      var qp = new URLSearchParams(location.search);
+      if (qp.has('api')) {
+        var q = String(qp.get('api') || '').replace(/\/+$/, '');
+        try { q ? localStorage.setItem('games-online-api', q) : localStorage.removeItem('games-online-api'); } catch (e) {}
+        return q;
+      }
+      var saved = null;
+      try { saved = localStorage.getItem('games-online-api'); } catch (e) {}
+      return String(saved || window.GAMES_ONLINE_API || '').replace(/\/+$/, '');
+    } catch (e) { return ''; }
+  })();
+  function apiUrl(path) { return API_BASE ? API_BASE + path : path; }
+  function inviteSuffix() { return API_BASE ? '&api=' + encodeURIComponent(API_BASE) : ''; }
   async function api(method, path, body) {
-    var res = await fetch(path, {
+    var res = await fetch(apiUrl(path), {
       method: method,
       headers: { 'content-type': 'application/json' },
       body: body ? JSON.stringify(body) : undefined,
@@ -385,27 +409,49 @@ a{color:var(--accent)}
     els.roomPanel.hidden = true;
     els.gamePanel.hidden = true;
   }
-
   function sessionBody(extra) {
     var body = Object.assign({}, extra || {});
-    if (state.session) {
-      body.session = state.session.token;
-      body.playerId = state.session.playerId;
-    }
+    if (state.session) body.session = state.session.token;
     return body;
   }
+  function currentSeat(view) {
+    if (!view || !view.seats) return null;
+    for (var i = 0; i < view.seats.length; i += 1) if (view.seats[i].isYou) return view.seats[i];
+    return null;
+  }
+  function isHost(view) { var seat = currentSeat(view); return !!(seat && seat.isHost); }
+  function seatMeta(index) {
+    for (var i = 0; i < SEATS.length; i += 1) if (SEATS[i].index === index) return SEATS[i];
+    return null;
+  }
+  function roleLabel(index) {
+    var meta = seatMeta(index);
+    return meta ? TEAM[meta.team] + ROLE[meta.role] : '';
+  }
+
   async function poll() {
     if (!state.session || state.busy) return;
     state.busy = true;
+    var roomId = state.session.roomId;
+    var token = state.session.token;
     try {
-      var view = await api('GET', '/api/rooms/' + encodeURIComponent(state.session.roomId) +
-        '?session=' + encodeURIComponent(state.session.token) +
-        '&playerId=' + encodeURIComponent(state.session.playerId));
+      var view = await api('GET', '/api/rooms/' + encodeURIComponent(roomId) +
+        '?session=' + encodeURIComponent(token));
       state.view = view;
       render(view);
     } catch (err) {
-      if (err.status === 403 || err.status === 404) {
-        toast('房间已关闭或会话失效');
+      if (err.status === 401 || err.status === 403) {
+        try {
+          var rec = await api('POST', '/api/rooms/' + encodeURIComponent(roomId) + '/reconnect', { session: token });
+          state.view = rec;
+          render(rec);
+        } catch (err2) {
+          toast('会话已失效，请重新加入房间');
+          clearSession();
+          loadLeaderboard();
+        }
+      } else if (err.status === 404) {
+        toast('房间已关闭');
         clearSession();
         loadLeaderboard();
       }
@@ -430,23 +476,26 @@ a{color:var(--accent)}
   }
 
   function createInviteLink(view) {
-    var token = view.inviteToken || view.inviteCode;
     return location.origin + location.pathname + '?room=' + encodeURIComponent(view.roomId) +
-      '&invite=' + encodeURIComponent(token);
+      '&invite=' + encodeURIComponent(view.inviteToken || view.inviteCode || '') + inviteSuffix();
   }
 
   function renderSeats(view) {
     els.seats.innerHTML = '';
-    view.seats.forEach(function (seat) {
+    var takeover = view.takeover || [];
+    (view.seats || []).forEach(function (seat) {
+      var meta = seatMeta(seat.index);
+      var team = meta ? meta.team : 'red';
+      var role = meta ? meta.role : 'operative';
       var div = document.createElement('div');
-      div.className = 'seat ' + seat.team + (seat.current ? ' current' : '') + (seat.takeover ? ' takeover' : '');
+      div.className = 'seat ' + team + (seat.isYou ? ' current' : '') + (takeover.indexOf(seat.index) !== -1 ? ' takeover' : '');
       var badges = '';
-      if (view.you && view.you.seat === seat.id) badges += '<span class="badge you">你</span>';
+      if (seat.isYou) badges += '<span class="badge you">你</span>';
       if (seat.ai) badges += '<span class="badge ai">AI</span>';
-      if (seat.takeover) badges += '<span class="badge takeover">托管中</span>';
-      if (seat.current && !seat.controlledByAI) badges += '<span class="badge">当前行动</span>';
-      div.innerHTML = '<div class="seat-role">' + TEAM[seat.team] + ROLE[seat.role] + '</div>' +
-        '<div class="seat-name">' + (seat.ai ? 'AI' : escapeHtml(seat.nickname || seat.playerId || '—')) + '</div>' +
+      if (takeover.indexOf(seat.index) !== -1) badges += '<span class="badge takeover">托管中</span>';
+      if (seat.isHost) badges += '<span class="badge">房主</span>';
+      div.innerHTML = '<div class="seat-role">' + TEAM[team] + ROLE[role] + '</div>' +
+        '<div class="seat-name">' + (seat.ai ? 'AI' : escapeHtml(seat.name || '—')) + '</div>' +
         '<div class="seat-badges">' + badges + '</div>';
       els.seats.appendChild(div);
     });
@@ -473,26 +522,28 @@ a{color:var(--accent)}
     });
   }
   function updateBoard(view) {
-    ensureBoard(view.words);
-    els.board.dataset.key = view.keyVisible ? 'true' : 'false';
+    var game = view.state;
+    if (!game || !game.words) return;
+    ensureBoard(game.words);
+    var keyVisible = Boolean(game.keyVisible);
+    els.board.dataset.key = keyVisible ? 'true' : 'false';
     var tiles = els.board.querySelectorAll('.tile');
-    view.words.forEach(function (w, index) {
+    game.words.forEach(function (w, index) {
       var tile = tiles[index];
       if (!tile) return;
       var revealed = w.revealed;
-      var color = revealed ? w.color : (view.keyVisible ? w.color : 'hidden');
-      tile.className = 'tile ' + (revealed ? 'is-' + w.color + ' revealed' : (view.keyVisible ? 'hidden' : 'hidden')) +
-        (view.canGuess && !revealed ? ' clickable' : '');
+      tile.className = 'tile ' + (revealed ? 'is-' + w.color + ' revealed' : 'hidden') +
+        (game.canGuess && !revealed ? ' clickable' : '');
       tile.querySelector('.word').textContent = w.text;
       tile.querySelector('.role').textContent = revealed ? (w.role || '') : '';
       var dot = tile.querySelector('.dot');
-      dot.className = 'dot' + (view.keyVisible ? ' dot-' + w.color : '');
+      dot.className = 'dot' + (keyVisible ? ' dot-' + w.color : '');
       var colorLabel = w.color === 'red' ? '红队' : w.color === 'blue' ? '蓝队' :
         w.color === 'neutral' ? '平民' : '刺客';
       var aria = '词卡 ' + w.text + (revealed ? '，' + (w.role || '') + '，已翻开' :
-        (view.keyVisible ? '，' + colorLabel : '，未翻开'));
+        (keyVisible ? '，' + colorLabel : '，未翻开'));
       tile.setAttribute('aria-label', aria);
-      tile.setAttribute('aria-disabled', view.canGuess && !revealed ? 'false' : 'true');
+      tile.setAttribute('aria-disabled', game.canGuess && !revealed ? 'false' : 'true');
     });
   }
 
@@ -500,79 +551,82 @@ a{color:var(--accent)}
     els.lobby.hidden = true;
     els.roomPanel.hidden = false;
     els.gamePanel.hidden = !view.started;
-    els.roomCode.textContent = view.roomCode || view.roomId;
-    els.roomStatus.textContent = view.status === 'waiting' ? '等待玩家' :
-      view.status === 'playing' ? '对局进行中' : view.status === 'finished' ? '对局已结束' : view.status;
+    els.roomCode.textContent = view.code || view.roomId;
+    els.roomStatus.textContent = !view.started ? '等待玩家' :
+      (view.over ? '对局已结束' : '对局进行中');
     els.inviteCode.textContent = view.inviteCode || '—';
-    els.copyInvite.disabled = !(view.inviteToken || view.inviteCode);
-    els.startBtn.hidden = !(view.you && view.playerId !== undefined ? false : false);
-    var isHost = view.you && view.hostId === view.you.playerId;
-    els.startBtn.hidden = !(isHost && !view.started && view.seats.filter(function (s) { return !s.ai; }).length >= 2);
-    els.closeBtn.hidden = !isHost;
+    els.copyInvite.disabled = !view.inviteCode;
+    var host = isHost(view);
+    els.startBtn.hidden = !(host && !view.started);
+    els.closeBtn.hidden = !host;
     els.roomHint.textContent = view.started ? '对局已开始；断线后可用同一浏览器会话重连，超时由 AI 托管。' :
       '至少 2 名真人即可开始；空位自动由 AI 补足，AI 使用同一套线索/猜词/刺客规则。';
     renderSeats(view);
-    renderLeaderboardFromView(view);
 
     if (!view.started) {
       els.gamePanel.hidden = true;
       return;
     }
-    els.redScore.textContent = String(view.scores.red);
-    els.blueScore.textContent = String(view.scores.blue);
-    els.redLeft.textContent = '/ 9 · 剩 ' + view.remaining.red;
-    els.blueLeft.textContent = '/ 8 · 剩 ' + view.remaining.blue;
-    els.status.dataset.team = view.turn || 'red';
-    els.turnLabel.textContent = view.phase === 'over' ? (TEAM[view.winner] || '') + '获胜' :
-      (TEAM[view.turn] || '') + '回合';
-    els.phaseLabel.textContent = view.phase === 'over' ? '对局结束' :
-      view.phase === 'clue' ? '线索阶段' : '猜词阶段';
-    if (view.clue) {
+    var game = view.state;
+    if (!game) return;
+    var yourIndex = view.you == null ? null : view.you;
+    var yourMeta = seatMeta(yourIndex);
+    els.redScore.textContent = String(game.scores.red);
+    els.blueScore.textContent = String(game.scores.blue);
+    els.redLeft.textContent = '/ 9 · 剩 ' + game.remaining.red;
+    els.blueLeft.textContent = '/ 8 · 剩 ' + game.remaining.blue;
+    els.status.dataset.team = game.turn || 'red';
+    els.turnLabel.textContent = game.phase === 'over' ? (TEAM[game.winner] || '') + '获胜' :
+      (TEAM[game.turn] || '') + '回合';
+    els.phaseLabel.textContent = game.phase === 'over' ? '对局结束' :
+      game.phase === 'clue' ? '线索阶段' : '猜词阶段';
+    if (game.clue) {
       els.clueRow.hidden = false;
-      els.clueChip.className = 'clue-chip ' + view.clue.team;
-      els.clueChip.innerHTML = '<b>' + escapeHtml(view.clue.text) + '</b> · ' + view.clue.count;
+      els.clueChip.className = 'clue-chip ' + game.clue.team;
+      els.clueChip.innerHTML = '<b>' + escapeHtml(game.clue.text) + '</b> · ' + game.clue.count;
     } else {
       els.clueRow.hidden = true;
     }
-    var your = view.you ? (TEAM[view.you.team] + ROLE[view.you.role]) : '观战';
+    var your = yourMeta ? (TEAM[yourMeta.team] + ROLE[yourMeta.role]) : '观战';
     var hint;
-    if (view.phase === 'over') hint = '对局结束。';
-    else if (view.currentSeatIsAI) hint = 'AI 正在行动（' + (view.currentSeatLabel || '') + '）。';
-    else if (view.canClue) hint = '你是' + your + '：给出一个线索词和数字。';
-    else if (view.canGuess) hint = '你是' + your + '：根据线索点击词卡；至少猜一次后可结束猜词。';
-    else hint = '你是' + your + '；当前由' + (view.currentSeatLabel || '其他座位') + '行动。';
-    if (view.takeoverSeats.indexOf(view.you && view.you.seat) !== -1) {
+    if (game.phase === 'over') hint = '对局结束。';
+    else if (game.currentSeatIsAI) hint = 'AI 正在行动（' + (game.currentSeatLabel || '') + '）。';
+    else if (game.canClue) hint = '你是' + your + '：给出一个线索词和数字。';
+    else if (game.canGuess) hint = '你是' + your + '：根据线索点击词卡；至少猜一次后可结束猜词。';
+    else hint = '你是' + your + '；当前由' + (game.currentSeatLabel || '其他座位') + '行动。';
+    if (yourIndex != null && (view.takeover || []).indexOf(yourIndex) !== -1) {
       hint += ' 你的座位已超时托管，继续操作或重连即可恢复。';
     }
     els.statusHint.textContent = hint;
-    els.clueForm.hidden = !view.canClue;
-    if (view.canClue && view.suggestedClue && !els.clueText.value) {
-      els.clueText.placeholder = '建议：' + view.suggestedClue.text;
+    els.clueForm.hidden = !game.canClue;
+    if (game.canClue && game.suggestedClue && !els.clueText.value) {
+      els.clueText.placeholder = '建议：' + game.suggestedClue.text;
     }
-    els.passBtn.hidden = !view.canPass;
+    els.passBtn.hidden = !game.canPass;
     updateBoard(view);
-    renderLog(view);
-    if (view.phase === 'over') showResult(view); else hideResult();
+    renderLog(game);
+    if (game.phase === 'over') showResult(view); else hideResult(view);
   }
 
-  function renderLog(view) {
-    var key = view.log.join('|');
+  function renderLog(game) {
+    var lines = game.log || [];
+    var key = lines.join('|');
     if (key === renderLog.last) return;
     renderLog.last = key;
     els.log.innerHTML = '';
-    view.log.slice(-8).reverse().forEach(function (text) {
+    lines.slice(-8).reverse().forEach(function (text) {
       var div = document.createElement('div');
       div.textContent = text;
       els.log.appendChild(div);
     });
   }
   function showResult(view) {
+    var game = view.state;
     els.overlay.hidden = false;
-    els.bannerTitle.textContent = (TEAM[view.winner] || '') + '获胜';
-    els.bannerText.textContent = '比分 红 ' + view.scores.red + ' · 蓝 ' + view.scores.blue +
-      '；第 ' + view.turnNo + ' 回合结束。结果已写入结果榜。';
-    var isHost = view.you && view.hostId === view.you.playerId;
-    els.restartBtn.hidden = !isHost;
+    els.bannerTitle.textContent = (TEAM[game.winner] || '') + '获胜';
+    els.bannerText.textContent = '比分 红 ' + game.scores.red + ' · 蓝 ' + game.scores.blue +
+      '；第 ' + game.turnNo + ' 回合结束。结果已写入结果榜。';
+    els.restartBtn.hidden = !view.canRestart;
   }
   function hideResult() { els.overlay.hidden = true; }
 
@@ -585,21 +639,19 @@ a{color:var(--accent)}
     entries.slice(0, 10).forEach(function (entry, index) {
       var row = document.createElement('div');
       row.className = 'lb-row';
+      var when = entry.at ? new Date(entry.at).toLocaleString() : '';
       row.innerHTML = '<span class="lb-rank">' + (index + 1) + '</span>' +
-        '<span><b>' + (TEAM[entry.winner] || entry.winner) + '胜</b> · 红 ' + entry.scores.red + ' / 蓝 ' + entry.scores.blue +
-        '<br><span class="lb-meta">' + entry.roomCode + ' · ' + entry.turns + ' 回合 · ' +
-        new Date(entry.finishedAt).toLocaleString() + '</span></span>' +
-        '<span class="lb-meta">' + entry.durationMs + 'ms</span>';
+        '<span><b>' + escapeHtml(entry.name || ('座位 ' + (entry.seat + 1))) + '</b>' +
+        (entry.winner ? ' · 胜方' : '') + (entry.ai ? ' · AI' : '') +
+        '<br><span class="lb-meta">' + when + '</span></span>' +
+        '<span class="lb-meta">' + (entry.score == null ? '—' : entry.score) + '</span>';
       els.leaderboard.appendChild(row);
     });
   }
-  function renderLeaderboardFromView(view) {
-    if (view.result) renderLeaderboard([view.result]);
-  }
   async function loadLeaderboard() {
-    if (location.pathname.indexOf('/games/') === 0) return; // static site: no room API
+    if (!API_BASE && location.pathname.indexOf('/games/') === 0) return; // static site: no room API
     try {
-      var data = await api('GET', '/api/leaderboard?limit=10');
+      var data = await api('GET', '/api/leaderboard?game=codenames&limit=10');
       renderLeaderboard(data.entries || []);
     } catch (err) { /* offline lobby: keep the placeholder */ }
   }
@@ -611,36 +663,53 @@ a{color:var(--accent)}
     if (!nick) { els.createError.textContent = '请输入昵称'; return; }
     try {
       var view = await api('POST', '/api/rooms', {
-        playerId: nick,
+        game: 'codenames-premium',
+        playerId: newPlayerId(),
+        nickname: nick,
         password: els.createPassword.value || undefined,
         visibility: els.createVisibility.value
       });
-      saveSession({ roomId: view.roomId, playerId: view.playerId, token: view.playerSession });
+      saveSession({ roomId: view.roomId, playerId: view.playerId, token: view.session });
       toast('房间已创建');
       enterRoom(view, state.session);
     } catch (err) { els.createError.textContent = err.message; }
   }
+  function parseJoinInput(raw) {
+    var text = (raw || '').trim();
+    if (!text) return null;
+    if (/^https?:\/\//i.test(text) || text.indexOf('?') !== -1) {
+      try {
+        var u = new URL(text, location.href);
+        var room = u.searchParams.get('room');
+        if (room) return { room: room, invite: u.searchParams.get('invite') || u.searchParams.get('code') || '' };
+      } catch (err) {}
+    }
+    return { room: text, invite: els.joinInvite.value.trim() || '' };
+  }
   async function onJoin(ev) {
     ev.preventDefault();
     els.joinError.textContent = '';
-    var room = els.joinRoom.value.trim();
+    var parsed = parseJoinInput(els.joinRoom.value);
     var nick = els.joinNick.value.trim();
-    if (!room || !nick) { els.joinError.textContent = '请填写房间号与昵称'; return; }
+    if (!parsed || !parsed.room || !nick) { els.joinError.textContent = '请填写房间号与昵称'; return; }
     try {
-      var view = await api('POST', '/api/rooms/' + encodeURIComponent(room) + '/join', {
-        playerId: nick,
+      var view = await api('POST', '/api/rooms/' + encodeURIComponent(parsed.room) + '/join', {
+        playerId: newPlayerId(),
+        nickname: nick,
         password: els.joinPassword.value || undefined,
-        inviteCode: els.joinInvite.value.trim() || undefined
+        inviteCode: parsed.invite || undefined
       });
-      saveSession({ roomId: view.roomId, playerId: view.playerId, token: view.playerSession });
+      saveSession({ roomId: view.roomId, playerId: view.playerId, token: view.session });
       toast('已加入房间');
       enterRoom(view, state.session);
     } catch (err) { els.joinError.textContent = err.message; }
   }
   async function onStart() {
+    var view = state.view;
+    if (!view) return;
     try {
-      var view = await api('POST', '/api/rooms/' + encodeURIComponent(state.session.roomId) + '/start', sessionBody());
-      state.view = view; render(view); toast('对局开始');
+      var next = await api('POST', '/api/rooms/' + encodeURIComponent(view.roomId) + '/start', sessionBody());
+      state.view = next; render(next); toast('对局开始');
     } catch (err) { toast(err.message); }
   }
   async function onLeave() {
@@ -654,46 +723,45 @@ a{color:var(--accent)}
   async function onClose() {
     try {
       await api('DELETE', '/api/rooms/' + encodeURIComponent(state.session.roomId) +
-        '?session=' + encodeURIComponent(state.session.token) +
-        '&playerId=' + encodeURIComponent(state.session.playerId));
+        '?session=' + encodeURIComponent(state.session.token));
     } catch (err) {}
     clearSession();
     showLobby();
     loadLeaderboard();
   }
-  async function onClue(ev) {
+  async function sendAction(action) {
+    var view = state.view;
+    if (!view || !view.state) return;
+    try {
+      var next = await api('POST', '/api/rooms/' + encodeURIComponent(view.roomId) + '/actions',
+        sessionBody({ action: action }));
+      state.view = next; render(next);
+    } catch (err) { toast(err.message); }
+  }
+  function onClue(ev) {
     ev.preventDefault();
-    if (!state.view || !state.view.canClue) return;
-    var text = els.clueText.value.trim();
-    var count = Number(els.clueCount.value);
-    try {
-      var view = await api('POST', '/api/rooms/' + encodeURIComponent(state.session.roomId) + '/actions',
-        sessionBody({ type: 'clue', text: text, count: count }));
-      els.clueText.value = '';
-      state.view = view; render(view);
-    } catch (err) { toast(err.message); }
+    var game = state.view && state.view.state;
+    if (!game || !game.canClue) return;
+    sendAction({ type: 'clue', text: els.clueText.value.trim(), count: Number(els.clueCount.value) });
+    els.clueText.value = '';
   }
-  async function onGuess(index) {
-    if (!state.view || !state.view.canGuess) return;
-    if (state.view.words[index] && state.view.words[index].revealed) return;
-    try {
-      var view = await api('POST', '/api/rooms/' + encodeURIComponent(state.session.roomId) + '/actions',
-        sessionBody({ type: 'guess', index: index }));
-      state.view = view; render(view);
-    } catch (err) { toast(err.message); }
+  function onGuess(index) {
+    var game = state.view && state.view.state;
+    if (!game || !game.canGuess) return;
+    if (game.words[index] && game.words[index].revealed) return;
+    sendAction({ type: 'guess', index: index });
   }
-  async function onPass() {
-    if (!state.view || !state.view.canPass) return;
-    try {
-      var view = await api('POST', '/api/rooms/' + encodeURIComponent(state.session.roomId) + '/actions',
-        sessionBody({ type: 'pass' }));
-      state.view = view; render(view);
-    } catch (err) { toast(err.message); }
+  function onPass() {
+    var game = state.view && state.view.state;
+    if (!game || !game.canPass) return;
+    sendAction({ type: 'pass' });
   }
   async function onRestart() {
+    var view = state.view;
+    if (!view) return;
     try {
-      var view = await api('POST', '/api/rooms/' + encodeURIComponent(state.session.roomId) + '/restart', sessionBody());
-      state.view = view; hideResult(); render(view); toast('新对局开始');
+      var next = await api('POST', '/api/rooms/' + encodeURIComponent(view.roomId) + '/restart', sessionBody());
+      state.view = next; hideResult(); render(next); toast('新对局开始');
     } catch (err) { toast(err.message); }
   }
   async function onCopyInvite() {
@@ -722,7 +790,7 @@ a{color:var(--accent)}
     if (!saved) { showLobby(); loadLeaderboard(); return; }
     try {
       var view = await api('POST', '/api/rooms/' + encodeURIComponent(saved.roomId) + '/reconnect', {
-        token: saved.token, playerId: saved.playerId
+        session: saved.token
       });
       state.session = saved;
       enterRoom(view, saved);
@@ -751,7 +819,7 @@ a{color:var(--accent)}
   var params = new URLSearchParams(location.search);
   if (params.get('room')) {
     els.joinRoom.value = params.get('room');
-    els.joinInvite.value = params.get('invite') || '';
+    els.joinInvite.value = params.get('invite') || params.get('code') || '';
     var lastNick = '';
     try { lastNick = localStorage.getItem('codenames.online.nick') || ''; } catch (err) {}
     els.joinNick.value = lastNick;
@@ -772,5 +840,6 @@ a{color:var(--accent)}
   };
 }());
 </script>
+<p style="text-align:center;margin:14px 0"><a href="../spectate.html" style="display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:44px;padding:0 14px;border-radius:12px;border:1px solid currentColor;color:inherit;font-size:13px;text-decoration:none">围观其他对局</a></p>
 </body>
 </html>

@@ -311,7 +311,6 @@ html[data-theme="light"] .online-box{background:rgba(255,255,255,.45)}
 
 <script src="../../shared/sfx.js"></script>
 <script src="../../shared/share.js" data-name-zh="黑白棋" data-name-en="Reversi" data-name-id="Reversi"></script>
-<script src="../app/online-bridge.js"></script>
 <script src="./engine.js"></script>
 <script src="./data.js"></script>
 <script>
@@ -320,7 +319,7 @@ html[data-theme="light"] .online-box{background:rgba(255,255,255,.45)}
 
   var E = window.ReversiEngine;
   var D = window.ReversiData;
-  var ONLINE = !!(window.OnlineBridge && window.OnlineBridge.active);
+  var ONLINE = false;
 
   var $ = function (id) { return document.getElementById(id); };
   function esc(s) {
@@ -340,8 +339,10 @@ html[data-theme="light"] .online-box{background:rgba(255,255,255,.45)}
   }
 
   var game = null;
+  var online = null;
   var onlineView = null;
   var onlineReady = false;
+  var onlinePoll = null;
   var mode = 'ai';
   var diff = 'normal';
   var thinking = false;
@@ -399,10 +400,14 @@ html[data-theme="light"] .online-box{background:rgba(255,255,255,.45)}
     if (ONLINE) return onlineView && onlineView.state ? onlineView.state : null;
     return game;
   }
+  function isMyOnlineTurn() {
+    var state = onlineView && onlineView.state;
+    return !!(state && !state.over && onlineView.you != null && onlineView.you === state.current - 1);
+  }
   function myTurn() {
     var state = stateOf();
     if (!state || state.over) return false;
-    if (ONLINE) return !!(onlineView && onlineReady && window.OnlineBridge.isMyTurn());
+    if (ONLINE) return !!(onlineReady && isMyOnlineTurn());
     if (mode === 'local') return true;
     var p = seatOf(state.current - 1);
     return !!(p && !p.isAI);
@@ -475,10 +480,10 @@ html[data-theme="light"] .online-box{background:rgba(255,255,255,.45)}
     }
     if (ONLINE) {
       if (!onlineView || !onlineView.started) return '等待房主开始对局';
-      if (window.OnlineBridge.isMyTurn()) return '轮到你 · ' + (onlineView.you.playerIndex === 0 ? '黑棋' : '白棋');
-      var cur = seatOf(state.current - 1);
-      if (cur && (cur.takeover || cur.ai)) return 'AI 托管中 · ' + cur.name;
-      return '等待 ' + (cur ? cur.name : '对手') + ' 落子';
+      if (isMyOnlineTurn()) return '轮到你 · ' + (onlineView.you === 0 ? '黑棋' : '白棋');
+      var curSeat = onlineView.seats ? onlineView.seats[state.current - 1] : null;
+      if (curSeat && curSeat.ai && onlineView.started) return 'AI 托管中 · ' + (curSeat.name || '对手');
+      return '等待 ' + (curSeat ? curSeat.name : '对手') + ' 落子';
     }
     if (thinking) return 'AI 正在思考…';
     if (mode === 'local') return state.current === E.BLACK ? '黑棋落子' : '白棋落子';
@@ -492,10 +497,9 @@ html[data-theme="light"] .online-box{background:rgba(255,255,255,.45)}
     box.innerHTML = players.map(function (p, i) {
       var active = !state.over && state.current - 1 === i;
       var tags = [];
-      if (p.isAI) tags.push('AI');
-      if (ONLINE && onlineView && onlineView.players && onlineView.players[i]) {
-        if (onlineView.players[i].takeover) tags.push('托管');
-      }
+      var onlineSeat = ONLINE && onlineView && onlineView.seats ? onlineView.seats[i] : null;
+      if (p.isAI || (onlineSeat && onlineSeat.ai && onlineView.started)) tags.push('AI');
+      if (onlineSeat && onlineSeat.isHost) tags.push('房主');
       var color = i === 0 ? '黑' : '白';
       return '<div class="player' + (active ? ' current' : '') + '">' +
         '<i class="disc-mini ' + (i === 0 ? 'b' : 'w') + '"></i>' +
@@ -599,24 +603,26 @@ html[data-theme="light"] .online-box{background:rgba(255,255,255,.45)}
   function renderOnlineBox(view) {
     $('online-box').hidden = false;
     $('room-info').hidden = false;
-    $('room-info').textContent = '房间 ' + (view.roomCode || view.roomId || '—');
-    $('online-code').textContent = view.roomCode || view.roomId || '——';
-    var humans = (view.seats || []).filter(function (s) { return !s.ai; }).length;
+    $('room-info').textContent = '房间 ' + (view.code || view.roomId || '—');
+    $('online-code').textContent = view.code || view.roomId || '——';
+    var seats = view.seats || [];
+    var humans = seats.filter(function (s) { return !s.ai; }).length;
+    var host = seats.some(function (s) { return s.isHost && s.isYou; });
     var lines = [];
-    lines.push('座位 ' + humans + ' / ' + (view.maxPlayers || 2) + ' · 状态 ' + (view.status || 'waiting'));
-    if (view.seats) {
-      view.seats.forEach(function (s) {
-        var tags = [];
-        if (s.ai) tags.push('AI');
-        if (s.takeover) tags.push('托管');
-        if (s.current) tags.push('行动中');
-        lines.push((s.index + 1) + '. ' + (s.nickname || ('座位 ' + (s.index + 1))) + (tags.length ? ' · ' + tags.join(' · ') : ''));
-      });
-    }
-    if (view.currentControlledByAI) lines.push('当前座位由 AI 托管。');
+    var phase = view.over ? '已结束' : (view.started ? '进行中' : '等待中');
+    lines.push('座位 ' + humans + ' / ' + seats.length + ' · 状态 ' + phase);
+    seats.forEach(function (s, i) {
+      var tags = [];
+      if (s.ai) tags.push('AI');
+      if (s.isHost) tags.push('房主');
+      if (s.isYou) tags.push('你');
+      if (view.started && !view.over && view.state && view.state.current - 1 === i) tags.push('行动中');
+      lines.push((s.index + 1) + '. ' + (s.name || ('座位 ' + (s.index + 1))) + (tags.length ? ' · ' + tags.join(' · ') : ''));
+    });
+    if (view.you == null) lines.push('你已不在座位上。');
     $('online-line').textContent = lines.join('\n');
     $('online-line').style.whiteSpace = 'pre-line';
-    $('online-restart').hidden = !(view.canRestart && view.isHost);
+    $('online-restart').hidden = !(view.canRestart && host);
   }
 
   function applyLocal(next, animate) {
@@ -685,14 +691,12 @@ html[data-theme="light"] .online-box{background:rgba(255,255,255,.45)}
   }
 
   function doOnlineMove(row, col) {
-    if (!onlineView || !window.OnlineBridge.isMyTurn()) return false;
+    if (!onlineView || !isMyOnlineTurn()) return false;
     var state = onlineView.state;
     var flips = E.flipsAt(state.board, row, col, state.current);
     if (!flips) { sfx('error'); toast('这里不能落子。'); return false; }
     sfx(flips.length ? 'capture' : 'move');
-    window.OnlineBridge.send({ type: 'place', row: row, col: col }).then(function (view) {
-      if (view) { onlineView = view; onlineReady = true; render(true); }
-    });
+    onlineSend({ type: 'place', row: row, col: col });
     return true;
   }
 
@@ -764,19 +768,88 @@ html[data-theme="light"] .online-box{background:rgba(255,255,255,.45)}
 
   function maybeOnlinePass(view) {
     if (!view || !view.state || view.state.over) return;
-    if (!view.canMove || !window.OnlineBridge.isMyTurn()) return;
+    if (!isMyOnlineTurn()) return;
     if (E.legalFor(view.state.board, view.state.current).length) return;
     var key = view.state.moveCount + ':' + view.state.current + ':' + (view.state.board.join(''));
     if (lastAutoPassKey === key) return;
     lastAutoPassKey = key;
     setTimeout(function () {
       if (!onlineView || !onlineView.state || onlineView.state.over) return;
-      if (!window.OnlineBridge.isMyTurn()) return;
+      if (!isMyOnlineTurn()) return;
       if (E.legalFor(onlineView.state.board, onlineView.state.current).length) return;
-      window.OnlineBridge.send({ type: 'pass' }).then(function (next) {
-        if (next) { onlineView = next; render(true); }
-      });
+      onlineSend({ type: 'pass' });
     }, 900);
+  }
+
+  /* ------------------------------------------------------------------ online */
+  function onlineApi(method, route, body) {
+    return fetch(route, {
+      method: method,
+      headers: { 'content-type': 'application/json' },
+      body: body == null ? undefined : JSON.stringify(body)
+    }).then(function (res) {
+      return res.text().then(function (text) {
+        var data = null;
+        try { data = JSON.parse(text); } catch (err) { data = null; }
+        return { status: res.status, body: data };
+      });
+    });
+  }
+  function onlineRoomBase() { return '/api/rooms/' + encodeURIComponent(online.roomId); }
+  function onlineRoomPath() {
+    return onlineRoomBase() + '?session=' + encodeURIComponent(online.session) +
+      '&playerId=' + encodeURIComponent(online.playerId);
+  }
+  function onlineReconnect() {
+    return onlineApi('POST', onlineRoomBase() + '/reconnect', {
+      session: online.session, playerId: online.playerId
+    }).then(function (res) {
+      if (res.status === 200) onlineApply(res.body);
+      return res;
+    });
+  }
+  function refreshOnline() {
+    if (!online || document.hidden) return;
+    onlineApi('GET', onlineRoomPath()).then(function (res) {
+      if (res.status === 401) { onlineReconnect(); return; }
+      if (res.status !== 200) {
+        if (res.status === 403 || res.status === 404) {
+          toast('联机房间已失效，返回大厅重新加入。');
+          if (onlinePoll) clearInterval(onlinePoll);
+        }
+        return;
+      }
+      onlineApply(res.body);
+    }).catch(function () {});
+  }
+  function onlineSend(action) {
+    if (!online || !isMyOnlineTurn()) return Promise.resolve(null);
+    return onlineApi('POST', onlineRoomBase() + '/actions', {
+      session: online.session, playerId: online.playerId, action: action
+    }).then(function (res) {
+      if (res.status !== 200) {
+        toast((res.body && res.body.error && res.body.error.message) || '着法被拒绝。');
+        refreshOnline();
+        return null;
+      }
+      onlineApply(res.body);
+      return res.body;
+    }).catch(function () {
+      toast('网络中断，正在重连…');
+      return null;
+    });
+  }
+  function onlineRestart() {
+    if (!online || !onlineView || !onlineView.canRestart) return Promise.resolve(null);
+    return onlineApi('POST', onlineRoomBase() + '/restart', {
+      session: online.session, playerId: online.playerId
+    }).then(function (res) {
+      if (res.status !== 200) { toast('重开失败。'); return null; }
+      lastRendered = new Array(64).fill(0);
+      resultShownKey = '';
+      onlineApply(res.body);
+      return res.body;
+    }).catch(function () { return null; });
   }
 
   function bind() {
@@ -804,7 +877,7 @@ html[data-theme="light"] .online-box{background:rgba(255,255,255,.45)}
     });
     $('pass').addEventListener('click', function () {
       if (ONLINE) {
-        window.OnlineBridge.send({ type: 'pass' }).then(function (v) { if (v) { onlineView = v; render(true); } });
+        onlineSend({ type: 'pass' });
         return;
       }
       if (!game || game.over || !myTurn()) return;
@@ -850,10 +923,8 @@ html[data-theme="light"] .online-box{background:rgba(255,255,255,.45)}
       if (!muted) sfx('click');
     });
     $('online-restart').addEventListener('click', function () {
-      if (!window.OnlineBridge || !onlineView || !onlineView.canRestart) return;
-      window.OnlineBridge.restart().then(function (v) {
-        if (v) { onlineView = v; lastRendered = new Array(64).fill(0); resultShownKey = ''; render(false); }
-      });
+      if (!onlineView || !onlineView.canRestart) return;
+      onlineRestart();
     });
     window.addEventListener('resize', function () { ensureReadable(); });
   }
@@ -867,18 +938,29 @@ html[data-theme="light"] .online-box{background:rgba(255,255,255,.45)}
     buildBoard();
     bind();
     $('record').textContent = recordLine();
-    if (ONLINE) {
+    var params = new URLSearchParams(location.search);
+    var room = params.get('online');
+    if (room) {
+      ONLINE = true;
+      online = {
+        roomId: room,
+        session: params.get('session') || '',
+        playerId: params.get('player') || params.get('playerId') || '',
+        view: null,
+        ready: false
+      };
+      onlineView = null;
+      onlineReady = false;
       $('mode-seg').hidden = true;
       $('diff-seg').hidden = true;
       $('new').disabled = true;
       $('undo').disabled = true;
-      window.OnlineBridge.onChange(onlineApply);
-      window.OnlineBridge.onError(function (err) {
-        toast('联机：' + (err && err.message ? err.message : '连接失败'));
-        if (err && (err.code === 'E_SESSION' || err.status === 404)) setTimeout(function () { location.href = 'online.html'; }, 1200);
-      });
       $('status').textContent = '正在连接联机房间…';
       render(false);
+      refreshOnline();
+      onlinePoll = setInterval(refreshOnline, 900);
+      document.addEventListener('visibilitychange', function () { if (!document.hidden) refreshOnline(); });
+      window.addEventListener('beforeunload', function () { if (onlinePoll) clearInterval(onlinePoll); });
     } else {
       newGameLocal();
     }

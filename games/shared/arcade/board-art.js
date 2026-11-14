@@ -64,7 +64,7 @@
     hanoi: {
       board: MAT + 'hanoi/surface.webp',
       boardOpacity: 0.85,
-      disk: ARCADE + 'hanoi/disk.png'
+      disk: ARCADE + 'hanoi/disk.webp'
     },
     snake: {
       board: MAT + 'snake/surface.webp',

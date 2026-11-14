@@ -1,6 +1,6 @@
 /* Dominion premium — offline cache. Same-origin only, no external requests. */
 'use strict';
-var CACHE = 'dominion-premium-v1';
+var CACHE = 'dominion-premium-v3';
 var ASSETS = [
   "./index.html",
   "./online.html",
@@ -10,9 +10,8 @@ var ASSETS = [
   "./meta.json",
   "../../shared/shuffle.js",
   "../../shared/sfx.js",
-  "../app/online-bridge.js",
-  "../app/online-lobby.css",
-  "../app/online-lobby.js",
+  "../../shared/poker-ui.css",
+  "../../shared/poker-ui.js",
   "../../assets/art/premium/dominion/cover.webp",
   "../../assets/art/premium/dominion/og.webp",
   "../../assets/art/premium/dominion/detail.webp",

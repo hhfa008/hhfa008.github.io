@@ -95,7 +95,7 @@ input{width:100%;min-height:46px;border:1px solid var(--line);border-radius:10px
   <section id="room" class="hidden">
     <div class="panel">
       <div class="row" style="align-items:center"><div><span class="muted">房间码</span><br><span class="code" id="roomCode">------</span></div>
-        <div style="margin-left:auto" class="row"><button class="btn" type="button" id="copyBtn">复制邀请</button><button class="btn" type="button" id="leaveBtn">离开</button><button class="btn primary" type="button" id="startBtn" hidden>开始对局</button><button class="btn" type="button" id="restartBtn" hidden>再来一局</button></div></div>
+        <div style="margin-left:auto" class="row"><button class="btn" type="button" id="copyBtn">复制邀请</button><button class="btn" type="button" id="leaveBtn">离开</button><button class="btn primary" type="button" id="startBtn" hidden>开始对局</button><button class="btn" type="button" id="restartBtn" hidden>再来一局</button><button class="btn" type="button" id="roomCloseBtn" hidden>关闭房间</button></div></div>
       <div class="seats" id="seats"></div><p class="status" id="roomStatus" role="status" aria-live="polite"></p><p class="muted" id="roomHint">把房间码发给朋友；空位会由 AI 补足，一个人也能开局。</p>
     </div>
     <div id="game" class="hidden">
@@ -115,50 +115,116 @@ input{width:100%;min-height:46px;border:1px solid var(--line);border-radius:10px
 <script src="../../shared/sfx.js"></script>
 <script src="data.js"></script>
 <script src="engine.js"></script>
+<script src="../../shared/online-client.js"></script>
 <script>
 (function () {
   'use strict';
   var E = window.WarChestEngine, D = window.WarChestData;
   var $ = function (id) { return document.getElementById(id); };
-  var st = { session:null, playerId:null, roomId:null, view:null, poll:null, busy:false, selection:null };
-  var KEY = 'hhfa-warchest-online-v1';
+  var GAME = 'war-chest-premium';
+  var S = { roomId:null, session:null, playerId:null, view:null, poll:null, busy:false, selection:null, seq:0, resultShown:false, inviteCode:'' };
+  var KEY = 'hhfa-warchest-online-v2';
   function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]})}
-  function save(){try{localStorage.setItem(KEY,JSON.stringify({session:st.session,playerId:st.playerId,roomId:st.roomId}))}catch(e){}}
+  function save(){try{localStorage.setItem(KEY,JSON.stringify({session:S.session,playerId:S.playerId,roomId:S.roomId}))}catch(e){}}
   function load(){try{return JSON.parse(localStorage.getItem(KEY)||'null')}catch(e){return null}}
   function clearSave(){try{localStorage.removeItem(KEY)}catch(e){}}
   function sound(n){try{if(window.Sfx)window.Sfx.play(n,{volume:.5})}catch(e){}}
   function setStatus(id,text,bad){var el=$(id);if(!el)return;el.textContent=text||'';el.style.color=bad?'#b4513f':'#3c434d'}
-  async function api(method,route,body){
-    var res=await fetch(route,{method,headers:{'content-type':'application/json'},body:body?JSON.stringify(body):undefined});
-    var data=null;try{data=await res.json()}catch(e){}
-    if(!res.ok||!data||data.ok===false){throw new Error(data&&data.error&&data.error.message?data.error.message:('HTTP '+res.status))}
-    return data;
+
+  // Unified room API. Default is same-origin (online-server.mjs); ?api=...
+  // points the static page at a Cloudflare Worker and is remembered.
+  var API_BASE=(function(){try{var q=new URLSearchParams(location.search);if(q.has('api')){var v=String(q.get('api')||'').replace(/\/+$/,'');try{v?localStorage.setItem('games-online-api',v):localStorage.removeItem('games-online-api')}catch(e){}return v}var s=null;try{s=localStorage.getItem('games-online-api')}catch(e){}return String(s||window.GAMES_ONLINE_API||'').replace(/\/+$/,'')}catch(e){return ''}})();
+  function inviteSuffix(){return API_BASE?'&api='+encodeURIComponent(API_BASE):''}
+  var oc = OnlineClient.create({ game: GAME, storagePrefix: KEY, apiBase: API_BASE, pollMs: 900 });
+  var savedSession = load();
+  var initialSearch = location.search;
+  oc.load();
+  oc.setApiBase(API_BASE);
+  if (savedSession && savedSession.roomId && savedSession.session) {
+    oc.setSession(savedSession.roomId, savedSession.session, savedSession.playerId);
   }
   function nick(id,f){var el=$(id);return (el&&el.value.trim())||f}
-  async function createRoom(){var pid=nick('createName','铁腕领主');setStatus('createStatus','正在创建…');try{var d=await api('POST','/api/rooms',{playerId:pid,password:$('createPass').value||undefined});enter(d,d.playerSession);sound('notify')}catch(e){setStatus('createStatus',e.message,true)}}
-  async function joinRoom(){var pid=nick('joinName','边境校尉');var code=$('joinCode').value.trim().toUpperCase();if(!code){setStatus('joinStatus','请填房间码。',true);return}setStatus('joinStatus','正在加入…');try{var d=await api('POST','/api/rooms/'+encodeURIComponent(code)+'/join',{playerId:pid,password:$('joinPass').value||undefined});enter(d,d.playerSession);sound('notify')}catch(e){setStatus('joinStatus',e.message,true)}}
-  function enter(d,session){st.session=session;st.playerId=d.playerId||(d.you&&d.you.playerId)||st.playerId;st.roomId=d.roomId;st.view=d;save();$('lobby').classList.add('hidden');$('room').classList.remove('hidden');try{history.replaceState({},'','?room='+encodeURIComponent(d.roomCode||d.roomId))}catch(e){}renderRoom();startPolling()}
-  function startPolling(){stopPolling();st.poll=setInterval(poll,900);poll()}
-  function stopPolling(){if(st.poll){clearInterval(st.poll);st.poll=null}}
-  async function poll(){if(!st.roomId||!st.session)return;try{var v=await api('GET','/api/rooms/'+encodeURIComponent(st.roomId)+'?session='+encodeURIComponent(st.session)+'&playerId='+encodeURIComponent(st.playerId));applyView(v)}catch(e){if(/not found|invalid session|not a member/i.test(e.message)){clearSave();stopPolling();$('room').classList.add('hidden');$('lobby').classList.remove('hidden');setStatus('joinStatus','房间已关闭，请重新加入。',true)}}}
-  function applyView(v){st.view=v;renderRoom();if(v.started&&v.state){renderGame();if(v.state.over&&v.result)showResult(v.result)}}
+
+  async function createRoom(){
+    var pid=nick('createName','铁腕领主');setStatus('createStatus','正在创建…');
+    var body={playerId:pid,nickname:pid};var pass=$('createPass').value;if(pass)body.password=pass;
+    try{
+      var data=await oc.createRoom(body);
+      S.roomId=oc.room();S.session=oc.session();S.playerId=oc.playerId();save();
+      enter(data);sound('notify');setStatus('createStatus','');
+    }catch(e){setStatus('createStatus','创建失败：'+e.message,true)}
+  }
+  async function joinRoom(){
+    var raw=$('joinCode').value.trim();if(!raw){setStatus('joinStatus','请填房间码。',true);return}
+    var room=raw,invite='';
+    if(/^https?:\/\//.test(raw)){try{var u=new URL(raw);room=u.searchParams.get('room')||u.searchParams.get('roomId')||'';invite=u.searchParams.get('code')||u.searchParams.get('invite')||''}catch(e){}}
+    if(!room){setStatus('joinStatus','邀请链接里没有 room 参数。',true);return}
+    if(!invite&&S.inviteCode)invite=S.inviteCode;
+    var pid=nick('joinName','边境校尉');setStatus('joinStatus','正在加入…');
+    var body={playerId:pid,nickname:pid};if(invite)body.inviteCode=invite;var pass=$('joinPass').value;if(pass)body.password=pass;
+    try{
+      var data=await oc.joinRoom(room,body);
+      S.roomId=oc.room();S.session=oc.session();S.playerId=oc.playerId();save();
+      enter(data);sound('notify');setStatus('joinStatus','');
+    }catch(e){setStatus('joinStatus','加入失败：'+e.message,true)}
+  }
+  function enter(view){
+    if(!view)return;
+    S.view=view;S.roomId=oc.room()||view.roomId||S.roomId;
+    S.session=oc.session();S.playerId=oc.playerId();
+    $('lobby').classList.add('hidden');$('room').classList.remove('hidden');
+    try{history.replaceState({},'','?room='+encodeURIComponent(S.roomId))}catch(e){}
+    applyView(view);oc.start();
+  }
+  function applyView(v){
+    if(!v)return;
+    S.view=v;S.roomId=v.roomId||S.roomId;
+    var over=!!(v.over||(v.state&&v.state.over));
+    if(!over)S.resultShown=false;
+    renderRoom();
+    if(v.started&&v.state)renderGame();
+    if(over&&v.result&&!S.resultShown){S.resultShown=true;setTimeout(showResult,120)}
+  }
+  oc.onView(applyView);
+  oc.onError(function(err){
+    var msg=(err&&err.message)||'';
+    if(/room not found|房间已失效|not seated|invalid session|session does not belong/i.test(msg)){
+      leaveLocal();
+      setStatus('joinStatus','房间已关闭或会话失效，请重新加入。',true);
+    }
+  });
+  function myTurn(){
+    var v=S.view;
+    return !!(v&&v.started&&v.state&&!v.over&&!v.state.over&&v.you!=null&&v.state.current===v.you);
+  }
+  function isHost(){return (S.view&&S.view.seats||[]).some(function(s){return s.isYou&&s.isHost})}
   function renderRoom(){
-    var v=st.view;if(!v)return;
-    $('roomCode').textContent=v.roomCode||v.roomId.slice(-6).toUpperCase();
-    $('seats').innerHTML=(v.seats||[]).map(function(s){return '<div class="seat'+(s.ai?' ai':'')+'"><b>'+esc(s.nickname)+'</b>'+(s.playerId===st.playerId?'你':(s.ai?'AI 补位':'玩家'))+'<span class="tag">'+(s.ai?'AI':s.takeover?'托管中':(v.currentPlayerIndex===s.index&&v.started?'行动中':'在线'))+'</span></div>'}).join('');
-    $('startBtn').hidden=!v.canStart;$('restartBtn').hidden=!v.canRestart;$('game').classList.toggle('hidden',!v.started||!v.state);
-    $('roomStatus').textContent=v.lastAiError?('AI 提示：'+v.lastAiError):'';
-    $('roomHint').textContent=v.started?(v.state&&v.state.over?'对局结束。':(v.canMove?'轮到你行动。':(v.currentControlledByAI?'对方由 AI 行动中…':'等待对方行动…'))):'把房间码发给朋友；空位会由 AI 补足，一个人也能开局。';
+    var v=S.view;if(!v)return;
+    $('roomCode').textContent=v.code||String(S.roomId||'').slice(-6).toUpperCase();
+    var current=v.state?v.state.current:null;
+    $('seats').innerHTML=(v.seats||[]).map(function(s){
+      var tag=s.ai?'AI':(current===s.index&&v.started&&!v.over?'行动中':(s.connected?'在线':'离线'));
+      return '<div class="seat'+(s.ai?' ai':'')+'"><b>'+esc(s.name)+'</b>'+(s.isYou?'你':(s.ai?'AI 补位':'玩家'))+'<span class="tag">'+esc(tag)+'</span></div>';
+    }).join('');
+    $('startBtn').hidden=!(isHost()&&!v.started);
+    $('restartBtn').hidden=!v.canRestart;
+    $('roomCloseBtn').hidden=!isHost();
+    $('game').classList.toggle('hidden',!v.started||!v.state);
+    var cur=v.state?(v.seats||[])[v.state.current]:null;
+    var meta='状态版本 '+(v.stateVersion==null?0:v.stateVersion)+' · 历史 '+((v.history||[]).length)+' 条';
+    $('roomHint').textContent=(v.started?(v.over||(v.state&&v.state.over)?'对局结束。':(myTurn()?'轮到你行动。':(cur&&cur.ai?'对方由 AI 行动中…':'等待对方行动…'))):'把房间码发给朋友；空位会由 AI 补足，一个人也能开局。')+' '+meta;
   }
   function selActions(){
-    if(!st.view||!st.selection)return [];
-    var acts=st.view.legalMoves||[];
-    return acts.filter(function(a){if(st.selection.kind==='coin')return a.type==='deploy'&&a.unitType===st.selection.unitType;return a.unitId===st.selection.unitId});
+    if(!S.view||!S.selection)return [];
+    var acts=S.view.legalActions||[];
+    return acts.filter(function(a){if(S.selection.kind==='coin')return a.type==='deploy'&&a.unitType===S.selection.unitType;return a.unitId===S.selection.unitId});
   }
   function renderGame(){
-    var v=st.view,state=v.state,me=v.youIndex;
-    $('scorebar').innerHTML=state.players.map(function(p){return '<div class="scorecard'+(state.current===p.index&&!state.over?' active':'')+'"><b>'+esc(p.name)+'</b><span>据点 '+p.control+'/4 · 场上 '+p.units+' · 手牌 '+p.handCount+' · 袋 '+p.bag+'</span></div>'}).join('');
-    var acts=selActions(),deploy={},move={},attack={};
+    var v=S.view,state=v.state,me=v.you,mine=state.players[me];
+    if(!mine)return;
+    var canAct=myTurn();
+    $('scorebar').innerHTML=state.players.map(function(p){return '<div class="scorecard'+(state.current===p.index&&!state.over?' active':'')+'"><b>'+esc(p.name)+'</b><span>据点 '+p.control+'/4 · 场上 '+p.units+' · 手牌 '+p.handCount+' · 袋 '+p.bagCount+'</span></div>'}).join('');
+    var acts=canAct?selActions():[],deploy={},move={},attack={};
     acts.forEach(function(a){if(a.type==='deploy')deploy[a.r+','+a.c]=true;if(a.type==='move')move[a.to.r+','+a.to.c]=true;if(a.type==='attack'){var t=(state.units||[]).filter(function(u){return u.id===a.targetUnitId})[0];if(t)attack[t.r+','+t.c]=true}});
     var html='';
     for(var r=0;r<7;r++)for(var c=0;c<7;c++){
@@ -170,58 +236,101 @@ input{width:100%;min-height:46px;border:1px solid var(--line);border-radius:10px
         (unit&&unit.hp!=null&&unit.maxHp!=null&&unit.hp<unit.maxHp?'<span class="wound"></span>':'')+'</div>';
     }
     $('board').innerHTML=html;
-    var mine=state.players[me];
     $('hand').innerHTML=D.UNIT_ORDER.map(function(type){
       var n=(mine.hand||[]).filter(function(t){return t===type}).length;
-      var sel=st.selection&&st.selection.kind==='coin'&&st.selection.unitType===type;
-      return '<button class="coin-btn" type="button" data-unit="'+type+'" aria-pressed="'+(sel?'true':'false')+'" '+(v.canMove&&n>0?'':'disabled')+'><b>'+n+'</b><span>'+D.UNITS[type].name+'</span><em>'+D.UNITS[type].move+'步/'+(D.UNITS[type].range?D.UNITS[type].range+'射':'无攻')+'</em></button>';
+      var sel=S.selection&&S.selection.kind==='coin'&&S.selection.unitType===type;
+      return '<button class="coin-btn" type="button" data-unit="'+type+'" aria-pressed="'+(sel?'true':'false')+'" '+(canAct&&n>0?'':'disabled')+'><b>'+n+'</b><span>'+D.UNITS[type].name+'</span><em>'+D.UNITS[type].move+'步/'+(D.UNITS[type].range?D.UNITS[type].range+'射':'无攻')+'</em></button>';
     }).join('');
     $('reserves').innerHTML=D.UNIT_ORDER.map(function(type){return '<div class="res"><b>'+mine.reserves[type]+'</b>'+D.UNITS[type].name+'</div>'}).join('');
-    $('endTurn').disabled=!v.canMove;$('cancel').disabled=!st.selection;
+    $('endTurn').disabled=!canAct;$('cancel').disabled=!S.selection;
     $('log').innerHTML=(state.log||[]).slice(-14).reverse().map(function(x){return '<li>'+esc(x.text)+'</li>'}).join('')||'<li class="muted">等待第一步。</li>';
   }
-  function selectCoin(type){if(!st.view||!st.view.canMove)return;st.selection={kind:'coin',unitType:type};renderGame()}
-  function selectUnit(unit){if(!st.view||!st.view.canMove||unit.owner!==st.view.youIndex)return;st.selection={kind:'unit',unitId:unit.id,unitType:unit.type};renderGame()}
+  function selectCoin(type){if(!myTurn())return;S.selection={kind:'coin',unitType:type};renderGame()}
+  function selectUnit(unit){if(!myTurn()||!S.view||unit.owner!==S.view.you)return;S.selection={kind:'unit',unitId:unit.id,unitType:unit.type};renderGame()}
   async function sendAction(action){
-    if(st.busy)return;st.busy=true;
-    try{var d=await api('POST','/api/rooms/'+encodeURIComponent(st.roomId)+'/actions',{session:st.session,playerId:st.playerId,move:action});st.selection=null;applyView(d);sound(action.type==='attack'?'capture':'move')}
-    catch(e){setStatus('roomStatus','动作被拒绝：'+e.message,true)}
-    st.busy=false;
+    if(S.busy)return;S.busy=true;
+    try{
+      var d=await oc.action(action,'wc-'+(++S.seq));
+      S.selection=null;applyView(d);sound(action.type==='attack'?'capture':'move');
+    }catch(e){setStatus('roomStatus','动作被拒绝：'+e.message,true)}
+    S.busy=false;
   }
   function onCell(r,c){
-    if(!st.view||!st.view.canMove)return;
-    var state=st.view.state;var unit=(state.units||[]).filter(function(x){return x.r===r&&x.c===c})[0];
-    if(!st.selection){if(unit)selectUnit(unit);return}
+    if(!myTurn())return;
+    var state=S.view.state;var unit=(state.units||[]).filter(function(x){return x.r===r&&x.c===c})[0];
+    if(!S.selection){if(unit)selectUnit(unit);return}
     var acts=selActions(),hit=null;
-    if(st.selection.kind==='coin') hit=acts.filter(function(a){return a.type==='deploy'&&a.r===r&&a.c===c})[0];
+    if(S.selection.kind==='coin')hit=acts.filter(function(a){return a.type==='deploy'&&a.r===r&&a.c===c})[0];
     else hit=acts.filter(function(a){if(a.type==='move')return a.to.r===r&&a.to.c===c;if(a.type==='attack'){var t=(state.units||[]).filter(function(u){return u.id===a.targetUnitId})[0];return t&&t.r===r&&t.c===c}return false})[0];
     if(!hit){if(unit)selectUnit(unit);return}
     sendAction(hit);
   }
-  function showResult(result){
+  function showResult(){
+    var v=S.view,result=v&&v.result;
     if(!result||!$('resultOverlay').hidden)return;
-    var meSeat=result.seats&&result.seats.find(function(s){return s.playerId===st.playerId});
-    var title=result.winner==null?'平局':(!meSeat?'对局结束':(result.winner===meSeat.index?'你赢了':'对手获胜'));
-    $('resultTitle').textContent=title;$('resultText').textContent=(result.scores||[]).map(function(s){return s.name+'：据点 '+s.control+' · 场上 '+s.units}).join(' · ');
+    var title=result.tied?'平局':(result.winnerSeat===v.you?'你赢了':'对手获胜');
+    $('resultTitle').textContent=title;
+    var detail=result.detail||{};
+    $('resultText').textContent=(v.seats||[]).map(function(s,i){
+      var control=detail.control?detail.control[i]:result.scores[i];
+      var units=detail.units?detail.units[i]:'-';
+      return s.name+'：据点 '+control+' · 场上 '+units;
+    }).join(' · ')+(detail.reason?'。'+detail.reason:'');
     $('resultOverlay').hidden=false;sound(title==='你赢了'?'win':title==='对手获胜'?'lose':'notify');
   }
-  async function copyInvite(){var url=location.origin+location.pathname+'?room='+encodeURIComponent(st.view.roomCode||st.roomId);try{await navigator.clipboard.writeText(url);setStatus('roomStatus','邀请链接已复制：'+url)}catch(e){setStatus('roomStatus','邀请链接：'+url)}}
-  async function start(){try{var d=await api('POST','/api/rooms/'+encodeURIComponent(st.roomId)+'/start',{session:st.session,playerId:st.playerId});applyView(d)}catch(e){setStatus('roomStatus',e.message,true)}}
-  async function restart(){try{var d=await api('POST','/api/rooms/'+encodeURIComponent(st.roomId)+'/restart',{session:st.session,playerId:st.playerId});$('resultOverlay').hidden=true;applyView(d)}catch(e){setStatus('roomStatus',e.message,true)}}
-  async function leave(){try{await api('POST','/api/rooms/'+encodeURIComponent(st.roomId)+'/leave',{session:st.session,playerId:st.playerId})}catch(e){}clearSave();stopPolling();st.roomId=null;st.view=null;$('room').classList.add('hidden');$('lobby').classList.remove('hidden')}
-  $('createBtn').addEventListener('click',createRoom);$('joinBtn').addEventListener('click',joinRoom);$('copyBtn').addEventListener('click',copyInvite);$('leaveBtn').addEventListener('click',leave);$('startBtn').addEventListener('click',start);$('restartBtn').addEventListener('click',restart);$('againBtn').addEventListener('click',restart);$('closeBtn').addEventListener('click',function(){$('resultOverlay').hidden=true});
+  async function copyInvite(){
+    var token=null;
+    try{var d=await oc.invite();if(d)token=d.inviteToken||d.inviteCode}catch(e){}
+    if(!token&&S.view)token=S.view.inviteCode;
+    var url=token
+      ?location.origin+location.pathname+'?room='+encodeURIComponent(S.roomId)+'&code='+encodeURIComponent(token)+inviteSuffix()
+      :oc.inviteUrl();
+    try{await navigator.clipboard.writeText(url);setStatus('roomStatus','邀请链接已复制：'+url)}catch(e){setStatus('roomStatus','邀请链接：'+url)}
+  }
+  async function start(){
+    try{var d=await oc.startMatch();applyView(d)}catch(e){setStatus('roomStatus',e.message,true)}
+  }
+  async function restart(){
+    try{
+      var d=await oc.restart();
+      $('resultOverlay').hidden=true;S.resultShown=false;applyView(d);
+    }catch(e){setStatus('roomStatus',e.message,true)}
+  }
+  function leaveLocal(){
+    oc.stop();clearSave();S.roomId=null;S.session=null;S.playerId=null;S.view=null;S.selection=null;S.resultShown=false;
+    $('room').classList.add('hidden');$('lobby').classList.remove('hidden');$('resultOverlay').hidden=true;
+  }
+  async function leave(){await oc.leave();leaveLocal()}
+  async function closeRoom(){
+    try{await oc.closeRoom();leaveLocal()}catch(e){setStatus('roomStatus','关闭失败：'+e.message,true)}
+  }
+  $('createBtn').addEventListener('click',createRoom);$('joinBtn').addEventListener('click',joinRoom);$('copyBtn').addEventListener('click',copyInvite);$('leaveBtn').addEventListener('click',leave);$('startBtn').addEventListener('click',start);$('restartBtn').addEventListener('click',restart);$('roomCloseBtn').addEventListener('click',closeRoom);$('againBtn').addEventListener('click',restart);$('closeBtn').addEventListener('click',function(){$('resultOverlay').hidden=true});
   $('endTurn').addEventListener('click',function(){sendAction({type:'end'})});
-  $('cancel').addEventListener('click',function(){st.selection=null;renderGame()});
+  $('cancel').addEventListener('click',function(){S.selection=null;renderGame()});
   $('hand').addEventListener('click',function(e){var b=e.target.closest('[data-unit]');if(b)selectCoin(b.getAttribute('data-unit'))});
   $('board').addEventListener('click',function(e){var c=e.target.closest('[data-r]');if(c)onCell(Number(c.getAttribute('data-r')),Number(c.getAttribute('data-c')))});
   (async function boot(){
-    if(location.pathname.indexOf('/games/')!==0){ // static site: no room API
-    try{var lb=await api('GET','/api/leaderboard?limit=5');if(lb.entries&&lb.entries.length)$('leaderboard').innerHTML=lb.entries.map(function(x){return '<li><span>'+esc(x.winnerName||'平局')+'</span><b>'+(x.scores||[]).map(function(s){return s.control}).join(' : ')+'</b></li>'}).join('')}catch(e){}}
-    var saved=load();var q=new URLSearchParams(location.search);var room=q.get('room');
-    if(saved&&saved.roomId&&saved.session){st.roomId=saved.roomId;st.session=saved.session;st.playerId=saved.playerId;try{var d=await api('POST','/api/rooms/'+encodeURIComponent(st.roomId)+'/reconnect',{token:saved.session,playerId:saved.playerId});enter(d,saved.session);return}catch(e){clearSave()}}
-    if(room)$('joinCode').value=room;
+    var q=new URLSearchParams(location.search);
+    if(!(location.pathname.indexOf('/games/')===0&&!API_BASE)){try{var lb=await oc.api('GET','/api/leaderboard?game='+encodeURIComponent(GAME)+'&limit=5');if(lb.status<400&&lb.body&&lb.body.entries&&lb.body.entries.length)$('leaderboard').innerHTML=lb.body.entries.map(function(x){return '<li><span>'+esc(x.name||'玩家')+(x.winner?' · 胜':'')+'</span><b>'+(x.score==null?'-':x.score)+'</b></li>'}).join('')}catch(e){}}
+    if(savedSession&&savedSession.roomId&&savedSession.session){
+      try{
+        var r=await oc.api('POST','/api/rooms/'+encodeURIComponent(savedSession.roomId)+'/reconnect',{session:savedSession.session});
+        if(r.status>=400||!r.body||r.body.ok===false)throw new Error(oc.errText(r));
+        oc.setSession(savedSession.roomId,r.body.session||savedSession.session,r.body.playerId||savedSession.playerId);
+        S.roomId=oc.room();S.session=oc.session();S.playerId=oc.playerId();
+        enter(r.body);return;
+      }catch(e){
+        clearSave();oc.stop();
+        try{oc.setSession('','','')}catch(e2){}
+        try{history.replaceState(null,'',location.pathname+initialSearch)}catch(e3){}
+        S.roomId=null;S.session=null;S.playerId=null;
+      }
+    }
+    if(q.get('room'))$('joinCode').value=q.get('room');
+    S.inviteCode=q.get('code')||'';
   })();
 })();
 </script>
+<p style="text-align:center;margin:14px 0"><a href="../spectate.html" style="display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:44px;padding:0 14px;border-radius:12px;border:1px solid currentColor;color:inherit;font-size:13px;text-decoration:none">围观其他对局</a></p>
 </body>
 </html>

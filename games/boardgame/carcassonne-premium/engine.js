@@ -886,7 +886,7 @@
   /* 联机服务器适配层                                                    */
   /* ------------------------------------------------------------------ */
   /*
-   * The shared room server (../app/online-game.mjs) drives every game through
+   * The shared room server (games/shared/online-room-server.mjs) drives every game through
    * getLegalMoves(state) / applyMove(state, move). Carcassonne's turn has two
    * phases, so the adapter exposes typed moves matching the page and the
    * online suite: place -> meeple | skip, plus discard when the drawn tile has

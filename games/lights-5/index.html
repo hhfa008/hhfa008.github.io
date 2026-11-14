@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#f3ead9">
 <title>Lights Out 5×5 — free online game</title>
 <meta name="description" content="Tapping a light flips it and its neighbours; turn them all off.">
-<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="robots" content="noindex,follow">
 <meta name="author" content="Devin">
 <link rel="canonical" href="https://hhfa008.github.io/games/lights-5/">
 <link rel="alternate" hreflang="en" href="https://hhfa008.github.io/games/lights-5/">
@@ -67,9 +67,10 @@
 
 <link rel="stylesheet" href="/games/shared/arcade/arcade.css">
 <style>
+.size-tag{display:inline-block;margin:6px 0 0;padding:3px 9px;border:1px solid rgba(60,50,40,.25);border-radius:999px;font-size:12px;color:#5a4a3a}
 #board {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(var(--n, 5), 1fr);
   gap: 4px;
   background-color: #444;
   padding: 8px;
@@ -134,6 +135,7 @@
   <section class="hero" aria-labelledby="page-title">
     <p class="eyebrow" data-i="eyebrow"></p>
     <h1 id="page-title" data-i="title"></h1>
+    <span class="size-tag" id="size-tag" hidden></span>
     <p class="lede" data-i="tagline"></p>
   </section>
 
@@ -186,7 +188,21 @@
 <script src="/games/shared/arcade/kits/lights-out.js"></script>
 <script src="/games/shared/arcade/board-art.js"></script>
 <script>
-var CORE = ArcadeKit.create({"n":5});
+var BOOT = { n: 5 };
+(function () {
+  try {
+    var v = parseInt(new URLSearchParams(location.search).get("n"), 10);
+    if (v >= 3 && v <= 12) BOOT.n = v;
+  } catch (e) { /* no URLSearchParams */ }
+  document.documentElement.style.setProperty("--n", BOOT.n);
+})();
+var CORE = ArcadeKit.create(BOOT);
+(function () {
+  if (BOOT.n === 5) return;
+  var tag = document.getElementById("size-tag");
+  if (tag) { tag.hidden = false; tag.textContent = BOOT.n + "×" + BOOT.n; }
+  document.title += " · " + BOOT.n + "×" + BOOT.n;
+})();
 var I18N = {
   en: { eyebrow:'Mini game', title:'Lights Out 5×5', tagline:'Turn off all the lights!', score:'Score', best:'Best', extraLabel:'Moves',
         boardAria:'Game board', playAgain:'Play again', newGame:'New game', hint:'Hint',
@@ -227,7 +243,7 @@ var I18N = {
     E.best.textContent = best;
     E.extra.textContent = S.moves;
     E.board.innerHTML = '';
-    var n = 5;
+    var n = BOOT.n;
     for (var i = 0; i < n * n; i++) {
       var cell = document.createElement('div');
       cell.className = 'cell';

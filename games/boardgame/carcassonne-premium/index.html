@@ -295,6 +295,118 @@ body{padding-bottom:env(safe-area-inset-bottom)}
 <script src="data.js"></script>
 <script src="engine.js"></script>
 <script>
+/* Unified online client for ?online=<roomId> (games/shared/online-room-server.mjs).
+ * The authoritative server owns the match; this page only polls and submits
+ * { session, action } to /api/rooms/:id/actions. */
+(function () {
+  'use strict';
+  var params = new URLSearchParams(location.search);
+  var room = params.get('online') || params.get('room');
+  if (!room) { window.OnlineBridge = { active: false }; return; }
+  var readJSON = function (key) { try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch (err) { return null; } };
+  var writeJSON = function (key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch (err) {} };
+  var saved = readJSON('carcassonne-online-session-' + room) || {};
+  var state = {
+    room: room,
+    session: params.get('session') || saved.session || '',
+    playerId: params.get('player') || saved.playerId || '',
+    view: null,
+    timer: null,
+    sending: false,
+    closed: false
+  };
+  var listeners = [];
+  var errorListeners = [];
+  function emit() { listeners.slice().forEach(function (fn) { try { fn(state.view); } catch (err) {} }); }
+  function emitError(err) { errorListeners.slice().forEach(function (fn) { try { fn(err); } catch (e) {} }); }
+  function api(method, route, body) {
+    return fetch(route, {
+      method: method,
+      headers: body ? { 'content-type': 'application/json' } : undefined,
+      body: body ? JSON.stringify(body) : undefined
+    }).then(function (response) {
+      return response.text().then(function (text) {
+        var data = null;
+        try { data = JSON.parse(text); } catch (err) { data = null; }
+        if (!response.ok) {
+          throw Object.assign(new Error(data && data.error && data.error.message ? data.error.message : ('HTTP ' + response.status)), {
+            code: data && data.error && data.error.code, status: response.status
+          });
+        }
+        return data;
+      });
+    });
+  }
+  function laneUrl(suffix) {
+    return '/api/rooms/' + encodeURIComponent(state.room) + (suffix || '');
+  }
+  function poll() {
+    if (state.closed) return;
+    if (!state.session || !state.playerId) {
+      location.replace('online.html?room=' + encodeURIComponent(state.room));
+      return;
+    }
+    api('GET', laneUrl() + '?session=' + encodeURIComponent(state.session) + '&playerId=' + encodeURIComponent(state.playerId))
+      .then(function (view) {
+        state.view = view;
+        writeJSON('carcassonne-online-session-' + state.room, { session: state.session, playerId: state.playerId });
+        emit();
+      })
+      .catch(function (err) {
+        emitError(err);
+        if (err.status === 404 || err.code === 'E_SESSION' || err.code === 'E_PLAYER') {
+          state.closed = true;
+          return;
+        }
+      })
+      .then(function () {
+        clearTimeout(state.timer);
+        if (!state.closed) state.timer = setTimeout(poll, 900);
+      });
+  }
+  function send(action) {
+    if (state.sending || !state.view) return Promise.resolve(null);
+    state.sending = true;
+    return api('POST', laneUrl('/actions'), {
+      session: state.session, playerId: state.playerId, action: action
+    }).then(function (view) {
+      state.view = view;
+      emit();
+      return view;
+    }).catch(function (err) {
+      emitError(err);
+      return null;
+    }).then(function (view) {
+      state.sending = false;
+      return view;
+    });
+  }
+  function restart() {
+    return api('POST', laneUrl('/restart'), { session: state.session, playerId: state.playerId })
+      .then(function (view) { state.view = view; emit(); return view; })
+      .catch(function (err) { emitError(err); return null; });
+  }
+  function seatIndex() { return state.view && state.view.you != null ? state.view.you : -1; }
+  function isMyTurn() {
+    var view = state.view;
+    return !!(view && !view.over && view.you != null && view.state && view.state.currentPlayer === view.you);
+  }
+  window.OnlineBridge = {
+    active: true,
+    room: room,
+    view: function () { return state.view; },
+    onChange: function (fn) { listeners.push(fn); if (state.view) fn(state.view); },
+    onError: function (fn) { errorListeners.push(fn); },
+    send: send,
+    restart: restart,
+    seatIndex: seatIndex,
+    isMyTurn: isMyTurn,
+    session: function () { return { session: state.session, playerId: state.playerId }; }
+  };
+  poll();
+})();
+</script>
+<script>
 (function () {
   'use strict';
   var E = window.CarcassonneEngine;
@@ -306,6 +418,10 @@ body{padding-bottom:env(safe-area-inset-bottom)}
   var lastCentered = null;
   var audio = null;
   var COLORS = ['#cc6a4f', '#7fa8c9'];
+  var ONLINE = !!(window.OnlineBridge && window.OnlineBridge.active);
+  var onlineReady = false;
+  var onlineRot = 0;
+  var onlineTileKey = '';
   var MEEPLE_ART = [
     '../../assets/art/premium/carcassonne/meeple-red.webp',
     '../../assets/art/premium/carcassonne/meeple-blue.webp'
@@ -477,7 +593,17 @@ body{padding-bottom:env(safe-area-inset-bottom)}
   }
 
   /* ----------------------------- 渲染 ----------------------------- */
+  function currentRot() {
+    if (ONLINE) return game && game.currentTile ? onlineRot : 0;
+    return game && game.currentTile ? game.currentTile.rot : 0;
+  }
+  function syncOnlineRot() {
+    if (!ONLINE || !game || !game.currentTile) return;
+    var key = game.turn + ':' + game.currentTile.tileId;
+    if (key !== onlineTileKey) { onlineTileKey = key; onlineRot = game.currentTile.rot || 0; }
+  }
   function humanTurn() {
+    if (ONLINE) return !!(onlineReady && game && game.phase !== 'over' && window.OnlineBridge.isMyTurn());
     return game.currentPlayer === 0 && game.phase !== 'over';
   }
   function renderScores() {
@@ -497,6 +623,11 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     $('board-count').textContent = '已放 ' + Object.keys(game.board).length + ' 块';
     var pill = $('phase-pill');
     if (game.phase === 'over') { pill.textContent = '对局结束'; pill.className = 'phase-pill'; }
+    else if (ONLINE) {
+      var mine = humanTurn();
+      pill.textContent = mine ? (game.phase === 'meeple' ? '你 · 放米宝' : '你 · 放瓦片') : ('座位 ' + (game.currentPlayer + 1) + ' 回合');
+      pill.className = 'phase-pill' + (mine ? '' : ' ai');
+    }
     else if (game.currentPlayer === 1) { pill.textContent = 'AI 回合'; pill.className = 'phase-pill ai'; }
     else if (game.phase === 'meeple') { pill.textContent = '你 · 放米宝'; pill.className = 'phase-pill'; }
     else { pill.textContent = '你 · 放瓦片'; pill.className = 'phase-pill'; }
@@ -512,11 +643,12 @@ body{padding-bottom:env(safe-area-inset-bottom)}
       $('discard').disabled = true;
       return;
     }
-    var tile = E.makeTile(E.currentTileDef(game), game.currentTile.rot);
+    var rot = currentRot();
+    var tile = E.makeTile(E.currentTileDef(game), rot);
     prev.innerHTML = tileSvg(tile);
     $('tile-name').textContent = tile.name;
-    $('tile-sub').textContent = '旋转 ' + (game.currentTile.rot * 90) + '° · ' + E.currentTileDef(game).edges.join(' / ');
-    var legal = E.getLegalPlacements(game, game.currentTile.tileId, game.currentTile.rot);
+    $('tile-sub').textContent = '旋转 ' + (rot * 90) + '° · ' + E.currentTileDef(game).edges.join(' / ');
+    var legal = E.getLegalPlacements(game, game.currentTile.tileId, rot);
     $('legal-count').innerHTML = '合法位置 <b>' + legal.length + '</b> 个';
     var can = humanTurn() && game.phase === 'placing';
     $('rotate-l').disabled = !can;
@@ -537,7 +669,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     });
     var legal = [];
     if (game.phase === 'placing' && game.currentTile && humanTurn()) {
-      legal = E.getLegalPlacements(game, game.currentTile.tileId, game.currentTile.rot);
+      legal = E.getLegalPlacements(game, game.currentTile.tileId, currentRot());
       legal.forEach(function (p) {
         minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
         minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
@@ -608,7 +740,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
       panel.innerHTML = '<div class="hint">' + (game.currentPlayer === 1 ? 'AI 正在决定是否派出米宝…' : '放置瓦片后，可在这里选择城市、道路、农田或修道院。') + '</div>';
       return;
     }
-    var opts = E.getMeepleOptions(game, 0);
+    var opts = E.getMeepleOptions(game, ONLINE ? window.OnlineBridge.seatIndex() : 0);
     var btns = opts.map(function (o, i) {
       var det = o.tiles + ' 块 · ' + (o.complete ? '已完成' : '未完成') + (o.occupied ? ' · 已被占' : '');
       return '<button class="mopt' + (o.occupied ? ' occ' : '') + '" data-mk="' + o.kind + '" data-mg="' + o.group + '"' + (o.occupied ? ' disabled' : '') + ' aria-label="在' + o.label + '放置米宝">' +
@@ -618,6 +750,11 @@ body{padding-bottom:env(safe-area-inset-bottom)}
       '<div class="btnrow"><button id="skip-meeple" class="ghost" aria-label="跳过放置米宝">跳过，不放米宝</button></div>';
     Array.prototype.forEach.call(panel.querySelectorAll('[data-mk]'), function (b) {
       b.addEventListener('click', function () {
+        if (ONLINE) {
+          sfx('meeple');
+          window.OnlineBridge.send({ type: 'meeple', kind: b.getAttribute('data-mk'), group: Number(b.getAttribute('data-mg')) });
+          return;
+        }
         try {
           var ev = E.placeMeeple(game, b.getAttribute('data-mk'), Number(b.getAttribute('data-mg')), 0);
           sfx('meeple'); handleEvents(ev); renderAll(); scheduleAI();
@@ -626,6 +763,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     });
     var skip = $('skip-meeple');
     if (skip) skip.addEventListener('click', function () {
+      if (ONLINE) { sfx('click'); window.OnlineBridge.send({ type: 'skip' }); return; }
       try { var ev = E.skipMeeple(game); sfx('click'); handleEvents(ev); renderAll(); scheduleAI(); }
       catch (err) { sfx('error'); toast(err.message); }
     });
@@ -637,12 +775,18 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     }).join('') || '<div class="hint">还没有记录。</div>';
   }
   function renderAll() {
+    syncOnlineRot();
     renderHeader(); renderScores(); renderPreview(); renderBoard(); renderMeeplePanel(); renderLog();
   }
 
   /* ----------------------------- 交互 ----------------------------- */
   function humanPlace(x, y) {
     if (!humanTurn() || game.phase !== 'placing') return;
+    if (ONLINE) {
+      sfx('place');
+      window.OnlineBridge.send({ type: 'place', x: x, y: y, rot: currentRot() });
+      return;
+    }
     try {
       var tile = E.placeCurrentTile(game, { x: x, y: y, rot: game.currentTile.rot });
       sfx('place');
@@ -652,6 +796,12 @@ body{padding-bottom:env(safe-area-inset-bottom)}
   }
   function rotate(delta) {
     if (!humanTurn() || game.phase !== 'placing') return;
+    if (ONLINE) {
+      onlineRot = ((currentRot() + delta) % 4 + 4) % 4;
+      sfx('click');
+      renderAll();
+      return;
+    }
     E.rotateCurrent(game, delta);
     sfx('click');
     renderAll();
@@ -689,6 +839,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
   }
   function scheduleAI() {
     clearTimeout(aiTimer);
+    if (ONLINE) { showAI(false); return; }
     if (game.phase === 'over') { endGame(); return; }
     if (game.currentPlayer !== 1) return;
     showAI(true);
@@ -762,6 +913,12 @@ body{padding-bottom:env(safe-area-inset-bottom)}
   function newGame() {
     clearTimeout(aiTimer);
     showAI(false);
+    if (ONLINE) {
+      window.OnlineBridge.restart().then(function (view) {
+        if (view) { $('modal').classList.remove('show'); onlineApply(view); }
+      });
+      return;
+    }
     game = E.createGame({ seed: (Date.now() ^ (Math.random() * 0xffffffff)) >>> 0, players: [{ name: '你', isAI: false }, { name: 'AI 对手', isAI: true }] });
     lastCentered = null;
     $('modal').classList.remove('show');
@@ -774,6 +931,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
   $('rotate-r').addEventListener('click', function () { rotate(1); });
   $('discard').addEventListener('click', function () {
     if (!humanTurn() || game.phase !== 'placing') return;
+    if (ONLINE) { sfx('click'); window.OnlineBridge.send({ type: 'discard' }); return; }
     try { E.discardCurrentTile(game); sfx('click'); toast('瓦片无处可放，已弃置并补抽'); renderAll(); }
     catch (err) { sfx('error'); toast(err.message); }
   });
@@ -805,13 +963,39 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     else if (e.key === 'Escape') { $('modal').classList.remove('show'); }
   });
 
+  /* ----------------------------- 联机 ----------------------------- */
+  function onlineApply(view) {
+    if (!view || !view.state) return;
+    game = view.state;
+    if (!Array.isArray(game.deck)) game.deck = new Array(view.deckCount || 0);
+    if (!Array.isArray(game.discard)) game.discard = new Array(view.discardCount || 0);
+    onlineReady = true;
+    var who = document.querySelectorAll('.score .who');
+    game.players.forEach(function (player, i) {
+      if (!who[i]) return;
+      who[i].textContent = (view.you === i ? '你 · ' : '') + (player.name || ('座位 ' + (i + 1)));
+    });
+    renderAll();
+    $('again').disabled = ONLINE ? !view.canRestart : false;
+    if (game.over || game.phase === 'over') { showAI(false); endGame(); }
+  }
+
   /* ----------------------------- 启动 ----------------------------- */
   var savedTheme = storeGet('carc-prem-theme');
   if (savedTheme === 'light' || savedTheme === 'dark') document.documentElement.setAttribute('data-theme', savedTheme);
   muted = storeGet('carc-prem-muted') === '1';
   $('sound').style.opacity = muted ? '.45' : '1';
   if (window.matchMedia && window.matchMedia('(max-width: 520px)').matches) cell = 48;
-  newGame();
+  if (ONLINE) {
+    window.OnlineBridge.onChange(onlineApply);
+    window.OnlineBridge.onError(function (err) {
+      toast('联机：' + (err && err.message ? err.message : '连接失败'));
+      if (err && (err.status === 404 || err.code === 'E_SESSION')) setTimeout(function () { location.href = 'online.html'; }, 1200);
+    });
+    $('tip').textContent = '正在连接联机房间…';
+  } else {
+    newGame();
+  }
 })();
 </script>
 </body>

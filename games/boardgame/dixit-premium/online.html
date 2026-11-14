@@ -82,15 +82,14 @@ body{padding-bottom:env(safe-area-inset-bottom)}
       <h2>创建房间</h2>
       <p>3–6 人。空位由 AI 补足，房主点「开始对局」后发牌。</p>
       <label for="hostName">你的名字</label><input id="hostName" maxlength="16" placeholder="例如：潮汐说书人" autocomplete="nickname">
-      <label for="hostMax">人数</label><select id="hostMax"><option value="4">4 人</option><option value="3">3 人</option><option value="5">5 人</option><option value="6">6 人</option></select>
       <label for="hostPw">房间密码（可选）</label><input id="hostPw" maxlength="24" placeholder="留空则公开房间" autocomplete="off">
       <div class="row" style="margin-top:12px"><button class="btn primary grow" id="createBtn" type="button">创建房间</button></div>
     </section>
     <section class="panel">
       <h2>加入房间</h2>
-      <p>输入房间码或邀请码，也可以从邀请链接直接进入。</p>
+      <p>输入房间码或邀请链接。邀请链接可直接进入。</p>
       <label for="joinName">你的名字</label><input id="joinName" maxlength="16" placeholder="例如：纸月说书人" autocomplete="nickname">
-      <label for="joinCode">房间码 / 邀请码</label><input id="joinCode" maxlength="64" placeholder="例如：MOON-42" autocomplete="off">
+      <label for="joinCode">房间码 / 邀请链接</label><input id="joinCode" maxlength="200" placeholder="例如：MOON-42" autocomplete="off">
       <label for="joinPw">房间密码（如需要）</label><input id="joinPw" maxlength="24" placeholder="可选" autocomplete="off">
       <div class="row" style="margin-top:12px"><button class="btn primary grow" id="joinBtn" type="button">加入房间</button></div>
     </section>
@@ -105,7 +104,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
         <div class="grow"><div style="font-size:12px;color:var(--ink-dim)">邀请码</div><div id="inviteCode" style="font-size:13px;word-break:break-all">—</div></div>
       </div>
       <div id="seatList"></div>
-      <div class="row" style="margin-top:12px"><button class="btn primary" id="startBtn" type="button" disabled>开始对局</button><button class="btn" id="copyBtn" type="button">复制邀请</button><button class="btn" id="leaveBtn" type="button">离开</button></div>
+      <div class="row" style="margin-top:12px"><button class="btn primary" id="startBtn" type="button" disabled>开始对局</button><button class="btn" id="copyBtn" type="button">复制邀请</button><button class="btn" id="leaveBtn" type="button">离开</button><button class="btn" id="closeBtn" type="button">关闭房间</button></div>
     </section>
   </div>
 
@@ -136,12 +135,14 @@ body{padding-bottom:env(safe-area-inset-bottom)}
   'use strict';
   var C = window.DixitCards;
   var LS = 'hhfa-dixit-online-v1';
-  var session = null, playerId = null, roomId = null, view = null;
+  var session = null, playerId = null, roomId = null, roomCode = '', view = null, pendingInvite = '';
   var selected = null, pollTimer = null, pollBusy = false, uid = 0;
   function $(id) { return document.getElementById(id); }
   function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function sfx(n) { try { window.Sfx && window.Sfx.play && window.Sfx.play(n); } catch (e) {} }
   function setStatus(node, t, err) { node.textContent = t; node.classList.toggle('err', !!err); }
+  function newPlayerId() { return 'dx_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); }
+  function randomNickname() { return '玩家' + Math.floor(Math.random() * 900 + 100); }
   function save() { try { localStorage.setItem(LS, JSON.stringify({ session: session, playerId: playerId, roomId: roomId })); } catch (e) {} }
   function clearSave() { try { localStorage.removeItem(LS); } catch (e) {} }
   async function api(method, route, body) {
@@ -151,14 +152,27 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     return { status: r.status, body: data };
   }
   function roomUrl(s) { return '/api/rooms/' + encodeURIComponent(roomId) + (s || ''); }
-  function viewUrl() { return roomUrl() + '?session=' + encodeURIComponent(session) + '&playerId=' + encodeURIComponent(playerId); }
+  function viewUrl() { return roomUrl() + '?session=' + encodeURIComponent(session); }
+  function mySeat() {
+    if (!view || !view.seats) return null;
+    for (var i = 0; i < view.seats.length; i += 1) if (view.seats[i].isYou) return view.seats[i];
+    return null;
+  }
+  function isHost() { var seat = mySeat(); return !!(seat && seat.isHost); }
+  function takeoverSeats() { return (view && view.takeover) || []; }
+  function legalActions() { return (view && view.legalActions) || []; }
+
   async function refresh() {
     if (!roomId || !session || pollBusy) return;
     pollBusy = true;
     try {
       var res = await api('GET', viewUrl());
-      if (res.status === 200 && res.body) { view = res.body; render(); }
-      else if (res.status === 404) { setStatus($('lobbyStatus'), '房间已关闭。', true); stopPolling(); }
+      if (res.status === 200 && res.body) { view = res.body; roomCode = view.code || roomCode; render(); }
+      else if (res.status === 401 || res.status === 403) {
+        var rec = await api('POST', roomUrl('/reconnect'), { session: session });
+        if (rec.status === 200 && rec.body) { view = rec.body; render(); }
+        else { setStatus($('lobbyStatus'), '会话已失效，请重新加入房间。', true); clearSave(); stopPolling(); }
+      } else if (res.status === 404) { setStatus($('lobbyStatus'), '房间已关闭。', true); clearSave(); stopPolling(); }
     } catch (e) {}
     pollBusy = false;
   }
@@ -182,16 +196,19 @@ body{padding-bottom:env(safe-area-inset-bottom)}
   function renderSeats() {
     if (!view) return;
     var host = $('seatList'); host.innerHTML = '';
-    view.seats.forEach(function (s) {
+    var takeover = takeoverSeats();
+    (view.seats || []).forEach(function (s) {
       var row = document.createElement('div'); row.className = 'seat';
-      var left = document.createElement('div'); left.textContent = s.nickname;
-      var tag = document.createElement('span'); tag.className = 'tag' + (s.ai ? ' ai' : '') + (s.takeover ? ' takeover' : '');
-      tag.textContent = s.ai ? 'AI' : (s.takeover ? '已托管' : (s.playerId === view.hostId ? '房主' : '玩家'));
+      var left = document.createElement('div'); left.textContent = s.name || ('座位 ' + (s.index + 1));
+      var managed = takeover.indexOf(s.index) !== -1;
+      var tag = document.createElement('span'); tag.className = 'tag' + (s.ai ? ' ai' : '') + (managed ? ' takeover' : '');
+      tag.textContent = s.ai ? 'AI' : (managed ? '已托管' : (s.isHost ? '房主' : (s.isYou ? '你' : '玩家')));
       row.appendChild(left); row.appendChild(tag); host.appendChild(row);
     });
-    $('roomCode').textContent = view.roomCode || '—';
-    $('inviteCode').textContent = view.inviteToken || view.inviteCode || '—';
-    $('startBtn').disabled = !view.canStart;
+    $('roomCode').textContent = view.code || roomCode || '—';
+    $('inviteCode').textContent = view.inviteCode || pendingInvite || '—';
+    $('startBtn').disabled = !isHost() || !!view.started;
+    $('closeBtn').style.display = isHost() ? '' : 'none';
     setStatus($('lobbyStatus'), view.started ? '对局已开始。' : '等待玩家与房主开始。');
   }
 
@@ -200,16 +217,18 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     if (!view.started) {
       $('game').classList.remove('on'); $('lobby').classList.add('on'); $('launcher').style.display = 'grid'; renderSeats(); return;
     }
-    $('game').classList.add('on'); $('lobby').classList.remove('on'); $('launcher').style.display = 'none';
-    $('gameRoom').textContent = view.roomCode || '—';
-    $('rematchBtn').style.display = view.canRestart ? '' : 'none';
     var s = view.state;
-    setStatus($('gameStatus'), s.over ? '对局结束' : (view.canMove ? '轮到你' : '等待其他人…'));
+    if (!s) return;
+    $('game').classList.add('on'); $('lobby').classList.remove('on'); $('launcher').style.display = 'none';
+    $('gameRoom').textContent = view.code || roomCode || '—';
+    $('rematchBtn').style.display = view.canRestart ? '' : 'none';
+    setStatus($('gameStatus'), s.over ? '对局结束' : (legalActions().length ? '轮到你' : '等待其他人…'));
 
     var board = $('gamePlayers'); board.innerHTML = '';
+    var meIndex = view.you == null ? 0 : view.you;
     s.players.forEach(function (p) {
       var box = document.createElement('div'); box.className = 'pbox';
-      box.innerHTML = '<div class="nm">' + esc(p.name) + (p.index === (view.you && view.you.playerIndex) ? '（你）' : '') + '</div>' +
+      box.innerHTML = '<div class="nm">' + esc(p.name) + (p.index === meIndex ? '（你）' : '') + '</div>' +
         '<div class="sub">' + (p.isStoryteller ? '说书人 · ' : '') + (p.isAI ? 'AI' : '玩家') + ' · 手牌 ' + p.handCount + '</div>' +
         '<div class="sc">' + p.score + ' 分</div>';
       board.appendChild(box);
@@ -218,9 +237,9 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     $('gameClue').textContent = s.clue ? '「' + s.clue + '」' : '—';
     var turn = '';
     if (s.over) turn = '对局结束。';
-    else if (s.phase === 'clue') turn = s.storyteller === (view.you && view.you.playerIndex) ? '轮到你当说书人：选一张牌并给出线索。' : '等待 ' + s.players[s.storyteller].name + ' 给出线索。';
-    else if (s.phase === 'submit') turn = view.canMove ? '轮到你出牌：选一张最贴合线索的牌。' : '等待 ' + s.players[s.current].name + ' 出牌。';
-    else if (s.phase === 'vote') turn = view.canMove ? '轮到你投票：选出说书人的牌。' : '等待 ' + s.players[s.current].name + ' 投票。';
+    else if (s.phase === 'clue') turn = s.storyteller === meIndex ? '轮到你当说书人：选一张牌并给出线索。' : '等待 ' + s.players[s.storyteller].name + ' 给出线索。';
+    else if (s.phase === 'submit') turn = legalActions().length ? '轮到你出牌：选一张最贴合线索的牌。' : '等待 ' + s.players[s.current].name + ' 出牌。';
+    else if (s.phase === 'vote') turn = legalActions().length ? '轮到你投票：选出说书人的牌。' : '等待 ' + s.players[s.current].name + ' 投票。';
     $('gameTurn').textContent = turn;
 
     var pub = $('gamePublic'); pub.innerHTML = '';
@@ -230,18 +249,17 @@ body{padding-bottom:env(safe-area-inset-bottom)}
         pub.appendChild(cardEl(card, {
           num: i + 1,
           sel: selected === card,
-          disabled: own || !view.canMove,
+          disabled: own || !legalActions().length,
           onClick: function () { if (!own) { selected = selected === card ? null : card; render(); } }
         }));
       });
     }
     var hand = $('gameHand'); hand.innerHTML = '';
-    var me = s.players[view.you ? view.you.playerIndex : 0];
+    var me = s.players[meIndex];
     if (me) {
       me.hand.forEach(function (card) {
-        var hidden = card === 'hidden';
-        if (hidden) return;
-        var canPlay = view.canMove && (s.phase === 'clue' || s.phase === 'submit');
+        if (card === 'hidden') return;
+        var canPlay = legalActions().length > 0 && (s.phase === 'clue' || s.phase === 'submit');
         hand.appendChild(cardEl(card, {
           sel: selected === card,
           disabled: !canPlay,
@@ -251,15 +269,15 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     }
 
     var clueRow = $('clueRow');
-    var canClue = view.canMove && s.phase === 'clue';
+    var canClue = legalActions().length > 0 && s.phase === 'clue';
     clueRow.style.display = canClue ? '' : 'none';
     $('clueBtn').disabled = !canClue || selected == null || !$('gameClueInput').value.trim();
     $('gameClueInput').oninput = function () { $('clueBtn').disabled = !canClue || selected == null || !$('gameClueInput').value.trim(); };
     $('clueBtn').onclick = function () { send({ type: 'clue', card: selected, text: $('gameClueInput').value.trim() }); };
     var playBtn = $('playBtn');
     playBtn.disabled = true; playBtn.textContent = '确认';
-    if (view.canMove && s.phase === 'submit' && selected != null) { playBtn.disabled = false; playBtn.textContent = '提交这张'; playBtn.onclick = function () { send({ type: 'submit', card: selected }); }; }
-    if (view.canMove && s.phase === 'vote' && selected != null) { playBtn.disabled = false; playBtn.textContent = '投这一票'; playBtn.onclick = function () { send({ type: 'vote', card: selected }); }; }
+    if (legalActions().length && s.phase === 'submit' && selected != null) { playBtn.disabled = false; playBtn.textContent = '提交这张'; playBtn.onclick = function () { send({ type: 'submit', card: selected }); }; }
+    if (legalActions().length && s.phase === 'vote' && selected != null) { playBtn.disabled = false; playBtn.textContent = '投这一票'; playBtn.onclick = function () { send({ type: 'vote', card: selected }); }; }
 
     var log = $('gameLog'); log.innerHTML = '';
     (s.log || []).slice(-10).reverse().forEach(function (e) { var p = document.createElement('p'); p.textContent = e.text; log.appendChild(p); });
@@ -273,46 +291,78 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     }
   }
 
-  async function send(move) {
-    if (!view || !view.canMove) return;
-    if ((move.type === 'clue') && (!move.card || !move.text)) { setStatus($('gameStatus'), '先选牌并写线索。', true); return; }
-    var res = await api('POST', roomUrl('/actions'), { session: session, playerId: playerId, type: 'move', move: move });
+  async function send(action) {
+    if (!view || !legalActions().length) return;
+    if ((action.type === 'clue') && (!action.card || !action.text)) { setStatus($('gameStatus'), '先选牌并写线索。', true); return; }
+    var res = await api('POST', roomUrl('/actions'), { session: session, action: action });
     if (res.status === 200 && res.body) { view = res.body; selected = null; sfx('move'); render(); }
     else { setStatus($('gameStatus'), '行动失败：' + ((res.body && res.body.error && res.body.error.message) || res.status), true); refresh(); }
   }
 
+  function enterRoom(data, nickname) {
+    roomId = data.roomId;
+    session = data.session;
+    playerId = data.playerId;
+    roomCode = data.code || '';
+    view = data;
+    pendingInvite = data.inviteCode || pendingInvite;
+    save();
+    $('launcher').style.display = 'none';
+    $('lobby').classList.add('on');
+    renderSeats();
+    startPolling();
+    sfx('notify');
+  }
+
   async function createRoom() {
-    var name = ($('hostName').value || '').trim() || ('玩家' + Math.floor(Math.random() * 900 + 100));
-    var res = await api('POST', '/api/rooms', { playerId: name, maxPlayers: Number($('hostMax').value), password: ($('hostPw').value || undefined) });
-    if (res.status !== 201) { setStatus($('lobbyStatus'), '创建失败：' + res.status, true); return; }
-    roomId = res.body.roomId; session = res.body.playerSession; playerId = name; view = res.body;
-    save(); $('launcher').style.display = 'none'; $('lobby').classList.add('on'); renderSeats(); startPolling(); sfx('notify');
+    var name = ($('hostName').value || '').trim() || randomNickname();
+    var res = await api('POST', '/api/rooms', { playerId: newPlayerId(), nickname: name, password: ($('hostPw').value || undefined) });
+    if (res.status !== 201 || !res.body) { setStatus($('lobbyStatus'), '创建失败：' + ((res.body && res.body.error && res.body.error.message) || res.status), true); return; }
+    enterRoom(res.body, name);
   }
+
+  function parseJoinInput(raw) {
+    var text = (raw || '').trim();
+    if (!text) return null;
+    if (/^https?:\/\//i.test(text) || text.indexOf('?') !== -1) {
+      try {
+        var u = new URL(text, location.href);
+        var room = u.searchParams.get('room');
+        if (room) return { room: room, invite: u.searchParams.get('code') || u.searchParams.get('invite') || '' };
+      } catch (e) {}
+    }
+    return { room: text, invite: pendingInvite };
+  }
+
   async function joinRoom() {
-    var name = ($('joinName').value || '').trim() || ('玩家' + Math.floor(Math.random() * 900 + 100));
-    var code = ($('joinCode').value || '').trim();
-    if (!code) { $('joinCode').focus(); return; }
-    var room = await api('GET', '/api/rooms/' + encodeURIComponent(code));
-    if (room.status !== 200) { setStatus($('lobbyStatus'), '找不到房间：' + code, true); return; }
-    roomId = room.body.roomId;
-    var res = await api('POST', roomUrl('/join'), { playerId: name, inviteCode: code, password: ($('joinPw').value || undefined) });
-    if (res.status !== 200) { setStatus($('lobbyStatus'), '加入失败：' + ((res.body && res.body.error && res.body.error.message) || res.status), true); return; }
-    session = res.body.playerSession; playerId = name; view = res.body;
-    save(); $('launcher').style.display = 'none'; $('lobby').classList.add('on'); renderSeats(); startPolling(); sfx('notify');
+    var name = ($('joinName').value || '').trim() || randomNickname();
+    var parsed = parseJoinInput($('joinCode').value);
+    if (!parsed || !parsed.room) { $('joinCode').focus(); return; }
+    var res = await api('POST', '/api/rooms/' + encodeURIComponent(parsed.room) + '/join', {
+      playerId: newPlayerId(), nickname: name,
+      inviteCode: parsed.invite || undefined,
+      password: ($('joinPw').value || undefined)
+    });
+    if (res.status !== 200 || !res.body) { setStatus($('lobbyStatus'), '加入失败：' + ((res.body && res.body.error && res.body.error.message) || res.status), true); return; }
+    enterRoom(res.body, name);
   }
+
   async function startMatch() {
-    var res = await api('POST', roomUrl('/start'), { session: session, playerId: playerId });
+    var res = await api('POST', roomUrl('/start'), { session: session });
     if (res.status !== 200) { setStatus($('lobbyStatus'), '无法开始：' + ((res.body && res.body.error && res.body.error.message) || res.status), true); return; }
     view = res.body; render(); sfx('win');
   }
+
   async function reconnectSaved() {
     try {
       var saved = JSON.parse(localStorage.getItem(LS) || 'null');
       if (!saved || !saved.session || !saved.roomId) return false;
       roomId = saved.roomId; session = saved.session; playerId = saved.playerId;
-      var res = await api('POST', roomUrl('/reconnect'), { session: session, playerId: playerId });
-      if (res.status !== 200) { clearSave(); return false; }
-      view = res.body; $('launcher').style.display = 'none'; render(); startPolling(); return true;
+      var res = await api('POST', roomUrl('/reconnect'), { session: session });
+      if (res.status !== 200 || !res.body) { clearSave(); return false; }
+      view = res.body; roomCode = view.code || '';
+      pendingInvite = view.inviteCode || '';
+      $('launcher').style.display = 'none'; render(); startPolling(); return true;
     } catch (e) { return false; }
   }
 
@@ -321,21 +371,28 @@ body{padding-bottom:env(safe-area-inset-bottom)}
   $('startBtn').addEventListener('click', startMatch);
   $('refreshBtn').addEventListener('click', refresh);
   $('rematchBtn').addEventListener('click', async function () {
-    var res = await api('POST', roomUrl('/restart'), { session: session, playerId: playerId });
+    var res = await api('POST', roomUrl('/restart'), { session: session });
     if (res.status === 200) { view = res.body; render(); }
   });
   $('leaveBtn').addEventListener('click', async function () {
-    try { await api('POST', roomUrl('/leave'), { session: session, playerId: playerId }); } catch (e) {}
+    try { await api('POST', roomUrl('/leave'), { session: session }); } catch (e) {}
+    clearSave(); stopPolling(); location.reload();
+  });
+  $('closeBtn').addEventListener('click', async function () {
+    try { await api('DELETE', roomUrl() + '?session=' + encodeURIComponent(session)); } catch (e) {}
     clearSave(); stopPolling(); location.reload();
   });
   $('copyBtn').addEventListener('click', function () {
-    var text = location.origin + location.pathname + '?room=' + encodeURIComponent(view.roomCode || '');
+    var base = location.origin + location.pathname + '?room=' + encodeURIComponent(roomId || (view && view.roomId) || '');
+    var text = base + (view && view.inviteCode ? '&code=' + encodeURIComponent(view.inviteCode) : '');
     try { navigator.clipboard.writeText(text); $('copyBtn').textContent = '已复制'; } catch (e) { $('copyBtn').textContent = text; }
   });
   var params = new URLSearchParams(location.search);
   if (params.get('room')) $('joinCode').value = params.get('room');
+  if (params.get('code')) pendingInvite = params.get('code');
   reconnectSaved().then(function (ok) { if (!ok) setStatus($('lobbyStatus'), '创建或加入一个房间。'); });
 })();
 </script>
+<p style="text-align:center;margin:14px 0"><a href="../spectate.html" style="display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:44px;padding:0 14px;border-radius:12px;border:1px solid currentColor;color:inherit;font-size:13px;text-decoration:none">围观其他对局</a></p>
 </body>
 </html>

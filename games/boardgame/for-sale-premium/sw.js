@@ -5,7 +5,7 @@
  */
 'use strict';
 
-var CACHE = 'for-sale-premium-v1';
+var CACHE = 'for-sale-premium-v3';
 var CORE = [
   './',
   './index.html',
@@ -15,6 +15,8 @@ var CORE = [
   './rules.html',
   '../../shared/shuffle.js',
   '../../shared/sfx.js',
+  '../../shared/poker-ui.css',
+  '../../shared/poker-ui.js',
   './assets/cover.webp',
   './assets/og.webp',
   './assets/detail-1.webp',

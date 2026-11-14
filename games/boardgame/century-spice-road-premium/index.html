@@ -331,6 +331,71 @@ body{background-image:linear-gradient(rgba(243,234,214,.93),rgba(243,234,214,.93
 .cube-pip{background-image:var(--art-table);background-size:cover;background-blend-mode:multiply}
 .coin-badge::after{content:"";position:absolute;inset:-2px;border-radius:50%;background:var(--art-gold) center/cover no-repeat;opacity:.35;mix-blend-mode:screen;pointer-events:none}
 </style>
+<style id="ui-fix">
+/* Hero：米色底上强制深色字（暗色模式下 --ink 会变浅，但 premium-art 底图仍是米色） */
+.hero{padding:14px 0 8px}
+.hero .eyebrow{color:#7a5722;margin-bottom:5px;font-size:12px}
+.hero h1{color:#221d16;font-size:clamp(1.5rem,6vw,2.1rem);margin-bottom:4px}
+.hero h1 span{color:#5c5346;font-size:12px;letter-spacing:.06em;margin-top:3px}
+.hero-more{display:none}
+.hero-toggle{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.hero-toggle-label{display:inline-flex;align-items:center;gap:6px;min-height:32px;margin-top:6px;padding:0 10px;
+  border:1px solid #c2ac82;border-radius:999px;background:#fbf4e4;color:#4a3f2f;font-size:12px;font-weight:650;
+  cursor:pointer;-webkit-tap-highlight-color:transparent}
+.hero-toggle-label::after{content:"▾";font-size:11px;line-height:1;color:#7a6a50;transition:transform .15s}
+.hero-toggle:checked ~ .hero-toggle-label::after{transform:rotate(180deg)}
+.hero-toggle:checked ~ .hero-more{display:block}
+.hero-toggle:focus-visible ~ .hero-toggle-label{outline:2px solid #8d6a33;outline-offset:2px}
+.hero .lede{color:#4a4136;font-size:13px;line-height:1.55;max-width:66ch;margin-top:8px}
+.hero .hero-tags{margin-top:8px}
+.hero .tag{min-height:26px;padding:0 9px;font-size:12px;color:#4a4136;background:#fbf4e4;border-color:#c2ac82}
+.hero a.tag{min-height:32px;min-width:0}
+/* 种子行：四个小按钮收成 2×2 组，AI 演示与其它控件对齐 */
+.setup-row{gap:6px}
+.setup-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;flex:1 1 190px;min-width:180px}
+.setup-actions .mini-btn{width:100%;padding:0 8px;min-width:0}
+/* 玩家卡：金币/银币另起一行，不再被省略号截断 */
+.player-meta{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.35}
+.player-meta span{display:block;white-space:nowrap}
+/* 面板辅助行：字号 12px，独占一行 */
+.panel-sub{font-size:12px;line-height:1.45;color:var(--on-dark-muted);margin:-2px 0 6px}
+/* 得分卡：底部预留状态条，胶囊不再压住香料费用图标 */
+.point-card{min-height:126px;padding-bottom:22px}
+.point-card .claim-hint{left:4px;right:4px;bottom:3px;text-align:center;line-height:16px;padding:0 2px;
+  background:#efe0bb;color:#6d4a12;border:1px solid rgb(109 74 18 / .25)}
+.point-card.unaffordable .claim-hint{background:#5a4a2e;color:#f6ead2;border-color:#3f331f}
+.point-card.unaffordable .points-big{color:#5a4318}
+/* 浅羊皮纸底上的 12px 标签加深，避免「浅底浅字」 */
+.merchant-card .m-type{color:#4a3210}
+.merchant-card .m-arrow{color:#4a3210}
+.point-card .points-label{color:#4a3210}
+.hand-card .h-tag{color:#4a3210}
+.action-btn:disabled{opacity:.55}
+/* 记录行号在深底上也保持可读 */
+.log .log-round{color:#a69d8c}
+/* 中文提示避免「息。」孤字成行 */
+.hint{text-wrap:pretty}
+.nowrap{white-space:nowrap}
+@media(min-width:431px){
+  .hero{padding:22px 0 12px}
+  .hero .eyebrow{font-size:12px;margin-bottom:8px}
+  .hero h1{font-size:clamp(1.9rem,7vw,2.6rem);margin-bottom:8px}
+  .hero h1 span{font-size:12px;letter-spacing:.14em;margin-top:6px}
+  .hero-toggle-label{display:none}
+  .hero-more{display:block}
+  .hero .lede{font-size:15.5px;line-height:1.68;margin-top:0}
+  .hero .hero-tags{margin-top:12px}
+  .hero .tag{min-height:30px;padding:0 11px}
+  .hero a.tag{min-height:44px;min-width:44px}
+}
+@media(max-width:430px){
+  .setup-row{display:grid;grid-template-columns:auto minmax(0,1fr)}
+  .seed-label input{width:112px}
+  .setup-actions{min-width:0}
+  .round-info{display:none}
+  .point-card{min-height:114px;padding:4px 4px 22px}
+}
+</style>
 <link rel="canonical" href="https://hhfa008.github.io/games/boardgame/century-spice-road-premium/">
 </head>
 <body>
@@ -350,14 +415,18 @@ body{background-image:linear-gradient(rgba(243,234,214,.93),rgba(243,234,214,.93
   <section class="hero">
     <p class="eyebrow">Century: Spice Road · 2 Players</p>
     <h1>香料之路<span>Century: Spice Road · 商队的取舍</span></h1>
-    <p class="lede">四种香料、36 张得分卡、43 张商人卡。每回合只能做一个动作：打出商人卡、获取新卡、休息收回、或交付香料领取得分卡。商队最多 10 个香料，先拿到第 6 张得分卡的人触发最后一轮；金币 3 分、银币 1 分、剩余非姜黄香料每枚 1 分。</p>
-    <div class="hero-tags" aria-label="玩法要点">
-      <span class="tag">36 张得分卡</span>
-      <span class="tag">43 张商人卡</span>
-      <span class="tag">四种香料</span>
-      <span class="tag">商队上限 10</span>
-      <span class="tag">单人 / 联机 · 2 人</span>
-      <a class="tag" href="online.html" style="text-decoration:none">联机房间</a>
+    <input type="checkbox" id="heroMore" class="hero-toggle" aria-controls="heroMoreBody">
+    <label class="hero-toggle-label" for="heroMore">玩法说明与标签</label>
+    <div class="hero-more" id="heroMoreBody">
+      <p class="lede">四种香料、36 张得分卡、43 张商人卡。每回合只能做一个动作：打出商人卡、获取新卡、休息收回、或交付香料领取得分卡。商队最多 10 个香料，先拿到第 6 张得分卡的人触发最后一轮；金币 3 分、银币 1 分、剩余非姜黄香料每枚 1 分。</p>
+      <div class="hero-tags" aria-label="玩法要点">
+        <span class="tag">36 张得分卡</span>
+        <span class="tag">43 张商人卡</span>
+        <span class="tag">四种香料</span>
+        <span class="tag">商队上限 10</span>
+        <span class="tag">单人 / 联机 · 2 人</span>
+        <a class="tag" href="online.html" style="text-decoration:none">联机房间</a>
+      </div>
     </div>
   </section>
 
@@ -367,13 +436,13 @@ body{background-image:linear-gradient(rgba(243,234,214,.93),rgba(243,234,214,.93
         <div class="player-head"><span class="player-dot" aria-hidden="true"></span>
           <span class="player-name">你</span><span class="player-role">HUMAN</span></div>
         <div class="player-score"><strong id="score0">0</strong><span>分</span></div>
-        <div class="player-meta" id="meta0">得分卡 0/6 · 金币 0 · 银币 0</div>
+        <div class="player-meta" id="meta0"><span>得分卡 0/6 · 商队 0</span><span>金币 0 · 银币 0</span></div>
       </div>
       <div class="player ai" id="player1">
         <div class="player-head"><span class="player-dot" aria-hidden="true"></span>
           <span class="player-name">AI 商队</span><span class="player-role">AI</span></div>
         <div class="player-score"><strong id="score1">0</strong><span>分</span></div>
-        <div class="player-meta" id="meta1">得分卡 0/6 · 金币 0 · 银币 0</div>
+        <div class="player-meta" id="meta1"><span>得分卡 0/6 · 商队 0</span><span>金币 0 · 银币 0</span></div>
       </div>
     </div>
 
@@ -381,17 +450,20 @@ body{background-image:linear-gradient(rgba(243,234,214,.93),rgba(243,234,214,.93
       <label class="seed-label" for="seedInput">种子
         <input id="seedInput" type="number" inputmode="numeric" min="0" max="999999999" step="1" value="20261110" aria-label="随机种子，0 到 999999999">
       </label>
-      <button class="mini-btn" data-cta data-cta-dock="board" id="newSeed" type="button">换一局</button>
-      <button class="mini-btn" id="restart" type="button">重开</button>
-      <button class="mini-btn" id="muteBtn" type="button" aria-pressed="false">音效：开</button>
-      <button class="mini-btn" id="autoDemo" type="button">AI 演示</button>
+      <div class="setup-actions">
+        <button class="mini-btn" data-cta data-cta-dock="board" id="newSeed" type="button">换一局</button>
+        <button class="mini-btn" id="restart" type="button">重开</button>
+        <button class="mini-btn" id="muteBtn" type="button" aria-pressed="false">音效：开</button>
+        <button class="mini-btn" id="autoDemo" type="button">AI 演示</button>
+      </div>
       <span class="round-info" id="roundInfo">第 1 回合 · 商人牌堆 37</span>
     </div>
 
     <p class="hint" id="hint" role="status" aria-live="polite">你的回合：点商人卡、手牌或得分卡。</p>
 
     <section class="panel" aria-labelledby="pointTitle">
-      <div class="panel-head"><h2 id="pointTitle">得分卡</h2><span id="pointHint">前两张带金币 / 银币</span></div>
+      <div class="panel-head"><h2 id="pointTitle">得分卡</h2></div>
+      <p class="panel-sub" id="pointHint">前两张带金币 / 银币</p>
       <div class="points" id="pointMarket"></div>
       <div class="action-bar" id="pointActions" hidden>
         <span class="picked" id="pointPicked"></span>
@@ -401,7 +473,8 @@ body{background-image:linear-gradient(rgba(243,234,214,.93),rgba(243,234,214,.93
     </section>
 
     <section class="panel" aria-labelledby="merchantTitle">
-      <div class="panel-head"><h2 id="merchantTitle">商人卡市场</h2><span id="merchantHint">左侧每张卡 1 个香料，最左免费</span></div>
+      <div class="panel-head"><h2 id="merchantTitle">商人卡市场</h2></div>
+      <p class="panel-sub" id="merchantHint">左侧每张卡 1 个香料，最左免费</p>
       <div class="merchants" id="merchantMarket"></div>
       <div class="action-bar" id="merchantActions" hidden>
         <span class="picked" id="merchantPicked"></span>
@@ -601,17 +674,22 @@ body{background-image:linear-gradient(rgba(243,234,214,.93),rgba(243,234,214,.93
     return null;
   }
 
+  var pointDealKey = '';
   function renderPoints() {
+    var key = state.pointMarket.map(function (c) { return c.id; }).join(',');
+    var deal = key !== pointDealKey;
+    pointDealKey = key;
     var html = '';
     state.pointMarket.forEach(function (card, index) {
       var selectedHere = selected && selected.kind === 'point' && selected.cardId === card.id;
       var coin = coinForSlot(index);
       var affordable = E.canAfford(state.players[0].spices, card.cost);
-      html += '<button class="point-card' + (selectedHere ? ' selected' : '') + '" type="button" data-point="' +
+      html += '<button class="point-card' + (selectedHere ? ' selected' : '') +
+        (affordable ? '' : ' unaffordable') + '" type="button" data-point="' +
         card.id + '" aria-pressed="' + selectedHere + '" aria-label="' + card.points + ' 分得分卡，费用 ' +
         card.cost.map(function (n, i) { return n ? SPICES[i].name + n : ''; }).filter(Boolean).join(' ') +
         (coin ? '，附带' + (coin === 'gold' ? '金币' : '银币') : '') + '"' +
-        (canHumanAct() ? '' : ' disabled') + ' style="animation-delay:' + (index * 45) + 'ms">' +
+        (canHumanAct() ? '' : ' disabled') + ' style="' + (deal ? 'animation-delay:' + (index * 45) + 'ms' : 'animation:none') + '">' +
         (coin ? '<span class="coin-badge">' + coinSvg(coin) + '</span>' : '') +
         '<span class="points-big">' + card.points + '</span><span class="points-label">POINTS</span>' +
         '<span class="cost-cubes">' + costHtml(card.cost) + '</span>' +
@@ -621,14 +699,18 @@ body{background-image:linear-gradient(rgba(243,234,214,.93),rgba(243,234,214,.93
     byId('pointHint').textContent = '牌堆剩 ' + state.pointDeck.length + ' 张 · 第 1/2 位带金币/银币';
   }
 
+  var merchantDealKey = '';
   function renderMerchants() {
+    var key = state.merchantMarket.map(function (c) { return c.id; }).join(',');
+    var deal = key !== merchantDealKey;
+    merchantDealKey = key;
     var html = '';
     state.merchantMarket.forEach(function (card, index) {
       var selectedHere = selected && selected.kind === 'merchant' && selected.index === index;
       html += '<button class="merchant-card' + (selectedHere ? ' selected' : '') + '" type="button" data-merchant="' +
         index + '" aria-pressed="' + selectedHere + '" aria-label="商人卡 ' + esc(card.name) +
         '，获取需要向左侧 ' + index + ' 张卡各放 1 个香料" ' + (canHumanAct() ? '' : ' disabled') +
-        ' style="animation-delay:' + (index * 45) + 'ms">' +
+        ' style="' + (deal ? 'animation-delay:' + (index * 45) + 'ms' : 'animation:none') + '">' +
         '<span class="m-type">' + (card.effect.type === 'create' ? 'PRODUCE' : card.effect.type === 'trade' ? 'TRADE' : 'UPGRADE') + '</span>' +
         '<span class="m-cost-tag">' + (index ? '付 ' + index : '免费') + '</span>' +
         '<span class="m-name">' + esc(card.name) + '</span>' +
@@ -675,8 +757,8 @@ body{background-image:linear-gradient(rgba(243,234,214,.93),rgba(243,234,214,.93
     [0, 1].forEach(function (pi) {
       var p = state.players[pi];
       byId('score' + pi).textContent = playerPoints(p);
-      byId('meta' + pi).textContent = '得分卡 ' + p.scoreCards.length + '/6 · 金币 ' + p.gold +
-        ' · 银币 ' + p.silver + ' · 商队 ' + E.totalSpices(p.spices);
+      byId('meta' + pi).innerHTML = '<span>得分卡 ' + p.scoreCards.length + '/6 · 商队 ' +
+        E.totalSpices(p.spices) + '</span><span>金币 ' + p.gold + ' · 银币 ' + p.silver + '</span>';
     });
     byId('player0').className = 'player' + (state.current === 0 && !state.over ? ' active' : '');
     byId('player1').className = 'player ai' + (state.current === 1 && !state.over ? ' active' : '');
@@ -781,6 +863,9 @@ body{background-image:linear-gradient(rgba(243,234,214,.93),rgba(243,234,214,.93
     }
   }
 
+  /* 每个动作短语内部用 word joiner 连成不可断行，只允许在标点后换行，避免「息。」孤字或词内断行 */
+  function noBreakPhrase(s) { return s.split('').join(String.fromCharCode(0x2060)); }
+
   function renderHint() {
     var el = byId('hint');
     var text = '', tone = '';
@@ -793,7 +878,8 @@ body{background-image:linear-gradient(rgba(243,234,214,.93),rgba(243,234,214,.93
     } else if (state.finalRound) {
       text = '最后一轮：完成本轮后结算。你可以领取得分卡或继续构筑商队。';
     } else {
-      text = '你的回合：点得分卡领取、点商人卡获取、点手牌打出，或休息。';
+      text = '你的回合：' + noBreakPhrase('点得分卡领取、') + noBreakPhrase('点商人卡获取、') +
+        noBreakPhrase('点手牌打出，') + noBreakPhrase('或休息。');
     }
     el.textContent = text;
     el.className = 'hint' + (tone ? ' ' + tone : '');
@@ -1002,6 +1088,8 @@ body{background-image:linear-gradient(rgba(243,234,214,.93),rgba(243,234,214,.93
   function newGame(seed) {
     clearAI();
     gameToken += 1;
+    pointDealKey = '';
+    merchantDealKey = '';
     state = E.createGame(seed >>> 0);
     selected = null;
     payment = null;
@@ -1017,6 +1105,8 @@ body{background-image:linear-gradient(rgba(243,234,214,.93),rgba(243,234,214,.93
   function startDemo() {
     clearAI();
     gameToken += 1;
+    pointDealKey = '';
+    merchantDealKey = '';
     var token = gameToken;
     state = E.createGame(parseSeed());
     selected = null;

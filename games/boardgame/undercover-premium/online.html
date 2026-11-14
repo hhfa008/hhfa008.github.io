@@ -8,16 +8,114 @@
 <meta name="theme-color" content="#121013">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23121013'/%3E%3Crect x='14' y='9' width='36' height='46' rx='5' fill='%23f2e6cc'/%3E%3Crect x='14' y='9' width='36' height='46' rx='5' fill='none' stroke='%23c9a15f' stroke-width='2'/%3E%3Ccircle cx='32' cy='27' r='7' fill='none' stroke='%238b2f35' stroke-width='3'/%3E%3Cpath d='M22 43h20M22 48h14' stroke='%238b2f35' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
 <title>谁是卧底 Undercover · 联机房间</title>
-<link rel="stylesheet" href="../app/online-lobby.css">
 <link rel="canonical" href="https://hhfa008.github.io/games/boardgame/undercover-premium/online.html">
 <style>
-/* safe-area: keep the original bottom padding, clear the iOS home indicator */
-body{padding-bottom:env(safe-area-inset-bottom)}
+:root{
+  --bg:#121013;--bg2:#1c181f;--panel:#261f29;--line:#4a3a44;--ink:#f2e6cc;--dim:#b9a9b2;
+  --gold:#d8b06b;--red:#b0565f;--ok:#7ed69a;--bad:#ff9b91;
+  --sans:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:radial-gradient(900px 500px at 50% -10%,#3a2229,var(--bg));color:var(--ink);
+  font:15px/1.5 var(--sans);min-height:100dvh;padding-bottom:calc(20px + env(safe-area-inset-bottom))}
+[hidden]{display:none!important}
+h1,h2,h3,p{margin:0}
+button,input,select{font:inherit;color:inherit}
+a{color:var(--gold)}
+.wrap{max-width:980px;margin:0 auto;padding:0 12px}
+.topbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:calc(10px + env(safe-area-inset-top)) 0 10px;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:9px;min-width:0}
+.brand .logo{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:var(--gold);color:#22180d;font-weight:900;flex:none}
+.brand h1{font-size:17px;letter-spacing:.02em}
+.brand p{font-size:12px;color:var(--dim)}
+.top-actions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 14px;border-radius:11px;
+  border:1px solid var(--line);background:var(--panel);color:var(--ink);font-size:13px;font-weight:700;cursor:pointer;
+  text-decoration:none;touch-action:manipulation;white-space:nowrap}
+.btn:hover{background:#332a38}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.primary{background:var(--gold);border-color:var(--gold);color:#22180d}
+.btn.ghost{background:transparent}
+.btn.danger{border-color:#7a3d44;color:#ffb7af}
+.shell{display:grid;gap:12px;padding-top:14px}
+.grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:12px}
+@media(max-width:760px){.grid{grid-template-columns:1fr}}
+.panel{background:rgba(38,31,41,.92);border:1px solid var(--line);border-radius:16px;padding:14px;min-width:0}
+.panel h2{font-size:16px;margin-bottom:4px}
+.lede,.hint{font-size:12.5px;color:var(--dim);line-height:1.6}
+.section{margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:9px}
+@media(max-width:520px){.form-row{grid-template-columns:1fr}}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field label{font-size:12px;color:var(--dim)}
+input,select{width:100%;min-height:44px;padding:0 11px;border-radius:10px;border:1px solid var(--line);
+  background:var(--bg2);color:var(--ink);font-size:15px;min-width:0}
+.check{display:flex;align-items:center;gap:8px;min-height:44px;font-size:13px}
+.check input{width:22px;height:22px;min-height:22px;accent-color:var(--gold)}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.status{font-size:12.5px;line-height:1.5;min-height:18px;margin-top:8px;color:var(--dim);overflow-wrap:anywhere}
+.status.error{color:var(--bad)}
+.status.ok{color:var(--ok)}
+.roombar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.room-code{font:700 20px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.12em;color:var(--gold)}
+.chip{display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:0 10px;border-radius:999px;
+  border:1px solid var(--line);background:var(--bg2);font-size:12px;font-weight:700}
+.seats{display:grid;gap:8px;margin-top:10px}
+.seat{display:flex;align-items:center;gap:9px;min-height:46px;padding:7px 10px;border:1px solid var(--line);
+  border-radius:11px;background:var(--bg2);font-size:13.5px;min-width:0}
+.seat.current{border-color:var(--gold);box-shadow:inset 0 0 0 1px rgba(216,176,107,.3)}
+.seat.out{opacity:.55}
+.seat .idx{width:28px;height:28px;flex:none;border-radius:50%;display:grid;place-items:center;
+  border:1px solid var(--line);color:var(--gold);font-size:12px}
+.seat .who{flex:1;min-width:0;overflow-wrap:anywhere}
+.seat .tag{font-size:11.5px;color:var(--dim);white-space:nowrap}
+.seat .tag.me{color:var(--ok)}
+.invite{display:flex;gap:8px;margin-top:8px;min-width:0}
+.invite input{font-size:12px;color:var(--dim)}
+.game-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.turn-badge{display:inline-flex;align-items:center;min-height:30px;padding:0 11px;border-radius:999px;
+  background:#253a2b;color:var(--ok);font-size:12px;font-weight:800}
+.turn-badge.wait{background:#3a2f1a;color:#ffd479}
+.metrics{display:flex;gap:6px;flex-wrap:wrap}
+.metric{display:inline-flex;align-items:center;gap:5px;min-height:30px;padding:0 10px;border-radius:8px;
+  background:var(--bg2);border:1px solid var(--line);font-size:12px;color:var(--dim)}
+.metric b{color:var(--ink);font-variant-numeric:tabular-nums}
+.identity{margin-top:10px;padding:12px;border:1px solid var(--gold);border-radius:12px;background:#2d2520}
+.identity .role{font-size:12px;color:var(--gold);font-weight:800;letter-spacing:.08em}
+.identity .word{font-size:clamp(1.4rem,6vw,2rem);font-weight:900;margin-top:4px;letter-spacing:.04em}
+.identity .hint{margin-top:4px}
+.players{display:grid;gap:8px;margin-top:10px}
+.prow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;border:1px solid var(--line);
+  border-radius:10px;background:var(--bg2);font-size:13px}
+.prow.me{border-color:var(--gold)}
+.prow.out{opacity:.58}
+.prow .nm{font-weight:700}
+.prow .st{margin-left:auto;display:flex;gap:7px;flex-wrap:wrap;font-size:11.5px;color:var(--dim)}
+.prow .st b{color:var(--ink)}
+.role-pill{display:inline-flex;align-items:center;min-height:24px;padding:0 8px;border-radius:999px;
+  font-size:11px;font-weight:800;background:#3a4a3a;color:#cfead6}
+.role-pill.u{background:#5a2f35;color:#ffd7d7}
+.role-pill.b{background:#3a3a4a;color:#dcdcff}
+.actions-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-top:8px}
+.vote-btn{display:flex;align-items:center;gap:8px;min-height:46px;padding:7px 10px;border-radius:10px;
+  border:1px solid var(--line);background:var(--bg2);cursor:pointer;text-align:left}
+.vote-btn:hover{border-color:var(--gold)}
+.vote-btn .av{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--line);font-size:11px;color:var(--gold);flex:none}
+.result{margin-top:10px;padding:12px;border:1px solid var(--gold);border-radius:12px;background:#2d2520}
+.result h3{font-size:16px;color:var(--gold);margin-bottom:6px}
+.result .srow{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:3px 0}
+.log{max-height:220px;overflow:auto;display:flex;flex-direction:column;gap:5px;margin-top:8px}
+.log .row{display:flex;gap:8px;font-size:12px;color:var(--dim);line-height:1.45}
+.log .row .t{color:var(--gold);flex:none;font-variant-numeric:tabular-nums}
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translateX(-50%);
+  max-width:92vw;padding:10px 14px;border-radius:10px;background:#3a2d34;border:1px solid var(--line);
+  font-size:13px;z-index:50;box-shadow:0 8px 30px rgba(0,0,0,.4)}
+.footer{padding:18px 0 4px;font-size:12px;color:var(--dim);display:flex;gap:12px;flex-wrap:wrap}
 </style>
 </head>
 <body>
-<script>window.ONLINE_GAME = { id: 'undercover', cn: '谁是卧底', en: 'Undercover', maxPlayers: 6, accent: '#d8b06b', art: '../../assets/art/premium/undercover/table-wood.webp', gameHref: 'index.html' };</script>
-<header class="topbar">
+<header class="topbar wrap">
   <div class="brand">
     <div class="logo">卧</div>
     <div>
@@ -30,88 +128,550 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     <a class="btn ghost" href="rules.html">规则</a>
   </div>
 </header>
-<main class="shell">
+<main class="wrap shell">
   <div class="grid">
     <section class="panel">
       <h2>联机房间</h2>
-      <p class="lede">创建 4–6 人房，把房间码或单次邀请码发给朋友。人不够时空位由 AI 补位；断线可用会话重连，超时自动托管。规则由服务器 engine.js 判定，不做简化。</p>
+      <p class="lede">创建 4–6 人房，把房间码或邀请链接发给朋友。人不够时空位由 AI 补位；断线可用会话重连，超时自动托管。规则由服务器 engine.js 判定，不做简化。</p>
       <div id="lobbySection">
         <div class="section">
           <h3>创建房间</h3>
           <div class="form-row">
             <div class="field"><label for="hostName">你的昵称</label><input id="hostName" maxlength="24" autocomplete="nickname" placeholder="例如 主持人"></div>
-            <div class="field"><label for="maxPlayers">人数</label><select id="maxPlayers"></select></div>
+            <div class="field"><label for="hostPassword">房间密码（可选）</label><input id="hostPassword" type="password" maxlength="64" autocomplete="new-password" placeholder="留空表示无密码"></div>
           </div>
           <div class="form-row">
-            <div class="field"><label for="hostPassword">房间密码（可选）</label><input id="hostPassword" type="password" maxlength="64" autocomplete="new-password" placeholder="留空表示无密码"></div>
-            <div class="field" style="align-content:end"><label style="display:flex;gap:8px;align-items:center;min-height:44px"><input id="privateRoom" type="checkbox" aria-label="私密房（必须凭邀请）" style="width:44px;height:44px;min-height:44px;min-width:44px;margin:0;flex:none"> 私密房（必须凭邀请）</label></div>
+            <div class="field" style="align-content:end">
+              <label class="check"><input id="privateRoom" type="checkbox" aria-label="私密房（必须凭邀请）"> 私密房（必须凭邀请）</label>
+            </div>
           </div>
-          <div class="form-actions"><button class="btn primary" id="createBtn" type="button">创建房间</button></div>
+          <div class="actions"><button class="btn primary" id="createBtn" type="button">创建房间</button></div>
         </div>
         <div class="section">
           <h3>加入房间</h3>
           <div class="form-row">
-            <div class="field"><label for="joinCode">房间码</label><input id="joinCode" maxlength="12" autocomplete="off" placeholder="例如 AB3K9Q"></div>
+            <div class="field"><label for="joinCode">房间码 / 房间 ID</label><input id="joinCode" maxlength="96" autocomplete="off" placeholder="例如 AB3K9Q"></div>
             <div class="field"><label for="joinName">昵称</label><input id="joinName" maxlength="24" autocomplete="nickname" placeholder="你的昵称"></div>
           </div>
           <div class="form-row">
             <div class="field"><label for="joinPassword">密码（可选）</label><input id="joinPassword" type="password" maxlength="64" autocomplete="current-password" placeholder="有密码时填写"></div>
             <div class="field"><label for="joinInvite">邀请码（可选）</label><input id="joinInvite" maxlength="96" autocomplete="off" placeholder="房主分享的单次邀请码"></div>
           </div>
-          <div class="form-actions"><button class="btn" id="joinBtn" type="button">加入房间</button></div>
+          <div class="actions"><button class="btn" id="joinBtn" type="button">加入房间</button></div>
         </div>
       </div>
       <div id="roomSection" hidden>
-        <div class="room-meta"><span class="room-code" id="roomCode" aria-label="房间码">——</span></div>
-        <div class="room-meta" id="roomMeta"></div>
-        <div class="seats" id="seatList" aria-label="座位"></div>
-        <div id="inviteBox" hidden>
-          <div class="field"><label for="inviteToken">单次邀请码（发给朋友）</label><input id="inviteToken" readonly autocomplete="off"></div>
-          <div class="form-actions"><button class="btn ghost" id="copyInvite" type="button">复制邀请码</button></div>
+        <div class="roombar">
+          <span class="room-code" id="roomCode" aria-label="房间码">——</span>
+          <span class="chip" id="roomStatus">等待开始</span>
+          <span class="chip" id="versionChip" hidden></span>
         </div>
-        <div class="room-actions">
+        <div class="seats" id="seatList" aria-label="座位"></div>
+        <div class="invite" id="inviteBox" hidden>
+          <input id="inviteToken" readonly aria-label="邀请链接">
+          <button class="btn ghost" id="copyInvite" type="button">复制</button>
+        </div>
+        <div class="actions">
           <button class="btn primary" id="startBtn" type="button" hidden>开始对局</button>
-          <button class="btn" id="inviteBtn" type="button" hidden>生成新邀请码</button>
+          <button class="btn" id="inviteBtn" type="button" hidden>生成新邀请</button>
+          <button class="btn" id="restartBtn" type="button" hidden>再来一局</button>
+          <button class="btn danger" id="closeBtn" type="button" hidden>关闭房间</button>
           <button class="btn ghost" id="leaveBtn" type="button">离开房间</button>
           <button class="btn ghost" id="newRoomBtn" type="button">回到大厅</button>
         </div>
       </div>
       <p class="status" id="status" role="status" aria-live="polite"></p>
     </section>
-    <aside class="aside">
-      <div class="aside-card">
-        <h3>联机规则</h3>
-        <ul>
-          <li>4–6 人；空位由 AI 补位。</li>
-          <li>依次看词 → 发言 → 逐位投票。</li>
-          <li>卧底方全灭平民胜；卧底方人数不少于平民则卧底方胜。</li>
-          <li>平票无人出局，进入下一轮。</li>
-          <li>断线重连，超时 AI 托管，终局进入榜单。</li>
-        </ul>
-        <a class="btn" href="rules.html">查看完整规则</a>
-      </div>
-      <div class="aside-card">
+    <aside class="panel">
+      <h2>联机规则</h2>
+      <ul class="hint" style="margin:8px 0 0;padding-left:18px">
+        <li>4–6 人；空位由 AI 补位。</li>
+        <li>依次看词 → 发言 → 逐位投票。</li>
+        <li>卧底方全灭平民胜；卧底方人数不少于平民则卧底方胜。</li>
+        <li>平票无人出局，进入下一轮。</li>
+        <li>断线重连，超时 AI 托管，终局进入榜单。</li>
+      </ul>
+      <div class="section">
         <h3>最近对局</h3>
-        <div class="leaderboard" id="leaderboard"></div>
+        <div class="log" id="leaderboard"><div class="row"><span>还没有完成的联机对局</span></div></div>
+      </div>
+      <div class="section">
+        <a class="btn" href="rules.html">查看完整规则</a>
       </div>
     </aside>
   </div>
+  <section class="panel" id="gameSection" hidden>
+    <div class="game-head">
+      <h2>牌桌</h2>
+      <span class="turn-badge" id="turnBadge">等待</span>
+      <div class="metrics" id="metrics"></div>
+    </div>
+    <div id="gameBody"></div>
+  </section>
 </main>
-<footer class="footer">
-  <span>谁是卧底 · Undercover · 本地权威房间，无外部请求</span>
+<p style="text-align:center;margin:14px 0"><a href="../spectate.html" style="display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:44px;padding:0 14px;border-radius:12px;border:1px solid currentColor;color:inherit;font-size:13px;text-decoration:none">围观其他对局</a></p>
+<footer class="wrap footer">
+  <span>谁是卧底 · Undercover · 服务端权威房间</span>
   <a href="index.html">返回本地版</a>
 </footer>
-<script src="../app/online-lobby.js"></script>
+<div class="toast" id="toast" hidden></div>
+<script src="data.js"></script>
+<script src="../../shared/shuffle.js"></script>
+<script src="engine.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-  var select = document.getElementById('maxPlayers');
-  if (select) {
-    Array.prototype.slice.call(select.options).forEach(function (opt) {
-      if (Number(opt.value) < 4) select.removeChild(opt);
+(function () {
+  'use strict';
+  var E = window.UndercoverEngine;
+  var GAME = 'undercover-premium';
+  var $ = function (id) { return document.getElementById(id); };
+  var S = { room: '', session: '', playerId: '', view: null, timer: null, pending: null };
+
+  function readJSON(key) { try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch (err) { return null; } }
+  function writeJSON(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch (err) {} }
+  function removeKey(key) { try { localStorage.removeItem(key); } catch (err) {} }
+  function randomId() { return 'p-' + Math.random().toString(36).slice(2, 10); }
+  function randomName() { return '玩家' + String(Math.floor(1000 + Math.random() * 9000)); }
+  function savedName() { try { return localStorage.getItem(GAME + '-name') || ''; } catch (err) { return ''; } }
+  function rememberName(name) { try { localStorage.setItem(GAME + '-name', name); } catch (err) {} }
+  function esc(value) {
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch];
     });
-    select.value = '6';
   }
-});
+  function roleLabel(role) {
+    return E && typeof E.roleLabel === 'function' ? E.roleLabel(role) : String(role || '');
+  }
+  function toast(text) {
+    var el = $('toast');
+    el.textContent = text;
+    el.hidden = false;
+    clearTimeout(toast.timer);
+    toast.timer = setTimeout(function () { el.hidden = true; }, 2000);
+  }
+  function status(text, kind) {
+    var el = $('status');
+    el.textContent = text || '';
+    el.className = 'status' + (kind ? ' ' + kind : '');
+  }
+  async function api(method, route, body) {
+    var response = await fetch(route, {
+      method: method,
+      headers: body ? { 'content-type': 'application/json' } : undefined,
+      body: body ? JSON.stringify(body) : undefined
+    });
+    var text = await response.text();
+    var data = null;
+    try { data = JSON.parse(text); } catch (err) { data = null; }
+    return { status: response.status, body: data };
+  }
+  function errorText(res) {
+    return (res && res.body && res.body.error && res.body.error.message) || ('请求失败 (' + (res && res.status) + ')');
+  }
+  function roomUrl(suffix) { return '/api/rooms/' + encodeURIComponent(S.room) + (suffix || ''); }
+  function sessionQuery() {
+    return '?session=' + encodeURIComponent(S.session) + '&playerId=' + encodeURIComponent(S.playerId);
+  }
+  function saveSession() {
+    writeJSON(GAME + '-online-session-' + S.room, { session: S.session, playerId: S.playerId });
+  }
+  function enter(view) {
+    S.room = view.roomId;
+    S.view = view;
+    saveSession();
+    $('lobbySection').hidden = true;
+    $('roomSection').hidden = false;
+    render();
+    schedulePoll();
+  }
+  function showLobby() {
+    clearTimeout(S.timer);
+    S.view = null;
+    $('lobbySection').hidden = false;
+    $('roomSection').hidden = true;
+    $('gameSection').hidden = true;
+  }
+
+  async function createRoom() {
+    var name = ($('hostName').value || '').trim() || randomName();
+    rememberName(name);
+    S.playerId = S.playerId || randomId();
+    var body = { playerId: S.playerId, nickname: name };
+    var password = ($('hostPassword').value || '').trim();
+    if (password) body.password = password;
+    if ($('privateRoom').checked) body.visibility = 'private';
+    var res = await api('POST', '/api/rooms', body);
+    if (res.status !== 201) return status(errorText(res), 'error');
+    S.session = res.body.session;
+    enter(res.body);
+    status('房间已创建，把房间码或邀请链接发给朋友。', 'ok');
+  }
+
+  async function joinRoom() {
+    var code = ($('joinCode').value || '').trim();
+    var invite = ($('joinInvite').value || '').trim();
+    if (!code) return status('请填写房间码或房间 ID（仅邀请码不能定位房间）。', 'error');
+    var name = ($('joinName').value || '').trim() || randomName();
+    rememberName(name);
+    S.playerId = S.playerId || randomId();
+    var body = { playerId: S.playerId, nickname: name };
+    if (invite) body.inviteCode = invite;
+    if ($('joinPassword').value) body.password = $('joinPassword').value;
+    var res = await api('POST', '/api/rooms/' + encodeURIComponent(code) + '/join', body);
+    if (res.status !== 200) return status(errorText(res), 'error');
+    S.room = res.body.roomId;
+    S.session = res.body.session;
+    enter(res.body);
+    status('已加入房间。', 'ok');
+  }
+
+  async function startGame() {
+    if (!isHost()) return;
+    var res = await api('POST', roomUrl('/start'), { session: S.session, playerId: S.playerId });
+    if (res.status !== 200) return status(errorText(res), 'error');
+    S.view = res.body;
+    render();
+  }
+
+  async function sendAction(action) {
+    if (!action) return;
+    var res = await api('POST', roomUrl('/actions'), {
+      session: S.session, playerId: S.playerId, action: action
+    });
+    if (res.status !== 200) {
+      status(errorText(res), 'error');
+      return;
+    }
+    S.pending = null;
+    S.view = res.body;
+    render();
+  }
+
+  async function refreshRoom() {
+    if (!S.room || !S.session || !S.view) return;
+    var res = await api('GET', roomUrl() + sessionQuery());
+    if (res.status === 401 || res.status === 404) {
+      status('会话已失效或房间已关闭。', 'error');
+      forgetRoom();
+      return;
+    }
+    if (res.status !== 200) {
+      status(errorText(res), 'error');
+      schedulePoll();
+      return;
+    }
+    S.view = res.body;
+    render();
+    schedulePoll();
+  }
+  function schedulePoll() {
+    clearTimeout(S.timer);
+    if (!S.room || !S.session || !S.view) return;
+    S.timer = setTimeout(refreshRoom, 900);
+  }
+
+  async function inviteAgain() {
+    var res = await api('POST', roomUrl('/invite'), { session: S.session, playerId: S.playerId });
+    if (res.status !== 200) return status(errorText(res), 'error');
+    S.view.inviteCode = res.body.inviteCode;
+    render();
+    status('新的单次邀请码已生成。', 'ok');
+  }
+
+  async function restartGame() {
+    var res = await api('POST', roomUrl('/restart'), { session: S.session, playerId: S.playerId });
+    if (res.status !== 200) return status(errorText(res), 'error');
+    S.pending = null;
+    S.view = res.body;
+    render();
+  }
+
+  async function leaveRoom() {
+    if (S.room && S.session) {
+      await api('POST', roomUrl('/leave'), { session: S.session, playerId: S.playerId });
+    }
+    forgetRoom();
+    status('已离开房间。', 'ok');
+  }
+
+  async function closeRoom() {
+    if (!S.room || !S.session) return;
+    var res = await api('DELETE', roomUrl() + sessionQuery());
+    if (res.status !== 200) return status(errorText(res), 'error');
+    forgetRoom();
+    status('房间已关闭。', 'ok');
+  }
+
+  function forgetRoom() {
+    if (S.room) removeKey(GAME + '-online-session-' + S.room);
+    clearTimeout(S.timer);
+    S.room = ''; S.session = ''; S.view = null; S.pending = null;
+    showLobby();
+  }
+
+  function copyInvite() {
+    var input = $('inviteToken');
+    if (!input) return;
+    input.select();
+    var copy = navigator.clipboard && navigator.clipboard.writeText
+      ? navigator.clipboard.writeText(input.value)
+      : Promise.reject(new Error('clipboard unavailable'));
+    copy.then(function () { status('邀请链接已复制。', 'ok'); })
+      .catch(function () { status('请手动复制邀请链接。', 'error'); });
+  }
+
+  function inviteUrl() {
+    if (!S.view) return '';
+    return location.origin + location.pathname + '?room=' + encodeURIComponent(S.view.roomId) +
+      '&code=' + encodeURIComponent(S.view.inviteCode || '');
+  }
+  function isHost() {
+    return !!(S.view && S.view.seats && S.view.you != null && S.view.seats[S.view.you] &&
+      S.view.seats[S.view.you].isHost);
+  }
+  function legalActions() {
+    return (S.view && S.view.legalActions) || [];
+  }
+  function legalOf(type) {
+    return legalActions().filter(function (move) { return move.type === type; });
+  }
+  function myTurn() {
+    return !!(S.view && S.view.state && !S.view.state.over && S.view.you != null &&
+      S.view.state.current === S.view.you && (S.view.legalActions || []).length > 0);
+  }
+  function phaseName(phase) {
+    return ({ reveal: '看词阶段', speak: '发言讨论', vote: '投票阶段', over: '已结束' })[phase] || phase;
+  }
+
+  function render() {
+    var view = S.view;
+    if (!view) return;
+    $('roomCode').textContent = view.code || view.roomId || '——';
+    var humans = (view.seats || []).filter(function (s) { return !s.ai; }).length;
+    $('roomStatus').textContent = (!view.started ? '等待开始' : (view.over ? '已结束' : '对局中')) +
+      ' · 玩家 ' + humans + '/' + (view.seats || []).length;
+    $('versionChip').hidden = !view.stateVersion;
+    $('versionChip').textContent = '版本 ' + (view.stateVersion || 0);
+    $('seatList').innerHTML = (view.seats || []).map(function (s) {
+      var tags = [];
+      if (s.isYou) tags.push('你');
+      if (s.isHost) tags.push('房主');
+      if (s.ai) tags.push('AI 补位');
+      if (view.started && !view.over && view.state && view.state.current === s.index) tags.push('行动中');
+      if (view.state && view.state.players && view.state.players[s.index] && !view.state.players[s.index].alive) tags.push('已出局');
+      return '<div class="seat' + (view.started && !view.over && view.state && view.state.current === s.index ? ' current' : '') +
+        (view.state && view.state.players && view.state.players[s.index] && !view.state.players[s.index].alive ? ' out' : '') + '">' +
+        '<span class="idx">' + (s.index + 1) + '</span>' +
+        '<span class="who">' + esc(s.name) + '</span>' +
+        '<span class="tag' + (s.isYou ? ' me' : '') + '">' + esc(tags.join(' · ') || '等待') + '</span></div>';
+    }).join('');
+    $('startBtn').hidden = !(isHost() && !view.started);
+    $('inviteBtn').hidden = !isHost();
+    $('closeBtn').hidden = !isHost();
+    $('restartBtn').hidden = !view.canRestart;
+    $('inviteBox').hidden = !view.inviteCode;
+    $('inviteToken').value = view.inviteCode ? inviteUrl() : '';
+    $('gameSection').hidden = !view.started;
+    $('turnBadge').hidden = !view.started;
+    if (!view.started) {
+      $('gameBody').innerHTML = '';
+      $('metrics').innerHTML = '';
+      $('turnBadge').textContent = '等待房主开始';
+      $('turnBadge').className = 'turn-badge wait';
+      return;
+    }
+    renderGame(view);
+  }
+
+  function renderGame(view) {
+    var state = view.state;
+    if (!state) return;
+    var mine = view.you;
+    var me = mine == null ? null : (state.players || [])[mine];
+    var now = myTurn();
+    $('turnBadge').textContent = state.over ? '本局结束' : (now ? '轮到你行动' : '等待其他玩家');
+    $('turnBadge').className = 'turn-badge' + (now ? '' : ' wait');
+    $('metrics').innerHTML =
+      '<span class="metric">阶段 <b>' + esc(phaseName(state.phase)) + '</b></span>' +
+      '<span class="metric">第 <b>' + state.round + '</b> 轮</span>' +
+      '<span class="metric">存活 <b>' + (state.players || []).filter(function (p) { return p.alive; }).length + '</b></span>' +
+      '<span class="metric">已投 <b>' + (state.votedCount || 0) + '</b></span>';
+    var html = '';
+    if (me) {
+      html += '<div class="identity">' +
+        '<div class="role">你的身份 · ' + esc(roleLabel(me.role)) + '</div>' +
+        '<div class="word">' + esc(me.role === 'b' ? '白板 · 无词' : me.word) + '</div>' +
+        '<div class="hint">只有你能看到自己的词；其他人的身份在终局前保密。</div></div>';
+    }
+    var currentName = state.current != null && state.players[state.current] ? state.players[state.current].name : '—';
+    html += '<p class="hint" style="margin-top:8px">' +
+      (state.over ? '对局已结束，身份公开。' : '当前：' + esc(currentName)) + '</p>';
+    html += '<h3 style="font-size:14px;margin-top:14px">玩家</h3><div class="players">';
+    (state.players || []).forEach(function (p) {
+      var tags = [];
+      if (p.index === mine) tags.push('你');
+      if (!p.alive) tags.push('已出局');
+      else if (p.revealed) tags.push('已看词');
+      if (p.isAI) tags.push('AI');
+      var roleHtml = '';
+      if (p.role !== undefined) {
+        roleHtml = '<span class="role-pill ' + esc(p.role) + '">' + esc(roleLabel(p.role)) + '</span>';
+      }
+      html += '<div class="prow' + (p.index === mine ? ' me' : '') + (p.alive ? '' : ' out') + '">' +
+        '<span class="nm">' + esc(p.name) + '</span>' +
+        roleHtml +
+        (p.word !== undefined && p.role !== 'b' ? '<span class="hint">' + esc(p.word) + '</span>' : '') +
+        '<span class="st"><span>' + esc(tags.join(' · ') || '存活') + '</span>' +
+        '<span>票 <b>' + (p.votes || 0) + '</b></span></span></div>';
+    });
+    html += '</div>';
+
+    var last = state.lastElim;
+    if (last) {
+      html += '<div class="section"><h3 style="font-size:14px">最近淘汰</h3><p class="hint">';
+      if (last.tie) html += '平票，本轮无人淘汰。';
+      else {
+        var pid = last.pid;
+        var pname = pid != null && state.players[pid] ? state.players[pid].name : '玩家';
+        html += esc(pname) + ' 被淘汰。';
+        if (last.role !== undefined) html += ' 身份：' + esc(roleLabel(last.role)) + (last.word ? ' · ' + esc(last.word) : '');
+      }
+      html += '</p></div>';
+    }
+
+    var actionsHtml = '';
+    if (!state.over && now) {
+      if (state.phase === 'reveal') {
+        actionsHtml = '<button class="btn primary" id="revealBtn" type="button">我已看词</button>';
+      } else if (state.phase === 'speak') {
+        actionsHtml = '<button class="btn primary" id="beginVoteBtn" type="button">讨论结束，开始投票</button>';
+      } else if (state.phase === 'vote') {
+        var votes = legalOf('vote');
+        actionsHtml = '<div class="actions-grid">';
+        votes.forEach(function (move) {
+          var target = state.players[move.target];
+          actionsHtml += '<button class="vote-btn" type="button" data-target="' + move.target + '">' +
+            '<span class="av">' + (move.target + 1) + '</span><span>' + esc(target ? target.name : ('座位 ' + (move.target + 1))) + '</span></button>';
+        });
+        actionsHtml += '</div>';
+      }
+    }
+    if (actionsHtml) html += '<div class="actions">' + actionsHtml + '</div>';
+
+    if (state.over) {
+      var result = view.result || state.result || {};
+      var winnerSide = result.winnerSide || state.winnerSide || 'civ';
+      html += '<div class="result"><h3>' + (winnerSide === 'civ' ? '平民阵营获胜' : '卧底阵营获胜') + '</h3>' +
+        '<p class="hint">' + esc(result.reason || (winnerSide === 'civ' ? '卧底方全部出局。' : '卧底方人数已不少于平民。')) + '</p>';
+      var rows = (state.result && state.result.players) || (state.players || []);
+      rows.forEach(function (p) {
+        html += '<div class="srow"><span>' + esc(p.name) + (p.alive ? '' : ' · 已出局') + '</span>' +
+          '<span>' + esc(roleLabel(p.role)) + (p.role === 'b' ? ' · 无词' : (p.word ? ' · ' + esc(p.word) : '')) + '</span></div>';
+      });
+      html += '<p class="hint">房主可以再来一局。</p></div>';
+    }
+
+    html += '<div class="section"><h3 style="font-size:14px">战报</h3><div class="log">';
+    html += (state.history || []).slice(-20).reverse().map(function (entry) {
+      var text = entry.type;
+      if (entry.type === 'reveal') text = '座位 ' + (entry.pid + 1) + ' 已看词';
+      else if (entry.type === 'beginVote') text = '第 ' + entry.round + ' 轮开始投票';
+      else if (entry.type === 'vote') text = '座位 ' + (entry.from + 1) + ' → 座位 ' + (entry.to + 1);
+      else if (entry.type === 'eliminate') text = '座位 ' + (entry.pid + 1) + ' 被淘汰';
+      else if (entry.type === 'tie') text = '第 ' + entry.round + ' 轮平票';
+      else if (entry.type === 'nextRound') text = '进入第 ' + entry.round + ' 轮';
+      else if (entry.type === 'gameOver') text = '对局结束 · ' + (entry.winnerSide === 'civ' ? '平民胜' : '卧底方胜');
+      else if (entry.type === 'deal') text = '发牌：' + entry.players + ' 人 · 卧底 ' + entry.undercover + ' 人';
+      return '<div class="row"><span class="t">' + esc(entry.round || '') + '</span><span>' + esc(text) + '</span></div>';
+    }).join('') || '<div class="row"><span>还没有战报。</span></div>';
+    html += '</div>';
+    html += '<h3 style="font-size:14px;margin-top:14px">联机战报</h3><div class="log">';
+    html += (view.history || []).slice(-12).reverse().map(function (entry) {
+      var action = entry.action || {};
+      var text = entry.type;
+      if (entry.type === 'start') text = '对局开始';
+      else if (entry.type === 'restart') text = '房主重开对局';
+      else if (entry.type === 'over') text = '对局结束';
+      else if (entry.type === 'human') text = '座位 ' + (entry.seat + 1) + ' · ' + action.type + (action.target != null ? ' → 座位 ' + (action.target + 1) : '');
+      else if (entry.type === 'ai') text = 'AI 座位 ' + (entry.seat + 1) + ' · ' + action.type + (action.target != null ? ' → 座位 ' + (action.target + 1) : '');
+      return '<div class="row"><span class="t">v' + (entry.stateVersion || 0) + '</span><span>' + esc(text) + '</span></div>';
+    }).join('') || '<div class="row"><span>还没有联机战报。</span></div>';
+    html += '</div></div>';
+    $('gameBody').innerHTML = html;
+
+    var revealBtn = $('revealBtn');
+    if (revealBtn) revealBtn.addEventListener('click', function () { sendAction({ type: 'reveal' }); });
+    var beginVoteBtn = $('beginVoteBtn');
+    if (beginVoteBtn) beginVoteBtn.addEventListener('click', function () { sendAction({ type: 'beginVote' }); });
+    Array.prototype.forEach.call($('gameBody').querySelectorAll('[data-target]'), function (btn) {
+      btn.addEventListener('click', function () {
+        sendAction({ type: 'vote', target: Number(btn.getAttribute('data-target')) });
+      });
+    });
+  }
+
+  async function loadLeaderboard() {
+    var box = $('leaderboard');
+    if (!box) return;
+    var res = await api('GET', '/api/leaderboard?game=' + encodeURIComponent(GAME));
+    if (res.status !== 200 || !res.body || !res.body.entries) return;
+    var entries = res.body.entries.slice(0, 6);
+    if (!entries.length) {
+      box.innerHTML = '<div class="row"><span>还没有完成的联机对局</span></div>';
+      return;
+    }
+    box.innerHTML = entries.map(function (entry) {
+      return '<div class="row"><span class="t">' + (entry.seat + 1) + '</span><span>' +
+        esc(entry.name || '玩家') + (entry.ai ? ' · AI' : '') + ' · ' +
+        (entry.winner ? '胜' : '负') + '</span></div>';
+    }).join('');
+  }
+
+  function bind() {
+    $('hostName').value = savedName();
+    $('joinName').value = savedName();
+    $('createBtn').addEventListener('click', createRoom);
+    $('joinBtn').addEventListener('click', joinRoom);
+    $('startBtn').addEventListener('click', startGame);
+    $('inviteBtn').addEventListener('click', inviteAgain);
+    $('restartBtn').addEventListener('click', restartGame);
+    $('copyInvite').addEventListener('click', copyInvite);
+    $('leaveBtn').addEventListener('click', leaveRoom);
+    $('closeBtn').addEventListener('click', closeRoom);
+    $('newRoomBtn').addEventListener('click', forgetRoom);
+
+    S.playerId = readJSON(GAME + '-player') || randomId();
+    writeJSON(GAME + '-player', S.playerId);
+
+    var q = new URLSearchParams(location.search);
+    var room = q.get('room') || q.get('online') || '';
+    var qSession = q.get('session') || '';
+    var qPlayer = q.get('player') || '';
+    if (qPlayer) S.playerId = qPlayer;
+    if (q.get('code')) $('joinInvite').value = q.get('code');
+    if (room) {
+      $('joinCode').value = room;
+      var saved = readJSON(GAME + '-online-session-' + room);
+      if (qSession) saved = { session: qSession, playerId: S.playerId };
+      if (saved && saved.session) {
+        S.room = room;
+        S.session = saved.session;
+        S.playerId = saved.playerId || S.playerId;
+        api('POST', roomUrl('/reconnect'), { session: S.session, playerId: S.playerId }).then(function (res) {
+          if (res.status === 200) {
+            enter(res.body);
+            status('已重连到房间。', 'ok');
+          } else {
+            status('上次的房间会话已失效，请重新加入。', 'error');
+          }
+        });
+      }
+    }
+    loadLeaderboard();
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
+  else bind();
+})();
 </script>
 </body>
 </html>

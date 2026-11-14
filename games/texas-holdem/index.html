@@ -46,6 +46,7 @@
 }
 </script>
 <link rel="stylesheet" href="/games/shared/arcade/legacy-mobile.css">
+<link rel="stylesheet" href="/games/shared/poker-ui.css">
 
 <style>
 :root{
@@ -87,30 +88,23 @@ a{color:inherit}
   background:transparent;color:var(--on-dark-muted);font-size:13px;font-weight:600;cursor:pointer}
 .langs button[aria-pressed="true"]{background:var(--on-dark);color:var(--dark);border-color:var(--on-dark)}
 
-.hero{padding:24px 0 4px}
+.hero{padding:10px 0 0}
 .eyebrow{font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.12em;
-  text-transform:uppercase;color:var(--accent-2);margin:0 0 8px}
-.hero h1{font-size:clamp(2rem,7.8vw,2.7rem);line-height:1.08;letter-spacing:-.02em;margin:0 0 8px}
-.lede{color:var(--muted);font-size:15.5px}
+  text-transform:uppercase;color:var(--accent-2);margin:0 0 4px}
+.hero h1{font-size:clamp(2rem,7.8vw,2.7rem);line-height:1.08;letter-spacing:-.02em;margin:0 0 4px}
+.lede{color:var(--muted);font-size:15.5px;line-height:1.45}
 
-.compliance{margin:16px 0 0;display:flex;gap:11px;align-items:flex-start;padding:13px 14px;
+.compliance{margin:8px 0 0;display:flex;gap:9px;align-items:flex-start;padding:9px 12px;
   border-radius:14px;background:var(--dark);color:var(--on-dark);border-left:4px solid var(--accent);
   box-shadow:0 8px 20px rgba(43,47,54,.14)}
-.compliance .shield{width:30px;height:30px;border-radius:50%;background:rgba(185,138,90,.22);
-  display:flex;align-items:center;justify-content:center;font-weight:800;color:#f0c894;flex:none;font-size:15px}
-.compliance strong{display:block;font-size:13px;letter-spacing:.03em;color:#f0c894;margin-bottom:2px}
-.compliance p{font-size:13.5px;line-height:1.5;color:var(--on-dark)}
+.compliance .shield{width:26px;height:26px;border-radius:50%;background:rgba(185,138,90,.22);
+  display:flex;align-items:center;justify-content:center;font-weight:800;color:#f0c894;flex:none;font-size:14px}
+.compliance strong{display:block;font-size:13px;letter-spacing:.03em;color:#f0c894;margin-bottom:1px}
+.compliance p{font-size:13.5px;line-height:1.45;color:var(--on-dark)}
 
-.game{margin:14px 0 0}
-.table{border-radius:22px;padding:12px 10px 10px;color:var(--on-dark);position:relative;overflow:hidden;
-  background:
-    radial-gradient(120% 80% at 50% 0%,rgba(185,138,90,.18),transparent 60%),
-    radial-gradient(90% 70% at 50% 100%,rgba(0,0,0,.28),transparent 70%),
-    linear-gradient(160deg,var(--felt),var(--felt-2));
-  box-shadow:inset 0 0 0 1px rgba(243,234,217,.08),0 18px 40px rgba(43,47,54,.22)}
-.table::after{content:"";position:absolute;inset:7px;border:1px solid rgba(243,234,217,.09);
-  border-radius:17px;pointer-events:none}
-.table-grid{position:relative;z-index:1;display:grid;gap:6px;
+.game{margin:8px 0 0}
+.table{padding:8px 8px 6px}
+.table-grid{position:relative;z-index:1;display:grid;gap:4px;
   grid-template-columns:minmax(0,1fr) minmax(0,1.55fr) minmax(0,1fr);
   grid-template-rows:auto minmax(112px,auto) auto;align-items:center}
 .seat{min-width:0;padding:5px 6px;border-radius:12px;transition:background .16s ease,box-shadow .16s ease}
@@ -118,7 +112,16 @@ a{color:inherit}
 .seat-left{grid-column:1;grid-row:2;justify-self:start}
 .seat-right{grid-column:3;grid-row:2;justify-self:end}
 .seat-bottom{grid-column:2;grid-row:3}
-.seat.active{background:rgba(185,138,90,.20);box-shadow:inset 0 0 0 1px rgba(207,157,104,.55)}
+/* 左右座位从同一行顶开始，徽章多少不一致时头像与手牌仍横向对齐。 */
+.seat-left,.seat-right{align-self:start}
+/* 三个 AI 座位保持同一形态：一律无底。当前行动只加头像描边，
+   不再整块换底色/换形态（原先只有 AI3 是棕底圆角块）。 */
+.seat.active,
+.pui-seat:where(.is-active){background:transparent;box-shadow:none}
+.seat.active .avatar,
+.pui-seat:where(.is-active) .pui-seat__avatar{
+  box-shadow:0 0 0 2px #f3ead9,0 0 0 3px rgba(0,0,0,.4),0 2px 0 rgba(0,0,0,.25)}
+.seat.active .pui-seat__name{color:#f0c894}
 .seat.folded{opacity:.55}
 .seat-head{display:flex;align-items:center;gap:7px;min-width:0}
 .seat-right .seat-head{flex-direction:row-reverse;text-align:right}
@@ -128,9 +131,10 @@ a{color:inherit}
   box-shadow:0 2px 0 rgba(0,0,0,.25)}
 .seat-meta{min-width:0;line-height:1.15}
 .seat-meta strong{display:block;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:86px}
-.seat-meta span{display:block;font-family:var(--mono);font-size:12px;color:var(--on-dark-muted);margin-top:2px}
+.seat-meta span{display:block;font-family:var(--mono);font-size:12px;color:var(--on-dark-muted);margin-top:2px;
+  white-space:pre-line;line-height:1.3}
 .seat-meta .turn{color:#f0c894;font-weight:700}
-.hole{display:flex;gap:3px;margin-top:4px;min-height:44px}
+.hole{display:flex;gap:3px;margin-top:4px;min-height:40px}
 .seat-right .hole{justify-content:flex-end}
 .seat-bottom .hole{justify-content:center;min-height:64px}
 .badges{display:flex;gap:3px;margin-top:3px;flex-wrap:wrap}
@@ -138,7 +142,7 @@ a{color:inherit}
 .seat-bottom .badges{justify-content:center}
 .badge{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.04em;padding:1px 4px;border-radius:4px;
   background:rgba(243,234,217,.14);color:var(--on-dark-muted)}
-.badge.btn{background:var(--on-dark);color:var(--dark)}
+.badge.dealer{background:var(--on-dark);color:var(--dark)}
 .badge.sb{background:rgba(185,138,90,.35);color:#f6dfc2}
 .bet{margin-top:3px;font-family:var(--mono);font-size:12px;color:#f0c894;min-height:14px;text-align:center}
 .seat-right .bet{text-align:right}
@@ -151,28 +155,18 @@ a{color:inherit}
 .street{font-size:12px;font-weight:700;padding:2px 7px;border-radius:999px;background:rgba(243,234,217,.12);
   color:var(--on-dark)}
 .board{display:flex;gap:4px;justify-content:center;align-items:center;min-height:60px}
-.pcard{position:relative;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;
-  width:38px;height:54px;border-radius:6px;background:linear-gradient(180deg,#fffdf7,#f3ead9);
-  color:#2b2f36;border:1px solid #cbbba2;box-shadow:0 2px 5px rgba(0,0,0,.25);
-  font-family:var(--card);line-height:1;flex:none}
-.pcard .p-rank{font-size:16px;font-weight:700}
-.pcard .p-suit{font-size:14px;margin-top:1px}
-.pcard.red{color:#c0392b}
-.pcard.back{background:linear-gradient(145deg,#855c34,#5d3f23);border-color:#a87a4c;color:#f3ead9}
-.pcard.back .back-mark{font-size:18px;opacity:.75}
-.pcard.slot{background:rgba(243,234,217,.05);border:1px dashed rgba(243,234,217,.22);box-shadow:none}
-.pcard.sm{width:29px;height:42px;border-radius:5px}
-.pcard.sm .p-rank{font-size:12px}
-.pcard.sm .p-suit{font-size:10px}
-.pcard.best{outline:2px solid #f0c894;outline-offset:1px}
-.pcard.big{width:43px;height:61px}
+/* 牌面、牌背、空位、牌堆与筹码全部由 shared/poker-ui 的 token 决定尺寸。
+   牌桌是深色桌面，这里只把纸牌色固定在浅色 token 上，避免深色主题把牌也变暗。 */
+.table .pui-card{--pui-paper:#f3ead9;--pui-paper-2:#fbf6ea;--pui-ink:#2b2f36;
+  --pui-line:#dcccb3;--pui-line-strong:#c9b697;--pui-red:#c0392b;--pui-gold:#f0c894}
+.pot-chips{display:inline-flex;align-items:center;min-height:20px;vertical-align:middle}
 .result{margin-top:7px;font-size:12px;line-height:1.45;color:var(--on-dark);min-height:0}
 .result:empty{display:none}
 .result .win{color:#f0c894;font-weight:700}
 .result .pot-list{color:var(--on-dark-muted);font-size:12px;margin-top:2px}
 .hand-info{margin-top:7px;font-size:12px;color:var(--on-dark-muted);min-height:15px}
 
-.controls{margin-top:10px;padding:10px;border-radius:16px;background:var(--paper-2);border:1px solid var(--line)}
+.controls{margin-top:6px;padding:8px;border-radius:16px;background:var(--paper-2);border:1px solid var(--line)}
 .action-buttons{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
 .btn{min-height:46px;border-radius:11px;border:1px solid var(--line-strong);background:var(--paper);
   font-weight:700;font-size:13.5px;cursor:pointer;padding:4px 6px;transition:transform .08s ease,background .15s ease}
@@ -211,12 +205,11 @@ footer{margin:22px 0 0;color:var(--muted-2);font-size:12px;line-height:1.6;borde
 footer a{color:inherit}
 
 @media (max-width:430px){
-  .pcard{width:34px;height:48px}
-  .pcard.sm{width:26px;height:38px}
-  .pcard.big{width:37px;height:53px}
   .seat-left,.seat-right{max-width:92px}
   .seat-meta strong{max-width:64px}
-  .action-buttons{grid-template-columns:repeat(3,minmax(0,1fr))}
+  /* 4 个操作按钮排成一行（过牌/跟注互斥，任一时刻正好 4 个），
+     避免「全下」换行后被 844 首屏裁掉。 */
+  .action-buttons{grid-template-columns:repeat(4,minmax(0,1fr))}
   .btn.wide{grid-column:span 1}
 }
 @media (prefers-reduced-motion:reduce){.seat,.btn{transition:none}}
@@ -250,12 +243,12 @@ footer a{color:inherit}
   </aside>
 
   <section class="game" aria-label="德州扑克牌桌">
-    <div class="table">
+    <div class="pui pui-table table">
       <div class="table-grid">
         <div class="seat seat-top" id="seat-2" aria-label="AI 2"></div>
         <div class="seat seat-left" id="seat-1" aria-label="AI 1"></div>
         <div class="board-area">
-          <div class="pot-line"><span class="label" data-i18n="pot">底池</span><strong id="pot">0</strong><span class="street" id="street">—</span></div>
+          <div class="pot-line"><span class="label" data-i18n="pot">底池</span><strong id="pot">0</strong><span id="pot-chips" class="pot-chips" aria-hidden="true"></span><span class="street" id="street">—</span></div>
           <div class="board" id="board" aria-label="公共牌"></div>
           <div class="hand-info" id="hand-info"></div>
           <div class="result" id="result" aria-live="polite"></div>
@@ -309,6 +302,7 @@ footer a{color:inherit}
 <script src="/games/shared/hand-eval.js"></script>
 <script src="/games/shared/shuffle.js"></script>
 <script src="/games/shared/store.js"></script>
+<script src="/games/shared/poker-ui.js"></script>
 <script id="engine">
 (function (global) {
   'use strict';
@@ -1152,6 +1146,25 @@ footer a{color:inherit}
     render();
   }
 
+  function migrateActionBar() {
+    var UI = window.PokerUI;
+    var host = document.querySelector('.action-buttons');
+    if (!UI || !UI.createActionBar || !host) return;
+    var bar = UI.createActionBar({
+      className: 'action-buttons',
+      columns: 5,
+      actions: [
+        { id: 'fold', label: t('fold'), kind: 'fold', elementId: 'btn-fold', className: 'btn fold', attrs: { 'data-i18n': 'fold' } },
+        { id: 'check', label: t('check'), kind: 'check', elementId: 'btn-check', className: 'btn', attrs: { 'data-i18n': 'check' } },
+        { id: 'call', label: t('call'), kind: 'call', elementId: 'btn-call', className: 'btn primary', primary: true },
+        { id: 'raise', label: t('raise'), kind: 'raise', elementId: 'btn-raise', className: 'btn dark' },
+        { id: 'allin', label: t('allIn'), kind: 'allin', elementId: 'btn-allin', className: 'btn', attrs: { 'data-i18n': 'allIn' } }
+      ]
+    });
+    if (bar) host.replaceWith(bar);
+  }
+  migrateActionBar();
+
   var els = {
     seat: [document.getElementById('seat-0'), document.getElementById('seat-1'), document.getElementById('seat-2'), document.getElementById('seat-3')],
     board: document.getElementById('board'),
@@ -1187,32 +1200,43 @@ footer a{color:inherit}
     return t('ai') + ' ' + seat;
   }
 
-  function cardEl(c, hidden, extraClass) {
+  // 牌面/牌背/空位统一交给 shared/poker-ui 渲染，尺寸只取它的大小 token
+  // （sm/md/big）；隐藏牌的 size 与同座位明牌完全一致。
+  function cardEl(c, hidden, size) {
+    var UI = window.PokerUI;
+    size = size || 'md';
+    if (UI) {
+      if (hidden) {
+        var back = UI.createCardBack({ size: size, ariaLabel: t('hidden') });
+        if (back) return back;
+      } else if (!c) {
+        var slot = UI.createSlot({ size: size });
+        if (slot) return slot;
+      } else {
+        var face = UI.createCard(c, { size: size });
+        if (face) return face;
+      }
+    }
+    // shared/poker-ui.js 未加载时的降级：仍用同一套 pui class contract，
+    // 页面样式无需再为牌面准备第二套 CSS。
     var el = document.createElement('span');
-    el.className = 'pcard' + (hidden ? ' back' : '') + (extraClass ? ' ' + extraClass : '');
+    el.className = 'pui pui-card pui-card--' + size +
+      (hidden ? ' is-back' : (c ? '' : ' is-slot')) +
+      (c && !hidden && (c.s === 'h' || c.s === 'd') ? ' is-red' : '');
     if (hidden) {
+      el.setAttribute('role', 'img');
       el.setAttribute('aria-label', t('hidden'));
-      var m = document.createElement('span');
-      m.className = 'back-mark';
-      m.textContent = '♠';
-      el.appendChild(m);
+      el.innerHTML = '<span class="pui-card__back-mark" aria-hidden="true">♠</span>';
       return el;
     }
     if (!c) {
-      el.className += ' slot';
       el.setAttribute('aria-hidden', 'true');
       return el;
     }
-    if (c.s === 'h' || c.s === 'd') el.className += ' red';
+    el.setAttribute('role', 'img');
     el.setAttribute('aria-label', P.rankLabel(c.r) + P.SUIT_SYMBOLS[c.s]);
-    var r = document.createElement('span');
-    r.className = 'p-rank';
-    r.textContent = P.rankLabel(c.r);
-    var su = document.createElement('span');
-    su.className = 'p-suit';
-    su.textContent = P.SUIT_SYMBOLS[c.s];
-    el.appendChild(r);
-    el.appendChild(su);
+    el.innerHTML = '<span class="pui-face__rank">' + P.rankLabel(c.r) + '</span>' +
+      '<span class="pui-face__suit">' + P.SUIT_SYMBOLS[c.s] + '</span>';
     return el;
   }
 
@@ -1244,59 +1268,150 @@ footer a{color:inherit}
 
   function renderSeat(seat) {
     var p = state.players[seat];
-    var el = els.seat[seat];
-    if (!el) return;
+    var host = els.seat[seat];
+    if (!host) return;
     var isHuman = seat === 0;
     var showHole = isHuman || (state.street === 'complete' && !p.folded);
+    var active = state.toAct === seat && state.street !== 'complete';
+    var status = statusOf(p, seat);
+    var badges = [];
+    if (state.dealer === seat && state.street !== 'idle') badges.push({ text: t('dealer'), className: 'dealer' });
+    if (state.sbSeat === seat) badges.push({ text: t('sb'), className: 'sb' });
+    if (state.bbSeat === seat) badges.push({ text: t('bb'), className: '' });
+    if (status) badges.push({ text: status, className: '' });
+    var seatClass = 'seat seat-' + ['bottom', 'left', 'top', 'right'][seat] +
+      (active ? ' active' : '') + (p.folded ? ' folded' : '');
+    var aria = seatName(seat) + ', ' + p.chips + ' ' + t('chipUnit') +
+      (status ? ', ' + status : '') +
+      (p.folded ? '' : (showHole && p.hole && p.hole.length
+        ? ', ' + p.hole.map(function (c) { return P.rankLabel(c.r) + P.SUIT_SYMBOLS[c.s]; }).join(' ')
+        : ''));
+
+    if (window.PokerUI && window.PokerUI.createSeat) {
+      var seatEl = window.PokerUI.createSeat({
+        name: seatName(seat),
+        avatar: isHuman ? 'YOU' : 'AI' + seat,
+        chips: p.chips,
+        // 数字与单位固定两行，三个 AI 座位筹码区等高（68 与 741 不再一行/两行错位）。
+        chipsText: p.chips + '\n' + t('chipUnit'),
+        chipsClassName: active ? 'turn' : '',
+        holeCards: p.hole || [],
+        hidden: !showHole,
+        renderCard: function (c, index, hidden) { return cardEl(c, hidden, isHuman ? 'big' : 'sm'); },
+        holeClassName: 'hole',
+        badges: badges,
+        bet: p.bet > 0 ? p.bet : null,
+        active: active,
+        folded: !!p.folded,
+        out: false,
+        size: isHuman ? 'big' : 'sm',
+        className: seatClass
+      });
+      if (seatEl) {
+        seatEl.id = 'seat-' + seat;
+        // Keep the legacy class hooks so the page CSS remains the visual source.
+        var head = seatEl.querySelector('.pui-seat__head'); if (head) head.classList.add('seat-head');
+        var avatar = seatEl.querySelector('.pui-seat__avatar'); if (avatar) avatar.classList.add('avatar');
+        var meta = seatEl.querySelector('.pui-seat__meta'); if (meta) meta.classList.add('seat-meta');
+        var hole = seatEl.querySelector('.pui-seat__hole'); if (hole) hole.classList.add('hole');
+        if (isHuman && hole && window.PokerUI.layoutHand) {
+          window.PokerUI.layoutHand(hole, { mode: 'row', gap: 3, watch: false });
+        }
+        var badgeWrap = seatEl.querySelector('.pui-seat__badges'); if (badgeWrap) badgeWrap.classList.add('badges');
+        Array.prototype.forEach.call(seatEl.querySelectorAll('.pui-badge'), function (b) { b.classList.add('badge'); });
+        var betEl = seatEl.querySelector('.pui-seat__bet');
+        if (!betEl) {
+          betEl = document.createElement('div');
+          betEl.className = 'pui-seat__bet bet';
+          seatEl.appendChild(betEl);
+        } else {
+          betEl.classList.add('bet');
+        }
+        seatEl.setAttribute('aria-label', aria);
+        host.replaceWith(seatEl);
+        els.seat[seat] = seatEl;
+        return;
+      }
+    }
+
+    var el = document.createElement('div');
     var html = '';
     html += '<div class="seat-head"><span class="avatar">' + (isHuman ? 'YOU' : 'AI' + seat) + '</span>';
     html += '<div class="seat-meta"><strong>' + seatName(seat) + '</strong><span' +
-      (state.toAct === seat && state.street !== 'complete' ? ' class="turn"' : '') + '>' +
-      p.chips + ' ' + t('chipUnit') + '</span></div></div>';
+      (active ? ' class="turn"' : '') + '>' +
+      p.chips + '\n' + t('chipUnit') + '</span></div></div>';
     el.innerHTML = html;
     var hole = document.createElement('div');
     hole.className = 'hole';
     if (p.hole && p.hole.length) {
       p.hole.forEach(function (c) {
-        hole.appendChild(cardEl(c, !showHole, isHuman ? 'sm big' : 'sm'));
+        hole.appendChild(cardEl(c, !showHole, isHuman ? 'big' : 'sm'));
       });
     }
     el.appendChild(hole);
-    var badges = document.createElement('div');
-    badges.className = 'badges';
-    if (state.dealer === seat && state.street !== 'idle') {
-      var b = document.createElement('span'); b.className = 'badge btn'; b.textContent = t('dealer'); badges.appendChild(b);
-    }
-    if (state.sbSeat === seat) {
-      var s = document.createElement('span'); s.className = 'badge sb'; s.textContent = t('sb'); badges.appendChild(s);
-    }
-    if (state.bbSeat === seat) {
-      var bb = document.createElement('span'); bb.className = 'badge'; bb.textContent = t('bb'); badges.appendChild(bb);
-    }
-    var st = statusOf(p, seat);
-    if (st) {
-      var stEl = document.createElement('span'); stEl.className = 'badge'; stEl.textContent = st; badges.appendChild(stEl);
-    }
-    el.appendChild(badges);
+    var badgesEl = document.createElement('div');
+    badgesEl.className = 'badges';
+    badges.forEach(function (badge) {
+      var b = document.createElement('span');
+      b.className = 'badge' + (badge.className ? ' ' + badge.className : '');
+      b.textContent = badge.text;
+      badgesEl.appendChild(b);
+    });
+    el.appendChild(badgesEl);
     var bet = document.createElement('div');
     bet.className = 'bet';
     bet.textContent = p.bet > 0 ? '+' + p.bet : '';
     el.appendChild(bet);
-    el.className = 'seat seat-' + ['bottom', 'left', 'top', 'right'][seat] +
-      (state.toAct === seat && state.street !== 'complete' ? ' active' : '') +
-      (p.folded ? ' folded' : '');
-    el.setAttribute('aria-label', seatName(seat) + ', ' + p.chips + ' ' + t('chipUnit') +
-      (st ? ', ' + st : '') + (p.folded ? '' : (showHole && p.hole && p.hole.length ? ', ' + p.hole.map(function (c) { return P.rankLabel(c.r) + P.SUIT_SYMBOLS[c.s]; }).join(' ') : '')));
+    el.className = seatClass;
+    el.setAttribute('aria-label', aria);
+    host.replaceWith(el);
+    els.seat[seat] = el;
   }
 
   function renderBoard() {
-    els.pot.textContent = String(P.potTotal(state));
+    var total = P.potTotal(state);
+    els.pot.textContent = String(total);
     var streetKey = 'street' + state.street.charAt(0).toUpperCase() + state.street.slice(1);
     els.street.textContent = state.street === 'complete' ? t('streetComplete') : t(streetKey);
-    els.board.innerHTML = '';
-    for (var i = 0; i < 5; i++) {
-      els.board.appendChild(cardEl(state.board[i] || null, false, 'big'));
+    var UI = window.PokerUI;
+    if (UI && UI.createBoard) {
+      var boardEl = UI.createBoard({
+        slots: 5,
+        cards: state.board,
+        size: 'md',
+        className: 'board',
+        label: t('ariaBoard'),
+        renderCard: function (c) { return cardEl(c, false, 'big'); },
+        renderSlot: function () { return cardEl(null, false, 'big'); }
+      });
+      if (boardEl) {
+        boardEl.id = 'board';
+        els.board.replaceWith(boardEl);
+        els.board = boardEl;
+      }
+    } else {
+      els.board.innerHTML = '';
+      for (var i = 0; i < 5; i++) {
+        els.board.appendChild(cardEl(state.board[i] || null, false, 'big'));
+      }
     }
+    renderPotChips(total);
+  }
+
+  function renderPotChips(total) {
+    var host = document.getElementById('pot-chips');
+    var UI = window.PokerUI;
+    if (!host || !UI || !UI.createChipStack) return;
+    var stack = UI.createChipStack({
+      value: total,
+      max: 4,
+      className: 'pot-chips',
+      label: String(total)
+    });
+    if (!stack) return;
+    stack.id = 'pot-chips';
+    stack.setAttribute('aria-hidden', 'true');
+    host.replaceWith(stack);
   }
 
   function currentHandName() {

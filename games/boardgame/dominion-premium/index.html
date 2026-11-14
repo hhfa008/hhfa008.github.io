@@ -10,7 +10,22 @@
 <meta property="og:image" content="../../assets/art/premium/dominion/og.webp">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
+<script>
+/* ?online=<roomId> opens the unified online client. The local table below is
+ * intentionally untouched; online state lives on the authoritative server. */
+(function () {
+  var q = new URLSearchParams(location.search);
+  var room = q.get('online') || q.get('room');
+  if (!room) return;
+  var next = 'online.html?room=' + encodeURIComponent(room);
+  if (q.get('code')) next += '&code=' + encodeURIComponent(q.get('code'));
+  if (q.get('session')) next += '&session=' + encodeURIComponent(q.get('session'));
+  if (q.get('player')) next += '&player=' + encodeURIComponent(q.get('player'));
+  location.replace(next);
+})();
+</script>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23251b2e'/%3E%3Cpath d='M16 10h32v42l-16-11-16 11z' fill='%23d8b26a'/%3E%3Ccircle cx='32' cy='28' r='7' fill='%23a78be0'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../../shared/poker-ui.css">
 <style>
 :root{
   --bg:#171020;--bg2:#1e1629;--panel:#261d33;--panel2:#30243f;--ink:#f3edf8;--muted:#b6a7c8;
@@ -291,6 +306,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
   </div>
 </div>
 
+<script src="../../shared/poker-ui.js"></script>
 <script src="data.js"></script>
 <script src="engine.js"></script>
 <script>
@@ -364,19 +380,41 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     }
     return '<svg viewBox="0 0 40 32"><path d="M9 27V6l11 4 11-4v21l-11-4z" fill="#b9e0c4" stroke="#3f6b4d" stroke-width="1.5"/><path d="M20 9v15M15 16h10" stroke="#31563c" stroke-width="1.8" stroke-linecap="round"/><circle cx="20" cy="8" r="3" fill="#83c99a" stroke="#31563c" stroke-width="1.2"/></svg>';
   }
-  function cardFace(c, compact) {
+  function cardFaceInner(c) {
     var t = D.TYPES[c.type];
     var coinArt = COIN_ART[c.id];
-    return '<div class="card" style="--tc:' + t.color + '" role="img" aria-label="' + esc(c.name) + '，' + t.name + '，费用 ' + c.cost + '">' +
-      '<div class="cost" aria-hidden="true">' + c.cost + '</div>' +
+    return '<div class="cost" aria-hidden="true">' + c.cost + '</div>' +
       '<div class="glyph" aria-hidden="true">' + icon(c) + '</div>' +
       '<div class="name">' + esc(c.name) + '</div>' +
       (coinArt
         ? '<div class="art coin-art" aria-hidden="true" style="background-image:url(\'' + coinArt + '\')"></div>'
         : '<div class="art" aria-hidden="true">' + icon(c) + '</div>') +
       '<div class="desc">' + esc(c.desc) + '</div>' +
-      '<div class="kind">' + t.name + '</div>' +
+      '<div class="kind">' + t.name + '</div>';
+  }
+  function cardFace(c, compact) {
+    var t = D.TYPES[c.type];
+    return '<div class="card" style="--tc:' + t.color + '" role="img" aria-label="' + esc(c.name) + '，' + t.name + '，费用 ' + c.cost + '">' +
+      cardFaceInner(c) +
       '</div>';
+  }
+  function createFaceCard(c) {
+    var t = D.TYPES[c.type];
+    var label = esc(c.name) + '，' + t.name + '，费用 ' + c.cost;
+    var face = window.PokerUI && window.PokerUI.createCard
+      ? window.PokerUI.createCard(c, {
+        face: 'custom',
+        faceHtml: cardFaceInner(c),
+        className: 'card',
+        tag: 'div',
+        style: { '--tc': t.color },
+        ariaLabel: label
+      })
+      : null;
+    if (face) return face;
+    var holder = document.createElement('div');
+    holder.innerHTML = cardFace(c);
+    return holder.firstChild;
   }
   function effectShort(c) {
     var p = [];
@@ -425,42 +463,75 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     $('hand-hint').textContent = game.over ? '终局' : (game.turn === 1 ? 'AI 行动中' : (game.phase === 'action' ? '点击行动牌打出' : '购买阶段 · 点击上方牌堆买入'));
   }
   function renderSupply() {
-    var html = E.CARDS.map(function (c) {
+    var host = $('supply');
+    host.innerHTML = '';
+    E.CARDS.forEach(function (c) {
       var left = game.supply[c.id];
       var isBuy = canBuy(c.id);
-      var cls = 'pile' + (lastBuy === c.id ? ' bought' : '');
-      return '<button class="' + cls + '" data-buy="' + c.id + '"' + (isBuy ? '' : ' disabled') + ' aria-label="买入' + esc(c.name) + '，费用 ' + c.cost + '，剩余 ' + left + ' 张">' +
-        cardFace(c) +
-        '<span class="meta"><span>余 ' + left + '</span><span class="left">' + c.cost + ' 金</span></span>' +
-        '<span class="buyhint">' + (isBuy ? '可买入' : (game.turn === 0 && game.phase === 'buy' ? (game.coins < c.cost ? '金币不足' : '牌堆已空') : ' ')) + '</span>' +
-        '</button>';
-    }).join('');
-    $('supply').innerHTML = html;
-    Array.prototype.forEach.call($('supply').querySelectorAll('[data-buy]'), function (b) {
-      b.addEventListener('click', function () { humanBuy(b.getAttribute('data-buy')); });
+      var btn = document.createElement('button');
+      btn.className = 'pile' + (lastBuy === c.id ? ' bought' : '');
+      btn.setAttribute('data-buy', c.id);
+      btn.disabled = !isBuy;
+      btn.setAttribute('aria-label', '买入' + esc(c.name) + '，费用 ' + c.cost + '，剩余 ' + left + ' 张');
+      btn.appendChild(createFaceCard(c));
+      var meta = document.createElement('span');
+      meta.className = 'meta';
+      meta.innerHTML = '<span>余 ' + left + '</span><span class="left">' + c.cost + ' 金</span>';
+      btn.appendChild(meta);
+      var hint = document.createElement('span');
+      hint.className = 'buyhint';
+      hint.textContent = isBuy ? '可买入' : (game.turn === 0 && game.phase === 'buy' ? (game.coins < c.cost ? '金币不足' : '牌堆已空') : ' ');
+      btn.appendChild(hint);
+      btn.addEventListener('click', function () { humanBuy(btn.getAttribute('data-buy')); });
+      host.appendChild(btn);
     });
   }
   function renderHand() {
     var hand = game.players[0].hand;
     var ids = [];
     hand.forEach(function (id) { if (ids.indexOf(id) < 0) ids.push(id); });
+    var host = $('hand');
+    host.innerHTML = '';
     if (!ids.length) {
-      $('hand').innerHTML = '<div class="hint" style="padding:8px">手牌为空。</div>';
+      host.innerHTML = '<div class="hint" style="padding:8px">手牌为空。</div>';
       return;
     }
-    $('hand').innerHTML = ids.map(function (id) {
+    ids.forEach(function (id) {
       var c = E.CARD_BY_ID[id];
       var playable = canPlay(id);
       var cnt = countHand(id);
-      return '<div class="hcard' + (playable ? ' playable' : '') + '" role="listitem">' +
-        cardFace(c) +
-        '<div class="row"><span class="cnt">×' + cnt + '</span>' +
-        (c.type === 'action' ? '<button data-play="' + id + '"' + (playable ? '' : ' disabled') + ' aria-label="打出' + esc(c.name) + '">' + (playable ? '打出' : '不可打出') + '</button>' : '<span class="cnt" style="flex:1;font-size:12px">' + effectShort(c) + '</span>') +
-        '</div></div>';
-    }).join('');
-    Array.prototype.forEach.call($('hand').querySelectorAll('[data-play]'), function (b) {
-      b.addEventListener('click', function () { humanPlay(b.getAttribute('data-play')); });
+      var wrap = document.createElement('div');
+      wrap.className = 'hcard' + (playable ? ' playable' : '');
+      wrap.setAttribute('role', 'listitem');
+      wrap.appendChild(createFaceCard(c));
+      var row = document.createElement('div');
+      row.className = 'row';
+      var count = document.createElement('span');
+      count.className = 'cnt';
+      count.textContent = '×' + cnt;
+      row.appendChild(count);
+      if (c.type === 'action') {
+        var play = document.createElement('button');
+        play.setAttribute('data-play', id);
+        play.disabled = !playable;
+        play.setAttribute('aria-label', '打出' + esc(c.name));
+        play.textContent = playable ? '打出' : '不可打出';
+        play.addEventListener('click', function () { humanPlay(id); });
+        row.appendChild(play);
+      } else {
+        var fx = document.createElement('span');
+        fx.className = 'cnt';
+        fx.style.flex = '1';
+        fx.style.fontSize = '12px';
+        fx.textContent = effectShort(c);
+        row.appendChild(fx);
+      }
+      wrap.appendChild(row);
+      host.appendChild(wrap);
     });
+    if (window.PokerUI && window.PokerUI.layoutHand) {
+      window.PokerUI.layoutHand(host, { mode: 'scroll', gap: 8, watch: false });
+    }
   }
   function renderPlayed() {
     var played = game.players[0].playArea;
@@ -593,9 +664,20 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     $('modal').classList.add('show');
     renderAll();
   }
+  function migrateDeckIcons() {
+    var UI = window.PokerUI;
+    if (!UI || !UI.createCardBack) return;
+    Array.prototype.forEach.call(document.querySelectorAll('.deck-tray .card-back-ico:not(.pui-card)'), function (host) {
+      var back = UI.createCardBack({ size: 'mini', tag: 'i', className: 'card-back-ico', ariaLabel: '隐藏的牌' });
+      if (!back) return;
+      back.innerHTML = '';
+      host.replaceWith(back);
+    });
+  }
   function newGame() {
     clearTimeout(aiTimer);
     showAI(false);
+    migrateDeckIcons();
     game = E.createGame({ seed: (Date.now() ^ (Math.random() * 0xffffffff)) >>> 0 });
     lastBuy = ''; lastCoins = 0;
     $('modal').classList.remove('show');

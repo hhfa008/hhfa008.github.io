@@ -1,0 +1,3942 @@
+<!doctype html>
+<!--
+  《全球惊悚：阿撒托斯》· 精品单机版 · UI 二期
+  · 规则完全由 engine.js 驱动：createGame / legalActions / applyAction / result。
+  · 世界地图、地形、人物肖像、怪物剪影、门与末日轨全部为内联 SVG / CSS 绘制。
+  · 零外部图片、零外部依赖、零追踪；手机 390 / 320 宽度不横向滚动。
+-->
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="全球惊悚：阿撒托斯精品单机版。四名调查员环游世界，研究神秘卡、封闭裂隙、对抗怪物，在末日轨归零之前阻止盲目痴愚之神苏醒。纯前端、本地绘制、零外部请求。">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#080a09">
+<meta property="og:title" content="全球惊悚 · 阿撒托斯 · 精品桌游">
+<meta property="og:description" content="四名调查员，十七座地点，十二格末日轨。掷骰、研究、封闭裂隙，在阿撒托斯醒来之前完成三道神秘封印。">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23090b0a'/%3E%3Cpath d='M32 7 12 20l8 30 12-9 12 9 8-30L32 7z' fill='%2317201c' stroke='%23c8a263' stroke-width='2'/%3E%3Ccircle cx='32' cy='31' r='7' fill='%23c8a263'/%3E%3Ccircle cx='32' cy='31' r='2.4' fill='%23090b0a'/%3E%3C/svg%3E">
+<title>全球惊悚 · 阿撒托斯 · 精品桌游</title>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/eldritch-horror-premium/">
+<style>
+/* ------------------------------------------------------------------ *
+ * 设计令牌 · 旧羊皮纸 / 黄铜 / 深渊墨绿 / 血锈                     *
+ * ------------------------------------------------------------------ */
+:root {
+  --font-display: "Songti SC", "Noto Serif SC", "Palatino Linotype", "Iowan Old Style", Georgia, serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", sans-serif;
+
+  --bg: #070909;
+  --bg-2: #0b0f0e;
+  --panel: rgba(18, 24, 22, .94);
+  --panel-2: rgba(24, 31, 28, .86);
+  --panel-3: rgba(9, 12, 11, .72);
+  --ink: #ece2cf;
+  --ink-soft: #d3c4aa;
+  --ink-dim: #a3937b;
+  --gold: #c8a263;
+  --gold-2: #ecd9a8;
+  --gold-3: #8f6b37;
+  --line: rgba(200, 162, 99, .22);
+  --line-soft: rgba(200, 162, 99, .11);
+  --parch: #d9c7a4;
+  --parch-2: #c4ac82;
+  --parch-3: #9c8257;
+  --brown: #4a3720;
+  --teal: #5fb3a1;
+  --teal-2: #9fe3d2;
+  --crimson: #b8483c;
+  --crimson-2: #ed9782;
+  --violet: #8f6fbb;
+  --violet-2: #c8a8ec;
+  --hp: #b94a3f;
+  --hp-2: #e08a6a;
+  --san: #4f9fa6;
+  --san-2: #8fd7d6;
+  --focus: #ffe7b0;
+  --shadow: 0 26px 64px rgba(0, 0, 0, .58);
+  --shadow-soft: 0 12px 28px rgba(0, 0, 0, .38);
+  --radius: 14px;
+  --tap: 44px;
+
+  --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.78' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.42'/%3E%3C/svg%3E");
+  --paper: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.62' numOctaves='4' seed='11' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23p)' opacity='.5'/%3E%3C/svg%3E");
+  --fibers: repeating-linear-gradient(94deg, rgba(88, 62, 30, .045) 0 1px, transparent 1px 5px),
+            repeating-linear-gradient(2deg, rgba(88, 62, 30, .035) 0 1px, transparent 1px 7px);
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.52;
+  background:
+    radial-gradient(860px 640px at 8% -8%, rgba(74, 102, 82, .2), transparent 64%),
+    radial-gradient(720px 560px at 96% -4%, rgba(118, 74, 40, .16), transparent 62%),
+    radial-gradient(1100px 900px at 50% 118%, rgba(0, 0, 0, .82), transparent 66%),
+    linear-gradient(164deg, var(--bg), var(--bg-2) 58%, #060807);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+body.modal-open { overflow: hidden; }
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: var(--noise);
+  background-size: 160px 160px;
+  opacity: .055;
+}
+button, a, [tabindex] { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+button { font: inherit; cursor: pointer; color: inherit; }
+button:disabled { cursor: not-allowed; }
+a { color: var(--gold-2); text-underline-offset: 3px; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 8px; }
+h1, h2, h3, p { margin: 0; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+.defs-only { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+.shell {
+  max-width: 1220px;
+  margin: 0 auto;
+  padding:
+    max(8px, env(safe-area-inset-top))
+    max(8px, env(safe-area-inset-right))
+    max(20px, env(safe-area-inset-bottom))
+    max(8px, env(safe-area-inset-left));
+}
+
+/* ------------------------------------------------------------------ *
+ * 顶栏                                                               *
+ * ------------------------------------------------------------------ */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 2px 9px;
+}
+.brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.brand-mark {
+  width: 44px; height: 44px;
+  flex: none;
+  display: grid; place-items: center;
+  border-radius: 12px;
+  border: 1px solid rgba(200, 162, 99, .4);
+  background:
+    radial-gradient(circle at 34% 28%, rgba(236, 217, 168, .22), transparent 55%),
+    linear-gradient(160deg, #1a211d, #090c0a);
+  box-shadow: inset 0 1px 0 rgba(255, 244, 214, .14), 0 6px 16px rgba(0, 0, 0, .45);
+}
+.brand-mark svg { width: 30px; height: 30px; filter: drop-shadow(0 0 7px rgba(95, 179, 161, .3)); }
+.brand-copy { min-width: 0; }
+.brand h1 {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.06;
+  letter-spacing: .14em;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.brand h1 span { color: var(--gold-2); }
+.brand-sub {
+  margin-top: 3px;
+  font-size: 10px;
+  letter-spacing: .28em;
+  color: var(--ink-dim);
+  white-space: nowrap;
+}
+.top-actions { display: flex; align-items: center; gap: 6px; flex: none; }
+.seed-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 30px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--line-soft);
+  background: rgba(8, 11, 10, .55);
+  color: var(--ink-dim);
+  font-size: 12px;
+  letter-spacing: .04em;
+  white-space: nowrap;
+}
+.seed-chip b { color: var(--ink-soft); font-weight: 600; }
+
+/* ------------------------------------------------------------------ *
+ * 按钮                                                               *
+ * ------------------------------------------------------------------ */
+.btn {
+  min-height: var(--tap);
+  padding: 8px 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 10px;
+  border: 1px solid rgba(200, 162, 99, .32);
+  background:
+    linear-gradient(180deg, rgba(47, 55, 48, .95), rgba(20, 25, 22, .97));
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.2;
+  letter-spacing: .02em;
+  box-shadow: inset 0 1px 0 rgba(255, 244, 214, .08), 0 3px 9px rgba(0, 0, 0, .32);
+  transition: transform .14s ease, border-color .14s ease, filter .14s ease;
+}
+.btn:hover:not(:disabled) { border-color: rgba(236, 217, 168, .7); transform: translateY(-1px); }
+.btn:active:not(:disabled) { transform: translateY(0); }
+.btn svg { width: 18px; height: 18px; flex: none; }
+.btn.primary {
+  border-color: #e8d3a0;
+  background:
+    linear-gradient(180deg, #f0dca8 0%, #d9b977 32%, #bd9455 58%, #8f6a34 100%);
+  color: #1c1408;
+  font-weight: 700;
+  text-shadow: 0 1px 0 rgba(255, 250, 230, .42);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 240, .75),
+    inset 0 -2px 3px rgba(68, 44, 14, .4),
+    0 7px 18px rgba(0, 0, 0, .44);
+  position: relative;
+  overflow: hidden;
+}
+.btn.primary::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(112deg, transparent 26%, rgba(255, 252, 236, .42) 46%, transparent 64%);
+  transform: translateX(-130%);
+  transition: transform .55s ease;
+  pointer-events: none;
+}
+.btn.primary:hover:not(:disabled)::after { transform: translateX(130%); }
+.btn.ghost { background: rgba(13, 17, 15, .62); }
+.btn.danger { border-color: rgba(184, 72, 60, .5); color: #ffd2c6; background: linear-gradient(170deg, rgba(90, 33, 26, .68), rgba(34, 15, 12, .85)); }
+.btn:disabled, .btn[aria-disabled="true"] { opacity: .4; }
+.btn.small { min-height: 36px; padding: 5px 9px; font-size: 12px; }
+.text-link {
+  min-height: var(--tap);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-dim);
+  font-size: 12px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.text-link:hover { color: var(--gold-2); }
+
+/* ------------------------------------------------------------------ *
+ * 布局                                                               *
+ * ------------------------------------------------------------------ */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 366px;
+  gap: 12px;
+  align-items: start;
+}
+.stage { display: grid; gap: 7px; min-width: 0; }
+.side { display: grid; gap: 10px; min-width: 0; }
+@media (max-width: 1020px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+}
+.foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  padding: 8px 4px 0;
+  border-top: 1px solid var(--line-soft);
+  color: var(--ink-dim);
+  font-size: 12px;
+  letter-spacing: .04em;
+}
+
+/* ------------------------------------------------------------------ *
+ * 世界地图卡                                                         *
+ * ------------------------------------------------------------------ */
+.world-card {
+  position: relative;
+  min-width: 0;
+  padding: 7px 7px 0;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background:
+    radial-gradient(540px 240px at 0% 0%, rgba(190, 130, 58, .1), transparent 70%),
+    radial-gradient(460px 220px at 100% 0%, rgba(86, 148, 126, .08), transparent 72%),
+    linear-gradient(178deg, rgba(27, 33, 29, .97), rgba(8, 11, 10, .98));
+  box-shadow: var(--shadow);
+}
+.world-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background-image: var(--noise);
+  background-size: 160px 160px;
+  opacity: .04;
+}
+.world-topline {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  padding: 2px 2px 7px;
+  border-bottom: 1px solid var(--line-soft);
+  margin-bottom: 6px;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 27px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line-soft);
+  background: rgba(7, 10, 9, .55);
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.chip svg { width: 14px; height: 14px; flex: none; }
+.chip b { color: var(--gold-2); font-weight: 700; }
+.chip.round b { font-family: var(--font-display); font-size: 15px; }
+.chip.phase { border-color: rgba(200, 162, 99, .42); color: var(--gold-2); }
+.chip.phase::before {
+  content: "";
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 9px var(--gold);
+  flex: none;
+}
+.chip.phase.encounters { border-color: rgba(95, 179, 161, .45); color: var(--teal-2); }
+.chip.phase.encounters::before { background: var(--teal); box-shadow: 0 0 9px var(--teal); }
+.chip.phase.mythos { border-color: rgba(143, 111, 187, .5); color: var(--violet-2); }
+.chip.phase.mythos::before { background: var(--violet); box-shadow: 0 0 10px var(--violet); }
+.chip.doom { border-color: rgba(184, 72, 60, .36); }
+.chip.doom b { color: #ffb7a3; }
+.chip.mystery { border-color: rgba(95, 179, 161, .28); }
+.world-spacer { flex: 1 1 auto; min-width: 0; }
+.world-title {
+  padding-right: 3px;
+  font-family: var(--font-display);
+  font-size: 12px;
+  letter-spacing: .24em;
+  color: var(--ink-dim);
+  white-space: nowrap;
+}
+
+/* 画框 + 做旧羊皮纸 */
+.world-frame {
+  position: relative;
+  padding: 6px;
+  border-radius: 10px;
+  background:
+    linear-gradient(145deg, #6d5229 0%, #352614 18%, #1c1610 52%, #4a3518 82%, #7c5c2f 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 235, 190, .28),
+    inset 0 -2px 4px rgba(0, 0, 0, .72),
+    0 10px 24px rgba(0, 0, 0, .5);
+}
+.world-frame::before {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 8px;
+  border: 1px solid rgba(20, 14, 8, .9);
+  box-shadow: 0 0 0 1px rgba(214, 176, 106, .22);
+  pointer-events: none;
+}
+.map-parchment {
+  position: relative;
+  aspect-ratio: 1000 / 690;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 4px;
+  isolation: isolate;
+  background:
+    radial-gradient(ellipse at 24% 16%, rgba(247, 233, 202, .82), transparent 48%),
+    radial-gradient(ellipse at 76% 82%, rgba(96, 64, 28, .22), transparent 52%),
+    radial-gradient(circle at 50% 46%, #e2d0ac 0%, #d4c098 46%, #c3ad82 72%, #a98f61 100%);
+  box-shadow:
+    inset 0 0 46px rgba(66, 45, 20, .55),
+    inset 0 0 8px rgba(42, 27, 12, .75);
+}
+.map-parchment::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  background-image: var(--paper), var(--fibers);
+  background-size: 220px 220px, auto, auto;
+  mix-blend-mode: multiply;
+  opacity: .55;
+}
+.map-parchment::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  border-radius: 4px;
+  background:
+    radial-gradient(ellipse at 50% 50%, transparent 52%, rgba(58, 38, 16, .28) 86%, rgba(38, 24, 10, .55) 100%),
+    radial-gradient(circle at 12% 82%, rgba(75, 48, 18, .22), transparent 24%),
+    radial-gradient(circle at 88% 18%, rgba(75, 48, 18, .18), transparent 20%);
+  box-shadow: inset 0 0 0 1px rgba(88, 62, 30, .55);
+}
+.map-art { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.map-nodes { position: absolute; inset: 0; z-index: 2; }
+
+/* SVG 地图笔触 */
+.map-art .graticule { stroke: #6b5433; stroke-width: 1; stroke-dasharray: 2 7; opacity: .3; }
+.map-art .land-fill { stroke: #5e472c; stroke-width: 1.35; stroke-linejoin: round; filter: url(#coastShadow); }
+.map-art .land-hatch { opacity: .55; }
+.map-art .sea-name {
+  fill: #4f543f; opacity: .42;
+  font-family: var(--font-display); font-size: 19px; letter-spacing: .3em;
+}
+.map-art .land-name {
+  fill: #5a4325; opacity: .3;
+  font-family: var(--font-display); font-size: 20px; letter-spacing: .32em; font-weight: 700;
+}
+.map-art .ink-line { fill: none; stroke: #5a4325; stroke-linecap: round; }
+.map-art .blot { fill: #3b2a24; opacity: .16; }
+.map-art .compass-ink { fill: #5e472c; opacity: .48; }
+
+/* 地点节点 */
+.node {
+  position: absolute;
+  width: 44px; height: 44px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.node-btn {
+  position: relative;
+  width: 44px; height: 44px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  pointer-events: auto;
+  border-radius: 50%;
+}
+.node-medal {
+  position: relative;
+  width: 32px; height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid #5b431f;
+  background:
+    radial-gradient(circle at 34% 26%, #f6e7c2 0%, #e2cda0 26%, #c8ad7c 52%, #a3834f 74%, #6f5228 92%, #4a3518 100%);
+  box-shadow:
+    0 3px 6px rgba(44, 30, 12, .58),
+    inset 0 1px 1px rgba(255, 255, 255, .68),
+    inset 0 -2px 3px rgba(70, 45, 18, .6),
+    inset 0 0 0 1px rgba(255, 244, 214, .22);
+  transition: transform .16s ease, box-shadow .16s ease, filter .16s ease;
+}
+.node-medal::before {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  border: 1px solid rgba(92, 64, 28, .55);
+  box-shadow: inset 0 0 5px rgba(255, 245, 220, .38);
+  pointer-events: none;
+}
+.node-medal svg {
+  width: 18px; height: 18px;
+  color: #3b2a15;
+  filter: drop-shadow(0 1px 0 rgba(255, 250, 232, .55));
+}
+.node.city .node-medal {
+  background:
+    radial-gradient(circle at 34% 26%, #f8e9c6 0%, #e5cfa2 24%, #c9ab74 52%, #a07c45 76%, #654a24 94%, #3f2d15 100%);
+}
+.node.wilderness .node-medal {
+  background:
+    radial-gradient(circle at 34% 26%, #e4e6c6 0%, #c3c69c 26%, #99a071 54%, #727b4e 78%, #48512c 95%, #2f361b 100%);
+}
+.node.sea .node-medal {
+  background:
+    radial-gradient(circle at 34% 26%, #dce8e4 0%, #b3c9c2 26%, #849f9c 54%, #5c7777 78%, #354949 95%, #1f2f30 100%);
+}
+.node.wilderness .node-medal svg, .node.sea .node-medal svg { color: #26301f; }
+.node.sea .node-medal svg { color: #19302f; }
+.node-btn:hover .node-medal, .node-btn:focus-visible .node-medal { transform: scale(1.08); }
+.node.active .node-medal {
+  box-shadow:
+    0 0 0 2px rgba(236, 217, 168, .86),
+    0 0 18px rgba(236, 217, 168, .62),
+    0 3px 7px rgba(44, 30, 12, .6),
+    inset 0 1px 1px rgba(255, 255, 255, .75),
+    inset 0 -2px 3px rgba(70, 45, 18, .58);
+}
+.node.active::after {
+  content: "";
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 46px; height: 46px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 1px solid rgba(236, 217, 168, .7);
+  box-shadow: 0 0 14px rgba(236, 217, 168, .42);
+  animation: activeRing 2.4s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes activeRing {
+  0%, 100% { opacity: .35; transform: translate(-50%, -50%) scale(.9); }
+  50% { opacity: .9; transform: translate(-50%, -50%) scale(1.12); }
+}
+.node.reachable .node-btn::after {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(230, 196, 122, .9);
+  box-shadow: 0 0 10px rgba(230, 196, 122, .55), inset 0 0 6px rgba(230, 196, 122, .35);
+  animation: reachPulse 1.9s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes reachPulse {
+  0%, 100% { opacity: .45; transform: scale(.94); }
+  50% { opacity: 1; transform: scale(1.06); }
+}
+.node-label {
+  position: absolute;
+  left: 50%;
+  top: calc(50% + 18px);
+  transform: translateX(-50%);
+  z-index: 2;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: .01em;
+  color: #3a2a16;
+  white-space: nowrap;
+  text-shadow: 0 0 2px #ecdcbc, 0 0 4px #ecdcbc, 0 0 7px #ecdcbc, 0 1px 0 #f6ecd4;
+  pointer-events: none;
+}
+.node.wilderness .node-label { color: #36421f; }
+.node.sea .node-label { color: #294544; font-style: italic; }
+.node.sealed .node-label { color: #6b5127; }
+.label-top { top: auto; bottom: calc(50% + 17px); }
+.label-right { left: calc(50% + 20px); top: 50%; transform: translateY(-50%); }
+.label-left { left: auto; right: calc(50% + 20px); top: 50%; transform: translateY(-50%); }
+.label-bottom { top: calc(50% + 18px); }
+.node.has-gate .node-medal {
+  box-shadow:
+    0 0 0 1px rgba(214, 90, 74, .66),
+    0 0 14px rgba(184, 62, 48, .55),
+    0 3px 6px rgba(44, 30, 12, .58),
+    inset 0 1px 1px rgba(255, 255, 255, .6),
+    inset 0 -2px 3px rgba(70, 45, 18, .6);
+}
+.gate-ring {
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 50px; height: 50px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 1px solid rgba(214, 90, 74, .55);
+  box-shadow: 0 0 14px rgba(184, 62, 48, .5), inset 0 0 9px rgba(184, 62, 48, .35);
+  animation: gatePulse 2.6s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes gatePulse {
+  0%, 100% { opacity: .5; transform: translate(-50%, -50%) scale(.94); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.04); }
+}
+.gate-mark {
+  position: absolute;
+  left: 29px; top: -11px;
+  width: 18px; height: 28px;
+  pointer-events: none;
+  filter: drop-shadow(0 0 6px rgba(232, 104, 82, .9)) drop-shadow(0 1px 2px rgba(0, 0, 0, .8));
+  animation: riftFlicker 3.2s ease-in-out infinite;
+}
+.gate-mark svg { width: 100%; height: 100%; display: block; }
+@keyframes riftFlicker {
+  0%, 100% { opacity: .82; transform: scaleY(1); }
+  40% { opacity: 1; transform: scaleY(1.05); }
+  62% { opacity: .7; transform: scaleY(.97); }
+}
+.seal-mark {
+  position: absolute;
+  left: 0; top: -8px;
+  width: 18px; height: 18px;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .7));
+}
+.seal-mark svg { width: 100%; height: 100%; display: block; }
+
+/* 地图上的调查员 / 怪物 / 线索 */
+.tok-inv {
+  position: absolute;
+  width: 24px; height: 24px;
+  z-index: 2;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 1px solid #f0dbab;
+  box-shadow: 0 0 0 1px #24170b, 0 0 9px var(--pc, rgba(200, 162, 99, .5)), 0 2px 4px rgba(0, 0, 0, .6);
+  background: radial-gradient(circle at 50% 32%, var(--pc, #6f9fd8), #0a0c0b 78%);
+  pointer-events: none;
+}
+.tok-inv svg { width: 100%; height: 100%; display: block; }
+.tok-inv.active-inv { box-shadow: 0 0 0 2px #ffe7b0, 0 0 14px #e6c47a, 0 2px 4px rgba(0, 0, 0, .65); z-index: 3; }
+.tok-inv.dead { filter: grayscale(1) brightness(.6); }
+.clue-badge {
+  position: absolute;
+  right: -5px; bottom: -4px;
+  min-width: 13px; height: 13px;
+  padding: 0 2px;
+  display: grid; place-items: center;
+  font-size: 9px; font-weight: 800; line-height: 1;
+  color: #201506;
+  background: linear-gradient(180deg, #ffe7a6, #d3a74c 70%, #9a7028);
+  border: 1px solid #5c4116;
+  transform: rotate(45deg);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .55);
+}
+.clue-badge > span { transform: rotate(-45deg); }
+.monster-btn {
+  position: absolute;
+  width: 44px; height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  display: grid;
+  place-items: center;
+  z-index: 2;
+  pointer-events: auto;
+  border-radius: 50%;
+}
+.monster-art {
+  position: relative;
+  width: 26px; height: 26px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  border: 1px solid rgba(214, 90, 74, .7);
+  background: radial-gradient(circle at 50% 36%, rgba(52, 30, 40, .96), rgba(9, 10, 12, .98) 74%);
+  box-shadow: 0 0 8px rgba(143, 111, 187, .5), inset 0 0 6px rgba(0, 0, 0, .8);
+}
+.monster-art svg { width: 22px; height: 22px; display: block; }
+.monster-art .hp-pip-row {
+  position: absolute;
+  left: 50%; bottom: -5px;
+  transform: translateX(-50%);
+  display: flex; gap: 2px;
+}
+.monster-art .hp-pip {
+  width: 4px; height: 4px; border-radius: 50%;
+  background: #e08a6a;
+  box-shadow: 0 0 3px rgba(224, 138, 106, .8);
+}
+.monster-art .hp-pip.off { background: #3a3430; box-shadow: none; }
+.monster-count {
+  position: absolute;
+  right: -6px; top: -5px;
+  min-width: 14px; height: 14px;
+  padding: 0 3px;
+  display: grid; place-items: center;
+  border-radius: 999px;
+  border: 1px solid #5b2a28;
+  background: linear-gradient(180deg, #e08a6a, #a8352b);
+  color: #1d0705;
+  font-size: 9px; font-weight: 800; line-height: 1;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .6);
+}
+.monster-btn:hover .monster-art { transform: scale(1.1); box-shadow: 0 0 12px rgba(200, 120, 90, .8); }
+.monster-btn.can-fight .monster-art {
+  border-color: #f0b08f;
+  box-shadow: 0 0 0 1px rgba(255, 220, 180, .5), 0 0 12px rgba(224, 110, 82, .8);
+  animation: huntPulse 1.7s ease-in-out infinite;
+}
+@keyframes huntPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.12); }
+}
+.map-legend {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 5px 12px;
+  flex-wrap: wrap;
+  padding: 6px 3px 7px;
+  color: var(--ink-dim);
+  font-size: 12px;
+  line-height: 1.2;
+}
+.legend-item { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.legend-swatch {
+  width: 13px; height: 13px; flex: none; border-radius: 50%;
+  border: 1px solid #5b431f;
+  background: radial-gradient(circle at 34% 26%, #f2e2bc, #c8ad7c 56%, #6f5228 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5);
+}
+.legend-swatch.wild { background: radial-gradient(circle at 34% 26%, #dfe2c0, #99a071 56%, #3c4624 100%); }
+.legend-swatch.sea { background: radial-gradient(circle at 34% 26%, #d8e6e2, #849f9c 56%, #263b3b 100%); }
+.legend-swatch.gate {
+  border-radius: 2px;
+  background: linear-gradient(160deg, #f0a184, #a8352b 58%, #4a1010);
+  box-shadow: 0 0 6px rgba(214, 90, 74, .7);
+}
+.legend-swatch.monster {
+  border-radius: 6px;
+  background: radial-gradient(circle at 50% 36%, #3a2230, #0a0b0d 76%);
+  box-shadow: 0 0 5px rgba(143, 111, 187, .6);
+}
+.legend-swatch.clue {
+  border-radius: 2px;
+  transform: rotate(45deg);
+  background: linear-gradient(180deg, #ffe7a6, #b98b39);
+  box-shadow: none;
+}
+.legend-swatch.reach {
+  border-radius: 50%;
+  background: transparent;
+  border: 1.5px solid rgba(230, 196, 122, .9);
+  box-shadow: 0 0 6px rgba(230, 196, 122, .6);
+}
+.legend-swatch.inv {
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 32%, #9fe3d2, #0a0c0b 78%);
+  box-shadow: 0 0 0 1px #ecd9a8;
+}
+.legend-item em { font-style: normal; color: var(--ink-soft); }
+
+/* ------------------------------------------------------------------ *
+ * 当前调查员                                                         *
+ * ------------------------------------------------------------------ */
+.active-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 62px minmax(0, 1fr);
+  gap: 10px;
+  padding: 10px;
+  border-radius: 13px;
+  border: 1px solid var(--line);
+  background:
+    radial-gradient(240px 130px at 0% 0%, var(--pc-glow, rgba(111, 159, 216, .13)), transparent 72%),
+    linear-gradient(168deg, rgba(26, 33, 30, .97), rgba(10, 13, 12, .98));
+  box-shadow: var(--shadow-soft), inset 0 1px 0 rgba(255, 244, 214, .07);
+  overflow: hidden;
+}
+.active-card::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 12px; bottom: 12px;
+  width: 2px;
+  background: linear-gradient(180deg, transparent, var(--pc, var(--gold)), transparent);
+  box-shadow: 0 0 10px var(--pc, var(--gold));
+  opacity: .9;
+}
+.active-portrait {
+  width: 62px; height: 74px;
+  border-radius: 9px;
+  overflow: hidden;
+  border: 1px solid rgba(200, 162, 99, .55);
+  background:
+    radial-gradient(circle at 50% 28%, var(--pc, #6f9fd8), var(--pc2, #1d3350) 62%, #080a09 100%);
+  box-shadow: inset 0 0 0 2px rgba(8, 10, 9, .8), 0 4px 12px rgba(0, 0, 0, .5);
+  position: relative;
+}
+.active-portrait::after, .portrait-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(125deg, rgba(255, 255, 255, .22), transparent 34%),
+    radial-gradient(ellipse at 50% 100%, rgba(0, 0, 0, .5), transparent 60%),
+    var(--noise);
+  background-size: auto, auto, 160px 160px;
+  opacity: .5;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+}
+.active-portrait svg { width: 100%; height: 100%; display: block; }
+.active-main { min-width: 0; display: grid; gap: 5px; }
+.active-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; }
+.active-name {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  line-height: 1.16;
+  color: var(--ink);
+}
+.active-title { margin-top: 2px; font-size: 12px; color: var(--ink-dim); letter-spacing: .08em; }
+.state-chip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 24px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid rgba(200, 162, 99, .35);
+  background: rgba(12, 16, 14, .7);
+  color: var(--gold-2);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.state-chip::before {
+  content: "";
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--gold); box-shadow: 0 0 7px var(--gold);
+}
+.state-chip.encounters { color: var(--teal-2); border-color: rgba(95, 179, 161, .4); }
+.state-chip.encounters::before { background: var(--teal); box-shadow: 0 0 7px var(--teal); }
+.state-chip.mythos { color: var(--violet-2); border-color: rgba(143, 111, 187, .45); }
+.state-chip.mythos::before { background: var(--violet); box-shadow: 0 0 8px var(--violet); }
+.state-chip.dead { color: #ffb7a3; border-color: rgba(184, 72, 60, .45); }
+.state-chip.dead::before { background: var(--crimson); box-shadow: 0 0 7px var(--crimson); }
+.attr-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
+.attr {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  padding: 4px 6px;
+  border-radius: 7px;
+  border: 1px solid var(--line-soft);
+  background: linear-gradient(170deg, rgba(255, 255, 255, .045), rgba(0, 0, 0, .18));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .045);
+}
+.attr svg { width: 16px; height: 16px; flex: none; color: var(--gold); opacity: .9; }
+.attr .attr-label { font-size: 12px; color: var(--ink-dim); white-space: nowrap; }
+.attr .attr-val { margin-left: auto; font-family: var(--font-display); font-size: 16px; font-weight: 700; color: var(--gold-2); line-height: 1; }
+.bar-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+.bar-block { min-width: 0; }
+.bar-label { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--ink-dim); }
+.bar-label svg { width: 13px; height: 13px; }
+.bar-label b { margin-left: auto; color: var(--ink-soft); font-weight: 700; font-size: 12px; }
+.bar {
+  position: relative;
+  height: 8px;
+  margin-top: 3px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, .55);
+  background: linear-gradient(180deg, #201d19, #14120f);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .7), 0 1px 0 rgba(255, 244, 214, .06);
+  overflow: hidden;
+}
+.bar > i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--hp), var(--hp-2));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), 0 0 7px rgba(185, 74, 63, .5);
+  transition: width .35s ease;
+}
+.bar.san > i { background: linear-gradient(90deg, var(--san), var(--san-2)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), 0 0 7px rgba(79, 159, 166, .5); }
+.bar.low > i { background: linear-gradient(90deg, #8f221b, #e0664f); animation: lowPulse 1.9s ease-in-out infinite; }
+@keyframes lowPulse { 0%, 100% { filter: brightness(.9); } 50% { filter: brightness(1.25); } }
+.active-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px 12px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--ink-dim);
+}
+.active-meta .v { color: var(--ink-soft); font-weight: 700; }
+.active-meta .loc { display: inline-flex; align-items: center; gap: 4px; color: var(--gold-2); }
+.active-meta .loc svg { width: 13px; height: 13px; }
+.ability-line {
+  font-size: 12px;
+  color: var(--ink-dim);
+  line-height: 1.42;
+  padding-top: 5px;
+  border-top: 1px dashed var(--line-soft);
+}
+.ability-line b { color: var(--teal-2); font-weight: 600; }
+.ability-line .used { color: var(--crimson-2); }
+.ability-line svg { width: 15px; height: 15px; flex: none; vertical-align: -2px; margin-right: 2px; }
+
+/* ------------------------------------------------------------------ *
+ * 行动区                                                             *
+ * ------------------------------------------------------------------ */
+.action-card {
+  position: relative;
+  padding: 9px;
+  border-radius: 13px;
+  border: 1px solid var(--line);
+  background:
+    radial-gradient(280px 130px at 50% 0%, rgba(200, 162, 99, .08), transparent 76%),
+    linear-gradient(168deg, rgba(25, 31, 28, .97), rgba(9, 12, 11, .98));
+  box-shadow: var(--shadow-soft), inset 0 1px 0 rgba(255, 244, 214, .06);
+}
+.action-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 1px 2px 8px;
+  border-bottom: 1px solid var(--line-soft);
+  margin-bottom: 8px;
+}
+.action-head .ah-icon {
+  width: 28px; height: 28px;
+  flex: none;
+  display: grid; place-items: center;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: rgba(9, 12, 10, .7);
+  color: var(--gold);
+}
+.action-head .ah-icon svg { width: 17px; height: 17px; }
+.action-head .ah-copy { min-width: 0; flex: 1 1 auto; }
+.action-head .ah-copy > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.action-head b {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 15px;
+  letter-spacing: .06em;
+  color: var(--ink);
+  line-height: 1.2;
+}
+.action-head span { display: block; font-size: 12px; color: var(--ink-dim); line-height: 1.35; }
+.action-head .ah-spacer { flex: 1 1 auto; }
+.action-head .ah-hint {
+  flex: none;
+  font-size: 12px;
+  color: var(--gold-2);
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  padding: 3px 8px;
+  background: rgba(8, 11, 9, .5);
+  white-space: nowrap;
+}
+.action-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.act-btn {
+  position: relative;
+  min-height: 50px;
+  padding: 7px 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  border-radius: 9px;
+  border: 1px solid rgba(200, 162, 99, .25);
+  background:
+    linear-gradient(168deg, rgba(255, 250, 235, .055), rgba(0, 0, 0, .2)),
+    linear-gradient(180deg, rgba(38, 45, 40, .9), rgba(16, 20, 18, .96));
+  color: var(--ink);
+  box-shadow: inset 0 1px 0 rgba(255, 244, 214, .07), 0 2px 6px rgba(0, 0, 0, .26);
+  transition: transform .14s ease, border-color .14s ease, filter .14s ease;
+  overflow: hidden;
+}
+.act-btn:hover:not(:disabled) { border-color: rgba(236, 217, 168, .65); transform: translateY(-1px); }
+.act-btn:active:not(:disabled) { transform: translateY(0); }
+.act-btn .ai {
+  width: 28px; height: 28px;
+  flex: none;
+  display: grid; place-items: center;
+  border-radius: 8px;
+  border: 1px solid var(--line-soft);
+  background: rgba(6, 9, 8, .58);
+  color: var(--gold);
+  box-shadow: inset 0 0 8px rgba(0, 0, 0, .5);
+}
+.act-btn .ai svg { width: 17px; height: 17px; }
+.act-btn .ac { min-width: 0; display: grid; gap: 1px; }
+.act-btn .ac b { font-size: 13px; font-weight: 700; line-height: 1.2; color: var(--ink); white-space: nowrap; }
+.act-btn .ac span { font-size: 12px; line-height: 1.25; color: var(--ink-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.act-btn.primary {
+  border-color: rgba(236, 217, 168, .62);
+  background:
+    linear-gradient(180deg, rgba(236, 217, 168, .18), rgba(143, 107, 55, .12)),
+    linear-gradient(180deg, rgba(50, 55, 45, .94), rgba(20, 24, 20, .97));
+  box-shadow: inset 0 1px 0 rgba(255, 248, 224, .2), 0 0 12px rgba(200, 162, 99, .12), 0 3px 8px rgba(0, 0, 0, .3);
+}
+.act-btn.primary .ai { color: var(--gold-2); border-color: rgba(236, 217, 168, .4); }
+.act-btn.danger { border-color: rgba(184, 72, 60, .34); }
+.act-btn.danger .ai { color: var(--crimson-2); }
+.act-btn.passive { border-style: dashed; background: rgba(10, 13, 11, .5); box-shadow: none; }
+.act-btn.passive .ai { color: var(--ink-dim); }
+.act-btn:disabled { opacity: .42; }
+.act-btn.passive .ac b { color: var(--ink-soft); }
+.act-btn.locked { opacity: .55; border-style: dashed; }
+.action-foot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 7px;
+  flex-wrap: wrap;
+}
+.action-foot .note { flex: 1 1 150px; font-size: 12px; color: var(--ink-dim); line-height: 1.4; }
+.action-foot .btn { flex: 0 0 auto; }
+.phase-big { display: grid; gap: 7px; }
+.phase-big .big-btn {
+  min-height: 56px;
+  justify-content: flex-start;
+  padding: 10px 13px;
+  font-size: 15px;
+}
+.phase-big .big-btn .bi { width: 34px; height: 34px; flex: none; display: grid; place-items: center; border-radius: 9px; border: 1px solid rgba(0, 0, 0, .3); background: rgba(20, 14, 6, .16); }
+.phase-big .big-btn .bi svg { width: 21px; height: 21px; }
+.phase-big .big-btn .bt { display: grid; gap: 1px; text-align: left; }
+.phase-big .big-btn .bt b { font-size: 15px; line-height: 1.2; }
+.phase-big .big-btn .bt span { font-size: 12px; font-weight: 400; opacity: .8; }
+.phase-progress { display: flex; gap: 5px; align-items: center; font-size: 12px; color: var(--ink-dim); }
+.phase-progress .pips { display: inline-flex; gap: 3px; }
+.phase-progress .pip { width: 8px; height: 8px; border-radius: 50%; border: 1px solid rgba(200, 162, 99, .45); background: rgba(0, 0, 0, .3); }
+.phase-progress .pip.on { background: var(--teal); border-color: var(--teal-2); box-shadow: 0 0 6px rgba(95, 179, 161, .7); }
+.phase-progress .pip.done { background: var(--gold); border-color: var(--gold-2); }
+
+/* ------------------------------------------------------------------ *
+ * 通用面板                                                           *
+ * ------------------------------------------------------------------ */
+.panel {
+  position: relative;
+  padding: 10px 11px 11px;
+  border-radius: 13px;
+  border: 1px solid var(--line);
+  background:
+    radial-gradient(320px 150px at 0% 0%, rgba(200, 162, 99, .05), transparent 76%),
+    linear-gradient(168deg, rgba(22, 29, 26, .96), rgba(8, 11, 10, .98));
+  box-shadow: var(--shadow-soft), inset 0 1px 0 rgba(255, 244, 214, .055);
+}
+.panel::before {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border-radius: 10px;
+  border: 1px solid rgba(200, 162, 99, .055);
+  pointer-events: none;
+}
+.panel-head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding-bottom: 7px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.panel-head h2 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.panel-head h2::before {
+  content: "";
+  width: 14px; height: 1px;
+  background: var(--gold);
+  box-shadow: 0 0 5px rgba(200, 162, 99, .6);
+  flex: none;
+}
+.panel-note { margin-left: auto; font-size: 12px; color: var(--ink-dim); white-space: nowrap; }
+.empty-note {
+  padding: 9px 8px;
+  border: 1px dashed var(--line-soft);
+  border-radius: 8px;
+  color: var(--ink-dim);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+/* ------------------------------------------------------------------ *
+ * 阿撒托斯 / 末日轨 / 神秘卡                                         *
+ * ------------------------------------------------------------------ */
+.ao-head {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr) auto;
+  gap: 9px;
+  align-items: center;
+  margin-bottom: 9px;
+}
+.ao-sigil {
+  width: 58px; height: 58px;
+  position: relative;
+  border-radius: 50%;
+  border: 1px solid rgba(200, 162, 99, .4);
+  background: radial-gradient(circle at 50% 44%, #231b2b, #0a0a0d 70%);
+  box-shadow: inset 0 0 16px rgba(143, 111, 187, .35), 0 0 16px rgba(143, 111, 187, .18);
+  overflow: hidden;
+}
+.ao-sigil svg { width: 100%; height: 100%; display: block; }
+.ao-sigil .orbit { animation: orbit 70s linear infinite; transform-origin: 60px 60px; }
+@keyframes orbit { to { transform: rotate(360deg); } }
+.ao-name { min-width: 0; }
+.ao-name b {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 19px;
+  letter-spacing: .1em;
+  line-height: 1.1;
+  color: var(--ink);
+}
+.ao-name span { display: block; margin-top: 2px; font-size: 12px; color: var(--violet-2); letter-spacing: .12em; }
+.ao-doom {
+  width: 58px; height: 58px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid rgba(184, 72, 60, .55);
+  background: radial-gradient(circle at 40% 30%, rgba(224, 138, 106, .2), rgba(30, 12, 10, .92) 64%, #0a0706);
+  box-shadow: inset 0 0 14px rgba(184, 72, 60, .42), 0 0 14px rgba(184, 72, 60, .16);
+  position: relative;
+}
+.ao-doom::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  border: 1px dashed rgba(236, 217, 168, .28);
+}
+.ao-doom b {
+  font-family: var(--font-display);
+  font-size: 25px;
+  line-height: 1;
+  color: #ffc8b6;
+  text-shadow: 0 0 10px rgba(224, 110, 82, .65);
+}
+.ao-doom span { display: block; margin-top: 1px; font-size: 10px; letter-spacing: .18em; color: var(--ink-dim); }
+.ao-doom.low { animation: doomLow 2.1s ease-in-out infinite; }
+@keyframes doomLow {
+  0%, 100% { box-shadow: inset 0 0 14px rgba(184, 72, 60, .45), 0 0 10px rgba(184, 72, 60, .2); }
+  50% { box-shadow: inset 0 0 20px rgba(224, 90, 70, .7), 0 0 22px rgba(224, 90, 70, .48); }
+}
+.doom-track-wrap { position: relative; padding: 2px 0 1px; }
+.doom-scale {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  letter-spacing: .12em;
+  color: var(--ink-dim);
+  padding: 0 1px;
+}
+.doom-track {
+  display: flex;
+  gap: 3px;
+  height: 26px;
+  padding: 3px;
+  border-radius: 7px;
+  border: 1px solid rgba(0, 0, 0, .65);
+  background:
+    linear-gradient(180deg, #171412, #0d0c0a);
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, .8), 0 1px 0 rgba(255, 244, 214, .06);
+}
+.dseg {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #2d2822, #171512);
+  box-shadow: inset 0 1px 0 rgba(255, 240, 210, .06);
+  overflow: hidden;
+}
+.dseg::after {
+  content: "";
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 3px; height: 3px;
+  transform: translate(-50%, -50%) rotate(45deg);
+  background: rgba(255, 240, 210, .08);
+}
+.dseg.on {
+  background:
+    linear-gradient(180deg, #e9d199 0%, #c8a263 30%, #94703a 68%, #5b401b 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 246, 220, .58),
+    inset 0 -2px 3px rgba(40, 25, 5, .5),
+    0 0 8px rgba(200, 162, 99, .32);
+}
+.doom-track.low .dseg.on {
+  background:
+    linear-gradient(180deg, #e08368 0%, #b8483c 30%, #7c241d 68%, #48110d 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 220, 196, .5),
+    inset 0 -2px 3px rgba(30, 5, 4, .6),
+    0 0 8px rgba(184, 72, 60, .4);
+}
+.dseg.on::after { background: rgba(255, 246, 220, .55); }
+.doom-track.low .dseg.on::after { background: rgba(255, 226, 200, .55); }
+.dseg.on.edge {
+  background: linear-gradient(180deg, #ffd6a8, #e0a45f 40%, #b8782f 76%, #71471a);
+  box-shadow: inset 0 1px 0 rgba(255, 252, 236, .8), 0 0 10px rgba(224, 164, 95, .6);
+}
+.dseg.on.edge::after { background: #3a240c; }
+.doom-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 5px;
+  font-size: 12px;
+  color: var(--ink-dim);
+}
+.doom-foot .zero { color: var(--crimson-2); letter-spacing: .1em; }
+.doom-foot svg { width: 14px; height: 14px; vertical-align: -2px; }
+.doom-foot .calm { color: var(--ink-dim); letter-spacing: .1em; }
+.mystery-list { display: grid; gap: 6px; margin-top: 9px; }
+.mystery-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) auto;
+  gap: 7px;
+  align-items: center;
+  padding: 7px 8px;
+  border-radius: 9px;
+  border: 1px solid var(--line-soft);
+  background:
+    linear-gradient(168deg, rgba(255, 250, 235, .035), rgba(0, 0, 0, .16));
+  box-shadow: inset 0 1px 0 rgba(255, 244, 214, .03);
+  overflow: hidden;
+}
+.mystery-card .m-index {
+  width: 26px; height: 26px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  border: 1px solid rgba(200, 162, 99, .4);
+  background: radial-gradient(circle at 40% 30%, #3a2d1c, #120e08);
+  font-family: var(--font-display);
+  font-size: 13px;
+  color: var(--gold-2);
+  box-shadow: inset 0 1px 0 rgba(255, 244, 214, .14);
+}
+.mystery-card .m-body { min-width: 0; display: grid; gap: 1px; }
+.mystery-card .m-name { font-size: 13px; font-weight: 700; color: var(--ink-soft); line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mystery-card .m-meta { font-size: 12px; color: var(--ink-dim); line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mystery-card .m-progress { display: flex; gap: 3px; align-items: center; }
+.mystery-card .m-pip {
+  width: 8px; height: 8px;
+  transform: rotate(45deg);
+  background: rgba(0, 0, 0, .35);
+  border: 1px solid rgba(200, 162, 99, .35);
+}
+.mystery-card .m-pip.on {
+  background: linear-gradient(160deg, #ffe7a6, #c8a263);
+  border-color: #f0dcae;
+  box-shadow: 0 0 6px rgba(236, 217, 168, .6);
+}
+.mystery-card.current {
+  border-color: rgba(95, 179, 161, .5);
+  background:
+    radial-gradient(220px 90px at 0% 0%, rgba(95, 179, 161, .14), transparent 76%),
+    linear-gradient(168deg, rgba(255, 250, 235, .04), rgba(0, 0, 0, .18));
+  box-shadow: inset 0 0 0 1px rgba(95, 179, 161, .1), 0 0 10px rgba(95, 179, 161, .12);
+}
+.mystery-card.current .m-name { color: var(--teal-2); }
+.mystery-card.done {
+  border-color: rgba(236, 217, 168, .55);
+  background:
+    linear-gradient(100deg, rgba(236, 217, 168, .14), rgba(143, 107, 55, .07) 46%, rgba(0, 0, 0, .16));
+  box-shadow: inset 0 0 0 1px rgba(236, 217, 168, .12), 0 0 12px rgba(200, 162, 99, .12);
+}
+.mystery-card.done .m-name { color: var(--gold-2); }
+.mystery-card.done::after {
+  content: "已破";
+  position: absolute;
+  right: 7px; top: 50%;
+  transform: translateY(-50%) rotate(-7deg);
+  padding: 1px 5px;
+  border: 1px solid rgba(236, 217, 168, .7);
+  border-radius: 3px;
+  font-size: 10px;
+  letter-spacing: .1em;
+  color: var(--gold-2);
+  background: rgba(40, 28, 10, .5);
+  box-shadow: 0 0 6px rgba(236, 217, 168, .25);
+}
+.mystery-card.done .m-progress, .mystery-card.done .m-meta { opacity: .55; }
+.mystery-card.done .m-progress { visibility: hidden; }
+.mystery-card.locked { opacity: .55; }
+.mystery-card.locked .m-index { color: var(--ink-dim); }
+.mystery-card.locked .m-name { color: var(--ink-dim); }
+
+/* ------------------------------------------------------------------ *
+ * 小队                                                               *
+ * ------------------------------------------------------------------ */
+.team-list { display: grid; gap: 5px; }
+.team-row {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  gap: 7px;
+  align-items: center;
+  padding: 6px;
+  border-radius: 9px;
+  border: 1px solid var(--line-soft);
+  background: linear-gradient(168deg, rgba(255, 250, 235, .03), rgba(0, 0, 0, .16));
+  box-shadow: inset 0 1px 0 rgba(255, 244, 214, .025);
+  transition: border-color .18s ease, background .18s ease;
+}
+.team-row.active {
+  border-color: rgba(236, 217, 168, .52);
+  background:
+    radial-gradient(180px 70px at 0% 0%, var(--pc-glow, rgba(111, 159, 216, .16)), transparent 78%),
+    linear-gradient(168deg, rgba(255, 250, 235, .055), rgba(0, 0, 0, .16));
+}
+.team-row.dead { opacity: .5; filter: saturate(.35); }
+.portrait-frame {
+  position: relative;
+  width: 38px; height: 46px;
+  border-radius: 7px;
+  overflow: hidden;
+  border: 1px solid rgba(200, 162, 99, .45);
+  background: radial-gradient(circle at 50% 28%, var(--pc, #6f9fd8), var(--pc2, #1d3350) 62%, #080a09 100%);
+  box-shadow: inset 0 0 0 1px rgba(8, 10, 9, .7), 0 2px 6px rgba(0, 0, 0, .4);
+}
+.portrait-frame svg { width: 100%; height: 100%; display: block; }
+.team-main { min-width: 0; display: grid; gap: 2px; }
+.team-line { display: flex; align-items: center; gap: 5px; min-width: 0; }
+.team-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.team-title { font-size: 12px; color: var(--ink-dim); white-space: nowrap; }
+.team-loc {
+  margin-left: auto;
+  flex: none;
+  font-size: 12px;
+  color: var(--gold-2);
+  white-space: nowrap;
+}
+.team-bars { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.mini-bar {
+  height: 5px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #1f1c18, #12100d);
+  border: 1px solid rgba(0, 0, 0, .5);
+  overflow: hidden;
+}
+.mini-bar > i { display: block; height: 100%; background: linear-gradient(90deg, var(--hp), var(--hp-2)); }
+.mini-bar.san > i { background: linear-gradient(90deg, var(--san), var(--san-2)); }
+.team-sub { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; font-size: 12px; color: var(--ink-dim); }
+.team-sub b { color: var(--ink-soft); font-weight: 700; }
+.team-status {
+  flex: none;
+  margin-left: auto;
+  font-size: 11px;
+  letter-spacing: .04em;
+  padding: 2px 5px;
+  border-radius: 999px;
+  border: 1px solid var(--line-soft);
+  color: var(--ink-dim);
+  white-space: nowrap;
+}
+.team-status.on { color: var(--gold-2); border-color: rgba(236, 217, 168, .45); }
+.team-status.enc { color: var(--teal-2); border-color: rgba(95, 179, 161, .4); }
+.team-status.out { color: #ffb7a3; border-color: rgba(184, 72, 60, .4); }
+.team-pips { display: inline-flex; gap: 2px; }
+.team-pips i { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 5px rgba(200, 162, 99, .6); }
+.team-pips i.off { background: #35312a; box-shadow: none; }
+
+/* ------------------------------------------------------------------ *
+ * 事件档案                                                           *
+ * ------------------------------------------------------------------ */
+.event-list { display: grid; gap: 6px; }
+.event-mini {
+  position: relative;
+  padding: 7px 8px;
+  border-radius: 9px;
+  border: 1px solid var(--line-soft);
+  background:
+    linear-gradient(168deg, rgba(255, 250, 235, .035), rgba(0, 0, 0, .16));
+  box-shadow: inset 0 1px 0 rgba(255, 244, 214, .03);
+}
+.event-mini.encounter { border-left: 2px solid rgba(200, 162, 99, .6); }
+.event-mini.mythos { border-left: 2px solid rgba(143, 111, 187, .7); }
+.event-mini.check { border-left: 2px solid rgba(95, 179, 161, .7); }
+.event-mini.combat { border-left: 2px solid rgba(184, 72, 60, .7); }
+.event-mini-head { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-dim); }
+.event-mini-head .tag {
+  font-size: 10px;
+  letter-spacing: .1em;
+  padding: 1px 5px;
+  border-radius: 999px;
+  border: 1px solid var(--line-soft);
+  color: var(--gold-2);
+}
+.event-mini-head .verdict {
+  margin-left: auto;
+  font-size: 10px;
+  letter-spacing: .08em;
+  padding: 1px 5px;
+  border-radius: 3px;
+  border: 1px solid rgba(95, 179, 161, .5);
+  color: var(--teal-2);
+}
+.event-mini-head .verdict.fail { border-color: rgba(184, 72, 60, .5); color: var(--crimson-2); }
+.event-mini-head .verdict.info { border-color: rgba(143, 111, 187, .5); color: var(--violet-2); }
+.event-mini-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 3px 0 3px;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: .03em;
+}
+.event-mini-title .mini-dice { margin-left: auto; display: inline-flex; gap: 2px; }
+.mini-die {
+  width: 17px; height: 17px;
+  display: grid; place-items: center;
+  border-radius: 3px;
+  border: 1px solid rgba(200, 162, 99, .4);
+  background: linear-gradient(160deg, #efe3c8, #c9b48d 62%, #a08763);
+  color: #2a2013;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5);
+}
+.mini-die.ok {
+  border-color: #f0dcae;
+  background: linear-gradient(160deg, #ffeab6, #d9b977 62%, #a87e3e);
+  box-shadow: 0 0 5px rgba(236, 217, 168, .55), inset 0 1px 0 rgba(255, 255, 255, .6);
+}
+.event-mini-text { font-size: 12px; line-height: 1.4; color: var(--ink-dim); }
+.event-mini-text b { color: var(--ink-soft); font-weight: 700; }
+.event-mini .review {
+  margin-top: 2px;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  color: var(--gold-2);
+  background: none;
+  border: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ------------------------------------------------------------------ *
+ * 日志                                                               *
+ * ------------------------------------------------------------------ */
+.log { max-height: 238px; overflow-y: auto; padding-right: 2px; scrollbar-width: thin; scrollbar-color: rgba(200, 162, 99, .35) transparent; }
+.log-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.log-entry {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 5px;
+  padding: 3px 2px;
+  border-bottom: 1px solid rgba(200, 162, 99, .055);
+  font-size: 12px;
+  line-height: 1.42;
+}
+.log-entry:last-child { border-bottom: 0; }
+.log-round { color: var(--ink-dim); font-family: var(--font-display); font-size: 11px; padding-top: 1px; letter-spacing: .04em; }
+.log-body { color: var(--ink-dim); }
+.log-body b { color: var(--ink-soft); font-weight: 700; }
+.log-entry.good .log-body { color: #a9d8c4; }
+.log-entry.bad .log-body { color: #e5a293; }
+.log-entry.gate .log-body { color: #e9b79e; }
+.log-entry.myth .log-body { color: #c8b0e0; }
+.log-entry.sys .log-body { color: var(--ink-dim); font-style: italic; }
+.log-entry .dmg { color: #ffad8f; font-weight: 700; }
+.log-entry .gain { color: #a9e0c4; font-weight: 700; }
+
+/* ------------------------------------------------------------------ *
+ * 揭示卡（遭遇 / 神秘 / 检定）                                       *
+ * ------------------------------------------------------------------ */
+.reveal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  padding: max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom));
+  background:
+    radial-gradient(560px 420px at 50% 36%, rgba(38, 30, 20, .45), transparent 72%),
+    rgba(3, 5, 4, .78);
+  backdrop-filter: blur(3px);
+  animation: fadeIn .18s ease both;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.reveal-card {
+  position: relative;
+  width: min(440px, 100%);
+  max-height: min(92vh, 760px);
+  display: flex;
+  flex-direction: column;
+  border-radius: 14px;
+  border: 1px solid rgba(200, 162, 99, .48);
+  background:
+    radial-gradient(360px 200px at 50% -6%, rgba(200, 162, 99, .13), transparent 72%),
+    linear-gradient(168deg, #1c241f, #0a0d0b 68%, #070908);
+  box-shadow:
+    0 34px 80px rgba(0, 0, 0, .7),
+    inset 0 1px 0 rgba(255, 244, 214, .13),
+    inset 0 0 0 4px rgba(0, 0, 0, .38);
+  animation: cardIn .28s cubic-bezier(.2, .9, .3, 1.08) both;
+  overflow: hidden;
+}
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(14px) scale(.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.reveal-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--noise);
+  background-size: 160px 160px;
+  opacity: .05;
+  pointer-events: none;
+}
+.reveal-card.encounter { border-color: rgba(200, 162, 99, .55); }
+.reveal-card.mythos { border-color: rgba(143, 111, 187, .58); background:
+    radial-gradient(360px 200px at 50% -6%, rgba(143, 111, 187, .18), transparent 72%),
+    linear-gradient(168deg, #211d28, #0a0c0d 68%, #070809); }
+.reveal-card.check { border-color: rgba(95, 179, 161, .5); }
+.reveal-card.combat { border-color: rgba(184, 72, 60, .55); background:
+    radial-gradient(360px 200px at 50% -6%, rgba(184, 72, 60, .16), transparent 72%),
+    linear-gradient(168deg, #241a18, #0c0b0a 68%, #080706); }
+.reveal-ribbon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 12px;
+  background:
+    linear-gradient(180deg, rgba(236, 217, 168, .16), rgba(143, 107, 55, .08)),
+    linear-gradient(180deg, #2b2418, #171208);
+  border-bottom: 1px solid rgba(200, 162, 99, .32);
+  color: var(--gold-2);
+  font-size: 12px;
+  letter-spacing: .18em;
+  text-transform: none;
+}
+.reveal-ribbon::after {
+  content: "";
+  position: absolute;
+  left: 12px; right: 12px; bottom: 3px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(236, 217, 168, .45), transparent);
+}
+.reveal-card.mythos .reveal-ribbon { color: var(--violet-2); background: linear-gradient(180deg, rgba(143, 111, 187, .2), rgba(40, 28, 52, .2)), linear-gradient(180deg, #241d2c, #120e18); border-bottom-color: rgba(143, 111, 187, .4); }
+.reveal-card.combat .reveal-ribbon { color: var(--crimson-2); background: linear-gradient(180deg, rgba(184, 72, 60, .2), rgba(50, 16, 12, .2)), linear-gradient(180deg, #2a1a17, #150c0a); border-bottom-color: rgba(184, 72, 60, .4); }
+.reveal-ribbon .rb-icon { width: 17px; height: 17px; flex: none; }
+.reveal-ribbon .rb-icon svg { width: 100%; height: 100%; display: block; }
+.reveal-ribbon .rb-meta { margin-left: auto; font-size: 12px; letter-spacing: .04em; opacity: .72; }
+.reveal-body { padding: 11px 13px 4px; overflow-y: auto; min-height: 0; }
+.reveal-title {
+  font-family: var(--font-display);
+  font-size: 25px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  line-height: 1.14;
+  color: var(--ink);
+}
+.reveal-sub { margin-top: 2px; font-size: 12px; color: var(--ink-dim); letter-spacing: .04em; }
+.reveal-flavor {
+  margin: 7px 0 9px;
+  padding: 7px 9px;
+  border-left: 2px solid var(--line);
+  background: rgba(255, 250, 235, .025);
+  font-family: var(--font-display);
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--ink-soft);
+  border-radius: 0 6px 6px 0;
+}
+.reveal-card.mythos .reveal-flavor { border-left-color: rgba(143, 111, 187, .55); }
+.test-block {
+  margin: 9px 0;
+  padding: 9px;
+  border-radius: 9px;
+  border: 1px solid var(--line-soft);
+  background:
+    radial-gradient(240px 100px at 50% 0%, rgba(200, 162, 99, .06), transparent 76%),
+    rgba(0, 0, 0, .18);
+  box-shadow: inset 0 1px 0 rgba(255, 244, 214, .04);
+}
+.test-head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 12px; color: var(--ink-dim); }
+.test-head .attr-tag { color: var(--gold-2); font-weight: 700; letter-spacing: .06em; }
+.test-head .diff { color: var(--ink-soft); }
+.test-head .verdict-stamp { margin-left: auto; }
+.dice-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 9px 0 7px;
+  min-height: 42px;
+}
+.die {
+  width: 42px; height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  position: relative;
+  background: linear-gradient(155deg, #f4e9d0, #d8c39c 56%, #b39a72);
+  border: 1px solid #7e6034;
+  box-shadow:
+    0 4px 8px rgba(0, 0, 0, .42),
+    inset 0 1px 0 rgba(255, 255, 255, .75),
+    inset 0 -2px 3px rgba(70, 45, 18, .35);
+  animation: dieSettle .42s cubic-bezier(.2, .9, .3, 1.18) both;
+}
+@keyframes dieSettle {
+  from { opacity: 0; transform: translateY(-10px) rotate(-9deg) scale(.86); }
+  to { opacity: 1; transform: translateY(0) rotate(0) scale(1); }
+}
+.die svg { width: 100%; height: 100%; display: block; }
+.die.ok {
+  border-color: #f0d79d;
+  background: linear-gradient(155deg, #ffeec2, #e6c98b 46%, #c39a55);
+  box-shadow:
+    0 0 12px rgba(236, 217, 168, .5),
+    0 4px 8px rgba(0, 0, 0, .42),
+    inset 0 1px 0 rgba(255, 255, 255, .8),
+    inset 0 -2px 3px rgba(110, 74, 24, .35);
+}
+.die.ok::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 248, 224, .5);
+  pointer-events: none;
+}
+.die.miss { filter: saturate(.65) brightness(.94); }
+.die-ghost {
+  width: 34px; height: 34px;
+  opacity: .42;
+  border-radius: 7px;
+  background: linear-gradient(155deg, #cfc3a8, #a8946f);
+  border: 1px dashed #7e6034;
+  display: grid; place-items: center;
+  font-size: 11px; font-weight: 800; color: #2a2013;
+}
+.dice-note { font-size: 12px; color: var(--ink-dim); line-height: 1.45; }
+.dice-note b { color: var(--ink-soft); }
+.verdict-stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transform: rotate(-4deg);
+  padding: 2px 8px;
+  border: 2px double rgba(95, 179, 161, .72);
+  border-radius: 4px;
+  color: var(--teal-2);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .16em;
+  background: rgba(23, 55, 49, .2);
+  box-shadow: 0 0 10px rgba(95, 179, 161, .14);
+  white-space: nowrap;
+}
+.verdict-stamp.fail { border-color: rgba(184, 72, 60, .72); color: var(--crimson-2); background: rgba(74, 22, 17, .2); box-shadow: 0 0 10px rgba(184, 72, 60, .16); }
+.outcome-grid { display: grid; gap: 5px; margin: 9px 0 4px; }
+.outcome-row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 7px;
+  align-items: center;
+  padding: 6px 8px;
+  border-radius: 7px;
+  border: 1px solid var(--line-soft);
+  background: rgba(0, 0, 0, .14);
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--ink-dim);
+}
+.outcome-row .o-label {
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  color: var(--ink-dim);
+  text-align: center;
+  border-right: 1px solid var(--line-soft);
+  padding-right: 6px;
+}
+.outcome-row.applied {
+  border-color: rgba(236, 217, 168, .5);
+  background:
+    linear-gradient(100deg, rgba(236, 217, 168, .1), transparent 62%),
+    rgba(0, 0, 0, .18);
+  color: var(--ink-soft);
+  box-shadow: inset 0 0 0 1px rgba(236, 217, 168, .08), 0 0 10px rgba(200, 162, 99, .08);
+}
+.outcome-row.applied .o-label { color: var(--gold-2); }
+.outcome-row.bad.applied {
+  border-color: rgba(184, 72, 60, .5);
+  background: linear-gradient(100deg, rgba(184, 72, 60, .16), transparent 62%), rgba(0, 0, 0, .18);
+}
+.outcome-row.bad.applied .o-label { color: var(--crimson-2); }
+.effect-list { display: grid; gap: 4px; margin: 8px 0 5px; }
+.effect-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+.effect-row .ei {
+  width: 18px; height: 18px;
+  flex: none;
+  display: grid; place-items: center;
+  color: var(--gold);
+  margin-top: 1px;
+}
+.effect-row .ei svg { width: 15px; height: 15px; }
+.effect-row.good .ei { color: var(--teal); }
+.effect-row.bad .ei { color: var(--crimson-2); }
+.effect-row.myth .ei { color: var(--violet-2); }
+.mystery-progress-block {
+  margin: 8px 0;
+  padding: 7px 9px;
+  border-radius: 8px;
+  border: 1px solid var(--line-soft);
+  background: rgba(0, 0, 0, .17);
+}
+.mp-head { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-dim); }
+.mp-head b { margin-left: auto; color: var(--gold-2); font-size: 13px; }
+.mp-pips { display: flex; gap: 4px; margin-top: 6px; }
+.mp-pip {
+  flex: 1 1 0;
+  height: 7px;
+  border-radius: 2px;
+  border: 1px solid rgba(200, 162, 99, .26);
+  background: rgba(0, 0, 0, .3);
+}
+.mp-pip.on {
+  background: linear-gradient(90deg, #ffe7a6, #c8a263);
+  border-color: #f0dcae;
+  box-shadow: 0 0 7px rgba(236, 217, 168, .45);
+}
+.reveal-foot {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 13px 12px;
+  border-top: 1px solid var(--line-soft);
+  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, .24));
+}
+.reveal-foot .btn { flex: 0 0 auto; min-width: 110px; }
+.reveal-foot .note { flex: 1 1 auto; font-size: 12px; color: var(--ink-dim); line-height: 1.4; }
+.completion-banner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 7px 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(236, 217, 168, .62);
+  background:
+    linear-gradient(100deg, rgba(236, 217, 168, .24), rgba(143, 107, 55, .1) 52%, rgba(0, 0, 0, .2));
+  color: var(--gold-2);
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  box-shadow: 0 0 16px rgba(200, 162, 99, .14), inset 0 1px 0 rgba(255, 248, 224, .18);
+  overflow: hidden;
+}
+.completion-banner::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(112deg, transparent 30%, rgba(255, 250, 226, .26) 48%, transparent 66%);
+  transform: translateX(-100%);
+  animation: bannerSweep 2.6s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes bannerSweep {
+  0%, 55% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+.completion-banner svg { width: 20px; height: 20px; flex: none; }
+
+/* ------------------------------------------------------------------ *
+ * 终局 / 规则弹层                                                     *
+ * ------------------------------------------------------------------ */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
+  background:
+    radial-gradient(700px 500px at 50% 30%, rgba(48, 38, 24, .38), transparent 72%),
+    rgba(3, 5, 4, .84);
+  backdrop-filter: blur(4px);
+  animation: fadeIn .22s ease both;
+}
+.overlay-card {
+  position: relative;
+  width: min(470px, 100%);
+  max-height: 92vh;
+  overflow-y: auto;
+  padding: 19px 17px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(200, 162, 99, .48);
+  background:
+    radial-gradient(420px 240px at 50% -8%, rgba(200, 162, 99, .14), transparent 72%),
+    linear-gradient(168deg, #1d251f, #0a0d0b 66%, #070908);
+  box-shadow: 0 40px 90px rgba(0, 0, 0, .72), inset 0 1px 0 rgba(255, 244, 214, .14);
+  animation: cardIn .3s cubic-bezier(.2, .9, .3, 1.08) both;
+}
+.overlay-card::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border-radius: 11px;
+  border: 1px solid rgba(200, 162, 99, .1);
+  pointer-events: none;
+}
+.end-seal {
+  width: 74px; height: 74px;
+  margin: 0 auto 7px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  border: 1px solid rgba(200, 162, 99, .55);
+  background: radial-gradient(circle at 50% 38%, rgba(236, 217, 168, .2), rgba(18, 14, 8, .9));
+  box-shadow: 0 0 22px rgba(200, 162, 99, .18), inset 0 0 14px rgba(0, 0, 0, .6);
+}
+.end-seal svg { width: 46px; height: 46px; }
+.end-eyebrow { text-align: center; font-size: 10px; letter-spacing: .32em; color: var(--ink-dim); text-transform: uppercase; }
+.end-title {
+  text-align: center;
+  margin-top: 4px;
+  font-family: var(--font-display);
+  font-size: clamp(26px, 7.4vw, 34px);
+  letter-spacing: .1em;
+  line-height: 1.16;
+  color: var(--gold-2);
+  text-shadow: 0 0 22px rgba(200, 162, 99, .18);
+}
+.end-title.lose { color: #f0a48f; text-shadow: 0 0 22px rgba(184, 72, 60, .25); }
+.end-reason { margin-top: 6px; text-align: center; font-size: 13px; line-height: 1.65; color: var(--ink-soft); }
+.end-ribbon {
+  display: block;
+  width: 120px; height: 4px;
+  margin: 11px auto 12px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  box-shadow: 0 0 9px rgba(200, 162, 99, .5);
+}
+.end-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin: 11px 0 12px; }
+.end-stat {
+  padding: 7px 9px;
+  border-radius: 9px;
+  border: 1px solid var(--line-soft);
+  background: linear-gradient(168deg, rgba(255, 250, 235, .04), rgba(0, 0, 0, .16));
+  font-size: 12px;
+  color: var(--ink-dim);
+  line-height: 1.45;
+}
+.end-stat b { display: block; font-family: var(--font-display); font-size: 18px; color: var(--gold-2); letter-spacing: .02em; }
+.end-actions { display: flex; gap: 7px; flex-wrap: wrap; }
+.end-actions .btn { flex: 1 1 130px; }
+.rules-card h2 { text-align: center; font-family: var(--font-display); font-size: 23px; letter-spacing: .14em; color: var(--gold-2); margin-bottom: 3px; }
+.rules-lead { text-align: center; font-size: 12px; color: var(--ink-dim); margin-bottom: 10px; }
+.rules-list { display: grid; gap: 7px; }
+.rule-item {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: 9px;
+  border: 1px solid var(--line-soft);
+  background: rgba(255, 250, 235, .025);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+.rule-item .ri { display: grid; place-items: center; color: var(--gold); }
+.rule-item .ri svg { width: 20px; height: 20px; }
+.rule-item b { color: var(--gold-2); }
+.rule-item .muted { color: var(--ink-dim); }
+.rules-note { margin-top: 9px; padding: 7px 9px; border-radius: 8px; border: 1px dashed var(--line-soft); font-size: 12px; color: var(--ink-dim); line-height: 1.55; }
+.rules-card .modal-close { width: 100%; margin-top: 12px; }
+
+/* ------------------------------------------------------------------ *
+ * 浮动提示                                                           *
+ * ------------------------------------------------------------------ */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: 120;
+  transform: translate(-50%, 14px);
+  opacity: 0;
+  pointer-events: none;
+  max-width: min(460px, calc(100vw - 24px));
+  padding: 9px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(20, 26, 23, .97);
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.45;
+  text-align: center;
+  box-shadow: var(--shadow-soft);
+  transition: opacity .2s ease, transform .2s ease;
+}
+.toast.on { opacity: 1; transform: translate(-50%, 0); }
+
+/* ------------------------------------------------------------------ *
+ * 手机适配                                                           *
+ * ------------------------------------------------------------------ */
+@media (max-width: 560px) {
+  .shell { padding-left: 6px; padding-right: 6px; }
+  .topbar { padding-bottom: 7px; gap: 6px; }
+  .brand { gap: 7px; }
+  .brand-mark { width: 38px; height: 38px; border-radius: 10px; }
+  .brand-mark svg { width: 26px; height: 26px; }
+  .brand h1 { font-size: 20px; letter-spacing: .1em; }
+  .brand-sub { display: none; }
+  .seed-chip { display: none; }
+  .top-actions .btn { padding: 7px 10px; }
+  .world-card { padding: 5px 5px 0; border-radius: 12px; }
+  .world-frame { padding: 4px; }
+  .world-topline { gap: 4px; padding-bottom: 5px; margin-bottom: 5px; }
+  .chip { min-height: 25px; padding: 2px 6px; gap: 4px; font-size: 12px; }
+  .chip svg { width: 12px; height: 12px; }
+  .world-title { display: none; }
+  .map-legend { gap: 4px 9px; padding: 5px 2px 6px; font-size: 12px; }
+  .legend-swatch { width: 11px; height: 11px; }
+  .node-label { font-size: 12px; }
+  .active-card { grid-template-columns: 54px minmax(0, 1fr); gap: 8px; padding: 8px; border-radius: 12px; }
+  .active-portrait { width: 54px; height: 66px; }
+  .active-name { font-size: 16px; }
+  .active-title { font-size: 12px; }
+  .attr { padding: 3px 5px; gap: 4px; }
+  .attr svg { width: 14px; height: 14px; }
+  .attr .attr-val { font-size: 15px; }
+  .ability-line { font-size: 12px; }
+  .action-card { padding: 8px; border-radius: 12px; }
+  .action-head { padding-bottom: 6px; margin-bottom: 6px; }
+  .action-head b { font-size: 14px; }
+  .action-grid { gap: 5px; }
+  .act-btn { min-height: 48px; padding: 6px 7px; gap: 6px; }
+  .act-btn .ai { width: 26px; height: 26px; }
+  .act-btn .ai svg { width: 15px; height: 15px; }
+  .act-btn .ac b { font-size: 13px; }
+  .act-btn .ac span { font-size: 12px; }
+  .side { gap: 8px; }
+  .panel { padding: 9px 10px 10px; border-radius: 12px; }
+  .panel-head h2 { font-size: 14px; }
+  .ao-head { grid-template-columns: 52px minmax(0, 1fr) auto; gap: 8px; }
+  .ao-sigil { width: 52px; height: 52px; }
+  .ao-name b { font-size: 17px; }
+  .ao-doom { width: 52px; height: 52px; }
+  .ao-doom b { font-size: 22px; }
+  .log { max-height: 190px; }
+  .reveal-body { padding: 9px 10px 3px; }
+  .reveal-title { font-size: 22px; }
+  .reveal-flavor { font-size: 13px; line-height: 1.58; }
+  .reveal-foot { padding: 8px 10px 10px; }
+  .overlay-card { padding: 16px 14px 14px; }
+  .end-stats { gap: 5px; }
+}
+@media (max-width: 370px) {
+  .node.wilderness .node-label, .node.sea .node-label { display: none; }
+  .action-head .ah-hint { display: none; }
+  .brand h1 { font-size: 18px; letter-spacing: .06em; }
+  .brand-mark { width: 34px; height: 34px; }
+  .top-actions .btn { padding: 6px 8px; font-size: 12px; }
+  .chip { padding: 2px 5px; }
+  .chip.round b { font-size: 13px; }
+  .map-legend { gap: 3px 8px; font-size: 12px; }
+  .active-card { grid-template-columns: 48px minmax(0, 1fr); gap: 7px; }
+  .active-portrait { width: 48px; height: 60px; }
+  .active-name { font-size: 15px; }
+  .attr-row { gap: 3px; }
+  .attr { padding: 3px 4px; gap: 3px; }
+  .attr .attr-label { font-size: 12px; }
+  .attr svg { width: 13px; height: 13px; }
+  .bar-row { gap: 5px; }
+  .action-grid { gap: 4px; }
+  .act-btn { min-height: 46px; padding: 5px 6px; gap: 5px; }
+  .act-btn .ai { width: 24px; height: 24px; }
+  .act-btn .ai svg { width: 14px; height: 14px; }
+  .phase-big .big-btn { min-height: 52px; padding: 8px 10px; }
+  .node-label { font-size: 12px; }
+  .die { width: 38px; height: 38px; }
+  .overlay-card { padding: 14px 12px 12px; }
+  .end-title { font-size: 26px; }
+  .rule-item { font-size: 12px; }
+  .team-row { grid-template-columns: 34px minmax(0, 1fr) auto; }
+  .portrait-frame { width: 34px; height: 42px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+</style>
+</head>
+<body>
+<!-- 全局 SVG 材质与光效：肖像、骰子、印章、怪物共用 -->
+<svg class="defs-only" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id="gGold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f6e6b8"/><stop offset=".28" stop-color="#d8b979"/>
+      <stop offset=".56" stop-color="#a9823f"/><stop offset=".78" stop-color="#e2c78d"/>
+      <stop offset="1" stop-color="#7a5626"/>
+    </linearGradient>
+    <linearGradient id="gGoldV" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f8ecc8"/><stop offset=".34" stop-color="#d8b979"/>
+      <stop offset=".7" stop-color="#9b7434"/><stop offset="1" stop-color="#6a4a1e"/>
+    </linearGradient>
+    <linearGradient id="gSkin" x1="0" y1="0" x2=".9" y2="1">
+      <stop offset="0" stop-color="#e8c9a4"/><stop offset=".46" stop-color="#cfa984"/>
+      <stop offset=".78" stop-color="#a87c5c"/><stop offset="1" stop-color="#6e4a34"/>
+    </linearGradient>
+    <linearGradient id="gSkinDark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#b78e6b"/><stop offset="1" stop-color="#5a3a28"/>
+    </linearGradient>
+    <linearGradient id="gCoatNorman" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3e5f86"/><stop offset=".45" stop-color="#223a56"/>
+      <stop offset="1" stop-color="#0b1420"/>
+    </linearGradient>
+    <linearGradient id="gCoatMark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7a5a3c"/><stop offset=".48" stop-color="#4a3423"/>
+      <stop offset="1" stop-color="#1b120b"/>
+    </linearGradient>
+    <linearGradient id="gCoatDiana" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#5d4679"/><stop offset=".48" stop-color="#352647"/>
+      <stop offset="1" stop-color="#120d18"/>
+    </linearGradient>
+    <linearGradient id="gCoatSilas" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3d6a60"/><stop offset=".5" stop-color="#20423e"/>
+      <stop offset="1" stop-color="#091412"/>
+    </linearGradient>
+    <linearGradient id="gRobe" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3c2a35"/><stop offset=".55" stop-color="#221722"/>
+      <stop offset="1" stop-color="#090708"/>
+    </linearGradient>
+    <linearGradient id="gMonster" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4c554b"/><stop offset=".42" stop-color="#262e28"/>
+      <stop offset="1" stop-color="#080b09"/>
+    </linearGradient>
+    <linearGradient id="gTentacle" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7a8f76"/><stop offset=".5" stop-color="#3e5148"/>
+      <stop offset="1" stop-color="#0c1411"/>
+    </linearGradient>
+    <linearGradient id="gWing" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3b3350"/><stop offset=".55" stop-color="#221d31"/>
+      <stop offset="1" stop-color="#0a0810"/>
+    </linearGradient>
+    <linearGradient id="gGate" x1="0" y1="0" x2=".6" y2="1">
+      <stop offset="0" stop-color="#ffd6a0"/><stop offset=".28" stop-color="#f08a63"/>
+      <stop offset=".62" stop-color="#b83b32"/><stop offset="1" stop-color="#3f0a10"/>
+    </linearGradient>
+    <linearGradient id="gDie" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f6ecd5"/><stop offset=".5" stop-color="#ddc9a2"/>
+      <stop offset="1" stop-color="#ae9266"/>
+    </linearGradient>
+    <linearGradient id="gDieOk" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff0c4"/><stop offset=".46" stop-color="#e7ca8c"/>
+      <stop offset="1" stop-color="#b98d45"/>
+    </linearGradient>
+    <linearGradient id="gLand" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#cdb992" stop-opacity=".9"/>
+      <stop offset=".52" stop-color="#c3ad82" stop-opacity=".82"/>
+      <stop offset="1" stop-color="#a88f62" stop-opacity=".9"/>
+    </linearGradient>
+    <radialGradient id="gEye" cx=".5" cy=".42" r=".6">
+      <stop offset="0" stop-color="#ffe9b8"/><stop offset=".45" stop-color="#d9a95c"/>
+      <stop offset="1" stop-color="#5f3c12"/>
+    </radialGradient>
+    <radialGradient id="gStain" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#4a3518" stop-opacity=".3"/>
+      <stop offset=".68" stop-color="#5e4622" stop-opacity=".12"/>
+      <stop offset="1" stop-color="#5e4622" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gGlowTeal" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#9fe3d2" stop-opacity=".9"/>
+      <stop offset="1" stop-color="#5fb3a1" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gGlowViolet" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#c8a8ec" stop-opacity=".85"/>
+      <stop offset="1" stop-color="#8f6fbb" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="coastShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="1.4" dy="2.2" stdDeviation="1.7" flood-color="#3a2a18" flood-opacity=".45"/>
+    </filter>
+    <pattern id="hatchPat" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(26)">
+      <line x1="0" y1="0" x2="0" y2="7" stroke="#5a4327" stroke-width=".7" opacity=".32"/>
+    </pattern>
+  </defs>
+</svg>
+
+<div class="shell">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 64 64" fill="none">
+          <path d="M32 6 10 22l8 30 14-10 14 10 8-30L32 6z" fill="#0e1512" stroke="url(#gGold)" stroke-width="1.7"/>
+          <path d="M32 13 20 52M32 13l12 39M14 26h36M19 42h26" stroke="url(#gGold)" stroke-width=".9" opacity=".62"/>
+          <ellipse cx="32" cy="33" rx="11" ry="6.5" fill="url(#gEye)" stroke="#f4e2b4" stroke-width=".7"/>
+          <ellipse cx="32" cy="33" rx="3.1" ry="5.4" fill="#0a0c0a"/>
+          <circle cx="34.1" cy="31.2" r=".9" fill="#ffeec8"/>
+          <path d="M32 2v5M8 20l4 3M56 20l-4 3M12 57l4-4M52 57l-4-4" stroke="url(#gGold)" stroke-width="1.2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="brand-copy">
+        <h1>全球<span>惊悚</span></h1>
+        <div class="brand-sub">ELDRITCH HORROR · AZATHOTH</div>
+      </div>
+    </div>
+    <div class="top-actions">
+      <span class="seed-chip" id="seedChip">seed <b id="seedText">—</b></span>
+      <button class="btn ghost" id="rulesBtn" data-act="rules" type="button" title="查看规则">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16.5H6.5A2.5 2.5 0 0 0 4 22V5.5z"/><path d="M8 7h8M8 11h6"/></svg>
+        <span>规则</span>
+      </button>
+      <button class="btn ghost" id="resetBtn" data-act="reset" type="button" title="重新开始一局">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>
+        <span>重开</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="stage" aria-label="世界地图与行动">
+      <section class="world-card" aria-label="世界地图">
+        <div class="world-topline">
+          <span class="chip phase" id="phaseChip">行动阶段</span>
+          <span class="chip round">回合 <b id="roundNum">1</b>/<span id="maxRounds">16</span></span>
+          <span class="chip doom" id="doomChip" title="末日轨">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 3a7 7 0 0 0-7 7v4l-2 4h5l1 3h6l1-3h5l-2-4v-4a7 7 0 0 0-7-7z"/><circle cx="9" cy="10" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="1.3" fill="currentColor" stroke="none"/><path d="M10 15h4"/></svg>
+            末日 <b id="doomChipNum">12</b>
+          </span>
+          <span class="chip mystery" id="mysteryChip">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2 6 9l6 13 6-13-6-7z"/><path d="M6 9h12"/></svg>
+            神秘 <b id="mysteryChipNum">0/3</b>
+          </span>
+          <span class="world-spacer"></span>
+          <span class="world-title">世界地图 · 1926</span>
+        </div>
+
+        <div class="world-frame">
+          <div class="map-parchment" id="map">
+            <svg class="map-art" viewBox="0 0 1000 760" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+              <defs>
+                <g id="continents">
+                  <path d="M96 148 C118 120 168 102 226 104 C282 106 330 126 352 158 C366 180 360 202 342 220 C330 232 336 244 322 256 C306 270 298 292 276 298 C256 304 240 282 222 272 C204 260 184 268 166 254 C146 238 136 214 118 202 C102 188 82 176 96 148 Z"/>
+                  <path d="M286 298 C300 310 312 318 318 330 L304 336 C294 324 282 314 272 304 Z"/>
+                  <path d="M292 336 C318 326 348 340 364 366 C380 392 374 426 382 460 C390 498 376 546 356 588 C342 618 330 652 312 648 C296 644 292 608 284 572 C276 536 262 502 268 464 C272 432 278 376 292 336 Z"/>
+                  <path d="M318 74 C340 60 372 62 386 78 C398 92 394 114 380 126 C364 140 336 138 322 122 C310 108 306 86 318 74 Z"/>
+                  <path d="M416 140 C424 132 436 138 438 150 C440 162 432 172 424 168 C416 164 410 152 416 140 Z"/>
+                  <path d="M430 130 C456 110 498 104 532 114 C556 122 572 140 578 162 C584 182 572 196 558 206 C546 214 536 212 524 220 C512 228 500 242 486 238 C470 234 462 218 450 208 C438 198 424 190 418 174 C412 158 418 140 430 130 Z"/>
+                  <path d="M576 226 C588 232 598 246 602 260 L592 270 L580 250 Z"/>
+                  <path d="M452 294 C500 280 568 284 604 302 C622 312 630 334 624 356 C616 384 602 406 592 436 C580 474 558 510 530 516 C502 522 486 492 474 464 C462 436 442 410 436 380 C430 348 438 312 452 294 Z"/>
+                  <path d="M604 452 C612 444 622 448 624 460 C626 474 618 488 610 486 C602 484 598 464 604 452 Z"/>
+                  <path d="M592 122 C648 98 736 94 816 104 C868 110 906 132 922 160 C934 186 924 214 908 238 C890 266 868 278 846 294 C822 312 790 314 762 334 C736 352 712 368 690 358 C666 346 652 322 638 300 C622 274 606 248 596 220 C586 190 578 148 592 122 Z"/>
+                  <path d="M690 358 C702 380 712 404 702 424 C690 442 678 420 674 396 C670 376 676 362 690 358 Z"/>
+                  <path d="M872 214 C878 204 888 202 892 210 C896 220 890 232 882 246 C876 256 868 252 868 240 C868 230 868 220 872 214 Z"/>
+                  <path d="M748 516 C786 498 842 504 874 524 C896 538 900 564 886 586 C870 612 834 622 800 612 C770 604 750 580 746 556 C744 540 742 526 748 516 Z"/>
+                  <path d="M908 604 C916 596 924 600 924 610 C924 622 916 634 908 632 C900 630 900 612 908 604 Z"/>
+                </g>
+                <pattern id="graticulePat" width="100" height="95" patternUnits="userSpaceOnUse">
+                  <path d="M100 0V95M0 95H100" fill="none" stroke="#6b5433" stroke-width="1" stroke-dasharray="2 7" opacity=".26"/>
+                </pattern>
+              </defs>
+              <rect x="0" y="0" width="1000" height="760" fill="url(#graticulePat)"/>
+              <ellipse cx="330" cy="360" rx="150" ry="90" fill="url(#gStain)" opacity=".6"/>
+              <ellipse cx="690" cy="600" rx="180" ry="100" fill="url(#gStain)" opacity=".5"/>
+              <ellipse cx="865" cy="330" rx="110" ry="130" fill="url(#gStain)" opacity=".45"/>
+              <use href="#continents" fill="url(#gLand)" stroke="#5e472c" stroke-width="1.35" stroke-linejoin="round" filter="url(#coastShadow)"/>
+              <use href="#continents" fill="url(#hatchPat)" stroke="none" opacity=".62"/>
+              <use href="#continents" fill="none" stroke="#3f2e1a" stroke-width=".55" stroke-linejoin="round" opacity=".55"/>
+
+              <g class="ink-line" opacity=".26" stroke-width="1.5">
+                <path d="M148 676 C160 650 178 646 190 656 C202 666 198 684 184 686 C172 688 166 676 176 670"/>
+                <path d="M158 690 C168 674 186 678 192 694"/>
+                <path d="M188 686 C200 676 214 682 214 696"/>
+                <path d="M174 690 C170 704 178 714 190 712"/>
+                <circle cx="184" cy="662" r="1.8" fill="#5a4325" stroke="none"/>
+                <circle cx="194" cy="690" r="1.6" fill="#5a4325" stroke="none"/>
+              </g>
+              <g class="compass-ink" opacity=".5" transform="translate(884 132)">
+                <circle r="35" fill="none" stroke="#5e472c" stroke-width="1"/>
+                <circle r="26" fill="none" stroke="#5e472c" stroke-width=".6" stroke-dasharray="2 4"/>
+                <path d="M0-39 7-9 0 0-7-9Z" fill="#6b4e2a" opacity=".72"/>
+                <path d="M0 39 5 9 0 0-5 9Z" fill="#6b4e2a" opacity=".34"/>
+                <path d="M-39 0-9 5 0 0-9-5Z" fill="#6b4e2a" opacity=".46"/>
+                <path d="M39 0 9-5 0 0 9 5Z" fill="#6b4e2a" opacity=".46"/>
+                <text x="0" y="-43" text-anchor="middle" font-size="11" fill="#5e472c">N</text>
+                <text x="43" y="4" text-anchor="middle" font-size="10" fill="#5e472c">E</text>
+                <text x="0" y="49" text-anchor="middle" font-size="10" fill="#5e472c">S</text>
+                <text x="-43" y="4" text-anchor="middle" font-size="10" fill="#5e472c">W</text>
+              </g>
+              <g class="ink-line" opacity=".3" transform="translate(206 376) scale(.9)">
+                <path d="M-17 5 H17 L11 14 H-11 Z" fill="#5a4325" stroke="none"/>
+                <path d="M0 5 V-22 M0-22 L13-12 H0" stroke-width="1.3"/>
+                <path d="M-17 5 C-8 1 8 1 17 5" stroke-width="1.1"/>
+              </g>
+              <g class="blot">
+                <ellipse cx="700" cy="566" rx="58" ry="26"/>
+                <path d="M660 560 C636 548 620 554 606 570 C630 568 644 566 660 572"/>
+                <path d="M742 566 C764 552 782 558 794 574 C770 572 756 570 742 576"/>
+                <path d="M690 586 C684 604 676 614 660 620 C676 626 692 618 700 604"/>
+              </g>
+            </svg>
+            <div class="map-nodes" id="mapNodes"></div>
+          </div>
+        </div>
+
+        <div class="map-legend" aria-label="图例">
+          <span class="legend-item"><span class="legend-swatch"></span>城市</span>
+          <span class="legend-item"><span class="legend-swatch wild"></span>荒野</span>
+          <span class="legend-item"><span class="legend-swatch sea"></span>海洋</span>
+          <span class="legend-item"><span class="legend-swatch gate"></span>门</span>
+          <span class="legend-item"><span class="legend-swatch monster"></span>怪物</span>
+          <span class="legend-item"><span class="legend-swatch inv"></span>调查员</span>
+          <span class="legend-item"><span class="legend-swatch clue"></span>线索</span>
+          <span class="legend-item"><span class="legend-swatch reach"></span>可移动</span>
+        </div>
+      </section>
+
+      <section class="active-card" id="activeCard" aria-label="当前调查员" aria-live="polite"></section>
+      <section class="action-card" id="actionCard" aria-label="行动操作"></section>
+    </section>
+
+    <aside class="side">
+      <section class="panel doom-panel" id="doomPanel" aria-label="阿撒托斯与末日轨"></section>
+      <section class="panel team-panel" id="teamPanel" aria-label="调查员小队"></section>
+      <section class="panel event-panel" id="eventPanel" aria-label="事件档案"></section>
+      <section class="panel log-panel" id="logPanel" aria-label="行动日志"></section>
+    </aside>
+  </main>
+
+  <footer class="foot">
+    <span>全球惊悚 · 阿撒托斯 · 16 回合 · 合作对抗古神</span>
+    <span>纯前端 · 零外部请求 · 地图与肖像均为本地绘制</span>
+  </footer>
+</div>
+
+<div id="revealRoot"></div>
+
+<!-- 终局 -->
+<div class="overlay" id="endOverlay" role="dialog" aria-modal="true" aria-labelledby="endTitle" hidden>
+  <div class="overlay-card">
+    <div class="end-seal" id="endSeal" aria-hidden="true"></div>
+    <div class="end-eyebrow">AZATHOTH · FINALE</div>
+    <h2 class="end-title" id="endTitle">阿撒托斯苏醒</h2>
+    <p class="end-reason" id="endReason"></p>
+    <span class="end-ribbon" aria-hidden="true"></span>
+    <div class="end-stats" id="endStats"></div>
+    <div class="end-actions">
+      <button class="btn primary" data-act="again" type="button">再来一局</button>
+      <button class="btn" data-act="dismissEnd" type="button">查看终局地图</button>
+    </div>
+  </div>
+</div>
+
+<!-- 规则 -->
+<div class="overlay" id="rulesOverlay" role="dialog" aria-modal="true" aria-labelledby="rulesTitle" hidden>
+  <div class="overlay-card rules-card">
+    <h2 id="rulesTitle">调查员手册</h2>
+    <p class="rules-lead">四名调查员，对抗盲目痴愚之神</p>
+    <div class="rules-list">
+      <div class="rule-item"><span class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 3c4 5 6.5 8 6.5 11a6.5 6.5 0 0 1-13 0C5.5 11 8 8 12 3z"/><path d="M9.5 14c.5 1.8 1.6 2.8 3 3"/></svg></span><div><b>目标</b>：完成 3 张神秘卡，阻止阿撒托斯苏醒；末日轨归零、全员倒下或 16 回合耗尽即失败。</div></div>
+      <div class="rule-item"><span class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg></span><div><b>回合</b>：行动阶段（每名调查员 2 个行动）→ 遭遇阶段（每人抽 1 张遭遇牌）→ 神秘阶段（抽 1 张神话卡，怪物行动）→ 下一回合。</div></div>
+      <div class="rule-item"><span class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20 20 4M13 4h7v7"/><path d="M5 5l7 7" opacity=".35"/></svg></span><div><b>移动</b>：点击地图上带金色光圈的地点，沿连线移动 1 步；水手西拉斯一次可走 2 步。行动栏中还有研究、战斗、休息、关门、封印。</div></div>
+      <div class="rule-item"><span class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1" fill="currentColor"/><circle cx="15" cy="9" r="1" fill="currentColor"/><circle cx="9" cy="15" r="1" fill="currentColor"/><circle cx="15" cy="15" r="1" fill="currentColor"/></svg></span><div><b>检定</b>：每点属性掷 1 颗骰，5 或 6 为 1 个成功；达到难度即成功。研究时可消耗 1 个线索，额外 +2 骰。</div></div>
+      <div class="rule-item"><span class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 2 6 9l6 13 6-13-6-7z"/><path d="M6 9h12M12 2v20"/></svg></span><div><b>神秘卡</b>：在城市 / 荒野 / 海洋研究对应地点类型，累积进度。完成一张会获得线索，也会惊动古神，在门附近刷出 1 只怪物。</div></div>
+      <div class="rule-item"><span class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 17 12 4l8 13"/><path d="M7 14h10M8.5 17.5h7M6 21h12"/></svg></span><div><b>怪物与门</b>：怪物每神话阶段向最近的调查员移动 1 步，同格就攻击。门是刷怪点；意志检定可关门（难度 1），消耗线索可永久封印（难度 2）。</div></div>
+      <div class="rule-item"><span class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 3v18M5 7l7-4 7 4M7 21h10"/></svg></span><div><b>线索</b>：获得后跟随调查员，显示为头像上的金色菱标。地图上的金色菱形表示该地点的调查员持有线索。</div></div>
+    </div>
+    <div class="rules-note"><span class="muted">本版简化：</span>未实装资产、法术、交易与终局战；遭遇与神话卡文本为本版原创简化。专属能力：诺曼观察 +1 骰、马克力量 +1 骰、戴安娜每轮首次失败自动重掷、西拉斯双步移动。</div>
+    <button class="btn modal-close" data-act="closeRules" type="button">知道了</button>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="sr-only" id="live" aria-live="polite"></div>
+
+<script type="module">
+import {
+  createGame, legalActions, applyAction, chooseAIAction,
+  getInvestigator, getLocation, aliveInvestigators,
+  ATTRIBUTE_NAMES, MYSTERIES,
+  ENCOUNTER_CARDS, MYTHOS_CARDS,
+  ACTIONS_PER_TURN, VERSION
+} from './engine.js';
+
+const $ = (id) => document.getElementById(id);
+const QUERY = new URLSearchParams(location.search);
+const DEFAULT_SEED = QUERY.get('seed') || 'azathoth-ui-01';
+
+/* ------------------------------------------------------------------ *
+ * 世界地图坐标：viewBox 1000 x 760                                  *
+ * ------------------------------------------------------------------ */
+const POS = {
+  arkham: [200, 220],
+  north_atlantic: [380, 295],
+  london: [430, 145],
+  alps: [535, 180],
+  rome: [602, 250],
+  cairo: [625, 325],
+  sahara: [543, 400],
+  timbuktu: [410, 465],
+  amazon: [300, 442],
+  buenos_aires: [325, 622],
+  himalayas: [750, 325],
+  shanghai: [810, 252],
+  tokyo: [893, 220],
+  outback: [792, 540],
+  sydney: [878, 606],
+  indian_ocean: [700, 475],
+  pacific_ocean: [920, 388]
+};
+const LABEL_SIDE = {
+  arkham: 'right', north_atlantic: 'left', london: 'left', alps: 'right',
+  rome: 'left', cairo: 'left', sahara: 'bottom', timbuktu: 'bottom',
+  amazon: 'left', buenos_aires: 'left', himalayas: 'bottom', shanghai: 'left',
+  tokyo: 'top', outback: 'left', sydney: 'bottom', indian_ocean: 'right',
+  pacific_ocean: 'top'
+};
+const SHORT_NAME = {
+  buenos_aires: '布宜诺斯', amazon: '亚马逊', alps: '阿尔卑斯', himalayas: '喜马拉雅',
+  outback: '澳洲内陆', north_atlantic: '北大西洋', indian_ocean: '印度洋',
+  pacific_ocean: '太平洋', timbuktu: '廷巴克图'
+};
+const TYPE_NAME = { city: '城市', wilderness: '荒野', sea: '海洋' };
+const TYPE_DECK = { city: '城市遭遇', wilderness: '荒野遭遇', sea: '海洋遭遇' };
+const ATTR_ICON = { will: 'spiral', strength: 'fist', observation: 'eye', influence: 'mask' };
+const INV_COLOR = {
+  norman: { pc: '#6f9fd8', pc2: '#1d3350', glow: 'rgba(111,159,216,.16)' },
+  mark: { pc: '#c47a52', pc2: '#4a2114', glow: 'rgba(196,122,82,.16)' },
+  diana: { pc: '#9a79c8', pc2: '#2d1d44', glow: 'rgba(154,121,200,.16)' },
+  silas: { pc: '#57ab99', pc2: '#123a35', glow: 'rgba(87,171,153,.16)' }
+};
+const MONSTER_COLOR = {
+  cultist: ['#a15d6f', '#2a121c'],
+  ghoul: ['#7f9a6c', '#1c2a16'],
+  nightgaunt: ['#8a7bb5', '#1d1730'],
+  star_spawn: ['#68b39c', '#10302a']
+};
+
+/* ------------------------------------------------------------------ *
+ * 图标                                                               *
+ * ------------------------------------------------------------------ */
+const ICONS = {
+  eye: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2.6 12S6.2 5.6 12 5.6 21.4 12 21.4 12 17.8 18.4 12 18.4 2.6 12 2.6 12z"/><circle cx="12" cy="12" r="3.1"/><path d="M12 9.6v4.8" opacity=".55"/></svg>',
+  fist: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 11V6.5a1.3 1.3 0 0 1 2.6 0V10M9.6 10V5.2a1.3 1.3 0 0 1 2.6 0V10M12.2 10V5.8a1.3 1.3 0 0 1 2.6 0V11M14.8 11V7.6a1.3 1.3 0 0 1 2.6 0V14c0 3.6-2.5 6.2-6.1 6.2-2.6 0-4.4-1.2-5.5-3.2L4.2 13a1.5 1.5 0 0 1 2.5-1.6L7 12.4"/></svg>',
+  spiral: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 12a3 3 0 1 1 3-3 5.2 5.2 0 1 1-5.2 5.2 7.4 7.4 0 1 1 7.4 7.4"/></svg>',
+  mask: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6c2.6-1.2 5.3-1.8 8-1.8S17.4 4.8 20 6v6.4c0 3.8-3.6 6.6-8 6.6s-8-2.8-8-6.6V6z"/><path d="M8 10.6c1-.8 2-.8 3 0M13 10.6c1-.8 2-.8 3 0M9.6 15c1.6 1.2 3.2 1.2 4.8 0"/></svg>',
+  boot: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v8l-3 4v4h5l5-3h5v-4h-4l-3-3V3H8z"/><path d="M10 3v3M12.5 3v3"/></svg>',
+  book: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5.5A2.5 2.5 0 0 1 5.5 3H11v16H5.5A2.5 2.5 0 0 0 3 21.5V5.5z"/><path d="M21 5.5A2.5 2.5 0 0 0 18.5 3H13v16h5.5a2.5 2.5 0 0 1 2.5 2.5V5.5z"/><path d="M6 8h2.5M6 11h2.5M15.5 8H18M15.5 11H18"/></svg>',
+  sword: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4 20 9.5 10 19.5 6 20l.5-4L16.5 6"/><path d="M4 20l3-3M6.5 17.5l2 2"/></svg>',
+  moon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.4A8.4 8.4 0 0 1 9.6 4 8.4 8.4 0 1 0 20 14.4z"/><path d="M16.5 4.5v2M15.5 5.5h2" opacity=".7"/></svg>',
+  gate: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V8c0-3 3-5 7-5s7 2 7 5v13"/><path d="M9 21v-7c0-1.7 1.3-3 3-3s3 1.3 3 3v7"/><path d="M3 21h18"/><path d="M12 10v3" opacity=".6"/></svg>',
+  seal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 20 6v7c0 5-3.4 8.4-8 9-4.6-.6-8-4-8-9V6l8-4z"/><path d="M12 6v9M8.5 9.5 15.5 13M15.5 9.5 8.5 13"/></svg>',
+  clue: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 2.5 19 12l-7 9.5L5 12l7-9.5z"/><path d="M12 7.5 15.5 12 12 16.5 8.5 12 12 7.5z" opacity=".55"/></svg>',
+  heart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7.5-4.6-7.5-10A4.3 4.3 0 0 1 12 6.8 4.3 4.3 0 0 1 19.5 10c0 5.4-7.5 10-7.5 10z"/></svg>',
+  sanity: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4a8 8 0 1 0 8 8c0-1.5-.4-2.8-1.2-4A5.2 5.2 0 0 1 12 4z"/><path d="M18 3v2M17 4h2M4.5 8v1.5M3.75 8.75h1.5"/></svg>',
+  skull: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.6A7.4 7.4 0 0 0 4.6 10v4.2L2.4 18h5l1.1 3.4h7L16.6 18h5l-2.2-3.8V10A7.4 7.4 0 0 0 12 2.6z"/><circle cx="9" cy="10" r="1.4" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="1.4" fill="currentColor" stroke="none"/><path d="M10 15h4"/></svg>',
+  mythos: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.8 3.2 8.4v7.2L12 21.2l8.8-5.6V8.4L12 2.8z"/><circle cx="12" cy="12" r="4.1"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/><path d="M12 3v5M3.6 8.6 8 11.4M20.4 8.6 16 11.4" opacity=".55"/></svg>',
+  card: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="13" height="18" rx="2"/><path d="M10.5 8.2 8.4 10.3h4.2L10.5 8.2zM7.5 15h6M7.5 17.4h4" opacity=".6"/><path d="M17 6h2a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-9" opacity=".5"/></svg>',
+  check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.6 2.8L16.5 9"/></svg>',
+  warning: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 22 20H2L12 3z"/><path d="M12 9v5M12 17.2v.4"/></svg>',
+  pin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>',
+  star: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="m12 2.8 2.8 5.9 6.4.8-4.7 4.4 1.2 6.3L12 17.2l-5.7 3 1.2-6.3-4.7-4.4 6.4-.8L12 2.8z"/></svg>',
+  scroll: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h13a2 2 0 0 1 2 2v15H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M7 3v17M10 7h7M10 11h7M10 15h4"/><path d="M6 20a2 2 0 0 0 0-4" opacity=".5"/></svg>',
+  lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></svg>',
+  compass: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5 5-2z"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2" opacity=".5"/></svg>'
+};
+function icon(name, cls) {
+  const svg = ICONS[name] || ICONS.star;
+  return cls ? svg.replace('<svg ', '<svg class="' + cls + '" ') : svg;
+}
+function attrIcon(attr) { return icon(ATTR_ICON[attr] || 'star'); }
+
+/* ------------------------------------------------------------------ *
+ * 调查员肖像：半剪影 + 材质光影 + 职业道具                            *
+ * ------------------------------------------------------------------ */
+const PORTRAITS = {
+  norman: `
+    <g opacity=".62" stroke="#a9c9ea" stroke-width=".7" fill="none">
+      <path d="M12 26 22 17 34 22 48 12 60 20 74 14"/>
+      <path d="M22 17 26 8M48 12 52 5M60 20 66 11"/>
+      <circle cx="22" cy="17" r="1.2" fill="#dcecff" stroke="none"/>
+      <circle cx="34" cy="22" r="1" fill="#dcecff" stroke="none"/>
+      <circle cx="48" cy="12" r="1.3" fill="#dcecff" stroke="none"/>
+      <circle cx="60" cy="20" r=".9" fill="#dcecff" stroke="none"/>
+      <circle cx="74" cy="14" r="1.2" fill="#dcecff" stroke="none"/>
+    </g>
+    <g transform="rotate(-30 72 52)">
+      <rect x="62" y="24" width="40" height="9" rx="3" fill="url(#gGold)"/>
+      <rect x="62" y="24" width="10" height="9" fill="#5b431f"/>
+      <rect x="96" y="21" width="8" height="15" rx="2" fill="#3d2c16"/>
+      <rect x="72" y="25" width="4" height="7" fill="#f3e2b6" opacity=".7"/>
+    </g>
+    <path d="M10 124 C12 98 28 85 50 85 C72 85 88 98 90 124 Z" fill="url(#gCoatNorman)"/>
+    <path d="M10 124 C12 102 20 92 30 88 L38 124 Z" fill="#08101a" opacity=".5"/>
+    <path d="M50 85 43 100 50 112 57 100 Z" fill="#101c2b" opacity=".85"/>
+    <path d="M38 88 50 104 62 88" fill="none" stroke="#8fb6dd" stroke-width=".9" opacity=".45"/>
+    <path d="M50 104 45 112 50 124 55 112 Z" fill="#e8dcbf"/>
+    <path d="M42 72 H58 V88 C58 94 42 94 42 88 Z" fill="url(#gSkinDark)"/>
+    <ellipse cx="50" cy="51" rx="17.5" ry="21" fill="url(#gSkin)"/>
+    <path d="M50 30 C40 30 32 39 33 52 L36 50 C37 41 43 34 50 34 Z" fill="#d8ad86" opacity=".5"/>
+    <path d="M50 31 C59 31 67 39 67 50 L64 60 C62 48 57 40 50 40 Z" fill="#4d3222" opacity=".34"/>
+    <path d="M34 43 C34 29 42 24 50 24 C58 24 66 29 67 42 C61 35 56 32 50 32 C43 32 37 36 34 43 Z" fill="#2f2721"/>
+    <path d="M34 43 C38 40 42 40 45 42" stroke="#4a3d31" stroke-width="1" fill="none"/>
+    <path d="M38 47 C40 45 43 45 45 47 M55 47 C57 45 60 45 62 47" stroke="#4a3222" stroke-width="1.1" fill="none" stroke-linecap="round"/>
+    <circle cx="42" cy="50" r="6.2" fill="#dfeaf4" opacity=".1" stroke="url(#gGold)" stroke-width=".9"/>
+    <circle cx="58" cy="50" r="6.2" fill="#dfeaf4" opacity=".1" stroke="url(#gGold)" stroke-width=".9"/>
+    <path d="M48 50 H52" stroke="url(#gGold)" stroke-width=".9"/>
+    <circle cx="42" cy="50" r="1.5" fill="#1b1510"/>
+    <circle cx="58" cy="50" r="1.5" fill="#1b1510"/>
+    <circle cx="42.5" cy="49.5" r=".5" fill="#e9f5ff"/>
+    <circle cx="58.5" cy="49.5" r=".5" fill="#e9f5ff"/>
+    <path d="M50 51 C49 55 48.5 57 50 58" stroke="#8f6548" stroke-width=".8" fill="none"/>
+    <path d="M46 63 C48.5 65 51.5 65 54 63" stroke="#6f4632" stroke-width="1.1" fill="none" stroke-linecap="round"/>
+    <path d="M36 31 C39 26 45 23 50 23" stroke="#a9d4ff" stroke-width=".8" opacity=".45" fill="none"/>
+    <path d="M31 96 50 112 69 96" fill="none" stroke="#c8a263" stroke-width=".8" opacity=".4"/>
+    <circle cx="50" cy="116" r="2.4" fill="url(#gGold)"/>
+  `,
+  mark: `
+    <g transform="rotate(24 20 70)" opacity=".9">
+      <rect x="8" y="62" width="12" height="56" rx="3" fill="#3b2314"/>
+      <rect x="10" y="56" width="8" height="18" rx="2" fill="#6b6b63"/>
+      <rect x="10" y="54" width="8" height="3" fill="#a3a296" opacity=".7"/>
+    </g>
+    <path d="M8 124 C10 98 26 84 50 84 C74 84 90 98 92 124 Z" fill="url(#gCoatMark)"/>
+    <path d="M50 84 38 95 42 110 50 104 58 110 62 95 Z" fill="#241a12"/>
+    <path d="M18 94 50 124" stroke="#1b120b" stroke-width="5"/>
+    <path d="M18 94 50 124" stroke="#6a4a2c" stroke-width="2.2"/>
+    <rect x="30" y="104" width="7" height="6" rx="1" fill="url(#gGold)"/>
+    <path d="M20 88 28 94 M80 88 72 94" stroke="url(#gGold)" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M42 72 H58 V88 C58 94 42 94 42 88 Z" fill="url(#gSkinDark)"/>
+    <ellipse cx="50" cy="52" rx="16.5" ry="20" fill="url(#gSkin)"/>
+    <path d="M50 32 C59 32 66 40 66 51 C66 61 60 68 50 68 C40 68 34 61 34 51 C34 40 41 32 50 32 Z" fill="url(#gSkin)"/>
+    <path d="M50 34 C57 34 63 40 64 48 L61 58 C60 49 56 42 50 42 Z" fill="#4a3020" opacity=".3"/>
+    <path d="M33 45 C34 32 41 26 50 26 C59 26 66 32 67 45 L68 47 C60 43 40 43 32 47 Z" fill="#33301f"/>
+    <path d="M29 47 C38 42 62 42 71 47 L70 51 C60 47 40 47 30 51 Z" fill="#17140c"/>
+    <rect x="32" y="38" width="36" height="6" fill="#22241a"/>
+    <path d="M46 41 50 37 54 41 50 45 Z" fill="url(#gGold)"/>
+    <path d="M38 50 C40 48 43 48 45 50 M55 50 C57 48 60 48 62 50" stroke="#3a2416" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+    <path d="M39 54 H45 M55 54 H61" stroke="#1f1510" stroke-width="1.3"/>
+    <circle cx="42" cy="54" r="1.4" fill="#120c08"/>
+    <circle cx="58" cy="54" r="1.4" fill="#120c08"/>
+    <path d="M50 54 48.5 59 H51.5 Z" fill="#8f6244" opacity=".7"/>
+    <path d="M43 63 C46 64.5 54 64.5 57 63" stroke="#6f4430" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+    <path d="M60 47 64 52" stroke="#a05b45" stroke-width="1" opacity=".7"/>
+    <path d="M44 70 C47 72 53 72 56 70" stroke="#3c2618" stroke-width="2" opacity=".35" fill="none"/>
+    <path d="M40 78 C46 84 54 84 60 78" stroke="#b8b3a3" stroke-width=".8" fill="none" opacity=".85"/>
+    <path d="M50 86 V96" stroke="#c8c2b0" stroke-width=".8" opacity=".8"/>
+    <rect x="47" y="95" width="6" height="8" rx="1" fill="#b7b09d" stroke="#5c5548" stroke-width=".5"/>
+    <path d="M36 30 C40 25 46 24 50 24" stroke="#ffd8b0" stroke-width=".8" opacity=".35" fill="none"/>
+  `,
+  diana: `
+    <circle cx="72" cy="34" r="24" fill="url(#gGlowTeal)" opacity=".28"/>
+    <path d="M20 74 C18 36 32 14 50 14 C68 14 82 36 80 74 C74 54 66 42 50 42 C34 42 26 54 20 74 Z" fill="url(#gCoatDiana)"/>
+    <path d="M32 44 C30 62 34 84 50 92 C66 84 70 62 68 44 C64 58 58 64 50 64 C42 64 36 58 32 44 Z" fill="#0d0911" opacity=".8"/>
+    <path d="M8 124 C10 98 28 86 50 86 C72 86 90 98 92 124 Z" fill="url(#gCoatDiana)"/>
+    <path d="M24 92 C30 106 34 116 34 124 L48 124 42 94 Z" fill="#160f1e" opacity=".6"/>
+    <path d="M76 92 C70 106 66 116 66 124 L52 124 58 94 Z" fill="#160f1e" opacity=".6"/>
+    <path d="M42 72 H58 V88 C58 94 42 94 42 88 Z" fill="url(#gSkinDark)"/>
+    <ellipse cx="50" cy="52" rx="15.5" ry="19" fill="#e3c4a1"/>
+    <path d="M50 33 C58 33 64 40 64 50 C64 60 58 68 50 68 C42 68 36 60 36 50 C36 40 42 33 50 33 Z" fill="url(#gSkin)"/>
+    <path d="M50 35 C57 35 62 41 63 48 L60 58 C59 49 56 43 50 43 Z" fill="#3a2418" opacity=".36"/>
+    <path d="M36 44 C38 33 42 30 50 30 C58 30 63 34 65 44" fill="none" stroke="#1a1220" stroke-width="2.2" opacity=".7"/>
+    <path d="M38 47 C40 45 43 45 45 47 M55 47 C57 45 60 45 62 47" stroke="#3a2418" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+    <path d="M39 52 C41 51 44 51 46 52 M54 52 C56 51 59 51 61 52" stroke="#241610" stroke-width="1.2" fill="none"/>
+    <circle cx="42.5" cy="52" r="1.2" fill="#1a100c"/>
+    <circle cx="57.5" cy="52" r="1.2" fill="#1a100c"/>
+    <circle cx="42.9" cy="51.6" r=".5" fill="#9fe3d2"/>
+    <circle cx="57.9" cy="51.6" r=".5" fill="#9fe3d2"/>
+    <path d="M50 53 49 58 H51 Z" fill="#9b6a4c" opacity=".7"/>
+    <path d="M46 62 C48 63.5 52 63.5 54 62" stroke="#6d3242" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+    <path d="M42 70 C46 72 54 72 58 70" stroke="#2a1a20" stroke-width="2.2" opacity=".4" fill="none"/>
+    <path d="M38 82 C46 78 54 78 62 82" fill="none" stroke="#8f6fbb" stroke-width=".9" opacity=".5"/>
+    <path d="M50 86 V100" stroke="#8f6fbb" stroke-width=".8" opacity=".55"/>
+    <g transform="translate(50 102)">
+      <path d="M0-6 C5-3 5 3 0 6 C-5 3-5-3 0-6Z" fill="url(#gGold)" stroke="#3b2a12" stroke-width=".5"/>
+      <ellipse cx="0" cy="0" rx="3.2" ry="2.1" fill="#10201d"/>
+      <circle cx="0" cy="0" r=".9" fill="#9fe3d2"/>
+    </g>
+    <path d="M64 32 C68 26 72 24 76 26" stroke="#c8a8ec" stroke-width=".7" fill="none" opacity=".5"/>
+    <path d="M34 32 C32 40 31 52 33 62" stroke="#c8a8ec" stroke-width=".6" fill="none" opacity=".35"/>
+  `,
+  silas: `
+    <path d="M8 124 C10 98 26 86 50 86 C74 86 90 98 92 124 Z" fill="url(#gCoatSilas)"/>
+    <path d="M24 92 C22 102 22 114 24 124 L40 124 38 94 Z" fill="#08100e" opacity=".5"/>
+    <path d="M76 92 C78 102 78 114 76 124 L60 124 62 94 Z" fill="#08100e" opacity=".5"/>
+    <path d="M28 92 C24 82 26 74 36 72 C40 84 42 90 42 94 Z" fill="#2f4f47" opacity=".8"/>
+    <path d="M42 72 H58 V88 C58 94 42 94 42 88 Z" fill="url(#gSkinDark)"/>
+    <ellipse cx="50" cy="52" rx="16.5" ry="20" fill="url(#gSkin)"/>
+    <path d="M50 33 C58 33 65 40 65 51 C65 61 59 68 50 68 C41 68 35 61 35 51 C35 40 42 33 50 33 Z" fill="url(#gSkin)"/>
+    <path d="M50 35 C57 35 62 41 63 49 L60 59 C59 50 56 43 50 43 Z" fill="#4a2c1a" opacity=".32"/>
+    <path d="M33 41 C25 38 22 44 24 54 C25 63 30 67 34 66 C31 58 31 48 33 41 Z" fill="#2f5a52"/>
+    <path d="M67 41 C75 38 78 44 76 54 C75 63 70 67 66 66 C69 58 69 48 67 41 Z" fill="#2f5a52"/>
+    <path d="M30 38 C35 28 43 23 50 23 C58 23 66 28 70 38 L71 31 C68 22 60 17 50 17 C40 17 32 22 29 31 Z" fill="#1d3a35"/>
+    <path d="M27 40 C37 34 63 34 73 40 L72 45 C60 40 40 40 28 45 Z" fill="#122622"/>
+    <path d="M36 43 C39 44 42 44 44 43" stroke="#203b35" stroke-width="1" fill="none"/>
+    <path d="M37 47 C40 45 43 45 45 47 M55 47 C57 45 60 45 63 47" stroke="#3a2410" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+    <circle cx="42" cy="51" r="1.4" fill="#171008"/>
+    <circle cx="58" cy="51" r="1.4" fill="#171008"/>
+    <path d="M42.4 50.6h.8M58.4 50.6h.8" stroke="#e8e2cf" stroke-width=".5"/>
+    <path d="M50 52 48.5 58 H51.5 Z" fill="#8f5c3e" opacity=".75"/>
+    <path d="M40 63 C42 60 46 58 50 58 C54 58 58 60 60 63 C56 68 52 70 50 70 C48 70 44 68 40 63 Z" fill="#9a978d"/>
+    <path d="M43 63 C46 66 54 66 57 63" stroke="#6e6a60" stroke-width="1" fill="none"/>
+    <path d="M46 66 C48 67 52 67 54 66" stroke="#4c4a42" stroke-width="1" fill="none"/>
+    <g transform="translate(60 60) rotate(12)">
+      <path d="M0 0 H17" stroke="#3b2314" stroke-width="1.6" stroke-linecap="round"/>
+      <rect x="16" y="-3.5" width="5" height="7" rx="1" fill="url(#gGold)"/>
+      <circle cx="18.5" cy="-3.5" r="1.6" fill="#f08a4a" opacity=".95"/>
+    </g>
+    <path d="M26 96 C30 84 40 78 50 78" stroke="#b9a37b" stroke-width="2.4" fill="none" opacity=".35"/>
+    <path d="M30 102 C34 92 42 88 50 88" stroke="#b9a37b" stroke-width="1.6" fill="none" opacity=".25"/>
+    <path d="M50 86 43 100 50 112 57 100 Z" fill="#17332e" opacity=".85"/>
+    <circle cx="50" cy="104" r="1.5" fill="url(#gGold)"/>
+    <path d="M34 42 C38 37 44 35 50 35" stroke="#ffd8a8" stroke-width=".7" opacity=".35" fill="none"/>
+  `
+};
+function portrait(key) {
+  return '<svg viewBox="0 0 100 124" aria-hidden="true" focusable="false">' + (PORTRAITS[key] || PORTRAITS.norman) + '</svg>';
+}
+
+/* ------------------------------------------------------------------ *
+ * 怪物剪影                                                           *
+ * ------------------------------------------------------------------ */
+const MONSTER_ART = {
+  cultist: `
+    <path d="M32 4 C21 4 14 15 15 28 L18 58 L46 58 L49 28 C50 15 43 4 32 4Z" fill="url(#gRobe)" stroke="#090708" stroke-width=".8"/>
+    <path d="M32 11 C24 11 20 19 21 27 C22 34 26 38 32 38 C38 38 42 34 43 27 C44 19 40 11 32 11Z" fill="#080607"/>
+    <path d="M22 27 C24 25 27 25 29 27 M35 27 C37 25 40 25 42 27" stroke="#4a3a46" stroke-width=".8" fill="none"/>
+    <ellipse cx="27.5" cy="27.5" rx="2.2" ry="1.3" fill="#ffc27a"/>
+    <ellipse cx="36.5" cy="27.5" rx="2.2" ry="1.3" fill="#ffc27a"/>
+    <circle cx="27.5" cy="27.5" r=".7" fill="#3a1a06"/>
+    <circle cx="36.5" cy="27.5" r=".7" fill="#3a1a06"/>
+    <path d="M18 58 C20 46 26 41 32 41 C38 41 44 46 46 58" fill="#120d13" opacity=".7"/>
+    <path d="M24 45 C26 52 25 56 23 58 M40 45 C38 52 39 56 41 58 M32 42V58" stroke="#4b3948" stroke-width=".7" opacity=".65" fill="none"/>
+    <path d="M6 42 C12 40 16 44 17 50 C14 49 11 52 12 56 C8 52 5 47 6 42Z" fill="url(#gRobe)"/>
+    <path d="M58 42 C52 40 48 44 47 50 C50 49 53 52 52 56 C56 52 59 47 58 42Z" fill="url(#gRobe)"/>
+    <path d="M48 34 61 12 63 14 53 36 Z" fill="#c7c2b0" stroke="#5a5547" stroke-width=".6"/>
+    <path d="M60 13 64 9 67 12 63 16 Z" fill="url(#gGold)" stroke="#4a3315" stroke-width=".5"/>
+    <path d="M49 35 54 39" stroke="#3a2a16" stroke-width="2.6" stroke-linecap="round"/>
+    <path d="M14 40 C17 37 20 38 20 42" stroke="#7a5f73" stroke-width=".7" fill="none" opacity=".7"/>
+    <path d="M50 40 C53 37 56 38 56 42" stroke="#7a5f73" stroke-width=".7" fill="none" opacity=".7"/>
+  `,
+  ghoul: `
+    <path d="M14 58 C9 48 12 36 22 32 C24 24 30 19 38 20 C46 21 50 28 49 35 C55 38 58 46 57 58 Z" fill="url(#gMonster)" stroke="#070907" stroke-width=".8"/>
+    <path d="M22 32 C18 42 20 52 26 58" stroke="#4f5d4c" stroke-width=".8" fill="none" opacity=".6"/>
+    <path d="M30 25 C28 33 30 42 35 48" stroke="#485546" stroke-width=".7" fill="none" opacity=".55"/>
+    <ellipse cx="40" cy="28" rx="9.5" ry="10.5" fill="#20271f"/>
+    <path d="M34 33 C36 37 44 37 47 32 C44 38 36 38 34 33Z" fill="#070907"/>
+    <path d="M35 32 37 35M42 35 44 32" stroke="#8aa17f" stroke-width=".7"/>
+    <circle cx="37" cy="27" r="1.4" fill="#c7e8b6"/>
+    <circle cx="43" cy="27" r="1.4" fill="#c7e8b6"/>
+    <circle cx="37" cy="27" r=".5" fill="#1b2a17"/>
+    <circle cx="43" cy="27" r=".5" fill="#1b2a17"/>
+    <path d="M36 23 C38 21 42 21 44 23" stroke="#5a6a51" stroke-width=".7" fill="none"/>
+    <path d="M20 38 C11 42 6 50 8 59 C10 56 14 55 17 58 C16 51 18 45 22 42" fill="url(#gTentacle)"/>
+    <path d="M52 38 C60 42 64 50 62 59 C60 56 56 55 53 58 C54 51 52 45 49 42" fill="url(#gTentacle)"/>
+    <path d="M8 59 5 63M10 61 8 65M62 59 65 63M60 61 62 65" stroke="#b9d0ae" stroke-width=".9" stroke-linecap="round"/>
+    <path d="M26 34 C30 36 32 40 31 44 M34 40 C38 41 41 44 41 48" stroke="#3c4939" stroke-width=".7" fill="none" opacity=".8"/>
+    <path d="M18 51 C21 49 24 50 25 53 M46 51 C43 49 40 50 39 53" stroke="#66755f" stroke-width=".6" fill="none" opacity=".6"/>
+    <path d="M40 18 C38 16 36 17 35 19" stroke="#9bb18e" stroke-width=".8" fill="none" opacity=".6"/>
+    <path d="M22 33 C25 28 31 25 36 25" stroke="#b7c9a9" stroke-width=".6" fill="none" opacity=".35"/>
+  `,
+  nightgaunt: `
+    <path d="M31 30 C18 15 6 18 5 32 C11 31 15 35 18 43 C13 41 9 45 10 53 C17 47 24 47 30 52 Z" fill="url(#gWing)" stroke="#08070d" stroke-width=".7"/>
+    <path d="M33 30 C46 15 58 18 59 32 C53 31 49 35 46 43 C51 41 55 45 54 53 C47 47 40 47 34 52 Z" fill="url(#gWing)" stroke="#08070d" stroke-width=".7"/>
+    <path d="M13 27 C20 27 25 32 27 39 M51 27 C44 27 39 32 37 39" stroke="#5a4f78" stroke-width=".7" fill="none" opacity=".6"/>
+    <path d="M15 24 C22 21 27 24 30 29 M49 24 C42 21 37 24 34 29" stroke="#6d5f8d" stroke-width=".5" fill="none" opacity=".5"/>
+    <ellipse cx="32" cy="26" rx="9.5" ry="11" fill="#171420" stroke="#08070d" stroke-width=".8"/>
+    <path d="M25 17 C23 12 25 9 28 11 C29 13 28 16 27 18 M39 17 C41 12 39 9 36 11 C35 13 36 16 37 18" fill="#100e18"/>
+    <path d="M28 28 C30 30 34 30 36 28" stroke="#2e2940" stroke-width=".7" fill="none"/>
+    <path d="M32 36 C36 40 38 46 36 54 C35 57 31 57 30 54 C29 48 29 41 30 36Z" fill="#1c1828"/>
+    <path d="M33 55 C38 60 42 64 39 68 C36 65 33 63 30 62" fill="none" stroke="#1c1828" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M32 37V53" stroke="#4b4266" stroke-width=".6" opacity=".6"/>
+    <path d="M20 48 C24 44 28 44 32 47 C36 44 40 44 44 48" stroke="#2c2640" stroke-width=".8" fill="none"/>
+    <path d="M27 18 C29 15 35 15 37 18" stroke="#7d6ca0" stroke-width=".5" fill="none" opacity=".55"/>
+  `,
+  star_spawn: `
+    <path d="M32 7 C20 7 14 17 16 27 C18 34 24 38 32 38 C40 38 46 34 48 27 C50 17 44 7 32 7Z" fill="url(#gMonster)" stroke="#080c09" stroke-width=".8"/>
+    <path d="M32 12 C24 12 20 19 21 26 C22 31 26 34 32 34 C38 34 42 31 43 26 C44 19 40 12 32 12Z" fill="#1b2620"/>
+    <ellipse cx="32" cy="23" rx="5.2" ry="8" fill="url(#gEye)" stroke="#f4d9a2" stroke-width=".6"/>
+    <ellipse cx="32" cy="23" rx="1.6" ry="6.2" fill="#0a0b08"/>
+    <circle cx="30.8" cy="19.5" r=".9" fill="#fff1c8"/>
+    <path d="M20 32 C13 38 9 47 11 55 C16 50 20 49 24 52" fill="none" stroke="url(#gTentacle)" stroke-width="4.6" stroke-linecap="round"/>
+    <path d="M44 32 C51 38 55 47 53 55 C48 50 44 49 40 52" fill="none" stroke="url(#gTentacle)" stroke-width="4.6" stroke-linecap="round"/>
+    <path d="M28 37 C25 46 22 54 17 59" fill="none" stroke="url(#gTentacle)" stroke-width="3.8" stroke-linecap="round"/>
+    <path d="M36 37 C39 46 42 54 47 59" fill="none" stroke="url(#gTentacle)" stroke-width="3.8" stroke-linecap="round"/>
+    <path d="M32 38 C32 48 31 56 29 62" fill="none" stroke="url(#gTentacle)" stroke-width="3.2" stroke-linecap="round"/>
+    <path d="M32 38 C34 47 36 54 39 60" fill="none" stroke="url(#gTentacle)" stroke-width="2.6" stroke-linecap="round"/>
+    <circle cx="15" cy="49" r="1" fill="#9fb8a8" opacity=".7"/><circle cx="18" cy="52" r=".8" fill="#9fb8a8" opacity=".6"/>
+    <circle cx="49" cy="49" r="1" fill="#9fb8a8" opacity=".7"/><circle cx="46" cy="52" r=".8" fill="#9fb8a8" opacity=".6"/>
+    <circle cx="24" cy="47" r=".8" fill="#9fb8a8" opacity=".5"/><circle cx="40" cy="47" r=".8" fill="#9fb8a8" opacity=".5"/>
+    <path d="M18 24 C16 18 20 13 26 12" stroke="#a9c3b0" stroke-width=".6" fill="none" opacity=".35"/>
+  `
+};
+function monsterSvg(type) {
+  return '<svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">' + (MONSTER_ART[type] || MONSTER_ART.cultist) + '</svg>';
+}
+
+/* ------------------------------------------------------------------ *
+ * 阿撒托斯印记 / 地点图标 / 门 / 封印                                *
+ * ------------------------------------------------------------------ */
+function azathothSigil() {
+  return `<svg viewBox="0 0 120 120" aria-hidden="true" focusable="false">
+    <circle cx="60" cy="60" r="57" fill="#08070c"/>
+    <circle cx="60" cy="60" r="52" fill="none" stroke="url(#gGold)" stroke-width=".8" opacity=".55"/>
+    <circle cx="60" cy="60" r="45" fill="none" stroke="#8f6fbb" stroke-width=".5" stroke-dasharray="2 5" opacity=".55"/>
+    <g class="orbit">
+      <path d="M60 13 C80 24 86 46 72 61 C58 76 36 72 30 56 C24 42 36 27 51 30 C64 33 69 47 60 55 C53 62 42 57 44 48" fill="none" stroke="#a98fd2" stroke-width="1.6" stroke-linecap="round" opacity=".75"/>
+      <path d="M60 107 C40 96 34 74 48 59 C62 44 84 48 90 64 C96 78 84 93 69 90 C56 87 51 73 60 65 C67 58 78 63 76 72" fill="none" stroke="#c8a8ec" stroke-width="1.1" stroke-linecap="round" opacity=".5"/>
+      <path d="M18 42 C28 24 46 18 60 26M102 78 C92 96 74 102 60 94" fill="none" stroke="#7f5fa8" stroke-width=".8" opacity=".55"/>
+      <circle cx="18" cy="42" r="1.4" fill="#c8a8ec" opacity=".8"/>
+      <circle cx="102" cy="78" r="1.4" fill="#c8a8ec" opacity=".8"/>
+      <circle cx="34" cy="90" r=".9" fill="#d9c8f2" opacity=".7"/>
+      <circle cx="88" cy="30" r=".9" fill="#d9c8f2" opacity=".7"/>
+      <circle cx="72" cy="16" r=".7" fill="#d9c8f2" opacity=".55"/>
+      <circle cx="44" cy="104" r=".7" fill="#d9c8f2" opacity=".55"/>
+    </g>
+    <ellipse cx="60" cy="60" rx="18" ry="10.5" fill="url(#gEye)" stroke="#f4e2b4" stroke-width=".6"/>
+    <ellipse cx="60" cy="60" rx="4.2" ry="9.6" fill="#08070a"/>
+    <circle cx="63.1" cy="55.8" r="1.3" fill="#ffeec8"/>
+    <path d="M35 46 C40 38 48 34 60 34 M85 74 C80 82 72 86 60 86" fill="none" stroke="#f0dca8" stroke-width=".5" opacity=".35"/>
+  </svg>`;
+}
+const LOC_ICON = {
+  city: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V9h5v12M10 21V5h5v16M15 21v-8h4v8"/><path d="M7 12h1M7 15h1M7 18h1M12 8h1M12 11h1M12 14h1M12 17h1M17 15h1M17 18h1"/></svg>',
+  wilderness: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m3 20 6-11 4 7 3-5 5 9H3z"/><path d="m7.4 15 1.6-2 1.6 2M14.2 16.2l1.8-3 1.8 3.4"/><path d="M3 20h18"/></svg>',
+  sea: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 9c2.4-2.2 4.4-2.2 6.4 0s4 2.2 6.3 0 4.4-2.2 6.3 0M2.5 14c2.4-2.2 4.4-2.2 6.4 0s4 2.2 6.3 0 4.4-2.2 6.3 0M2.5 19c2.4-2.2 4.4-2.2 6.4 0s4 2.2 6.3 0 4.4-2.2 6.3 0"/></svg>'
+};
+function locIcon(type) { return LOC_ICON[type] || LOC_ICON.city; }
+function gateMarkSvg() {
+  return `<svg viewBox="0 0 24 40" aria-hidden="true" focusable="false">
+    <path d="M12 2 C6 9 4 19 8 30 C9.5 34 14.5 34 16 30 C20 19 18 9 12 2Z" fill="url(#gGate)" stroke="#ffcf9f" stroke-width=".7" opacity=".95"/>
+    <path d="M12 5 9.5 13 13 17 10 25 13.5 31" fill="none" stroke="#ffe4b8" stroke-width="1" opacity=".95"/>
+    <path d="M7 12 4 15M17 18 20 21M8 26 5 29" stroke="#ffb48a" stroke-width=".8" opacity=".8"/>
+  </svg>`;
+}
+function sealMarkSvg() {
+  return `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path d="M12 2 20 6v7c0 5-3.4 8.4-8 9-4.6-.6-8-4-8-9V6l8-4z" fill="url(#gGold)" stroke="#4a3315" stroke-width=".7"/>
+    <path d="M12 6v9M8.5 9.5 15.5 13M15.5 9.5 8.5 13" stroke="#2d1e08" stroke-width="1" stroke-linecap="round"/>
+  </svg>`;
+}
+
+/* ------------------------------------------------------------------ *
+ * 骰子                                                               *
+ * ------------------------------------------------------------------ */
+const PIPS = {
+  1: [[50, 50]],
+  2: [[32, 32], [68, 68]],
+  3: [[32, 32], [50, 50], [68, 68]],
+  4: [[32, 32], [68, 32], [32, 68], [68, 68]],
+  5: [[32, 32], [68, 32], [50, 50], [32, 68], [68, 68]],
+  6: [[32, 28], [68, 28], [32, 50], [68, 50], [32, 72], [68, 72]]
+};
+function dieSvg(face, ok) {
+  const pips = (PIPS[face] || PIPS[1]).map((p) =>
+    '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="6.6" fill="#241a10"/>' +
+    '<circle cx="' + (p[0] - 1.9) + '" cy="' + (p[1] - 1.9) + '" r="1.9" fill="#6a5230" opacity=".62"/>'
+  ).join('');
+  return `<span class="die ${ok ? 'ok' : 'miss'}" role="img" aria-label="${face} 点${ok ? '，成功' : '，失败'}">
+    <svg viewBox="0 0 100 100" aria-hidden="true">
+      <rect x="3" y="3" width="94" height="94" rx="14" fill="url(#${ok ? 'gDieOk' : 'gDie'})" stroke="#6b4f27" stroke-width="1.6"/>
+      <rect x="7.5" y="7.5" width="85" height="85" rx="11" fill="none" stroke="#fff8e2" stroke-width="1" opacity="${ok ? '.58' : '.3'}"/>
+      ${pips}
+    </svg>
+  </span>`;
+}
+function miniDie(face) {
+  const ok = face >= 5;
+  return `<span class="mini-die ${ok ? 'ok' : ''}" title="${face} 点${ok ? ' · 成功' : ''}">${face}</span>`;
+}
+function diceRow(faces, ghost) {
+  if (!faces || !faces.length) return '';
+  const cls = ghost ? 'dice-row ghost-row' : 'dice-row';
+  const style = ghost ? ' style="margin-top:0;min-height:30px;opacity:.55"' : '';
+  return `<div class="${cls}"${style}>` + faces.map((f) => ghost
+    ? `<span class="die-ghost" title="首掷 ${f} 点">${f}</span>`
+    : dieSvg(f, f >= 5)).join('') + '</div>';
+}
+
+/* ------------------------------------------------------------------ *
+ * 文案工具                                                           *
+ * ------------------------------------------------------------------ */
+function esc(value) {
+  return String(value == null ? '' : value).replace(/[&<>"']/g, (ch) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[ch]));
+}
+function fmtPct(value, max) {
+  if (!max) return 0;
+  return Math.max(0, Math.min(100, Math.round((value / max) * 100)));
+}
+function invById(id) {
+  if (!state) return null;
+  return state.investigators.find((inv) => inv.id === id) || getInvestigator(state, id);
+}
+function invName(id) {
+  const inv = invById(id);
+  return inv ? inv.name : String(id || '调查员');
+}
+function locById(id) {
+  if (!state) return null;
+  return state.locations.find((loc) => loc.id === id) || getLocation(state, id);
+}
+function locName(id) {
+  const loc = locById(id);
+  return loc ? loc.name : String(id || '未知地点');
+}
+function shortName(loc) {
+  return SHORT_NAME[loc.id] || loc.name;
+}
+function typeName(type) { return TYPE_NAME[type] || type; }
+
+function effectText(effect) {
+  if (!effect) return '无事发生';
+  const parts = [];
+  if (effect.clues) parts.push((effect.clues > 0 ? '获得 ' : '失去 ') + Math.abs(effect.clues) + ' 线索');
+  if (effect.health) parts.push('生命 ' + (effect.health > 0 ? '+' : '') + effect.health);
+  if (effect.sanity) parts.push('理智 ' + (effect.sanity > 0 ? '+' : '') + effect.sanity);
+  if (effect.doom) parts.push('末日轨 ' + (effect.doom > 0 ? '+' : '') + effect.doom);
+  if (effect.monster) parts.push('在本地生成 1 只怪物');
+  return parts.length ? parts.join(' · ') : '无事发生';
+}
+function effectTone(effect) {
+  if (!effect) return '';
+  if ((effect.health || 0) < 0 || (effect.sanity || 0) < 0 || (effect.doom || 0) < 0 || effect.monster) return 'bad';
+  return 'good';
+}
+function locSummary(id) {
+  const loc = locById(id);
+  if (!loc) return '未知地点';
+  const bits = [loc.name, typeName(loc.type), loc.region];
+  if (state) {
+    const invs = aliveInvestigators(state).filter((inv) => inv.locationId === id);
+    if (invs.length) bits.push('调查员：' + invs.map((inv) => inv.name).join('、'));
+    const mons = state.monsters.filter((m) => m.health > 0 && m.locationId === id);
+    if (mons.length) bits.push('怪物：' + mons.map((m) => m.name).join('、'));
+    const gate = state.gates.find((g) => g.locationId === id);
+    if (gate) bits.push('门已开启');
+    if (state.sealedLocations.indexOf(id) !== -1) bits.push('已永久封印');
+  }
+  return bits.join(' · ');
+}
+
+/* ------------------------------------------------------------------ *
+ * 全局状态                                                           *
+ * ------------------------------------------------------------------ */
+let state = null;
+let archive = { check: null, encounter: null, mythos: null };
+let reveal = null;
+let legal = null;
+let resetArmed = false;
+let resetTimer = null;
+let toastTimer = null;
+let endDismissed = false;
+
+function activeInvForView() {
+  if (!state) return null;
+  if (state.phase === 'actions') return state.investigators[state.activeInvestigatorIndex] || null;
+  if (state.phase === 'encounters') return state.investigators[state.encounterIndex] || null;
+  const alive = aliveInvestigators(state);
+  return alive[0] || state.investigators[0] || null;
+}
+
+function readLegal() {
+  const out = {
+    all: [], moves: new Map(), fights: new Map(),
+    research: null, researchClue: null, closeGate: null, sealGate: null,
+    rest: null, endTurn: null, encounter: null, mythos: null
+  };
+  if (!state || state.over) return out;
+  out.all = legalActions(state);
+  out.all.forEach((action) => {
+    if (action.type === 'move') {
+      const dest = action.path[action.path.length - 1];
+      const old = out.moves.get(dest);
+      if (!old || action.path.length < old.path.length) out.moves.set(dest, action);
+    } else if (action.type === 'fight') {
+      out.fights.set(action.target, action);
+    } else if (action.type === 'research') {
+      if (action.useClue) out.researchClue = action;
+      else out.research = action;
+    } else if (action.type === 'closeGate') out.closeGate = action;
+    else if (action.type === 'sealGate') out.sealGate = action;
+    else if (action.type === 'rest') out.rest = action;
+    else if (action.type === 'endTurn') out.endTurn = action;
+    else if (action.type === 'encounter') out.encounter = action;
+    else if (action.type === 'mythos') out.mythos = action;
+  });
+  return out;
+}
+function actionIndex(action) {
+  return legal && action ? legal.all.indexOf(action) : -1;
+}
+
+function startGame(seed) {
+  const useSeed = String(seed == null ? DEFAULT_SEED : seed);
+  state = createGame({ seed: useSeed, investigators: ['norman', 'mark', 'diana', 'silas'] });
+  archive = { check: null, encounter: null, mythos: null };
+  reveal = null;
+  resetArmed = false;
+  endDismissed = false;
+  clearTimeout(resetTimer);
+  updateResetLabel();
+  $('seedText').textContent = useSeed;
+  $('endOverlay').hidden = true;
+  $('rulesOverlay').hidden = true;
+  document.body.classList.remove('modal-open');
+  renderReveal();
+  render();
+  announce('对局开始，' + (state.investigators[0] ? state.investigators[0].name + ' 行动' : ''));
+}
+
+function newSeed() {
+  return 'azathoth-' + Date.now().toString(36).slice(-6);
+}
+
+/* ------------------------------------------------------------------ *
+ * 提示 / 声音（视觉）                                                *
+ * ------------------------------------------------------------------ */
+function toast(text) {
+  const el = $('toast');
+  el.textContent = text;
+  el.classList.add('on');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('on'), 2400);
+}
+function announce(text) {
+  const el = $('live');
+  if (el) el.textContent = text;
+}
+
+/* ------------------------------------------------------------------ *
+ * 渲染：顶栏 / 地图 / 当前调查员                                     *
+ * ------------------------------------------------------------------ */
+const PHASE_LABEL = { actions: '行动阶段', encounters: '遭遇阶段', mythos: '神秘阶段', ended: '终局' };
+
+function render() {
+  if (!state) return;
+  legal = readLegal();
+  renderTop();
+  renderMap();
+  renderActive();
+  renderActions();
+  renderDoom();
+  renderTeam();
+  renderEvents();
+  renderLog();
+}
+
+function renderTop() {
+  const chip = $('phaseChip');
+  chip.textContent = PHASE_LABEL[state.phase] || state.phase;
+  chip.className = 'chip phase ' + state.phase;
+  $('roundNum').textContent = String(state.round);
+  $('maxRounds').textContent = String(state.maxRounds);
+  $('doomChipNum').textContent = String(state.doom);
+  $('mysteryChipNum').textContent = state.mysteriesCompleted + '/3';
+}
+
+function activeMarkerId() {
+  if (!state) return null;
+  if (state.phase === 'actions') {
+    const inv = state.investigators[state.activeInvestigatorIndex];
+    return inv && inv.alive ? inv.id : null;
+  }
+  if (state.phase === 'encounters') {
+    const inv = state.investigators[state.encounterIndex];
+    return inv && inv.alive ? inv.id : null;
+  }
+  return null;
+}
+
+function invTokenHtml(inv, index, count) {
+  const col = INV_COLOR[inv.key] || INV_COLOR.norman;
+  const offset = (index - (count - 1) / 2) * 22;
+  const clue = inv.clues > 0
+    ? '<span class="clue-badge"><span>' + inv.clues + '</span></span>'
+    : '';
+  return '<span class="tok-inv ' + (inv.id === activeMarkerId() ? 'active-inv ' : '') + (inv.alive ? '' : 'dead') + '"' +
+    ' style="left:calc(50% + ' + offset + 'px);top:-25px;transform:translateX(-50%);--pc:' + col.pc + ';--pc2:' + col.pc2 + '"' +
+    ' title="' + esc(inv.displayName) + ' · ' + esc(locName(inv.locationId)) + ' · 线索 ' + inv.clues + '">' +
+    portrait(inv.key) + clue + '</span>';
+}
+
+function monsterTokenHtml(monHere, loc) {
+  const lead = monHere[0];
+  const canFight = legal.fights.has(lead.id);
+  const names = monHere.map((m) => m.name).join('、');
+  const pips = [];
+  for (let i = 0; i < lead.maxHealth; i += 1) {
+    pips.push('<span class="hp-pip ' + (i < lead.health ? '' : 'off') + '"></span>');
+  }
+  const countBadge = monHere.length > 1 ? '<span class="monster-count">×' + monHere.length + '</span>' : '';
+  return '<button class="monster-btn ' + (canFight ? 'can-fight' : '') + '" type="button" data-act="monster" data-monster="' + lead.id + '" data-loc="' + loc.id + '"' +
+    ' style="left:calc(50% + 20px);top:calc(50% + 17px);transform:translate(-50%,-50%)"' +
+    ' title="' + esc(names) + ' · 生命 ' + lead.health + '/' + lead.maxHealth + (canFight ? ' · 点击迎战' : '') + '"' +
+    ' aria-label="怪物 ' + esc(names) + (canFight ? '，可迎战' : '') + '">' +
+    '<span class="monster-art">' + monsterSvg(lead.type) +
+    '<span class="hp-pip-row">' + pips.join('') + '</span>' + countBadge + '</span></button>';
+}
+
+function renderMap() {
+  const host = $('mapNodes');
+  if (!host) return;
+  const activeId = activeMarkerId();
+  const activeInv = state.investigators.find((inv) => inv.id === activeId) || null;
+  const activeLoc = activeInv ? activeInv.locationId : null;
+  const invByLoc = {};
+  const monByLoc = {};
+  const gateByLoc = {};
+  aliveInvestigators(state).forEach((inv) => {
+    (invByLoc[inv.locationId] = invByLoc[inv.locationId] || []).push(inv);
+  });
+  state.monsters.filter((m) => m.health > 0).forEach((m) => {
+    (monByLoc[m.locationId] = monByLoc[m.locationId] || []).push(m);
+  });
+  state.gates.forEach((g) => { gateByLoc[g.locationId] = g; });
+  const sealed = new Set(state.sealedLocations);
+
+  const html = state.locations.map((loc) => {
+    const pos = POS[loc.id] || [500, 380];
+    const side = LABEL_SIDE[loc.id] || 'bottom';
+    const reach = legal.moves.has(loc.id);
+    const gate = gateByLoc[loc.id] || null;
+    const isSealed = sealed.has(loc.id);
+    const invHere = invByLoc[loc.id] || [];
+    const monHere = monByLoc[loc.id] || [];
+    const isActive = loc.id === activeLoc;
+    const cls = ['node', loc.type];
+    if (isActive) cls.push('active');
+    if (reach) cls.push('reachable');
+    if (gate) cls.push('has-gate');
+    if (isSealed) cls.push('sealed');
+    const bits = [loc.name, typeName(loc.type), loc.region];
+    if (reach) bits.push('可移动到此处');
+    else if (state.phase === 'actions') bits.push('无法直接到达');
+    if (gate) bits.push('有门');
+    if (isSealed) bits.push('已永久封印');
+    if (invHere.length) bits.push('调查员：' + invHere.map((inv) => inv.name).join('、'));
+    if (monHere.length) bits.push('怪物：' + monHere.map((m) => m.name).join('、'));
+    const gateHtml = gate
+      ? '<span class="gate-ring" aria-hidden="true"></span><span class="gate-mark" aria-hidden="true">' + gateMarkSvg() + '</span>'
+      : '';
+    const sealHtml = isSealed
+      ? '<span class="seal-mark" aria-hidden="true">' + sealMarkSvg() + '</span>'
+      : '';
+    const invHtml = invHere.map((inv, i) => invTokenHtml(inv, i, invHere.length)).join('');
+    const monHtml = monHere.length ? monsterTokenHtml(monHere, loc) : '';
+    const label = '<span class="node-label label-' + side + '">' + esc(shortName(loc)) + '</span>';
+    return '<div class="' + cls.join(' ') + '" style="left:' + (pos[0] / 10) + '%;top:' + (pos[1] / 7.6) + '%">' +
+      gateHtml + sealHtml +
+      '<button class="node-btn" type="button" data-act="node" data-loc="' + loc.id + '"' +
+      ' title="' + esc(bits.join(' · ')) + '" aria-label="' + esc(bits.join('，')) + '">' +
+      '<span class="node-medal">' + locIcon(loc.type) + '</span></button>' +
+      label + invHtml + monHtml + '</div>';
+  }).join('');
+  host.innerHTML = html;
+}
+
+function renderActive() {
+  const card = $('activeCard');
+  const inv = activeInvForView();
+  if (!state || !inv) {
+    card.innerHTML = '<div class="empty-note">所有调查员都已倒下。</div>';
+    return;
+  }
+  const col = INV_COLOR[inv.key] || INV_COLOR.norman;
+  card.style.setProperty('--pc', col.pc);
+  card.style.setProperty('--pc2', col.pc2);
+  card.style.setProperty('--pc-glow', col.glow);
+  const loc = locById(inv.locationId);
+  let status = '待命';
+  let statusCls = '';
+  if (!inv.alive) { status = '已倒下'; statusCls = 'dead'; }
+  else if (state.over) { status = '终局'; }
+  else if (state.phase === 'actions') { status = '行动 ' + inv.actionsLeft + '/' + ACTIONS_PER_TURN; }
+  else if (state.phase === 'encounters') { status = '遭遇中'; statusCls = 'encounters'; }
+  else if (state.phase === 'mythos') { status = '神秘阶段'; statusCls = 'mythos'; }
+
+  const hpPct = fmtPct(inv.health, inv.maxHealth);
+  const sanPct = fmtPct(inv.sanity, inv.maxSanity);
+  const researched = inv.researchedRound === state.round;
+  const abilityUsed = inv.key === 'diana' && inv.abilityUsedRound === state.round;
+  const mystery = MYSTERIES[state.mysteryIndex];
+  const researchHint = mystery && loc && mystery.types.indexOf(loc.type) !== -1 && !researched && inv.alive
+    ? '此处可研究「' + mystery.name + '」'
+    : '';
+  const attrs = ['will', 'strength', 'observation', 'influence'].map((a) =>
+    '<div class="attr">' + attrIcon(a) +
+    '<span class="attr-label">' + ATTRIBUTE_NAMES[a] + '</span>' +
+    '<span class="attr-val">' + inv.attributes[a] + '</span></div>'
+  ).join('');
+
+  card.innerHTML = `
+    <div class="active-portrait">${portrait(inv.key)}</div>
+    <div class="active-main">
+      <div class="active-head">
+        <div>
+          <div class="active-name">${esc(inv.name)}</div>
+          <div class="active-title">${esc(inv.title)} · ${inv.alive ? '存活' : '已倒下'}</div>
+        </div>
+        <span class="state-chip ${statusCls}">${status}</span>
+      </div>
+      <div class="attr-row">${attrs}</div>
+      <div class="bar-row">
+        <div class="bar-block">
+          <div class="bar-label">${icon('heart')}生命<b>${inv.health}/${inv.maxHealth}</b></div>
+          <div class="bar ${hpPct <= 35 ? 'low' : ''}" role="img" aria-label="生命 ${inv.health}/${inv.maxHealth}"><i style="width:${hpPct}%"></i></div>
+        </div>
+        <div class="bar-block">
+          <div class="bar-label">${icon('sanity')}理智<b>${inv.sanity}/${inv.maxSanity}</b></div>
+          <div class="bar san ${sanPct <= 35 ? 'low' : ''}" role="img" aria-label="理智 ${inv.sanity}/${inv.maxSanity}"><i style="width:${sanPct}%"></i></div>
+        </div>
+      </div>
+      <div class="active-meta">
+        <span class="loc">${icon('pin')}${esc(loc ? loc.name : '—')}</span>
+        <span>${loc ? typeName(loc.type) + ' · ' + esc(loc.region) : ''}</span>
+        <span>线索 <span class="v">${inv.clues}</span></span>
+        <span>行动 <span class="v">${inv.actionsLeft}/${ACTIONS_PER_TURN}</span></span>
+        ${state.phase === 'mythos' ? '<span>古神行动中</span>' : ''}
+      </div>
+      ${researchHint ? '<div class="ability-line" style="color:var(--teal-2)">' + icon('book') + ' ' + esc(researchHint) + '</div>' : ''}
+      <div class="ability-line"><b>${esc(inv.ability.name)}</b>：${esc(inv.ability.text)}${researched ? ' · <span class="used">本轮已研究</span>' : ''}${abilityUsed ? ' · <span class="used">重掷已用</span>' : ''}</div>
+    </div>`;
+}
+
+/* ------------------------------------------------------------------ *
+ * 渲染：行动区                                                       *
+ * ------------------------------------------------------------------ */
+function actionHead(iconName, title, sub, hint) {
+  return '<div class="action-head">' +
+    '<span class="ah-icon">' + icon(iconName) + '</span>' +
+    '<div class="ah-copy"><b>' + esc(title) + '</b><span>' + esc(sub) + '</span></div>' +
+    '<span class="ah-spacer"></span>' +
+    (hint ? '<span class="ah-hint">' + esc(hint) + '</span>' : '') +
+    '</div>';
+}
+
+function actTile(opts) {
+  const legalIndex = opts.action ? actionIndex(opts.action) : -1;
+  const attrs = opts.action && legalIndex >= 0
+    ? ' data-act="legal" data-legal="' + legalIndex + '"'
+    : (opts.click ? ' data-act="' + opts.click + '"' : '');
+  const disabled = !opts.action && !opts.click;
+  const cls = ['act-btn'];
+  if (opts.primary) cls.push('primary');
+  if (opts.tone) cls.push(opts.tone);
+  if (opts.passive) cls.push('passive');
+  if (opts.locked) cls.push('locked');
+  return '<button class="' + cls.join(' ') + '" type="button"' + attrs + (disabled ? ' disabled aria-disabled="true"' : '') + '>' +
+    '<span class="ai">' + icon(opts.icon || 'star') + '</span>' +
+    '<span class="ac"><b>' + esc(opts.label) + '</b><span>' + esc(opts.sub || '') + '</span></span>' +
+    '</button>';
+}
+
+function poolFor(inv, attr) {
+  let pool = inv.attributes[attr] || 0;
+  if (inv.key === 'norman' && attr === 'observation') pool += 1;
+  if (inv.key === 'mark' && attr === 'strength') pool += 1;
+  return pool;
+}
+
+function phaseTransitionText(prev, next) {
+  if (next.phase === 'encounters') {
+    const inv = next.investigators[next.encounterIndex];
+    return '遭遇阶段 · ' + (inv ? inv.name + ' 在 ' + locName(inv.locationId) : '抽牌');
+  }
+  if (next.phase === 'mythos') return '遭遇结算完毕 · 神秘阶段';
+  if (next.phase === 'actions') {
+    const inv = next.investigators[next.activeInvestigatorIndex];
+    return '第 ' + next.round + ' 回合 · ' + (inv ? inv.name + ' 先行动' : '行动阶段');
+  }
+  if (next.phase === 'ended') return '对局结束';
+  return PHASE_LABEL[next.phase] || next.phase;
+}
+
+function renderActions() {
+  const card = $('actionCard');
+  if (!state) return;
+  if (state.over) {
+    const win = state.winner === 'investigators';
+    card.innerHTML = actionHead('skull', '对局结束', win ? '调查员守住了世界' : '世界已归于盲目痴愚之神', '终局') +
+      '<div class="action-grid">' +
+      '<button class="btn primary" data-act="showEnd" type="button" style="grid-column:1/-1">查看终局</button>' +
+      '<button class="btn" data-act="again" type="button" style="grid-column:1/-1">再来一局</button>' +
+      '</div>';
+    return;
+  }
+
+  if (state.phase === 'actions') {
+    const inv = state.investigators[state.activeInvestigatorIndex];
+    if (!inv || !inv.alive) {
+      card.innerHTML = '<div class="empty-note">当前没有可行动的调查员。</div>';
+      return;
+    }
+    const loc = locById(inv.locationId);
+    const mystery = MYSTERIES[state.mysteryIndex];
+    const tiles = [];
+    tiles.push(actTile({ icon: 'boot', label: '移动', sub: legal.moves.size ? '点击金色地点 · ' + legal.moves.size + ' 处' : '四周暂无路', click: 'hintMove', passive: true }));
+    if (legal.research) {
+      const pool = poolFor(inv, mystery.attribute);
+      tiles.push(actTile({
+        icon: 'book', label: '研究 · ' + state.mysteryProgress + '/' + mystery.required, primary: true,
+        sub: ATTRIBUTE_NAMES[mystery.attribute] + ' ' + pool + '骰 · 难度 ' + mystery.difficulty,
+        action: legal.research
+      }));
+    } else if (mystery && mystery.types.indexOf(loc.type) === -1) {
+      tiles.push(actTile({ icon: 'book', label: '研究', sub: '此地点类型不可研究', locked: true }));
+    } else if (mystery && inv.researchedRound === state.round) {
+      tiles.push(actTile({ icon: 'book', label: '研究', sub: '本轮已研究过', locked: true }));
+    }
+    if (legal.researchClue) {
+      tiles.push(actTile({ icon: 'clue', label: '线索研究', sub: '消耗 1 线索 · 本次 +2 骰', action: legal.researchClue }));
+    }
+    if (legal.closeGate) {
+      tiles.push(actTile({ icon: 'gate', label: '关门', sub: '意志检定 · 难度 1 · 成功 +1 线索', action: legal.closeGate }));
+    }
+    if (legal.sealGate) {
+      tiles.push(actTile({ icon: 'seal', label: '封印', sub: '消耗 1 线索 · 意志 难度 2', action: legal.sealGate }));
+    }
+    state.monsters.filter((m) => m.health > 0 && m.locationId === inv.locationId).forEach((m) => {
+      const fight = legal.fights.get(m.id);
+      if (fight) {
+        tiles.push(actTile({
+          icon: 'sword', label: '迎战 ' + m.name, tone: 'danger',
+          sub: ATTRIBUTE_NAMES[m.fightAttr] + ' · 难度 ' + m.difficulty + ' · 生命 ' + m.health + '/' + m.maxHealth,
+          action: fight
+        }));
+      }
+    });
+    if (legal.rest) {
+      tiles.push(actTile({ icon: 'moon', label: '休息', sub: '生命 +1 · 理智 +1', action: legal.rest }));
+    }
+    tiles.push(actTile({ icon: 'scroll', label: '交易', sub: '本版无资产 · 未开放', locked: true }));
+    card.innerHTML = actionHead('compass', '行动阶段', inv.name + ' · 还剩 ' + inv.actionsLeft + ' 个行动 · ' + locName(inv.locationId), '行动 ' + inv.actionsLeft + '/' + ACTIONS_PER_TURN) +
+      '<div class="action-grid">' + tiles.join('') + '</div>' +
+      '<div class="action-foot"><span class="note">点击金色光圈移动 · 行动耗尽自动换人。</span>' +
+      (legal.endTurn ? '<button class="btn ghost" data-act="legal" data-legal="' + actionIndex(legal.endTurn) + '" type="button">' + icon('moon') + '结束回合</button>' : '') +
+      '</div>';
+    return;
+  }
+
+  if (state.phase === 'encounters') {
+    const inv = state.investigators[state.encounterIndex];
+    const loc = inv ? locById(inv.locationId) : null;
+    const alive = state.investigators.filter((x) => x.alive);
+    const order = alive.findIndex((x) => x.id === (inv && inv.id));
+    const pips = alive.map((x, i) => '<span class="pip ' + (i < order ? 'done' : i === order ? 'on' : '') + '"></span>').join('');
+    card.innerHTML = actionHead('card', '遭遇阶段', inv ? inv.name + ' · ' + locName(inv.locationId) : '遭遇结算', (order + 1) + '/' + alive.length) +
+      '<div class="phase-big">' +
+      '<button class="btn primary big-btn" data-act="phaseAction" data-phase="encounter" type="button">' +
+      '<span class="bi">' + icon('card') + '</span><span class="bt"><b>为 ' + esc(inv ? inv.name : '调查员') + ' 抽取遭遇牌</b>' +
+      '<span>' + esc(loc ? TYPE_DECK[loc.type] + ' · ' + loc.name : '') + '</span></span></button>' +
+      '<div class="phase-progress"><span>结算顺序</span><span class="pips">' + pips + '</span><span>' + alive.length + ' 名存活调查员</span></div>' +
+      '</div>' +
+      '<div class="action-foot"><span class="note">每人结算 1 张所在地点类型的遭遇牌；牌堆耗尽会用同一牌堆重洗。</span></div>';
+    return;
+  }
+
+  if (state.phase === 'mythos') {
+    const gates = state.gates.length;
+    const monsters = state.monsters.filter((m) => m.health > 0).length;
+    card.innerHTML = actionHead('mythos', '神秘阶段', '翻开一张神话卡 · 阿撒托斯在梦中翻身', '第 ' + state.round + ' 回合') +
+      '<div class="phase-big">' +
+      '<button class="btn primary big-btn" data-act="phaseAction" data-phase="mythos" type="button">' +
+      '<span class="bi">' + icon('mythos') + '</span><span class="bt"><b>翻开神话卡</b>' +
+      '<span>末日 -1 起 · 门与怪物都会躁动</span></span></button>' +
+      '<div class="phase-progress"><span>场上</span><span>门 <b style="color:#e9b79e">' + gates + '</b></span><span>怪物 <b style="color:#c8a8ec">' + monsters + '</b></span><span>末日 <b style="color:#ffb7a3">' + state.doom + '</b></span></div>' +
+      '</div>' +
+      '<div class="action-foot"><span class="note">结算后怪物会向最近的调查员移动 1 步或攻击同格目标，然后进入下一回合。</span></div>';
+    return;
+  }
+
+  card.innerHTML = '<div class="empty-note">等待下一步。</div>';
+}
+
+/* ------------------------------------------------------------------ *
+ * 渲染：末日轨 / 神秘卡 / 小队 / 档案 / 日志                        *
+ * ------------------------------------------------------------------ */
+function renderDoom() {
+  const panel = $('doomPanel');
+  const doom = state.doom;
+  const max = state.maxDoom;
+  const segs = [];
+  for (let i = 0; i < max; i += 1) {
+    const on = i < doom;
+    const edge = on && i === doom - 1;
+    segs.push('<span class="dseg ' + (on ? 'on ' : '') + (edge ? 'edge' : '') + '" title="' + (i + 1) + ' / ' + max + '"></span>');
+  }
+  const mysteries = MYSTERIES.map((m, i) => {
+    const done = i < state.mysteriesCompleted;
+    const current = !done && i === state.mysteryIndex && !state.over;
+    const progress = done ? m.required : (current ? state.mysteryProgress : 0);
+    const pips = [];
+    for (let p = 0; p < m.required; p += 1) {
+      pips.push('<span class="m-pip ' + (p < progress ? 'on' : '') + '"></span>');
+    }
+    const cls = done ? 'done' : (current ? 'current' : 'locked');
+    const iconName = done ? 'check' : (current ? 'mythos' : 'lock');
+    return '<article class="mystery-card ' + cls + '" title="' + esc(m.text) + '">' +
+      '<span class="m-index">' + (['I', 'II', 'III'][i] || (i + 1)) + '</span>' +
+      '<div class="m-body"><div class="m-name">' + esc(m.name) + '</div>' +
+      '<div class="m-meta">' + ATTRIBUTE_NAMES[m.attribute] + ' · 难度 ' + m.difficulty + ' · 需 ' + m.required + ' · ' + m.types.map(typeName).join('/') + '</div></div>' +
+      '<div class="m-progress">' + pips.join('') + '</div>' +
+      '</article>';
+  }).join('');
+
+  panel.innerHTML = '<div class="panel-head"><h2>阿撒托斯</h2><span class="panel-note">神秘 ' + state.mysteriesCompleted + '/3</span></div>' +
+    '<div class="ao-head">' +
+    '<div class="ao-sigil">' + azathothSigil() + '</div>' +
+    '<div class="ao-name"><b>阿撒托斯</b><span>盲目痴愚之神</span></div>' +
+    '<div class="ao-doom ' + (doom <= 3 ? 'low' : '') + '" role="img" aria-label="末日轨 ' + doom + ' / ' + max + '"><b>' + doom + '</b><span>末日</span></div>' +
+    '</div>' +
+    '<div class="doom-track-wrap">' +
+    '<div class="doom-scale"><span>0</span><span>3</span><span>6</span><span>9</span><span>' + max + '</span></div>' +
+    '<div class="doom-track ' + (doom <= 6 ? 'low' : '') + '" role="img" aria-label="末日轨 ' + doom + ' / ' + max + '">' + segs.join('') + '</div>' +
+    '<div class="doom-foot"><span class="zero">' + icon('skull') + ' 苏醒</span><span>' + doom + '/' + max + ' · ' + (doom <= 3 ? '低语已到耳边' : '仍在沉睡') + '</span></div>' +
+    '</div>' +
+    '<div class="mystery-list">' + mysteries + '</div>';
+}
+
+function renderTeam() {
+  const panel = $('teamPanel');
+  const rows = state.investigators.map((inv) => {
+    const col = INV_COLOR[inv.key] || INV_COLOR.norman;
+    const loc = locById(inv.locationId);
+    const hpPct = fmtPct(inv.health, inv.maxHealth);
+    const sanPct = fmtPct(inv.sanity, inv.maxSanity);
+    let status = '待命';
+    let statusCls = '';
+    if (!inv.alive) { status = '倒下'; statusCls = 'out'; }
+    else if (state.phase === 'actions' && state.investigators[state.activeInvestigatorIndex] && state.investigators[state.activeInvestigatorIndex].id === inv.id) { status = '行动中'; statusCls = 'on'; }
+    else if (state.phase === 'encounters' && state.investigators[state.encounterIndex] && state.investigators[state.encounterIndex].id === inv.id) { status = '遭遇中'; statusCls = 'enc'; }
+    const pips = [];
+    for (let i = 0; i < ACTIONS_PER_TURN; i += 1) {
+      pips.push('<i class="' + (i < inv.actionsLeft && state.phase === 'actions' && inv.alive ? '' : 'off') + '"></i>');
+    }
+    return '<div class="team-row ' + (inv.id === activeMarkerId() ? 'active ' : '') + (inv.alive ? '' : 'dead') + '" style="--pc:' + col.pc + ';--pc2:' + col.pc2 + ';--pc-glow:' + col.glow + '">' +
+      '<div class="portrait-frame" style="--pc:' + col.pc + ';--pc2:' + col.pc2 + '">' + portrait(inv.key) + '</div>' +
+      '<div class="team-main">' +
+      '<div class="team-line"><span class="team-name">' + esc(inv.name) + '</span><span class="team-title">' + esc(inv.title) + '</span><span class="team-loc">' + esc(loc ? loc.name : '—') + '</span></div>' +
+      '<div class="team-bars">' +
+      '<span class="mini-bar" role="img" aria-label="生命 ' + inv.health + '/' + inv.maxHealth + '"><i style="width:' + hpPct + '%"></i></span>' +
+      '<span class="mini-bar san" role="img" aria-label="理智 ' + inv.sanity + '/' + inv.maxSanity + '"><i style="width:' + sanPct + '%"></i></span>' +
+      '</div>' +
+      '<div class="team-sub"><span>生命 <b>' + inv.health + '</b></span><span>理智 <b>' + inv.sanity + '</b></span><span>线索 <b>' + inv.clues + '</b></span>' +
+      '<span class="team-pips">' + pips.join('') + '</span><span class="team-status ' + statusCls + '">' + status + '</span></div>' +
+      '</div></div>';
+  }).join('');
+  panel.innerHTML = '<div class="panel-head"><h2>调查员小队</h2><span class="panel-note">' + aliveInvestigators(state).length + ' / ' + state.investigators.length + ' 存活</span></div>' +
+    '<div class="team-list">' + rows + '</div>';
+}
+
+const ARCHIVE_LABEL = {
+  check: ['最近检定', 'tag'],
+  encounter: ['最近遭遇', 'tag'],
+  mythos: ['最近神话', 'tag']
+};
+function renderEvents() {
+  const panel = $('eventPanel');
+  const order = ['check', 'encounter', 'mythos'];
+  const items = [];
+  order.forEach((key) => {
+    const data = archive[key];
+    if (!data) return;
+    const label = ARCHIVE_LABEL[key][0];
+    const verdict = data.success === true ? '成功' : data.success === false ? '失败' : '记录';
+    const verdictCls = data.success === true ? '' : data.success === false ? 'fail' : 'info';
+    const dice = (data.dice || []).slice(0, 8).map(miniDie).join('');
+    items.push('<article class="event-mini ' + data.kind + '">' +
+      '<div class="event-mini-head"><span class="tag">' + label + '</span><span>' + esc(data.eyebrow || '') + '</span>' +
+      '<span class="verdict ' + verdictCls + '">' + verdict + '</span></div>' +
+      '<div class="event-mini-title">' + esc(data.title) + (dice ? '<span class="mini-dice">' + dice + '</span>' : '') + '</div>' +
+      '<div class="event-mini-text">' + esc(data.summary || '') + '</div>' +
+      '<button class="review" type="button" data-act="review" data-kind="' + key + '">回看</button>' +
+      '</article>');
+  });
+  panel.innerHTML = '<div class="panel-head"><h2>事件档案</h2><span class="panel-note">可回看</span></div>' +
+    (items.length ? '<div class="event-list">' + items.join('') + '</div>' : '<div class="empty-note">尚无检定或遭遇记录。移动地图、研究神秘卡或抽取遭遇牌后，这里会留下档案。</div>');
+}
+
+function describeEvent(e) {
+  const n = (id) => esc(invName(id));
+  const l = (id) => esc(locName(id));
+  switch (e.type) {
+    case 'game-start':
+      return { tone: 'sys', html: '对局开始 · 种子 <b>' + esc(e.seed) + '</b>' };
+    case 'round-start':
+      return { tone: 'sys', html: '第 <b>' + e.round + '</b> 回合开始' };
+    case 'move':
+      return { tone: '', html: '<b>' + n(e.investigator) + '</b> 从 ' + l(e.from) + ' 移动到 <b>' + l(e.to) + '</b>' };
+    case 'research': {
+      const m = MYSTERIES.find((x) => x.id === e.mystery);
+      return { tone: e.success ? 'good' : 'bad', html: '<b>' + n(e.investigator) + '</b> 研究「' + esc(m ? m.name : '神秘卡') + '」· ' + esc(e.attributeName) + ' ' + e.successes + '/' + e.difficulty + ' ' + (e.success ? '<span class="gain">成功</span>' : '失败') + (e.success ? ' · 进度 ' + (e.completedNow ? '完成' : e.progress) : ' · <span class="dmg">理智 -1</span>') };
+    }
+    case 'fight':
+      return { tone: e.success ? 'good' : 'bad', html: '<b>' + n(e.investigator) + '</b> 迎战 ' + esc(e.monsterName) + ' · ' + esc(e.attributeName) + ' ' + e.successes + '/' + e.difficulty + ' ' + (e.success ? '<span class="gain">造成 ' + e.damage + ' 伤害</span>' + (e.defeated ? ' · <span class="gain">击败</span>' : '') : '<span class="dmg">受伤</span>') };
+    case 'gate-closed':
+      return { tone: e.success ? 'good' : 'bad', html: '<b>' + n(e.investigator) + '</b> 关门 · 意志 ' + e.successes + '/' + e.difficulty + ' ' + (e.success ? '<span class="gain">门已关闭</span>' : '<span class="dmg">理智 -1</span>') };
+    case 'gate-sealed':
+      return { tone: e.success ? 'good' : 'bad', html: '<b>' + n(e.investigator) + '</b> 封印 ' + l(e.location) + ' · 意志 ' + e.successes + '/' + e.difficulty + ' ' + (e.success ? '<span class="gain">永久封印</span>' : '<span class="dmg">理智 -1</span>') };
+    case 'rest':
+      return { tone: '', html: '<b>' + n(e.investigator) + '</b> 休息 · 生命 ' + e.healthAfter + ' · 理智 ' + e.sanityAfter };
+    case 'encounter':
+      return { tone: e.success ? 'good' : 'bad', html: '<b>' + n(e.investigator) + '</b> 遭遇「' + esc(e.cardName) + '」· ' + esc(ATTRIBUTE_NAMES[e.attribute] || '') + ' ' + e.successes + '/' + e.difficulty + ' ' + (e.success ? '<span class="gain">成功</span>' : '失败') };
+    case 'mythos':
+      return { tone: 'myth', html: '神话「' + esc(e.cardName) + '」· 末日 <b>' + e.doom + '</b> · 门 ' + e.gates + ' · 怪物 ' + e.monsters };
+    case 'gate-opened':
+      return { tone: 'gate', html: '一道门在 <b>' + l(e.location) + '</b> 打开' };
+    case 'monster-spawned':
+      return { tone: 'gate', html: esc(e.name) + ' 出现在 <b>' + l(e.location) + '</b>' };
+    case 'monster-spawned-by-effect':
+      return { tone: 'gate', html: '遭遇引发了怪物现身 · <b>' + l(e.location) + '</b>' };
+    case 'monster-attack':
+      return { tone: 'bad', html: esc(e.monsterName) + ' 攻击 <b>' + n(e.investigator) + '</b> · 生命 <span class="dmg">-' + e.healthDamage + '</span> · 理智 <span class="dmg">-' + e.sanityDamage + '</span>' };
+    case 'monster-move':
+      return { tone: '', html: '阴影移动：怪物从 ' + l(e.from) + ' 走向 ' + l(e.to) };
+    case 'mystery-completed':
+      return { tone: 'good', html: '<b>' + n(e.investigator) + '</b> 完成神秘卡 · 古神在 <b>' + (e.spawnedMonster ? '门旁' : '暗处') + '</b> 回应' };
+    case 'mythos-clue':
+      return { tone: 'good', html: '<b>' + n(e.investigator) + '</b> 从神话中抓住 1 条线索' };
+    case 'extra-doom':
+      return { tone: 'bad', html: '末日号角：敞开 ' + e.gates + ' 道门，末日额外 <span class="dmg">-' + e.amount + '</span>' };
+    case 'investigator-defeated':
+      return { tone: 'bad', html: '<b>' + esc(e.name) + '</b> 被击败 · 失去 ' + e.lostClues + ' 条线索' };
+    case 'game-over':
+      return { tone: e.winner === 'investigators' ? 'good' : 'bad', html: e.winner === 'investigators' ? '<b>调查员胜利</b> · 三道封印落下' : '<b>阿撒托斯苏醒</b> · 世界陷入盲目痴愚' };
+    default:
+      return null;
+  }
+}
+
+function renderLog() {
+  const panel = $('logPanel');
+  const rows = [];
+  for (let i = state.log.length - 1; i >= 0 && rows.length < 30; i -= 1) {
+    const e = state.log[i];
+    const d = describeEvent(e);
+    if (!d) continue;
+    rows.push('<li class="log-entry ' + (d.tone || '') + '"><span class="log-round">R' + e.round + '</span><span class="log-body">' + d.html + '</span></li>');
+  }
+  panel.innerHTML = '<div class="panel-head"><h2>行动日志</h2><span class="panel-note">引擎 ' + state.log.length + ' 条</span></div>' +
+    (rows.length ? '<div class="log"><ul class="log-list">' + rows.join('') + '</ul></div>' : '<div class="empty-note">还没有行动记录。</div>');
+}
+
+/* ------------------------------------------------------------------ *
+ * 检定揭示                                                           *
+ * ------------------------------------------------------------------ */
+function findEvent(events, type) {
+  for (let i = 0; i < events.length; i += 1) if (events[i].type === type) return events[i];
+  return null;
+}
+function makeTest(e) {
+  return {
+    attributeName: e.attributeName || ATTRIBUTE_NAMES[e.attribute] || '属性',
+    attribute: e.attribute,
+    difficulty: e.difficulty,
+    faces: e.faces || [],
+    successes: e.successes,
+    success: e.success,
+    rerolled: !!e.rerolled,
+    firstFaces: e.firstFaces || null,
+    firstSuccesses: e.firstSuccesses,
+    pool: e.pool || (e.faces ? e.faces.length : 0),
+    bonusDice: e.bonusDice || 0
+  };
+}
+function renderTestBlock(t) {
+  if (!t) return '';
+  const ok = !!t.success;
+  const bits = [t.successes + ' 个成功 / 需要 ' + t.difficulty, '掷 ' + t.pool + ' 骰'];
+  if (t.bonusDice) bits.push('含 +' + t.bonusDice + ' 加骰');
+  if (t.rerolled) bits.push('禁忌知识重掷 · 首掷 ' + t.firstSuccesses + ' 成功');
+  return '<div class="test-block">' +
+    '<div class="test-head"><span class="attr-tag">' + esc(t.attributeName) + '检定</span>' +
+    '<span class="diff">难度 ' + t.difficulty + '</span>' +
+    '<span class="verdict-stamp ' + (ok ? '' : 'fail') + '">' + (ok ? '成功' : '失败') + '</span></div>' +
+    diceRow(t.faces) +
+    (t.rerolled && t.firstFaces ? '<div class="dice-note" style="margin-top:-3px">首掷</div>' + diceRow(t.firstFaces, true) : '') +
+    '<div class="dice-note">' + bits.map(esc).join(' · ') + '</div>' +
+    '</div>';
+}
+function effectRows(effects) {
+  if (!effects || !effects.length) return '';
+  return '<div class="effect-list">' + effects.map((f) =>
+    '<div class="effect-row ' + (f.tone || '') + '"><span class="ei">' + icon(f.icon || 'star') + '</span><span>' + esc(f.text) + '</span></div>'
+  ).join('') + '</div>';
+}
+function progressBlock(p) {
+  if (!p) return '';
+  const total = Math.max(1, p.required);
+  const pips = [];
+  for (let i = 0; i < total; i += 1) pips.push('<span class="mp-pip ' + (i < p.current ? 'on' : '') + '"></span>');
+  return '<div class="mystery-progress-block"><div class="mp-head"><span>' + esc(p.label || '神秘进度') + '</span><b>' + p.current + '/' + p.required + '</b></div>' +
+    '<div class="mp-pips">' + pips.join('') + '</div></div>';
+}
+function outcomeBlock(outcomes) {
+  if (!outcomes || !outcomes.length) return '';
+  return '<div class="outcome-grid">' + outcomes.map((o) =>
+    '<div class="outcome-row ' + (o.applied ? 'applied ' : '') + (o.tone === 'bad' ? 'bad' : '') + '">' +
+    '<span class="o-label">' + esc(o.label) + '</span><span>' + esc(o.text) + '</span></div>'
+  ).join('') + '</div>';
+}
+
+function buildResearchReveal(events, prev) {
+  const e = findEvent(events, 'research');
+  if (!e) return null;
+  const mystery = MYSTERIES.find((m) => m.id === e.mystery) || MYSTERIES[0];
+  const inv = invById(e.investigator);
+  const current = e.completedNow ? mystery.required : e.progress;
+  const effects = [];
+  if (e.success) effects.push({ tone: 'good', icon: 'clue', text: '神秘进度 +1 · ' + current + '/' + mystery.required });
+  else effects.push({ tone: 'bad', icon: 'sanity', text: '检定失败：理智 -1' });
+  if (e.usedClue) effects.push({ tone: '', icon: 'clue', text: '消耗 1 线索 · 本次检定 +2 骰' });
+  if (e.completedNow) effects.push({ tone: 'good', icon: 'star', text: '神秘卡完成：' + mystery.name });
+  const done = findEvent(events, 'mystery-completed');
+  if (done && done.spawnedMonster) {
+    const m = state.monsters.find((x) => x.id === done.spawnedMonster);
+    effects.push({ tone: 'bad', icon: 'mythos', text: '古神的反应：' + (m ? m.name : '怪物') + ' 在 ' + locName(m ? m.locationId : '') + ' 出现' });
+  }
+  const nextMystery = MYSTERIES[state.mysteryIndex];
+  return {
+    kind: 'check', archiveKey: 'check', ribbonIcon: 'book',
+    eyebrow: '研究 · 神秘卡 ' + (prev.mysteriesCompleted + 1) + '/3',
+    meta: locName(inv ? inv.locationId : '') + ' · 第 ' + prev.round + ' 回合',
+    title: mystery.name,
+    subtitle: ATTRIBUTE_NAMES[mystery.attribute] + '检定 · 难度 ' + mystery.difficulty + ' · 需 ' + mystery.required + ' 点进度',
+    flavor: mystery.text,
+    test: makeTest(e),
+    effects: effects,
+    progress: { label: '神秘进度', current: current, required: mystery.required },
+    completion: !!e.completedNow,
+    success: e.success,
+    dice: e.faces,
+    summary: (e.success ? '成功' : '失败') + ' · 进度 ' + current + '/' + mystery.required + (e.completedNow ? ' · 神秘卡完成' : ''),
+    footerNote: e.completedNow
+      ? (nextMystery ? '下一张神秘卡即将翻开。' : '三道封印全部落下。')
+      : (e.success ? '研究推进了一步。' : '理智受损，但调查仍可继续。')
+  };
+}
+
+function buildCombatReveal(events, prev) {
+  const e = findEvent(events, 'fight');
+  if (!e) return null;
+  const monster = prev.monsters.find((m) => m.id === e.monster);
+  const inv = invById(e.investigator);
+  const effects = [];
+  if (e.success) {
+    effects.push({ tone: 'good', icon: 'sword', text: '造成 ' + e.damage + ' 点伤害' + (e.defeated ? ' · 怪物被击败' : ' · 怪物剩余生命 ' + e.monsterHealth) });
+    if (e.defeated) effects.push({ tone: 'good', icon: 'clue', text: '击败怪物：获得 1 线索' });
+  } else {
+    effects.push({ tone: 'bad', icon: 'heart', text: '生命 -' + (monster ? monster.damage : 1) });
+    effects.push({ tone: 'bad', icon: 'sanity', text: '理智 -' + (monster ? monster.horror : 1) });
+  }
+  if (e.rerolled) effects.push({ tone: '', icon: 'star', text: '戴安娜的禁忌知识：本次检定自动重掷' });
+  return {
+    kind: 'combat', archiveKey: 'check', ribbonIcon: 'sword',
+    eyebrow: '战斗 · 第 ' + prev.round + ' 回合',
+    meta: locName(inv ? inv.locationId : '') + ' · ' + (monster ? '怪物难度 ' + monster.difficulty : ''),
+    title: e.monsterName,
+    subtitle: (e.attributeName || '战斗') + '检定 · 难度 ' + e.difficulty + (monster ? ' · 怪物生命 ' + monster.maxHealth : ''),
+    flavor: monster
+      ? '它站在阴影里，呼吸声像潮湿的潮汐。生命 ' + monster.maxHealth + ' · 伤害 ' + monster.damage + ' · 恐惧 ' + monster.horror + '。'
+      : '阴影中有什么在等待。',
+    test: makeTest(e),
+    effects: effects,
+    completion: !!e.defeated,
+    success: e.success,
+    dice: e.faces,
+    summary: (e.success ? '命中 ' + e.damage + ' 伤害' : '战斗失败') + (e.defeated ? ' · 击败 ' + e.monsterName : ''),
+    footerNote: e.defeated ? '它退回黑暗，但门仍然开着。' : (e.success ? '它受伤了，但还没有倒下。' : '你被它的影子咬伤。')
+  };
+}
+
+function buildGateReveal(events, prev, sealed) {
+  const e = findEvent(events, sealed ? 'gate-sealed' : 'gate-closed');
+  if (!e) return null;
+  const inv = invById(e.investigator);
+  const effects = [];
+  if (e.success) {
+    if (sealed) {
+      effects.push({ tone: 'good', icon: 'seal', text: '门被移除 · ' + locName(e.location) + ' 永久封印' });
+      effects.push({ tone: '', icon: 'clue', text: '消耗 1 线索' });
+    } else {
+      effects.push({ tone: 'good', icon: 'gate', text: '门被移除 · 获得 1 线索' });
+    }
+  } else {
+    effects.push({ tone: 'bad', icon: 'sanity', text: '理智 -1 · 门仍然敞开' });
+  }
+  return {
+    kind: 'check', archiveKey: 'check', ribbonIcon: sealed ? 'seal' : 'gate',
+    eyebrow: sealed ? '封印 · 意志检定' : '关门 · 意志检定',
+    meta: locName(e.location) + ' · 第 ' + prev.round + ' 回合',
+    title: sealed ? '裂痕被黄铜封死' : '门在低语中合拢',
+    subtitle: '意志检定 · 难度 ' + e.difficulty + ' · ' + (inv ? inv.name : '调查员'),
+    flavor: sealed
+      ? '你以线索为钉、以意志为锤，把这个地点从古神的梦里钉了出去。'
+      : '门后吹来不属于这个世界的风，你用力把它推回去。',
+    test: makeTest(e),
+    effects: effects,
+    success: e.success,
+    dice: e.faces,
+    summary: (e.success ? (sealed ? '永久封印' : '门已关闭') : '失败') + ' · ' + locName(e.location),
+    footerNote: e.success ? '这个地点暂时安静了。' : '门还开着，它记得你的脸。'
+  };
+}
+
+function buildEncounterReveal(events) {
+  const e = findEvent(events, 'encounter');
+  if (!e) return null;
+  const card = ENCOUNTER_CARDS.find((c) => c.id === e.card);
+  const inv = invById(e.investigator);
+  const type = (card && card.type) || e.cardType || 'city';
+  const flavorMap = {
+    city: '煤气灯下，城市把秘密藏在人群里。',
+    wilderness: '风穿过荒草，带着不属于此地的低语。',
+    sea: '甲板在浪里起伏，海面下有什么在回应。'
+  };
+  const outcomes = card ? [
+    { label: '成功', text: effectText(card.success), applied: !!e.success, tone: effectTone(card.success) },
+    { label: '失败', text: effectText(card.fail), applied: !e.success, tone: 'bad' }
+  ] : [];
+  const effects = [];
+  if (inv && !inv.alive) effects.push({ tone: 'bad', icon: 'warning', text: inv.name + ' 被击倒，失去所有线索' });
+  if (e.rerolled) effects.push({ tone: '', icon: 'star', text: '戴安娜的禁忌知识：本次检定自动重掷' });
+  const alive = state.investigators.filter((x) => x.alive);
+  let footerNote = '继续调查。';
+  if (state.phase === 'encounters') {
+    const nextInv = state.investigators[state.encounterIndex];
+    footerNote = nextInv ? '下一位：' + nextInv.name + ' · ' + locName(nextInv.locationId) : '继续。';
+  } else if (state.phase === 'mythos') {
+    footerNote = '所有遭遇结算完毕，进入神秘阶段。';
+  }
+  return {
+    kind: 'encounter', archiveKey: 'encounter', ribbonIcon: 'card',
+    eyebrow: '遭遇 · ' + TYPE_NAME[type] + '牌',
+    meta: (inv ? inv.name : '') + ' · 第 ' + state.round + ' 回合',
+    title: card ? card.name : e.cardName,
+    subtitle: locName(e.location) + ' · ' + TYPE_DECK[type] + ' · ' + (ATTRIBUTE_NAMES[e.attribute] || '') + '检定',
+    flavor: flavorMap[type] || '你在阴影中抽到了一张牌。',
+    test: makeTest(e),
+    outcomes: outcomes,
+    effects: effects,
+    success: e.success,
+    dice: e.faces,
+    summary: (e.success ? '成功' : '失败') + ' · ' + effectText(e.effect),
+    footerNote: footerNote
+  };
+}
+
+function buildMythosReveal(events, prev) {
+  const e = findEvent(events, 'mythos');
+  if (!e) return null;
+  const card = MYTHOS_CARDS.find((c) => c.id === e.card);
+  const doomLost = Math.max(0, prev.doom - state.doom);
+  const effects = [];
+  if (doomLost > 0) effects.push({ tone: 'bad', icon: 'skull', text: '末日轨 -' + doomLost + ' · ' + state.doom + '/' + state.maxDoom });
+  else effects.push({ tone: '', icon: 'skull', text: '末日轨保持在 ' + state.doom + '/' + state.maxDoom });
+  const extra = findEvent(events, 'extra-doom');
+  if (extra) effects.push({ tone: 'bad', icon: 'warning', text: '末日号角：敞开 ' + extra.gates + ' 道门，额外 -' + extra.amount });
+  const gateEv = findEvent(events, 'gate-opened');
+  if (gateEv) effects.push({ tone: 'bad', icon: 'gate', text: '一道门在 ' + locName(gateEv.location) + ' 打开' });
+  events.filter((x) => x.type === 'monster-spawned').forEach((s) => {
+    effects.push({ tone: 'bad', icon: 'mythos', text: s.name + ' 在 ' + locName(s.location) + ' 出现' });
+  });
+  const clueEv = findEvent(events, 'mythos-clue');
+  if (clueEv) effects.push({ tone: 'good', icon: 'clue', text: invName(clueEv.investigator) + ' 抓住 1 条线索' });
+  if (card && card.sanity) effects.push({ tone: 'bad', icon: 'sanity', text: '所有存活调查员理智 -' + card.sanity });
+  const attacks = events.filter((x) => x.type === 'monster-attack');
+  attacks.forEach((a) => {
+    effects.push({ tone: 'bad', icon: 'sword', text: a.monsterName + ' 攻击 ' + invName(a.investigator) + '：生命 -' + a.healthDamage + ' · 理智 -' + a.sanityDamage });
+  });
+  const moves = events.filter((x) => x.type === 'monster-move');
+  if (moves.length) effects.push({ tone: '', icon: 'mythos', text: moves.length + ' 只怪物沿最短路径向调查员移动 1 步' });
+  events.filter((x) => x.type === 'investigator-defeated').forEach((d) => {
+    effects.push({ tone: 'bad', icon: 'warning', text: d.name + ' 被击败' });
+  });
+  return {
+    kind: 'mythos', archiveKey: 'mythos', ribbonIcon: 'mythos',
+    eyebrow: '神话 · 第 ' + e.round + ' 回合',
+    meta: '末日 ' + state.doom + '/' + state.maxDoom + ' · 门 ' + e.gates + ' · 怪物 ' + e.monsters,
+    title: card ? card.name : e.cardName,
+    subtitle: '阿撒托斯的梦又翻过一页',
+    flavor: card ? card.text : '盲目痴愚之神在梦中翻身。',
+    effects: effects,
+    success: null,
+    dice: [],
+    summary: card ? card.name + ' · 末日 -' + doomLost : '神话卡 · 末日 -' + doomLost,
+    footerNote: state.over
+      ? '一切归于寂静。'
+      : '第 ' + state.round + ' 回合开始 · ' + (state.investigators[state.activeInvestigatorIndex] ? state.investigators[state.activeInvestigatorIndex].name + ' 先行动' : '行动阶段')
+  };
+}
+
+function buildReveal(action, events, prev) {
+  if (action.type === 'research') return buildResearchReveal(events, prev);
+  if (action.type === 'fight') return buildCombatReveal(events, prev);
+  if (action.type === 'closeGate') return buildGateReveal(events, prev, false);
+  if (action.type === 'sealGate') return buildGateReveal(events, prev, true);
+  if (action.type === 'encounter') return buildEncounterReveal(events, prev);
+  if (action.type === 'mythos') return buildMythosReveal(events, prev);
+  return null;
+}
+
+function syncLock() {
+  const locked = !!reveal || !$('endOverlay').hidden || !$('rulesOverlay').hidden;
+  document.body.classList.toggle('modal-open', locked);
+}
+
+function renderReveal() {
+  const root = $('revealRoot');
+  if (!reveal) {
+    root.innerHTML = '';
+    syncLock();
+    return;
+  }
+  const r = reveal;
+  const test = r.test ? renderTestBlock(r.test) : '';
+  const outcomes = outcomeBlock(r.outcomes);
+  const effects = effectRows(r.effects);
+  const progress = progressBlock(r.progress);
+  const completion = r.completion
+    ? '<div class="completion-banner">' + icon('star') + '神秘卡完成 · ' + esc(r.title) + '</div>'
+    : '';
+  root.innerHTML = '<div class="reveal-backdrop" data-act="closeReveal">' +
+    '<div class="reveal-card ' + esc(r.kind) + '" role="dialog" aria-modal="true" aria-labelledby="revealTitle">' +
+    '<div class="reveal-ribbon"><span class="rb-icon">' + icon(r.ribbonIcon || 'card') + '</span><span>' + esc(r.eyebrow || '') + '</span>' +
+    '<span class="rb-meta">' + esc(r.meta || '') + '</span></div>' +
+    '<div class="reveal-body">' +
+    '<h2 class="reveal-title" id="revealTitle">' + esc(r.title) + '</h2>' +
+    (r.subtitle ? '<div class="reveal-sub">' + esc(r.subtitle) + '</div>' : '') +
+    (r.flavor ? '<p class="reveal-flavor">' + esc(r.flavor) + '</p>' : '') +
+    test + outcomes + effects + progress + completion +
+    '</div>' +
+    '<div class="reveal-foot"><span class="note">' + esc(r.footerNote || '') + '</span>' +
+    '<button class="btn primary reveal-continue" data-act="closeReveal" type="button">继续</button></div>' +
+    '</div></div>';
+  syncLock();
+  const btn = root.querySelector('.reveal-continue');
+  if (btn) {
+    setTimeout(() => {
+      try { btn.focus({ preventScroll: true }); } catch (err) { btn.focus(); }
+    }, 40);
+  }
+}
+
+function closeReveal() {
+  reveal = null;
+  renderReveal();
+}
+
+/* ------------------------------------------------------------------ *
+ * 状态推进                                                           *
+ * ------------------------------------------------------------------ */
+function applyAndReveal(action) {
+  if (!state || state.over || !action) return;
+  const prev = state;
+  const logStart = prev.log.length;
+  let next;
+  try {
+    next = applyAction(prev, action);
+  } catch (err) {
+    toast(err && err.message ? err.message : '这个行动无法执行');
+    return;
+  }
+  state = next;
+  const events = state.log.slice(logStart);
+  const info = buildReveal(action, events, prev);
+  if (info && info.archiveKey) archive[info.archiveKey] = info;
+
+  if (state.over) {
+    reveal = null;
+    renderReveal();
+    render();
+    showEnd();
+    return;
+  }
+
+  reveal = info;
+  renderReveal();
+  render();
+
+  if (info) {
+    announce(info.title + ' · ' + (info.success === true ? '成功' : info.success === false ? '失败' : info.summary));
+  } else if (prev.phase !== state.phase) {
+    toast(phaseTransitionText(prev, state));
+    announce(phaseTransitionText(prev, state));
+  } else if (action.type === 'rest') {
+    const inv = invById(action.actor);
+    toast('休息：生命 +1 · 理智 +1' + (inv ? ' · ' + inv.name : ''));
+  } else if (action.type === 'move') {
+    const inv = invById(action.actor);
+    announce((inv ? inv.name : '调查员') + ' 移动到 ' + locName(action.path[action.path.length - 1]));
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * 终局                                                               *
+ * ------------------------------------------------------------------ */
+const END_REASON = {
+  'mysteries-complete': '三道神秘封印全部落下，阿撒托斯的梦呓归于寂静。人类又争取到了一个黎明。',
+  'doom-zero': '末日轨归零。盲目痴愚之神终于把注意力转向地球，世界在无声中消失。',
+  'all-investigators-defeated': '最后一名调查员倒下。没有人再记得这些名字，也没有人再能阻止群星。',
+  'round-limit': '十六个回合耗尽，群星归位。阿撒托斯不需要醒来——它从未真正睡着。'
+};
+const WIN_SEAL = '<svg viewBox="0 0 64 64" fill="none" aria-hidden="true"><path d="M32 3 26 20 8 22l14 12-5 18 15-9 15 9-5-18 14-12-18-2L32 3z" fill="url(#gGold)" stroke="#5a3f18" stroke-width="1"/><circle cx="32" cy="32" r="12" fill="#101713" stroke="#f6e6b8" stroke-width="1.2"/><path d="m26 32 4.2 4.4L39 27" stroke="#f6e6b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 56 C20 62 44 62 52 56" stroke="#c8a263" stroke-width="1.4" stroke-linecap="round" opacity=".7"/></svg>';
+const LOSE_SEAL = '<svg viewBox="0 0 64 64" fill="none" aria-hidden="true"><circle cx="32" cy="32" r="26" fill="#150b12" stroke="#8f6fbb" stroke-width="1.2"/><path d="M32 8c12 8 15 20 6 28-9 8-22 4-24-6-2-9 8-16 16-12 7 4 8 13 2 17-5 4-12 1-11-5" stroke="#c8a8ec" stroke-width="1.5" stroke-linecap="round" opacity=".8"/><ellipse cx="32" cy="32" rx="9" ry="5" fill="url(#gEye)"/><ellipse cx="32" cy="32" rx="2.4" ry="5" fill="#08070a"/><circle cx="34" cy="30" r=".8" fill="#ffeec8"/></svg>';
+
+function showEnd() {
+  if (!state || !state.over) return;
+  const win = state.winner === 'investigators';
+  const alive = aliveInvestigators(state);
+  const clues = alive.reduce((sum, inv) => sum + inv.clues, 0);
+  const tests = state.stats.testsPassed + state.stats.testsFailed;
+  $('endSeal').innerHTML = win ? WIN_SEAL : LOSE_SEAL;
+  $('endTitle').textContent = win ? '人类守住了黎明' : '阿撒托斯苏醒';
+  $('endTitle').className = 'end-title' + (win ? '' : ' lose');
+  $('endReason').textContent = END_REASON[state.endReason] || '对局结束。';
+  const stats = [
+    ['回合', state.round + ' / ' + state.maxRounds],
+    ['末日轨', state.doom + ' / ' + state.maxDoom],
+    ['神秘卡', state.mysteriesCompleted + ' / 3'],
+    ['存活调查员', alive.length + ' / ' + state.investigators.length],
+    ['剩余线索', clues],
+    ['击败怪物', state.stats.monstersDefeated],
+    ['关门 / 封印', state.stats.gatesClosed + ' / ' + state.stats.gatesSealed],
+    ['检定通过', state.stats.testsPassed + ' / ' + tests],
+    ['回放种子', state.seed]
+  ];
+  $('endStats').innerHTML = stats.map((row) =>
+    '<div class="end-stat"' + (row[0] === '回放种子' ? ' style="grid-column:1/-1"' : '') + '><b>' + esc(row[1]) + '</b>' + esc(row[0]) + '</div>'
+  ).join('');
+  $('endOverlay').hidden = false;
+  endDismissed = false;
+  syncLock();
+  announce(win ? '调查员胜利' : '阿撒托斯苏醒');
+}
+
+function hideEnd() {
+  $('endOverlay').hidden = true;
+  endDismissed = true;
+  syncLock();
+}
+
+/* ------------------------------------------------------------------ *
+ * 弹层 / 重置 / 交互                                                 *
+ * ------------------------------------------------------------------ */
+function openRules() {
+  $('rulesOverlay').hidden = false;
+  syncLock();
+  const btn = $('rulesOverlay').querySelector('.modal-close');
+  if (btn) setTimeout(() => { try { btn.focus({ preventScroll: true }); } catch (err) { btn.focus(); } }, 40);
+}
+function closeRules() {
+  $('rulesOverlay').hidden = true;
+  syncLock();
+}
+function updateResetLabel() {
+  const span = $('resetBtn') ? $('resetBtn').querySelector('span') : null;
+  if (span) span.textContent = resetArmed ? '确认重开' : '重开';
+}
+function armReset() {
+  if (!state) { startGame(DEFAULT_SEED); return; }
+  if (state.over) { startGame(newSeed()); return; }
+  if (resetArmed) {
+    resetArmed = false;
+    clearTimeout(resetTimer);
+    updateResetLabel();
+    startGame(newSeed());
+    return;
+  }
+  resetArmed = true;
+  updateResetLabel();
+  toast('再次点击「确认重开」换一局');
+  clearTimeout(resetTimer);
+  resetTimer = setTimeout(() => {
+    resetArmed = false;
+    updateResetLabel();
+  }, 3200);
+}
+function onNode(locId) {
+  if (!state) return;
+  if (state.over) { toast(locSummary(locId)); announce(locSummary(locId)); return; }
+  if (state.phase === 'actions') {
+    const move = legal.moves.get(locId);
+    if (move) { applyAndReveal(move); return; }
+    const active = state.investigators[state.activeInvestigatorIndex];
+    if (active && active.locationId === locId) {
+      toast('你正在 ' + locName(locId) + ' · ' + locSummary(locId));
+      return;
+    }
+    toast(locSummary(locId) + ' · 无法直接到达');
+    return;
+  }
+  toast(locSummary(locId));
+  announce(locSummary(locId));
+}
+function onMonster(id) {
+  if (!state || state.over) return;
+  const fight = legal.fights.get(id);
+  if (fight) { applyAndReveal(fight); return; }
+  const m = state.monsters.find((x) => x.id === id);
+  toast(m ? (m.name + ' 在 ' + locName(m.locationId) + ' · 必须与它同地点才能战斗') : '这只怪物已经不在了');
+}
+function onPhaseAction() {
+  if (!state || state.over) return;
+  const action = state.phase === 'encounters' ? legal.encounter : state.phase === 'mythos' ? legal.mythos : null;
+  if (action) applyAndReveal(action);
+}
+
+function handleClick(e) {
+  const hit = e.target && e.target.closest ? e.target.closest('[data-act]') : null;
+  if (!hit) return;
+  const act = hit.getAttribute('data-act');
+  if (act === 'closeReveal') {
+    if (hit.classList.contains('reveal-backdrop') && e.target.closest('.reveal-card')) return;
+    closeReveal();
+    return;
+  }
+  switch (act) {
+    case 'rules':
+      openRules();
+      break;
+    case 'closeRules':
+      closeRules();
+      break;
+    case 'reset':
+      armReset();
+      break;
+    case 'node':
+      onNode(hit.getAttribute('data-loc'));
+      break;
+    case 'monster':
+      onMonster(hit.getAttribute('data-monster'));
+      break;
+    case 'legal': {
+      const idx = Number(hit.getAttribute('data-legal'));
+      const action = legal && legal.all ? legal.all[idx] : null;
+      if (action) applyAndReveal(action);
+      break;
+    }
+    case 'phaseAction':
+      onPhaseAction();
+      break;
+    case 'hintMove':
+      toast('点击地图上带金色光圈的地点移动；连线是唯一可走的路径。');
+      break;
+    case 'review': {
+      const key = hit.getAttribute('data-kind');
+      if (archive[key]) { reveal = archive[key]; renderReveal(); }
+      break;
+    }
+    case 'again':
+      startGame(newSeed());
+      break;
+    case 'dismissEnd':
+      hideEnd();
+      break;
+    case 'showEnd':
+      showEnd();
+      break;
+    default:
+      break;
+  }
+}
+document.addEventListener('click', handleClick);
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  if (reveal) { closeReveal(); return; }
+  if (!$('rulesOverlay').hidden) { closeRules(); return; }
+  if (!$('endOverlay').hidden) { hideEnd(); }
+});
+
+/* ------------------------------------------------------------------ *
+ * 调试 / 自动化钩子（只读状态 + 官方动作）                            *
+ * ------------------------------------------------------------------ */
+window.__EH__ = {
+  version: VERSION,
+  seed: () => state && state.seed,
+  state: () => state,
+  phase: () => state && state.phase,
+  round: () => state && state.round,
+  over: () => !!(state && state.over),
+  legal: () => (state ? legalActions(state) : []),
+  apply: (action) => { applyAndReveal(action); return state; },
+  close: closeReveal,
+  review: (key) => { if (archive[key]) { reveal = archive[key]; renderReveal(); } },
+  archive: () => archive,
+  aiStep: () => {
+    if (!state || state.over) return null;
+    const action = chooseAIAction(state);
+    applyAndReveal(action);
+    return action;
+  },
+  runAI: (limit) => {
+    let n = 0;
+    const lim = limit || 400;
+    while (state && !state.over && n < lim) {
+      const action = chooseAIAction(state);
+      applyAndReveal(action);
+      reveal = null;
+      renderReveal();
+      n += 1;
+    }
+    return {
+      steps: n,
+      over: !!(state && state.over),
+      phase: state && state.phase,
+      round: state && state.round,
+      winner: state && state.winner
+    };
+  },
+  start: (seed) => {
+    startGame(seed || newSeed());
+    return state && state.seed;
+  }
+};
+
+/* ------------------------------------------------------------------ *
+ * 启动                                                               *
+ * ------------------------------------------------------------------ */
+startGame(DEFAULT_SEED);
+</script>
+</body>
+</html>

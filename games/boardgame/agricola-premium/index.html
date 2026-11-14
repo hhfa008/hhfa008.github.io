@@ -1,0 +1,2012 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>农场主 · Agricola 双人桌游（人机对战）</title>
+<meta name="description" content="农场主 Agricola 家族版中文单机桌游：28 个行动格分 6 个阶段解锁，耕种、畜牧、扩建农舍、养家糊口。5×3 农场、14 类终局计分、手机优先、离线可玩。">
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/agricola-premium/">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="theme-color" content="#141d15">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23141d15'/%3E%3Cpath d='M5 16l11-8 11 8v11H5z' fill='%23b07c48'/%3E%3Cpath d='M5 16l11-8 11 8' fill='none' stroke='%23e0b75f' stroke-width='2'/%3E%3Cpath d='M13 27v-7h6v7z' fill='%23f3e7ce'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#0e1510;--bg-2:#131d14;--panel:#1c2a1e;--panel-2:#223324;--panel-3:#182419;
+  --cream:#f4ead5;--cream-2:#e8d9bb;--muted:#b9b199;--muted-2:#a59b82;
+  --ink:#2d2416;--ink-2:#4a3b25;
+  --gold:#d8ac5a;--gold-2:#f0cd86;--gold-3:#8d6a33;
+  --wheat:#e2b963;--green:#7fae63;--green-2:#4d7040;--rust:#c1734f;--barn:#a34b36;
+  --line:rgba(216,172,90,.26);--line-2:rgba(216,172,90,.14);
+  --human:#8fbe70;--ai:#d0885f;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --serif:"Songti SC","Noto Serif SC",Georgia,"Times New Roman",serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;color:var(--cream);font:16px/1.55 var(--sans);-webkit-font-smoothing:antialiased;
+  background:
+    radial-gradient(1100px 680px at 8% -8%,rgba(96,128,72,.30),transparent 62%),
+    radial-gradient(900px 620px at 108% 4%,rgba(140,96,46,.24),transparent 58%),
+    repeating-linear-gradient(92deg,rgba(255,255,255,.014) 0 2px,transparent 2px 8px),
+    linear-gradient(180deg,#121b13 0%,#0e1510 52%,#0b110d 100%);
+  background-attachment:fixed;min-height:100vh}
+h1,h2,h3,p,ul,ol,figure{margin:0}
+button{font:inherit;color:inherit}
+a{color:inherit}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.wrap{max-width:820px;margin:0 auto;padding:0 10px}
+.ic{width:22px;height:22px;display:block;flex:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.28))}
+
+/* ---------- header ---------- */
+.site-header{background:linear-gradient(180deg,rgba(20,30,21,.96),rgba(16,24,17,.9));border-bottom:1px solid var(--line-2)}
+.head-inner{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:48px}
+.brand{min-height:44px;display:flex;align-items:center;gap:8px;text-decoration:none;font-family:var(--serif);font-weight:700;font-size:16px;letter-spacing:.02em}
+.brand-mark{width:26px;height:26px;border-radius:7px;flex:none;background:linear-gradient(150deg,#c08a4c,#7a4f2c);
+  box-shadow:inset 0 0 0 2px #10180f,0 2px 6px rgba(0,0,0,.35);position:relative}
+.brand-mark::after{content:"";position:absolute;inset:6px;background:var(--cream);clip-path:polygon(50% 0,100% 62%,82% 62%,82% 100%,18% 100%,18% 62%,0 62%)}
+.top-nav{display:flex;align-items:center;gap:0}
+.top-nav a{display:inline-flex;align-items:center;min-height:44px;padding:0 8px;border-radius:9px;color:var(--muted);text-decoration:none;font-size:12px;font-weight:650}
+.top-nav a:hover{color:var(--cream);background:rgba(255,255,255,.06)}
+
+/* ---------- game shell ---------- */
+.game{margin-top:10px;background:
+  radial-gradient(680px 320px at 12% 0,rgba(216,172,90,.07),transparent 62%),
+  linear-gradient(165deg,rgba(34,51,36,.98),rgba(24,36,25,.98));
+  border:1px solid var(--line);border-radius:16px;padding:8px;
+  box-shadow:0 16px 42px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.05);min-width:0}
+.top-strip{display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-width:0}
+.round-badge{display:flex;align-items:baseline;gap:3px;padding:5px 8px;border-radius:10px;background:rgba(216,172,90,.12);border:1px solid var(--line);flex:none}
+.round-badge .k{font-size:12px;color:var(--muted);font-weight:600}
+.round-badge b{font-family:var(--mono);font-size:20px;line-height:1;color:var(--gold-2);font-variant-numeric:tabular-nums}
+.round-badge .of{font-size:12px;color:var(--muted)}
+.stage-badge{display:flex;flex-direction:column;justify-content:center;min-height:44px;padding:2px 9px;border-radius:10px;
+  background:rgba(255,255,255,.04);border:1px solid var(--line-2);min-width:0;flex:none}
+.stage-badge b{font-size:12.5px;line-height:1.2;color:var(--cream)}
+.stage-badge span{font-size:12px;line-height:1.2;color:var(--muted)}
+.top-actions{margin-left:auto;display:flex;gap:5px;flex:none}
+.mini-btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 10px;border-radius:10px;
+  border:1px solid rgba(216,172,90,.34);background:rgba(255,255,255,.035);color:var(--cream);font-size:12px;font-weight:650;
+  cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;white-space:nowrap}
+.mini-btn:hover{background:rgba(216,172,90,.14)}
+.mini-btn:focus-visible{outline:2px solid var(--gold-2);outline-offset:2px}
+.mini-btn[aria-pressed="true"]{background:rgba(216,172,90,.2);border-color:var(--gold)}
+.turn-line{display:flex;align-items:center;flex-wrap:wrap;gap:4px 9px;margin:2px 1px 0;font-size:12px;color:var(--muted);line-height:1.45}
+.turn-line b{color:var(--cream);font-weight:650}
+.turn-line .sep{color:rgba(216,172,90,.45)}
+.turn-line .harvest-now{color:#f0b184;font-weight:650}
+
+/* ---------- players ---------- */
+.players{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:6px}
+.player{display:flex;align-items:flex-start;gap:7px;min-width:0;min-height:52px;padding:6px 8px;border-radius:11px;
+  background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08);transition:border-color .15s,background .15s}
+.player.active{border-color:var(--gold);background:rgba(216,172,90,.12);box-shadow:inset 0 0 0 1px rgba(240,205,134,.16)}
+.pc-dot{width:9px;height:9px;border-radius:50%;flex:none;margin-top:5px;background:var(--human);box-shadow:0 0 0 2px rgba(255,255,255,.1)}
+.player.ai .pc-dot{background:var(--ai)}
+.pc-body{min-width:0;flex:1}
+.pc-top{display:flex;align-items:center;gap:5px;min-width:0}
+.pc-top b{font-size:13px;font-weight:700;white-space:nowrap}
+.pc-role{font-family:var(--mono);font-size:12px;letter-spacing:.08em;color:var(--muted-2);flex:none}
+.pc-first{margin-left:2px;font-size:12px;font-weight:700;color:#402f12;background:var(--gold);border-radius:999px;padding:0 5px;flex:none}
+.pc-meta{display:flex;flex-wrap:wrap;align-items:center;gap:0 4px;margin-top:1px;font-size:12px;color:var(--muted);line-height:1.4;min-width:0}
+.pc-meta b{color:var(--cream-2);font-weight:650}
+.pc-sep{color:rgba(255,255,255,.28)}
+.pc-i{white-space:nowrap}
+.pc-pips{margin-left:auto;display:inline-flex;gap:2px;flex:none;align-items:center}
+.w-pips{display:inline-flex;gap:2px;vertical-align:-2px;margin-left:2px}
+.w-pip{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.13);box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)}
+.w-pip.on{background:var(--gold-2);box-shadow:0 0 4px rgba(240,205,134,.5)}
+
+.hint{display:flex;align-items:center;justify-content:center;min-height:28px;margin:4px 2px 2px;padding:0 4px;
+  font-size:12.5px;line-height:1.4;text-align:center;color:var(--muted)}
+.hint.warn{color:#f0a79f}
+.hint.good{color:#a9d58b}
+
+/* ---------- panels ---------- */
+.panel{background:linear-gradient(165deg,rgba(30,45,31,.96),rgba(22,34,24,.96));border:1px solid var(--line-2);
+  border-radius:13px;padding:6px 7px;min-width:0}
+.panel-head{display:flex;align-items:baseline;justify-content:space-between;gap:6px;margin-bottom:4px;min-width:0}
+.panel-head h2{font-family:var(--mono);font-size:12px;letter-spacing:.1em;color:var(--muted);font-weight:700;text-transform:uppercase}
+.panel-head span{font-size:12px;color:var(--muted-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+
+/* ---------- dashboard: farm + resources ---------- */
+.dash{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,.8fr);gap:6px;margin-top:6px;align-items:stretch}
+.farm-panel{display:flex;flex-direction:column;min-width:0;padding-left:5px;padding-right:5px}
+.farm-wrap{position:relative;min-width:0;flex:1;display:flex;min-height:0}
+.farm{position:relative;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));width:100%;
+  border:1px solid #26351f;border-radius:7px;overflow:hidden;background:#3f5b31;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.08),0 4px 10px rgba(0,0,0,.28);isolation:isolate}
+.fcell{position:relative;min-width:0;min-height:0;border:1px solid rgba(20,30,14,.24);
+  padding:0;margin:0;cursor:default;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+  background:
+    repeating-linear-gradient(74deg,transparent 0 6px,rgba(28,54,18,.14) 6px 7px,transparent 7px 13px),
+    repeating-linear-gradient(-70deg,transparent 0 9px,rgba(214,232,176,.10) 9px 10px,transparent 10px 17px),
+    radial-gradient(circle at 24% 20%,rgba(255,255,255,.08),transparent 44%),
+    radial-gradient(circle at 76% 72%,rgba(0,0,0,.09),transparent 46%),
+    linear-gradient(150deg,#5b7c44,#47653a);
+  display:flex;align-items:center;justify-content:center;overflow:hidden;color:var(--cream);font:inherit}
+.fcell:focus-visible{outline:2px solid var(--gold-2);outline-offset:-2px;z-index:5}
+.fcell.pasture{background:
+  repeating-linear-gradient(74deg,transparent 0 5px,rgba(26,50,16,.18) 5px 6px,transparent 6px 11px),
+  repeating-linear-gradient(-70deg,transparent 0 8px,rgba(226,240,192,.12) 8px 9px,transparent 9px 15px),
+  radial-gradient(circle at 26% 24%,rgba(255,255,255,.12),transparent 46%),
+  linear-gradient(150deg,#7aa355,#5c8041)}
+.fcell.field{background:
+  repeating-linear-gradient(90deg,rgba(48,30,14,.55) 0 2px,rgba(128,92,54,.28) 2px 4px,transparent 4px 8px),
+  linear-gradient(160deg,#7d5734,#5d3f23)}
+.fcell.room{box-shadow:inset 0 0 0 1px rgba(255,255,255,.13)}
+.fcell.room::before{content:"";position:absolute;left:0;right:0;top:0;height:38%;
+  clip-path:polygon(0 100%,50% 0,100% 100%);background:linear-gradient(180deg,#d4ab6d,#9c6f38);opacity:.95}
+.fcell.room.wood{background:
+  repeating-linear-gradient(90deg,rgba(48,28,12,.4) 0 1px,transparent 1px 7px),
+  linear-gradient(160deg,#9a6a3f,#7b502c 62%,#653f1f)}
+.fcell.room.wood::before{background:linear-gradient(180deg,#c99857,#8d5c2e)}
+.fcell.room.clay{background:
+  radial-gradient(circle at 28% 34%,rgba(255,255,255,.22),transparent 48%),
+  radial-gradient(circle at 72% 68%,rgba(92,56,24,.2),transparent 42%),
+  linear-gradient(150deg,#cfa76d,#a87f4c)}
+.fcell.room.clay::before{background:linear-gradient(180deg,#d8b47a,#ab7c43)}
+.fcell.room.stone{background:
+  repeating-linear-gradient(0deg,rgba(42,47,44,.34) 0 1px,transparent 1px 8px),
+  repeating-linear-gradient(90deg,rgba(42,47,44,.3) 0 1px,transparent 1px 10px),
+  linear-gradient(150deg,#9ba29c,#727a74)}
+.fcell.room.stone::before{background:linear-gradient(180deg,#aeb5ae,#77807a)}
+.cell-tag{position:absolute;right:2px;bottom:1px;font-size:12px;line-height:1.3;font-weight:700;color:rgba(255,250,238,.92);
+  background:rgba(30,22,12,.42);border-radius:3px;padding:0 2px;pointer-events:none}
+.crop-badge{position:absolute;left:2px;bottom:2px;display:inline-flex;align-items:center;gap:1px;background:rgba(30,22,12,.62);
+  border-radius:4px;padding:0 2px 0 1px;font-family:var(--mono);font-size:12px;font-weight:700;color:#fff4da;pointer-events:none}
+.crop-badge .ic{width:11px;height:11px;filter:none}
+.stable-ic{position:absolute;inset:12% 20%;width:60%;height:76%;pointer-events:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.4))}
+.fcell.placeable{cursor:pointer;box-shadow:inset 0 0 0 2px var(--gold-2),0 0 0 1px rgba(0,0,0,.25);animation:cellPulse 1.4s ease-in-out infinite}
+.fcell.placeable::after{content:"";position:absolute;inset:0;background:rgba(240,205,134,.16);pointer-events:none}
+.fcell.dead{cursor:not-allowed}
+.fence-layer{position:absolute;inset:0;pointer-events:none;z-index:4}
+.fence-seg{position:absolute;background:linear-gradient(180deg,#f0cf95,#a8763b 70%,#7d5227);
+  box-shadow:0 0 0 1px rgba(52,32,10,.45),0 1px 2px rgba(0,0,0,.55);border-radius:1px}
+.fence-seg.h{height:4px;transform:translateY(-2px)}
+.fence-seg.v{width:4px;transform:translateX(-2px)}
+.farm-legend{display:flex;flex-wrap:wrap;gap:3px 8px;margin-top:4px;font-size:12px;color:var(--muted);line-height:1.35}
+.farm-legend .sw{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:3px;vertical-align:-1px;border:1px solid rgba(0,0,0,.28)}
+.sw.room{background:linear-gradient(150deg,#a87240,#70461f)}
+.sw.field{background:repeating-linear-gradient(90deg,#7d5734 0 2px,#5d3f23 2px 4px)}
+.sw.pasture{background:linear-gradient(150deg,#62884a,#456334)}
+.sw.stable{background:linear-gradient(150deg,#a34b36,#6f2f21)}
+.farm-actions{display:flex;align-items:center;justify-content:space-between;gap:5px;margin-top:4px;min-height:0}
+.farm-actions .place-note{font-size:12px;color:var(--gold-2);line-height:1.35;min-width:0}
+.cancel-place{min-height:44px;padding:0 9px;font-size:12px}
+
+/* ---------- resources ---------- */
+.res-panel{display:flex;flex-direction:column;min-width:0;padding-left:4px;padding-right:4px}
+.res-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px}
+.res-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;min-width:0;min-height:44px;
+  border-radius:7px;background:rgba(0,0,0,.19);border:1px solid rgba(255,255,255,.055);padding:2px 1px;position:relative}
+.res-tile .ic{width:19px;height:19px}
+.res-val{font-family:var(--mono);font-size:14px;font-weight:700;line-height:1.05;color:var(--cream);font-variant-numeric:tabular-nums}
+.res-name{font-size:12px;line-height:1.1;color:var(--muted);white-space:nowrap}
+.res-tile.flash{animation:resFlash .5s ease}
+.res-tile.dim{opacity:.6}
+.res-foot{margin-top:auto;padding-top:3px;font-size:12px;color:var(--muted-2);line-height:1.35}
+
+/* ---------- action board ---------- */
+.board{margin-top:6px}
+.board.ai-turn .spaces{opacity:.7}
+.board.ai-turn .spaces .space{cursor:wait}
+.board-head{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:1px 2px 5px;min-width:0}
+.board-head h2{font-family:var(--serif);font-size:15px;font-weight:700;color:var(--cream);white-space:nowrap}
+.board-head span{font-size:12px;color:var(--muted-2);text-align:right;line-height:1.35;min-width:0}
+.stage-rail{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:3px;margin-bottom:5px}
+.stage-chip{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;min-height:44px;padding:2px 1px;
+  border-radius:8px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.035);color:var(--muted);
+  font-size:12px;font-weight:650;cursor:pointer;line-height:1.15;touch-action:manipulation;-webkit-tap-highlight-color:transparent;min-width:0}
+.stage-chip b{font-family:var(--mono);font-size:12.5px;color:var(--cream-2);font-weight:700}
+.stage-chip span{font-size:12px;color:var(--muted-2);white-space:nowrap}
+.stage-chip.current{border-color:var(--gold);background:rgba(216,172,90,.16)}
+.stage-chip.current b{color:var(--gold-2)}
+.stage-chip.done{background:rgba(127,174,99,.11);border-color:rgba(127,174,99,.35)}
+.stage-chip.done b{color:#b6d79b}
+.stage-chip.locked{opacity:.55}
+.stage-chip:focus-visible{outline:2px solid var(--gold-2);outline-offset:1px}
+.stage{background:rgba(0,0,0,.13);border:1px solid rgba(255,255,255,.055);border-radius:10px;margin-top:4px;min-width:0}
+.stage[open]{padding-bottom:5px}
+.stage>summary{display:flex;align-items:center;gap:7px;min-height:44px;padding:4px 7px;cursor:pointer;list-style:none;
+  border-radius:10px;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.stage>summary::-webkit-details-marker{display:none}
+.stage>summary:focus-visible{outline:2px solid var(--gold-2);outline-offset:-2px}
+.stage-sum-main{min-width:0;flex:1}
+.stage-sum-main b{display:block;font-size:12.5px;line-height:1.25;color:var(--cream)}
+.stage-sum-main span{display:block;font-size:12px;line-height:1.25;color:var(--muted)}
+.stage-state{font-size:12px;font-weight:700;padding:2px 6px;border-radius:999px;flex:none;line-height:1.25;
+  background:rgba(255,255,255,.07);color:var(--muted)}
+.stage.current .stage-state{background:var(--gold);color:#3a2b10}
+.stage.done .stage-state{background:rgba(127,174,99,.2);color:#c1e0aa}
+.stage.locked .stage-state{background:rgba(255,255,255,.05);color:var(--muted-2)}
+.chev{width:14px;height:14px;flex:none;color:var(--muted);transition:transform .16s}
+.stage[open] .chev{transform:rotate(180deg)}
+.stage-locked-note{padding:0 7px 6px;font-size:12px;line-height:1.4;color:var(--muted-2)}
+.spaces{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding:0 5px;min-width:0}
+.stage-6-note{padding:2px 7px 8px;font-size:12px;line-height:1.5;color:var(--muted)}
+.space{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:1px;min-width:0;min-height:64px;
+  padding:5px 3px 4px;border-radius:8px;border:1px solid #b99a67;color:var(--ink);text-align:center;cursor:pointer;
+  background:
+    radial-gradient(circle at 20% 0,rgba(255,255,255,.55),transparent 42%),
+    repeating-linear-gradient(112deg,rgba(120,90,40,.045) 0 2px,transparent 2px 7px),
+    linear-gradient(158deg,#f8eed8,#ecdcbd 58%,#dfcaa2);
+  box-shadow:0 2px 5px rgba(0,0,0,.28),inset 0 0 0 1px rgba(255,255,255,.42);
+  touch-action:manipulation;-webkit-tap-highlight-color:transparent;font:inherit;overflow:hidden;
+  transition:transform .1s,box-shadow .1s}
+.space:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 5px 10px rgba(0,0,0,.34),inset 0 0 0 1px rgba(255,255,255,.5)}
+.space:focus-visible{outline:2px solid var(--gold-2);outline-offset:1px;z-index:3}
+.space:disabled{opacity:1;cursor:not-allowed}
+.space .ic{width:21px;height:21px;margin-top:1px;filter:drop-shadow(0 1px 0 rgba(255,255,255,.35))}
+.space-name{font-size:12px;font-weight:700;line-height:1.16;color:#3a2c18;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  overflow:hidden;overflow-wrap:anywhere;max-width:100%}
+.space-bonus{font-size:12px;line-height:1.15;color:#6f5a38;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;max-width:100%}
+.space.occupied:not(.occ-ai){filter:saturate(.55) brightness(.9);border-color:#6f9c55;
+  box-shadow:inset 0 0 0 2px rgba(127,174,99,.72),0 2px 5px rgba(0,0,0,.28)}
+.space.occ-ai{filter:saturate(.55) brightness(.9);border-color:#b06140;
+  box-shadow:inset 0 0 0 2px rgba(193,115,79,.75),0 2px 5px rgba(0,0,0,.28)}
+.space.occupied::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(45deg,rgba(50,36,18,.2) 0 5px,transparent 5px 11px)}
+.occ-badge{position:absolute;z-index:3;top:2px;right:2px;font-size:12px;font-weight:800;line-height:1.4;border-radius:999px;padding:0 5px;white-space:nowrap;
+  color:#17200f;background:var(--human);box-shadow:0 1px 2px rgba(0,0,0,.3)}
+.space.occ-ai .occ-badge{background:var(--ai);color:#2a1409}
+.space.locked{background:
+  repeating-linear-gradient(135deg,rgba(92,72,42,.12) 0 7px,rgba(255,255,255,.1) 7px 14px),
+  linear-gradient(158deg,#e5d9c0,#d7c7a7);border-color:#a99773;filter:saturate(.7)}
+.space.locked .space-name,.space.locked .space-bonus{color:#73654d}
+.space.unavailable:not(.occupied):not(.locked){filter:saturate(.6) brightness(.94)}
+.space.waiting{filter:saturate(.72)}
+.space-mark{position:absolute;top:2px;left:2px;display:none;color:#6b5836;z-index:2}
+.space.locked .space-mark{display:block}
+.space-mark .ic{width:12px;height:12px;filter:none}
+.space.place-active{outline:3px solid var(--gold-2);outline-offset:-3px}
+
+/* ---------- log / info ---------- */
+.log-panel{margin-top:8px;background:rgba(0,0,0,.16);border:1px solid var(--line-2);border-radius:12px;padding:6px 8px;min-width:0}
+.log-panel h2{font-family:var(--mono);font-size:12px;letter-spacing:.1em;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:3px}
+.log{list-style:none;padding:0;display:flex;flex-direction:column;gap:2px;max-height:112px;overflow-y:auto}
+.log li{display:flex;gap:6px;font-size:12px;line-height:1.4;color:var(--muted);min-width:0}
+.log .lr{font-family:var(--mono);font-size:12px;color:#8d876f;flex:none;min-width:24px}
+.log .lt{min-width:0;overflow-wrap:anywhere}
+.log li.hl .lt{color:var(--cream-2)}
+.log li.bad .lt{color:#e8a292}
+.help{margin-top:14px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.help-card{background:rgba(255,255,255,.045);border:1px solid var(--line-2);border-radius:11px;padding:8px 9px;min-width:0}
+.help-card h3{font-size:12.5px;margin-bottom:2px;color:var(--cream-2)}
+.help-card p{font-size:12px;line-height:1.55;color:var(--muted)}
+.site-footer{max-width:820px;margin:16px auto 0;padding:10px;font-size:12px;line-height:1.6;color:var(--muted-2);
+  border-top:1px solid var(--line-2);display:flex;gap:10px;flex-wrap:wrap}
+.site-footer a{display:inline-flex;align-items:center;min-height:44px;text-decoration:none;color:var(--muted)}
+.site-footer a:hover{color:var(--cream)}
+
+/* ---------- overlays / sheet ---------- */
+.overlay{position:fixed;inset:0;z-index:70;background:rgba(7,11,8,.76);display:flex;align-items:flex-start;justify-content:center;
+  padding:12px;overflow-y:auto;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
+.overlay.center{align-items:center}
+.modal{width:100%;max-width:440px;margin:auto;background:
+  radial-gradient(420px 240px at 15% 0,rgba(216,172,90,.12),transparent 64%),
+  linear-gradient(165deg,#203021,#18251a);border:1px solid var(--line);border-radius:16px;padding:14px;
+  box-shadow:0 26px 70px rgba(0,0,0,.56),inset 0 1px 0 rgba(255,255,255,.06);color:var(--cream);min-width:0}
+.modal .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.13em;color:var(--gold);font-weight:700;text-transform:uppercase;margin-bottom:3px}
+.modal h2{font-family:var(--serif);font-weight:700;font-size:clamp(1.25rem,5.4vw,1.6rem);line-height:1.2;color:var(--cream)}
+.modal-sub{font-size:12px;line-height:1.5;color:var(--muted);margin-top:3px}
+.modal-close{min-width:44px;min-height:44px;border-radius:10px;border:1px solid rgba(255,255,255,.16);background:transparent;color:var(--muted);
+  font-size:12px;font-weight:650;cursor:pointer;flex:none}
+.modal-close:hover{color:var(--cream);background:rgba(255,255,255,.07)}
+.modal-head{display:flex;align-items:flex-start;gap:8px}
+.modal-head>div{min-width:0;flex:1}
+.modal-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:12px}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:0 12px;border-radius:10px;
+  border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.05);color:var(--cream);font-size:13px;font-weight:650;
+  cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.btn:hover{background:rgba(255,255,255,.1)}
+.btn.primary{background:var(--gold);border-color:var(--gold);color:#35270f}
+.btn.primary:hover{background:var(--gold-2)}
+.btn.full{grid-column:1 / -1}
+.btn:focus-visible{outline:2px solid var(--gold-2);outline-offset:2px}
+
+.sheet-card{width:100%;max-width:480px;margin:auto;background:linear-gradient(165deg,#223424,#18251b);border:1px solid var(--line);
+  border-radius:15px;padding:11px;box-shadow:0 24px 64px rgba(0,0,0,.55);min-width:0}
+.sheet-body{display:flex;flex-direction:column;gap:5px;margin-top:9px;max-height:58vh;overflow-y:auto;padding-right:2px}
+.opt{display:flex;align-items:center;gap:8px;width:100%;min-height:48px;padding:6px 9px;border-radius:9px;text-align:left;
+  border:1px solid rgba(216,172,90,.24);background:rgba(255,255,255,.045);color:var(--cream);cursor:pointer;font-size:12.5px;
+  line-height:1.35;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.opt:hover{background:rgba(216,172,90,.14)}
+.opt:focus-visible{outline:2px solid var(--gold-2);outline-offset:1px}
+.opt .opt-text{min-width:0;flex:1}
+.opt .opt-text b{display:block;font-size:12.5px;color:var(--cream)}
+.opt .opt-text span{display:block;font-size:12px;color:var(--muted);margin-top:1px}
+.opt .opt-cost{display:flex;align-items:center;gap:1px;flex-wrap:wrap;justify-content:flex-end;max-width:45%;font-size:12px;color:var(--cream-2)}
+.opt .ic{width:17px;height:17px}
+.sheet-foot{margin-top:8px;display:flex;justify-content:flex-end}
+
+/* harvest */
+.harvest-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}
+.harvest-col{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:10px;padding:7px 8px;min-width:0}
+.harvest-col h3{font-size:12.5px;color:var(--cream);margin-bottom:4px;display:flex;align-items:center;gap:5px}
+.harvest-col h3 .dot{width:7px;height:7px;border-radius:50%;background:var(--human);flex:none}
+.harvest-col.ai h3 .dot{background:var(--ai)}
+.harvest-col ul{list-style:none;padding:0;display:flex;flex-direction:column;gap:2px}
+.harvest-col li{font-size:12px;line-height:1.45;color:var(--muted);overflow-wrap:anywhere}
+.harvest-col li b{color:var(--cream-2);font-weight:650}
+.harvest-col li.bad{color:#e8a292}
+
+/* result */
+.result-title{display:flex;align-items:center;gap:7px}
+.result-title .medal{width:48px;height:48px;flex:none;filter:drop-shadow(0 5px 8px rgba(0,0,0,.42))}
+.score-scroll{margin-top:9px;min-width:0}
+.score-table{display:grid;grid-template-columns:minmax(0,1fr) 68px 68px;gap:1px 0;border:1px solid rgba(255,255,255,.09);
+  border-radius:9px;overflow:hidden;background:rgba(0,0,0,.18)}
+.score-table .th,.score-table .cell{min-width:0;padding:3px 6px;font-size:12px;line-height:1.35}
+.score-table .th{background:rgba(216,172,90,.1);color:var(--muted);font-weight:650;font-size:12px}
+.score-table .th.p,.score-table .cell.p{text-align:center;font-variant-numeric:tabular-nums}
+.score-table .cell{background:rgba(255,255,255,.025);color:var(--cream-2);overflow-wrap:anywhere}
+.score-table .cell.cat{color:var(--cream);font-weight:600}
+.score-table .cell.cat span{display:block;font-weight:400;font-size:12px;color:var(--muted-2);line-height:1.3}
+.score-table .cell.p b{font-family:var(--mono);font-size:13px;color:var(--cream)}
+.score-table .cell.p.pos b{color:#a9d58b}
+.score-table .cell.p.neg b{color:#e8a292}
+.score-table .cell.p span{display:block;font-size:12px;color:var(--muted-2)}
+.score-table .total{background:rgba(216,172,90,.14)}
+.score-table .total .cell{font-weight:700;color:var(--cream);background:transparent}
+.score-table .total .cell.p b{font-size:17px;color:var(--gold-2)}
+.result-note{margin-top:8px;font-size:12px;line-height:1.5;color:var(--muted)}
+.result-note b{color:var(--cream-2)}
+.score-foot{margin-top:5px;font-size:12px;line-height:1.45;color:var(--muted-2)}
+.improvement-list{display:flex;flex-wrap:wrap;gap:3px;margin-top:7px}
+.imp-chip{font-size:12px;line-height:1.4;border:1px solid rgba(216,172,90,.28);border-radius:999px;padding:0 6px;color:var(--cream-2);background:rgba(216,172,90,.08)}
+.improvement-list .empty{font-size:12px;color:var(--muted-2)}
+
+@keyframes resFlash{0%{background:rgba(216,172,90,.42);border-color:var(--gold)}100%{background:rgba(0,0,0,.19);border-color:rgba(255,255,255,.055)}}
+@keyframes cellPulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.16)}}
+@keyframes popIn{from{opacity:0;transform:translateY(7px) scale(.985)}to{opacity:1;transform:none}}
+.space,.stage{animation:popIn .28s ease both}
+.stage{animation:none}
+
+@media (min-width:640px){
+  .wrap{padding:0 16px}
+  .game{padding:11px;border-radius:19px}
+  .spaces{grid-template-columns:repeat(6,minmax(0,1fr));gap:5px}
+  .dash{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:8px}
+  .res-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .res-tile{min-height:47px}
+  .space{min-height:70px}
+  .space .ic{width:23px;height:23px}
+  .space-name{font-size:12.5px}
+  .space-bonus{font-size:12px}
+  .help{gap:8px}
+}
+@media (max-width:360px){
+  .wrap{padding:0 6px}
+  .game{padding:6px}
+  .dash{grid-template-columns:1fr;gap:5px}
+  .farm-wrap{flex:none}
+  .farm{height:auto}
+  .fcell{min-height:54px}
+  .res-grid{grid-template-columns:repeat(6,minmax(0,1fr));gap:2px}
+  .res-tile{min-height:44px}
+  .res-tile .ic{width:17px;height:17px}
+  .res-name{font-size:12px}
+  .spaces{grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;padding:0 3px}
+  .space{min-height:62px;padding:4px 2px}
+  .stage-rail{gap:2px}
+  .stage-chip span{display:none}
+  .pc-role{display:none}
+  .pc-sep{display:none}
+  .w-pips{display:none}
+  .top-actions{gap:3px}
+  .mini-btn{padding:0 8px}
+  .help{grid-template-columns:1fr}
+  .harvest-grid{grid-template-columns:1fr}
+  .score-table{grid-template-columns:minmax(0,1fr) 62px 62px}
+  .score-table .th,.score-table .cell{padding:3px 4px;font-size:12px}
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition:none!important;animation:none!important;scroll-behavior:auto!important}
+}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap head-inner">
+    <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span><span>农场主</span></a>
+    <nav class="top-nav" aria-label="导航">
+      <a href="rules.md">规则文档</a>
+      <a href="../index.html">桌游目录</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="game" id="game" aria-label="农场主对局">
+    <div class="top-strip">
+      <div class="round-badge" aria-label="当前回合"><span class="k">回合</span><b id="roundNum">1</b><span class="of">/14</span></div>
+      <div class="stage-badge"><b id="stageName">阶段 1</b><span id="stageRange">第 1–4 回合</span></div>
+      <div class="top-actions">
+        <button class="mini-btn" id="restartBtn" type="button">重开</button>
+        <button class="mini-btn" id="demoBtn" type="button" aria-pressed="false">AI 演示</button>
+      </div>
+    </div>
+    <div class="turn-line">
+      <span id="phaseText"><b>工作阶段</b></span>
+      <span class="sep">·</span>
+      <span id="workersText">你的工人 1/1</span>
+      <span class="sep">·</span>
+      <span id="harvestText">下次收获：第 4 回合</span>
+    </div>
+
+    <div class="players">
+      <div class="player human active" id="pc0">
+        <span class="pc-dot" aria-hidden="true"></span>
+        <div class="pc-body">
+          <div class="pc-top"><b>你</b><span class="pc-role">玩家</span><span class="pc-pips" id="pips0" aria-hidden="true"></span><span class="pc-first" id="first0" hidden>先手</span></div>
+          <div class="pc-meta" id="meta0">木屋 2 间 · 家庭 2 人</div>
+        </div>
+      </div>
+      <div class="player ai" id="pc1">
+        <span class="pc-dot" aria-hidden="true"></span>
+        <div class="pc-body">
+          <div class="pc-top"><b>AI 农夫</b><span class="pc-role">AI</span><span class="pc-pips" id="pips1" aria-hidden="true"></span><span class="pc-first" id="first1" hidden>先手</span></div>
+          <div class="pc-meta" id="meta1">木屋 2 间 · 家庭 2 人</div>
+        </div>
+      </div>
+    </div>
+
+    <p class="hint" id="hint" role="status" aria-live="polite">你的回合：选择一个行动格。</p>
+
+    <div class="dash">
+      <section class="panel farm-panel" id="farmPanel" aria-labelledby="farmTitle">
+        <div class="panel-head"><h2 id="farmTitle">你的农场</h2><span id="farmHead">木屋 · 2 间</span></div>
+        <div class="farm-wrap">
+          <div class="farm" id="farm" role="grid" aria-label="5 乘 3 农场"></div>
+          <div class="fence-layer" id="fenceLayer" aria-hidden="true"></div>
+        </div>
+        <div class="farm-legend" id="farmLegend"></div>
+        <div class="farm-actions" id="farmActions" hidden>
+          <span class="place-note" id="placeNote"></span>
+          <button class="mini-btn cancel-place" id="cancelPlace" type="button">取消</button>
+        </div>
+      </section>
+
+      <section class="panel res-panel" aria-labelledby="resTitle">
+        <div class="panel-head"><h2 id="resTitle">你的资源</h2><span id="resCap">无上限</span></div>
+        <div class="res-grid" id="resGrid"></div>
+        <div class="res-foot" id="resFoot">食物 ×2 · 家庭 2 人 · 烹饪 1</div>
+      </section>
+    </div>
+
+    <section class="board" aria-labelledby="boardTitle">
+      <div class="board-head">
+        <h2 id="boardTitle">行动板</h2>
+        <span>28 格 · 6 阶段 · 点标题展开</span>
+      </div>
+      <div class="stage-rail" id="stageRail" role="group" aria-label="阶段跳转"></div>
+      <div id="stages"></div>
+    </section>
+
+    <section class="log-panel" aria-labelledby="logTitle">
+      <h2 id="logTitle">对局记录</h2>
+      <ol class="log" id="log"></ol>
+    </section>
+  </section>
+
+  <section class="help" aria-labelledby="helpTitle">
+    <h2 class="sr-only" id="helpTitle">玩法提示</h2>
+    <article class="help-card"><h3>每回合放工人</h3><p>行动格每回合只能用一次。第 1 回合每人 1 个工人，第 2 回合起放全部家庭成员。被占用的格子会标出占用者。</p></article>
+    <article class="help-card"><h3>六个阶段与收获</h3><p>阶段 1–6 分别在第 1、5、8、10、12、14 回合开启。第 4、7、9、11、13、14 回合结束时收获：田地、喂养、繁殖。</p></article>
+    <article class="help-card"><h3>终局 14 类计分</h3><p>田地、牧场、谷物、蔬菜、羊、猪、牛、未使用空间、围栏马厩、房间、家庭成员、乞讨卡、大设施、未花资源。</p></article>
+  </section>
+
+  <footer class="site-footer">
+    <a href="rules.md">规则与来源</a>
+    <a href="../index.html">桌游目录</a>
+    <span>零外部依赖 · 纯前端 · 手机优先</span>
+  </footer>
+</main>
+
+<!-- 行动选项 -->
+<div class="overlay" id="sheetOverlay" hidden>
+  <div class="sheet-card" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <div class="modal-head">
+      <div><p class="eyebrow">选择行动</p><h2 id="sheetTitle" style="font-size:1.1rem">行动</h2><p class="modal-sub" id="sheetSub"></p></div>
+      <button class="modal-close" id="sheetClose" type="button">关闭</button>
+    </div>
+    <div class="sheet-body" id="sheetBody"></div>
+    <div class="sheet-foot"><button class="mini-btn" id="sheetCancel" type="button">取消</button></div>
+  </div>
+</div>
+
+<!-- 收获结算 -->
+<div class="overlay center" id="harvestOverlay" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="harvestTitle">
+    <p class="eyebrow">Harvest · 收获阶段</p>
+    <h2 id="harvestTitle">第 4 回合收获</h2>
+    <p class="modal-sub" id="harvestSub">田地 → 喂养 → 繁殖，三个步骤已经结算。</p>
+    <div class="harvest-grid" id="harvestGrid"></div>
+    <div class="modal-actions">
+      <button class="btn primary full" id="harvestNext" type="button">继续下一回合</button>
+    </div>
+  </div>
+</div>
+
+<!-- 终局计分 -->
+<div class="overlay center" id="resultOverlay" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="resultTitle" style="max-width:500px">
+    <p class="eyebrow">Game Over · 终局结算</p>
+    <div class="result-title">
+      <svg class="medal" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+        <defs>
+          <linearGradient id="mdRim" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#fff7cf"/><stop offset=".28" stop-color="#f0cf7d"/>
+            <stop offset=".55" stop-color="#c99a3e"/><stop offset=".8" stop-color="#8a611b"/><stop offset="1" stop-color="#5d400e"/>
+          </linearGradient>
+          <radialGradient id="mdFace" cx="34%" cy="26%" r="82%">
+            <stop offset="0" stop-color="#fffbe3"/><stop offset=".35" stop-color="#f5de9f"/>
+            <stop offset=".68" stop-color="#d1a64a"/><stop offset="1" stop-color="#8e651f"/>
+          </radialGradient>
+          <linearGradient id="mdRib" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#e06a51"/><stop offset=".48" stop-color="#b23f2e"/><stop offset="1" stop-color="#6f1d14"/>
+          </linearGradient>
+          <linearGradient id="mdRib2" x1="1" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#c64c38"/><stop offset=".55" stop-color="#8f2b1f"/><stop offset="1" stop-color="#5b150f"/>
+          </linearGradient>
+          <filter id="mdSh" x="-30%" y="-30%" width="160%" height="170%">
+            <feDropShadow dx="0" dy="2.4" stdDeviation="1.8" flood-color="#000" flood-opacity=".48"/>
+          </filter>
+        </defs>
+        <g filter="url(#mdSh)">
+          <path d="M22 30L14 61l10-5.2 5.4 5.2 3.4-29z" fill="url(#mdRib2)" stroke="#4e120d" stroke-width=".8"/>
+          <path d="M42 30l8 31-10-5.2-5.4 5.2-3.4-29z" fill="url(#mdRib)" stroke="#4e120d" stroke-width=".8"/>
+          <path d="M21.4 33l-4.6 21 5.2-2.8 1.4-18.2z" fill="#f2a18c" opacity=".45"/>
+          <path d="M42.6 33l4.6 21-5.2-2.8-1.4-18.2z" fill="#f7b39f" opacity=".35"/>
+          <path d="M26 58.4l3-2.6M38 58.4l-3-2.6" stroke="#4e120d" stroke-width=".7" opacity=".7"/>
+          <path d="M30 50l-.6 8M34 50l.6 8" stroke="#f0c0ae" stroke-width=".45" opacity=".35"/>
+          <circle cx="32" cy="25" r="21" fill="url(#mdRim)" stroke="#5d400e" stroke-width="1"/>
+          <circle cx="32" cy="25" r="17.4" fill="url(#mdFace)" stroke="#8a611b" stroke-width=".9"/>
+          <circle cx="32" cy="25" r="14.6" fill="none" stroke="#7d5716" stroke-width=".7" stroke-dasharray="1.1 2.1" opacity=".85"/>
+          <circle cx="32" cy="25" r="12.2" fill="none" stroke="#f8e6ad" stroke-width=".55" opacity=".55"/>
+          <path d="M32 10.5l2.3 4.2 4.7.3-3.6 3.2 1.1 4.6-4.1-2.3-4.1 2.3 1.1-4.6-3.6-3.2 4.7-.3z" fill="#7d5716" transform="translate(.5 .8)" opacity=".7"/>
+          <path d="M32 10.5l2.3 4.2 4.7.3-3.6 3.2 1.1 4.6-4.1-2.3-4.1 2.3 1.1-4.6-3.6-3.2 4.7-.3z" fill="#fff4c8" stroke="#b4862e" stroke-width=".5"/>
+          <path d="M32 13.2l1.4 2.6 2.9.2-2.2 2 .7 2.8-2.5-1.4-2.5 1.4.7-2.8-2.2-2 2.9-.2z" fill="#f7df9c" opacity=".75"/>
+          <circle cx="32" cy="25" r="19.2" fill="none" stroke="#fff5c9" stroke-width=".45" opacity=".55"/>
+          <path d="M14 15.5c2-3.2 5-5.4 8.6-6.4" fill="none" stroke="#fff9dd" stroke-width="1.1" opacity=".62" stroke-linecap="round"/>
+          <circle cx="43.5" cy="19.5" r="1.1" fill="#fffbe8" opacity=".8"/>
+          <circle cx="45.6" cy="23" r=".6" fill="#fffbe8" opacity=".6"/>
+          <path d="M9.5 22.5c.3 1.6 1.1 2.8 2.4 3.6" fill="none" stroke="#fff8d8" stroke-width=".6" opacity=".55" stroke-linecap="round"/>
+          <path d="M28.5 56.6l3.5 2 3.5-2" fill="none" stroke="#f4cbbd" stroke-width=".5" opacity=".4"/>
+        </g>
+      </svg>
+      <h2 id="resultTitle">你赢了</h2>
+    </div>
+    <p class="modal-sub" id="resultSub"></p>
+    <div class="score-scroll"><div class="score-table" id="scoreTable" role="table" aria-label="14 类终局计分"></div></div>
+    <p class="score-foot">谷物与蔬菜含田里存量；牧场按围栏区域数计分；未花资源按官方规则固定 0。每格上方为得分，下方为数量。</p>
+    <div class="improvement-list" id="improvementList"></div>
+    <div class="result-note" id="resultNote"></div>
+    <div class="modal-actions">
+      <button class="btn primary" id="playAgain" type="button">再来一局</button>
+      <button class="btn" id="closeResult" type="button">查看农场</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import {
+  createGame, legalActions, applyAction, score, scorePlayer, currentPlayer,
+  computePastures, chooseGreedyAction, hashState, SPACES, SPACE_IDS,
+  MAJOR_IMPROVEMENTS, MAX_ROUND
+} from './engine.js';
+
+/* ================================================================== */
+/* 常量与文案                                                          */
+/* ================================================================== */
+
+const PLAYER_NAMES = ['你', 'AI 农夫'];
+const DEFAULT_SEED = 20261111;
+const STAGES = [
+  { n: 1, start: 1, end: 4, harvest: 4 },
+  { n: 2, start: 5, end: 7, harvest: 7 },
+  { n: 3, start: 8, end: 9, harvest: 9 },
+  { n: 4, start: 10, end: 11, harvest: 11 },
+  { n: 5, start: 12, end: 13, harvest: 13 },
+  { n: 6, start: 14, end: 14, harvest: 14 }
+];
+const STAGE_ACCENTS = ['#d8ac5a', '#8fae6b', '#7fa8a0', '#c98f5a', '#b07c9e', '#9a8f7a'];
+const HOUSE_NAME = { wood: '木屋', clay: '泥屋', stone: '石屋' };
+const HOUSE_TAG = { wood: '木', clay: '泥', stone: '石' };
+const RES = [
+  { key: 'food', name: '食物', short: '食', icon: 'food' },
+  { key: 'wood', name: '木材', short: '木', icon: 'wood' },
+  { key: 'clay', name: '黏土', short: '泥', icon: 'clay' },
+  { key: 'reed', name: '芦苇', short: '苇', icon: 'reed' },
+  { key: 'stone', name: '石头', short: '石', icon: 'stone' },
+  { key: 'grain', name: '谷物', short: '谷', icon: 'grain' },
+  { key: 'veg', name: '蔬菜', short: '菜', icon: 'veg' },
+  { key: 'sheep', name: '羊', short: '羊', icon: 'sheep', animal: 'sheep' },
+  { key: 'boar', name: '野猪', short: '猪', icon: 'boar', animal: 'boar' },
+  { key: 'cattle', name: '牛', short: '牛', icon: 'cattle', animal: 'cattle' },
+  { key: 'beggar', name: '乞讨卡', short: '乞讨', icon: 'beggar' }
+];
+const RES_BY_KEY = Object.fromEntries(RES.map((r) => [r.key, r]));
+const ANIMAL_NAME = { sheep: '羊', boar: '野猪', cattle: '牛' };
+const SPACE_ICON = {
+  forest: 'wood', clayPit: 'clay', reedBank: 'reed', quarry: 'stone', fishing: 'fish',
+  crafts: 'basket', market: 'market', dayLaborer: 'food', grainSeeds: 'grain',
+  vegetableSeeds: 'veg', plow: 'plow', plow2: 'plow', sow: 'seed', build: 'house',
+  stables: 'barn', fence: 'fence', renovate: 'hammer', familyGrowth: 'family',
+  familyGrowthNoRoom: 'family', improvement: 'card', startingPlayer: 'flag',
+  sheep: 'sheep', boar: 'boar', cattle: 'cattle', grainSeeds2: 'grain',
+  reedBank2: 'reed', clayPit2: 'clay', plowAndSow: 'sprout'
+};
+
+/* ================================================================== */
+/* 图形：全部为内联 SVG，无外部资源                                     */
+/* ================================================================== */
+
+const ICON_PATHS = {
+  wood: `<ellipse cx="16" cy="29" rx="11.5" ry="2" fill="#000" opacity=".22"/>
+    <defs><linearGradient id="wdA-{u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e6bd82"/><stop offset=".45" stop-color="#c08a4c"/><stop offset="1" stop-color="#7a4a22"/></linearGradient>
+    <linearGradient id="wdE-{u}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f8dcaa"/><stop offset=".55" stop-color="#d6a463"/><stop offset="1" stop-color="#a76f35"/></linearGradient>
+    <linearGradient id="wdB-{u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c89254"/><stop offset="1" stop-color="#6b3d19"/></linearGradient></defs>
+    <path d="M5 8h18a3.2 3.2 0 0 1 0 6.4H5A3.2 3.2 0 0 1 5 8z" fill="url(#wdA-{u})" stroke="#6c421f" stroke-width=".7"/>
+    <path d="M7 9.2h15" stroke="#f8dfb8" stroke-width="1" opacity=".6" stroke-linecap="round"/>
+    <ellipse cx="6" cy="11.2" rx="3.1" ry="3.1" fill="url(#wdE-{u})" stroke="#6f431f" stroke-width=".7"/>
+    <ellipse cx="6" cy="11.2" rx="1.8" ry="1.8" fill="none" stroke="#b57c42" stroke-width=".65"/>
+    <ellipse cx="6" cy="11.2" rx=".75" ry=".75" fill="#8b5a2b"/>
+    <path d="M9 20.5h17a3 3 0 0 1 0 6H9a3 3 0 0 1 0-6z" fill="url(#wdB-{u})" stroke="#5b3416" stroke-width=".7"/>
+    <path d="M11 21.7h13" stroke="#e2b57c" stroke-width="1" opacity=".45" stroke-linecap="round"/>
+    <ellipse cx="9.5" cy="23.5" rx="2.8" ry="2.8" fill="url(#wdE-{u})" stroke="#6c421f" stroke-width=".7"/>
+    <ellipse cx="9.5" cy="23.5" rx="1.5" ry="1.5" fill="none" stroke="#a76f35" stroke-width=".6"/>
+    <path d="M14 10.5l5 3.2M19 22.7l4 2.4" stroke="#734520" stroke-width=".6" opacity=".55"/>`,
+  clay: `<ellipse cx="16" cy="29" rx="11" ry="2" fill="#000" opacity=".2"/>
+    <defs><linearGradient id="clT-{u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eab27d"/><stop offset=".5" stop-color="#cd8a58"/><stop offset="1" stop-color="#a9643d"/></linearGradient>
+    <linearGradient id="clF-{u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c27c4c"/><stop offset="1" stop-color="#8c4f2c"/></linearGradient>
+    <linearGradient id="clS-{u}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7d4325"/><stop offset="1" stop-color="#ad6a41"/></linearGradient></defs>
+    <path d="M4 17.5h24v7.2H4z" fill="url(#clF-{u})"/>
+    <path d="M4 17.5h24v2.2H4z" fill="url(#clT-{u})"/>
+    <path d="M4 23.4h24v1.3H4z" fill="#6f3a1f" opacity=".55"/>
+    <path d="M12 19.7v5.5M20 19.7v5.5" stroke="#7a4022" stroke-width=".7" opacity=".7"/>
+    <path d="M7 9h20v7.2H7z" fill="url(#clF-{u})"/>
+    <path d="M7 9h20v2.2H7z" fill="url(#clT-{u})"/>
+    <path d="M7 14.9h20v1.3H7z" fill="#6f3a1f" opacity=".55"/>
+    <path d="M14 11.2v5.5M22 11.2v5.5" stroke="#7a4022" stroke-width=".7" opacity=".7"/>
+    <path d="M5.5 18.2h21M8.5 9.7h17" stroke="#f3c99c" stroke-width=".55" opacity=".65"/>
+    <circle cx="10" cy="21" r=".45" fill="#8b5233"/><circle cx="18.5" cy="24" r=".4" fill="#8b5233"/><circle cx="23" cy="12.5" r=".4" fill="#8b5233"/>`,
+  reed: `<ellipse cx="16" cy="29" rx="10" ry="2" fill="#000" opacity=".2"/>
+    <defs><linearGradient id="rdS-{u}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7f8b42"/><stop offset=".5" stop-color="#c9c274"/><stop offset="1" stop-color="#7d8438"/></linearGradient>
+    <linearGradient id="rdC-{u}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#6f4a22"/><stop offset=".5" stop-color="#b4874a"/><stop offset="1" stop-color="#5e3b18"/></linearGradient>
+    <linearGradient id="rdL-{u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9dbf62"/><stop offset="1" stop-color="#587b34"/></linearGradient></defs>
+    <path d="M10 27c0-8 .3-14-.8-20M16.5 27c0-10 .6-16 1.2-21M23 27c0-7-.4-13-1.2-18" fill="none" stroke="url(#rdS-{u})" stroke-width="2.3" stroke-linecap="round"/>
+    <path d="M6 8c3 .2 4.6 1.8 5 5-3-.3-4.6-2-5-5z" fill="url(#rdL-{u})"/>
+    <path d="M26 11c-3 .1-4.6 1.7-5.2 4.8 3.1-.2 4.8-1.8 5.2-4.8z" fill="url(#rdL-{u})"/>
+    <rect x="13.7" y="3.2" width="4.4" height="7.2" rx="2.1" fill="url(#rdC-{u})" stroke="#4f3214" stroke-width=".6"/>
+    <rect x="20.9" y="7.2" width="3.6" height="6" rx="1.8" fill="url(#rdC-{u})" stroke="#4f3214" stroke-width=".55"/>
+    <rect x="7.5" y="4.6" width="3.2" height="5.4" rx="1.6" fill="url(#rdC-{u})" stroke="#4f3214" stroke-width=".5"/>
+    <path d="M15.8 4.2v5.6M22.8 8.3v3.8" stroke="#d6ad72" stroke-width=".5" opacity=".8"/>
+    <path d="M11 20c-2.2-.5-3.6-1.8-4.2-3.8 2.2.2 3.6 1.4 4.2 3.8z" fill="url(#rdL-{u})" opacity=".9"/>
+    <path d="M21.4 16.4c2.2-.6 3.5-2 4-4-2.2.3-3.6 1.6-4 4z" fill="url(#rdL-{u})" opacity=".9"/>`,
+  stone: `<ellipse cx="16" cy="29" rx="11" ry="2" fill="#000" opacity=".22"/>
+    <defs><linearGradient id="stM-{u}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#cfd8d4"/><stop offset=".45" stop-color="#97a39e"/><stop offset="1" stop-color="#5c6762"/></linearGradient>
+    <linearGradient id="stF-{u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b7c2bd"/><stop offset="1" stop-color="#78837d"/></linearGradient>
+    <linearGradient id="stD-{u}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#5b6560"/><stop offset="1" stop-color="#88938d"/></linearGradient></defs>
+    <path d="M5 24.5l2.6-9.2 7-4.8 8.4 3.2 3 10.8z" fill="url(#stM-{u})" stroke="#4d5752" stroke-width=".7"/>
+    <path d="M7.6 15.3l7-4.8 3.4 6.2-4.6 7.8z" fill="url(#stF-{u})" opacity=".85"/>
+    <path d="M18 10.5l5 3.2 3 10.8h-5.2l-2.2-8.6z" fill="url(#stD-{u})" opacity=".9"/>
+    <path d="M8.2 15l5.6 4.2M17.6 12l1.4 4.6M13 24l4-5.2" fill="none" stroke="#5f6a64" stroke-width=".65" opacity=".7"/>
+    <path d="M8.6 13.4c1-1.6 2.6-2.8 4.4-3.4" fill="none" stroke="#e5ece8" stroke-width="1" opacity=".65" stroke-linecap="round"/>
+    <path d="M21 22l2.4-2.8" fill="none" stroke="#dce4df" stroke-width=".8" opacity=".5"/>
+    <path d="M24.5 25.5c1.8-1.4 3.4-1.4 4.6-.2-1 1.4-2.8 1.6-4.6.2z" fill="#8fa06a" opacity=".8"/>`,
+  grain: `<ellipse cx="16" cy="29" rx="8.5" ry="1.8" fill="#000" opacity=".2"/>
+    <defs><linearGradient id="grS-{u}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8f6a2d"/><stop offset=".5" stop-color="#d3a750"/><stop offset="1" stop-color="#8f6a2d"/></linearGradient>
+    <linearGradient id="grK-{u}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f7df9a"/><stop offset=".45" stop-color="#dfb45f"/><stop offset="1" stop-color="#a8792e"/></linearGradient></defs>
+    <path d="M16 28.5V8" stroke="url(#grS-{u})" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M16 12.2c-4.3-1-6.4-3.1-6.5-6.4 4.2.2 6.3 2.4 6.5 6.4zM16 12.2c4.3-1 6.4-3.1 6.5-6.4-4.2.2-6.3 2.4-6.5 6.4zM16 18.4c-4.3-1-6.4-3.1-6.5-6.4 4.2.2 6.3 2.4 6.5 6.4zM16 18.4c4.3-1 6.4-3.1 6.5-6.4-4.2.2-6.3 2.4-6.5 6.4zM16 24.5c-4.3-1-6.4-3.1-6.5-6.4 4.2.2 6.3 2.4 6.5 6.4zM16 24.5c4.3-1 6.4-3.1 6.5-6.4-4.2.2-6.3 2.4-6.5 6.4z" fill="url(#grK-{u})" stroke="#9b6a24" stroke-width=".45"/>
+    <path d="M12 8.4c1.5-2.8 2.8-4.6 4.4-5.6" fill="none" stroke="#e8c272" stroke-width=".7" stroke-linecap="round"/>
+    <path d="M10.6 7.2l-1.8-2M21.4 7.2l1.8-2" stroke="#e8c272" stroke-width=".55" opacity=".8"/>
+    <path d="M12.2 11.2c1.2-.6 2.2-1.4 3-2.4" fill="none" stroke="#fff0bd" stroke-width=".55" opacity=".8"/>`,
+  veg: `<ellipse cx="16" cy="29" rx="8" ry="1.7" fill="#000" opacity=".2"/>
+    <defs><linearGradient id="vgC-{u}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f6b26e"/><stop offset=".45" stop-color="#e08a43"/><stop offset="1" stop-color="#a9521f"/></linearGradient>
+    <linearGradient id="vgL-{u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a8cc72"/><stop offset="1" stop-color="#4f7a32"/></linearGradient></defs>
+    <path d="M12 9.2c1.5-1.5 6.5-1.5 8 0l-2.3 15.4c-.4 2.5-3.9 2.5-4.3 0z" fill="url(#vgC-{u})" stroke="#94471b" stroke-width=".55"/>
+    <path d="M14.1 10.6l-1.2 11.6" stroke="#ffd9a8" stroke-width=".9" opacity=".65" stroke-linecap="round"/>
+    <path d="M17.9 12l-1.6 9.4M15.9 17.4l-.9 4.8" stroke="#b25f25" stroke-width=".65" opacity=".55" stroke-linecap="round"/>
+    <path d="M16 9.6c-1.2-4.1.6-6.8 3.8-7.8.2 3.2-1.3 5.8-3.8 7.8z" fill="url(#vgL-{u})" stroke="#416728" stroke-width=".45"/>
+    <path d="M15.6 9.2c-3-2.9-6.2-3.2-8.6-1.2 2.2 2.3 5 2.8 8.6 1.2z" fill="url(#vgL-{u})" stroke="#416728" stroke-width=".45"/>
+    <path d="M16.6 9.2c2.8-2.2 5.4-2.4 7.6-.5-1.9 2-4.4 2.4-7.6.5z" fill="url(#vgL-{u})" stroke="#416728" stroke-width=".45"/>
+    <path d="M14.2 4.2c1.4 1.2 2.2 2.7 2.4 4.4" fill="none" stroke="#d4e8aa" stroke-width=".6" opacity=".75"/>`,
+  food: `<ellipse cx="16" cy="29" rx="11" ry="2" fill="#000" opacity=".22"/>
+    <defs><linearGradient id="fdC-{u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4ce8c"/><stop offset=".42" stop-color="#d9a35c"/><stop offset="1" stop-color="#9c6427"/></linearGradient>
+    <linearGradient id="fdB-{u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c88c46"/><stop offset="1" stop-color="#7e4c1c"/></linearGradient></defs>
+    <path d="M5 21.4c0-7 4.7-11.4 11-11.4s11 4.4 11 11.4v2.4H5z" fill="url(#fdC-{u})" stroke="#8a5a24" stroke-width=".6"/>
+    <path d="M5 22.2h22v2.6H5z" fill="url(#fdB-{u})"/>
+    <path d="M8 18.6c1.8-4.8 5-7.4 9.4-7.6" fill="none" stroke="#ffe9bd" stroke-width="1.2" opacity=".55" stroke-linecap="round"/>
+    <path d="M10.2 15.2c1.4.9 2.8 1.2 4.4 1M17 13.6c1.3.8 2.7 1.1 4.2 1M13.6 19c1.2.7 2.4.9 3.7.8" fill="none" stroke="#9a5f22" stroke-width=".9" stroke-linecap="round" opacity=".7"/>
+    <circle cx="9" cy="20.6" r=".45" fill="#f9e4b7" opacity=".8"/><circle cx="22" cy="19.4" r=".4" fill="#f9e4b7" opacity=".8"/><circle cx="15.4" cy="12.2" r=".35" fill="#f9e4b7" opacity=".75"/>`,
+  sheep: `<ellipse cx="16.5" cy="29" rx="11" ry="2" fill="#000" opacity=".2"/>
+    <defs><radialGradient id="shW-{u}" cx="35%" cy="25%" r="75%"><stop offset="0" stop-color="#fffdf2"/><stop offset=".55" stop-color="#eee1c4"/><stop offset="1" stop-color="#bfae88"/></radialGradient>
+    <radialGradient id="shF-{u}" cx="38%" cy="30%" r="80%"><stop offset="0" stop-color="#a98a63"/><stop offset="1" stop-color="#5a432c"/></radialGradient>
+    <linearGradient id="shL-{u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7b6247"/><stop offset="1" stop-color="#493522"/></linearGradient></defs>
+    <path d="M9 25.8v2.4M15 25.4v2.8M22.5 25.2v2.6" stroke="url(#shL-{u})" stroke-width="2" stroke-linecap="round"/>
+    <ellipse cx="16.5" cy="18" rx="9.5" ry="6.5" fill="url(#shW-{u})" stroke="#b6a27d" stroke-width=".5"/>
+    <circle cx="9.5" cy="14.8" r="3.4" fill="url(#shW-{u})"/><circle cx="14" cy="12.6" r="3.5" fill="url(#shW-{u})"/>
+    <circle cx="19.5" cy="12.8" r="3.4" fill="url(#shW-{u})"/><circle cx="24" cy="15.8" r="3.1" fill="url(#shW-{u})"/>
+    <circle cx="23.5" cy="21" r="3.2" fill="url(#shW-{u})"/><circle cx="18" cy="23.6" r="3.3" fill="url(#shW-{u})"/>
+    <circle cx="12" cy="23" r="3.2" fill="url(#shW-{u})"/><circle cx="7.6" cy="19.6" r="2.9" fill="url(#shW-{u})"/>
+    <path d="M9 15.4c.6 2.4 2 3.6 4.2 4.1" fill="none" stroke="#c9b98f" stroke-width=".6" opacity=".55"/>
+    <circle cx="7.2" cy="17.8" r="3.6" fill="url(#shF-{u})" stroke="#4a3725" stroke-width=".5"/>
+    <path d="M4.2 15.8c-1.4-.2-2.3.5-2.6 1.8 1.1.4 2.1.2 3-.9M10 15.6c1.3-.4 2.3.1 2.8 1.3-1 .5-2 .4-3-.6" fill="#8f7050" stroke="#4a3725" stroke-width=".4"/>
+    <circle cx="6.2" cy="17.2" r=".75" fill="#22160d"/><circle cx="5.95" cy="16.95" r=".25" fill="#fff"/>
+    <path d="M4.6 20c.8.6 1.7.7 2.6.2" fill="none" stroke="#3f2d1c" stroke-width=".5" stroke-linecap="round"/>
+    <path d="M19 13.8c1.5-.9 3.1-.9 4.8 0" fill="none" stroke="#fffef6" stroke-width=".8" opacity=".7"/>`,
+  boar: `<ellipse cx="17" cy="29" rx="11" ry="2" fill="#000" opacity=".2"/>
+    <defs><radialGradient id="brB-{u}" cx="40%" cy="22%" r="80%"><stop offset="0" stop-color="#e6b4a0"/><stop offset=".5" stop-color="#c1816b"/><stop offset="1" stop-color="#7e4a3b"/></radialGradient>
+    <radialGradient id="brH-{u}" cx="40%" cy="30%" r="78%"><stop offset="0" stop-color="#e0a993"/><stop offset="1" stop-color="#9a5f50"/></radialGradient>
+    <linearGradient id="brL-{u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8b5748"/><stop offset="1" stop-color="#4f2f26"/></linearGradient></defs>
+    <path d="M13 24v4.2M22 23.8v4.4M17 25v3.4" stroke="url(#brL-{u})" stroke-width="2.4" stroke-linecap="round"/>
+    <ellipse cx="18" cy="18.5" rx="9.6" ry="6.2" fill="url(#brB-{u})" stroke="#734236" stroke-width=".5"/>
+    <path d="M10 15.2l1.4-2.4 1.4 2.2 1.5-2.4 1.4 2.2 1.6-2.2 1.4 2.1 1.5-1.9 1.2 2" fill="#8f5848" stroke="#5a352b" stroke-width=".35"/>
+    <path d="M13 23.5c3 1.5 7.4 1.2 10.6-.7" fill="none" stroke="#814d40" stroke-width=".8" opacity=".65"/>
+    <ellipse cx="25.8" cy="17.5" rx="4.4" ry="3.6" fill="url(#brH-{u})" stroke="#7b4a3c" stroke-width=".5"/>
+    <ellipse cx="27.6" cy="18" rx="1.8" ry="1.4" fill="#c98d7d"/>
+    <ellipse cx="27.8" cy="17.7" rx=".55" ry=".38" fill="#5e3128"/><ellipse cx="27.8" cy="18.5" rx=".55" ry=".35" fill="#5e3128"/>
+    <circle cx="24.2" cy="15.8" r=".8" fill="#2f1b14"/><circle cx="24" cy="15.55" r=".26" fill="#fff"/>
+    <path d="M22.5 13.2c1.1-1.7 2.6-2.2 4.2-1.5-.6 1.7-2 2.4-4.2 1.5z" fill="#a46a58" stroke="#6d3f33" stroke-width=".4"/>
+    <path d="M26.4 20.2c1.5.3 2.6 1.1 3.2 2.4-1.9.4-3.2-.2-3.2-2.4z" fill="#f4e6cf" stroke="#b39971" stroke-width=".35"/>
+    <path d="M8.6 18.8c-1.6.3-2.8 1.3-3.4 2.9" fill="none" stroke="#7e4a3b" stroke-width="1.5" stroke-linecap="round"/>
+    <path d="M10 13.4c3-2 7.6-2.4 11.4-.8" fill="none" stroke="#f7d8c8" stroke-width=".8" opacity=".5"/>`,
+  cattle: `<ellipse cx="16" cy="29.2" rx="11.5" ry="2" fill="#000" opacity=".2"/>
+    <defs><linearGradient id="ctB-{u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f3e6c9"/><stop offset=".55" stop-color="#d9c39c"/><stop offset="1" stop-color="#a88a61"/></linearGradient>
+    <linearGradient id="ctD-{u}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9c7a52"/><stop offset="1" stop-color="#6d4f31"/></linearGradient>
+    <linearGradient id="ctH-{u}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fbf3dd"/><stop offset="1" stop-color="#c8ad7f"/></linearGradient>
+    <linearGradient id="ctN-{u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d6b0a0"/><stop offset="1" stop-color="#9b6f62"/></linearGradient></defs>
+    <path d="M9.5 24.2v4.2M15 24v4.4M21.5 23.8v4.4M26 23.6v4" stroke="#8a6a46" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M7 14.4c0-3.4 2.4-5.8 5.6-5.8h8.8c3.2 0 5.6 2.4 5.6 5.8v8.2c0 3.8-3 6.8-6.6 6.8h-6.8c-3.6 0-6.6-3-6.6-6.8z" fill="url(#ctB-{u})" stroke="#8f7049" stroke-width=".55"/>
+    <path d="M8.4 12.6c2.2-2.6 5-4 8.2-4.2" fill="none" stroke="#fff8e5" stroke-width="1.1" opacity=".65" stroke-linecap="round"/>
+    <ellipse cx="22.8" cy="16" rx="3.6" ry="2.8" fill="url(#ctD-{u})" opacity=".92"/>
+    <path d="M9 22.4c3.2 1.8 7.6 1.8 10.8-.2" fill="none" stroke="#8f7049" stroke-width=".7" opacity=".55"/>
+    <path d="M5.4 10.4c-2-2.6-4-3.3-6-2.2 1 2.6 3 3.6 6 2.2z" fill="url(#ctH-{u})" stroke="#8f7049" stroke-width=".45"/>
+    <path d="M26.6 10.4c2-2.6 4-3.3 6-2.2-1 2.6-3 3.6-6 2.2z" fill="url(#ctH-{u})" stroke="#8f7049" stroke-width=".45"/>
+    <path d="M12 11.2c-1.4-2.2-1.2-4 .5-5.2 1.5 1.3 1.9 3.1 1.2 5.4zM20 11.2c1.4-2.2 1.2-4-.5-5.2-1.5 1.3-1.9 3.1-1.2 5.4z" fill="#8a6a45" opacity=".85"/>
+    <circle cx="12.8" cy="17.2" r="1.1" fill="#3d2a1b"/><circle cx="12.5" cy="16.9" r=".36" fill="#fff"/>
+    <circle cx="21.2" cy="17.2" r="1.1" fill="#3d2a1b"/><circle cx="20.9" cy="16.9" r=".36" fill="#fff"/>
+    <ellipse cx="16.5" cy="22" rx="4.6" ry="3" fill="url(#ctN-{u})"/>
+    <ellipse cx="15" cy="21.4" rx=".65" ry=".45" fill="#6d4a3f"/><ellipse cx="18" cy="21.4" rx=".65" ry=".45" fill="#6d4a3f"/>
+    <path d="M14 24.4c1.7.8 3.4.8 5 0" fill="none" stroke="#7c574b" stroke-width=".55"/>
+    <path d="M26.8 22.4c1.5.2 2.4 1 2.8 2.3" fill="none" stroke="#8a6a45" stroke-width="1.3" stroke-linecap="round"/>`,
+  beggar: `<ellipse cx="16" cy="29" rx="10" ry="2" fill="#000" opacity=".22"/>
+    <defs><linearGradient id="bgP-{u}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f0e3c8"/><stop offset=".55" stop-color="#d9c4a0"/><stop offset="1" stop-color="#b79b70"/></linearGradient>
+    <radialGradient id="bgS-{u}" cx="35%" cy="28%" r="80%"><stop offset="0" stop-color="#f08b76"/><stop offset=".55" stop-color="#b83f32"/><stop offset="1" stop-color="#6f211a"/></radialGradient></defs>
+    <path d="M7.5 5.5h17v18.8l-3.4-1.6-3.3 1.6-3.3-1.6-3.3 1.6-3.7-1.6z" fill="url(#bgP-{u})" stroke="#7d5f38" stroke-width=".8"/>
+    <path d="M10.5 10.2h11M10.5 14h11M10.5 17.8h7.5" stroke="#9b7d51" stroke-width="1" stroke-linecap="round" opacity=".8"/>
+    <path d="M10.5 10.2h11" stroke="#fff8e8" stroke-width=".35" opacity=".8"/>
+    <circle cx="21" cy="21" r="4.2" fill="url(#bgS-{u})" stroke="#6f211a" stroke-width=".6"/>
+    <circle cx="21" cy="21" r="2.9" fill="none" stroke="#e8a08c" stroke-width=".45" opacity=".7"/>
+    <path d="M19.2 21.4c1.2 1.2 2.5 1.7 3.9 1.4" fill="none" stroke="#f4c3b4" stroke-width=".5" opacity=".8"/>
+    <path d="M7.5 5.5h17v2.4h-17z" fill="#fbf2df" opacity=".55"/>`,
+  fish: `<ellipse cx="16" cy="29" rx="10" ry="1.8" fill="#000" opacity=".2"/>
+    <defs><linearGradient id="fsB-{u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#cfe6ec"/><stop offset=".45" stop-color="#7faebd"/><stop offset="1" stop-color="#3f6f80"/></linearGradient>
+    <linearGradient id="fsF-{u}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9cc4d0"/><stop offset="1" stop-color="#4f7f8f"/></linearGradient></defs>
+    <path d="M4.5 17c4.2-6.2 12.6-7.2 17.8-1.2-5.2 6-13.6 7.1-17.8 1.2z" fill="url(#fsB-{u})" stroke="#456f7d" stroke-width=".6"/>
+    <path d="M22.4 15.8l5.8-4.2v10.8z" fill="url(#fsF-{u})" stroke="#456f7d" stroke-width=".5"/>
+    <path d="M13 11.2c1.8 1.4 2.8 3.2 3 5.4M9.5 12.2c1.3 1.1 2.1 2.5 2.4 4.2M17.6 11.6c1.2 1.2 1.9 2.6 2.1 4.2" fill="none" stroke="#d9edf2" stroke-width=".55" opacity=".7"/>
+    <path d="M7 15.2c3.4-2.4 7.8-3.2 11.8-2.2" fill="none" stroke="#f2fbfd" stroke-width=".85" opacity=".65" stroke-linecap="round"/>
+    <circle cx="10" cy="15.2" r="1.15" fill="#1b343d"/><circle cx="9.7" cy="14.9" r=".36" fill="#fff"/>
+    <path d="M12 21c2 2 4.2 2.8 6.6 2.6" fill="none" stroke="#a9cbd4" stroke-width=".6" opacity=".75"/>`,
+  basket: `<ellipse cx="16" cy="29" rx="10.5" ry="2" fill="#000" opacity=".2"/>
+    <defs><linearGradient id="bsB-{u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d6a45f"/><stop offset=".5" stop-color="#b57d3f"/><stop offset="1" stop-color="#7d4f21"/></linearGradient>
+    <linearGradient id="bsR-{u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e7bd7f"/><stop offset="1" stop-color="#a86c33"/></linearGradient></defs>
+    <path d="M6.2 13.2h19.6l-2.2 14.2H8.4z" fill="url(#bsB-{u})" stroke="#6d441d" stroke-width=".6"/>
+    <path d="M8.8 13.2h14.4l-1.1 14.2H9.9z" fill="#c68e4e" opacity=".45"/>
+    <path d="M9.4 17.2h13.2M9 21h14M8.6 24.8h14.8M11 13.2l.7 14.2M16 13.2v14.2M21 13.2l-.7 14.2" stroke="#7d4f21" stroke-width=".65" opacity=".7"/>
+    <path d="M6.2 13.2h19.6v2.1H6.2z" fill="url(#bsR-{u})" stroke="#6d441d" stroke-width=".5"/>
+    <path d="M11 12.8c0-5.6 10-5.6 10 0" fill="none" stroke="#8f5c2a" stroke-width="2"/>
+    <path d="M12 12.2c0-4.6 8-4.6 8 0" fill="none" stroke="#d9a86b" stroke-width=".8" opacity=".7"/>
+    <path d="M8 14.4h16" stroke="#f3d6a8" stroke-width=".55" opacity=".7"/>`,
+  market: `<ellipse cx="16" cy="29" rx="12" ry="2" fill="#000" opacity=".2"/>
+    <defs><linearGradient id="mkA-{u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e0836c"/><stop offset=".55" stop-color="#bc5843"/><stop offset="1" stop-color="#7f3327"/></linearGradient>
+    <linearGradient id="mkC-{u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f8edd2"/><stop offset="1" stop-color="#d2b98c"/></linearGradient>
+    <linearGradient id="mkW-{u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c79455"/><stop offset="1" stop-color="#7b4b22"/></linearGradient></defs>
+    <path d="M4 8.4h24l-2.2 6.4H6.2z" fill="url(#mkA-{u})" stroke="#6d2b21" stroke-width=".55"/>
+    <path d="M7.4 8.4h4.2l-1 6.4H5.9zM15.4 8.4h4.2l-.6 6.4h-4.2zM23.2 8.4h3.6l-1.7 6.4h-3.6z" fill="#f5dcc0" opacity=".9"/>
+    <path d="M4 8.4l2-2.6h20l2 2.6z" fill="#8f3f30" stroke="#6d2b21" stroke-width=".45"/>
+    <path d="M6.2 14.8h19.6v12.6H6.2z" fill="url(#mkC-{u})" stroke="#8a6a3e" stroke-width=".55"/>
+    <path d="M10.2 20.2h12v7.2h-12z" fill="url(#mkW-{u})" stroke="#6d441d" stroke-width=".5"/>
+    <path d="M10.8 20.8h10.8M10.8 23.2h10.8M10.8 25.6h10.8" stroke="#5f3a18" stroke-width=".55" opacity=".65"/>
+    <path d="M7 15.4h18" stroke="#fff8e8" stroke-width=".55" opacity=".8"/>
+    <path d="M4.6 8.6l1.8-2.4" stroke="#f5b9a8" stroke-width=".5" opacity=".8"/>`,
+  plow: `<ellipse cx="16" cy="29" rx="12" ry="2" fill="#000" opacity=".2"/>
+    <defs><linearGradient id="plM-{u}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e5ece8"/><stop offset=".45" stop-color="#9aa6a1"/><stop offset="1" stop-color="#56635e"/></linearGradient>
+    <linearGradient id="plW-{u}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#cf9c5d"/><stop offset=".5" stop-color="#a16d35"/><stop offset="1" stop-color="#6c441d"/></linearGradient></defs>
+    <path d="M4 25.4h25" stroke="#6f4a22" stroke-width="2.1" stroke-linecap="round"/>
+    <path d="M5.4 21.6h22M5.4 18h22" stroke="#7d9b57" stroke-width="1.7" opacity=".85"/>
+    <path d="M5 21.6h22" stroke="#b5cf8a" stroke-width=".5" opacity=".6"/>
+    <path d="M18.4 5.2l7 4.6-2.3 6.2-3.2 6.8-5.4-2.4 3.2-6.2-4.6-3.2z" fill="url(#plM-{u})" stroke="#4e5a55" stroke-width=".55"/>
+    <path d="M18.8 6.6l5 3.4-1.6 4.4-5.2-3z" fill="#f1f6f2" opacity=".55"/>
+    <path d="M8.4 6.4l6.2 4.2" stroke="url(#plW-{u})" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M8.6 5.2l6.2 4.2" stroke="#e2bc8a" stroke-width=".55" opacity=".7" stroke-linecap="round"/>
+    <path d="M25.2 16.4l2.8 1" stroke="#d9e2dd" stroke-width=".55" opacity=".7"/>`,
+  seed: `<ellipse cx="16" cy="29" rx="9.5" ry="1.8" fill="#000" opacity=".2"/>
+    <defs><linearGradient id="sdB-{u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e0bb84"/><stop offset=".5" stop-color="#c1995f"/><stop offset="1" stop-color="#8a5f2e"/></linearGradient>
+    <linearGradient id="sdN-{u}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8a6234"/><stop offset="1" stop-color="#5f3f1c"/></linearGradient></defs>
+    <path d="M10.4 8.8h11.2l3 15.4H7.4z" fill="url(#sdB-{u})" stroke="#6f4a22" stroke-width=".65"/>
+    <path d="M12.6 8.8c0-3.2 6.8-3.2 6.8 0" fill="none" stroke="url(#sdN-{u})" stroke-width="2"/>
+    <path d="M11.4 12.4l1.8 11.2M16 10.8v12.8M20.6 12.4l-1.8 11.2" stroke="#7d5428" stroke-width=".55" opacity=".55"/>
+    <path d="M11.6 17.6h8.8M10.8 21.6h9.8" stroke="#7d5428" stroke-width=".5" opacity=".45"/>
+    <circle cx="13.4" cy="15.2" r="1.15" fill="#7a5124" stroke="#5f3d18" stroke-width=".25"/>
+    <circle cx="19.2" cy="18.4" r="1.15" fill="#8a5f2e" stroke="#5f3d18" stroke-width=".25"/>
+    <circle cx="15.2" cy="21.6" r="1.15" fill="#7a5124" stroke="#5f3d18" stroke-width=".25"/>
+    <path d="M12.6 14.8c.3-.3.6-.4 1-.4M18.4 18c.3-.3.6-.4 1-.4" stroke="#f0d6a8" stroke-width=".35" opacity=".8"/>
+    <path d="M9.2 9.6c2-1.4 4.4-2 7-1.8" fill="none" stroke="#f0d6a8" stroke-width=".7" opacity=".6" stroke-linecap="round"/>`,
+  house: `<ellipse cx="16" cy="29" rx="12" ry="2" fill="#000" opacity=".22"/>
+    <defs><linearGradient id="hsR-{u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d9a465"/><stop offset=".55" stop-color="#b07c48"/><stop offset="1" stop-color="#7a4f2c"/></linearGradient>
+    <linearGradient id="hsW-{u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c6935b"/><stop offset="1" stop-color="#8a5a2f"/></linearGradient>
+    <linearGradient id="hsD-{u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6b4522"/><stop offset="1" stop-color="#432a13"/></linearGradient></defs>
+    <path d="M4.6 15.2L16 6.6l11.4 8.6v12.6H4.6z" fill="url(#hsW-{u})" stroke="#6b4522" stroke-width=".6"/>
+    <path d="M4.6 15.2L16 6.6l11.4 8.6z" fill="url(#hsR-{u})" stroke="#6b4522" stroke-width=".65"/>
+    <path d="M7.4 14.2L16 7.8l8.6 6.4" fill="none" stroke="#f2cf9d" stroke-width=".7" opacity=".65"/>
+    <path d="M12.4 27.2v-8.4h7.2v8.4z" fill="url(#hsD-{u})" stroke="#4a2e15" stroke-width=".45"/>
+    <path d="M16 19.2v8" stroke="#8a5a2f" stroke-width=".5" opacity=".7"/>
+    <rect x="19.2" y="12.6" width="4.4" height="4.4" rx=".4" fill="#f7d88e" stroke="#6b4522" stroke-width=".45"/>
+    <path d="M21.4 12.8v4M19.4 14.8h4" stroke="#9a6a2c" stroke-width=".4"/>
+    <path d="M11 8.6c2.8-1.8 6-2.4 9.4-1.6" fill="none" stroke="#f7dfb5" stroke-width=".55" opacity=".55"/>`,
+  barn: `<ellipse cx="16" cy="29" rx="12.5" ry="2" fill="#000" opacity=".22"/>
+    <defs><linearGradient id="bnR-{u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d06b52"/><stop offset=".55" stop-color="#a34b36"/><stop offset="1" stop-color="#64261b"/></linearGradient>
+    <linearGradient id="bnD-{u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f7e7c4"/><stop offset="1" stop-color="#c9a875"/></linearGradient></defs>
+    <path d="M5 26.4V14.2L16 6.8l11 7.4v12.2z" fill="url(#bnR-{u})" stroke="#5f271c" stroke-width=".65"/>
+    <path d="M5 14.2L16 6.8l11 7.4" fill="none" stroke="#e0b48a" stroke-width="1.1" opacity=".55"/>
+    <path d="M11.6 26.4v-9.2h8.8v9.2z" fill="url(#bnD-{u})" stroke="#7a3a26" stroke-width=".5"/>
+    <path d="M16 17.2v9.2M11.8 21.8h8.4" stroke="#a34b36" stroke-width="1.1"/>
+    <path d="M7.8 16.6l2.4 1.6M24.2 16.6L21.8 18.2" stroke="#e59a7c" stroke-width=".5" opacity=".65"/>
+    <rect x="8.4" y="24.8" width="2.6" height="1.6" fill="#5f271c" opacity=".7"/>`,
+  fence: `<ellipse cx="16" cy="29" rx="11.5" ry="1.8" fill="#000" opacity=".2"/>
+    <defs><linearGradient id="fcW-{u}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#e0b379"/><stop offset=".5" stop-color="#b98145"/><stop offset="1" stop-color="#7a4c22"/></linearGradient>
+    <linearGradient id="fcR-{u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f1d09a"/><stop offset="1" stop-color="#a86f35"/></linearGradient></defs>
+    <path d="M5 24V10M12 24V10M19 24V10M26 24V10" stroke="url(#fcW-{u})" stroke-width="2.6" stroke-linecap="round"/>
+    <path d="M5.6 10.4l2.7-3.6 2.7 3.6M18.6 10.4l2.7-3.6 2.7 3.6" fill="none" stroke="#7a4c22" stroke-width="1.2"/>
+    <path d="M4 14.2h23M4 20h23" stroke="#c99857" stroke-width="2.3"/>
+    <path d="M4 14.2h23M4 20h23" stroke="url(#fcR-{u})" stroke-width="1.1" opacity=".8"/>
+    <path d="M5 10.6v-1M12 10.6v-1M19 10.6v-1M26 10.6v-1" stroke="#f3d6a5" stroke-width=".5" opacity=".8"/>
+    <circle cx="12" cy="17" r=".5" fill="#7a4c22"/><circle cx="19" cy="17" r=".5" fill="#7a4c22"/>`,
+  hammer: `<ellipse cx="16" cy="29" rx="9" ry="1.7" fill="#000" opacity=".2"/>
+    <defs><linearGradient id="hmH-{u}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#d9a465"/><stop offset=".5" stop-color="#a9773f"/><stop offset="1" stop-color="#6c441d"/></linearGradient>
+    <linearGradient id="hmM-{u}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f0f5f1"/><stop offset=".5" stop-color="#9aa6a1"/><stop offset="1" stop-color="#4f5b56"/></linearGradient></defs>
+    <path d="M9.6 26.4L22.4 8.4" stroke="url(#hmH-{u})" stroke-width="3.1" stroke-linecap="round"/>
+    <path d="M10.2 25.6L22.6 8.2" stroke="#e2b881" stroke-width=".6" opacity=".65" stroke-linecap="round"/>
+    <path d="M17.6 4.6l9 5.4-4.4 6.6-9-5.4z" fill="url(#hmM-{u})" stroke="#46524d" stroke-width=".65"/>
+    <path d="M18.6 6l6.8 4-2.6 4-6.8-4z" fill="#f4f8f5" opacity=".55"/>
+    <path d="M22.6 6.6l4.2 2.4" stroke="#fff" stroke-width=".6" opacity=".7"/>
+    <path d="M8.4 27.6h3.4" stroke="#6c441d" stroke-width=".8" opacity=".6"/>`,
+  family: `<ellipse cx="16" cy="29" rx="12" ry="2" fill="#000" opacity=".2"/>
+    <defs><linearGradient id="fmS-{u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4d4ae"/><stop offset="1" stop-color="#c99a6d"/></linearGradient>
+    <linearGradient id="fmG-{u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9cc97c"/><stop offset="1" stop-color="#4e7a37"/></linearGradient>
+    <linearGradient id="fmO-{u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e29a78"/><stop offset="1" stop-color="#a95435"/></linearGradient></defs>
+    <circle cx="10.4" cy="8.8" r="4.2" fill="url(#fmS-{u})" stroke="#9a6a44" stroke-width=".5"/>
+    <path d="M6.4 8.2c.4-3.4 7.6-3.8 8 0-2.4-1.2-5.6-1.2-8 0z" fill="#5d3a20"/>
+    <circle cx="22.6" cy="10.6" r="3.5" fill="url(#fmS-{u})" stroke="#9a6a44" stroke-width=".45"/>
+    <path d="M19.2 10.2c.3-2.8 6.4-3 6.8 0-2-1-4.8-1-6.8 0z" fill="#6b4326"/>
+    <path d="M3.6 27.2v-5.6c0-4.4 3-7.6 6.8-7.6s6.8 3.2 6.8 7.6v5.6z" fill="url(#fmG-{u})" stroke="#3f652c" stroke-width=".55"/>
+    <path d="M16.8 27.2v-3.6c0-3.5 2.5-6 5.8-6s5.8 2.5 5.8 6v3.6z" fill="url(#fmO-{u})" stroke="#813f27" stroke-width=".55"/>
+    <path d="M6.4 19.6c1.8-1.6 4.2-1.8 6.2-.4" fill="none" stroke="#e2f2ca" stroke-width=".65" opacity=".65"/>
+    <path d="M18.8 21.8c1.5-1.2 3.4-1.4 5.2-.4" fill="none" stroke="#ffd3bd" stroke-width=".55" opacity=".65"/>
+    <circle cx="8.8" cy="8.2" r=".42" fill="#3f2a18"/><circle cx="12" cy="8.2" r=".42" fill="#3f2a18"/>
+    <path d="M9.6 10.2c.7.6 1.5.7 2.3.1" fill="none" stroke="#8a5536" stroke-width=".4"/>
+    <circle cx="21.4" cy="10.2" r=".35" fill="#3f2a18"/><circle cx="23.8" cy="10.2" r=".35" fill="#3f2a18"/>`,
+  card: `<ellipse cx="16" cy="29" rx="9.5" ry="1.8" fill="#000" opacity=".2"/>
+    <defs><linearGradient id="cdP-{u}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fbf2dd"/><stop offset=".55" stop-color="#ead8b4"/><stop offset="1" stop-color="#c6aa7e"/></linearGradient>
+    <radialGradient id="cdS-{u}" cx="35%" cy="28%" r="80%"><stop offset="0" stop-color="#f2cf7c"/><stop offset=".55" stop-color="#c99a3e"/><stop offset="1" stop-color="#7d5a1c"/></radialGradient></defs>
+    <rect x="6.4" y="4.6" width="19.2" height="22.8" rx="2" fill="url(#cdP-{u})" stroke="#8d6a33" stroke-width=".8"/>
+    <path d="M9.6 10.4h12.8M9.6 14h12.8M9.6 17.6h7" stroke="#9a8360" stroke-width="1" stroke-linecap="round" opacity=".8"/>
+    <path d="M9.6 10.4h12.8" stroke="#fff9ea" stroke-width=".35" opacity=".85"/>
+    <circle cx="21.6" cy="21.6" r="4.1" fill="url(#cdS-{u})" stroke="#7d5a1c" stroke-width=".55"/>
+    <circle cx="21.6" cy="21.6" r="2.8" fill="none" stroke="#f0d79b" stroke-width=".4" opacity=".7"/>
+    <path d="M19.8 21.8l1.3 1.3 2.4-2.8" fill="none" stroke="#4a3718" stroke-width=".9" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M6.6 5.2h18.8v1.6H6.6z" fill="#fffaf0" opacity=".55"/>`,
+  flag: `<ellipse cx="16" cy="29" rx="8" ry="1.6" fill="#000" opacity=".2"/>
+    <defs><linearGradient id="fgP-{u}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#d9a465"/><stop offset=".5" stop-color="#a9773f"/><stop offset="1" stop-color="#6c441d"/></linearGradient>
+    <linearGradient id="fgC-{u}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e98a6e"/><stop offset=".5" stop-color="#c05b45"/><stop offset="1" stop-color="#7f3026"/></linearGradient></defs>
+    <path d="M9 28V4.2" stroke="url(#fgP-{u})" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M9.6 5.2h14.8l-3 5 3 5H9.6z" fill="url(#fgC-{u})" stroke="#6b2a21" stroke-width=".55"/>
+    <path d="M11.4 7.2l9.8 5.4M11.4 9.6l11.6 6.4M11.4 12.2l8.2 4.4" stroke="#f3b39c" stroke-width=".55" opacity=".5"/>
+    <path d="M9.8 6.4c4.4-.8 8.6-.8 12.6 0" fill="none" stroke="#ffd6c7" stroke-width=".5" opacity=".7"/>
+    <circle cx="9" cy="4.2" r="1.1" fill="#e8c08a" stroke="#7a4c22" stroke-width=".4"/>
+    <path d="M9 4.2l.3-1.4" stroke="#f6dfb8" stroke-width=".45"/>`,
+  sprout: `<ellipse cx="16" cy="29" rx="11.5" ry="1.9" fill="#000" opacity=".2"/>
+    <defs><linearGradient id="spS-{u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7a5634"/><stop offset="1" stop-color="#4c321b"/></linearGradient>
+    <linearGradient id="spL-{u}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b5da85"/><stop offset=".5" stop-color="#7fae63"/><stop offset="1" stop-color="#3f6a2a"/></linearGradient></defs>
+    <path d="M4.4 26.2h23.2" stroke="url(#spS-{u})" stroke-width="2.3" stroke-linecap="round"/>
+    <path d="M16 26V12.8" stroke="#5f8b3f" stroke-width="2.1" stroke-linecap="round"/>
+    <path d="M16 17.2c-5.4-1-7.8-4.2-7.6-8.8 5.2.2 7.6 3.6 7.6 8.8z" fill="url(#spL-{u})" stroke="#3f6a2a" stroke-width=".5"/>
+    <path d="M16 15.2c5.4-1.2 7.8-4.6 7.6-9.2-5.2.2-7.6 3.8-7.6 9.2z" fill="url(#spL-{u})" stroke="#3f6a2a" stroke-width=".5"/>
+    <path d="M11.6 10.2c1.8.4 3.2 1.4 4.2 3M19.4 8.6c-1.6.8-2.6 2-3.2 3.6" fill="none" stroke="#e0f0c4" stroke-width=".55" opacity=".7"/>
+    <circle cx="16.6" cy="20.6" r=".7" fill="#dff0c2" opacity=".85"/>
+    <path d="M12 25.2c2.4-1 5.2-1 8 0" fill="none" stroke="#8f6a42" stroke-width=".6" opacity=".55"/>`,
+  lock: `<defs><linearGradient id="lkM-{u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0d79b"/><stop offset=".5" stop-color="#c9a45c"/><stop offset="1" stop-color="#8a6a2c"/></linearGradient></defs>
+    <rect x="8" y="14" width="16" height="13" rx="2.4" fill="url(#lkM-{u})" stroke="#7a5a22" stroke-width=".8"/>
+    <path d="M11 14v-4a5 5 0 0 1 10 0v4" fill="none" stroke="#d9c08a" stroke-width="2.2"/>
+    <path d="M11.5 14v-4a4.5 4.5 0 0 1 9 0v4" fill="none" stroke="#fff0c4" stroke-width=".55" opacity=".6"/>
+    <circle cx="16" cy="19.6" r="1.7" fill="#6f5220"/><path d="M16 20.8v3.2" stroke="#6f5220" stroke-width="1.3" stroke-linecap="round"/>
+    <path d="M9.2 15.2h13.6" stroke="#fff3cf" stroke-width=".6" opacity=".65"/>`,
+  check: '<path d="M6 17l6 6L26 9" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>',
+  chevron: '<path d="M8 12l8 8 8-8" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>'
+};
+
+let iconSeq = 0;
+function icon(name, cls) {
+  const uid = 'g' + (++iconSeq);
+  const body = (ICON_PATHS[name] || ICON_PATHS.card).replace(/\{u\}/g, uid);
+  return '<svg class="ic ' + (cls || '') + '" viewBox="0 0 32 32" aria-hidden="true" focusable="false">' +
+    body + '</svg>';
+}
+function lockIcon() { return '<span class="space-mark">' + icon('lock') + '</span>'; }
+function chevron() { return '<svg class="chev" viewBox="0 0 32 32" aria-hidden="true" focusable="false">' + ICON_PATHS.chevron + '</svg>'; }
+
+/* ================================================================== */
+/* 小工具                                                              */
+/* ================================================================== */
+
+const byId = (id) => document.getElementById(id);
+const esc = (v) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+const signed = (n) => (n > 0 ? '+' : '') + n;
+const colLetter = (x) => 'ABCDE'.charAt(x);
+function cellLabel(i) { return colLetter(i % 5) + (Math.floor(i / 5) + 1); }
+function stageForRound(round) {
+  for (const s of STAGES) if (round >= s.start && round <= s.end) return s;
+  return STAGES[STAGES.length - 1];
+}
+function stageForSpace(id) { return stageForRound(SPACES[id].minRound); }
+function playerColor(i) { return i === 0 ? 'var(--human)' : 'var(--ai)'; }
+function isMobile() { try { return window.matchMedia('(max-width: 639px)').matches; } catch (e) { return true; } }
+
+/* ================================================================== */
+/* 状态                                                                */
+/* ================================================================== */
+
+let state = null;
+let seed = DEFAULT_SEED;
+let legalBySpace = new Map();
+let pending = null;
+let sheetActions = [];
+let aiTimer = null;
+let demoTimer = null;
+let demoMode = false;
+let aiDelay = 650;
+let lastStageSeen = 1;
+let flashKeys = [];
+let flashTimer = null;
+
+/* ================================================================== */
+/* 初始化静态结构                                                      */
+/* ================================================================== */
+
+function buildResGrid() {
+  byId('resGrid').innerHTML = RES.map((r) =>
+    '<div class="res-tile" data-res="' + r.key + '" aria-label="' + esc(r.name) + '">' +
+      icon(r.icon) + '<span class="res-val" data-val="' + r.key + '">0</span>' +
+      '<span class="res-name">' + esc(r.short) + '</span></div>').join('');
+}
+
+function buildStageRail() {
+  byId('stageRail').innerHTML = STAGES.map((s) =>
+    '<button class="stage-chip" type="button" data-goto="' + s.n + '" aria-label="阶段 ' + s.n + '，第 ' + s.start + ' 到 ' + s.end + ' 回合">' +
+      '<b>阶段 ' + s.n + '</b><span>' + s.start + '–' + s.end + '</span></button>').join('');
+}
+
+function buildStages() {
+  const host = byId('stages');
+  host.innerHTML = STAGES.map((s) => {
+    const ids = SPACE_IDS.filter((id) => stageForSpace(id).n === s.n);
+    const harvestNote = s.n === 6 ? '终局结算' : '第 ' + s.harvest + ' 回合后收获';
+    let body = '';
+    if (ids.length) {
+      body = '<div class="spaces">' + ids.map((id) => {
+        const def = SPACES[id];
+        return '<button class="space" type="button" data-space="' + id + '" aria-label="' + esc(def.name) + '">' +
+          icon(SPACE_ICON[id] || 'card') + lockIcon() +
+          '<span class="space-name">' + esc(def.name) + '</span>' +
+          '<span class="space-bonus" data-bonus="' + id + '"></span>' +
+          '<span class="occ-badge" data-occ="' + id + '" hidden></span>' +
+          '</button>';
+      }).join('') + '</div>';
+    } else {
+      body = '<p class="stage-6-note">阶段 6 没有新增行动格。第 14 回合结束后进行终局收获与 14 类计分。</p>';
+    }
+    return '<details class="stage" data-stage="' + s.n + '" style="border-left:3px solid ' + STAGE_ACCENTS[s.n - 1] + '">' +
+      '<summary><div class="stage-sum-main"><b>阶段 ' + s.n + ' · 第 ' + s.start + '–' + s.end + ' 回合</b>' +
+      '<span>' + ids.length + ' 个行动格 · ' + harvestNote + '</span></div>' +
+      '<span class="stage-state" data-stage-state="' + s.n + '">未解锁</span>' + chevron() + '</summary>' +
+      body + '</details>';
+  }).join('');
+}
+
+/* ================================================================== */
+/* 新局 / 渲染                                                         */
+/* ================================================================== */
+
+function newGame(nextSeed) {
+  clearTimers();
+  demoMode = false;
+  seed = Number.isFinite(nextSeed) ? nextSeed >>> 0 : seed;
+  state = createGame({ seed, playerCount: 2, names: PLAYER_NAMES.slice() });
+  pending = null;
+  sheetActions = [];
+  byId('sheetOverlay').hidden = true;
+  byId('harvestOverlay').hidden = true;
+  byId('resultOverlay').hidden = true;
+  byId('demoBtn').setAttribute('aria-pressed', 'false');
+  byId('demoBtn').textContent = 'AI 演示';
+  lastStageSeen = stageForRound(1).n;
+  render();
+  openCurrentStage();
+  scheduleAI();
+}
+
+function clearTimers() {
+  if (aiTimer) { clearTimeout(aiTimer); aiTimer = null; }
+  if (demoTimer) { clearTimeout(demoTimer); demoTimer = null; }
+}
+
+function currentIsHuman() {
+  return !!state && state.phase === 'work' && currentPlayer(state) === 0 && !demoMode;
+}
+
+function canAct() {
+  return currentIsHuman() && !pending && byId('harvestOverlay').hidden && byId('resultOverlay').hidden;
+}
+
+function computeLegal() {
+  legalBySpace = new Map();
+  if (!currentIsHuman()) return;
+  const list = legalActions(state);
+  for (const a of list) {
+    if (!legalBySpace.has(a.space)) legalBySpace.set(a.space, []);
+    legalBySpace.get(a.space).push(a);
+  }
+}
+
+function spaceBonus(id) {
+  const def = SPACES[id];
+  const ps = state.players[0];
+  const sp = state.spaces[id];
+  switch (def.kind) {
+    case 'gain': {
+      if (id === 'grainSeeds' || id === 'grainSeeds2') return '+1 谷';
+      if (id === 'vegetableSeeds') return '+1 菜';
+      if (id === 'forest') return '+3 木';
+      if (id === 'dayLaborer') return '+2 食';
+      if (id === 'clayPit' || id === 'clayPit2') return '+1 泥';
+      if (id === 'reedBank' || id === 'reedBank2') return '+1 苇';
+      if (id === 'quarry') return '+1 石';
+      return Object.keys(def.gain).map((k) => '+' + def.gain[k] + (RES_BY_KEY[k] ? RES_BY_KEY[k].short : k)).join(' ');
+    }
+    case 'startingPlayer': return '1 食 · 下回合先手';
+    case 'pool': return '累积 ' + sp.pool + ' 食物';
+    case 'animals': return '累积 ' + sp.pool + ' ' + ANIMAL_NAME[def.animal];
+    case 'market': return '1 食 + 木/泥/苇 选 1';
+    case 'plow': return '开 1 块田';
+    case 'sow': return '1 谷 → 田里 3 谷';
+    case 'build': {
+      const unit = { material: state.rules.roomCost, reed: 2 };
+      return '1–2 间 · ' + unit.material + ' ' + (RES_BY_KEY[ps.house] ? RES_BY_KEY[ps.house].short : '木') + ' + 2 苇/间';
+    }
+    case 'stables': return '2 木/个 · 最多 4 个';
+    case 'fence': return '1 木/段 · 最多 15 段';
+    case 'renovate': {
+      if (ps.house === 'stone') return '已是石屋';
+      return ps.house === 'wood' ? '木屋 → 泥屋' : '泥屋 → 石屋';
+    }
+    case 'familyGrowth': {
+      if (id === 'familyGrowthNoRoom') return '家庭 +1 · 第 12 回合';
+      return '家庭 +1 · 需空房';
+    }
+    case 'improvement': return '购买 1 张大设施';
+    case 'plowAndSow': return '开 1 块田并播种';
+    default: return '';
+  }
+}
+
+function updateSpaces() {
+  const ps = state.players[0];
+  for (const id of SPACE_IDS) {
+    const btn = byId('stages').querySelector('[data-space="' + id + '"]');
+    if (!btn) continue;
+    const def = SPACES[id];
+    const sp = state.spaces[id];
+    const stageOpen = state.round >= def.minRound;
+    const occupied = sp.occupiedBy !== null;
+    const acts = legalBySpace.get(id) || [];
+    const usable = currentIsHuman() && stageOpen && !occupied && acts.length > 0;
+    const bonus = btn.querySelector('[data-bonus="' + id + '"]');
+    if (bonus) bonus.textContent = spaceBonus(id);
+    btn.classList.toggle('locked', !stageOpen);
+    btn.classList.toggle('occupied', occupied);
+    btn.classList.toggle('occ-ai', occupied && sp.occupiedBy === 1);
+    btn.classList.toggle('unavailable', stageOpen && !occupied && acts.length === 0);
+    btn.classList.toggle('waiting', !currentIsHuman() && stageOpen && !occupied);
+    btn.classList.toggle('place-active', !!pending && pending.space === id);
+    btn.disabled = !usable;
+    const occ = btn.querySelector('[data-occ="' + id + '"]');
+    if (occ) {
+      occ.hidden = !occupied;
+      if (occupied) occ.textContent = sp.occupiedBy === 0 ? '你已占' : 'AI 已占';
+    }
+    let label = def.name;
+    if (!stageOpen) label += '，第 ' + def.minRound + ' 回合解锁';
+    else if (occupied) label += '，已被' + (sp.occupiedBy === 0 ? '你' : 'AI') + '占用';
+    else if (currentIsHuman() && acts.length === 0) label += '，当前不可用';
+    else label += '，' + bonus.textContent;
+    btn.setAttribute('aria-label', label);
+  }
+}
+
+function updateStages() {
+  const current = stageForRound(state.round);
+  for (const s of STAGES) {
+    const det = byId('stages').querySelector('details[data-stage="' + s.n + '"]');
+    if (!det) continue;
+    const chip = byId('stageRail').querySelector('[data-goto="' + s.n + '"]');
+    det.classList.toggle('current', s.n === current.n);
+    det.classList.toggle('done', state.round > s.end);
+    det.classList.toggle('locked', state.round < s.start);
+    if (chip) {
+      chip.classList.toggle('current', s.n === current.n);
+      chip.classList.toggle('done', state.round > s.end);
+      chip.classList.toggle('locked', state.round < s.start);
+    }
+    const st = det.querySelector('[data-stage-state="' + s.n + '"]');
+    if (st) {
+      if (state.round > s.end) st.textContent = s.n === 6 ? '已结束' : '已通过';
+      else if (state.round < s.start) st.textContent = '未解锁';
+      else st.textContent = s.n === 6 ? '终局' : '当前';
+    }
+  }
+}
+
+function updateTop() {
+  const st = stageForRound(state.round);
+  byId('roundNum').textContent = String(state.round);
+  byId('stageName').textContent = '阶段 ' + st.n;
+  byId('stageRange').textContent = '第 ' + st.start + '–' + st.end + ' 回合';
+  const harvests = state.rules.harvestRounds;
+  const next = harvests.find((r) => r >= state.round);
+  if (state.phase === 'game-over') {
+    byId('phaseText').innerHTML = '<b>终局</b>';
+    byId('harvestText').textContent = '已完成 ' + state.harvestsDone.length + ' 次收获';
+  } else {
+    byId('phaseText').innerHTML = '<b>工作阶段</b>';
+    if (next === state.round) {
+      byId('harvestText').innerHTML = '<span class="harvest-now">本回合结束收获</span>';
+    } else if (next) {
+      byId('harvestText').textContent = '下次收获：第 ' + next + ' 回合';
+    } else {
+      byId('harvestText').textContent = '收获结束';
+    }
+  }
+  const cur = currentPlayer(state);
+  if (state.phase === 'game-over') {
+    byId('workersText').textContent = '对局已结束';
+  } else if (cur === 0) {
+    byId('workersText').textContent = '你的工人 ' + state.players[0].workersLeft + '/' + state.players[0].workersThisRound;
+  } else {
+    byId('workersText').textContent = 'AI 工人 ' + (cur === null ? 0 : state.players[cur].workersLeft) + '/' + (cur === null ? 0 : state.players[cur].workersThisRound);
+  }
+  byId('first0').hidden = state.firstPlayer !== 0;
+  byId('first1').hidden = state.firstPlayer !== 1;
+}
+
+function playerMeta(p) {
+  const rooms = p.cells.filter((c) => c.room).length;
+  return '<span class="pc-i"><b>' + HOUSE_NAME[p.house] + '</b> ' + rooms + ' 间</span>' +
+    '<span class="pc-sep">·</span><span class="pc-i">家庭 ' + p.family + ' 人</span>';
+}
+
+function updatePlayers() {
+  const cur = currentPlayer(state);
+  for (let i = 0; i < 2; i += 1) {
+    const p = state.players[i];
+    const card = byId('pc' + i);
+    card.classList.toggle('active', cur === i && state.phase === 'work');
+    byId('meta' + i).innerHTML = playerMeta(p);
+    let pips = '';
+    for (let w = 0; w < p.workersThisRound; w += 1) pips += '<span class="w-pip' + (w < p.workersLeft ? ' on' : '') + '"></span>';
+    byId('pips' + i).innerHTML = pips;
+  }
+}
+
+function updateHint() {
+  const el = byId('hint');
+  let text = '';
+  let cls = 'hint';
+  if (state.phase === 'game-over') {
+    const sc = score(state);
+    const win = sc.winner.indexOf(0) !== -1;
+    const draw = sc.winner.length > 1;
+    text = draw ? '对局结束：平局。' : (win ? '对局结束：你获胜。' : '对局结束：AI 农夫获胜。');
+    cls = 'hint good';
+  } else if (!byId('harvestOverlay').hidden) {
+    text = '收获阶段：查看结算后继续。';
+  } else if (pending) {
+    text = '请在你的农场中点击高亮格子：' + SPACES[pending.space].name + '。';
+    cls = 'hint good';
+  } else if (demoMode) {
+    text = 'AI 演示中：双方自动对局…';
+  } else if (currentPlayer(state) !== 0) {
+    text = 'AI 农夫正在安排工人…（剩余 ' + state.players[currentPlayer(state)].workersLeft + ' 个）';
+  } else {
+    const n = state.players[0].workersLeft;
+    text = n > 0 ? '你的回合：选择一个行动格 · 剩余工人 ' + n + ' 个。' : '本回合工人已放完。';
+  }
+  el.textContent = text;
+  el.className = cls;
+}
+
+/* --------------------------- 农场 --------------------------- */
+function stableArt() {
+  const uid = 's' + (++iconSeq);
+  return '<svg class="stable-ic" viewBox="0 0 32 32" aria-hidden="true">' +
+    '<defs>' +
+    '<linearGradient id="' + uid + 'r" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d06b52"/><stop offset=".55" stop-color="#a34b36"/><stop offset="1" stop-color="#64261b"/></linearGradient>' +
+    '<linearGradient id="' + uid + 'd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbf0d3"/><stop offset="1" stop-color="#c9a875"/></linearGradient>' +
+    '<linearGradient id="' + uid + 'w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a34b36"/><stop offset="1" stop-color="#702e20"/></linearGradient>' +
+    '</defs>' +
+    '<ellipse cx="16" cy="29" rx="13" ry="2" fill="#000" opacity=".28"/>' +
+    '<path d="M4 27V15l12-9 12 9v12z" fill="url(#' + uid + 'w)" stroke="#5d271d" stroke-width="1.1"/>' +
+    '<path d="M4 15l12-9 12 9z" fill="url(#' + uid + 'r)" stroke="#5d271d" stroke-width="1.1"/>' +
+    '<path d="M7 14l9-6.6L25 14" fill="none" stroke="#ebad8e" stroke-width=".7" opacity=".65"/>' +
+    '<path d="M11 27v-9h10v9z" fill="url(#' + uid + 'd)" stroke="#6f3322" stroke-width=".8"/>' +
+    '<path d="M16 18v9M11 22.5h10" stroke="#a34b36" stroke-width="1.1"/>' +
+    '<path d="M8.4 17.2l2.2 1.4M23.6 17.2l-2.2 1.4" stroke="#f0b294" stroke-width=".55" opacity=".65"/>' +
+    '<path d="M4.6 26.6h22.8" stroke="#4c1d14" stroke-width=".8" opacity=".7"/>' +
+    '</svg>';
+}
+
+
+
+function renderFarm() {
+  const p = state.players[0];
+  const pastures = computePastures(p);
+  const pastureCells = new Set();
+  for (const pa of pastures) for (const c of pa.cells) pastureCells.add(c);
+  const fieldCount = p.cells.filter((c) => c.field).length;
+  const roomCount = p.cells.filter((c) => c.room).length;
+  const stableCount = p.cells.filter((c) => c.stable).length;
+
+  let html = '';
+  for (let i = 0; i < 15; i += 1) {
+    const c = p.cells[i];
+    const classes = ['fcell'];
+    if (c.room) classes.push('room', p.house);
+    if (c.field) classes.push('field');
+    if (pastureCells.has(i)) classes.push('pasture');
+    if (pending && pending.space === 'plow') {
+      const choose = pending.actions.some((a) => a.cell === i);
+      classes.push(choose ? 'placeable' : 'dead');
+    }
+    if (pending && pending.space === 'plowAndSow') {
+      const choose = pending.actions.some((a) => a.cell === i);
+      classes.push(choose ? 'placeable' : 'dead');
+    }
+    let inner = '';
+    if (c.room) inner += '<span class="cell-tag">' + HOUSE_TAG[p.house] + '</span>';
+    if (c.field && c.field.crop) {
+      inner += '<span class="crop-badge">' + icon(c.field.crop) + c.field.count + '</span>';
+    }
+    if (c.stable) inner += stableArt();
+    const label = '农场格 ' + cellLabel(i) +
+      (c.room ? '，' + HOUSE_NAME[p.house] + '房间' : '') +
+      (c.field ? '，田地' + (c.field.crop ? (c.field.crop === 'grain' ? '种谷物' : '种蔬菜') + c.field.count : '空') : '') +
+      (pastureCells.has(i) ? '，牧场内' : '') +
+      (c.stable ? '，马厩' : '');
+    html += '<button class="' + classes.join(' ') + '" type="button" data-cell="' + i + '" aria-label="' + esc(label) + '">' + inner + '</button>';
+  }
+  byId('farm').innerHTML = html;
+
+  const layer = byId('fenceLayer');
+  layer.innerHTML = p.fences.map((e) => {
+    const parts = e.split(':');
+    const kind = parts[0];
+    const x = Number(parts[1]);
+    const y = Number(parts[2]);
+    if (kind === 'h') {
+      return '<span class="fence-seg h" style="left:' + (x * 20) + '%;top:' + (y * 33.3333) + '%;width:20%"></span>';
+    }
+    return '<span class="fence-seg v" style="left:' + (x * 20) + '%;top:' + (y * 33.3333) + '%;height:33.3333%"></span>';
+  }).join('');
+
+  byId('farmHead').textContent = HOUSE_NAME[p.house] + ' · ' + roomCount + ' 间 · 田 ' + fieldCount;
+  byId('farmLegend').innerHTML =
+    '<span><i class="sw room"></i>房间 ' + roomCount + '</span>' +
+    '<span><i class="sw field"></i>田地 ' + fieldCount + '</span>' +
+    '<span><i class="sw pasture"></i>牧场 ' + pastures.length + '</span>' +
+    '<span><i class="sw stable"></i>马厩 ' + stableCount + '</span>' +
+    '<span>围栏 ' + p.fences.length + ' 段</span>';
+
+  const actions = byId('farmActions');
+  if (pending) {
+    actions.hidden = false;
+    byId('placeNote').textContent = '待选：' + SPACES[pending.space].name + ' · 点高亮格';
+  } else {
+    actions.hidden = true;
+  }
+}
+
+/* --------------------------- 资源 --------------------------- */
+
+function renderResources() {
+  const p = state.players[0];
+  const values = {
+    food: p.food, wood: p.wood, clay: p.clay, reed: p.reed, stone: p.stone,
+    grain: p.grain, veg: p.veg, sheep: p.animals.sheep, boar: p.animals.boar,
+    cattle: p.animals.cattle, beggar: p.beggarCards
+  };
+  for (const key of Object.keys(values)) {
+    const el = byId('resGrid').querySelector('[data-val="' + key + '"]');
+    if (el) el.textContent = String(values[key]);
+    const tile = byId('resGrid').querySelector('[data-res="' + key + '"]');
+    if (tile) {
+      tile.classList.toggle('flash', flashKeys.indexOf(key) !== -1);
+      tile.classList.toggle('dim', values[key] === 0 && key !== 'food');
+      tile.setAttribute('aria-label', (RES_BY_KEY[key] ? RES_BY_KEY[key].name : key) + ' ' + values[key]);
+    }
+  }
+  byId('resCap').textContent = state.rules.resourceCap ? '每种上限 ' + state.rules.resourceCap : '无上限';
+  byId('resFoot').textContent = '烹饪 ' + p.cooking + ' · 大设施 ' + p.improvements.length;
+}
+
+/* --------------------------- 记录 --------------------------- */
+
+function eventText(ev) {
+  const who = state.players[ev.player] ? state.players[ev.player].name : '';
+  switch (ev.kind) {
+    case 'round-start': return '第 ' + ev.round + ' 回合开始';
+    case 'gain': {
+      const g = Object.keys(ev.gain).map((k) => '+' + ev.gain[k] + (RES_BY_KEY[k] ? RES_BY_KEY[k].short : k)).join(' ');
+      return who + ' 使用 ' + SPACES[ev.space].name + '：' + g;
+    }
+    case 'take-pool': return who + ' 使用 ' + SPACES[ev.space].name + '：获得 ' + ev.amount + ' 食物';
+    case 'take-animals': return who + ' 使用 ' + SPACES[ev.space].name + '：获得 ' + ev.kept + ' ' + ANIMAL_NAME[SPACES[ev.space].animal] + (ev.discarded ? '，放回 ' + ev.discarded : '');
+    case 'market': return who + ' 集市：食物 +1，' + RES_BY_KEY[ev.resource].short + ' +1';
+    case 'plow': return who + ' 耕地：' + cellLabel(ev.cell);
+    case 'sow': return who + ' 播种：谷 ' + ev.grain + ' 块田，菜 ' + ev.veg + ' 块田';
+    case 'build-rooms': return who + ' 扩建 ' + ev.cells.length + ' 间房间';
+    case 'build-stables': return who + ' 建 ' + ev.cells.length + ' 个马厩';
+    case 'build-fences': return who + ' 围出牧场：' + ev.rect.w + '×' + ev.rect.h + '，新围栏 ' + ev.newFences + ' 段';
+    case 'renovate': return who + ' 翻新为' + HOUSE_NAME[ev.house];
+    case 'family-growth': return who + ' 家庭 +1（现 ' + ev.family + ' 人）';
+    case 'improvement': return who + ' 购买大设施：' + MAJOR_IMPROVEMENTS[ev.card].name;
+    case 'starting-player': return who + ' 取得下回合先手';
+    case 'harvest': return '第 ' + ev.round + ' 回合收获：' + who + ' 喂养 ' + ev.feed.required + ' 食物' + (ev.feed.begging ? '，乞讨 ' + ev.feed.begging : '');
+    case 'game-over': return '终局：' + ev.winner.map((i) => state.players[i].name).join('、') + ' 获胜';
+    default: return '';
+  }
+}
+
+function renderLog() {
+  const entries = [];
+  for (let i = state.events.length - 1; i >= 0 && entries.length < 14; i -= 1) {
+    const ev = state.events[i];
+    const text = eventText(ev);
+    if (!text) continue;
+    const cls = ev.kind === 'harvest' || ev.kind === 'game-over' ? 'bad' : (ev.kind === 'gain' || ev.kind === 'improvement' ? 'hl' : '');
+    entries.push('<li class="' + cls + '"><span class="lr">R' + (ev.round || state.round) + '</span><span class="lt">' + esc(text) + '</span></li>');
+  }
+  byId('log').innerHTML = entries.join('');
+}
+
+/* --------------------------- 总渲染 --------------------------- */
+
+function render() {
+  if (!state) return;
+  computeLegal();
+  updateTop();
+  updatePlayers();
+  updateHint();
+  renderFarm();
+  renderResources();
+  updateStages();
+  updateSpaces();
+  renderLog();
+  const board = document.querySelector('.board');
+  if (board) board.classList.toggle('ai-turn', state.phase === 'work' && !currentIsHuman() && !demoMode);
+}
+
+/* ================================================================== */
+/* 阶段展开                                                            */
+/* ================================================================== */
+
+function openCurrentStage() {
+  const cur = stageForRound(state.round).n;
+  const all = [...byId('stages').querySelectorAll('details')];
+  if (isMobile()) {
+    all.forEach((d) => { d.open = Number(d.dataset.stage) === cur; });
+  } else {
+    all.forEach((d) => { d.open = true; });
+  }
+  lastStageSeen = cur;
+}
+
+function maybeAdvanceStage() {
+  const cur = stageForRound(state.round).n;
+  if (cur !== lastStageSeen) {
+    openCurrentStage();
+    lastStageSeen = cur;
+    const det = byId('stages').querySelector('details[data-stage="' + cur + '"]');
+    if (det && isMobile()) {
+      try { det.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) { /* optional */ }
+    }
+  }
+}
+
+/* ================================================================== */
+/* 应用动作 / AI                                                       */
+/* ================================================================== */
+
+function flashDelta(before, after) {
+  const a = before.players[0];
+  const b = after.players[0];
+  const keys = [];
+  const check = (k, x, y) => { if (x !== y) keys.push(k); };
+  check('food', a.food, b.food); check('wood', a.wood, b.wood); check('clay', a.clay, b.clay);
+  check('reed', a.reed, b.reed); check('stone', a.stone, b.stone); check('grain', a.grain, b.grain);
+  check('veg', a.veg, b.veg); check('sheep', a.animals.sheep, b.animals.sheep);
+  check('boar', a.animals.boar, b.animals.boar); check('cattle', a.animals.cattle, b.animals.cattle);
+  check('beggar', a.beggarCards, b.beggarCards);
+  flashKeys = keys;
+  if (flashTimer) clearTimeout(flashTimer);
+  flashTimer = setTimeout(() => { flashKeys = []; renderResources(); flashTimer = null; }, 560);
+}
+
+function applyChosen(action) {
+  if (!state || state.phase !== 'work') return;
+  const before = state;
+  const prevHarvests = state.harvestsDone.length;
+  try {
+    state = applyAction(state, action);
+  } catch (error) {
+    const hint = byId('hint');
+    hint.textContent = '这个行动无法执行：' + error.message.replace('Agricola illegal: ', '');
+    hint.className = 'hint warn';
+    return;
+  }
+  pending = null;
+  hideSheet();
+  const harvested = state.harvestsDone.length > prevHarvests;
+  const over = state.phase === 'game-over';
+  flashDelta(before, state);
+  render();
+  maybeAdvanceStage();
+  if (over) {
+    showResult();
+    return;
+  }
+  if (harvested && !demoMode) {
+    showHarvest();
+    return;
+  }
+  if (!demoMode) scheduleAI();
+}
+
+function scheduleAI() {
+  if (aiTimer) { clearTimeout(aiTimer); aiTimer = null; }
+  if (!state || state.phase !== 'work' || demoMode) return;
+  if (currentPlayer(state) === 0) return;
+  if (!byId('harvestOverlay').hidden || !byId('resultOverlay').hidden) return;
+  aiTimer = setTimeout(() => {
+    aiTimer = null;
+    if (!state || state.phase !== 'work' || demoMode || currentPlayer(state) === 0) return;
+    if (!byId('harvestOverlay').hidden || !byId('resultOverlay').hidden) return;
+    let action = null;
+    try { action = chooseGreedyAction(state); } catch (e) { action = null; }
+    if (!action) {
+      const list = legalActions(state);
+      action = list[0] || null;
+    }
+    if (!action) return;
+    applyChosen(action);
+  }, aiDelay);
+}
+
+function startDemo() {
+  clearTimers();
+  state = createGame({ seed: (seed + 7919) >>> 0, playerCount: 2, names: PLAYER_NAMES.slice() });
+  demoMode = true;
+  pending = null;
+  byId('sheetOverlay').hidden = true;
+  byId('harvestOverlay').hidden = true;
+  byId('resultOverlay').hidden = true;
+  byId('demoBtn').setAttribute('aria-pressed', 'true');
+  byId('demoBtn').textContent = '停止演示';
+  render();
+  openCurrentStage();
+  demoStep();
+}
+
+function demoStep() {
+  if (!demoMode) return;
+  demoTimer = setTimeout(() => {
+    if (!demoMode || !state) return;
+    if (state.phase === 'game-over') {
+      demoMode = false;
+      byId('demoBtn').setAttribute('aria-pressed', 'false');
+      byId('demoBtn').textContent = 'AI 演示';
+      render();
+      showResult();
+      return;
+    }
+    let action = null;
+    try { action = chooseGreedyAction(state); } catch (e) { action = null; }
+    if (!action) {
+      const list = legalActions(state);
+      action = list[0] || null;
+    }
+    if (!action) {
+      demoMode = false;
+      render();
+      return;
+    }
+    const before = state;
+    const prevHarvests = state.harvestsDone.length;
+    try { state = applyAction(state, action); } catch (e) { demoMode = false; render(); return; }
+    const harvested = state.harvestsDone.length > prevHarvests;
+    flashDelta(before, state);
+    render();
+    maybeAdvanceStage();
+    if (state.phase === 'game-over') {
+      demoMode = false;
+      byId('demoBtn').setAttribute('aria-pressed', 'false');
+      byId('demoBtn').textContent = 'AI 演示';
+      render();
+      showResult();
+      return;
+    }
+    demoStep();
+  }, 24);
+}
+
+/* ================================================================== */
+/* 行动选择                                                            */
+/* ================================================================== */
+
+function showSheet(title, sub, options) {
+  sheetActions = options;
+  byId('sheetTitle').textContent = title;
+  byId('sheetSub').textContent = sub || '';
+  byId('sheetBody').innerHTML = options.map((o, i) =>
+    '<button class="opt" type="button" data-opt="' + i + '">' +
+      '<span class="opt-text"><b>' + o.label + '</b>' + (o.meta ? '<span>' + o.meta + '</span>' : '') + '</span>' +
+      (o.cost ? '<span class="opt-cost">' + o.cost + '</span>' : '') +
+    '</button>').join('');
+  byId('sheetOverlay').hidden = false;
+}
+
+function hideSheet() {
+  byId('sheetOverlay').hidden = true;
+  sheetActions = [];
+}
+
+function costHtml(cost) {
+  return Object.keys(cost).map((k) =>
+    icon(RES_BY_KEY[k] ? RES_BY_KEY[k].icon : 'card') + '<span>' + cost[k] + '</span>').join('');
+}
+
+function sowLabel(plan) {
+  if (!plan || plan.length === 0) return '只耕地，不播种';
+  const g = plan.filter((p) => p.crop === 'grain').length;
+  const v = plan.filter((p) => p.crop === 'veg').length;
+  const parts = [];
+  if (g) parts.push('谷 ' + g + ' 块田（耗 ' + g + ' 谷，收 3/块）');
+  if (v) parts.push('菜 ' + v + ' 块田（耗 ' + v + ' 菜，收 2/块）');
+  return '播种：' + parts.join(' · ');
+}
+
+function fenceCost(rect) {
+  const p = state.players[0];
+  const edges = [];
+  for (let i = 0; i < rect.w; i += 1) {
+    edges.push('h:' + (rect.x + i) + ':' + rect.y);
+    edges.push('h:' + (rect.x + i) + ':' + (rect.y + rect.h));
+  }
+  for (let j = 0; j < rect.h; j += 1) {
+    edges.push('v:' + rect.x + ':' + (rect.y + j));
+    edges.push('v:' + (rect.x + rect.w) + ':' + (rect.y + j));
+  }
+  return edges.filter((e) => p.fences.indexOf(e) === -1).length;
+}
+
+function chooseSpace(id) {
+  if (!canAct()) return;
+  const acts = legalBySpace.get(id) || [];
+  if (!acts.length) return;
+  const def = SPACES[id];
+  switch (def.kind) {
+    case 'gain': case 'pool': case 'animals': case 'startingPlayer':
+    case 'renovate': case 'familyGrowth':
+      applyChosen(acts[0]);
+      return;
+    case 'market':
+      showSheet('集市', '获得 1 食物，并从木材、黏土、芦苇中选 1 个。',
+        acts.map((a) => ({
+          label: '食物 +1 · ' + RES_BY_KEY[a.resource].name + ' +1',
+          meta: '同时获得 1 食物与所选材料',
+          cost: icon('food') + '<span>1</span>' + icon(RES_BY_KEY[a.resource].icon) + '<span>1</span>',
+          action: a
+        })));
+      return;
+    case 'improvement':
+      showSheet('大设施', '支付费用购买 1 张，终局按卡面 VP 计分；烹饪值影响喂养。',
+        acts.map((a) => {
+          const card = MAJOR_IMPROVEMENTS[a.card];
+          return {
+            label: card.name + ' · VP +' + card.vp,
+            meta: '烹饪值 ' + card.cooking + ' · ' + (state.improvements[a.card] === null ? '全桌仅 1 张' : '已购买'),
+            cost: costHtml(card.cost),
+            action: a
+          };
+        }));
+      return;
+    case 'sow': {
+      const uniq = new Map();
+      for (const a of acts) {
+        const key = a.sow.map((s) => s.field + ':' + s.crop).join(',');
+        if (!uniq.has(key)) uniq.set(key, a);
+      }
+      showSheet('谷物种植', '每块空田消耗 1 个种子：谷物放 3 粒，蔬菜放 2 粒。',
+        [...uniq.values()].map((a) => ({
+          label: sowLabel(a.sow),
+          meta: '田地：' + a.sow.map((s) => cellLabel(s.field)).join('、'),
+          cost: icon('seed'),
+          action: a
+        })));
+      return;
+    }
+    case 'build':
+      showSheet('扩建农舍', '新房间必须与已有房间正交相邻；一次最多 2 间。',
+        acts.map((a) => {
+          const unit = { material: state.rules.roomCost, reed: 2 };
+          const cost = { reed: unit.reed * a.rooms.length };
+          cost[state.players[0].house] = unit.material * a.rooms.length;
+          return {
+            label: '建 ' + a.rooms.length + ' 间房间',
+            meta: '位置：' + a.rooms.map(cellLabel).join('、'),
+            cost: costHtml(cost),
+            action: a
+          };
+        }));
+      return;
+    case 'stables':
+      showSheet('建马厩', '每个 2 木，每人最多 4 个；牧场内马厩使容量翻倍。',
+        acts.map((a) => ({
+          label: '建 ' + a.cells.length + ' 个马厩',
+          meta: '位置：' + a.cells.map(cellLabel).join('、'),
+          cost: costHtml({ wood: 2 * a.cells.length }),
+          action: a
+        })));
+      return;
+    case 'fence': {
+      const list = acts;
+      showSheet('牧场围栏', '用矩形圈出牧场，每段围栏 1 木；新牧场必须与已有牧场相邻。',
+        list.map((a) => ({
+          label: a.rect.w + '×' + a.rect.h + ' 牧场 · ' + cellLabel(a.rect.y * 5 + a.rect.x) + ' 起',
+          meta: '新围栏 ' + fenceCost(a.rect) + ' 段 · 最多 15 段',
+          cost: costHtml({ wood: fenceCost(a.rect) }),
+          action: a
+        })));
+      return;
+    }
+    case 'plow':
+      pending = { space: id, actions: acts, cells: [...new Set(acts.map((a) => a.cell))] };
+      hideSheet();
+      render();
+      try { byId('farmPanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) { /* optional */ }
+      return;
+    case 'plowAndSow':
+      pending = { space: id, actions: acts, cells: [...new Set(acts.map((a) => a.cell))] };
+      hideSheet();
+      render();
+      try { byId('farmPanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) { /* optional */ }
+      return;
+    default:
+      applyChosen(acts[0]);
+  }
+}
+
+function chooseCell(i) {
+  if (!pending || !currentIsHuman()) return;
+  const acts = pending.actions.filter((a) => a.cell === i);
+  if (!acts.length) {
+    const hint = byId('hint');
+    hint.textContent = '这块地现在不能选：需要空地，并与已有田地相邻。';
+    hint.className = 'hint warn';
+    return;
+  }
+  if (pending.space === 'plowAndSow') {
+    const seen = new Set();
+    const options = [];
+    for (const a of acts) {
+      const key = (a.sow || []).map((s) => s.crop).join(',');
+      if (seen.has(key)) continue;
+      seen.add(key);
+      options.push({
+        label: sowLabel(a.sow || []),
+        meta: '先耕 ' + cellLabel(i) + '，再播种',
+        cost: icon('plow'),
+        action: a
+      });
+    }
+    showSheet('耕地并播种', '已选 ' + cellLabel(i) + '：选择是否同时播种。', options);
+    pending = null;
+    render();
+    return;
+  }
+  applyChosen(acts[0]);
+}
+
+/* ================================================================== */
+/* 收获弹窗                                                            */
+/* ================================================================== */
+
+function lastHarvestEvent() {
+  for (let i = state.events.length - 1; i >= 0; i -= 1) {
+    if (state.events[i].kind === 'harvest-complete') return state.events[i];
+  }
+  return null;
+}
+
+function harvestCol(ps, summary, ai) {
+  const feed = summary.feed;
+  const fields = summary.fields;
+  const breed = summary.breed;
+  const payParts = [];
+  if (feed.paid.food) payParts.push('食物 ' + feed.paid.food);
+  if (feed.paid.grain) payParts.push('谷物 ' + feed.paid.grain);
+  if (feed.paid.veg) payParts.push('蔬菜 ' + feed.paid.veg);
+  const breedParts = [];
+  for (const t of ['sheep', 'boar', 'cattle']) if (breed.bred[t]) breedParts.push(ANIMAL_NAME[t] + ' +' + breed.bred[t]);
+  const lostParts = [];
+  for (const t of ['sheep', 'boar', 'cattle']) if (breed.lost[t]) lostParts.push(ANIMAL_NAME[t] + ' ' + breed.lost[t]);
+  let html = '<div class="harvest-col' + (ai ? ' ai' : '') + '"><h3><span class="dot"></span>' + esc(ps.name) + '</h3><ul>';
+  html += '<li>田地：<b>谷 +' + fields.grain + ' · 菜 +' + fields.veg + '</b></li>';
+  html += '<li>喂养：需 <b>' + feed.required + '</b> 食物' + (payParts.length ? '，支付 ' + payParts.join(' · ') : '，无需支付') + '</li>';
+  if (feed.begging) html += '<li class="bad">乞讨卡 +' + feed.begging + '（终局 -' + (feed.begging * 3) + ' 分）</li>';
+  else html += '<li>乞讨卡：无</li>';
+  if (breedParts.length) html += '<li>繁殖：<b>' + breedParts.join(' · ') + '</b></li>';
+  else html += '<li>繁殖：没有可繁殖的动物</li>';
+  if (lostParts.length) html += '<li class="bad">放不下：' + lostParts.join(' · ') + '</li>';
+  html += '</ul></div>';
+  return html;
+}
+
+function showHarvest() {
+  const ev = lastHarvestEvent();
+  if (!ev) { scheduleAI(); return; }
+  const summary = ev.summary;
+  byId('harvestTitle').textContent = '第 ' + ev.round + ' 回合收获';
+  byId('harvestSub').textContent = '三个步骤已经自动结算：先收田地，再用食物或谷物蔬菜喂养家庭，最后繁殖动物。';
+  byId('harvestGrid').innerHTML = summary.players.map((row) =>
+    harvestCol(state.players[row.player], row, row.player === 1)).join('');
+  byId('harvestOverlay').hidden = false;
+  render();
+  byId('harvestOverlay').scrollTop = 0;
+  byId('harvestNext').focus({ preventScroll: true });
+}
+
+/* ================================================================== */
+/* 终局计分                                                            */
+/* ================================================================== */
+
+const SCORE_ROWS = [
+  { key: 'fields', label: '田地' },
+  { key: 'pastures', label: '牧场' },
+  { key: 'grain', label: '谷物' },
+  { key: 'vegetables', label: '蔬菜' },
+  { key: 'sheep', label: '羊' },
+  { key: 'boar', label: '野猪' },
+  { key: 'cattle', label: '牛' },
+  { key: 'unusedSpaces', label: '未使用空间' },
+  { key: 'fencedStables', label: '围栏马厩' },
+  { key: 'rooms', label: '房间' },
+  { key: 'family', label: '家庭成员' },
+  { key: 'begging', label: '乞讨卡' },
+  { key: 'cards', label: '卡片（大设施）' },
+  { key: 'unspentResources', label: '未花资源' }
+];
+
+function scoreDetailText(key, row) {
+  const d = row.details;
+  switch (key) {
+    case 'fields': return d.fields.count + ' 块';
+    case 'pastures': return d.pastures.count + ' 块';
+    case 'grain': return d.grain.count + ' 粒';
+    case 'vegetables': return d.vegetables.count + ' 个';
+    case 'sheep': return d.sheep.count + ' 只';
+    case 'boar': return d.boar.count + ' 只';
+    case 'cattle': return d.cattle.count + ' 头';
+    case 'unusedSpaces': return d.unusedSpaces.count + ' 格';
+    case 'fencedStables': return d.fencedStables.count + ' 个';
+    case 'rooms': {
+      const total = d.rooms.wooden + d.rooms.clay + d.rooms.stone;
+      return HOUSE_TAG[d.rooms.material] + ' ' + total + ' 间';
+    }
+    case 'family': return d.family.count + ' 人';
+    case 'begging': return d.begging.count + ' 张';
+    case 'cards': return d.cards.improvements.length ? 'VP ' + d.cards.points : '无';
+    case 'unspentResources': return '不计分';
+    default: return '';
+  }
+}
+
+function scoreCell(row, key) {
+  const pts = row.categories[key];
+  const cls = pts > 0 ? 'pos' : (pts < 0 ? 'neg' : '');
+  return '<div class="cell p ' + cls + '"><b>' + signed(pts) + '</b><span>' + esc(scoreDetailText(key, row)) + '</span></div>';
+}
+
+function showResult() {
+  if (!state) return;
+  const sc = score(state);
+  const p0 = sc.players[0];
+  const p1 = sc.players[1];
+  const draw = sc.winner.length > 1;
+  const win = sc.winner.indexOf(0) !== -1;
+  byId('resultTitle').textContent = draw ? '平局' : (win ? '你赢了' : 'AI 农夫获胜');
+  byId('resultSub').textContent = '第 ' + state.round + ' 回合结束 · 共完成 ' + state.harvestsDone.length + ' 次收获 · 终局分 ' +
+    p0.total + ' : ' + p1.total;
+  let html = '<div class="th cell cat">计分类别</div><div class="th p">你</div><div class="th p">AI</div>';
+  for (const rowDef of SCORE_ROWS) {
+    html += '<div class="cell cat">' + rowDef.label + '</div>';
+    html += scoreCell(p0, rowDef.key);
+    html += scoreCell(p1, rowDef.key);
+  }
+  html += '<div class="cell cat total">总分</div>' +
+    '<div class="cell p total"><b>' + p0.total + '</b></div>' +
+    '<div class="cell p total"><b>' + p1.total + '</b></div>';
+  byId('scoreTable').innerHTML = html;
+
+  const imps = [];
+  for (let i = 0; i < 2; i += 1) {
+    const p = sc.players[i];
+    if (p.details.cards.improvements.length) {
+      imps.push('<span class="imp-chip">' + esc(p.name) + '：' +
+        p.details.cards.improvements.map((id) => esc(MAJOR_IMPROVEMENTS[id].name) + ' +' + MAJOR_IMPROVEMENTS[id].vp).join('、') + '</span>');
+    }
+  }
+  byId('improvementList').innerHTML = imps.length ? imps.join('') : '<span class="empty">双方都没有购买大设施。</span>';
+  byId('resultNote').innerHTML = '胜者：<b>' + sc.winner.map((i) => esc(state.players[i].name)).join('、') +
+    '</b> · 状态摘要 ' + hashState(state) + ' · 第 ' + state.round + ' 回合';
+  byId('resultOverlay').hidden = false;
+  render();
+  const overlay = byId('resultOverlay');
+  overlay.scrollTop = 0;
+  if (byId('resultTitle').focus) { byId('resultTitle').setAttribute('tabindex', '-1'); byId('resultTitle').focus({ preventScroll: true }); }
+}
+
+/* ================================================================== */
+/* 事件绑定                                                            */
+/* ================================================================== */
+
+byId('stages').addEventListener('click', (event) => {
+  const btn = event.target.closest('button[data-space]');
+  if (!btn || btn.disabled) return;
+  chooseSpace(btn.getAttribute('data-space'));
+});
+
+byId('stageRail').addEventListener('click', (event) => {
+  const chip = event.target.closest('[data-goto]');
+  if (!chip) return;
+  const n = Number(chip.getAttribute('data-goto'));
+  const all = [...byId('stages').querySelectorAll('details')];
+  all.forEach((d) => { d.open = Number(d.dataset.stage) === n; });
+  const det = byId('stages').querySelector('details[data-stage="' + n + '"]');
+  if (det) {
+    try { det.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) { /* optional */ }
+  }
+});
+
+byId('stages').addEventListener('toggle', (event) => {
+  const det = event.target;
+  if (!det || det.tagName !== 'DETAILS' || !isMobile() || !det.open) return;
+  const all = [...byId('stages').querySelectorAll('details')];
+  for (const other of all) if (other !== det) other.open = false;
+}, true);
+
+byId('farm').addEventListener('click', (event) => {
+  const cell = event.target.closest('[data-cell]');
+  if (!cell) return;
+  chooseCell(Number(cell.getAttribute('data-cell')));
+});
+
+byId('cancelPlace').addEventListener('click', () => {
+  pending = null;
+  render();
+});
+
+byId('sheetBody').addEventListener('click', (event) => {
+  const opt = event.target.closest('[data-opt]');
+  if (!opt) return;
+  const idx = Number(opt.getAttribute('data-opt'));
+  const item = sheetActions[idx];
+  if (!item) return;
+  hideSheet();
+  applyChosen(item.action);
+});
+byId('sheetClose').addEventListener('click', hideSheet);
+byId('sheetCancel').addEventListener('click', hideSheet);
+byId('sheetOverlay').addEventListener('click', (event) => {
+  if (event.target === byId('sheetOverlay')) hideSheet();
+});
+
+byId('harvestNext').addEventListener('click', () => {
+  byId('harvestOverlay').hidden = true;
+  render();
+  if (state.phase === 'game-over') showResult();
+  else scheduleAI();
+});
+
+byId('closeResult').addEventListener('click', () => {
+  byId('resultOverlay').hidden = true;
+  render();
+});
+byId('playAgain').addEventListener('click', () => {
+  newGame((state ? state.seed : seed) + 7919);
+});
+
+byId('restartBtn').addEventListener('click', () => {
+  newGame(state ? state.seed : seed);
+});
+byId('demoBtn').addEventListener('click', () => {
+  if (demoMode) {
+    demoMode = false;
+    clearTimers();
+    byId('demoBtn').setAttribute('aria-pressed', 'false');
+    byId('demoBtn').textContent = 'AI 演示';
+    render();
+    scheduleAI();
+  } else {
+    startDemo();
+  }
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape') return;
+  if (!byId('sheetOverlay').hidden) { hideSheet(); return; }
+  if (!byId('harvestOverlay').hidden) { byId('harvestOverlay').hidden = true; render(); scheduleAI(); return; }
+  if (!byId('resultOverlay').hidden) { byId('resultOverlay').hidden = true; render(); return; }
+  if (pending) { pending = null; render(); }
+});
+
+window.addEventListener('resize', () => {
+  if (!state) return;
+  openCurrentStage();
+  render();
+});
+
+/* ================================================================== */
+/* 测试 / 调试钩子（只读或直接调用引擎，不改规则）                      */
+/* ================================================================== */
+
+window.__agricola = {
+  engine: { createGame, legalActions, applyAction, score, scorePlayer, currentPlayer, computePastures, chooseGreedyAction, hashState },
+  state: () => state,
+  legal: () => (state ? legalActions(state) : []),
+  apply: (action) => { applyChosen(action); },
+  chooseSpace: (id) => { chooseSpace(id); },
+  chooseCell: (i) => { chooseCell(i); },
+  hideSheet: () => hideSheet(),
+  render: () => render(),
+  dismissHarvest: () => { byId('harvestOverlay').hidden = true; render(); scheduleAI(); },
+  dismissResult: () => { byId('resultOverlay').hidden = true; render(); },
+  newGame: (s) => newGame(s === undefined ? seed : s),
+  setAIDelay: (ms) => { aiDelay = Math.max(0, Number(ms) || 0); },
+  demo: () => startDemo(),
+  get demoMode() { return demoMode; },
+  get pending() { return pending; }
+};
+
+buildResGrid();
+buildStageRail();
+buildStages();
+newGame(DEFAULT_SEED);
+</script>
+</body>
+</html>

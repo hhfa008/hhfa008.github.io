@@ -280,7 +280,6 @@ canvas{display:block;width:100%;height:auto;aspect-ratio:1/1;border-radius:14px;
 <script src="../../shared/sfx.js"></script>
 <script src="./data.js"></script>
 <script src="./engine.js"></script>
-<script src="../app/online-bridge.js"></script>
 <script>
 (function () {
   'use strict';
@@ -300,6 +299,7 @@ canvas{display:block;width:100%;height:auto;aspect-ratio:1/1;border-radius:14px;
   var pending = -1;
   var hover = -1;
   var online = null;
+  var onlinePoll = null;
   var recorded = false;
   var token = 0;
   var canvas, ctx;
@@ -317,19 +317,26 @@ canvas{display:block;width:100%;height:auto;aspect-ratio:1/1;border-radius:14px;
     $('recW').textContent = r.w; $('recL').textContent = r.l; $('recD').textContent = r.d;
   }
 
-  function isOnline() { return mode === 'online' && online && online.view(); }
-  function curState() { return isOnline() ? online.view().state : game; }
+  function isOnline() { return !!(online && online.ready); }
+  function curState() { return isOnline() ? online.view.state : game; }
+  function onlineTurnSeat() {
+    var st = online && online.view && online.view.state;
+    return st && st.current === WHITE ? 1 : 0;
+  }
   function myTurn() {
-    if (isOnline()) return online.isMyTurn();
+    if (isOnline()) {
+      var v = online.view;
+      return !!(v && v.you != null && v.state && !v.state.over && onlineTurnSeat() === v.you);
+    }
     if (mode === 'local') return !game.over;
     return !game.over && !thinking && game.current === BLACK;
   }
   function playerName(p) {
     var st = curState();
     if (isOnline()) {
-      var v = online.view();
-      var seat = v && v.players ? v.players[p === BLACK ? 0 : 1] : null;
-      return seat ? seat.nickname : (p === BLACK ? '黑方' : '白方');
+      var v = online.view;
+      var seat = v && v.seats ? v.seats[p === BLACK ? 0 : 1] : null;
+      return seat ? seat.name : (p === BLACK ? '黑方' : '白方');
     }
     return st && st.players ? st.players[p === BLACK ? 0 : 1].name : (p === BLACK ? '黑方' : '白方');
   }
@@ -347,16 +354,17 @@ canvas{display:block;width:100%;height:auto;aspect-ratio:1/1;border-radius:14px;
     var st = curState();
     if (!st) { setStatus('等待联机同步…', '正在读取房间状态', 'b'); return; }
     if (isOnline()) {
-      var v = online.view();
+      var v = online.view;
       if (st.over) {
         var win = st.winner === BLACK ? playerName(BLACK) : st.winner === WHITE ? playerName(WHITE) : '双方';
         setStatus(st.winner ? win + ' 获胜' : '平局', '联机对局结束 · 可等待房主重赛', st.winner === WHITE ? 'w' : 'b');
-      } else if (v && v.canMove) {
+      } else if (v && v.you != null && (v.legalActions || []).length) {
         setStatus('轮到你落子', '你是 ' + playerName(st.current) + ' · 点击交叉点', st.current === WHITE ? 'w' : 'b');
       } else {
         var who = playerName(st.current);
-        var controlled = v && v.currentControlledByAI;
-        setStatus('等待 ' + who + (controlled ? '（AI 托管）' : '') + ' 落子', '房间 ' + (v.roomCode || '') + ' · 自动同步', st.current === WHITE ? 'w' : 'b');
+        var curSeat = v && v.seats ? v.seats[st.current === WHITE ? 1 : 0] : null;
+        var controlled = curSeat && curSeat.ai && v.started;
+        setStatus('等待 ' + who + (controlled ? '（AI 托管）' : '') + ' 落子', '房间 ' + (v.code || '') + ' · 自动同步', st.current === WHITE ? 'w' : 'b');
       }
       return;
     }
@@ -385,14 +393,14 @@ canvas{display:block;width:100%;height:auto;aspect-ratio:1/1;border-radius:14px;
     $('undoBtn').disabled = isOnline() || !st.history || !st.history.length || thinking;
     $('newBtn').disabled = isOnline();
     $('restartBtn').hidden = !isOnline();
-    $('restartBtn').disabled = !(online && online.view() && online.view().canRestart);
+    $('restartBtn').disabled = !(online && online.view && online.view.canRestart);
     var onlineBar = $('onlineBar');
     if (isOnline()) {
       onlineBar.hidden = false;
-      var v = online.view();
-      $('roomCode').textContent = v.roomCode || v.roomId || '——';
-      $('roomSeats').textContent = (v.players || []).map(function (p) { return p.nickname + (p.ai ? '（AI）' : '') + (p.takeover ? '（托管）' : ''); }).join(' vs ');
-      $('roomState').textContent = v.status === 'finished' ? '已结束' : (v.started ? '进行中' : '等待开局');
+      var v = online.view;
+      $('roomCode').textContent = v.code || v.roomId || '——';
+      $('roomSeats').textContent = (v.seats || []).map(function (s) { return s.name + (s.ai ? '（AI）' : ''); }).join(' vs ');
+      $('roomState').textContent = v.over ? '已结束' : (v.started ? '进行中' : '等待开局');
     } else {
       onlineBar.hidden = true;
     }
@@ -619,12 +627,12 @@ canvas{display:block;width:100%;height:auto;aspect-ratio:1/1;border-radius:14px;
     var st = curState();
     if (!st || st.over) return;
     if (isOnline()) {
-      if (!online.isMyTurn()) return;
+      if (!myTurn()) return;
       var rect0 = canvas.getBoundingClientRect();
       var sc0 = view.size / rect0.width;
       var i0 = hitTest((e.clientX - rect0.left) * sc0, (e.clientY - rect0.top) * sc0);
       if (i0 < 0 || st.board[i0] !== EMPTY) return;
-      online.send({ type: 'place', row: (i0 / N) | 0, col: i0 % N });
+      onlineSend({ type: 'place', row: (i0 / N) | 0, col: i0 % N });
       return;
     }
     if (mode === 'ai' && (thinking || st.current !== BLACK)) return;
@@ -654,8 +662,28 @@ canvas{display:block;width:100%;height:auto;aspect-ratio:1/1;border-radius:14px;
   }
 
   /* ---------------------------------------------------------------- online */
+  function onlineApi(method, route, body) {
+    return fetch(route, {
+      method: method,
+      headers: { 'content-type': 'application/json' },
+      body: body == null ? undefined : JSON.stringify(body)
+    }).then(function (res) {
+      return res.text().then(function (text) {
+        var data = null;
+        try { data = JSON.parse(text); } catch (err) { data = null; }
+        return { status: res.status, body: data };
+      });
+    });
+  }
+  function onlineRoomBase() { return '/api/rooms/' + encodeURIComponent(online.roomId); }
+  function onlineRoomPath() {
+    return onlineRoomBase() + '?session=' + encodeURIComponent(online.session) +
+      '&playerId=' + encodeURIComponent(online.playerId);
+  }
   function applyOnlineView(v) {
     if (!v) return;
+    online.view = v;
+    online.ready = true;
     mode = 'online';
     if (v.state) {
       // Keep the engine-shaped public state; local game is ignored in this mode.
@@ -663,16 +691,72 @@ canvas{display:block;width:100%;height:auto;aspect-ratio:1/1;border-radius:14px;
     }
     updateAll();
   }
-  function initOnline() {
-    if (!window.OnlineBridge || !OnlineBridge.active) return;
-    online = OnlineBridge;
-    mode = 'online';
-    OnlineBridge.onChange(function (v) { applyOnlineView(v); });
-    OnlineBridge.onError(function (err) {
-      setStatus('联机连接中断', (err && err.message) || '正在重试', 'b');
+  function onlineReconnect() {
+    return onlineApi('POST', onlineRoomBase() + '/reconnect', {
+      session: online.session, playerId: online.playerId
+    }).then(function (res) {
+      if (res.status === 200) applyOnlineView(res.body);
+      return res;
     });
-    $('restartBtn').addEventListener('click', function () { if (online && online.restart) online.restart(); });
+  }
+  function refreshOnline() {
+    if (!online || document.hidden) return;
+    onlineApi('GET', onlineRoomPath()).then(function (res) {
+      if (res.status === 401) { onlineReconnect(); return; }
+      if (res.status !== 200) {
+        if (res.status === 403 || res.status === 404) {
+          toast('联机房间已失效，返回大厅重新加入。');
+          if (onlinePoll) clearInterval(onlinePoll);
+        }
+        return;
+      }
+      applyOnlineView(res.body);
+    }).catch(function () {});
+  }
+  function onlineSend(action) {
+    if (!online || !myTurn()) return;
+    onlineApi('POST', onlineRoomBase() + '/actions', {
+      session: online.session, playerId: online.playerId, action: action
+    }).then(function (res) {
+      if (res.status !== 200) {
+        toast((res.body && res.body.error && res.body.error.message) || '落子被拒绝。');
+        refreshOnline();
+        return;
+      }
+      sound('click');
+      applyOnlineView(res.body);
+    }).catch(function () {
+      toast('网络中断，正在重连…');
+    });
+  }
+  function onlineRestart() {
+    if (!online || !online.view || !online.view.canRestart) return;
+    onlineApi('POST', onlineRoomBase() + '/restart', {
+      session: online.session, playerId: online.playerId
+    }).then(function (res) {
+      if (res.status === 200) applyOnlineView(res.body);
+      else toast('重开失败。');
+    });
+  }
+  function initOnline() {
+    var params = new URLSearchParams(location.search);
+    var room = params.get('online');
+    if (!room) return;
+    online = {
+      roomId: room,
+      session: params.get('session') || '',
+      playerId: params.get('player') || params.get('playerId') || '',
+      view: null,
+      ready: false
+    };
+    mode = 'online';
+    document.body.setAttribute('data-view', 'online');
     setStatus('正在进入房间…', '读取会话与座位', 'b');
+    refreshOnline();
+    onlinePoll = setInterval(refreshOnline, 900);
+    $('restartBtn').addEventListener('click', onlineRestart);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) refreshOnline(); });
+    window.addEventListener('beforeunload', function () { if (onlinePoll) clearInterval(onlinePoll); });
   }
 
   /* ------------------------------------------------------------------ bind */
@@ -712,8 +796,8 @@ canvas{display:block;width:100%;height:auto;aspect-ratio:1/1;border-radius:14px;
     window.addEventListener('orientationchange', function () { setTimeout(fitCanvas, 140); });
     renderRecord();
     fitCanvas();
-    initOnline();
     updateAll();
+    initOnline();
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);

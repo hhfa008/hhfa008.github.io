@@ -117,6 +117,41 @@
     } catch (e) {}
   }
 
+  // One AudioContext + one limiter master for the whole page, shared with
+  // games/shared/arcade/music.js. Whichever script initialises first creates
+  // the bus and publishes it on globalThis.__arcadeAudioBus; the other adopts
+  // it. Each layer keeps its own sub-gain so their volumes stay independent.
+  // Keep these limiter settings in sync with LIMITER in arcade/music.js: that
+  // file measures this node's makeup gain at runtime to calibrate BGM level.
+  var BUS_KEY = '__arcadeAudioBus';
+
+  function sharedBus(AC) {
+    var existing = root[BUS_KEY];
+    if (existing && existing.ctx && existing.ctx.state !== 'closed') return existing;
+    var c;
+    try { c = new AC(); } catch (e) { return null; }
+    var busMaster = c.createGain();
+    busMaster.gain.value = 1;
+    var comp = null;
+    try {
+      comp = c.createDynamicsCompressor();
+      comp.threshold.value = -10;
+      comp.knee.value = 6;
+      comp.ratio.value = 12;
+      comp.attack.value = 0.003;
+      comp.release.value = 0.25;
+    } catch (e) { comp = null; }
+    if (comp) {
+      busMaster.connect(comp);
+      comp.connect(c.destination);
+    } else {
+      busMaster.connect(c.destination);
+    }
+    var created = { ctx: c, master: busMaster };
+    root[BUS_KEY] = created;
+    return created;
+  }
+
   function ensureContext() {
     if (ctx && ctx.state === 'closed') {
       ctx = null;
@@ -127,10 +162,12 @@
     var AC = root.AudioContext || root.webkitAudioContext;
     if (!AC) return null;
     try {
-      ctx = new AC();
+      var bus = sharedBus(AC);
+      if (!bus) return null;
+      ctx = bus.ctx;
       master = ctx.createGain();
       master.gain.value = muted ? 0 : volume;
-      master.connect(ctx.destination);
+      master.connect(bus.master);
       armStateChange(ctx);
       if (ctx.state === 'running') flushPending();
     } catch (e) {

@@ -13,6 +13,7 @@
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <title>斗地主 · 精品桌游 · 叫分抢地主</title>
+<link rel="stylesheet" href="../../shared/poker-ui.css">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23201612'/%3E%3Crect x='8' y='8' width='48' height='48' rx='9' fill='%23f2e6cf'/%3E%3Cpath d='M32 17c-4 5-10 7-10 13a5 5 0 0 0 9 2c0 3-1 5-3 7h8c-2-2-3-4-3-7a5 5 0 0 0 9-2c0-6-6-8-10-13z' fill='%23a92b25'/%3E%3C/svg%3E">
 <style>
   :root{
@@ -122,6 +123,7 @@
   /* hand fan */
   .hand-shell{position:relative;margin-top:9px;padding:10px 6px 4px;border-radius:18px;border:1px solid var(--line);background:linear-gradient(165deg,rgba(48,31,26,.94),rgba(25,16,14,.96));box-shadow:0 14px 30px rgba(0,0,0,.36),inset 0 1px 0 rgba(255,255,255,.08)}
   .hand{position:relative;height:112px;overflow:hidden;isolation:isolate}
+  .hand.pui-hand{align-items:flex-end;padding-bottom:4px}
   .hand-empty{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-size:13px;font-weight:700}
   .card{position:absolute;bottom:4px;border-radius:6px;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:manipulation;overflow:hidden;background:linear-gradient(150deg,var(--paper),var(--paper2) 80%),var(--art-paper) center/cover no-repeat;border:1px solid rgba(126,88,46,.55);box-shadow:0 4px 0 rgba(78,52,24,.5),0 8px 14px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.8);transition:transform .12s ease,box-shadow .12s ease}
   .card .corner{position:absolute;display:flex;flex-direction:column;align-items:center;gap:1px;line-height:1;font-family:var(--font-serif);font-weight:700}
@@ -140,7 +142,7 @@
   .card.black .bigpip{color:#1d1712}
   .card .court{position:absolute;left:21%;right:21%;top:15%;bottom:15%;color:#8d2b22;fill:#8d2b22}
   .card .court svg{width:100%;height:100%}
-  .card .joker-label{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);writing-mode:vertical-rl;font-family:var(--font-serif);font-weight:700;font-size:calc(var(--rank-font) * 1.25);letter-spacing:.08em}
+  .card .joker-label{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);writing-mode:vertical-rl;font-family:var(--font-serif);font-weight:700;font-size:calc(var(--rank-font) * 1.05);letter-spacing:.02em}
   .card.red .joker-label{color:#b53026}
   .card.black .joker-label{color:#1d1712}
   .card.sel{transform:translateY(-16px);box-shadow:0 8px 0 rgba(78,52,24,.5),0 16px 22px rgba(0,0,0,.4),inset 0 0 0 2px rgba(114,211,162,.7)}
@@ -148,7 +150,7 @@
   .card.back-card{background:linear-gradient(150deg,#7c2a24,#4c1614),var(--art-back) center/cover no-repeat;border-color:rgba(230,189,118,.55)}
 
   /* bid + actions */
-  .bid-panel{margin-top:9px;padding:10px 11px;border-radius:15px;border:1px solid var(--line2);background:linear-gradient(160deg,rgba(230,189,118,.14),var(--panel));box-shadow:0 10px 22px rgba(0,0,0,.28)}
+  .bid-panel{position:absolute;left:50%;top:62%;transform:translate(-50%,-50%);width:min(88%,336px);z-index:4;padding:10px 11px;border-radius:15px;border:1px solid var(--line2);background:linear-gradient(160deg,#3a2621,var(--panel));box-shadow:0 10px 22px rgba(0,0,0,.28)}
   .bid-panel[hidden]{display:none}
   .bid-title{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12.5px;color:var(--muted);font-weight:800;margin-bottom:7px}
   .bid-title b{color:var(--gold2)}
@@ -162,6 +164,7 @@
   .controls button{min-height:52px;min-width:44px;border-radius:13px;border:1px solid var(--line);background:linear-gradient(160deg,var(--panel2),var(--panel));font-size:13.5px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 0 rgba(0,0,0,.22);touch-action:manipulation;padding:0 5px}
   .controls button:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(0,0,0,.22)}
   .controls button.primary{background:linear-gradient(160deg,var(--gold),#bd8f45);color:#2a1608;border-color:transparent}
+  .controls button.primary:disabled{background:linear-gradient(160deg,var(--panel2),var(--panel));color:var(--muted);border-color:var(--line)}
   .controls button:disabled{opacity:.42;cursor:default;transform:none}
 
   .options{display:flex;flex-wrap:wrap;gap:8px;margin-top:9px;align-items:center}
@@ -233,8 +236,6 @@ body{padding-bottom:env(safe-area-inset-bottom)}
   </header>
 
   <main>
-<div style="display:flex;justify-content:flex-end;margin:0 0 8px"><button class="primary" type="button" style="min-height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(255,255,255,.18);background:linear-gradient(160deg,#e8c07a,#bd8f45);color:#241708;font-weight:800;font-size:14px" onclick="var b=document.getElementById('newBtn');if(b)b.click();">新对局</button></div>
-
     <section class="table" aria-label="斗地主牌桌">
       <div class="seat seat-left" id="seat2">
         <div class="avatar" aria-hidden="true">左</div>
@@ -256,6 +257,15 @@ body{padding-bottom:env(safe-area-inset-bottom)}
         <div class="last-play" id="lastPlay"></div>
         <div class="play-note" id="playNote"></div>
       </div>
+      <section class="bid-panel" id="bidPanel" hidden>
+        <div class="bid-title"><span>叫分抢地主</span><b id="bidHint">最高 0 分</b></div>
+        <div class="bid-grid">
+          <button type="button" data-bid="0">不叫</button>
+          <button type="button" data-bid="1">1 分</button>
+          <button type="button" data-bid="2">2 分</button>
+          <button type="button" data-bid="3" class="hot">3 分</button>
+        </div>
+      </section>
     </section>
 
     <div class="status" aria-live="polite"><i class="dot" id="turnDot"></i><span id="statusText">正在发牌…</span></div>
@@ -273,21 +283,11 @@ body{padding-bottom:env(safe-area-inset-bottom)}
       <div class="hand" id="hand"></div>
     </section>
 
-    <section class="bid-panel" id="bidPanel" hidden>
-      <div class="bid-title"><span>叫分抢地主</span><b id="bidHint">最高 0 分</b></div>
-      <div class="bid-grid">
-        <button type="button" data-bid="0">不叫</button>
-        <button type="button" data-bid="1">1 分</button>
-        <button type="button" data-bid="2">2 分</button>
-        <button type="button" data-bid="3" class="hot">3 分</button>
-      </div>
-    </section>
-
     <section class="controls" aria-label="出牌操作">
       <button id="playBtn" class="primary" type="button">出牌</button>
       <button id="passBtn" type="button">不要</button>
       <button id="hintBtn" type="button">提示</button>
-      <button id="newBtn" type="button">重开</button>
+      <button id="newBtn" type="button">新对局</button>
     </section>
 
     <div class="options">
@@ -331,6 +331,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
 <script src="../../shared/shuffle.js"></script>
 <script src="../../shared/sfx.js"></script>
 <script src="../../shared/store.js"></script>
+<script src="../../shared/poker-ui.js"></script>
 <script src="engine.js"></script>
 <script src="data.js"></script>
 <script>
@@ -354,6 +355,8 @@ body{padding-bottom:env(safe-area-inset-bottom)}
   var soundOn = true;
   var selected = {};
   var hintIds = {};
+  var handLayout = null;
+  var dealPending = false;
   var aiTimer = null;
   var lastSeed = 0;
 
@@ -402,52 +405,102 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     if (r === E.BIG_JOKER) return '大';
     return E.rankName(r);
   }
-  function cardFaceHtml(card) {
+  function cardFaceInner(card) {
     var r = card.r;
-    var red = E.isRed(card);
-    var cls = 'card ' + (red ? 'red' : 'black');
     var corner = function (pos) {
       return '<span class="corner ' + pos + '"><b>' + escapeHtml(rankText(r)) + '</b>' +
         (r >= 16 ? '<svg viewBox="0 0 24 24"><path d="' + JOKER_CROWN + '"/></svg>' : suitSvg(card.s)) + '</span>';
     };
     if (r >= 16) {
-      return '<div class="' + cls + ' joker" data-id="' + escapeHtml(card.id) + '" tabindex="0" aria-label="' +
-        (r === E.BIG_JOKER ? '大王' : '小王') + '"><span class="joker-label">' +
-        (r === E.BIG_JOKER ? '大王' : '小王') + '</span>' + corner('tl') + corner('br') + '</div>';
+      return '<span class="joker-label">' +
+        (r === E.BIG_JOKER ? '大王' : '小王') + '</span>' + corner('tl') + corner('br');
     }
     if (r >= 11) {
       var letter = E.rankName(r);
-      return '<div class="' + cls + ' court-card" data-id="' + escapeHtml(card.id) + '" tabindex="0" aria-label="' +
-        escapeHtml(E.cardLabel(card)) + '">' + corner('tl') + corner('br') +
+      return corner('tl') + corner('br') +
         '<span class="court"><svg viewBox="0 0 60 80" aria-hidden="true">' +
         '<rect x="4" y="4" width="52" height="72" rx="5" fill="none" stroke="currentColor" stroke-width="1.4"/>' +
         '<path d="M30 16c5 0 8 3 8 7s-3 6-8 6-8-2-8-6 3-7 8-7zM16 62c0-9 6-15 14-15s14 6 14 15z" fill="currentColor" opacity=".9"/>' +
         '<path d="M30 34c-7 0-12 5-12 12h24c0-7-5-12-12-12z" fill="currentColor" opacity=".55"/>' +
         '<text x="30" y="44" text-anchor="middle" font-family="Songti SC,serif" font-size="18" font-weight="700" fill="#f6efdf">' + letter + '</text>' +
-        '</svg></span></div>';
+        '</svg></span>';
     }
     if (r === 14) {
-      return '<div class="' + cls + '" data-id="' + escapeHtml(card.id) + '" tabindex="0" aria-label="' +
-        escapeHtml(E.cardLabel(card)) + '">' + corner('tl') + corner('br') +
-        '<svg class="bigpip" viewBox="0 0 24 24" aria-hidden="true"><path d="' + SUIT_PATH[card.s] + '"/></svg></div>';
+      return corner('tl') + corner('br') +
+        '<svg class="bigpip" viewBox="0 0 24 24" aria-hidden="true"><path d="' + SUIT_PATH[card.s] + '"/></svg>';
     }
     var pips = pipPositions(r).map(function (pos) {
       return '<svg style="left:' + pos[0] + ';top:' + pos[1] + ';transform:translate(-50%,-50%)" viewBox="0 0 24 24" aria-hidden="true"><path d="' + SUIT_PATH[card.s] + '"/></svg>';
     }).join('');
-    return '<div class="' + cls + '" data-id="' + escapeHtml(card.id) + '" tabindex="0" aria-label="' +
-      escapeHtml(E.cardLabel(card)) + '">' + corner('tl') + corner('br') +
-      '<span class="pips">' + pips + '</span></div>';
+    return corner('tl') + corner('br') + '<span class="pips">' + pips + '</span>';
+  }
+  function cardFaceClass(card) {
+    return 'card ' + (E.isRed(card) ? 'red' : 'black') +
+      (card.r >= 16 ? ' joker' : (card.r >= 11 && card.r <= 13 ? ' court-card' : ''));
+  }
+  function cardFaceHtml(card) {
+    return '<div class="' + cardFaceClass(card) + '" data-id="' + escapeHtml(card.id) + '" tabindex="0" aria-label="' +
+      escapeHtml(E.cardLabel(card)) + '">' + cardFaceInner(card) + '</div>';
+  }
+  function createHandCard(card) {
+    var UI = window.PokerUI;
+    if (UI && UI.createCard) {
+      var el = UI.createCard(card, {
+        face: 'custom',
+        faceHtml: cardFaceInner(card),
+        size: 'md',
+        className: cardFaceClass(card),
+        tag: 'div',
+        ariaLabel: E.cardLabel(card),
+        dataset: { id: card.id },
+        attrs: { tabindex: '0' }
+      });
+      if (el) return el;
+    }
+    var holder = document.createElement('div');
+    holder.innerHTML = cardFaceHtml(card);
+    return holder.firstChild;
+  }
+  function miniCardInner(card) {
+    var r = card.r;
+    if (r >= 16) {
+      return '<span class="mini-rank">' + (r === E.BIG_JOKER ? '大王' : '小王') + '</span>';
+    }
+    return '<span class="mini-rank">' + escapeHtml(E.rankName(r)) +
+      '</span><svg class="mini-pip" viewBox="0 0 24 24" aria-hidden="true"><path d="' +
+      SUIT_PATH[card.s] + '"/></svg>';
   }
   function miniCardHtml(card) {
     if (!card) return '';
-    var r = card.r;
-    if (r >= 16) {
-      return '<span class="mini-card joker ' + (E.isRed(card) ? 'red' : 'black') + '"><span class="mini-rank">' +
-        (r === E.BIG_JOKER ? '大王' : '小王') + '</span></span>';
+    return '<span class="mini-card ' + (card.r >= 16 ? 'joker ' : '') +
+      (E.isRed(card) ? 'red' : 'black') + '">' + miniCardInner(card) + '</span>';
+  }
+  function makeMiniCard(card, hidden) {
+    var UI = window.PokerUI;
+    if (hidden) {
+      if (UI && UI.createCardBack) {
+        var back = UI.createCardBack({ size: 'mini', className: 'mini-card back', ariaLabel: '隐藏的牌' });
+        if (back) { back.innerHTML = ''; return back; }
+      }
+      var backEl = document.createElement('span');
+      backEl.className = 'mini-card back';
+      return backEl;
     }
-    return '<span class="mini-card ' + (E.isRed(card) ? 'red' : 'black') + '"><span class="mini-rank">' +
-      escapeHtml(E.rankName(r)) + '</span><svg class="mini-pip" viewBox="0 0 24 24" aria-hidden="true"><path d="' +
-      SUIT_PATH[card.s] + '"/></svg></span>';
+    if (!card) return null;
+    var cls = 'mini-card ' + (card.r >= 16 ? 'joker ' : '') + (E.isRed(card) ? 'red' : 'black');
+    if (UI && UI.createCard) {
+      var el = UI.createCard(card, {
+        face: 'custom',
+        faceHtml: miniCardInner(card),
+        size: 'mini',
+        className: cls,
+        ariaLabel: E.cardLabel(card)
+      });
+      if (el) return el;
+    }
+    var holder = document.createElement('div');
+    holder.innerHTML = miniCardHtml(card);
+    return holder.firstChild;
   }
   function miniCardById(id) {
     var all = E.makeDeck();
@@ -465,23 +518,38 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     var cards = handEl.querySelectorAll('.card');
     var n = cards.length;
     if (!n) return;
+    if (handLayout) { handLayout.destroy(); handLayout = null; }
     var W = handEl.clientWidth || 320;
-    var cw = Math.floor(W / (n * 0.62 + 0.38));
+    /* 17 张牌一行只能压成 30px 窄条，改为两行摆放，保证花色可读 */
+    var rows = n > 10 ? 2 : 1;
+    var per = Math.ceil(n / rows);
+    var cw = Math.floor(W / (per * 0.62 + 0.38));
     cw = Math.max(30, Math.min(48, cw));
-    var step = n > 1 ? Math.min(cw * 0.72, (W - cw) / (n - 1)) : 0;
-    if (step < 12) step = Math.max(10, (W - cw) / (n - 1));
-    var total = cw + step * (n - 1);
-    var offset = Math.max(0, (W - total) / 2);
+    var cardH = Math.round(cw * 1.42);
+    var rowGap = 6;
     for (var i = 0; i < n; i++) {
       var el = cards[i];
       el.style.width = cw + 'px';
-      el.style.height = Math.round(cw * 1.42) + 'px';
-      el.style.left = Math.round(offset + i * step) + 'px';
+      el.style.height = cardH + 'px';
+      el.style.bottom = '4px';
       el.style.setProperty('--rank-font', Math.max(12, Math.round(cw * 0.36)) + 'px');
       el.style.setProperty('--pip-font', Math.max(10, Math.round(cw * 0.22)) + 'px');
-      el.style.zIndex = String(i + 1);
     }
-    handEl.style.height = Math.round(cw * 1.42 + 22) + 'px';
+    for (var r = 0; r < rows; r++) {
+      var rowStart = r * per;
+      var rowCount = Math.min(per, n - rowStart);
+      if (rowCount <= 0) continue;
+      var step = rowCount > 1 ? Math.min(cw * 0.72, (W - cw) / (rowCount - 1)) : 0;
+      var total = cw + step * (rowCount - 1);
+      var offset = Math.max(0, (W - total) / 2);
+      for (var j = 0; j < rowCount; j++) {
+        var card = cards[rowStart + j];
+        card.style.left = Math.round(offset + j * step) + 'px';
+        card.style.bottom = (4 + (rows - 1 - r) * (cardH + rowGap)) + 'px';
+        card.style.zIndex = String((r + 1) * 100 + j);
+      }
+    }
+    handEl.style.height = (rows > 1 ? cardH * 2 + rowGap + 22 : cardH + 22) + 'px';
   }
 
   function renderHand() {
@@ -489,23 +557,29 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     var cards = handCards();
     var sorted = E.sortHand(cards);
     selected = {};
+    if (handLayout) { handLayout.destroy(); handLayout = null; }
     handEl.innerHTML = '';
     if (!sorted.length) {
       var empty = document.createElement('div');
       empty.className = 'hand-empty';
       empty.textContent = state && state.phase === 'over' ? '手牌已出完' : '等待发牌';
       handEl.appendChild(empty);
+      handEl.style.height = '';
       return;
     }
     for (var i = 0; i < sorted.length; i++) {
-      var html = cardFaceHtml(sorted[i]);
-      var holder = document.createElement('div');
-      holder.innerHTML = html;
-      var el = holder.firstChild;
+      var el = createHandCard(sorted[i]);
+      if (!el) continue;
       if (hintIds[sorted[i].id]) el.classList.add('hinted');
       handEl.appendChild(el);
     }
     layoutHand();
+    if (dealPending) {
+      dealPending = false;
+      if (window.PokerUI && window.PokerUI.deal) {
+        window.PokerUI.deal(handEl, { from: $('bottomCards'), stagger: 16, duration: 220, sfx: false });
+      }
+    }
   }
 
   function toggleCard(el) {
@@ -551,6 +625,15 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     $('turnDot').className = 'dot' + (kind === 'over' ? ' over' : kind === 'wait' ? ' wait' : '');
   }
 
+  function fillMiniCards(host, cards, hidden) {
+    host.innerHTML = '';
+    var list = cards || [];
+    for (var i = 0; i < list.length; i++) {
+      var el = hidden ? makeMiniCard(null, true) : makeMiniCard(list[i], false);
+      if (el) host.appendChild(el);
+    }
+  }
+
   function renderTable() {
     var phase = state.phase;
     for (var s = 1; s <= 2; s++) {
@@ -564,7 +647,8 @@ body{padding-bottom:env(safe-area-inset-bottom)}
       countEl.textContent = state.hands[s].length + ' 张';
       stripEl.classList.toggle('is-turn', phase !== 'over' && E.currentSeat(state) === s);
     }
-    $('meName').textContent = seatOfPlayerName(0) + '（你）';
+    var meLabel = seatOfPlayerName(0);
+    $('meName').textContent = meLabel === '你' ? meLabel : meLabel + '（你）';
     $('meCount').textContent = String(state.hands[0].length);
     $('meBid').textContent = state.bid ? String(state.bid) : '—';
     $('meRole').textContent = roleOf(0);
@@ -574,15 +658,15 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     // Bottom cards: backs until the hand is over, then identities.
     var bottom = $('bottomCards');
     if (phase === 'over') {
-      bottom.innerHTML = state.bottom.map(miniCardHtml).join('');
+      fillMiniCards(bottom, state.bottom, false);
     } else {
-      bottom.innerHTML = '<span class="mini-card back"></span><span class="mini-card back"></span><span class="mini-card back"></span>';
+      fillMiniCards(bottom, [0, 0, 0], true);
     }
 
     var lp = $('lastPlay');
     var note = $('playNote');
     if (state.lastPlay) {
-      lp.innerHTML = state.lastPlay.cards.map(miniCardHtml).join('');
+      fillMiniCards(lp, state.lastPlay.cards, false);
       note.innerHTML = '<span class="play-label">' + escapeHtml(state.players[state.lastPlayer].name) + ' · ' +
         escapeHtml(E.typeName(state.lastPlay.type)) + '</span>';
     } else if (state.history.length) {
@@ -706,6 +790,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     }
     clearSelection();
     clearHint();
+    if (before === 'bid' && state.phase === 'play') dealPending = true;
     render();
     if (state.phase === 'over') { renderBanner(); return; }
     if (before === 'bid' && state.phase === 'play') beep('deal');
@@ -730,8 +815,10 @@ body{padding-bottom:env(safe-area-inset-bottom)}
 
   function humanBid(score) {
     if (!state || state.phase !== 'bid') return;
+    var before = state.phase;
     var res = E.applyAction(state, { k: 'bid', score: score }, 0);
     if (res.ok) beep('click');
+    if (res.ok && before === 'bid' && state.phase === 'play') dealPending = true;
     afterHumanAction(res);
   }
 
@@ -781,6 +868,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     state = E.createGame({ seed: lastSeed, names: ['你', 'AI 右', 'AI 左'], human: [true, false, false] });
     selected = {};
     hintIds = {};
+    dealPending = true;
     render();
     beep('deal');
     if (E.currentSeat(state) !== 0) schedulePump(650);
@@ -798,6 +886,22 @@ body{padding-bottom:env(safe-area-inset-bottom)}
 
   function seatLabel(seat) {
     return seat === 0 ? '你' : seatOfPlayerName(seat);
+  }
+
+  function migrateBackStacks() {
+    var UI = window.PokerUI;
+    if (!UI || !UI.createCardBack) return;
+    ['seat1Stack', 'seat2Stack'].forEach(function (id) {
+      var host = $(id);
+      if (!host) return;
+      host.innerHTML = '';
+      for (var i = 0; i < 3; i++) {
+        var back = UI.createCardBack({ size: 'mini', tag: 'i', ariaLabel: '隐藏的牌' });
+        if (!back) continue;
+        back.innerHTML = '';
+        host.appendChild(back);
+      }
+    });
   }
 
   function wire() {
@@ -843,6 +947,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
   var savedSound = window.Store ? window.Store.get('doudizhu-premium:sound', '1') : '1';
   soundOn = savedSound !== '0';
 
+  migrateBackStacks();
   wire();
   var segInit = document.querySelectorAll('.seg button');
   for (var k = 0; k < segInit.length; k++) {

@@ -46,9 +46,14 @@ button,input,select{font:inherit}
 .seats{display:grid;gap:8px;margin:8px 0 12px}
 .seat{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--line);border-radius:11px;padding:9px 11px;background:rgba(16,10,6,.5);font-size:13px;min-height:46px}
 .seat span{min-width:0;overflow-wrap:anywhere}
+.seat.you{border-color:var(--gold);box-shadow:inset 0 0 0 1px var(--gold)}
 .seat .tag{font-size:11.5px;letter-spacing:.1em;color:var(--dim);border:1px solid var(--line);border-radius:999px;padding:2px 8px;white-space:nowrap}
 .seat .tag.ai{color:var(--gold2)}
+.seat .tag.you{color:#2a1808;background:var(--gold2);border-color:transparent}
 .invite-box{border:1px dashed rgba(216,178,106,.4);border-radius:10px;padding:9px 11px;margin:8px 0 12px;font-family:var(--mono);font-size:12px;color:#e6d2b4;overflow-wrap:anywhere;line-height:1.6}
+.move-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:7px;margin:8px 0 12px}
+.move-grid button{min-height:40px;border-radius:9px;border:1px solid var(--line);background:rgba(16,10,6,.55);color:#f0dcb8;font-family:var(--mono);font-size:12.5px;cursor:pointer}
+.move-grid button:hover{border-color:var(--gold);color:var(--ink)}
 .board-list{display:grid;gap:7px;margin:6px 0 0;padding:0;list-style:none;max-height:300px;overflow-y:auto;overscroll-behavior:contain}
 .board-list li{border:1px solid rgba(216,178,106,.14);border-radius:10px;padding:8px 10px;font-size:12.5px;color:#d8c4a6;line-height:1.55;background:rgba(16,10,6,.4)}
 .board-list b{color:var(--gold2);font-weight:600}
@@ -127,13 +132,21 @@ button,input,select{font:inherit}
       <h3>当前房间</h3>
       <div class="room-code"><span>房间码</span><b id="roomCode">—</b><span class="tag" id="roomStatus">等待中</span></div>
       <div class="seats" id="seats"></div>
-      <div class="invite-box" id="inviteBox" hidden>邀请 token：<span id="inviteToken">—</span></div>
+      <div class="invite-box" id="inviteBox" hidden>邀请 token：<span id="inviteToken">—</span><div id="inviteLink"></div></div>
       <div class="form-actions">
         <button class="btn primary" id="startBtn" type="button">开始对局</button>
-        <button class="btn" id="enterBtn" type="button">进入棋盘</button>
+        <a class="btn" id="enterBtn" href="index.html" hidden>进入棋盘</a>
         <button class="btn ghost" id="inviteBtn" type="button">刷新邀请</button>
+        <button class="btn" id="restartBtn" type="button" hidden>再来一局</button>
         <button class="btn ghost" id="leaveBtn" type="button">离开房间</button>
+        <button class="btn ghost" id="closeBtn" type="button">关闭房间</button>
       </div>
+      <div id="moveSection" hidden>
+        <h3>轮到你 · 点选着法</h3>
+        <div class="move-grid" id="moveGrid"></div>
+      </div>
+      <h3>对局记录</h3>
+      <ul class="board-list" id="history"><li class="empty-note">还没有着法。</li></ul>
       <p class="status" id="roomStatusText"></p>
     </div>
   </section>
@@ -157,19 +170,459 @@ button,input,select{font:inherit}
 </main>
 <footer class="foot">
   <span>中国象棋 · 联机房间 · 无外部请求</span>
-  <span><a href="index.html">棋盘</a> · <a href="../index.html">桌游大厅</a></span>
+  <span><a href="index.html">棋盘</a> · <a href="../spectate.html">围观</a> · <a href="../index.html">桌游大厅</a></span>
 </footer>
 
 <script>
-window.__LOBBY_CONFIG = {
-  game: 'xiangqi',
-  lastKey: 'xiangqi-online-last-v1',
-  nameKey: 'xiangqi-name',
-  enterUrl: 'index.html',
-  seatNames: ['红方', '黑方'],
-  names: ['楚河', '汉界', '飞象', '跳马', '当头炮', '过河卒', '屏风马', '仙人指路']
-};
+(function () {
+  'use strict';
+  var GAME = 'xiangqi-premium';
+  var LAST_KEY = 'xiangqi-online-last-v2';
+  var NAME_KEY = 'xiangqi-name';
+  var $ = function (id) { return document.getElementById(id); };
+  var params = new URLSearchParams(location.search);
+
+  var state = {
+    roomId: params.get('room') || '',
+    session: params.get('session') || '',
+    playerId: params.get('player') || params.get('playerId') || '',
+    nickname: '',
+    invite: params.get('code') || '',
+    view: null,
+    timer: null,
+    lastVersion: -1
+  };
+
+  function esc(v) {
+    return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+    });
+  }
+  function newPlayerId() {
+    return 'xq-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
+  }
+  function storageGet(key) { try { return localStorage.getItem(key) || ''; } catch (e) { return ''; } }
+  function storageSet(key, value) { try { localStorage.setItem(key, value); } catch (e) {} }
+  function storageDel(key) { try { localStorage.removeItem(key); } catch (e) {} }
+  function errText(r) { return (r && r.body && r.body.error && r.body.error.message) || ('HTTP ' + (r && r.status)); }
+
+  function remember() {
+    var last = {
+      roomId: state.roomId, session: state.session, playerId: state.playerId,
+      nickname: state.nickname, invite: state.invite
+    };
+    storageSet(LAST_KEY, JSON.stringify(last));
+    try {
+      var url = location.pathname + '?room=' + encodeURIComponent(state.roomId) +
+        '&session=' + encodeURIComponent(state.session) +
+        '&player=' + encodeURIComponent(state.playerId);
+      history.replaceState(null, '', url);
+    } catch (e) {}
+  }
+  function forget() {
+    state.roomId = ''; state.session = ''; state.playerId = ''; state.invite = ''; state.view = null;
+    storageDel(LAST_KEY);
+  }
+  function restore() {
+    try {
+      var last = JSON.parse(storageGet(LAST_KEY) || '{}');
+      if (!state.roomId && last.roomId) state.roomId = last.roomId;
+      if (!state.session && last.session) state.session = last.session;
+      if (!state.playerId && last.playerId) state.playerId = last.playerId;
+      if (!state.invite && last.invite) state.invite = last.invite;
+    } catch (e) {}
+  }
+
+  function api(method, route, body) {
+    return fetch(route, {
+      method: method,
+      headers: { 'content-type': 'application/json' },
+      body: body == null ? undefined : JSON.stringify(body)
+    }).then(function (res) {
+      return res.text().then(function (text) {
+        var data = null;
+        try { data = JSON.parse(text); } catch (e) { data = null; }
+        return { status: res.status, body: data };
+      });
+    });
+  }
+  function roomRoute(suffix) {
+    return '/api/rooms/' + encodeURIComponent(state.roomId) + (suffix || '');
+  }
+
+  function saveNick(input) {
+    var value = ($(input).value || '').trim();
+    if (value) { state.nickname = value.slice(0, 24); storageSet(NAME_KEY, state.nickname); }
+    return state.nickname || '棋手-' + Math.random().toString(36).slice(2, 5);
+  }
+
+  function showLobby() {
+    $('roomPanel').hidden = true;
+    $('createSection').hidden = false;
+    $('joinSection').hidden = false;
+  }
+  function showRoom() {
+    $('roomPanel').hidden = false;
+    $('createSection').hidden = true;
+    $('joinSection').hidden = true;
+    $('reconnectSection').hidden = true;
+  }
+
+  function isHost(view) {
+    return !!((view && view.seats) || []).some(function (seat) { return seat.isYou && seat.isHost; });
+  }
+
+  function seatLabel(index) { return index === 0 ? '红方' : '黑方'; }
+  function sqLabel(sq) {
+    if (typeof sq !== 'number' || sq < 0) return '?';
+    return (sq % 9 + 1) + '路' + (Math.floor(sq / 9) + 1) + '线';
+  }
+
+  function renderSeats(view) {
+    var you = view.you;
+    $('seats').innerHTML = (view.seats || []).map(function (seat) {
+      var tags = [];
+      if (seat.isHost) tags.push('<span class="tag">房主</span>');
+      if (seat.index === you) tags.push('<span class="tag you">你</span>');
+      if (seat.ai) tags.push('<span class="tag ai">AI</span>');
+      else if (seat.connected === false) tags.push('<span class="tag">离线</span>');
+      var cls = 'seat' + (seat.index === you ? ' you' : '');
+      return '<div class="' + cls + '"><span><b>' + esc(seat.name || seatLabel(seat.index)) + '</b> · ' +
+        seatLabel(seat.index) + '</span><span style="display:flex;gap:5px">' + tags.join('') + '</span></div>';
+    }).join('');
+  }
+
+  function actionText(action) {
+    if (!action) return '';
+    if (action.type === 'resign') return '认输';
+    if (typeof action.from === 'number' && typeof action.to === 'number') {
+      return sqLabel(action.from) + ' → ' + sqLabel(action.to);
+    }
+    return action.type || '';
+  }
+
+  function renderHistory(view) {
+    var entries = (view.history || []).slice(-16);
+    if (!entries.length) {
+      $('history').innerHTML = '<li class="empty-note">还没有着法。</li>';
+      return;
+    }
+    $('history').innerHTML = entries.map(function (entry) {
+      var who = entry.seat == null ? '' : ('座位 ' + (entry.seat + 1) + ' · ');
+      if (entry.type === 'start') return '<li><b>对局开始</b></li>';
+      if (entry.type === 'restart') return '<li><b>房主重开</b></li>';
+      if (entry.type === 'over') return '<li><b>对局结束</b>' + (entry.winnerSeat == null ? '' : ' · 座位 ' + (entry.winnerSeat + 1) + ' 获胜') + '</li>';
+      if (entry.type === 'human' || entry.type === 'ai') {
+        return '<li>' + esc(who) + (entry.type === 'ai' ? 'AI ' : '') + esc(actionText(entry.action)) + '</li>';
+      }
+      return '<li>' + esc(entry.type || '事件') + '</li>';
+    }).join('');
+  }
+
+  function renderMoves(view) {
+    var moves = view.legalActions || [];
+    var mine = view.you != null && moves.length > 0;
+    $('moveSection').hidden = !mine;
+    $('moveGrid').innerHTML = mine ? moves.map(function (move, i) {
+      var label = move.notation || (sqLabel(move.from) + ' → ' + sqLabel(move.to));
+      return '<button type="button" data-move="' + i + '">' + esc(label) + '</button>';
+    }).join('') : '';
+    Array.prototype.forEach.call($('moveGrid').querySelectorAll('button'), function (btn) {
+      btn.addEventListener('click', function () {
+        var move = moves[Number(btn.getAttribute('data-move'))];
+        if (!move) return;
+        sendAction({ type: 'move', code: move.code, from: move.from, to: move.to });
+      });
+    });
+  }
+
+  function resultReason(result) {
+    var why = { checkmate: '将死', stalemate: '困毙', draw60: '连续 60 回合无吃子', repetition: '同一局面出现三次', resign: '认输' };
+    return why[result.reason] || '对局结束';
+  }
+
+  function renderStatus(view) {
+    var status = $('roomStatus');
+    var text = $('roomStatusText');
+    status.textContent = view.started ? (view.over ? '已结束' : '进行中') : '等待中';
+    $('roomCode').textContent = view.code || state.roomId.slice(0, 8);
+    var host = isHost(view);
+    $('startBtn').hidden = !!view.started;
+    $('startBtn').disabled = !host;
+    $('inviteBtn').disabled = !host;
+    $('closeBtn').disabled = !host;
+    $('enterBtn').hidden = !view.started;
+    if (view.started) {
+      $('enterBtn').href = 'index.html?online=' + encodeURIComponent(state.roomId) +
+        '&session=' + encodeURIComponent(state.session) +
+        '&player=' + encodeURIComponent(state.playerId);
+    }
+    var showInvite = host && (state.invite || view.inviteCode);
+    $('inviteBox').hidden = !showInvite;
+    if (showInvite) {
+      var token = state.invite || view.inviteCode;
+      $('inviteToken').textContent = token;
+      $('inviteLink').textContent = location.origin + '/boardgame/' + GAME + '/online.html?room=' +
+        encodeURIComponent(state.roomId) + '&code=' + encodeURIComponent(token);
+    }
+    $('restartBtn').hidden = !view.over;
+    $('restartBtn').disabled = !view.canRestart;
+    $('leaveBtn').hidden = !view.started && host;
+
+    if (!view.started) {
+      text.textContent = host ? '等待对手加入，或直接开始由 AI 补位。' : '等待房主开始对局。';
+    } else if (view.over) {
+      var result = view.result || {};
+      text.textContent = (result.winnerName || ('座位 ' + ((result.winnerSeat || 0) + 1))) + ' 获胜 · ' +
+        resultReason(result) + ' · ' + (result.turns == null ? '' : result.turns + ' 手');
+      text.className = 'status ok';
+    } else if (view.you == null) {
+      text.textContent = '你已不在座位上，可离开房间。';
+    } else if ((view.legalActions || []).length) {
+      text.textContent = '轮到你，点选上面的着法。';
+      text.className = 'status ok';
+    } else {
+      var turnSeat = view.state && view.state.turnSeat;
+      text.textContent = turnSeat == null ? '同步中…' : ('等待座位 ' + (turnSeat + 1) + ' 行棋…');
+      text.className = 'status';
+    }
+  }
+
+  function render(view) {
+    state.view = view;
+    if (view.inviteCode) state.invite = view.inviteCode;
+    showRoom();
+    renderSeats(view);
+    renderMoves(view);
+    renderHistory(view);
+    renderStatus(view);
+    if (state.session) remember();
+  }
+
+  function applyResponse(r) {
+    if (!r || r.status >= 400) throw new Error(errText(r));
+    if (!r.body || !r.body.roomId) throw new Error('房间响应无效。');
+    if (r.body.session) state.session = r.body.session;
+    if (r.body.playerId) state.playerId = r.body.playerId;
+    state.lastVersion = r.body.stateVersion;
+    render(r.body);
+    return r.body;
+  }
+
+  function reconnectSession() {
+    return api('POST', roomRoute('/reconnect'), { session: state.session, playerId: state.playerId })
+      .then(function (r) {
+        if (r.status >= 400) throw new Error(errText(r));
+        return r;
+      });
+  }
+
+  function fetchRoom() {
+    if (!state.roomId || !state.session) return Promise.resolve(null);
+    return api('GET', roomRoute('') + '?session=' + encodeURIComponent(state.session) +
+      '&playerId=' + encodeURIComponent(state.playerId))
+      .then(function (r) {
+        if (r.status === 401) return reconnectSession();
+        if (r.status >= 400) throw new Error(errText(r));
+        return r;
+      })
+      .then(function (r) {
+        if (!r) return null;
+        if (r.body && r.body.stateVersion === state.lastVersion) {
+          renderSeats(r.body);
+          renderStatus(r.body);
+          return r.body;
+        }
+        return applyResponse(r);
+      })
+      .catch(function (e) {
+        stopPoll();
+        $('reconnectSection').hidden = false;
+        $('reconnectText').textContent = '上次房间无法连接：' + e.message;
+        showLobby();
+        return null;
+      });
+  }
+
+  function stopPoll() {
+    if (state.timer) { clearInterval(state.timer); state.timer = null; }
+  }
+  function poll() {
+    stopPoll();
+    fetchRoom();
+    state.timer = setInterval(fetchRoom, 900);
+  }
+
+  function sendAction(action) {
+    if (!state.session) return;
+    $('roomStatusText').textContent = '正在提交着法…';
+    api('POST', roomRoute('/actions'), { session: state.session, playerId: state.playerId, action: action })
+      .then(function (r) {
+        if (r.status >= 400) throw new Error(errText(r));
+        var view = applyResponse(r);
+        if (view && view.over) stopPoll();
+      })
+      .catch(function (e) {
+        $('roomStatusText').textContent = e.message;
+        $('roomStatusText').className = 'status error';
+      });
+  }
+
+  function createRoom() {
+    var nickname = saveNick('createName');
+    $('createStatus').textContent = '';
+    var payload = { playerId: newPlayerId(), nickname: nickname, visibility: $('createVisibility').value };
+    if ($('createPassword').value) payload.password = $('createPassword').value;
+    api('POST', '/api/rooms', payload).then(function (r) {
+      if (!r.body || !r.body.roomId) throw new Error(errText(r));
+      state.roomId = r.body.roomId;
+      state.session = r.body.session;
+      state.playerId = r.body.playerId;
+      state.nickname = nickname;
+      state.invite = r.body.inviteToken || '';
+      state.lastVersion = r.body.stateVersion;
+      render(r.body);
+      poll();
+    }).catch(function (e) { $('createStatus').textContent = e.message; $('createStatus').className = 'status error'; });
+  }
+
+  function normalizeJoinKey(key) {
+    if (!key) return '';
+    if (/^https?:\/\//i.test(key)) {
+      try {
+        var link = new URL(key);
+        var room = link.searchParams.get('room') || '';
+        var code = link.searchParams.get('code') || '';
+        if (code && !$('joinInvite').value) $('joinInvite').value = code;
+        return room;
+      } catch (e) { return key; }
+    }
+    return key;
+  }
+
+  function joinRoom() {
+    var nickname = saveNick('joinName');
+    var key = normalizeJoinKey(($('joinCode').value || '').trim());
+    if (!key) { $('joinStatus').textContent = '请填写房间码 / 房间 ID。'; $('joinStatus').className = 'status error'; return; }
+    var payload = { playerId: newPlayerId(), nickname: nickname };
+    if ($('joinInvite').value) payload.inviteCode = $('joinInvite').value.trim();
+    if ($('joinPassword').value) payload.password = $('joinPassword').value;
+    $('joinStatus').textContent = '';
+    api('POST', '/api/rooms/' + encodeURIComponent(key) + '/join', payload).then(function (r) {
+      if (!r.body || !r.body.session) throw new Error(errText(r));
+      state.roomId = r.body.roomId;
+      state.session = r.body.session;
+      state.playerId = r.body.playerId;
+      state.nickname = nickname;
+      state.lastVersion = r.body.stateVersion;
+      render(r.body);
+      poll();
+    }).catch(function (e) { $('joinStatus').textContent = e.message; $('joinStatus').className = 'status error'; });
+  }
+
+  function startMatch() {
+    api('POST', roomRoute('/start'), { session: state.session, playerId: state.playerId }).then(function (r) {
+      if (r.status >= 400) throw new Error(errText(r));
+      var view = applyResponse(r);
+      if (view && view.over) stopPoll();
+    }).catch(function (e) { $('roomStatusText').textContent = e.message; $('roomStatusText').className = 'status error'; });
+  }
+
+  function restartMatch() {
+    api('POST', roomRoute('/restart'), { session: state.session, playerId: state.playerId }).then(function (r) {
+      if (r.status >= 400) throw new Error(errText(r));
+      state.lastVersion = -1;
+      applyResponse(r);
+      poll();
+    }).catch(function (e) { $('roomStatusText').textContent = e.message; $('roomStatusText').className = 'status error'; });
+  }
+
+  function refreshInvite() {
+    api('POST', roomRoute('/invite'), { session: state.session, playerId: state.playerId }).then(function (r) {
+      if (r.status >= 400) throw new Error(errText(r));
+      state.invite = r.body.inviteToken || r.body.inviteCode || '';
+      if (state.view) renderStatus(state.view);
+      var link = $('inviteLink').textContent;
+      if (link && navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(link).then(function () {
+          $('roomStatusText').textContent = '邀请链接已复制。';
+          $('roomStatusText').className = 'status ok';
+        }).catch(function () {});
+      }
+    }).catch(function (e) { $('roomStatusText').textContent = e.message; $('roomStatusText').className = 'status error'; });
+  }
+
+  function leaveRoom() {
+    api('POST', roomRoute('/leave'), { session: state.session, playerId: state.playerId })
+      .catch(function () {})
+      .then(function () {
+        stopPoll();
+        forget();
+        showLobby();
+        $('roomStatusText').textContent = '';
+      });
+  }
+
+  function closeRoom() {
+    api('DELETE', roomRoute('') + '?session=' + encodeURIComponent(state.session) +
+      '&playerId=' + encodeURIComponent(state.playerId))
+      .then(function (r) {
+        if (r.status >= 400) throw new Error(errText(r));
+        stopPoll();
+        forget();
+        showLobby();
+      })
+      .catch(function (e) { $('roomStatusText').textContent = e.message; $('roomStatusText').className = 'status error'; });
+  }
+
+  function manualReconnect() {
+    $('reconnectText').textContent = '正在重连…';
+    reconnectSession().then(function (r) {
+      state.lastVersion = r.body && r.body.stateVersion;
+      if (r.body) render(r.body);
+      poll();
+    }).catch(function (e) {
+      $('reconnectText').textContent = '重连失败：' + e.message;
+    });
+  }
+
+  function loadLeaderboard() {
+    api('GET', '/api/leaderboard?game=' + encodeURIComponent(GAME)).then(function (r) {
+      var entries = (r.body && r.body.entries) || [];
+      $('leaderboard').innerHTML = entries.length ? entries.slice(0, 10).map(function (e) {
+        return '<li><b>' + esc(e.name) + '</b>' + (e.ai ? ' · AI' : '') + ' · ' +
+          (e.winner ? '胜' : (e.score == null ? '—' : e.score + ' 子')) + '</li>';
+      }).join('') : '<li class="empty-note">还没有结算记录。</li>';
+    }).catch(function () {});
+  }
+
+  $('createBtn').addEventListener('click', createRoom);
+  $('joinBtn').addEventListener('click', joinRoom);
+  $('startBtn').addEventListener('click', startMatch);
+  $('restartBtn').addEventListener('click', restartMatch);
+  $('inviteBtn').addEventListener('click', refreshInvite);
+  $('leaveBtn').addEventListener('click', leaveRoom);
+  $('closeBtn').addEventListener('click', closeRoom);
+  $('reconnectBtn').addEventListener('click', manualReconnect);
+  $('forgetBtn').addEventListener('click', function () {
+    stopPoll();
+    forget();
+    $('reconnectSection').hidden = true;
+    showLobby();
+  });
+
+  try { $('createName').value = storageGet(NAME_KEY) || ''; $('joinName').value = storageGet(NAME_KEY) || ''; } catch (e) {}
+  restore();
+  if (state.roomId && state.session) {
+    state.nickname = storageGet(NAME_KEY) || '';
+    showRoom();
+    poll();
+  } else {
+    showLobby();
+  }
+  loadLeaderboard();
+  setInterval(loadLeaderboard, 5000);
+})();
 </script>
-<script src="../../shared/online-lobby.js"></script>
 </body>
 </html>

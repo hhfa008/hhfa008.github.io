@@ -206,7 +206,7 @@ h2 { margin: 0 0 6px; font-family: var(--font-serif); font-weight: 700; font-siz
       <div class="section" id="joinSection">
         <h3>加入房间</h3>
         <div class="form-row">
-          <div class="field"><label for="joinCode">房间码</label><input id="joinCode" maxlength="12" autocomplete="off" placeholder="例如 AB3K9Q"></div>
+          <div class="field"><label for="joinCode">房间码</label><input id="joinCode" maxlength="64" autocomplete="off" placeholder="例如 AB3K9Q"></div>
           <div class="field"><label for="joinName">昵称</label><input id="joinName" maxlength="24" autocomplete="nickname" placeholder="你的昵称"></div>
         </div>
         <div class="form-row">
@@ -245,6 +245,7 @@ h2 { margin: 0 0 6px; font-family: var(--font-serif); font-weight: 700; font-siz
     </aside>
   </div>
 </main>
+<p style="text-align:center;margin:14px 0"><a href="../spectate.html" style="display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:44px;padding:0 14px;border-radius:12px;border:1px solid currentColor;color:inherit;font-size:13px;text-decoration:none">围观其他对局</a></p>
 
 <footer class="footer">
   <span>JAIPUR · 斋普尔 · 本地 Node 联机服务器</span>
@@ -262,6 +263,9 @@ h2 { margin: 0 0 6px; font-family: var(--font-serif); font-weight: 700; font-siz
   function writeJSON(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch (err) {} }
   function removeKey(key) { try { localStorage.removeItem(key); } catch (err) {} }
   function randomName() { return '玩家' + String(Math.floor(1000 + Math.random() * 9000)); }
+  function newPlayerId() {
+    return 'jp-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+  }
   function savedName() { try { return localStorage.getItem('jaipur-online-name') || ''; } catch (err) { return ''; } }
   function rememberName(name) { try { localStorage.setItem('jaipur-online-name', name); } catch (err) {} }
   function status(text, kind) {
@@ -301,52 +305,83 @@ h2 { margin: 0 0 6px; font-family: var(--font-serif); font-weight: 700; font-siz
       localStorage.setItem('jaipur-online-session-' + view.roomId, session);
       localStorage.setItem('jaipur-online-player-' + view.roomId, playerId);
     } catch (err) {}
-    writeJSON(LAST_KEY, { room: view.roomId, session: session, playerId: playerId, roomCode: view.roomCode, at: Date.now() });
+    writeJSON(LAST_KEY, {
+      room: view.roomId, session: session, playerId: playerId,
+      roomCode: view.code || '', at: Date.now()
+    });
   }
   function gameUrl() {
     return 'index.html?online=' + encodeURIComponent(state.room) +
       '&session=' + encodeURIComponent(state.session) + '&player=' + encodeURIComponent(state.playerId);
   }
-  function seatLabel(seat) {
+  function isHostView(view) {
+    return !!(view && view.seats && view.seats.some(function (seat) { return seat.isYou && seat.isHost; }));
+  }
+  function seatLabel(seat, takeover) {
     if (seat.ai) return 'AI';
-    if (seat.takeover) return 'AI 托管';
-    return seat.current ? '行动中' : '在线';
+    if (takeover.indexOf(seat.index) !== -1) return 'AI 托管';
+    if (seat.isYou) return '你';
+    return seat.connected === false ? '离线' : '在线';
+  }
+  function roomPhase(view) {
+    if (!view) return '等待开始';
+    if (view.over) return '已结束';
+    return view.started ? '进行中' : '等待开始';
   }
   function renderRoom() {
     var view = state.view;
     if (!view) return;
+    var takeover = view.takeover || [];
+    var seats = view.seats || [];
     $('roomPanel').hidden = false;
-    $('roomCode').textContent = view.roomCode;
-    $('roomStatus').textContent = view.status === 'finished' ? '已结束' : view.started ? '进行中' : '等待开始';
-    var humans = view.seats.filter(function (s) { return !s.ai; }).length;
-    $('roomSeats').textContent = humans + ' / 2';
-    $('startBtn').hidden = !view.canStart;
-    $('startBtn').disabled = !view.canStart;
+    $('roomCode').textContent = view.code || '—';
+    $('roomStatus').textContent = roomPhase(view);
+    var humans = seats.filter(function (s) { return !s.ai; }).length;
+    $('roomSeats').textContent = humans + ' / ' + seats.length;
+    var host = isHostView(view);
+    $('startBtn').hidden = !!view.started;
+    $('startBtn').disabled = !!view.started || !host;
     $('enterBtn').hidden = !view.started;
-    $('seatList').innerHTML = view.seats.map(function (seat) {
-      return '<div class="seat' + (seat.ai ? ' ai' : '') + (seat.current ? ' current' : '') + '">' +
+    $('seatList').innerHTML = seats.map(function (seat) {
+      return '<div class="seat' + (seat.ai ? ' ai' : '') + (seat.isYou ? ' current' : '') + '">' +
         '<span class="idx">' + (seat.index + 1) + '</span>' +
-        '<span class="who">' + (seat.ai ? 'AI · 座位 ' + (seat.index + 1) : escapeHtml(seat.nickname || seat.playerId || '玩家')) + '</span>' +
-        '<span class="tag">' + seatLabel(seat) + '</span></div>';
+        '<span class="who">' + escapeHtml(seat.name || ('座位 ' + (seat.index + 1))) + '</span>' +
+        '<span class="tag">' + escapeHtml(seatLabel(seat, takeover)) + '</span></div>';
     }).join('');
     $('roomStatusLine').textContent = view.started
       ? '对局进行中；空位和超时座位由 AI 操作。'
-      : '房间码 ' + view.inviteCode + (view.inviteToken ? ' · 邀请 token ' + view.inviteToken : '') + '；房主可带一个 AI 直接开始。';
+      : '房间码 ' + (view.code || '—') + (view.inviteCode ? ' · 邀请 token ' + view.inviteCode : '') + '；房主可带一个 AI 直接开始。';
     if (view.started && !state.redirecting) {
       state.redirecting = true;
       roomStatus('对局已开始，正在进入牌桌…', 'ok');
       setTimeout(function () { location.href = gameUrl(); }, 350);
     }
   }
+  async function fetchRoom() {
+    if (!state.room || !state.session) return null;
+    try {
+      return await api('GET', '/api/rooms/' + encodeURIComponent(state.room) +
+        '?session=' + encodeURIComponent(state.session) + '&playerId=' + encodeURIComponent(state.playerId));
+    } catch (err) {
+      if (err.status === 401) {
+        var rec = await api('POST', '/api/rooms/' + encodeURIComponent(state.room) + '/reconnect', {
+          session: state.session, playerId: state.playerId
+        });
+        if (rec && rec.ok) return rec;
+      }
+      throw err;
+    }
+  }
   async function refreshRoom() {
     if (!state.room || !state.session) return;
     try {
-      var view = await api('GET', '/api/rooms/' + encodeURIComponent(state.room) +
-        '?session=' + encodeURIComponent(state.session) + '&playerId=' + encodeURIComponent(state.playerId));
-      state.view = view;
-      renderRoom();
+      var view = await fetchRoom();
+      if (view) {
+        saveSession(view, state.session, state.playerId);
+        renderRoom();
+      }
     } catch (err) {
-      if (err.status === 403) {
+      if (err.status === 401 || err.status === 404) {
         roomStatus('会话已失效，请重新加入房间。', 'error');
         removeKey(LAST_KEY);
         $('reconnectSection').hidden = true;
@@ -367,11 +402,10 @@ h2 { margin: 0 0 6px; font-family: var(--font-serif); font-weight: 700; font-siz
         return;
       }
       box.innerHTML = data.entries.map(function (entry, i) {
-        var label = entry.tied ? '平局' : (entry.winnerName || '—');
+        var label = (entry.name || '—') + (entry.ai ? ' · AI' : '');
         return '<div class="entry"><span class="rank">' + (i + 1) + '</span>' +
-          '<span class="who">' + escapeHtml(label) + ' · Seal ' + (entry.seals ? entry.seals.join(':') : '—') +
-          ' · 房间 ' + escapeHtml(entry.roomCode) + '</span>' +
-          '<span class="score">' + (entry.seals ? Math.max(entry.seals[0], entry.seals[1]) : '—') + '</span></div>';
+          '<span class="who">' + escapeHtml(label) + (entry.winner ? ' · 胜' : '') + '</span>' +
+          '<span class="score">' + (entry.score == null ? '—' : entry.score) + '</span></div>';
       }).join('');
     } catch (err) {
       $('leaderboard').innerHTML = '<p class="lede">服务器未启动或结果榜暂不可用。</p>';
@@ -384,15 +418,15 @@ h2 { margin: 0 0 6px; font-family: var(--font-serif); font-weight: 700; font-siz
     try {
       status('创建中…');
       var data = await api('POST', '/api/rooms', {
-        playerId: name,
-        maxPlayers: 2,
+        playerId: newPlayerId(),
+        nickname: name,
         password: password || undefined,
         visibility: $('createVisibility').value
       });
-      saveSession(data, data.playerSession, name);
+      saveSession(data, data.session, data.playerId);
       $('createSection').hidden = true;
       $('joinSection').hidden = true;
-      status('房间已创建。把房间码或邀请 token 发给朋友；也可以直接开始让 AI 补位。', 'ok');
+      status('房间已创建。把房间码或邀请链接发给朋友；也可以直接开始让 AI 补位。', 'ok');
       renderRoom();
       refreshRoom();
       loadLeaderboard();
@@ -401,17 +435,22 @@ h2 { margin: 0 0 6px; font-family: var(--font-serif); font-weight: 700; font-siz
     }
   }
   async function joinRoom() {
-    var code = $('joinCode').value.trim().toUpperCase();
+    var code = ($('joinCode').value || '').trim();
     var name = $('joinName').value.trim() || randomName();
     if (!code) { status('请填写房间码。', 'error'); return; }
+    if (/^[A-Z0-9]{20,}$/i.test(code)) {
+      status('请粘贴房主分享的完整邀请链接，或填写 6 位房间码。', 'error');
+      return;
+    }
     rememberName(name);
-    var body = { playerId: name };
-    if ($('joinInvite').value.trim()) body.inviteCode = $('joinInvite').value.trim();
-    else if ($('joinPassword').value) body.password = $('joinPassword').value;
+    var body = { playerId: newPlayerId(), nickname: name };
+    var invite = $('joinInvite').value.trim();
+    if (invite) body.inviteCode = invite;
+    if ($('joinPassword').value) body.password = $('joinPassword').value;
     try {
       status('加入中…');
       var data = await api('POST', '/api/rooms/' + encodeURIComponent(code) + '/join', body);
-      saveSession(data, data.playerSession, name);
+      saveSession(data, data.session, data.playerId);
       $('createSection').hidden = true;
       $('joinSection').hidden = true;
       status('已加入房间。', 'ok');
@@ -423,7 +462,7 @@ h2 { margin: 0 0 6px; font-family: var(--font-serif); font-weight: 700; font-siz
     }
   }
   async function startRoom() {
-    if (!state.view || !state.view.canStart) return;
+    if (!state.view || state.view.started || !isHostView(state.view)) return;
     try {
       roomStatus('开始中…');
       var data = await api('POST', '/api/rooms/' + encodeURIComponent(state.room) + '/start', {
@@ -437,12 +476,12 @@ h2 { margin: 0 0 6px; font-family: var(--font-serif); font-weight: 700; font-siz
     }
   }
   async function inviteAgain() {
-    if (!state.view || !state.view.isHost) return;
+    if (!state.view || !isHostView(state.view)) return;
     try {
       var data = await api('POST', '/api/rooms/' + encodeURIComponent(state.room) + '/invite', {
         session: state.session, playerId: state.playerId
       });
-      state.view.inviteToken = data.inviteToken;
+      state.view.inviteCode = data.inviteToken || data.inviteCode || state.view.inviteCode;
       renderRoom();
       roomStatus('已刷新邀请 token。', 'ok');
     } catch (err) {
@@ -479,8 +518,9 @@ h2 { margin: 0 0 6px; font-family: var(--font-serif); font-weight: 700; font-siz
     state.session = last.session;
     state.playerId = last.playerId;
     try {
-      var data = await api('GET', '/api/rooms/' + encodeURIComponent(last.room) +
-        '?session=' + encodeURIComponent(last.session) + '&playerId=' + encodeURIComponent(last.playerId));
+      var data = await api('POST', '/api/rooms/' + encodeURIComponent(last.room) + '/reconnect', {
+        session: last.session, playerId: last.playerId
+      });
       saveSession(data, last.session, last.playerId);
       $('createSection').hidden = true;
       $('joinSection').hidden = true;
@@ -500,6 +540,7 @@ h2 { margin: 0 0 6px; font-family: var(--font-serif); font-weight: 700; font-siz
     $('createName').value = name;
     $('joinName').value = name;
     if (params.get('room')) $('joinCode').value = params.get('room');
+    if (params.get('code')) $('joinInvite').value = params.get('code');
     $('createBtn').addEventListener('click', createRoom);
     $('joinBtn').addEventListener('click', joinRoom);
     $('startBtn').addEventListener('click', startRoom);

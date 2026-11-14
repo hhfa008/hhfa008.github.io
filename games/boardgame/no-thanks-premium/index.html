@@ -17,6 +17,7 @@
 <link rel="preload" as="image" href="../../assets/art/premium/no-thanks/chip-coral.webp">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2312171c'/%3E%3Crect x='14' y='10' width='36' height='44' rx='6' fill='%23fff6e8'/%3E%3Ctext x='32' y='41' font-family='Georgia,serif' font-size='26' font-weight='700' text-anchor='middle' fill='%23d8503f'%3E29%3C/text%3E%3C/svg%3E">
 <title>NO THANKS! 不谢 · 精品桌游</title>
+<link rel="stylesheet" href="../../shared/poker-ui.css">
 <style>
   :root{
     --art-felt:url("../../assets/art/premium/no-thanks/table-felt.webp");
@@ -299,6 +300,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
 
 <script src="../../shared/shuffle.js"></script>
 <script src="../../shared/sfx.js"></script>
+<script src="../../shared/poker-ui.js"></script>
 <script src="data.js"></script>
 <script src="engine.js"></script>
 <script>
@@ -416,25 +418,54 @@ body{padding-bottom:env(safe-area-inset-bottom)}
       return;
     }
     slot.className = 'card-slot';
-    var card = el('div', 'numcard');
+    var face = document.createElement('div');
     var tl = el('span', 'corner tl');
     tl.appendChild(document.createTextNode(String(view.current)));
     tl.appendChild(el('i', null, 'NO'));
-    card.appendChild(tl);
+    face.appendChild(tl);
     var br = el('span', 'corner br');
     br.appendChild(document.createTextNode(String(view.current)));
     br.appendChild(el('i', null, 'NO'));
-    card.appendChild(br);
-    card.appendChild(el('span', 'big', String(view.current)));
-    card.appendChild(emblemSvg());
+    face.appendChild(br);
+    face.appendChild(el('span', 'big', String(view.current)));
+    face.appendChild(emblemSvg());
+    var card = window.PokerUI && window.PokerUI.createCard
+      ? window.PokerUI.createCard(view.current, {
+        face: 'custom',
+        faceHtml: face.innerHTML,
+        className: 'numcard',
+        tag: 'div',
+        ariaLabel: String(view.current)
+      })
+      : null;
+    if (!card) {
+      card = el('div', 'numcard');
+      card.innerHTML = face.innerHTML;
+    }
     slot.appendChild(card);
 
     if (view.chipsOnCard > 0) {
-      var stack = el('div', 'chips-on-card');
-      for (var k = 0; k < Math.min(view.chipsOnCard, 14); k++) {
-        var chip = el('span', 'chip');
-        chip.style.animationDelay = (k * 30) + 'ms';
-        stack.appendChild(chip);
+      var stack = window.PokerUI && window.PokerUI.createChipStack
+        ? window.PokerUI.createChipStack({
+          value: view.chipsOnCard,
+          denominations: [1],
+          max: 14,
+          className: 'chips-on-card',
+          label: view.chipsOnCard + ' 枚筹码'
+        })
+        : null;
+      if (stack) {
+        Array.prototype.forEach.call(stack.children, function (chip, k) {
+          chip.classList.add('chip');
+          chip.style.animationDelay = (k * 30) + 'ms';
+        });
+      } else {
+        stack = el('div', 'chips-on-card');
+        for (var k = 0; k < Math.min(view.chipsOnCard, 14); k++) {
+          var chip = el('span', 'chip');
+          chip.style.animationDelay = (k * 30) + 'ms';
+          stack.appendChild(chip);
+        }
       }
       slot.appendChild(stack);
     }
@@ -569,6 +600,16 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     start: start,
     fast: fast
   };
+
+  (function migrateDeckStack() {
+    var host = document.querySelector('.deck-stack');
+    if (!host || !window.PokerUI || !window.PokerUI.createCardBack) return;
+    var back = window.PokerUI.createCardBack({ size: 'mini', tag: 'span', className: 'deck-stack', ariaLabel: '牌堆' });
+    if (!back) return;
+    back.innerHTML = '';
+    back.setAttribute('aria-hidden', 'true');
+    host.replaceWith(back);
+  })();
 
   start();
 

@@ -1,9 +1,11 @@
 /* Arcade shared: reaction-family in-game sprite art.
  *
  * 3 张单物件透明底素材（1024²，四角 alpha=0、中心 alpha=255）：
- *   mole         -> whack / whack-15 / whack-60
- *   target       -> aim-trainer / aim-15 / aim-60
- *   signal-lamp  -> reaction-time / reaction-10 / reaction-20 / reaction-30
+ *   mole         -> whack
+ *   target       -> aim-trainer
+ *   signal-lamp  -> reaction-time
+ *
+ * （尺寸/时长变体已合并为 canonical 的 ?参数，不再单独出页面。）
  *
  * 只负责插 <img>，不碰点击、计时、计分逻辑。素材来源与构建见
  * games/assets/art/arcade/reaction-objects/{sprites.json,build-sprites.py}。
@@ -16,9 +18,9 @@
   'use strict';
   var BASE = '/games/assets/art/arcade/reaction-objects/';
   var KINDS = {
-    mole: 'mole.png',
-    target: 'target.png',
-    lamp: 'signal-lamp.png'
+    mole: 'mole.webp',
+    target: 'target.webp',
+    lamp: 'signal-lamp.webp'
   };
 
   function url(kind) { return BASE + (KINDS[kind] || KINDS.target); }

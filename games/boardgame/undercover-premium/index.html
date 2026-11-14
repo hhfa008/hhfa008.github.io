@@ -453,7 +453,120 @@ h2{margin:0 0 6px;font-family:var(--serif);font-weight:700;font-size:clamp(25px,
 <script src="engine.js"></script>
 <script src="../../shared/sfx.js"></script>
 <script src="../../shared/share.js" data-name-zh="谁是卧底" data-name-en="Undercover" data-name-id="Undercover"></script>
-<script src="../app/online-bridge.js"></script>
+<script>
+/* Inline unified-room bridge: ?online=<roomId>&session=<token>&player=<playerId>.
+ * Uses the shared /api/rooms contract (seats/you/state/legalActions/...),
+ * never the retired app/online-bridge.js field shapes. */
+(function () {
+  'use strict';
+  var params = new URLSearchParams(location.search);
+  var room = params.get('online') || params.get('room');
+  if (!room) { window.OnlineBridge = { active: false }; return; }
+  var GAME = 'undercover-premium';
+  function readJSON(key) { try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch (err) { return null; } }
+  function writeJSON(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch (err) {} }
+  var saved = readJSON(GAME + '-online-session-' + room) || {};
+  var st = {
+    room: room,
+    session: params.get('session') || saved.session || '',
+    playerId: params.get('player') || saved.playerId || '',
+    view: null,
+    timer: null,
+    closed: false,
+    sending: false
+  };
+  var listeners = [];
+  var errorListeners = [];
+  function emit() { listeners.slice().forEach(function (fn) { try { fn(st.view); } catch (err) {} }); }
+  function emitError(err) { errorListeners.slice().forEach(function (fn) { try { fn(err); } catch (e) {} }); }
+  async function api(method, route, body) {
+    var response = await fetch(route, {
+      method: method,
+      headers: body ? { 'content-type': 'application/json' } : undefined,
+      body: body ? JSON.stringify(body) : undefined
+    });
+    var text = await response.text();
+    var data = null;
+    try { data = JSON.parse(text); } catch (err) { data = null; }
+    if (!response.ok) {
+      throw Object.assign(new Error(data && data.error && data.error.message ? data.error.message : ('HTTP ' + response.status)), {
+        code: data && data.error && data.error.code, status: response.status
+      });
+    }
+    return data;
+  }
+  function laneUrl(suffix) { return '/api/rooms/' + encodeURIComponent(st.room) + (suffix || ''); }
+  function sessionQuery() {
+    return '?session=' + encodeURIComponent(st.session) + '&playerId=' + encodeURIComponent(st.playerId);
+  }
+  async function poll() {
+    if (st.closed) return;
+    if (!st.session || !st.playerId) {
+      location.replace('online.html?room=' + encodeURIComponent(st.room));
+      return;
+    }
+    try {
+      var view = await api('GET', laneUrl() + sessionQuery());
+      st.view = view;
+      writeJSON(GAME + '-online-session-' + st.room, { session: st.session, playerId: st.playerId });
+      emit();
+    } catch (err) {
+      emitError(err);
+      if (err.status === 404 || err.code === 'E_SESSION' || err.code === 'E_PLAYER') {
+        st.closed = true;
+        return;
+      }
+    }
+    clearTimeout(st.timer);
+    st.timer = setTimeout(poll, 900);
+  }
+  async function send(move) {
+    if (st.sending || !st.view) return null;
+    st.sending = true;
+    try {
+      var view = await api('POST', laneUrl('/actions'), {
+        session: st.session, playerId: st.playerId, action: move
+      });
+      st.view = view;
+      emit();
+      return view;
+    } catch (err) {
+      emitError(err);
+      return null;
+    } finally {
+      st.sending = false;
+    }
+  }
+  async function restart() {
+    try {
+      var view = await api('POST', laneUrl('/restart'), { session: st.session, playerId: st.playerId });
+      st.view = view;
+      emit();
+      return view;
+    } catch (err) { emitError(err); return null; }
+  }
+  function seatIndex() {
+    return st.view && st.view.you != null ? st.view.you : -1;
+  }
+  function isMyTurn() {
+    var view = st.view;
+    return !!(view && view.state && !view.state.over && view.you != null &&
+      view.state.current === view.you && (view.legalActions || []).length > 0);
+  }
+  window.OnlineBridge = {
+    active: true,
+    room: room,
+    view: function () { return st.view; },
+    onChange: function (fn) { listeners.push(fn); if (st.view) fn(st.view); },
+    onError: function (fn) { errorListeners.push(fn); },
+    send: send,
+    restart: restart,
+    seatIndex: seatIndex,
+    isMyTurn: isMyTurn
+  };
+  poll();
+})();
+</script>
 <script>
 (function () {
   'use strict';
@@ -813,37 +926,39 @@ h2{margin:0 0 6px;font-family:var(--serif);font-weight:700;font-size:clamp(25px,
   function renderOnline(view) {
     if (!view) return;
     ol.lastState = view;
-    $('ol-room').textContent = view.roomCode || view.roomId || '——';
+    $('ol-room').textContent = (view.code || view.roomId || '——') + (view.stateVersion ? ' · v' + view.stateVersion : '');
     var state = view.state;
     var seats = view.seats || [];
-    var me = view.you ? view.you.playerIndex : -1;
+    var me = view.you == null ? -1 : view.you;
     var humanCount = seats.filter(function (s) { return !s.ai; }).length;
-    $('ol-lede').textContent = '房间 ' + (view.roomCode || '') + ' · ' + humanCount + ' 名玩家 · 上限 ' + view.maxPlayers + ' 人。空位由 AI 补位，断线可重连，超时自动托管。';
+    $('ol-lede').textContent = '房间 ' + (view.code || '') + ' · ' + humanCount + ' 名玩家 · 上限 ' + seats.length + ' 人。空位由 AI 补位，断线可重连，超时自动托管。';
     var seatHost = $('ol-seats');
     seatHost.textContent = '';
     seats.forEach(function (seat) {
+      var isCurrent = !!(state && state.current === seat.index && !state.over);
+      var isTakenOver = !!(view.takeover && view.takeover.indexOf(seat.index) !== -1);
       var row = document.createElement('div');
-      row.className = 'online-seat' + (seat.current ? ' current' : '');
+      row.className = 'online-seat' + (isCurrent ? ' current' : '');
       var idx = document.createElement('span'); idx.className = 'idx'; idx.textContent = String(seat.index + 1);
-      var who = document.createElement('span'); who.className = 'who'; who.textContent = seat.nickname || ('座位 ' + (seat.index + 1));
+      var who = document.createElement('span'); who.className = 'who'; who.textContent = seat.name || ('座位 ' + (seat.index + 1));
       var tags = [];
       if (seat.ai) tags.push('AI');
-      if (seat.takeover) tags.push('托管');
-      if (seat.current) tags.push('行动中');
-      var tag = document.createElement('span'); tag.className = 'tag'; tag.textContent = tags.join(' · ') || (seat.controlledByAI ? 'AI' : '等待');
+      if (isTakenOver) tags.push('托管');
+      if (isCurrent) tags.push('行动中');
+      var tag = document.createElement('span'); tag.className = 'tag'; tag.textContent = tags.join(' · ') || (seat.ai ? 'AI' : '等待');
       row.appendChild(idx); row.appendChild(who); row.appendChild(tag);
       seatHost.appendChild(row);
     });
     if (!view.started || !state) {
       $('ol-phase').textContent = '等待房主开始';
-      $('ol-current').textContent = view.isHost ? '你是房主' : '等待中';
+      $('ol-current').textContent = me >= 0 && seats[me] && seats[me].isHost ? '你是房主' : '等待中';
       $('ol-banner').hidden = false;
       $('ol-action').hidden = true;
       $('ol-result').hidden = true;
       $('ol-private-btn').hidden = true;
       $('ol-reveal-btn').hidden = true;
       $('ol-private-text').textContent = '对局开始后，这里会显示你的词与身份。';
-      $('ol-status').textContent = view.isHost ? '人齐后点击开始；空位会由 AI 补位。' : '等待房主开始对局。';
+      $('ol-status').textContent = me >= 0 && seats[me] && seats[me].isHost ? '人齐后点击开始；空位会由 AI 补位。' : '等待房主开始对局。';
       return;
     }
     var myPublic = me >= 0 && state.players ? state.players[me] : null;
@@ -852,8 +967,8 @@ h2{margin:0 0 6px;font-family:var(--serif);font-weight:700;font-size:clamp(25px,
     var currentName = state.current != null && state.players[state.current] ? state.players[state.current].name : '—';
     $('ol-current').textContent = state.over ? '本局结束' : ('轮到 ' + currentName);
     $('ol-banner').hidden = false;
-    var canViewPrivate = !!(view.privateWord !== undefined && me >= 0);
-    var isMyTurn = view.currentPlayerIndex === me && view.canMove;
+    var canViewPrivate = !!(myPublic && myPublic.word !== undefined && me >= 0);
+    var isMyTurn = state.current === me && !state.over && (view.legalActions || []).length > 0;
     var revealedMe = !!(myPublic && myPublic.revealed);
     $('ol-private-btn').hidden = !(canViewPrivate && (revealedMe || isMyTurn || state.phase !== 'reveal'));
     $('ol-reveal-btn').hidden = !(state.phase === 'reveal' && isMyTurn && !revealedMe);
@@ -908,8 +1023,10 @@ h2{margin:0 0 6px;font-family:var(--serif);font-weight:700;font-size:clamp(25px,
       head.className = 'reveal-row';
       var label = document.createElement('span');
       label.textContent = e.tie ? '平票，本轮无人淘汰' : (e.pid != null && state.players[e.pid] ? state.players[e.pid].name + ' 被淘汰' : '淘汰结果');
-      var role = document.createElement('span'); role.className = 'role-pill ' + (e.role || 'c'); role.textContent = e.role ? E.roleLabel(e.role) : '平票';
-      var word = document.createElement('span'); word.className = 'rw-word'; word.textContent = e.tie ? '' : (e.role === 'b' ? '无词' : (e.word || ''));
+      var role = document.createElement('span');
+      role.className = 'role-pill ' + (e.role || 'c');
+      role.textContent = e.role ? E.roleLabel(e.role) : (e.tie ? '平票' : '身份保密');
+      var word = document.createElement('span'); word.className = 'rw-word'; word.textContent = e.role === undefined ? '' : (e.role === 'b' ? '无词' : (e.word || ''));
       head.appendChild(label); head.appendChild(role); head.appendChild(word);
       lastBox.appendChild(head);
     } else {
@@ -937,16 +1054,19 @@ h2{margin:0 0 6px;font-family:var(--serif);font-weight:700;font-size:clamp(25px,
     } else {
       $('ol-result').hidden = true;
     }
-    $('ol-status').textContent = view.currentControlledByAI && !state.over ? '当前座位由 AI 托管，正在自动行动…' : '';
+    var currentSeat = state.current != null && seats[state.current] ? seats[state.current] : null;
+    $('ol-status').textContent = currentSeat && currentSeat.ai && !state.over ? '当前座位由 AI 托管，正在自动行动…' : '';
   }
   function sendOnline(move) {
     if (!bridge || !bridge.active) return;
     $('ol-status').textContent = '正在提交…';
-    bridge.send(move).then(function (view) {
+    Promise.resolve(bridge.send(move)).then(function (view) {
       ol.pending = null;
-      if (view) renderOnline(view);
-      $('ol-status').className = 'status';
-      $('ol-status').textContent = '';
+      if (view) {
+        renderOnline(view);
+        $('ol-status').className = 'status';
+        $('ol-status').textContent = '';
+      }
     }).catch(function (err) {
       $('ol-status').textContent = (err && err.message) || '提交失败';
       $('ol-status').className = 'status error';
@@ -954,11 +1074,13 @@ h2{margin:0 0 6px;font-family:var(--serif);font-weight:700;font-size:clamp(25px,
   }
   function openOnlinePrivate() {
     var view = ol.lastState;
-    if (!view || view.privateWord === undefined) return;
-    $('pv-role').textContent = E.roleLabel(view.privateRole);
-    $('pv-role').className = 'role-pill ' + view.privateRole;
-    $('pv-word').textContent = view.privateRole === 'b' ? '白板 · 无词' : view.privateWord;
-    $('pv-hint').textContent = view.privateHint ? ('类别：' + view.privateHint) : '只有你能看到这个词。';
+    var me = view && view.you != null ? view.you : -1;
+    var row = me >= 0 && view.state && view.state.players ? view.state.players[me] : null;
+    if (!row || row.word === undefined) return;
+    $('pv-role').textContent = E.roleLabel(row.role);
+    $('pv-role').className = 'role-pill ' + row.role;
+    $('pv-word').textContent = row.role === 'b' ? '白板 · 无词' : row.word;
+    $('pv-hint').textContent = view.state.hint ? ('类别：' + view.state.hint) : '只有你能看到这个词。';
     $('ov-private').hidden = false;
   }
   if (onlineMode()) {

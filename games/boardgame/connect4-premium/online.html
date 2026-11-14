@@ -210,18 +210,21 @@
       <div class="leaderboard" id="leaderboard"><p class="muted">还没有结算记录。</p></div>
     </section>
   </main>
+<p style="text-align:center;margin:14px 0"><a href="../spectate.html" style="display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:44px;padding:0 14px;border-radius:12px;border:1px solid currentColor;color:inherit;font-size:13px;text-decoration:none">围观其他对局</a></p>
 </div>
 
+<script src="../../shared/online-client.js"></script>
 <script>
 (function () {
   'use strict';
   var $ = function (id) { return document.getElementById(id); };
-  var params = new URLSearchParams(location.search);
-  var roomKey = params.get('room') || '';
-  var invite = params.get('code') || '';
-  var session = params.get('session') || '';
-  var playerId = params.get('player') || '';
-  var nickname = '';
+  var oc = OnlineClient.create({ game: 'connect4-premium', storagePrefix: 'c4p-online' });
+  oc.load();
+  var roomKey = oc.room();
+  var invite = oc.inviteCode();
+  var session = oc.session();
+  var playerId = oc.playerId();
+  var nickname = oc.nickname();
   var timer = null;
   var lastVersion = -1;
   var lastPlies = -1;
@@ -229,36 +232,12 @@
   var moveLog = [];
   var pollErrors = 0;
 
-  try {
-    if (!session) session = sessionStorage.getItem('c4p-online-session') || '';
-    if (!playerId) playerId = sessionStorage.getItem('c4p-online-player') || '';
-    if (!nickname) nickname = sessionStorage.getItem('c4p-online-nick') || '';
-  } catch (e) {}
-
   function remember(nextRoom, nextSession, nextPlayer) {
-    roomKey = nextRoom || roomKey;
-    session = nextSession || session;
-    playerId = nextPlayer || playerId;
-    try {
-      sessionStorage.setItem('c4p-online-session', session);
-      sessionStorage.setItem('c4p-online-player', playerId);
-    } catch (e) {}
-    var url = location.pathname + '?room=' + encodeURIComponent(roomKey) + '&session=' + encodeURIComponent(session) + '&player=' + encodeURIComponent(playerId);
-    try { history.replaceState(null, '', url); } catch (e) {}
+    oc.setSession(nextRoom || roomKey, nextSession || session, nextPlayer || playerId);
+    roomKey = oc.room(); session = oc.session(); playerId = oc.playerId();
   }
-
-  function api(method, route, body) {
-    return fetch(route, {
-      method: method,
-      headers: { 'content-type': 'application/json' },
-      body: body == null ? undefined : JSON.stringify(body)
-    }).then(function (res) {
-      return res.json().catch(function () { return {}; }).then(function (data) {
-        return { status: res.status, body: data };
-      });
-    });
-  }
-  function errText(r) { return (r.body && r.body.error && r.body.error.message) || ('HTTP ' + r.status); }
+  function api(method, route, body) { return oc.api(method, route, body); }
+  function errText(r) { return oc.errText(r); }
   function toast(msg) { $('boardErr').textContent = msg || ''; }
   function esc(v) {
     return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
@@ -269,7 +248,7 @@
 
   function saveNick() {
     nickname = ($('nickname').value || '').trim() || ('玩家-' + Math.random().toString(36).slice(2, 6));
-    try { sessionStorage.setItem('c4p-online-nick', nickname); } catch (e) {}
+    oc.setNickname(nickname);
     return nickname;
   }
   try { $('nickname').value = nickname; } catch (e) {}
@@ -282,13 +261,9 @@
   function createRoom() {
     saveNick();
     $('lobbyErr').textContent = '';
-    api('POST', '/api/rooms', {
-      playerId: 'c4p-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6),
-      nickname: nickname
-    }).then(function (r) {
-      if (!r.body || !r.body.roomId) throw new Error(errText(r));
-      remember(r.body.roomId, r.body.session, r.body.playerId);
-      invite = r.body.inviteToken || '';
+    oc.createRoom({ nickname: nickname }).then(function (body) {
+      roomKey = oc.room(); session = oc.session(); playerId = oc.playerId();
+      invite = body.inviteToken || oc.inviteCode() || '';
       showBoard(true);
       poll();
     }).catch(function (e) { $('lobbyErr').textContent = e.message; });
@@ -305,10 +280,9 @@
     };
     if (key.indexOf('room_') !== 0 && !/^[A-Z0-9]{6}$/i.test(key)) payload.inviteCode = key;
     if ($('joinPassword').value) payload.password = $('joinPassword').value;
-    api('POST', '/api/rooms/' + encodeURIComponent(key) + '/join', payload)
-      .then(function (r) {
-        if (!r.body || !r.body.session) throw new Error(errText(r));
-        remember(r.body.roomId, r.body.session, r.body.playerId);
+    oc.joinRoom(key, payload)
+      .then(function () {
+        roomKey = oc.room(); session = oc.session(); playerId = oc.playerId();
         showBoard(true);
         poll();
       })
@@ -438,35 +412,18 @@
 
   function fetchRoom() {
     if (!roomKey || !session) { showBoard(false); return Promise.resolve(null); }
-    return api('GET', '/api/rooms/' + encodeURIComponent(roomKey) + '?session=' + encodeURIComponent(session) + '&playerId=' + encodeURIComponent(playerId))
-      .then(function (r) {
-        if (r.status === 401) {
-          return api('POST', '/api/rooms/' + encodeURIComponent(roomKey) + '/reconnect', { session: session, playerId: playerId })
-            .then(function (rr) {
-              if (!rr.body || !rr.body.ok) throw new Error('房间已失效，请重新创建。');
-              return rr;
-            });
-        }
-        if (r.status >= 400) throw new Error(errText(r));
-        return r;
-      })
-      .then(function (r) {
-        if (!r) return;
-        pollErrors = 0;
-        var view = r.body || {};
-        showBoard(true);
-        if (view.stateVersion !== lastVersion) {
-          lastVersion = view.stateVersion;
-          render(view);
-        } else {
-          $('seats').innerHTML = (view.seats || []).map(function (seat) { return seatHtml(seat, view.state, view.you); }).join('');
-        }
-        if (view.inviteCode) invite = view.inviteCode;
-      })
-      .catch(function (e) {
-        pollErrors += 1;
-        toast(e.message);
-      });
+    return oc.fetchView().then(function (view) {
+      if (!view) return null;
+      showBoard(true);
+      if (view.stateVersion !== lastVersion) {
+        lastVersion = view.stateVersion;
+        render(view);
+      } else {
+        $('seats').innerHTML = (view.seats || []).map(function (seat) { return seatHtml(seat, view.state, view.you); }).join('');
+      }
+      if (view.inviteCode) invite = view.inviteCode;
+      return view;
+    });
   }
 
   function poll() {
@@ -478,10 +435,7 @@
   function act(action) {
     if (!session) return;
     toast('');
-    api('POST', '/api/rooms/' + encodeURIComponent(roomKey) + '/actions', {
-      session: session, playerId: playerId, action: action
-    }).then(function (r) {
-      if (r.status >= 400) throw new Error(errText(r));
+    oc.action(action).then(function () {
       lastVersion = -1;
       return fetchRoom();
     }).catch(function (e) { toast(e.message); });
@@ -493,17 +447,17 @@
     joinRoom();
   });
   $('startBtn').addEventListener('click', function () {
-    api('POST', '/api/rooms/' + encodeURIComponent(roomKey) + '/start', { session: session, playerId: playerId })
-      .then(function (r) { if (r.status >= 400) throw new Error(errText(r)); lastVersion = -1; return fetchRoom(); })
+    oc.startMatch()
+      .then(function () { lastVersion = -1; return fetchRoom(); })
       .catch(function (e) { toast(e.message); });
   });
   $('restartBtn').addEventListener('click', function () {
-    api('POST', '/api/rooms/' + encodeURIComponent(roomKey) + '/restart', { session: session, playerId: playerId })
-      .then(function (r) { if (r.status >= 400) throw new Error(errText(r)); lastVersion = -1; lastPlies = -1; moveLog = []; return fetchRoom(); })
+    oc.restart()
+      .then(function () { lastVersion = -1; lastPlies = -1; moveLog = []; return fetchRoom(); })
       .catch(function (e) { toast(e.message); });
   });
   $('leaveBtn').addEventListener('click', function () {
-    api('POST', '/api/rooms/' + encodeURIComponent(roomKey) + '/leave', { session: session, playerId: playerId })
+    oc.leave()
       .then(function () { showBoard(false); if (timer) clearInterval(timer); })
       .catch(function () { showBoard(false); });
   });

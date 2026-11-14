@@ -105,8 +105,6 @@ body{padding-bottom:env(safe-area-inset-bottom)}
       <p>生成房间码与一次性邀请码。空位由 AI 补足，房主点「开始」后发牌。</p>
       <label for="hostName">你的名字</label>
       <input id="hostName" maxlength="16" placeholder="例如：红衣密使" autocomplete="nickname">
-      <label for="hostMax">人数</label>
-      <select id="hostMax"><option value="2">2 人</option><option value="3">3 人</option><option value="4">4 人</option></select>
       <label for="hostPw">房间密码（可选）</label>
       <input id="hostPw" maxlength="24" placeholder="留空则公开房间" autocomplete="off">
       <div class="row" style="margin-top:12px"><button class="btn primary grow" id="createBtn" type="button">创建房间</button></div>
@@ -168,6 +166,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
   var playerId = null;
   var roomId = null;
   var view = null;
+  var pendingInvite = '';
   var selectedCard = null;
   var selectedTarget = null;
   var selectedGuess = null;
@@ -185,17 +184,19 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     node.textContent = text;
     node.classList.toggle('err', !!error);
   }
-  function showGame(on) {
-    $('game').classList.toggle('on', on);
-    $('lobby').classList.toggle('on', !on || !!view);
+  function newPlayerId() {
+    return 'll-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
   }
+  function randomNickname() { return '玩家' + Math.floor(Math.random() * 900 + 100); }
   function save() {
-    try { localStorage.setItem(LS, JSON.stringify({ session: session, playerId: playerId, roomId: roomId })); }
-    catch (err) {}
+    try {
+      localStorage.setItem(LS, JSON.stringify({
+        session: session, playerId: playerId, roomId: roomId,
+        roomCode: view && view.code ? view.code : ''
+      }));
+    } catch (err) {}
   }
-  function clearSave() {
-    try { localStorage.removeItem(LS); } catch (err) {}
-  }
+  function clearSave() { try { localStorage.removeItem(LS); } catch (err) {} }
 
   async function api(method, route, body) {
     var response = await fetch(route, {
@@ -212,6 +213,14 @@ body{padding-bottom:env(safe-area-inset-bottom)}
   function viewUrl() {
     return roomUrl() + '?session=' + encodeURIComponent(session) + '&playerId=' + encodeURIComponent(playerId);
   }
+  function mySeat() {
+    if (!view || !view.seats) return null;
+    for (var i = 0; i < view.seats.length; i += 1) if (view.seats[i].isYou) return view.seats[i];
+    return null;
+  }
+  function isHost() { var seat = mySeat(); return !!(seat && seat.isHost); }
+  function takeoverSeats() { return (view && view.takeover) || []; }
+
   async function refresh() {
     if (!roomId || !session || pollBusy) return;
     pollBusy = true;
@@ -220,9 +229,22 @@ body{padding-bottom:env(safe-area-inset-bottom)}
       if (res.status === 200 && res.body) {
         view = res.body;
         render();
+      } else if (res.status === 401) {
+        var rec = await api('POST', roomUrl('/reconnect'), { session: session, playerId: playerId });
+        if (rec.status === 200 && rec.body) {
+          view = rec.body;
+          render();
+        } else {
+          setStatus($('lobbyStatus'), '会话已失效，请重新加入房间。', true);
+          clearSave();
+          stopPolling();
+        }
       } else if (res.status === 404) {
         setStatus($('lobbyStatus'), '房间已关闭。', true);
+        clearSave();
         stopPolling();
+      } else {
+        setStatus($('lobbyStatus'), '同步失败：' + ((res.body && res.body.error && res.body.error.message) || res.status), true);
       }
     } catch (err) { /* offline; retry */ }
     pollBusy = false;
@@ -236,22 +258,24 @@ body{padding-bottom:env(safe-area-inset-bottom)}
   function renderSeats() {
     if (!view) return;
     var host = $('seatList');
+    var takeover = takeoverSeats();
     host.innerHTML = '';
-    view.seats.forEach(function (seat) {
+    (view.seats || []).forEach(function (seat) {
       var row = document.createElement('div');
       row.className = 'seat';
       var left = document.createElement('div');
-      left.textContent = seat.nickname;
+      left.textContent = seat.name || ('座位 ' + (seat.index + 1));
       var tag = document.createElement('span');
-      tag.className = 'tag' + (seat.ai ? ' ai' : '') + (seat.takeover ? ' takeover' : '');
-      tag.textContent = seat.ai ? 'AI' : (seat.takeover ? '已托管' : (seat.playerId === view.hostId ? '房主' : '玩家'));
+      var managed = takeover.indexOf(seat.index) !== -1;
+      tag.className = 'tag' + (seat.ai ? ' ai' : '') + (managed ? ' takeover' : '');
+      tag.textContent = seat.ai ? 'AI' : (managed ? '已托管' : (seat.isHost ? '房主' : (seat.isYou ? '你' : '玩家')));
       row.appendChild(left);
       row.appendChild(tag);
       host.appendChild(row);
     });
-    $('roomCode').textContent = view.roomCode || '—';
-    $('inviteCode').textContent = view.inviteToken || view.inviteCode || '—';
-    $('startBtn').disabled = !view.canStart;
+    $('roomCode').textContent = view.code || '—';
+    $('inviteCode').textContent = view.inviteCode || pendingInvite || '—';
+    $('startBtn').disabled = !isHost() || !!view.started;
     setStatus($('lobbyStatus'), view.started ? '对局已开始。' : '等待玩家与房主开始。');
   }
 
@@ -264,17 +288,21 @@ body{padding-bottom:env(safe-area-inset-bottom)}
       renderSeats();
       return;
     }
+    var state = view.state;
+    if (!state) return;
     $('game').classList.add('on');
     $('lobby').classList.remove('on');
     $('launcher').style.display = 'none';
-    $('gameRoom').textContent = view.roomCode || '—';
-    setStatus($('gameStatus'), view.state.over ? '对局结束' : (view.canMove ? '轮到你' : '等待其他人…'));
+    $('gameRoom').textContent = view.code || '—';
+    var legal = view.legalActions || [];
+    setStatus($('gameStatus'), state.over ? '对局结束' : (legal.length ? '轮到你' : '等待其他人…'));
     $('rematchBtn').style.display = view.canRestart ? '' : 'none';
 
+    var meIndex = view.you == null ? 0 : view.you;
     var opponents = $('gameOpponents');
     opponents.innerHTML = '';
-    view.state.players.forEach(function (p) {
-      if (view.you && p.index === view.you.playerIndex) return;
+    (state.players || []).forEach(function (p) {
+      if (p.index === meIndex) return;
       var box = document.createElement('div');
       box.className = 'opp';
       box.innerHTML = '<div class="nm">' + esc(p.name) + '</div>' +
@@ -282,7 +310,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
         '<div class="sub">情书标记 ' + p.tokens + '</div>';
       var backs = document.createElement('div');
       backs.className = 'backs';
-      for (var i = 0; i < p.handCount; i++) {
+      for (var i = 0; i < p.handCount; i += 1) {
         var b = document.createElement('span');
         b.className = 'mini-back';
         backs.appendChild(b);
@@ -299,25 +327,25 @@ body{padding-bottom:env(safe-area-inset-bottom)}
 
     var log = $('gameLog');
     log.innerHTML = '';
-    (view.state.log || []).slice(-10).reverse().forEach(function (entry) {
+    (state.log || []).slice(-10).reverse().forEach(function (entry) {
       var p = document.createElement('p');
       p.textContent = entry.text;
       log.appendChild(p);
     });
 
-    $('gameTurn').textContent = view.state.over ? '对局结束' :
-      ('第 ' + view.state.round + ' 轮 · ' + (view.canMove ? '轮到你，选择一张牌' : '轮到 ' + (view.state.players[view.state.current] ? view.state.players[view.state.current].name : '…')));
+    $('gameTurn').textContent = state.over ? '对局结束' :
+      ('第 ' + state.round + ' 轮 · ' + (legal.length ? '轮到你，选择一张牌' : '轮到 ' + (state.players[state.current] ? state.players[state.current].name : '…')));
 
     var hand = $('gameHand');
     hand.innerHTML = '';
-    var me = view.state.players[view.you ? view.you.playerIndex : 0];
+    var me = state.players[meIndex];
     if (me) {
       me.hand.forEach(function (cardId) {
-        var move = (view.legalMoves || []).filter(function (m) { return m.card === cardId; });
+        var move = legal.filter(function (m) { return m.card === cardId; });
         var btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'card' + (selectedCard === cardId ? ' sel' : '');
-        btn.disabled = !view.canMove || !move.length;
+        btn.disabled = !legal.length || !move.length;
         btn.innerHTML = '<div class="v">' + cardId + '</div><div class="n">' + esc(cardName(cardId)) + '</div><div>' + esc(cardText(cardId)) + '</div>';
         btn.addEventListener('click', function () {
           selectedCard = selectedCard === cardId ? null : cardId;
@@ -334,11 +362,11 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     targets.innerHTML = '';
     var needsTarget = [1, 2, 3, 5, 6].indexOf(selectedCard) !== -1;
     var needsGuess = selectedCard === 1;
-    if (needsTarget && view.canMove) {
-      var legalTargets = (view.legalMoves || []).filter(function (m) { return m.card === selectedCard; })
+    if (needsTarget && legal.length) {
+      var legalTargets = legal.filter(function (m) { return m.card === selectedCard; })
         .map(function (m) { return m.target; }).filter(function (v, i, a) { return a.indexOf(v) === i; });
       legalTargets.forEach(function (index) {
-        var p = view.state.players[index];
+        var p = state.players[index];
         var b = document.createElement('button');
         b.type = 'button';
         b.className = selectedTarget === index ? 'sel' : '';
@@ -349,8 +377,8 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     }
     var guesses = $('gameGuesses');
     guesses.innerHTML = '';
-    if (needsGuess && view.canMove) {
-      for (var g = 2; g <= 8; g++) {
+    if (needsGuess && legal.length) {
+      for (var g = 2; g <= 8; g += 1) {
         (function (value) {
           var b = document.createElement('button');
           b.type = 'button';
@@ -362,21 +390,21 @@ body{padding-bottom:env(safe-area-inset-bottom)}
       }
     }
     var playBtn = $('playBtn');
-    playBtn.disabled = !view.canMove || selectedCard == null ||
+    playBtn.disabled = !legal.length || selectedCard == null ||
       (needsTarget && selectedTarget == null) || (needsGuess && selectedGuess == null);
     playBtn.onclick = function () {
-      var move = { card: selectedCard };
-      if (needsTarget) move.target = selectedTarget;
-      if (needsGuess) move.guess = selectedGuess;
-      sendMove(move);
+      var action = { type: 'play', card: selectedCard };
+      if (needsTarget) action.target = selectedTarget;
+      if (needsGuess) action.guess = selectedGuess;
+      sendAction(action);
     };
 
     var result = $('gameResult');
     result.innerHTML = '';
-    if (view.state.over && view.state.result) {
-      view.state.result.tokens.forEach(function (p) {
+    if (state.over && state.result) {
+      state.result.tokens.forEach(function (p) {
         var line = document.createElement('div');
-        line.className = 'line' + (view.state.result.winners.indexOf(p.index) >= 0 ? ' win' : '');
+        line.className = 'line' + (state.result.winners.indexOf(p.index) >= 0 ? ' win' : '');
         line.innerHTML = '<span>' + esc(p.name) + '</span><b>' + p.tokens + ' 枚</b>';
         result.appendChild(line);
       });
@@ -395,10 +423,10 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     return text[id] || '';
   }
 
-  async function sendMove(move) {
-    if (!view || !view.canMove) return;
+  async function sendAction(action) {
+    if (!view) return;
     var res = await api('POST', roomUrl('/actions'), {
-      session: session, playerId: playerId, type: 'move', move: move
+      session: session, playerId: playerId, action: action
     });
     if (res.status === 200 && res.body) {
       view = res.body;
@@ -413,16 +441,12 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     }
   }
 
-  async function createRoom() {
-    var name = ($('hostName').value || '').trim() || ('玩家' + Math.floor(Math.random() * 900 + 100));
-    var res = await api('POST', '/api/rooms', {
-      playerId: name, maxPlayers: Number($('hostMax').value), password: ($('hostPw').value || undefined)
-    });
-    if (res.status !== 201) { setStatus($('lobbyStatus'), '创建失败：' + res.status, true); return; }
-    roomId = res.body.roomId;
-    session = res.body.playerSession;
-    playerId = name;
-    view = res.body;
+  function enterRoom(data, nickname, invite) {
+    roomId = data.roomId;
+    session = data.session;
+    playerId = data.playerId;
+    view = data;
+    pendingInvite = invite || data.inviteCode || '';
     save();
     $('launcher').style.display = 'none';
     $('lobby').classList.add('on');
@@ -431,34 +455,52 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     sfx('notify');
   }
 
-  async function joinRoom() {
-    var name = ($('joinName').value || '').trim() || ('玩家' + Math.floor(Math.random() * 900 + 100));
-    var code = ($('joinCode').value || '').trim();
-    if (!code) { $('joinCode').focus(); return; }
-    // The room code is the public code; invite tokens are longer and are
-    // accepted by the same endpoint.
-    var list = await api('GET', '/api/rooms/' + encodeURIComponent(code));
-    if (list.status !== 200) {
-      setStatus($('lobbyStatus'), '找不到房间：' + code, true);
+  async function createRoom() {
+    var name = ($('hostName').value || '').trim() || randomNickname();
+    var res = await api('POST', '/api/rooms', {
+      playerId: newPlayerId(),
+      nickname: name,
+      password: ($('hostPw').value || undefined)
+    });
+    if (res.status !== 201 || !res.body) {
+      setStatus($('lobbyStatus'), '创建失败：' + ((res.body && res.body.error && res.body.error.message) || res.status), true);
       return;
     }
-    roomId = list.body.roomId;
-    var res = await api('POST', roomUrl('/join'), {
-      playerId: name, inviteCode: code, password: ($('joinPw').value || undefined)
+    enterRoom(res.body, name, res.body.inviteToken);
+  }
+
+  function parseJoinInput(raw) {
+    var text = (raw || '').trim();
+    if (!text) return null;
+    if (/^https?:\/\//i.test(text) || text.indexOf('?') !== -1) {
+      try {
+        var u = new URL(text, location.href);
+        var room = u.searchParams.get('room');
+        if (room) return { room: room, invite: u.searchParams.get('code') || '' };
+      } catch (err) {}
+    }
+    return { room: text, invite: pendingInvite };
+  }
+
+  async function joinRoom() {
+    var name = ($('joinName').value || '').trim() || randomNickname();
+    var parsed = parseJoinInput($('joinCode').value);
+    if (!parsed || !parsed.room) { $('joinCode').focus(); return; }
+    if (/^[A-Z0-9]{20,}$/i.test(parsed.room)) {
+      setStatus($('lobbyStatus'), '请粘贴房主分享的完整邀请链接，或填写 6 位房间码。', true);
+      return;
+    }
+    var res = await api('POST', '/api/rooms/' + encodeURIComponent(parsed.room) + '/join', {
+      playerId: newPlayerId(),
+      nickname: name,
+      inviteCode: parsed.invite || undefined,
+      password: ($('joinPw').value || undefined)
     });
-    if (res.status !== 200) {
+    if (res.status !== 200 || !res.body) {
       setStatus($('lobbyStatus'), '加入失败：' + ((res.body && res.body.error && res.body.error.message) || res.status), true);
       return;
     }
-    session = res.body.playerSession;
-    playerId = name;
-    view = res.body;
-    save();
-    $('launcher').style.display = 'none';
-    $('lobby').classList.add('on');
-    renderSeats();
-    startPolling();
-    sfx('notify');
+    enterRoom(res.body, name, parsed.invite || res.body.inviteCode);
   }
 
   async function startMatch() {
@@ -476,10 +518,13 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     try {
       var saved = JSON.parse(localStorage.getItem(LS) || 'null');
       if (!saved || !saved.session || !saved.roomId) return false;
-      roomId = saved.roomId; session = saved.session; playerId = saved.playerId;
+      roomId = saved.roomId;
+      session = saved.session;
+      playerId = saved.playerId;
       var res = await api('POST', roomUrl('/reconnect'), { session: session, playerId: playerId });
-      if (res.status !== 200) { clearSave(); return false; }
+      if (res.status !== 200 || !res.body) { clearSave(); return false; }
       view = res.body;
+      pendingInvite = view.inviteCode || '';
       $('launcher').style.display = 'none';
       render();
       startPolling();
@@ -498,10 +543,14 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     });
     $('leaveBtn').addEventListener('click', async function () {
       try { await api('POST', roomUrl('/leave'), { session: session, playerId: playerId }); } catch (err) {}
-      clearSave(); stopPolling(); location.reload();
+      clearSave();
+      stopPolling();
+      location.reload();
     });
     $('copyBtn').addEventListener('click', function () {
-      var text = location.origin + location.pathname + '?room=' + encodeURIComponent(view.roomCode || '');
+      if (!view) return;
+      var text = location.origin + location.pathname + '?room=' + encodeURIComponent(roomId || view.roomId) +
+        '&code=' + encodeURIComponent(view.inviteCode || pendingInvite || '');
       try {
         navigator.clipboard.writeText(text);
         $('copyBtn').textContent = '已复制';
@@ -509,11 +558,13 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     });
     var params = new URLSearchParams(location.search);
     if (params.get('room')) $('joinCode').value = params.get('room');
+    if (params.get('code')) pendingInvite = params.get('code');
   }
 
   bind();
   reconnectSaved().then(function (ok) { if (!ok) setStatus($('lobbyStatus'), '创建或加入一个房间。'); });
 })();
 </script>
+<p style="text-align:center;margin:14px 0"><a href="../spectate.html" style="display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:44px;padding:0 14px;border-radius:12px;border:1px solid currentColor;color:inherit;font-size:13px;text-decoration:none">围观其他对局</a></p>
 </body>
 </html>

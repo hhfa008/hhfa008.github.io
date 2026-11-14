@@ -1,6 +1,6 @@
 /* Century: Spice Road premium — offline cache. Same-origin only, no external requests. */
 'use strict';
-var CACHE = 'century-spice-road-premium-v1';
+var CACHE = 'century-spice-road-premium-v2';
 var ASSETS = [
   "./index.html",
   "./online.html",

@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#101722">
+<title>自由牌桌 · 摸牌 / 道具 / 自助计分</title>
+<meta name="description" content="自由牌桌：点一次摸一张牌，道具自由选择，每人有自己的道具格与自助计分，全程无裁判、无强制规则。手机端可展开面板，不靠长页面滚动。">
+<meta name="robots" content="noindex,follow">
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/free-table/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23101722'/%3E%3Crect x='8' y='6' width='12' height='17' rx='2' fill='%23e8dcc0'/%3E%3Crect x='12' y='9' width='12' height='17' rx='2' fill='%23f6efdd'/%3E%3C/svg%3E">
+<style>
+:root{--bg:#0d141d;--panel:#16202c;--panel2:#1d2a38;--ink:#eef3f8;--muted:#9fb0c0;--line:#2f4152;--gold:#e8c268;--green:#6fd0a0;--red:#ef8a84}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;min-height:100vh;background:radial-gradient(800px 500px at 50% -12%,#22344a,#0d141d 66%) fixed;color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
+.wrap{max-width:560px;margin:0 auto;padding:12px 12px calc(28px + env(safe-area-inset-bottom,0px))}
+header{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+h1{font-size:18px;margin:0;flex:1;text-align:center}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:44px;padding:0 12px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:inherit;font-size:13px;font-weight:700;text-decoration:none;cursor:pointer}
+.table{position:relative;height:min(46vh,380px);min-height:300px;margin:0 0 10px;border-radius:16px;border:1px solid var(--line);
+  background:radial-gradient(120% 120% at 50% 30%,#244a3c,#12241d 70%);overflow:hidden;touch-action:none}
+.tray{position:absolute;width:44%;height:40%;border:1px dashed rgba(232,194,104,.35);border-radius:12px;pointer-events:none;
+  font-size:11px;letter-spacing:.06em;color:rgba(238,243,248,.55);padding:6px 8px}
+.tray.tl{left:6px;top:6px}.tray.tr{right:6px;top:6px}.tray.bl{left:6px;bottom:6px}.tray.br{right:6px;bottom:6px}
+.tray.active{border-color:var(--gold);background:rgba(232,194,104,.08);color:var(--gold)}
+.pcard{position:absolute;left:0;top:0;width:54px;height:76px;border-radius:8px;background:#f7f1e2;color:#1a2230;
+  font-weight:800;font-size:17px;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 14px rgba(0,0,0,.35);
+  touch-action:none;cursor:grab;will-change:transform;user-select:none}
+.pcard.red{color:#b5372d}
+.pcard.item{background:linear-gradient(160deg,#f3d98a,#caa24a);color:#2a1c05;font-size:12px;text-align:center;padding:4px;line-height:1.25}
+.pcard:active{cursor:grabbing}
+.seats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:10px}
+.seat{min-height:44px;border-radius:11px;border:1px solid var(--line);background:var(--panel);color:var(--muted);font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.seat[aria-pressed="true"]{background:linear-gradient(160deg,#e8c268,#c9a14a);color:#241a06;border-color:transparent}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px}
+.panel h2{font-size:13px;letter-spacing:.06em;color:var(--muted);margin:0 0 8px;font-weight:700}
+.draw-row{display:flex;align-items:center;gap:10px}
+.draw{flex:1;min-height:56px;border:0;border-radius:14px;background:linear-gradient(160deg,#7fb2ff,#4a86ef);color:#08172e;font:inherit;font-size:16px;font-weight:800;cursor:pointer}
+.draw:disabled{opacity:.5;cursor:default}
+.deck{font-size:13px;color:var(--muted);text-align:right;min-width:72px}
+.last{margin-top:10px;padding:10px 12px;border-radius:10px;border:1px dashed var(--line);font-size:14px;min-height:42px;display:flex;align-items:center;gap:10px}
+.last .card{font-weight:800}
+.players{display:grid;gap:8px}
+.player{border:1px solid var(--line);border-radius:12px;padding:10px;background:var(--panel2)}
+.player.active{border-color:var(--gold);box-shadow:0 0 0 1px rgba(232,194,104,.35) inset}
+.prow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pname{font-weight:800;flex:1;min-width:80px}
+.score{font-variant-numeric:tabular-nums;font-size:22px;font-weight:900;color:var(--gold);min-width:52px;text-align:center}
+.mini{min-height:44px;min-width:44px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:inherit;font-size:16px;font-weight:800;cursor:pointer}
+.slots{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.slot{min-height:44px;min-width:64px;padding:6px 10px;border-radius:10px;border:1px solid var(--line);background:#101a24;font-size:12px;color:var(--ink);display:inline-flex;align-items:center;gap:6px}
+.slot b{font-size:13px}
+.slot .x{border:0;background:transparent;color:var(--red);font:inherit;font-size:15px;cursor:pointer;padding:0 2px}
+.empty{font-size:12px;color:var(--muted)}
+details{border:1px solid var(--line);border-radius:12px;background:var(--panel);margin-bottom:10px}
+summary{min-height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;cursor:pointer;font-size:13px;font-weight:700;color:var(--ink)}
+summary::after{content:"展开";color:var(--muted);font-weight:600}
+details[open] summary::after{content:"收起"}
+.items{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:0 10px 10px}
+.item{min-height:48px;border-radius:10px;border:1px solid var(--line);background:#101a24;color:var(--ink);font:inherit;font-size:13px;font-weight:700;cursor:pointer;text-align:left;padding:6px 10px}
+.item span{display:block;font-size:11px;color:var(--muted);font-weight:500;margin-top:2px}
+.tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.tools .btn{flex:1}
+.foot{text-align:center;color:var(--muted);font-size:12px;margin-top:12px;line-height:1.7}
+@media (max-width:360px){.seat{font-size:12px}.score{font-size:19px}}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="btn" href="../index.html" aria-label="返回桌游目录">← 目录</a>
+    <h1>自由牌桌</h1>
+    <a class="btn" href="rules.html">规则</a>
+  </header>
+
+  <div class="seats" id="seats" aria-label="选择当前玩家"></div>
+
+  <section class="panel" aria-label="物理牌桌">
+    <div class="table" id="table">
+      <div class="tray tl" data-seat="0">玩家 1</div>
+      <div class="tray tr" data-seat="1">玩家 2</div>
+      <div class="tray bl" data-seat="2">玩家 3</div>
+      <div class="tray br" data-seat="3">玩家 4</div>
+    </div>
+  </section>
+
+  <section class="panel" aria-label="摸牌">
+    <div class="draw-row">
+      <button class="draw" id="drawBtn" type="button">摸一张牌</button>
+      <div class="deck" id="deckInfo">牌堆 52</div>
+    </div>
+    <div class="last" id="last" aria-live="polite"><span class="empty">还没摸牌。点一次，摸一张。</span></div>
+  </section>
+
+  <details id="itemDrawer">
+    <summary>道具库 · 选择后放入当前玩家格</summary>
+    <div class="items" id="itemLibrary"></div>
+  </details>
+
+  <section class="panel" aria-label="玩家道具与计分">
+    <h2>每人一格 · 自助计分</h2>
+    <div class="players" id="players"></div>
+  </section>
+
+  <div class="tools">
+    <button class="btn" id="bgmBtn" type="button" aria-pressed="true">音景 开</button>
+    <button class="btn" id="resetBtn" type="button">清空牌桌</button>
+  </div>
+
+  <p class="foot">自由模式：没有裁判、没有强制回合。摸牌 / 选道具 / 加减分都由你自己操作。<br>状态保存在本机，刷新不丢。</p>
+</div>
+
+<script src="/games/shared/physics.js"></script>
+<script src="/games/shared/cards.js"></script>
+<script src="/games/shared/scene.js"></script>
+<script src="/games/shared/sfx.js"></script>
+<script src="/games/shared/bgm.js"></script>
+<script>
+(function () {
+  'use strict';
+  var KEY = 'free-table.v1';
+  var PLAYERS = 4;
+  var SUITS = ['♠', '♥', '♦', '♣'];
+  var RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+  var ITEMS = [
+    { id: 'bomb', name: '炸弹', note: '打乱一次牌堆顺序' },
+    { id: 'shield', name: '护盾', note: '记录一次免伤' },
+    { id: 'double', name: '双倍', note: '本回合得分 ×2（手动记）' },
+    { id: 'swap', name: '换牌', note: '与牌堆顶交换一张' },
+    { id: 'peek', name: '窥视', note: '查看牌堆顶（不拿走）' },
+    { id: 'steal', name: '顺手牵羊', note: '从他人格拿一件道具' }
+  ];
+
+  var state = load();
+  var scene = Scene.create({
+    id: 'free-table',
+    ambience: 'table',
+    cast: buildCast()
+  });
+  var bgmOn = false;
+
+  function buildCast() {
+    var cast = [];
+    for (var i = 0; i < PLAYERS; i += 1) cast.push({ id: 'p' + i, name: '玩家 ' + (i + 1), role: 'player' });
+    return cast;
+  }
+  function freshDeck() {
+    var deck = [];
+    SUITS.forEach(function (suit) {
+      RANKS.forEach(function (rank) { deck.push({ suit: suit, rank: rank, kind: 'card' }); });
+    });
+    ITEMS.forEach(function (item) { deck.push({ id: item.id, name: item.name, kind: 'item' }); });
+    return Cards.shuffle(deck);
+  }
+  function blank() {
+    return {
+      active: 0,
+      deck: freshDeck(),
+      discard: [],
+      last: null,
+      players: Array.from({ length: PLAYERS }, function () { return { score: 0, slots: [] }; })
+    };
+  }
+  function load() {
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (!raw) return blank();
+      var s = JSON.parse(raw);
+      if (!s || !Array.isArray(s.players) || s.players.length !== PLAYERS || !Array.isArray(s.deck)) return blank();
+      return s;
+    } catch (e) { return blank(); }
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* storage optional */ }
+  }
+
+  function cardName(card) {
+    if (!card) return '—';
+    return card.kind === 'item' ? card.name : card.suit + card.rank;
+  }
+  function seatName(i) { return '玩家 ' + (i + 1); }
+
+  function drawCard() {
+    if (!state.deck.length) return;
+    var card = state.deck.pop();
+    state.last = card;
+    scene.emit('draw', { player: state.active, card: cardName(card), left: state.deck.length });
+    if (card.kind === 'item') scene.updateCast('p' + state.active, { emotion: 'happy' });
+    save();
+    spawnCard(card);
+    try { Sfx.play('deal'); } catch (e) { /* audio optional */ }
+    render();
+  }
+  function addItem(item) {
+    var player = state.players[state.active];
+    player.slots.push({ id: item.id, name: item.name, kind: 'item' });
+    scene.emit('item', { player: state.active, item: item.name });
+    save();
+    render();
+  }
+  function removeSlot(index) {
+    var player = state.players[state.active];
+    var card = player.slots.splice(index, 1)[0];
+    if (card) state.discard.unshift(card);
+    if (state.discard.length > 30) state.discard.pop();
+    save();
+    render();
+  }
+  function score(delta) {
+    state.players[state.active].score += delta;
+    save();
+    render();
+  }
+  function reset() {
+    if (typeof cardsPhys !== 'undefined') cardsPhys.slice().forEach(removePhys);
+    state = blank();
+    save();
+    scene.emit('reset', {});
+    render();
+  }
+  function startBgm() {
+    if (bgmOn) return;
+    bgmOn = true;
+    try { Bgm.play(scene.ambience); } catch (e) { /* audio optional */ }
+  }
+  document.addEventListener('pointerdown', startBgm, { once: true });
+
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+
+  function renderSeats() {
+    var box = document.getElementById('seats');
+    box.textContent = '';
+    for (var i = 0; i < PLAYERS; i += 1) {
+      (function (idx) {
+        var b = el('button', 'seat', seatName(idx));
+        b.type = 'button';
+        b.setAttribute('aria-pressed', idx === state.active ? 'true' : 'false');
+        b.addEventListener('click', function () { state.active = idx; save(); render(); });
+        box.appendChild(b);
+      })(i);
+    }
+  }
+
+  function renderLast() {
+    var last = document.getElementById('last');
+    last.textContent = '';
+    if (!state.last) {
+      last.appendChild(el('span', 'empty', '还没摸牌。点一次，摸一张。'));
+      return;
+    }
+    last.appendChild(el('span', 'card', cardName(state.last)));
+    last.appendChild(el('span', null, state.last.kind === 'item' ? '道具 · 在桌面上，拖进任一玩家托盘归位' : '手牌 · 在桌面上，拖进任一玩家托盘归位'));
+  }
+
+  function renderPlayers() {
+    var box = document.getElementById('players');
+    box.textContent = '';
+    state.players.forEach(function (player, i) {
+      var panel = el('div', 'player' + (i === state.active ? ' active' : ''));
+      var row = el('div', 'prow');
+      row.appendChild(el('span', 'pname', seatName(i)));
+      var minus = el('button', 'mini', '−');
+      minus.type = 'button';
+      minus.setAttribute('aria-label', seatName(i) + ' 减分');
+      minus.addEventListener('click', function () { if (i === state.active) score(-1); else { state.active = i; score(-1); } });
+      var scoreEl = el('span', 'score', String(player.score));
+      var plus = el('button', 'mini', '+');
+      plus.type = 'button';
+      plus.setAttribute('aria-label', seatName(i) + ' 加分');
+      plus.addEventListener('click', function () { if (i === state.active) score(1); else { state.active = i; score(1); } });
+      row.appendChild(minus);
+      row.appendChild(scoreEl);
+      row.appendChild(plus);
+      panel.appendChild(row);
+
+      var slots = el('div', 'slots');
+      (player.slots || []).forEach(function (card, idx) {
+        var slot = el('span', 'slot' + (i === state.active ? '' : ' dim'));
+        slot.appendChild(el('b', null, cardName(card)));
+        var x = el('button', 'x', '×');
+        x.type = 'button';
+        x.setAttribute('aria-label', '移除 ' + cardName(card));
+        x.addEventListener('click', function () { if (i === state.active) removeSlot(idx); });
+        slot.appendChild(x);
+        slots.appendChild(slot);
+      });
+      if (!player.slots.length) slots.appendChild(el('span', 'empty', '道具格空着'));
+      panel.appendChild(slots);
+      box.appendChild(panel);
+    });
+  }
+
+  function renderLibrary() {
+    var box = document.getElementById('itemLibrary');
+    box.textContent = '';
+    ITEMS.forEach(function (item) {
+      var b = el('button', 'item');
+      b.type = 'button';
+      b.appendChild(document.createTextNode(item.name));
+      b.appendChild(el('span', null, item.note));
+      b.addEventListener('click', function () {
+        addItem(item);
+        document.getElementById('itemDrawer').open = false;
+      });
+      box.appendChild(b);
+    });
+  }
+
+  function render() {
+    renderSeats();
+    var trays = tableEl ? tableEl.querySelectorAll('.tray') : [];
+    for (var t = 0; t < trays.length; t += 1) {
+      trays[t].classList.toggle('active', Number(trays[t].getAttribute('data-seat')) === state.active);
+    }
+    document.getElementById('deckInfo').textContent = '牌堆 ' + state.deck.length;
+    document.getElementById('drawBtn').disabled = state.deck.length === 0;
+    renderLast();
+    renderPlayers();
+  }
+
+  // ---- 物理牌桌：拖动 / 碰撞 / 惯性 / 声音 ----
+  var tableEl = document.getElementById('table');
+  var world = Physics.createWorld({ gravity: { x: 0, y: 0 }, fixedDt: 1 / 60 });
+  var walls = [];
+  var cardsPhys = [];
+  var dragging = null;
+  var lastCollideAt = 0;
+
+  function tableBox() { return { w: tableEl.clientWidth, h: tableEl.clientHeight }; }
+  function syncWalls() {
+    walls.forEach(function (b) { world.removeBody(b); });
+    walls = [];
+    var box = tableBox();
+    var t = 24;
+    walls.push(world.addBody({ shape: 'aabb', w: box.w, h: t, x: box.w / 2, y: -t / 2, static: true }));
+    walls.push(world.addBody({ shape: 'aabb', w: box.w, h: t, x: box.w / 2, y: box.h + t / 2, static: true }));
+    walls.push(world.addBody({ shape: 'aabb', w: t, h: box.h, x: -t / 2, y: box.h / 2, static: true }));
+    walls.push(world.addBody({ shape: 'aabb', w: t, h: box.h, x: box.w + t / 2, y: box.h / 2, static: true }));
+  }
+  syncWalls();
+  window.addEventListener('resize', syncWalls);
+
+  function spawnCard(card) {
+    var box = tableBox();
+    var isItem = card.kind === 'item';
+    var el = document.createElement('div');
+    el.className = 'pcard' + (isItem ? ' item' : '') +
+      (!isItem && (card.suit === '♥' || card.suit === '♦') ? ' red' : '');
+    el.textContent = isItem ? card.name : card.suit + card.rank;
+    el.setAttribute('role', 'img');
+    el.setAttribute('aria-label', cardName(card));
+    tableEl.appendChild(el);
+    var body = world.addBody({
+      shape: 'aabb', w: 54, h: 76,
+      x: box.w * 0.5 + (Math.random() * 44 - 22),
+      y: box.h * 0.6,
+      mass: 1, restitution: 0.42, friction: 0.35,
+      linearDamping: 1.4, angularDamping: 2.2
+    });
+    body.angle = Math.random() * 0.5 - 0.25;
+    world.applyImpulse(body, { x: (Math.random() - 0.5) * 280, y: -260 - Math.random() * 180 });
+    var item = { body: body, el: el, card: card };
+    cardsPhys.push(item);
+    bindDrag(item);
+    return item;
+  }
+
+  function bindDrag(item) {
+    item.el.addEventListener('pointerdown', function (ev) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      var r = tableEl.getBoundingClientRect();
+      dragging = {
+        item: item,
+        ox: item.body.x - (ev.clientX - r.left),
+        oy: item.body.y - (ev.clientY - r.top),
+        lastX: ev.clientX, lastY: ev.clientY,
+        lastT: performance.now(), vx: 0, vy: 0
+      };
+      item.body.sleep();
+      item.el.style.zIndex = 999;
+      if (item.el.setPointerCapture) { try { item.el.setPointerCapture(ev.pointerId); } catch (e) { /* ignore */ } }
+      try { Sfx.play('move'); } catch (e) { /* audio optional */ }
+    });
+    item.el.addEventListener('pointermove', function (ev) {
+      if (!dragging || dragging.item !== item) return;
+      var r = tableEl.getBoundingClientRect();
+      var now = performance.now();
+      var dt = Math.max(8, now - dragging.lastT) / 1000;
+      dragging.vx = (ev.clientX - dragging.lastX) / dt;
+      dragging.vy = (ev.clientY - dragging.lastY) / dt;
+      dragging.lastX = ev.clientX; dragging.lastY = ev.clientY; dragging.lastT = now;
+      item.body.x = ev.clientX - r.left + dragging.ox;
+      item.body.y = ev.clientY - r.top + dragging.oy;
+      item.body.vx = 0; item.body.vy = 0;
+    });
+    function endDrag() {
+      if (!dragging || dragging.item !== item) return;
+      var d = dragging;
+      dragging = null;
+      item.body.wake();
+      item.body.vx = Math.max(-1500, Math.min(1500, d.vx));
+      item.body.vy = Math.max(-1500, Math.min(1500, d.vy));
+      var seat = traySeatAt(item.body.x, item.body.y);
+      if (seat != null) assignToSeat(item, seat);
+      else { try { Sfx.play('move'); } catch (e) { /* optional */ } }
+    }
+    item.el.addEventListener('pointerup', endDrag);
+    item.el.addEventListener('pointercancel', function () {
+      if (dragging && dragging.item === item) { dragging = null; item.body.wake(); }
+    });
+  }
+
+  function traySeatAt(x, y) {
+    var base = tableEl.getBoundingClientRect();
+    var trays = tableEl.querySelectorAll('.tray');
+    for (var i = 0; i < trays.length; i += 1) {
+      var r = trays[i].getBoundingClientRect();
+      var lx = r.left - base.left;
+      var ly = r.top - base.top;
+      if (x >= lx && x <= lx + r.width && y >= ly && y <= ly + r.height) {
+        return Number(trays[i].getAttribute('data-seat'));
+      }
+    }
+    return null;
+  }
+
+  function assignToSeat(item, seat) {
+    var player = state.players[seat];
+    if (!player.slots) player.slots = [];
+    player.slots.push(item.card);
+    removePhys(item);
+    state.active = seat;
+    save();
+    scene.emit('store', { seat: seat, card: cardName(item.card) });
+    try { Sfx.play('click'); } catch (e) { /* optional */ }
+    render();
+  }
+
+  function removePhys(item) {
+    var i = cardsPhys.indexOf(item);
+    if (i >= 0) cardsPhys.splice(i, 1);
+    world.removeBody(item.body);
+    if (item.el.parentNode) item.el.parentNode.removeChild(item.el);
+  }
+
+  var lastFrame = performance.now();
+  function frame(now) {
+    var dt = Math.min(0.05, Math.max(0, (now - lastFrame) / 1000));
+    lastFrame = now;
+    var before = cardsPhys.map(function (it) { return Math.hypot(it.body.vx, it.body.vy); });
+    world.step(dt);
+    cardsPhys.forEach(function (it, idx) {
+      var b = it.body;
+      if (b.x < 27) { b.x = 27; b.vx = Math.abs(b.vx) * 0.45; }
+      if (b.x > tableBox().w - 27) { b.x = tableBox().w - 27; b.vx = -Math.abs(b.vx) * 0.45; }
+      if (b.y < 38) { b.y = 38; b.vy = Math.abs(b.vy) * 0.45; }
+      if (b.y > tableBox().h - 38) { b.y = tableBox().h - 38; b.vy = -Math.abs(b.vy) * 0.45; }
+      var speed = Math.hypot(b.vx, b.vy);
+      if (!dragging && before[idx] - speed > 180) {
+        if (now - lastCollideAt > 90) {
+          lastCollideAt = now;
+          try { Sfx.play('move', { volume: 0.35 }); } catch (e) { /* optional */ }
+        }
+      }
+      it.el.style.transform = 'translate(' + (b.x - 27) + 'px,' + (b.y - 38) + 'px) rotate(' + (b.angle || 0) + 'rad)';
+      it.el.style.zIndex = String(Math.round(b.y));
+    });
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  document.getElementById('drawBtn').addEventListener('click', drawCard);
+  document.getElementById('resetBtn').addEventListener('click', reset);
+  document.getElementById('bgmBtn').addEventListener('click', function () {
+    startBgm();
+    var muted = Bgm.mute(!Bgm.isMuted());
+    var btn = document.getElementById('bgmBtn');
+    btn.textContent = muted ? '音景 关' : '音景 开';
+    btn.setAttribute('aria-pressed', muted ? 'false' : 'true');
+  });
+
+  renderLibrary();
+  render();
+})();
+</script>
+</body>
+</html>

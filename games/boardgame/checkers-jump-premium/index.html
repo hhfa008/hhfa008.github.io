@@ -259,14 +259,16 @@ button,input,select{font:inherit}
   function isOnline() { return !!online; }
   function currentMoves() {
     if (isOnline()) {
-      if (!online.view || !online.view.state || !online.view.state.legal) return [];
-      return online.view.state.legal;
+      return online.view && Array.isArray(online.view.legalActions) ? online.view.legalActions : [];
     }
     return E.legalMovesForTurn(state);
   }
   function canInteract() {
     if (busy || !state || state.over) return false;
-    if (isOnline()) return !!(online.view && online.view.canMove);
+    if (isOnline()) {
+      var v = online.view;
+      return !!(v && v.you != null && v.state && v.state.turnSeat === v.you);
+    }
     if (mode === 'ai' && state.turn !== HUMAN) return false;
     return true;
   }
@@ -543,8 +545,8 @@ button,input,select{font:inherit}
     $('onlineLink').hidden = isOnline();
     $('newBtn').textContent = isOnline() ? '返回房间' : '新开一局';
     if (isOnline() && online.view) {
-      $('roomCode').textContent = online.view.roomCode || online.roomId.slice(0, 6);
-      var you = online.view.you ? online.view.you.playerIndex + 1 : '—';
+      $('roomCode').textContent = online.view.code || online.roomId.slice(0, 6);
+      var you = online.view.you != null ? online.view.you + 1 : '—';
       $('roomSeat').textContent = ' · 座位 ' + you + ' / 2';
     }
   }
@@ -562,9 +564,11 @@ button,input,select{font:inherit}
     $('result').hidden = false;
     var won = false;
     if (isOnline()) {
-      won = !!(online.view && online.view.you && online.view.result && online.view.result.winnerSeat === online.view.you.playerIndex);
-      $('againBtn').textContent = online.view && online.view.isHost ? '房主重开' : '等待房主重开';
-      $('againBtn').disabled = !(online.view && online.view.isHost);
+      var v = online.view || {};
+      var isHost = (v.seats || []).some(function (s) { return s.isYou && s.isHost; });
+      won = !!(v.you != null && v.result && v.result.winnerSeat === v.you);
+      $('againBtn').textContent = isHost ? '房主重开' : '等待房主重开';
+      $('againBtn').disabled = !isHost;
     } else {
       won = mode === 'local' ? true : state.winner === HUMAN;
       $('againBtn').textContent = '再来一局';
@@ -690,8 +694,11 @@ button,input,select{font:inherit}
       });
     });
   }
+  function roomBase() {
+    return '/api/rooms/' + encodeURIComponent(online.roomId);
+  }
   function roomPath() {
-    return '/api/rooms/' + encodeURIComponent(online.roomId) +
+    return roomBase() +
       '?session=' + encodeURIComponent(online.session) + '&playerId=' + encodeURIComponent(online.playerId);
   }
   function applyOnlineView(view) {
@@ -699,7 +706,7 @@ button,input,select{font:inherit}
     if (view && view.state) {
       state = view.state;
       lastMove = view.state.history && view.state.history.length ? view.state.history[view.state.history.length - 1] : null;
-      if (view.canMove) selected = -1;
+      if (view.you != null && view.state.turnSeat === view.you) selected = -1;
       render();
       if (view.over) finish();
       else if (resultOpen) hideResult();
@@ -713,7 +720,7 @@ button,input,select{font:inherit}
     if (!online || document.hidden) return;
     onlineApi('GET', roomPath()).then(function (res) {
       if (res.status !== 200) {
-        if (res.status === 403 || res.status === 404) {
+        if (res.status === 401 || res.status === 403 || res.status === 404) {
           toast('联机房间已失效，返回大厅重新加入。');
           if (pollTimer) clearInterval(pollTimer);
         }
@@ -723,12 +730,13 @@ button,input,select{font:inherit}
     }).catch(function () {});
   }
   function onlineMove(move) {
-    if (!online.view || !online.view.canMove) return;
+    var view = online.view;
+    if (!view || view.you == null || !view.state || view.state.turnSeat !== view.you) return;
     busy = true;
     render();
-    onlineApi('POST', '/api/rooms/' + encodeURIComponent(online.roomId) + '/actions', {
-      session: online.session, playerId: online.playerId, type: 'move',
-      move: { from: move.from, to: move.to, path: move.path }
+    onlineApi('POST', roomBase() + '/actions', {
+      session: online.session, playerId: online.playerId,
+      action: { type: 'move', from: move.from, to: move.to, path: move.path }
     }).then(function (res) {
       busy = false;
       if (res.status !== 200) {
@@ -746,8 +754,10 @@ button,input,select{font:inherit}
     });
   }
   function onlineAgain() {
-    if (!online || !online.view || !online.view.isHost) return;
-    onlineApi('POST', '/api/rooms/' + encodeURIComponent(online.roomId) + '/restart', {
+    if (!online || !online.view) return;
+    var isHost = (online.view.seats || []).some(function (s) { return s.isYou && s.isHost; });
+    if (!isHost) return;
+    onlineApi('POST', roomBase() + '/restart', {
       session: online.session, playerId: online.playerId
     }).then(function (res) {
       if (res.status === 200) { hideResult(); applyOnlineView(res.body); }

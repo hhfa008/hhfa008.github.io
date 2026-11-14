@@ -1,0 +1,2161 @@
+<!doctype html>
+<!--
+  工业革命：伯明翰 · 精品版二期
+  · 规则引擎一期（engine.js）只读调用，本页不改任何规则判定。
+  · 单文件、零外部依赖、零追踪；全部图标与地图用内联 SVG 绘制。
+  · 地图按 Midlands 真实相对方位排布：运河=水蓝虚线，铁路=铁灰枕木虚线，
+    已占据的连线用玩家色外圈 + 中点归属徽记。
+  · 移动端：板图可拖拽/双指缩放，另提供整图、放大、缩小按钮。
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0b0e12">
+<meta name="description" content="工业革命：伯明翰 精品版——可玩的 Midlands 板图、六大行动、产业板块翻面、煤铁市场与商人啤酒桶。">
+<title>工业革命：伯明翰 · 精品版</title>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/brass-birmingham-premium/">
+<style>
+:root {
+  --font-serif: "Iowan Old Style", "Palatino Linotype", "Songti SC", "Noto Serif SC", Georgia, serif;
+  --font-sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --bg: #0a0d11;
+  --bg2: #0e1217;
+  --panel: #171d24;
+  --panel2: #1e262f;
+  --panel3: #121820;
+  --ink: #f2e9d8;
+  --ink2: #d2c7b4;
+  --dim: #938b7c;
+  --brass: #c8a15a;
+  --brass2: #e8cd92;
+  --line: rgba(200, 161, 90, .26);
+  --line2: rgba(200, 161, 90, .13);
+  --paper: #e7dcc2;
+  --paper-line: #b8a67d;
+  --p0: #2e6fb5;
+  --p1: #b8443f;
+  --p2: #3d8a63;
+  --p3: #8a5cb0;
+  --ind-cotton: #4f86b4;
+  --ind-manufacturer: #d8a23a;
+  --ind-pottery: #c06a48;
+  --ind-coal: #2e3239;
+  --ind-iron: #7d93a6;
+  --ind-brewery: #8a5a2b;
+  --ok: #6fbf93;
+  --bad: #e08a7c;
+  --warn: #e0a35a;
+  --shadow: 0 24px 60px rgba(0, 0, 0, .45);
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.45;
+  background:
+    radial-gradient(1200px 760px at 8% -12%, rgba(200, 161, 90, .13), transparent 62%),
+    radial-gradient(900px 620px at 102% 0%, rgba(58, 111, 160, .11), transparent 60%),
+    radial-gradient(1000px 900px at 52% 118%, rgba(184, 68, 63, .08), transparent 64%),
+    linear-gradient(180deg, #090c10, #0e1217 42%, #0a0d11);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+}
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: .38;
+  background-image: repeating-linear-gradient(135deg, rgba(255, 255, 255, .018) 0 1px, transparent 1px 6px);
+}
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; touch-action: manipulation; }
+button:disabled { opacity: .38; cursor: not-allowed; }
+[hidden] { display: none !important; }
+svg { display: block; }
+.icon { width: 16px; height: 16px; flex: none; }
+.icon.ind-cotton { color: #8db4d6; }
+.icon.ind-manufacturer { color: #e0af5e; }
+.icon.ind-pottery { color: #d98a6c; }
+.icon.ind-coal { color: #b9bec7; }
+.icon.ind-iron { color: #a9bccd; }
+.icon.ind-brewery { color: #d2a06c; }
+.icon.ind-any { color: #e8cd92; }
+.icon.ind-blank { color: #8d8677; }
+.icon.ind-wild { color: #c8a8f0; }
+
+/* ---------- top bar ---------- */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background: rgba(10, 13, 17, .93);
+  border-bottom: 1px solid var(--line);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.brand-mark { width: 32px; height: 32px; flex: none; color: var(--brass); }
+.brand h1 { margin: 0; font: 700 17px/1.12 var(--font-serif); letter-spacing: .02em; white-space: nowrap; }
+.brand p { margin: 2px 0 0; font-size: 9px; letter-spacing: .18em; color: var(--dim); text-transform: uppercase; white-space: nowrap; }
+.status { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; min-width: 0; }
+.status-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  min-height: 28px; padding: 2px 9px; border: 1px solid var(--line); border-radius: 999px;
+  background: var(--panel); font-size: 12px; color: var(--ink2); white-space: nowrap;
+}
+.status-chip b { color: var(--ink); font-size: 13px; }
+.status-chip.era { border-color: rgba(200, 161, 90, .55); color: var(--brass2); }
+.status-chip.turn { border-color: rgba(111, 191, 147, .4); }
+.status-chip.turn b { color: #a7e0bf; }
+.status-chip.actions b { color: var(--brass2); }
+.status-chip.pulse { animation: chipPulse .9s ease 2; }
+.top-actions { display: flex; gap: 6px; justify-content: flex-end; }
+.tbtn { min-height: 38px; padding: 0 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel); font-size: 12.5px; color: var(--ink2); }
+.tbtn:hover { border-color: var(--brass); color: var(--brass2); }
+
+/* ---------- layout ---------- */
+.app {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 392px;
+  gap: 14px;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 14px;
+  align-items: start;
+}
+.board-panel {
+  position: sticky;
+  top: 72px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  background: linear-gradient(180deg, rgba(29, 23, 15, .72), rgba(14, 18, 23, .92));
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  min-width: 0;
+}
+.board-viewport {
+  position: relative;
+  width: 100%;
+  height: min(calc(100dvh - 150px), 900px);
+  min-height: 320px;
+  border-radius: 9px;
+  border: 1px solid #a8956b;
+  background: #d9ccae;
+  overflow: clip;
+  touch-action: none;
+  cursor: grab;
+  box-shadow: inset 0 0 90px rgba(74, 55, 20, .3), inset 0 0 0 6px rgba(96, 74, 34, .18);
+}
+.board-viewport:active { cursor: grabbing; }
+.board-stage { position: absolute; left: 0; top: 0; transform-origin: 0 0; will-change: transform; }
+.board-stage svg { width: 620px; height: 720px; }
+.board-era-badge {
+  position: absolute; left: 10px; top: 10px; z-index: 3;
+  padding: 4px 10px; border-radius: 999px;
+  background: rgba(18, 23, 29, .84); border: 1px solid var(--line);
+  color: var(--brass2); font-size: 11px; letter-spacing: .14em; pointer-events: none;
+}
+.board-tools { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.hint { font-size: 12px; color: var(--dim); line-height: 1.35; min-width: 0; }
+.hint-short { display: none; }
+.zoom { display: flex; gap: 4px; flex: none; }
+.zbtn {
+  min-width: 44px; height: 44px; padding: 0 8px;
+  border: 1px solid var(--line); border-radius: 8px;
+  background: var(--panel2); color: var(--ink2);
+  font-size: 15px; display: grid; place-items: center;
+}
+.zbtn:hover { border-color: var(--brass); color: var(--brass2); }
+.zbtn.small { font-size: 12px; }
+
+.side { display: flex; flex-direction: column; gap: 10px; min-width: 0; max-height: calc(100dvh - 90px); overflow-y: auto; padding-right: 2px; scrollbar-width: thin; scrollbar-color: rgba(200, 161, 90, .3) transparent; }
+
+/* ---------- panels ---------- */
+.panel { background: linear-gradient(180deg, rgba(25, 31, 39, .95), rgba(17, 22, 29, .96)); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 32px rgba(0, 0, 0, .28); min-width: 0; }
+.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--line2); font-size: 12px; color: var(--dim); }
+.panel-head b { font: 700 14px/1.2 var(--font-serif); color: var(--ink); letter-spacing: .03em; }
+.panel-head .sub { font-size: 12px; color: var(--dim); }
+
+/* ---------- players ---------- */
+.players { display: grid; grid-template-columns: repeat(auto-fit, minmax(164px, 1fr)); gap: 6px; padding: 8px; }
+.player { position: relative; border: 1px solid var(--line2); border-radius: 9px; padding: 6px 8px 7px; background: var(--panel2); min-width: 0; }
+.player.active { border-color: var(--brass); box-shadow: 0 0 0 1px rgba(200, 161, 90, .24), 0 0 22px rgba(200, 161, 90, .12); }
+.player .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--pc, var(--p0)); box-shadow: 0 0 0 2px rgba(0, 0, 0, .35); flex: none; }
+.p-top { display: flex; align-items: center; gap: 6px; font-size: 13px; min-width: 0; }
+.p-name { font-weight: 700; }
+.p-money { margin-left: auto; font-weight: 700; color: var(--brass2); font-size: 14px; white-space: nowrap; }
+.p-stats { display: flex; flex-wrap: wrap; gap: 3px 10px; margin-top: 3px; font-size: 12px; color: var(--dim); }
+.p-stats b { color: var(--ink2); }
+.tag { font-size: 10px; padding: 1px 5px; border-radius: 999px; background: rgba(200, 161, 90, .16); color: var(--brass2); white-space: nowrap; }
+.delta { display: inline-block; font-size: 11px; padding: 1px 5px; border-radius: 5px; background: rgba(111, 191, 147, .16); color: var(--ok); animation: pop .5s ease; white-space: nowrap; }
+.delta.neg { background: rgba(224, 138, 124, .15); color: var(--bad); }
+
+/* ---------- hand ---------- */
+.hand-wrap { padding: 8px 10px 10px; }
+.hand-meta { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 12px; color: var(--dim); margin-bottom: 6px; }
+.hand-meta b { color: var(--brass2); }
+.hand-strip {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: calc((100% - 18px) / 4);
+  gap: 6px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 2px 1px 6px;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(200, 161, 90, .3) transparent;
+}
+.hcard {
+  position: relative; width: 100%; min-width: 0; min-height: 88px;
+  border: 1px solid #5c5344; border-top: 3px solid var(--accent, #c8a15a);
+  border-radius: 9px;
+  background: linear-gradient(160deg, #f3e8d1, #dfd0b0);
+  color: #2b2721; text-align: left; padding: 6px 6px 5px;
+  display: flex; flex-direction: column; gap: 3px;
+  scroll-snap-align: start; box-shadow: 0 4px 10px rgba(0, 0, 0, .3);
+  transition: transform .15s, border-color .15s, box-shadow .15s;
+}
+.hcard:hover { transform: translateY(-2px); }
+.hcard[aria-pressed="true"] { border-color: #f0c96a; box-shadow: 0 0 0 2px #f0c96a, 0 10px 22px rgba(240, 201, 106, .28); transform: translateY(-3px); }
+.hc-kind { font-size: 10px; letter-spacing: .08em; color: #6b5c43; text-transform: uppercase; }
+.hc-name { font: 700 13px/1.12 var(--font-serif); overflow-wrap: anywhere; }
+.hc-sub { font-size: 12px; color: #6f6048; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hc-icons { display: flex; gap: 3px; margin-top: auto; color: #3c3428; flex-wrap: wrap; }
+.hc-icons .icon { width: 16px; height: 16px; }
+.hcard.wild { background: linear-gradient(160deg, #2d3440, #1c222a); color: #f0e6d0; border-color: #8a6fb0; border-top-color: #c8a8f0; }
+.hcard.wild .hc-kind, .hcard.wild .hc-sub { color: #b9a9d6; }
+.hcard.wild .hc-icons { color: #d9c6ff; }
+.hand-empty { font-size: 12.5px; color: var(--dim); padding: 8px 2px; }
+
+/* ---------- action dock ---------- */
+.dock-body { padding: 8px 10px 10px; display: flex; flex-direction: column; gap: 7px; }
+.dock-selected { font-size: 12px; color: var(--dim); min-height: 17px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dock-selected b { color: var(--brass2); }
+.dock-btns { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
+.dbtn {
+  min-height: 44px; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--panel2); font-size: 12.5px; font-weight: 600; color: var(--ink2);
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+}
+.dbtn:not(:disabled):hover { border-color: var(--brass); color: var(--brass2); }
+.dbtn[aria-disabled="false"]:hover { border-color: var(--brass); color: var(--brass2); }
+.dbtn[aria-disabled="true"] { opacity: .42; cursor: help; }
+.dbtn[aria-disabled="false"]:active { transform: translateY(1px); }
+.chips { display: flex; gap: 5px; overflow-x: auto; padding: 1px 0 4px; min-height: 48px; align-items: center; scrollbar-width: thin; scrollbar-color: rgba(200, 161, 90, .3) transparent; }
+.achip {
+  flex: none; min-height: 44px; max-width: 250px; padding: 0 10px;
+  border-radius: 8px; border: 1px solid var(--line);
+  background: var(--panel2); font-size: 12px; color: var(--ink2);
+  display: inline-flex; align-items: center; gap: 5px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.achip:hover { border-color: var(--brass); color: var(--brass2); }
+.achip .icon { width: 15px; height: 15px; }
+.achip .t { overflow: hidden; text-overflow: ellipsis; }
+.chips-empty { font-size: 12px; color: var(--dim); line-height: 1.45; padding: 2px 0; }
+.chips-more { flex: none; white-space: nowrap; font-size: 12px; color: var(--dim); padding: 0 6px; }
+
+/* ---------- markets ---------- */
+.markets { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 8px 10px 10px; }
+.market { border: 1px solid var(--line2); border-radius: 8px; padding: 6px 7px 7px; background: var(--panel2); min-width: 0; }
+.market h3 { margin: 0 0 5px; font-size: 12px; color: var(--ink2); display: flex; justify-content: space-between; align-items: baseline; gap: 4px; }
+.market h3 span { color: var(--dim); font-weight: 400; font-size: 12px; }
+.mcells { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+.market.iron .mcells { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.mcell {
+  position: relative; min-height: 27px; border-radius: 4px;
+  border: 1px solid #47402f; background: #232a32;
+  display: grid; place-items: center; font-size: 12px; color: #7d7565;
+}
+.mcell.on { background: linear-gradient(160deg, #3b3a35, #1e2227); border-color: #8d8270; color: #f4e9d3; }
+.mcell.on::before {
+  content: ""; position: absolute; top: 3px; width: 8px; height: 8px;
+  border-radius: 2px; background: #6b5f4c; border: 1px solid #a2957c;
+}
+.mcell b { position: absolute; bottom: 1px; font-size: 11px; font-weight: 500; }
+.mcell.on b { color: #cfc2a9; }
+.market.flash { animation: flash .9s ease; }
+
+/* ---------- merchants ---------- */
+.merch-list { display: flex; flex-direction: column; gap: 5px; padding: 8px 10px 10px; }
+.merch {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 8px;
+  min-height: 42px; padding: 5px 8px; border: 1px solid var(--line2); border-radius: 8px;
+  background: var(--panel2); font-size: 12px;
+}
+.merch.dim { opacity: .48; }
+.merch-name b { display: block; font-size: 13px; line-height: 1.2; }
+.merch-name span { color: var(--dim); font-size: 12px; }
+.merch-faces { display: flex; gap: 3px; color: var(--ink2); }
+.merch-faces .icon { width: 16px; height: 16px; }
+.barrels { display: flex; gap: 3px; }
+.barrel { width: 10px; height: 12px; border-radius: 3px; border: 1px solid #6b5b42; background: #2a241c; }
+.barrel.on { background: linear-gradient(180deg, #e0b45b, #a47427); border-color: #e8c77e; }
+
+/* ---------- log ---------- */
+.log-list { max-height: 236px; overflow-y: auto; padding: 4px 10px 8px; display: flex; flex-direction: column; gap: 0; scrollbar-width: thin; scrollbar-color: rgba(200, 161, 90, .3) transparent; }
+.log-row { display: flex; gap: 6px; padding: 5px 0; border-bottom: 1px solid rgba(200, 161, 90, .08); font-size: 12px; line-height: 1.4; }
+.log-row:last-child { border-bottom: 0; }
+.log-meta { flex: none; color: var(--dim); font-size: 10.5px; padding-top: 1px; min-width: 56px; }
+.log-text { min-width: 0; overflow-wrap: anywhere; color: var(--ink2); }
+.log-row.sys .log-text { color: var(--brass2); }
+.log-row.event .log-text { color: var(--ok); }
+.ptag { font-weight: 700; }
+.ptag.p0 { color: #7fb0e8; }
+.ptag.p1 { color: #e8928b; }
+.ptag.p2 { color: #8fd0a9; }
+.ptag.p3 { color: #c3a1e6; }
+
+/* ---------- overlays ---------- */
+.overlay { position: fixed; inset: 0; z-index: 80; background: rgba(4, 6, 9, .74); display: grid; place-items: center; padding: 16px; backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+.dialog { width: min(580px, 100%); max-height: 88dvh; overflow-y: auto; background: linear-gradient(180deg, #1c232c, #11161c); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 30px 80px rgba(0, 0, 0, .62); padding: 16px; }
+.dialog h2 { margin: 0 0 4px; font: 700 20px/1.2 var(--font-serif); color: var(--brass2); }
+.dialog h3 { margin: 14px 0 4px; font-size: 13px; color: var(--brass); letter-spacing: .04em; }
+.dialog p { font-size: 13px; color: var(--ink2); line-height: 1.55; margin: 6px 0; }
+.dialog ul { margin: 6px 0; padding-left: 18px; font-size: 12.5px; color: var(--ink2); line-height: 1.6; }
+.dialog li { margin: 2px 0; }
+.dialog .close-row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+.bigbtn { min-height: 44px; padding: 0 16px; border-radius: 9px; border: 1px solid var(--line); background: var(--panel2); font-size: 13px; color: var(--ink2); }
+.bigbtn:hover { border-color: var(--brass); color: var(--brass2); }
+.bigbtn.primary { background: var(--brass); border-color: var(--brass); color: #17120a; font-weight: 700; }
+.choice-list { display: flex; flex-direction: column; gap: 7px; margin-top: 10px; }
+.choice { min-height: 48px; text-align: left; padding: 8px 12px; border-radius: 9px; border: 1px solid var(--line); background: var(--panel2); display: flex; align-items: center; gap: 9px; font-size: 13px; color: var(--ink2); }
+.choice:hover { border-color: var(--brass); color: var(--brass2); }
+.score-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+.score-table th, .score-table td { padding: 6px 5px; border-bottom: 1px solid var(--line2); text-align: left; }
+.score-table th { color: var(--dim); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+.score-table .win { color: var(--brass2); font-weight: 700; }
+.winner-line { display: flex; align-items: center; gap: 8px; font-size: 15px; color: var(--brass2); font-weight: 700; margin: 6px 0 2px; }
+
+/* ---------- toast / banner ---------- */
+.toasts { position: fixed; top: 78px; left: 50%; transform: translateX(-50%); z-index: 90; display: flex; flex-direction: column; gap: 6px; align-items: center; pointer-events: none; width: min(92vw, 520px); }
+.toast { padding: 8px 14px; border-radius: 9px; background: rgba(24, 31, 39, .97); border: 1px solid var(--line); font-size: 12.5px; color: var(--ink); box-shadow: 0 10px 30px rgba(0, 0, 0, .42); animation: toastIn .24s ease; }
+.toast.bad { border-color: #8a4a44; color: #f0b6ae; }
+.toast.good { border-color: #4f7f63; color: #b9e5cb; }
+.era-banner { position: fixed; inset: 0; z-index: 85; display: grid; place-items: center; pointer-events: none; background: radial-gradient(circle at center, rgba(4, 6, 9, .58), rgba(4, 6, 9, .16) 55%, transparent 76%); animation: bannerFade 2.6s ease forwards; }
+.era-banner .inner { text-align: center; padding: 18px 30px; border-top: 1px solid var(--brass); border-bottom: 1px solid var(--brass); background: rgba(12, 16, 21, .78); box-shadow: 0 0 60px rgba(200, 161, 90, .18); }
+.era-banner .k { font-size: 10px; letter-spacing: .32em; color: var(--brass); text-transform: uppercase; }
+.era-banner .t { margin-top: 6px; font: 700 26px/1.2 var(--font-serif); color: var(--ink); }
+.era-banner .s { margin-top: 4px; font-size: 12px; color: var(--ink2); }
+
+/* ---------- svg map ---------- */
+#boardSvg { background: #e7dcc2; }
+#boardSvg .region-zh { font: 600 11px var(--font-sans); fill: #8d7b55; letter-spacing: .2em; opacity: .7; }
+#boardSvg .region-en { font: 500 6.6px var(--font-sans); fill: #9a8961; letter-spacing: .24em; opacity: .58; }
+#boardSvg .river { fill: none; stroke: #7ba3b8; stroke-linecap: round; opacity: .45; }
+#boardSvg .river-label { font: 500 7.5px var(--font-sans); fill: #63879c; letter-spacing: .1em; opacity: .75; }
+#boardSvg .node-name { font: 700 16px var(--font-serif); fill: #241f17; paint-order: stroke; stroke: #f3ead5; stroke-width: 2.6px; stroke-linejoin: round; }
+#boardSvg .city-name { font-size: 16px; }
+#boardSvg .farm-name { font-size: 13px; fill: #4f3b1f; }
+#boardSvg .merchant-name { font: 700 14px var(--font-serif); fill: #30281c; paint-order: stroke; stroke: #f6eeda; stroke-width: 2.4px; stroke-linejoin: round; }
+#boardSvg .name-plate { fill: #f3ead5; fill-opacity: .95; stroke: #b4a276; stroke-width: .75; }
+#boardSvg .merchant-plate { fill: #f6eeda; fill-opacity: .96; stroke: #c0a266; stroke-width: .85; }
+#boardSvg .merchant-sub { font: 500 8.5px var(--font-sans); fill: #7c6b4b; paint-order: stroke; stroke: #efe4cb; stroke-width: 2.6px; letter-spacing: .04em; }
+#boardSvg .ghost { stroke-linecap: round; fill: none; }
+#boardSvg .ghost.canal { stroke: #3f7fa2; stroke-width: 1.9; stroke-dasharray: 5 5; opacity: .48; }
+#boardSvg .ghost.rail { stroke: #57534a; stroke-width: 1.8; stroke-dasharray: 1.6 5; opacity: .46; }
+#boardSvg.canal-era .ghost.canal { opacity: .62; }
+#boardSvg.rail-era .ghost.rail { opacity: .62; }
+#boardSvg .built-halo { fill: none; stroke: #2b2419; stroke-width: 10; stroke-linecap: round; opacity: .3; }
+#boardSvg .built-casing { fill: none; stroke-linecap: round; stroke-width: 7.6; opacity: 1; }
+#boardSvg .built-inner { fill: none; stroke-linecap: round; stroke-width: 3.6; }
+#boardSvg .built-inner.canal { stroke: #77b9d9; stroke-dasharray: 7 3.6; }
+#boardSvg .built-inner.rail { stroke: #77736a; stroke-dasharray: 2.2 2.8; }
+#boardSvg .link-badge circle { stroke: #efe4cb; stroke-width: 1.4; }
+#boardSvg .link-badge text { font: 700 9px var(--font-sans); fill: #fff; text-anchor: middle; }
+#boardSvg .legal-edge { stroke: #e6c07a; stroke-width: 3.2; fill: none; stroke-dasharray: 6 6; opacity: .9; animation: dashMove 1.3s linear infinite; filter: drop-shadow(0 0 2px rgba(240, 201, 106, .55)); pointer-events: none; }
+#boardSvg .edge-hit { stroke: transparent; stroke-width: 18; fill: none; cursor: pointer; }
+#boardSvg .legal-plus circle { fill: #f0c96a; stroke: #5a4515; stroke-width: .8; }
+#boardSvg .legal-plus text { font: 700 9px var(--font-sans); fill: #3a2b08; text-anchor: middle; }
+#boardSvg .slot[data-ai] { cursor: pointer; }
+#boardSvg .empty-bg { fill: #f3ead5; stroke: #b5a785; stroke-width: 1; stroke-dasharray: 2 2; }
+#boardSvg .ghost-icon { color: #5a4f3b; opacity: .55; }
+#boardSvg .tile-bg { stroke: none; }
+#boardSvg .tile-icon { color: #fff; }
+#boardSvg .level-badge { stroke: #4a3e2a; stroke-width: .8; }
+#boardSvg .level-text { font: 700 8px var(--font-sans); fill: #2c261c; }
+#boardSvg .owner-pennant { opacity: .96; }
+#boardSvg .owner-0 .tile-bg { stroke: var(--p0); stroke-width: 2.2; }
+#boardSvg .owner-1 .tile-bg { stroke: var(--p1); stroke-width: 2.2; }
+#boardSvg .owner-2 .tile-bg { stroke: var(--p2); stroke-width: 2.2; }
+#boardSvg .owner-3 .tile-bg { stroke: var(--p3); stroke-width: 2.2; }
+#boardSvg .slot.flipped .tile-icon { opacity: .52; }
+#boardSvg .slot.flipped .tile-bg { filter: saturate(.5) brightness(.72); }
+#boardSvg .legal-ring { fill: none; stroke: #f0c96a; stroke-width: 2.2; stroke-dasharray: 5 3; animation: dashMove 1.1s linear infinite; filter: drop-shadow(0 0 4px rgba(240, 201, 106, .85)); }
+#boardSvg .legal-ring.sell { stroke: #8fd0ae; filter: drop-shadow(0 0 4px rgba(143, 208, 174, .8)); }
+#boardSvg .target-badge circle { fill: #f0c96a; stroke: #4a350c; stroke-width: .9; }
+#boardSvg .target-badge.sell circle { fill: #8fd0ae; stroke: #244434; }
+#boardSvg .slot[data-ai]:hover .tile-bg, #boardSvg .slot[data-ai]:hover .empty-bg { stroke: #f0c96a; stroke-width: 2.5; }
+#boardSvg .merchant-hex { fill: #2f343c; stroke: #c8a15a; stroke-width: 1.4; }
+#boardSvg .merchant.dim .merchant-hex { opacity: .42; }
+#boardSvg .merchant-icon { color: #e8cd92; }
+#boardSvg .merchant.dim .merchant-icon { opacity: .4; }
+#boardSvg .barrel-dot { fill: #d9a94f; stroke: #6d5322; stroke-width: .7; }
+#boardSvg .barrel-dot.off { fill: none; stroke: #6d6350; stroke-width: .9; }
+#boardSvg .farm-roof { fill: #8a5a2b; opacity: .34; stroke: #6b4420; stroke-width: .9; }
+#boardSvg .fx-flip { animation: flipFlash .9s ease 2; }
+#boardSvg .fx-merchant { animation: merchantGlow 1.1s ease 2; }
+#boardSvg .float-text { font: 700 10px var(--font-sans); fill: #8b4a2e; paint-order: stroke; stroke: #efe4cb; stroke-width: 2.4px; text-anchor: middle; animation: floatUp 1.5s ease forwards; pointer-events: none; }
+#boardSvg .float-text.good { fill: #2f7d5e; }
+#boardSvg .float-text.vp { fill: #7a5a12; }
+#boardSvg .compass { color: #6f6248; opacity: .7; }
+
+/* ---------- animation ---------- */
+@keyframes pop { 0% { transform: scale(.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes toastIn { from { transform: translateY(-6px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes dashMove { to { stroke-dashoffset: -24; } }
+@keyframes flash { 0%, 100% { box-shadow: none; } 50% { box-shadow: 0 0 0 2px var(--brass), 0 0 22px rgba(200, 161, 90, .35); } }
+@keyframes bannerFade { 0%, 66% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
+@keyframes floatUp { 0% { opacity: 0; transform: translateY(6px); } 18% { opacity: 1; } 100% { opacity: 0; transform: translateY(-20px); } }
+@keyframes flipFlash { 0%, 100% { opacity: 1; } 50% { opacity: .42; } }
+@keyframes merchantGlow { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
+@keyframes chipPulse { 0%, 100% { box-shadow: none; } 50% { box-shadow: 0 0 0 3px rgba(232, 205, 146, .38), 0 0 18px rgba(232, 205, 146, .45); } }
+
+/* ---------- responsive ---------- */
+@media (max-width: 1100px) {
+  .app { grid-template-columns: minmax(0, 1fr) 360px; }
+}
+@media (max-width: 900px) {
+  .topbar {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "brand actions" "status status";
+    gap: 4px 10px;
+    padding: 6px 10px;
+  }
+  .brand { grid-area: brand; }
+  .top-actions { grid-area: actions; }
+  .status { grid-area: status; justify-content: flex-start; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 1px; scrollbar-width: none; }
+  .status::-webkit-scrollbar { display: none; }
+  .brand p { display: none; }
+  .brand h1 { font-size: 15px; }
+  .brand-mark { width: 26px; height: 26px; }
+  .status-chip { min-height: 26px; padding: 1px 8px; }
+  .tbtn { min-height: 44px; padding: 0 10px; }
+  .app { display: flex; flex-direction: column; align-items: stretch; gap: 7px; padding: 8px; max-width: none; }
+  .board-panel { position: static; padding: 6px; gap: 5px; }
+  .board-viewport { height: clamp(300px, 46dvh, 520px); min-height: 0; }
+  .side { width: 100%; max-height: none; overflow: visible; padding-right: 0; gap: 8px; }
+  .players-panel > .panel-head, .hand-panel > .panel-head, .dock-panel > .panel-head { display: none; }
+  .players { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); padding: 6px; gap: 5px; }
+  .player { padding: 5px 7px; }
+  .p-stats { font-size: 12px; }
+  .hand-wrap { padding: 6px 8px 8px; }
+  .hand-meta { margin-bottom: 4px; }
+  .hand-strip { grid-auto-columns: calc((100% - 18px) / 4); }
+  .hcard { min-height: 88px; }
+  .dock-body { padding: 6px 8px 6px; gap: 5px; }
+  .chips { min-height: 44px; padding-bottom: 2px; }
+  .markets { grid-template-columns: 1fr 1fr; }
+  .log-list { max-height: 260px; }
+  .toasts { top: 96px; }
+}
+@media (min-width: 481px) and (max-width: 900px) {
+  .hand-strip { grid-auto-columns: calc((100% - 24px) / 5); }
+}
+@media (max-width: 480px) {
+  .board-viewport { height: clamp(220px, 35dvh, 400px); }
+}
+@media (max-width: 360px) {
+  .app { padding: 6px; }
+  .brand h1 { font-size: 14px; }
+  .status-chip { font-size: 11.5px; padding: 1px 6px; }
+  .status-chip b { font-size: 12px; }
+  .players { grid-template-columns: 1fr 1fr; gap: 4px; }
+  .player { padding: 5px 6px; }
+  .p-stats { gap: 2px 7px; font-size: 12px; }
+  .hand-strip { grid-auto-columns: calc((100% - 12px) / 3); }
+  .dock-body { padding: 7px 8px 8px; }
+  .dock-btns { gap: 4px; }
+  .dbtn { font-size: 12px; }
+  .markets { gap: 6px; padding: 7px 8px 8px; }
+  .dialog { padding: 14px 12px; }
+}
+@media (max-width: 380px) and (max-height: 620px) {
+  .topbar { padding: 3px 8px; gap: 2px 8px; }
+  .brand h1 { font-size: 14px; }
+  .brand-mark { width: 24px; height: 24px; }
+  .status-chip { min-height: 22px; padding: 0 6px; font-size: 11.5px; }
+  .status-chip b { font-size: 12px; }
+  .tbtn { min-height: 44px; padding: 0 8px; font-size: 12px; }
+  .app { gap: 6px; padding: 6px; }
+  .board-panel { padding: 4px; gap: 4px; }
+  .board-viewport { height: 136px; }
+  .board-tools .hint { font-size: 11.5px; line-height: 1.25; }
+  .hint-long { display: none; }
+  .hint-short { display: inline; }
+  .zbtn { min-width: 44px; height: 44px; }
+  .players { grid-template-columns: 1fr 1fr; padding: 4px 5px; gap: 4px; }
+  .player { display: flex; align-items: center; gap: 4px; padding: 3px 5px; min-height: 34px; }
+  .p-top { flex: none; gap: 4px; font-size: 12px; }
+  .p-stats { flex: 1; justify-content: flex-end; gap: 5px; margin: 0; font-size: 12px; }
+  .p-stats span:nth-child(2), .p-stats span:nth-child(3) { display: none; }
+  .p-money { font-size: 13px; }
+  .tag { display: none; }
+  .hand-wrap { padding: 4px 8px 6px; }
+  .hand-meta { margin-bottom: 2px; font-size: 11.5px; }
+  .hand-strip { grid-auto-columns: calc((100% - 12px) / 3); gap: 6px; padding: 1px 0 2px; }
+  .hcard { min-height: 66px; padding: 4px 5px; gap: 2px; }
+  .hc-kind { display: none; }
+  .hc-name { font-size: 12px; }
+  .hc-sub { font-size: 11px; }
+  .hc-icons .icon { width: 14px; height: 14px; }
+  .dock-body { padding: 4px 8px 5px; gap: 4px; }
+  .dock-selected { font-size: 11.5px; min-height: 15px; }
+  .dbtn { min-height: 44px; font-size: 12px; }
+  .chips { min-height: 44px; padding-bottom: 1px; }
+  .achip { min-height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001s !important; animation-iteration-count: 1 !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+      <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".55"/>
+      <circle cx="16" cy="16" r="5.2" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M16 1.5v4M16 26.5v4M1.5 16h4M26.5 16h4M5.7 5.7l2.8 2.8M23.5 23.5l2.8 2.8M26.3 5.7l-2.8 2.8M8.5 23.5l-2.8 2.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+      <circle cx="16" cy="16" r="2" fill="currentColor"/>
+    </svg>
+    <div>
+      <h1>工业革命：伯明翰</h1>
+      <p>BRASS · BIRMINGHAM · THE MIDLANDS</p>
+    </div>
+  </div>
+  <div class="status" id="statusBar">
+    <span class="status-chip era" id="eraChip">运河时代</span>
+    <span class="status-chip">第 <b id="roundChip">1</b> 轮</span>
+    <span class="status-chip turn" id="turnChip">P1 行动</span>
+    <span class="status-chip actions" id="actionsChip">动作 0/1</span>
+  </div>
+  <div class="top-actions">
+    <button class="tbtn" data-cmd="rules" type="button">规则</button>
+    <button class="tbtn" data-cmd="restart" type="button">新的一局</button>
+  </div>
+</header>
+
+<main class="app">
+  <section class="board-panel" aria-label="伯明翰板图">
+    <div class="board-viewport" id="boardViewport">
+      <div class="board-stage" id="boardStage">
+        <svg id="boardSvg" class="canal-era" viewBox="0 0 620 720" role="img" aria-label="伯明翰 Midlands 板图" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+      <div class="board-era-badge" id="boardEraBadge">CANAL ERA · 运河时代</div>
+    </div>
+    <div class="board-tools">
+      <span class="hint"><span class="hint-long">拖动平移 · 双指/滚轮缩放 · 运河=蓝虚线 · 铁路=灰点线 · 金圈=可行动</span><span class="hint-short">拖动/缩放 · 金圈可点</span></span>
+      <div class="zoom">
+        <button class="zbtn" data-cmd="zoom-out" type="button" aria-label="缩小">−</button>
+        <button class="zbtn small" data-cmd="zoom-fit" type="button" aria-label="显示整图">整图</button>
+        <button class="zbtn" data-cmd="zoom-in" type="button" aria-label="放大">+</button>
+      </div>
+    </div>
+  </section>
+
+  <aside class="side">
+    <section class="panel players-panel" aria-label="玩家状态">
+      <div class="panel-head"><b>玩家</b><span class="sub" id="playerHeadSub">现金 / 收入等级 / VP</span></div>
+      <div class="players" id="players"></div>
+    </section>
+
+    <section class="panel hand-panel" aria-label="手牌">
+      <div class="panel-head"><b>手牌</b><span class="sub" id="handHeadSub">选牌后板上高亮</span></div>
+      <div class="hand-wrap">
+        <div class="hand-meta"><span id="handMeta">P1 · 8 张</span><span>‹ 左右滑动 · 点牌选中 ›</span></div>
+        <div class="hand-strip" id="handStrip" aria-label="手牌，横向滑动查看"></div>
+      </div>
+    </section>
+
+    <section class="panel dock-panel" aria-label="行动">
+      <div class="panel-head"><b>行动</b><span class="sub" id="dockHeadSub">建造 / 铺路 / 售卖 / 研发 / 贷款 / 侦察</span></div>
+      <div class="dock-body">
+        <div class="dock-selected" id="dockSelected">先选一张手牌；板上金色标记即合法动作。</div>
+        <div class="dock-btns">
+          <button class="dbtn" data-cmd="develop" type="button" aria-disabled="true" title="先选一张手牌">研发</button>
+          <button class="dbtn" data-cmd="loan" type="button" aria-disabled="true" title="先选一张手牌">贷款</button>
+          <button class="dbtn" data-cmd="scout" type="button" aria-disabled="true" title="手牌不足 3 张">侦察</button>
+          <button class="dbtn" data-cmd="pass" type="button" aria-disabled="true" title="先选一张手牌">过牌</button>
+        </div>
+        <div class="chips" id="actionChips"><span class="chips-empty">选中手牌后，这里会列出该牌的全部合法动作。</span></div>
+      </div>
+    </section>
+
+    <section class="panel market-panel" aria-label="市场">
+      <div class="panel-head"><b>煤 / 铁市场</b><span class="sub" id="marketHeadSub">从便宜格买入</span></div>
+      <div class="markets" id="markets"></div>
+    </section>
+
+    <section class="panel merchants-panel" aria-label="商人">
+      <div class="panel-head"><b>商人板块</b><span class="sub">啤酒桶触发奖励</span></div>
+      <div class="merch-list" id="merchants"></div>
+    </section>
+
+    <section class="panel log-panel" aria-label="日志">
+      <div class="panel-head"><b>动作历史</b><span class="sub">最新在上</span></div>
+      <div class="log-list" id="logList"></div>
+    </section>
+  </aside>
+</main>
+
+<div class="toasts" id="toastLayer" aria-live="polite"></div>
+<div class="era-banner" id="eraBanner" hidden><div class="inner"><div class="k" id="bannerK">ERA</div><div class="t" id="bannerT"></div><div class="s" id="bannerS"></div></div></div>
+<div class="overlay" id="overlay" hidden></div>
+<div class="overlay sheet-overlay" id="sheet" hidden></div>
+
+<script type="module">
+import {
+  createGame, legalActions, applyAction, score, currentPlayer,
+  incomeLevelAt, actionsPerRound, chooseGreedyAction,
+  LOCATIONS, MERCHANTS, LINKS, ERA
+} from './engine.js';
+
+/* ================================================================== */
+/* 静态数据：中文名、产业外观、地图坐标                                */
+/* ================================================================== */
+
+const PLAYER_COLORS = ['#2e6fb5', '#b8443f', '#3d8a63', '#8a5cb0'];
+
+const IND = {
+  cotton:       { zh: '棉纺厂', short: '棉纺', color: '#4f86b4', icon: 'cotton' },
+  manufacturer: { zh: '制造商', short: '制造', color: '#d8a23a', icon: 'manufacturer' },
+  pottery:      { zh: '陶器',   short: '陶器', color: '#c06a48', icon: 'pottery' },
+  coal:         { zh: '煤矿',   short: '煤矿', color: '#2e3239', icon: 'coal' },
+  iron:         { zh: '铁厂',   short: '铁厂', color: '#7d93a6', icon: 'iron' },
+  brewery:      { zh: '酿酒厂', short: '酿酒', color: '#8a5a2b', icon: 'brewery' }
+};
+
+const LOC_ZH = {
+  belper: '贝尔珀', derby: '德比', leek: '利克', 'stoke-on-trent': '斯托克',
+  stone: '斯通', uttoxeter: '乌托克西特', stafford: '斯塔福德',
+  'burton-on-trent': '伯顿', cannock: '坎诺克', tamworth: '塔姆沃思',
+  walsall: '沃尔索尔', wolverhampton: '伍尔弗汉普顿', coalbrookdale: '煤溪谷',
+  dudley: '达德利', kidderminster: '基德明斯特', worcester: '伍斯特',
+  birmingham: '伯明翰', coventry: '考文垂', nuneaton: '纽尼顿', redditch: '雷迪奇',
+  'farm-north': '农场酒厂·北', 'farm-south': '农场酒厂·南'
+};
+
+/* 地图坐标按 Midlands 真实相对方位压缩到 620×720，手工错开避免标签相撞。 */
+const MAP = {
+  warrington:      { x: 122, y: 62,  label: 'top',    kind: 'merchant' },
+  nottingham:      { x: 585, y: 222, label: 'top',    kind: 'merchant' },
+  belper:          { x: 505, y: 190, label: 'top',    kind: 'city' },
+  derby:           { x: 476, y: 243, label: 'left',   kind: 'city' },
+  leek:            { x: 312, y: 166, label: 'top',    kind: 'city' },
+  'stoke-on-trent':{ x: 258, y: 212, label: 'left',   kind: 'city' },
+  stone:           { x: 272, y: 248, label: 'right',  kind: 'city' },
+  uttoxeter:       { x: 358, y: 246, label: 'top',    kind: 'city' },
+  stafford:        { x: 282, y: 288, label: 'left',   kind: 'city' },
+  'burton-on-trent':{ x: 432, y: 279, label: 'top',   kind: 'city' },
+  cannock:         { x: 308, y: 322, label: 'top',    kind: 'city' },
+  tamworth:        { x: 410, y: 344, label: 'bottom', kind: 'city' },
+  walsall:         { x: 330, y: 366, label: 'top',    kind: 'city' },
+  wolverhampton:   { x: 264, y: 368, label: 'left',   kind: 'city', labelAt: { x: 204, y: 386, anchor: 'end' } },
+  coalbrookdale:   { x: 160, y: 344, label: 'top',    kind: 'city' },
+  dudley:          { x: 294, y: 397, label: 'left',   kind: 'city' },
+  kidderminster:   { x: 239, y: 431, label: 'left',   kind: 'city' },
+  worcester:       { x: 248, y: 509, label: 'left',   kind: 'city' },
+  birmingham:      { x: 352, y: 404, label: 'right',  kind: 'city' },
+  coventry:        { x: 474, y: 434, label: 'bottom', kind: 'city' },
+  nuneaton:        { x: 500, y: 381, label: 'top',    kind: 'city' },
+  redditch:        { x: 337, y: 464, label: 'left',   kind: 'city' },
+  shrewsbury:      { x: 77,  y: 314, label: 'top',    kind: 'merchant' },
+  gloucester:      { x: 241, y: 620, label: 'bottom', kind: 'merchant' },
+  oxford:          { x: 552, y: 610, label: 'bottom', kind: 'merchant' },
+  'farm-north':    { x: 382, y: 303, label: 'right',  kind: 'farm' },
+  'farm-south':    { x: 198, y: 486, label: 'left',   kind: 'farm' }
+};
+
+const BONUS_TEXT = {
+  vp: (n) => `奖励 +${n} VP`,
+  income: (n) => `奖励 收入 +${n}`,
+  money: (n) => `奖励 +£${n}`,
+  develop: () => '奖励 研发 1 块'
+};
+
+const ICON_SYMBOLS = `
+<symbol id="i-cotton" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7.2" y="3" width="9.6" height="18" rx="3"/><path d="M7.2 8h9.6M7.2 12h9.6M7.2 16h9.6"/></g></symbol>
+<symbol id="i-manufacturer" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.2v3.1M12 18.7v3.1M2.2 12h3.1M18.7 12h3.1M5.1 5.1l2.2 2.2M16.7 16.7l2.2 2.2M18.9 5.1l-2.2 2.2M7.3 16.7l-2.2 2.2"/></g></symbol>
+<symbol id="i-pottery" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6M10 3c0 3.6-3.2 4.4-3.2 8.2C6.8 16 8.8 21 12 21s5.2-5 5.2-9.8C17.2 7.4 14 6.6 14 3"/><path d="M8.4 10.5h7.2"/></g></symbol>
+<symbol id="i-coal" viewBox="0 0 24 24"><g fill="currentColor"><path d="M3 15.5 6.5 9l4.4 1.7 3-4.7 5.6 7.2-1.7 6-10.4.8z"/><path d="M4.2 18.4l4.6-2.7 2.7 2.4-1.3 2.2-5.4.2z" opacity=".55"/></g></symbol>
+<symbol id="i-iron" viewBox="0 0 24 24"><g fill="currentColor"><path d="M4 15h16l-2 4.5H6z" opacity=".92"/><path d="M6 10h12l-2 4.5H8z" opacity=".76"/><path d="M8 5h8l-2 4.5h-4z" opacity=".6"/></g></symbol>
+<symbol id="i-brewery" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 5.2c0-1.6 10-1.6 10 0v13.6c0 1.6-10 1.6-10 0z"/><path d="M7 9.2h10M7 14.8h10M9.6 4.4v15.2M14.4 4.4v15.2"/></g></symbol>
+<symbol id="i-any" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2.4l2.5 6.5 6.9.5-5.3 4.6 1.7 6.7L12 17l-5.8 3.7 1.7-6.7-5.3-4.6 6.9-.5z"/></symbol>
+<symbol id="i-blank" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M6.3 17.7 17.7 6.3"/></g></symbol>
+<symbol id="i-wild" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8.5"/><path d="M15.4 8.6l-2 4.8-4.8 2 2-4.8z" fill="currentColor" stroke="none"/></g></symbol>
+<symbol id="i-canal" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2.5 9c2.5-2 5-2 7.5 0s5 2 7.5 0 4-1.2 4-1.2M2.5 15c2.5-2 5-2 7.5 0s5 2 7.5 0 4-1.2 4-1.2"/></g></symbol>
+<symbol id="i-rail" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 3v18M19 3v18"/><path d="M5 6.5h14M5 11h14M5 15.5h14M5 20h14" stroke-width="1.1"/></g></symbol>
+<symbol id="i-develop" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4"/><path d="M8.2 14.2a6 6 0 1 1 7.6 0c-.9.8-1.3 1.5-1.3 2.3H9.5c0-.8-.4-1.5-1.3-2.3z"/></g></symbol>
+<symbol id="i-loan" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M6 9.5v.01M18 14.5v.01" stroke-width="2.4" stroke-linecap="round"/></g></symbol>
+<symbol id="i-scout" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l5.2-5.2"/><path d="M9 14.5 5.5 11l2.1-2.1 3.5 3.5z"/><path d="M10 10.5 18.2 3.2l2.6 2.6L13.5 14z"/></g></symbol>
+<symbol id="i-pass" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h14M13 6.5 19 12l-6 5.5"/></g></symbol>
+<symbol id="i-sell" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6M6.5 11.5 12 6l5.5 5.5"/><path d="M5 21h14"/></g></symbol>
+`;
+
+/* ================================================================== */
+/* 小工具                                                              */
+/* ================================================================== */
+
+const $ = (sel) => document.querySelector(sel);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+function iconSvg(name, cls) {
+  return `<svg class="${cls || 'icon'}" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-${name}"></use></svg>`;
+}
+function indIconSvg(ind, cls) {
+  return iconSvg(IND[ind] ? IND[ind].icon : ind, cls || `icon ind-${ind}`);
+}
+function locZh(id) {
+  if (LOC_ZH[id]) return LOC_ZH[id];
+  if (MERCHANTS[id]) return MERCHANT_ZH[id] || MERCHANTS[id].name;
+  return id;
+}
+function locEn(id) {
+  if (LOCATIONS[id]) return LOCATIONS[id].name;
+  if (MERCHANTS[id]) return MERCHANTS[id].name;
+  return id;
+}
+const MERCHANT_ZH = {
+  shrewsbury: '什鲁斯伯里', gloucester: '格洛斯特', oxford: '牛津',
+  warrington: '沃灵顿', nottingham: '诺丁汉'
+};
+function bonusText(merchantId) {
+  const m = MERCHANTS[merchantId];
+  if (!m) return '';
+  return BONUS_TEXT[m.bonus.type](m.bonus.amount);
+}
+function playerTag(i) {
+  return `<span class="ptag p${i}">P${i + 1}</span>`;
+}
+function eraZh(era) { return era === ERA.RAIL ? '铁路时代' : '运河时代'; }
+function lowestTile(player, industry) {
+  return player.tiles.find((t) => t.industry === industry) || null;
+}
+
+/* ================================================================== */
+/* 运行状态                                                            */
+/* ================================================================== */
+
+let state = null;
+let selectedCard = null;
+let currentLegalAll = [];
+let legalAll = [];
+let actionIndex = [];
+let buildMap = new Map();
+let sellMap = new Map();
+let edgeMap = new Map();
+let logEntries = [];
+let fx = null;
+let fxTimer = 0;
+let gameCounter = 0;
+let toastTimer = 0;
+let bannerTimer = 0;
+let sheetActions = [];
+let dockReasons = {};
+
+const zoom = { scale: 1, tx: 0, ty: 0, min: .2, max: 4, user: false };
+let dragStart = null;
+let pinchStart = null;
+const pointers = new Map();
+let dragged = false;
+let suppressClick = false;
+
+/* ================================================================== */
+/* 开局                                                                */
+/* ================================================================== */
+
+function newGame() {
+  gameCounter += 1;
+  const seed = gameCounter === 1 ? 21 : 20 + gameCounter;
+  state = createGame({ playerCount: 2, seed });
+  selectedCard = null;
+  fx = null;
+  logEntries = [];
+  sheetActions = [];
+  closeOverlay();
+  closeSheet();
+  const first = currentPlayer(state);
+  pushLogRaw(`新局开始 · 2 人 · seed ${seed} · ${first === null ? '—' : playerTag(first)} 先手`, 'sys');
+  renderAll();
+}
+
+/* ================================================================== */
+/* 日志                                                                */
+/* ================================================================== */
+
+function pushLogRaw(text, kind, meta) {
+  logEntries.unshift({
+    round: meta && meta.round !== undefined ? meta.round : state.round,
+    era: meta && meta.era ? meta.era : state.era,
+    text,
+    kind: kind || 'act'
+  });
+  if (logEntries.length > 140) logEntries.length = 140;
+}
+
+/* ================================================================== */
+/* 渲染总控                                                            */
+/* ================================================================== */
+
+function renderAll() {
+  if (!state) return;
+  computeLegal();
+  renderHeader();
+  renderBoard();
+  renderPlayers();
+  renderHand();
+  renderDock();
+  renderMarkets();
+  renderMerchants();
+  renderLog();
+  applyFxToDom();
+}
+
+function computeLegal() {
+  currentLegalAll = state.phase === 'action' ? legalActions(state) : [];
+  legalAll = selectedCard ? currentLegalAll.filter((a) => a.cardId === selectedCard) : [];
+  // 引擎对双条铁路只在手牌第一张下列举一次；applyAction 接受任意手牌。
+  // 选中其他牌时，把同一双线动作改挂到所选牌上，避免 UI 隐藏合法走法。
+  if (selectedCard) {
+    const seen = new Set(legalAll.map(actionKey));
+    for (const a of currentLegalAll) {
+      if (a.type !== 'network' || a.links.length !== 2) continue;
+      const k = actionKey(a);
+      if (seen.has(k)) continue;
+      seen.add(k);
+      legalAll.push({ ...a, cardId: selectedCard });
+    }
+  }
+  actionIndex = legalAll;
+  buildMap = new Map();
+  sellMap = new Map();
+  edgeMap = new Map();
+  legalAll.forEach((a, i) => {
+    if (a.type === 'build') {
+      const key = a.location + ':' + a.slotIndex;
+      if (!buildMap.has(key)) buildMap.set(key, []);
+      buildMap.get(key).push(i);
+    } else if (a.type === 'sell') {
+      for (const sale of a.sales) {
+        const key = sale.location + ':' + sale.slotIndex;
+        if (!sellMap.has(key)) sellMap.set(key, []);
+        sellMap.get(key).push(i);
+      }
+    } else if (a.type === 'network') {
+      for (const e of a.links) {
+        if (!edgeMap.has(e)) edgeMap.set(e, []);
+        edgeMap.get(e).push(i);
+      }
+    }
+  });
+  if (selectedCard && !state.players.some((p) => p.hand.some((c) => c.id === selectedCard))) {
+    selectedCard = null;
+    legalAll = [];
+    actionIndex = [];
+  }
+}
+
+/* ================================================================== */
+/* 顶栏 / 玩家 / 手牌 / 行动栏                                          */
+/* ================================================================== */
+
+function renderHeader() {
+  const p = currentPlayer(state);
+  $('#eraChip').textContent = eraZh(state.era);
+  $('#roundChip').textContent = String(state.round);
+  $('#turnChip').innerHTML = p === null ? '对局结束' : `${playerTag(p)} 行动`;
+  const limit = actionsPerRound(state);
+  const left = Math.max(0, limit - state.actionsThisTurn);
+  $('#actionsChip').innerHTML = state.phase === 'game-over'
+    ? '终局'
+    : `动作 <b>${left}</b>/${limit}`;
+  $('#actionsChip').title = state.phase === 'game-over'
+    ? '对局已结束'
+    : `本回合还剩 ${left} 次行动，每次行动消耗 1 次`;
+  $('#boardSvg').classList.toggle('canal-era', state.era === ERA.CANAL);
+  $('#boardSvg').classList.toggle('rail-era', state.era === ERA.RAIL);
+  $('#boardEraBadge').textContent = state.era === ERA.RAIL ? 'RAIL ERA · 铁路时代' : 'CANAL ERA · 运河时代';
+  $('#playerHeadSub').textContent = state.phase === 'game-over' ? '对局结束 · 可开新局' : '现金 / 收入等级 / VP';
+}
+
+function renderPlayers() {
+  const p = currentPlayer(state);
+  const html = state.players.map((ps, i) => {
+    const level = incomeLevelAt(ps.incomeSpace);
+    const deltas = fx && fx.deltas && fx.deltas.get(i) ? fx.deltas.get(i) : [];
+    const deltaHtml = deltas.map((d) => `<span class="delta ${d.neg ? 'neg' : ''}">${esc(d.text)}</span>`).join('');
+    return `
+      <div class="player ${i === p ? 'active' : ''}" style="--pc:${PLAYER_COLORS[i]}">
+        <div class="p-top">
+          <span class="dot"></span>
+          <span class="p-name">P${i + 1}</span>
+          ${i === p ? '<span class="tag">行动中</span>' : ''}
+          <span class="p-money">£${ps.money}</span>
+        </div>
+        <div class="p-stats">
+          <span>收入 <b>${level >= 0 ? '+' : ''}${level}</b></span>
+          <span>VP <b>${ps.vp}</b></span>
+          <span>贷款 <b>${ps.loansTaken || 0}</b></span>
+          ${deltaHtml}
+        </div>
+      </div>`;
+  }).join('');
+  $('#players').innerHTML = html;
+}
+
+function cardFace(card) {
+  if (card.kind === 'location') {
+    const loc = LOCATIONS[card.location];
+    const inds = [];
+    for (const slot of loc.slots) {
+      for (const ind of slot.industries) if (!inds.includes(ind)) inds.push(ind);
+    }
+    return {
+      kind: '地点', name: LOC_ZH[card.location] || loc.name, sub: loc.name,
+      icons: inds, accent: '#c8a15a', wild: false
+    };
+  }
+  if (card.kind === 'industry') {
+    const single = card.industries.length === 1;
+    return {
+      kind: '产业', name: card.industries.map((i) => IND[i].short).join(' · '),
+      sub: single ? '网络内建造' : '二选一 · 网络内',
+      icons: card.industries, accent: IND[card.industries[0]].color, wild: false
+    };
+  }
+  if (card.kind === 'wild-location') {
+    return { kind: '万能', name: '万能位置', sub: '任意城市（非农场）', icons: ['wild', 'any'], accent: '#a98bd0', wild: true };
+  }
+  if (card.kind === 'wild-industry') {
+    return { kind: '万能', name: '万能产业', sub: '任意产业 / 城市', icons: ['wild', 'any'], accent: '#a98bd0', wild: true };
+  }
+  return { kind: '卡牌', name: card.id, sub: '', icons: [], accent: '#c8a15a', wild: false };
+}
+
+function renderHand() {
+  const p = currentPlayer(state);
+  if (p === null) {
+    $('#handMeta').textContent = '对局结束';
+    $('#handStrip').innerHTML = '<div class="hand-empty">终局已结算，点“新的一局”再来一盘。</div>';
+    return;
+  }
+  const ps = state.players[p];
+  $('#handMeta').innerHTML = `${playerTag(p)} · ${ps.hand.length} 张 <span style="color:var(--dim)">(8 张上限)</span>`;
+  if (!ps.hand.length) {
+    $('#handStrip').innerHTML = '<div class="hand-empty">本回合没有手牌。</div>';
+    return;
+  }
+  $('#handStrip').innerHTML = ps.hand.map((card) => {
+    const f = cardFace(card);
+    const icons = f.icons.map((ind) => (ind === 'wild' || ind === 'any')
+      ? iconSvg(ind, `icon ind-${ind}`)
+      : indIconSvg(ind)).join('');
+    return `
+      <button class="hcard ${f.wild ? 'wild' : ''}" type="button"
+        data-card="${esc(card.id)}" aria-pressed="${selectedCard === card.id}"
+        style="--accent:${f.accent}" title="${esc(f.name + ' · ' + f.sub)}">
+        <span class="hc-kind">${f.kind}</span>
+        <span class="hc-name">${esc(f.name)}</span>
+        <span class="hc-sub">${esc(f.sub)}</span>
+        <span class="hc-icons">${icons}</span>
+      </button>`;
+  }).join('');
+}
+
+function selectedCardFace() {
+  if (!selectedCard || !state) return null;
+  const p = currentPlayer(state);
+  if (p === null) return null;
+  const card = state.players[p].hand.find((c) => c.id === selectedCard);
+  return card ? cardFace(card) : null;
+}
+
+function renderDock() {
+  const p = currentPlayer(state);
+  const face = selectedCardFace();
+  const ps = p !== null ? state.players[p] : null;
+  const canAct = state.phase === 'action';
+  const limit = actionsPerRound(state);
+  const left = Math.max(0, limit - state.actionsThisTurn);
+  const hasDev = canAct && legalAll.some((a) => a.type === 'develop');
+  const hasLoan = canAct && legalAll.some((a) => a.type === 'loan');
+  const hasPass = canAct && selectedCard && legalAll.some((a) => a.type === 'pass');
+  const hasScout = canAct && currentLegalAll.some((a) => a.type === 'scout');
+
+  let devReason = '', loanReason = '', scoutReason = '', passReason = '';
+  if (!canAct) {
+    devReason = loanReason = scoutReason = passReason = '对局已结束';
+  } else {
+    if (!selectedCard) {
+      devReason = loanReason = passReason = '先选一张手牌';
+    }
+    if (!hasDev && selectedCard) {
+      const anyDev = ps && ps.tiles.some((t) => t.developable);
+      devReason = anyDev ? '现金不足支付研发用铁' : '没有可研发的最低级板块（陶 1/3 级带灯泡）';
+    }
+    if (!hasLoan) {
+      if (!selectedCard) loanReason = '先选一张手牌';
+      else if (ps && incomeLevelAt(ps.incomeSpace) - 3 < -10) loanReason = '收入等级已到 -10，不能再贷款';
+      else loanReason = '这张牌不能用于贷款';
+    }
+    if (!hasScout) {
+      const hasWild = ps && ps.hand.some((c) => c.kind === 'wild-location' || c.kind === 'wild-industry');
+      if (hasWild) scoutReason = '手中有万能卡，不能侦察';
+      else if (ps && ps.hand.length < 3) scoutReason = '手牌不足 3 张，不能侦察';
+      else if (state.wildSupply.location < 1 || state.wildSupply.industry < 1) scoutReason = '万能卡供应不足，不能侦察';
+      else scoutReason = '当前不能侦察';
+    }
+    if (!hasPass && selectedCard) passReason = '这张牌不能过牌';
+  }
+  dockReasons = { develop: devReason, loan: loanReason, scout: scoutReason, pass: passReason };
+
+  const setBtn = (btn, enabled, reason) => {
+    if (!btn) return;
+    btn.setAttribute('aria-disabled', enabled ? 'false' : 'true');
+    btn.title = enabled ? '消耗 1 次行动' : (reason || '暂不可用');
+  };
+  setBtn(document.querySelector('[data-cmd="develop"]'), hasDev, devReason);
+  setBtn(document.querySelector('[data-cmd="loan"]'), hasLoan, loanReason);
+  setBtn(document.querySelector('[data-cmd="scout"]'), hasScout, scoutReason);
+  setBtn(document.querySelector('[data-cmd="pass"]'), hasPass, passReason);
+
+  if (!canAct) {
+    $('#dockSelected').innerHTML = '对局结束。点右上角“新的一局”重新开始。';
+  } else if (!selectedCard) {
+    $('#dockSelected').innerHTML = `本回合还剩 <b>${left}</b> 次 · 每次耗 1 次 · 先选一张手牌`;
+  } else {
+    $('#dockSelected').innerHTML = `已选 <b>${esc(face ? face.name : selectedCard)}</b> · 本回合还剩 <b>${left}</b> 次 · 每次耗 1 次`;
+  }
+
+  if (!selectedCard) {
+    $('#actionChips').innerHTML = `<span class="chips-empty">${p === null ? '对局结束。' : '研发 / 贷款 / 过牌需先选牌；侦察可直接执行。灰按钮点一下会说明原因。'}</span>`;
+    return;
+  }
+  if (!legalAll.length) {
+    $('#actionChips').innerHTML = '<span class="chips-empty">这张牌没有建造/铺路/售卖动作；灰按钮点一下会说明原因。</span>';
+    return;
+  }
+  const order = { build: 0, network: 1, sell: 2, develop: 3, loan: 4, scout: 5, pass: 6 };
+  const seen = new Set();
+  const chips = [];
+  legalAll.forEach((a, i) => {
+    const key = actionKey(a);
+    if (seen.has(key)) return;
+    seen.add(key);
+    chips.push({ a, i });
+  });
+  chips.sort((x, y) => (order[x.a.type] ?? 9) - (order[y.a.type] ?? 9));
+  const shown = chips.slice(0, 42);
+  const more = chips.length - shown.length;
+  $('#actionChips').innerHTML = shown.map(({ a, i }) => actionChipHtml(a, i)).join('') +
+    (more > 0 ? `<span class="chips-more">还有 ${more} 个动作，请在板上点选</span>` : '');
+}
+
+function actionChipHtml(a, i) {
+  const label = shortActionLabel(a);
+  let ic = iconSvg('build', 'icon');
+  if (a.type === 'build') ic = indIconSvg(a.industry);
+  else if (a.type === 'network') ic = iconSvg(state.era === ERA.RAIL ? 'rail' : 'canal', 'icon');
+  else if (a.type === 'sell') {
+    const sale = a.sales[0];
+    const tile = state.board.slots[sale.location][sale.slotIndex];
+    ic = indIconSvg(tile ? tile.def.industry : 'cotton');
+  } else if (a.type === 'develop') ic = iconSvg('develop', 'icon');
+  else if (a.type === 'loan') ic = iconSvg('loan', 'icon');
+  else if (a.type === 'pass') ic = iconSvg('pass', 'icon');
+  return `<button class="achip act-${a.type}" type="button" data-ai="${i}" title="${esc(fullActionLabel(a))}">${ic}<span class="t">${esc(label)}</span></button>`;
+}
+
+/* ================================================================== */
+/* 动作描述                                                            */
+/* ================================================================== */
+
+function actionKey(a) {
+  if (a.type === 'build') return `b|${a.location}|${a.industry}|${a.slotIndex}`;
+  if (a.type === 'network') return `n|${a.links.join('-')}`;
+  if (a.type === 'sell') return `s|${a.sales.map((s) => s.location + ':' + s.slotIndex + ':' + s.merchant + ':' + s.useMerchantBeer).join('+')}`;
+  if (a.type === 'develop') return `d|${a.removals.join('+')}`;
+  if (a.type === 'loan') return 'loan';
+  if (a.type === 'pass') return 'pass';
+  if (a.type === 'scout') return `scout|${a.cardIds.join('+')}`;
+  return JSON.stringify(a);
+}
+
+function buildLevel(stateBefore, industry) {
+  const p = currentPlayer(stateBefore);
+  if (p === null) return '?';
+  const tile = lowestTile(stateBefore.players[p], industry);
+  return tile ? tile.level : '?';
+}
+
+function edgeLabel(edge) {
+  const d = LINKS[edge];
+  return `${locZh(d.a)}—${locZh(d.b)}`;
+}
+
+function shortActionLabel(a) {
+  if (a.type === 'build') return `${locZh(a.location)} · ${IND[a.industry].short} L${buildLevel(state, a.industry)}`;
+  if (a.type === 'network') return `${edgeLabel(a.links[0])}${a.links.length === 2 ? ' 双线' : ''}`;
+  if (a.type === 'sell') {
+    const s = a.sales[0];
+    const tile = state.board.slots[s.location][s.slotIndex];
+    const ind = tile ? tile.def.industry : 'cotton';
+    return `${locZh(s.location)} ${IND[ind].short}→${MERCHANT_ZH[s.merchant]}${s.useMerchantBeer ? '·桶' : ''}`;
+  }
+  if (a.type === 'develop') return `研发 ${a.removals.map((r) => IND[r].short).join('+')}`;
+  if (a.type === 'loan') return '贷款 +£30';
+  if (a.type === 'pass') return '过牌';
+  if (a.type === 'scout') return '侦察 弃 3 张';
+  return a.type;
+}
+
+function fullActionLabel(a) {
+  if (a.type === 'build') {
+    const p = currentPlayer(state);
+    const lvl = p === null ? '?' : buildLevel(state, a.industry);
+    const tile = p === null ? null : lowestTile(state.players[p], a.industry);
+    return `建造 ${locZh(a.location)}（${locEn(a.location)}）· ${IND[a.industry].zh} L${lvl}${tile ? ` · £${tile.cost}` : ''}`;
+  }
+  if (a.type === 'network') {
+    const cost = state.era === ERA.CANAL ? 3 : (a.links.length === 2 ? 15 : 5);
+    return `铺设${state.era === ERA.CANAL ? '运河' : '铁路'} ${a.links.map(edgeLabel).join(' + ')} · £${cost}${state.era === ERA.RAIL ? '（另计煤/啤酒）' : ''}`;
+  }
+  if (a.type === 'sell') {
+    const s = a.sales[0];
+    const tile = state.board.slots[s.location][s.slotIndex];
+    const ind = tile ? tile.def.industry : 'cotton';
+    return `售卖 ${locZh(s.location)} · ${IND[ind].zh} → ${MERCHANT_ZH[s.merchant]} 商人${s.useMerchantBeer ? '（使用商人啤酒桶，触发奖励）' : ''}`;
+  }
+  if (a.type === 'develop') return `研发：移除 ${a.removals.map((r) => IND[r].zh).join(' + ')}（各取当前最低级）`;
+  if (a.type === 'loan') return '贷款：获得 £30，收入等级 -3';
+  if (a.type === 'pass') return '过牌：弃 1 张手牌';
+  if (a.type === 'scout') return '侦察：弃 3 张手牌，获得万能位置 + 万能产业';
+  return a.type;
+}
+
+/* ================================================================== */
+/* 板图渲染                                                            */
+/* ================================================================== */
+
+const slotStep = 26;
+
+function slotPositions(count) {
+  if (count === 1) return [{ dx: 0, dy: 0 }];
+  if (count === 2) return [{ dx: -slotStep / 2, dy: 0 }, { dx: slotStep / 2, dy: 0 }];
+  const p = [
+    { dx: -slotStep / 2, dy: -slotStep / 2 },
+    { dx: slotStep / 2, dy: -slotStep / 2 },
+    { dx: -slotStep / 2, dy: slotStep / 2 },
+    { dx: slotStep / 2, dy: slotStep / 2 }
+  ];
+  return p.slice(0, count);
+}
+
+function labelPoint(meta, halfW, halfH, size) {
+  if (meta.labelAt) return meta.labelAt;
+  switch (meta.label) {
+    case 'top': return { x: meta.x, y: meta.y - halfH - 8 - size * .35, anchor: 'middle' };
+    case 'bottom': return { x: meta.x, y: meta.y + halfH + 8 + size * .85, anchor: 'middle' };
+    case 'left': return { x: meta.x - halfW - 7, y: meta.y + size * .35, anchor: 'end' };
+    default: return { x: meta.x + halfW + 7, y: meta.y + size * .35, anchor: 'start' };
+  }
+}
+
+function textWidth(text, size) {
+  let w = 0;
+  for (const ch of String(text)) {
+    w += ch.codePointAt(0) > 255 ? size : size * .56;
+  }
+  return w;
+}
+
+function plateBox(text, x, baseline, anchor, size) {
+  const w = Math.min(textWidth(text, size) + 13, 240);
+  const h = size * 1.2 + 7;
+  const px = anchor === 'middle' ? x - w / 2 : anchor === 'end' ? x - w : x;
+  return { x: px, y: baseline - size * .95 - 3.5, w, h };
+}
+
+function renderBoard() {
+  const svg = $('#boardSvg');
+  const builtSet = new Set(state.board.links.map((l) => l.edge));
+  const parts = [];
+  parts.push(`<defs>${ICON_SYMBOLS}<pattern id="paperDots" width="7" height="7" patternUnits="userSpaceOnUse"><circle cx="1.2" cy="1.2" r=".45" fill="#b09f77" opacity=".28"/></pattern></defs>`);
+  parts.push(mapBackground());
+  parts.push(ghostLinksSvg(builtSet));
+  parts.push(builtLinksSvg());
+  parts.push(legalEdgesSvg());
+  parts.push(nodesSvg());
+  svg.innerHTML = parts.join('');
+}
+
+function mapBackground() {
+  const regions = [
+    [500, 128, '德比郡', 'DERBYSHIRE'],
+    [142, 178, '斯塔福德郡', 'STAFFORDSHIRE'],
+    [72, 268, '什罗普郡', 'SHROPSHIRE'],
+    [148, 414, '黑乡', 'BLACK COUNTRY'],
+    [552, 500, '沃里克郡', 'WARWICKSHIRE'],
+    [118, 584, '伍斯特郡', 'WORCESTERSHIRE'],
+    [380, 664, '格洛斯特郡', 'GLOUCESTERSHIRE']
+  ].map(([x, y, zh, en]) => `
+    <text class="region-zh" x="${x}" y="${y}" text-anchor="middle">${zh}</text>
+    <text class="region-en" x="${x}" y="${y + 9}" text-anchor="middle">${en}</text>`).join('');
+
+  return `
+    <rect width="620" height="720" fill="#e7dcc2"/>
+    <rect width="620" height="720" fill="url(#paperDots)"/>
+    <g class="contours" fill="none" stroke="#b7a47a" stroke-width=".7" opacity=".32">
+      <path d="M36 128c58-42 128-46 168 4s78 84 44 146-100 60-134 6S-10 172 36 128z"/>
+      <path d="M344 58c64-16 128 12 152 66s-4 96-52 108-116-12-134-62 10-96 34-112z"/>
+      <path d="M46 402c46-24 108-18 134 20s18 88-26 106-102 10-126-30 4-80 18-96z"/>
+      <path d="M420 356c52-18 104 2 122 42s-4 86-48 98-94-6-108-46 6-78 34-94z"/>
+      <path d="M96 586c38-20 84-12 104 20s8 64-24 78-78 6-94-26 2-60 14-72z"/>
+      <path d="M398 566c44-16 88 0 102 34s-2 70-38 82-78-4-92-38 4-66 28-78z"/>
+    </g>
+    <rect x="7" y="7" width="606" height="706" rx="9" fill="none" stroke="#b6a276" stroke-width="2"/>
+    <rect x="13" y="13" width="594" height="694" rx="5" fill="none" stroke="#c8b88f" stroke-width=".8"/>
+    ${regions}
+    <path class="river" d="M78 314 C96 372 182 410 239 431 C258 470 246 548 248 590 C250 640 236 670 241 690"/>
+    <path class="river" d="M78 314 C96 372 182 410 239 431 C258 470 246 548 248 590 C250 640 236 670 241 690" stroke-width=".7" opacity=".25"/>
+    <path class="river" d="M258 212 C276 240 300 262 330 276 C380 296 432 292 470 280 C512 268 548 246 585 222"/>
+    <text class="river-label" x="155" y="520" transform="rotate(70 155 520)">塞文河 SEVERN</text>
+    <text class="river-label" x="500" y="292" transform="rotate(-9 500 292)">特伦特河 TRENT</text>
+    <g transform="translate(596,34)" text-anchor="end">
+      <text x="0" y="0" font-family="Songti SC, Georgia, serif" font-size="17" font-weight="700" fill="#3a3122">工业革命：伯明翰</text>
+      <text x="0" y="11" font-family="ui-sans-serif, sans-serif" font-size="7.5" letter-spacing="2.2" fill="#7d6d4e">BRASS · BIRMINGHAM · THE MIDLANDS 1760–1870</text>
+    </g>
+    <g class="compass" transform="translate(40,66)" fill="none" stroke="currentColor">
+      <circle r="14" stroke-width="1"/>
+      <path d="M0 -10 L4 2 L0 0 L-4 2 Z" fill="currentColor" stroke="none"/>
+      <text x="0" y="-17" text-anchor="middle" font-family="ui-sans-serif, sans-serif" font-size="7" fill="currentColor" stroke="none">N</text>
+    </g>`;
+}
+
+function edgeGeom(edge) {
+  const d = LINKS[edge];
+  const a = MAP[d.a];
+  const b = MAP[d.b];
+  if (!a || !b) return null;
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const len = Math.hypot(dx, dy) || 1;
+  return { a, b, dx, dy, len, nx: -dy / len, ny: dx / len, dual: !!(d.canal && d.rail) };
+}
+
+function ghostLinksSvg(builtSet) {
+  let out = '';
+  LINKS.forEach((d, e) => {
+    const g = edgeGeom(e);
+    if (!g) return;
+    const hasC = d.canal;
+    const hasR = d.rail;
+    const offC = hasC && hasR ? -2.8 : 0;
+    const offR = hasC && hasR ? 2.8 : 0;
+    if (hasC && !builtSet.has(e)) {
+      out += `<line class="ghost canal" x1="${g.a.x + g.nx * offC}" y1="${g.a.y + g.ny * offC}" x2="${g.b.x + g.nx * offC}" y2="${g.b.y + g.ny * offC}"/>`;
+    }
+    if (hasR && !builtSet.has(e)) {
+      out += `<line class="ghost rail" x1="${g.a.x + g.nx * offR}" y1="${g.a.y + g.ny * offR}" x2="${g.b.x + g.nx * offR}" y2="${g.b.y + g.ny * offR}"/>`;
+    }
+  });
+  return out;
+}
+
+function builtLinksSvg() {
+  let out = '';
+  for (const link of state.board.links) {
+    const d = LINKS[link.edge];
+    const g = edgeGeom(link.edge);
+    if (!d || !g) continue;
+    const off = d.canal && d.rail ? (link.era === ERA.CANAL ? -2.8 : 2.8) : 0;
+    const x1 = g.a.x + g.nx * off, y1 = g.a.y + g.ny * off;
+    const x2 = g.b.x + g.nx * off, y2 = g.b.y + g.ny * off;
+    const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+    out += `<line class="built-halo" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
+    out += `<line class="built-casing" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${PLAYER_COLORS[link.player]}"/>`;
+    out += `<line class="built-inner ${link.era}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
+    out += `<g class="link-badge" transform="translate(${mx},${my})"><title>P${link.player + 1} ${eraZh(link.era)} ${edgeLabel(link.edge)}</title><circle r="8.6" fill="${PLAYER_COLORS[link.player]}"/><text y="3.2">${link.era === ERA.CANAL ? 'C' : 'R'}${link.player + 1}</text></g>`;
+  }
+  return out;
+}
+
+function legalEdgesSvg() {
+  let out = '';
+  for (const [edge, idxs] of edgeMap) {
+    const d = LINKS[edge];
+    const g = edgeGeom(edge);
+    if (!d || !g) continue;
+    const off = d.canal && d.rail ? (state.era === ERA.CANAL ? -2.8 : 2.8) : 0;
+    const x1 = g.a.x + g.nx * off, y1 = g.a.y + g.ny * off;
+    const x2 = g.b.x + g.nx * off, y2 = g.b.y + g.ny * off;
+    out += `<line class="legal-edge" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
+    out += `<line class="edge-hit" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" pointer-events="stroke" data-ai="${idxs.join(',')}" tabindex="0" role="button" aria-label="${esc(idxs.map((i) => fullActionLabel(actionIndex[i])).join(' / '))}"/>`;
+  }
+  return out;
+}
+
+function nodesSvg() {
+  const ids = Object.keys(MAP);
+  let out = '';
+  for (const id of ids) {
+    const meta = MAP[id];
+    if (meta.kind === 'merchant') out += merchantNode(id);
+    else out += locationNode(id);
+  }
+  return out;
+}
+
+function slotGroup(locId, slotIndex, cx, cy, tile, idxs, legalKind, allowed) {
+  const isLegal = idxs.length > 0;
+  const cls = ['slot'];
+  if (tile) cls.push('filled');
+  if (isLegal) cls.push('legal');
+  let inner = '';
+  if (tile) {
+    const ind = IND[tile.def.industry];
+    cls.push('owner-' + tile.player, 'ind-' + tile.def.industry);
+    if (tile.flipped) cls.push('flipped');
+    inner += `<rect class="tile-bg" x="-12" y="-12" width="24" height="24" rx="5" fill="${ind.color}"/>`;
+    inner += `<rect x="-10.5" y="-10.5" width="21" height="7.5" rx="3" fill="#fff" opacity=".13"/>`;
+    inner += `<use href="#i-${tile.def.industry}" x="-8.5" y="-9" width="17" height="17" class="tile-icon"/>`;
+    inner += `<path class="owner-pennant" d="M-12 -12 L-3.5 -12 L-12 -3.5 Z" fill="${PLAYER_COLORS[tile.player]}"/>`;
+    inner += `<circle class="level-badge" cx="8.2" cy="-8.2" r="6.1" fill="#efe4cb"/>`;
+    inner += `<text class="level-text" x="8.2" y="-5.2" text-anchor="middle">${tile.def.level}</text>`;
+    if (tile.flipped) {
+      inner += `<rect x="-12" y="-12" width="24" height="24" rx="5" fill="#0d0b07" opacity=".34"/>`;
+      inner += `<g class="flip-mark" transform="translate(8,8)"><circle r="5" fill="#efe4cb"/><path d="M2.3 -2 A3 3 0 1 1 -1.7 -2.4" fill="none" stroke="#3a3126" stroke-width="1.2" stroke-linecap="round"/><path d="M-2.8 -3.8 L-1.5 -1.9 L-3.5 -1.3 Z" fill="#3a3126"/></g>`;
+    }
+    if (tile.resources > 0) {
+      for (let k = 0; k < Math.min(tile.resources, 6); k += 1) {
+        inner += `<rect x="${-10 + k * 3.4}" y="7.3" width="2.4" height="2.4" rx=".5" fill="#fff" opacity=".82"/>`;
+      }
+      if (tile.resources > 6) inner += `<text x="10" y="10" text-anchor="end" font-size="7" font-weight="700" fill="#fff">6+</text>`;
+    }
+  } else {
+    inner += `<rect class="empty-bg" x="-12" y="-12" width="24" height="24" rx="5"/>`;
+    const inds = allowed || [];
+    if (inds.length === 1) {
+      inner += `<use href="#i-${IND[inds[0]].icon}" x="-7" y="-7" width="14" height="14" class="ghost-icon"/>`;
+    } else {
+      const size = 9.8, gap = 1.2;
+      const total = inds.length * size + (inds.length - 1) * gap;
+      inds.forEach((ind, k) => {
+        inner += `<use href="#i-${IND[ind].icon}" x="${-total / 2 + k * (size + gap)}" y="${-size / 2}" width="${size}" height="${size}" class="ghost-icon"/>`;
+      });
+    }
+  }
+  if (isLegal) {
+    inner += `<rect class="legal-ring ${legalKind === 'sell' ? 'sell' : ''}" x="-15.5" y="-15.5" width="31" height="31" rx="8"/>`;
+    if (legalKind === 'sell') {
+      inner += `<g class="target-badge sell"><circle cx="13.5" cy="13.5" r="6"/><path d="M13.5 17V10.5M10.8 13.2 13.5 10.5l2.7 2.7" fill="none" stroke="#203a2c" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></g>`;
+    } else {
+      inner += `<g class="target-badge build"><circle cx="13.5" cy="13.5" r="6"/><path d="M13.5 10.4v6.2M10.4 13.5h6.2" fill="none" stroke="#3f2d08" stroke-width="1.5" stroke-linecap="round"/></g>`;
+    }
+  }
+  const attrs = isLegal
+    ? ` data-ai="${idxs.join(',')}" tabindex="0" role="button" aria-label="${esc(idxs.map((i) => fullActionLabel(actionIndex[i])).join(' / '))}"`
+    : '';
+  const dataSlot = ` data-slot="${locId}:${slotIndex}"`;
+  const tip = tile
+    ? `${locZh(locId)} · ${IND[tile.def.industry].zh} L${tile.def.level}${tile.flipped ? '（已翻面）' : ''} · P${tile.player + 1}`
+    : `${locZh(locId)} · 槽位 ${slotIndex + 1}：${(allowed || []).map((x) => IND[x].short).join(' / ')}`;
+  return `<g class="${cls.join(' ')}" transform="translate(${cx},${cy})"${dataSlot}${attrs}><title>${esc(tip)}</title>${inner}</g>`;
+}
+
+function locationNode(id) {
+  const meta = MAP[id];
+  const loc = LOCATIONS[id];
+  const slots = state.board.slots[id] || [];
+  const count = slots.length || 1;
+  const pos = slotPositions(count);
+  const halfW = count === 1 ? 12 : 25;
+  const halfH = count >= 3 ? 25 : 12;
+  const isFarm = !!loc.farm;
+  const size = isFarm ? 13 : 15.5;
+  const lp = labelPoint(meta, halfW, halfH, size);
+  const labelText = locZh(id);
+  const plate = plateBox(labelText, lp.x, lp.y, lp.anchor, size);
+
+  let out = `<g class="loc-node ${isFarm ? 'farm' : 'city'}" data-loc="${id}">`;
+  if (isFarm) {
+    out += `<path class="farm-roof" d="M${meta.x - 15} ${meta.y - 8} L${meta.x} ${meta.y - 28} L${meta.x + 15} ${meta.y - 8} Z"/>`;
+    out += `<rect class="farm-roof" x="${meta.x - 2.2}" y="${meta.y - 33}" width="4.4" height="8" rx="1.2"/>`;
+  }
+  out += `<rect class="name-plate" x="${plate.x}" y="${plate.y}" width="${plate.w}" height="${plate.h}" rx="4"/>`;
+  out += `<text class="node-name ${isFarm ? 'farm-name' : 'city-name'}" x="${lp.x}" y="${lp.y}" text-anchor="${lp.anchor}">${esc(labelText)}</text>`;
+  pos.forEach((p, i) => {
+    const key = id + ':' + i;
+    const bIdx = buildMap.get(key) || [];
+    const sIdx = sellMap.get(key) || [];
+    const idxs = [...bIdx, ...sIdx];
+    const kind = bIdx.length && sIdx.length ? 'build' : bIdx.length ? 'build' : sIdx.length ? 'sell' : '';
+    const allowed = loc.slots[i] ? loc.slots[i].industries.slice() : [];
+    out += slotGroup(id, i, meta.x + p.dx, meta.y + p.dy, slots[i], idxs, kind, allowed);
+  });
+  out += '</g>';
+  return out;
+}
+
+function merchantNode(id) {
+  const meta = MAP[id];
+  const m = MERCHANTS[id];
+  const ms = state.merchants[id];
+  const active = ms.tiles.length > 0;
+  const faces = ms.tiles;
+  const face = faces.find((f) => f !== 'blank') || 'blank';
+  const size = 13.5;
+  const lp = labelPoint(meta, 15, 15, size);
+  const subY = lp.y + 10;
+  const subText = active ? bonusText(id) : '未启用（2 人局）';
+  const pw = Math.min(Math.max(textWidth(MERCHANT_ZH[id], size), textWidth(subText, 8.5)) + 14, 230);
+  const px = lp.anchor === 'middle' ? lp.x - pw / 2 : lp.anchor === 'end' ? lp.x - pw : lp.x;
+
+  const pts = [];
+  for (let k = 0; k < 6; k += 1) {
+    const a = Math.PI / 3 * k - Math.PI / 2;
+    pts.push(`${(Math.cos(a) * 15).toFixed(2)},${(Math.sin(a) * 15).toFixed(2)}`);
+  }
+  let inner = `<polygon class="merchant-hex" points="${pts.join(' ')}"/>`;
+  inner += `<use href="#i-${face === 'blank' ? 'blank' : face}" x="-7" y="-8" width="14" height="14" class="merchant-icon"/>`;
+  ms.barrels.forEach((on, k) => {
+    inner += `<circle class="barrel-dot ${on ? '' : 'off'}" cx="${-5 + k * 5}" cy="19" r="2.6"/>`;
+  });
+  if (faces.length > 1) {
+    inner += `<text x="10" y="-12" text-anchor="middle" font-size="6.5" fill="#d8c9a6">×${faces.length}</text>`;
+  }
+  const sub = subText;
+  return `<g class="merchant ${active ? '' : 'dim'}" data-merchant="${id}" transform="translate(${meta.x},${meta.y})">
+    <title>${esc(MERCHANT_ZH[id] + ' · ' + m.name + ' · ' + sub)}</title>
+    ${inner}
+    <rect class="merchant-plate" x="${px - meta.x}" y="${lp.y - meta.y - 17}" width="${pw}" height="31" rx="4"/>
+    <text class="merchant-name" x="${lp.x - meta.x}" y="${lp.y - meta.y}" text-anchor="${lp.anchor}">${esc(MERCHANT_ZH[id])}</text>
+    <text class="merchant-sub" x="${lp.x - meta.x}" y="${subY - meta.y}" text-anchor="${lp.anchor}">${esc(sub)}</text>
+  </g>`;
+}
+
+/* ================================================================== */
+/* 市场 / 商人 / 日志                                                  */
+/* ================================================================== */
+
+function renderMarkets() {
+  const coalPrices = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7];
+  const ironPrices = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5];
+  const coal = state.markets.coal;
+  const iron = state.markets.iron;
+  const coalN = coal.filter(Boolean).length;
+  const ironN = iron.filter(Boolean).length;
+  $('#marketHeadSub').textContent = `煤 ${coalN}/14 · 铁 ${ironN}/10`;
+  const cell = (on, price) => `<span class="mcell ${on ? 'on' : ''}"><b>${price}</b></span>`;
+  $('#markets').innerHTML = `
+    <div class="market coal ${fx && fx.market && fx.market.coal ? 'flash' : ''}">
+      <h3>煤市场 <span>£1–£7 / 空后 £8</span></h3>
+      <div class="mcells">${coal.map((on, i) => cell(on, coalPrices[i])).join('')}</div>
+    </div>
+    <div class="market iron ${fx && fx.market && fx.market.iron ? 'flash' : ''}">
+      <h3>铁市场 <span>£1–£5 / 空后 £6</span></h3>
+      <div class="mcells">${iron.map((on, i) => cell(on, ironPrices[i])).join('')}</div>
+    </div>`;
+}
+
+function renderMerchants() {
+  const html = Object.keys(MERCHANTS).map((id) => {
+    const m = MERCHANTS[id];
+    const ms = state.merchants[id];
+    const active = ms.tiles.length > 0;
+    const faces = ms.tiles.length ? ms.tiles : ['blank'];
+    const faceIcons = faces.map((f) => iconSvg(f === 'blank' ? 'blank' : (f === 'any' ? 'any' : IND[f].icon), `icon ${f === 'any' ? 'ind-any' : f === 'blank' ? 'ind-blank' : 'ind-' + f}`)).join('');
+    const barrels = ms.barrels.length
+      ? ms.barrels.map((on) => `<span class="barrel ${on ? 'on' : ''}"></span>`).join('')
+      : '<span class="barrel"></span>';
+    return `
+      <div class="merch ${active ? '' : 'dim'}">
+        <div class="merch-name"><b>${esc(MERCHANT_ZH[id])}</b><span>${esc(m.name)} · ${esc(active ? bonusText(id) : '2 人局不启用')}</span></div>
+        <div class="merch-faces">${faceIcons}</div>
+        <div class="barrels">${barrels}</div>
+      </div>`;
+  }).join('');
+  $('#merchants').innerHTML = html;
+}
+
+function renderLog() {
+  const html = logEntries.length
+    ? logEntries.map((e) => `
+      <div class="log-row ${e.kind}">
+        <span class="log-meta">R${e.round}·${e.era === ERA.RAIL ? '铁' : '运'}</span>
+        <span class="log-text">${e.text}</span>
+      </div>`).join('')
+    : '<div class="log-row"><span class="log-text" style="color:var(--dim)">还没有动作。</span></div>';
+  $('#logList').innerHTML = html;
+  $('#logList').scrollTop = 0;
+}
+
+/* ================================================================== */
+/* 动作执行与反馈                                                      */
+/* ================================================================== */
+
+function executeAction(action) {
+  if (!state || state.phase !== 'action') return;
+  closeSheet();
+  const prev = state;
+  const actor = currentPlayer(prev);
+  let next;
+  try {
+    next = applyAction(prev, action);
+  } catch (err) {
+    showToast('动作不可执行：' + err.message, 'bad');
+    return;
+  }
+
+  const logs = [];
+  logs.push({
+    round: prev.round, era: prev.era, kind: 'act',
+    text: `${playerTag(actor)} ${actionLogText(action, prev, actor)}`
+  });
+
+  const flips = [];
+  for (const [location, slots] of Object.entries(next.board.slots)) {
+    const oldSlots = prev.board.slots[location] || [];
+    slots.forEach((tile, slotIndex) => {
+      const old = oldSlots[slotIndex];
+      if (!tile || !tile.flipped) return;
+      if (old && old.flipped) return;
+      flips.push({
+        location, slotIndex, player: tile.player,
+        def: tile.def, incomeAdvance: tile.def.income
+      });
+      logs.push({
+        round: prev.round, era: prev.era, kind: 'event',
+        text: `翻面：${locZh(location)} ${IND[tile.def.industry].zh} L${tile.def.level} · ${playerTag(tile.player)} 收入 +${tile.def.income}`
+      });
+    });
+  }
+
+  const bonuses = [];
+  for (const ev of next.lastEvents || []) {
+    if (ev.kind === 'merchant-bonus') {
+      const m = MERCHANTS[ev.merchant];
+      const text = m ? bonusText(ev.merchant) : '';
+      bonuses.push({ merchant: ev.merchant, label: text.replace('奖励 ', '') });
+      logs.push({
+        round: prev.round, era: prev.era, kind: 'event',
+        text: `商人啤酒奖励：${MERCHANT_ZH[ev.merchant]} · ${playerTag(ev.player)} ${text.replace('奖励 ', '')}`
+      });
+    }
+  }
+
+  const deltas = new Map();
+  next.players.forEach((np, i) => {
+    const op = prev.players[i];
+    const ds = [];
+    if (np.money !== op.money) {
+      const d = np.money - op.money;
+      ds.push({ text: `${d > 0 ? '+' : '−'}£${Math.abs(d)}`, neg: d < 0 });
+    }
+    if (np.incomeSpace !== op.incomeSpace) {
+      const ol = incomeLevelAt(op.incomeSpace);
+      const nl = incomeLevelAt(np.incomeSpace);
+      if (nl !== ol) ds.push({ text: `收入 ${nl > ol ? '+' : '−'}${Math.abs(nl - ol)}级`, neg: nl < ol });
+      else ds.push({ text: `收入格 ${np.incomeSpace - op.incomeSpace > 0 ? '+' : '−'}${Math.abs(np.incomeSpace - op.incomeSpace)}`, neg: np.incomeSpace < op.incomeSpace });
+    }
+    if (np.vp !== op.vp) {
+      const d = np.vp - op.vp;
+      ds.push({ text: `VP ${d > 0 ? '+' : '−'}${Math.abs(d)}`, neg: d < 0 });
+    }
+    if (ds.length) deltas.set(i, ds);
+  });
+
+  const marketChanged = {
+    coal: prev.markets.coal.join('') !== next.markets.coal.join(''),
+    iron: prev.markets.iron.join('') !== next.markets.iron.join('')
+  };
+
+  for (const rec of next.eraHistory.slice(prev.eraHistory.length)) {
+    const parts = rec.perPlayer.map((pp, i) => `${playerTag(i)} Link ${pp.linkVP} + 产业 ${pp.industryVP} → ${pp.vpAfter} VP`).join('；');
+    logs.push({
+      round: rec.round, era: rec.era, kind: 'sys',
+      text: `${eraZh(rec.era)}结算：${parts}`
+    });
+  }
+
+  let banner = null;
+  if (next.phase === 'game-over' && prev.phase !== 'game-over') {
+    const winners = next.winner || [];
+    const names = winners.map((i) => `P${i + 1}`).join(' / ');
+    logs.push({ round: next.round, era: next.era, kind: 'sys', text: `终局结算 · ${names ? names + ' 获胜' : '无胜者'}` });
+    banner = null;
+  } else if (next.era !== prev.era) {
+    logs.push({ round: next.round, era: next.era, kind: 'sys', text: '运河时代结束 · 移除一级板块、重洗牌堆，进入铁路时代' });
+    banner = { k: 'ERA CHANGE', t: '运河时代结束 · 铁路时代开始', s: '一级板块已移除 · 牌堆重洗 · 每人重抽 8 张' };
+  } else if (next.round !== prev.round) {
+    logs.push({ round: next.round, era: next.era, kind: 'sys', text: `第 ${next.round} 轮开始 · 按本轮花费重排顺位` });
+  }
+
+  for (const e of logs) logEntries.unshift(e);
+  if (logEntries.length > 140) logEntries.length = 140;
+
+  state = next;
+  selectedCard = null;
+  fx = { flips, bonuses, deltas, market: marketChanged };
+  renderAll();
+
+  if (banner) showBanner(banner);
+  if (next.phase === 'game-over') setTimeout(openGameOver, 420);
+  const np = currentPlayer(next);
+  if (next.phase !== 'game-over' && np !== null && np !== actor) {
+    pulseChip($('#turnChip'));
+  }
+}
+
+function pulseChip(el) {
+  if (!el) return;
+  el.classList.remove('pulse');
+  void el.offsetWidth;
+  el.classList.add('pulse');
+  setTimeout(() => el.classList.remove('pulse'), 1900);
+}
+
+function actionLogText(action, prev, actor) {
+  if (action.type === 'build') {
+    const level = buildLevel(prev, action.industry);
+    const tile = lowestTile(prev.players[actor], action.industry);
+    return `建造 ${locZh(action.location)} · ${IND[action.industry].zh} L${level}（£${tile ? tile.cost : '?'}）`;
+  }
+  if (action.type === 'network') {
+    const kind = prev.era === ERA.CANAL ? '运河' : '铁路';
+    return `铺设${kind} ${action.links.map(edgeLabel).join(' + ')}${action.links.length === 2 ? '（双线）' : ''}`;
+  }
+  if (action.type === 'sell') {
+    return action.sales.map((s) => {
+      const tile = prev.board.slots[s.location][s.slotIndex];
+      return `售出 ${locZh(s.location)} ${IND[tile.def.industry].zh} → ${MERCHANT_ZH[s.merchant]}${s.useMerchantBeer ? '（商人桶）' : ''}`;
+    }).join('；');
+  }
+  if (action.type === 'develop') {
+    const copy = prev.players[actor].tiles.slice();
+    const parts = action.removals.map((ind) => {
+      const idx = copy.findIndex((t) => t.industry === ind);
+      const tile = idx >= 0 ? copy.splice(idx, 1)[0] : null;
+      return `${IND[ind].zh}${tile ? ' L' + tile.level : ''}`;
+    });
+    return `研发：移除 ${parts.join(' + ')}`;
+  }
+  if (action.type === 'loan') return '贷款 +£30 · 收入等级 -3';
+  if (action.type === 'scout') return '侦察：弃 3 张，获得万能位置 + 万能产业';
+  if (action.type === 'pass') return '过牌（弃 1 张）';
+  return action.type;
+}
+
+function applyFxToDom() {
+  if (!fx) return;
+  for (const f of fx.flips) {
+    const el = document.querySelector(`[data-slot="${f.location}:${f.slotIndex}"]`);
+    if (!el) continue;
+    el.classList.add('fx-flip');
+    el.insertAdjacentHTML('beforeend', `<text class="float-text" y="-18">+${f.incomeAdvance} 收入</text>`);
+  }
+  for (const b of fx.bonuses) {
+    const el = document.querySelector(`[data-merchant="${b.merchant}"]`);
+    if (!el) continue;
+    el.classList.add('fx-merchant');
+    el.insertAdjacentHTML('beforeend', `<text class="float-text vp" y="-36">${esc(b.label)}</text>`);
+  }
+  clearTimeout(fxTimer);
+  fxTimer = setTimeout(() => {
+    fx = null;
+    document.querySelectorAll('.fx-flip, .fx-merchant').forEach((el) => el.classList.remove('fx-flip', 'fx-merchant'));
+    document.querySelectorAll('.float-text').forEach((el) => el.remove());
+  }, 1700);
+}
+
+/* ================================================================== */
+/* 弹层 / 提示                                                         */
+/* ================================================================== */
+
+function openOverlay(html) {
+  const el = $('#overlay');
+  el.innerHTML = html;
+  el.hidden = false;
+  const first = el.querySelector('button');
+  if (first) setTimeout(() => first.focus(), 30);
+}
+function closeOverlay() {
+  const el = $('#overlay');
+  el.hidden = true;
+  el.innerHTML = '';
+}
+function openSheet(actions) {
+  sheetActions = actions.slice();
+  const html = `
+    <div class="dialog" role="dialog" aria-modal="true" aria-label="选择动作">
+      <h2>选择动作</h2>
+      <p>同一位置有 ${sheetActions.length} 个合法选项。</p>
+      <div class="choice-list">
+        ${sheetActions.map((a, i) => `<button class="choice" type="button" data-choice="${i}">${choiceIcon(a)}<span>${esc(fullActionLabel(a))}</span></button>`).join('')}
+      </div>
+      <div class="close-row"><button class="bigbtn" type="button" data-cmd="close-sheet">取消</button></div>
+    </div>`;
+  const el = $('#sheet');
+  el.innerHTML = html;
+  el.hidden = false;
+  const first = el.querySelector('button');
+  if (first) setTimeout(() => first.focus(), 30);
+}
+function closeSheet() {
+  const el = $('#sheet');
+  el.hidden = true;
+  el.innerHTML = '';
+  sheetActions = [];
+}
+function choiceIcon(a) {
+  if (a.type === 'build') return indIconSvg(a.industry);
+  if (a.type === 'sell') return iconSvg('sell', 'icon');
+  if (a.type === 'network') return iconSvg(state.era === ERA.RAIL ? 'rail' : 'canal', 'icon');
+  if (a.type === 'develop') return iconSvg('develop', 'icon');
+  return iconSvg('pass', 'icon');
+}
+
+function showToast(text, kind) {
+  if (!text) return;
+  const el = document.createElement('div');
+  el.className = 'toast ' + (kind || '');
+  el.textContent = text;
+  $('#toastLayer').appendChild(el);
+  while ($('#toastLayer').children.length > 4) $('#toastLayer').firstChild.remove();
+  setTimeout(() => {
+    el.style.transition = 'opacity .3s ease';
+    el.style.opacity = '0';
+    setTimeout(() => el.remove(), 320);
+  }, 2300);
+}
+
+function showBanner({ k, t, s }) {
+  const el = $('#eraBanner');
+  $('#bannerK').textContent = k;
+  $('#bannerT').textContent = t;
+  $('#bannerS').textContent = s || '';
+  el.hidden = false;
+  clearTimeout(bannerTimer);
+  bannerTimer = setTimeout(() => { el.hidden = true; }, 2700);
+}
+
+function openRules() {
+  openOverlay(`
+    <div class="dialog" role="dialog" aria-modal="true" aria-label="规则">
+      <h2>工业革命：伯明翰</h2>
+      <p>2 人标准局。运河时代 → 铁路时代，每时代 10 轮；首轮每人 1 个动作，之后每回合 2 个动作。每个动作弃 1 张手牌。</p>
+      <h3>六种行动</h3>
+      <ul>
+        <li><b>建造</b>：选地点卡/产业卡，点金色槽位。地点卡不要求网络；产业卡要求自己的网络。</li>
+        <li><b>铺路</b>：任选一张牌，点金色连线。运河 £3；铁路 £5 + 1 煤；双线 £15 + 2 煤 + 1 啤酒。</li>
+        <li><b>售卖</b>：点自己发亮的棉纺/制造/陶器板块，再选商人。商人啤酒桶会触发奖励。</li>
+        <li><b>研发</b>：弃 1 张牌，移除 1–2 块当前最低级板块（陶 1/3 级带灯泡，不能研发）。</li>
+        <li><b>贷款</b>：+£30，收入等级 -3。</li>
+        <li><b>侦察</b>：弃 3 张牌，换 1 张万能位置 + 1 张万能产业。</li>
+      </ul>
+      <h3>读图</h3>
+      <ul>
+        <li>水蓝虚线 = 运河；铁灰点线 = 铁路；实线且带玩家色外圈 = 已被占据，中点徽记 C/R 表示运河/铁路，数字是玩家编号。</li>
+        <li>产业板块用颜色与图形区分六业；右下角数字是等级；变暗且有折角箭头 = 已翻面。</li>
+        <li>板图可拖动、双指/滚轮缩放；也可用“整图 / − / +”按钮。金色标记都可点。</li>
+      </ul>
+      <div class="close-row"><button class="bigbtn primary" type="button" data-cmd="close-overlay">开始</button></div>
+    </div>`);
+}
+
+function openGameOver() {
+  const sc = score(state);
+  const winners = sc.winner || [];
+  const winNames = winners.map((i) => `P${i + 1}`).join(' / ') || '—';
+  const rows = sc.ranking.map((p, rank) => `
+    <tr class="${winners.includes(p.index) ? 'win' : ''}">
+      <td>${rank + 1}</td>
+      <td>${playerTag(p.index)}${p.name && p.name !== 'P' + (p.index + 1) ? ' · ' + esc(p.name) : ''}</td>
+      <td>${p.vp}</td>
+      <td>${p.incomeLevel >= 0 ? '+' : ''}${p.incomeLevel}</td>
+      <td>£${p.money}</td>
+      <td>${p.loansTaken}</td>
+    </tr>`).join('');
+  const eraRows = sc.eraHistory.map((rec) => `
+    <tr>
+      <td>${eraZh(rec.era)}</td>
+      <td>${rec.round}</td>
+      <td>${rec.perPlayer.map((p, i) => `P${i + 1}: ${p.vpAfter} VP`).join(' · ')}</td>
+    </tr>`).join('');
+  openOverlay(`
+    <div class="dialog" role="dialog" aria-modal="true" aria-label="终局结算">
+      <h2>终局结算</h2>
+      <div class="winner-line">${winNames} 获胜</div>
+      <p>VP 高者胜；平局依次比较收入等级、现金。现金与收入不折算 VP。</p>
+      <table class="score-table">
+        <thead><tr><th>#</th><th>玩家</th><th>VP</th><th>收入</th><th>现金</th><th>贷款</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      ${eraRows ? `<h3>时代结算</h3><table class="score-table"><thead><tr><th>时代</th><th>轮</th><th>结算后</th></tr></thead><tbody>${eraRows}</tbody></table>` : ''}
+      <div class="close-row">
+        <button class="bigbtn" type="button" data-cmd="close-overlay">查看板图</button>
+        <button class="bigbtn primary" type="button" data-cmd="restart">再来一局</button>
+      </div>
+    </div>`);
+}
+
+/* ================================================================== */
+/* 交互：选牌、点板、按钮                                              */
+/* ================================================================== */
+
+function selectCard(cardId) {
+  if (state.phase !== 'action') return;
+  selectedCard = selectedCard === cardId ? null : cardId;
+  renderAll();
+  if (selectedCard) {
+    const el = document.querySelector(`.hcard[data-card="${selectedCard.replace(/"/g, '\\"')}"]`);
+    if (el && el.scrollIntoView) el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' });
+  }
+}
+
+function handleAi(indicesStr) {
+  const idxs = String(indicesStr).split(',').map(Number).filter((n) => Number.isInteger(n));
+  const acts = idxs.map((i) => actionIndex[i]).filter(Boolean);
+  if (!acts.length) return;
+  if (acts.length === 1) return executeAction(acts[0]);
+  const unique = [];
+  const seen = new Set();
+  for (const a of acts) {
+    const k = actionKey(a);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    unique.push(a);
+  }
+  if (unique.length === 1) return executeAction(unique[0]);
+  const singles = unique.filter((a) => a.type === 'network' && a.links.length === 1);
+  if (singles.length === 1 && unique.every((a) => a.type === 'network')) return executeAction(singles[0]);
+  openSheet(unique);
+}
+
+function doCmd(cmd) {
+  switch (cmd) {
+    case 'restart': newGame(); break;
+    case 'rules': openRules(); break;
+    case 'close-overlay': closeOverlay(); break;
+    case 'close-sheet': closeSheet(); break;
+    case 'zoom-in': {
+      const r = $('#boardViewport').getBoundingClientRect();
+      zoomAt(1.25, r.width / 2, r.height / 2);
+      break;
+    }
+    case 'zoom-out': {
+      const r = $('#boardViewport').getBoundingClientRect();
+      zoomAt(.8, r.width / 2, r.height / 2);
+      break;
+    }
+    case 'zoom-fit': fitBoard('contain'); break;
+    case 'develop': {
+      if (!selectedCard) { showToast(dockReasons.develop || '先选一张手牌', 'bad'); return; }
+      const acts = legalAll.filter((a) => a.type === 'develop');
+      if (!acts.length) { showToast(dockReasons.develop || '这张牌没有合法研发', 'bad'); return; }
+      if (acts.length === 1) executeAction(acts[0]); else openSheet(acts);
+      break;
+    }
+    case 'loan': {
+      if (!selectedCard) { showToast(dockReasons.loan || '先选一张手牌', 'bad'); return; }
+      const act = legalAll.find((a) => a.type === 'loan');
+      if (!act) { showToast(dockReasons.loan || '当前不能贷款', 'bad'); return; }
+      executeAction(act);
+      break;
+    }
+    case 'scout': {
+      const act = currentLegalAll.find((a) => a.type === 'scout');
+      if (!act) { showToast(dockReasons.scout || '当前不能侦察', 'bad'); return; }
+      executeAction(act);
+      break;
+    }
+    case 'pass': {
+      if (!selectedCard) { showToast(dockReasons.pass || '先选一张手牌', 'bad'); return; }
+      const act = legalAll.find((a) => a.type === 'pass');
+      if (!act) { showToast(dockReasons.pass || '当前不能过牌', 'bad'); return; }
+      executeAction(act);
+      break;
+    }
+    default: break;
+  }
+}
+
+/* ================================================================== */
+/* 缩放 / 拖拽                                                         */
+/* ================================================================== */
+
+function applyZoom() {
+  $('#boardStage').style.transform = `translate(${zoom.tx}px, ${zoom.ty}px) scale(${zoom.scale})`;
+}
+
+function clampPan() {
+  const vp = $('#boardViewport');
+  const r = vp.getBoundingClientRect();
+  const w = 620 * zoom.scale;
+  const h = 720 * zoom.scale;
+  if (w <= r.width) zoom.tx = (r.width - w) / 2;
+  else zoom.tx = clamp(zoom.tx, r.width - w - 36, 36);
+  if (h <= r.height) zoom.ty = (r.height - h) / 2;
+  else zoom.ty = clamp(zoom.ty, r.height - h - 36, 36);
+}
+
+function fitBoard(mode) {
+  const vp = $('#boardViewport');
+  const r = vp.getBoundingClientRect();
+  if (!r.width || !r.height) return;
+  const sW = r.width / 620;
+  const sH = r.height / 720;
+  const mobile = window.matchMedia('(max-width: 900px)').matches;
+  const narrow = window.innerWidth <= 480;
+  const compact = window.innerWidth <= 380 && window.innerHeight <= 620;
+  let s;
+  if (mode === 'contain' || !mobile) s = Math.min(sW, sH);
+  else if (compact) s = sW * .98;
+  else s = Math.min(sW, sH * (narrow ? 1.22 : 1.6));
+  s = clamp(s, .12, 6);
+  zoom.scale = s;
+  zoom.min = Math.min(sW, sH) * .72;
+  zoom.max = Math.max(sW, sH) * 5;
+  const w = 620 * s;
+  const h = 720 * s;
+  zoom.tx = (r.width - w) / 2;
+  const focusY = mobile ? 380 : 400;
+  zoom.ty = h <= r.height ? (r.height - h) / 2 : r.height / 2 - focusY * s;
+  zoom.user = false;
+  clampPan();
+  applyZoom();
+}
+
+function zoomAt(factor, cx, cy) {
+  const old = zoom.scale;
+  const ns = clamp(old * factor, zoom.min, zoom.max);
+  if (Math.abs(ns - old) < 1e-4) return;
+  const k = ns / old;
+  zoom.tx = cx - (cx - zoom.tx) * k;
+  zoom.ty = cy - (cy - zoom.ty) * k;
+  zoom.scale = ns;
+  zoom.user = true;
+  clampPan();
+  applyZoom();
+}
+
+function bindBoardGestures() {
+  const vp = $('#boardViewport');
+
+  vp.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const r = vp.getBoundingClientRect();
+    zoomAt(e.deltaY < 0 ? 1.12 : .89, e.clientX - r.left, e.clientY - r.top);
+  }, { passive: false });
+
+  vp.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.size === 1) {
+      dragStart = { x: e.clientX, y: e.clientY, tx: zoom.tx, ty: zoom.ty };
+      dragged = false;
+    } else if (pointers.size === 2) {
+      const pts = [...pointers.values()];
+      pinchStart = {
+        d: Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y),
+        cx: (pts[0].x + pts[1].x) / 2,
+        cy: (pts[0].y + pts[1].y) / 2,
+        scale: zoom.scale, tx: zoom.tx, ty: zoom.ty
+      };
+      dragStart = null;
+    }
+  });
+
+  window.addEventListener('pointermove', (e) => {
+    if (!pointers.has(e.pointerId)) return;
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.size === 1 && dragStart) {
+      const dx = e.clientX - dragStart.x;
+      const dy = e.clientY - dragStart.y;
+      if (Math.hypot(dx, dy) > 6) dragged = true;
+      zoom.tx = dragStart.tx + dx;
+      zoom.ty = dragStart.ty + dy;
+      zoom.user = true;
+      clampPan();
+      applyZoom();
+    } else if (pointers.size === 2 && pinchStart) {
+      const pts = [...pointers.values()];
+      const d = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) || 1;
+      const cx = (pts[0].x + pts[1].x) / 2;
+      const cy = (pts[0].y + pts[1].y) / 2;
+      const r = vp.getBoundingClientRect();
+      const ns = clamp(pinchStart.scale * (d / pinchStart.d), zoom.min, zoom.max);
+      const k = ns / pinchStart.scale;
+      zoom.scale = ns;
+      zoom.tx = (cx - r.left) - ((pinchStart.cx - r.left) - pinchStart.tx) * k;
+      zoom.ty = (cy - r.top) - ((pinchStart.cy - r.top) - pinchStart.ty) * k;
+      zoom.user = true;
+      clampPan();
+      applyZoom();
+      dragged = true;
+    }
+  });
+
+  const release = (e) => {
+    if (!pointers.has(e.pointerId)) return;
+    pointers.delete(e.pointerId);
+    if (pointers.size < 2) pinchStart = null;
+    if (pointers.size === 0) {
+      if (dragged) {
+        suppressClick = true;
+        setTimeout(() => { suppressClick = false; }, 80);
+      }
+      dragStart = null;
+      dragged = false;
+    }
+  };
+  window.addEventListener('pointerup', release);
+  window.addEventListener('pointercancel', release);
+}
+
+/* ================================================================== */
+/* 事件委托                                                            */
+/* ================================================================== */
+
+document.addEventListener('click', (e) => {
+  const cardEl = e.target.closest ? e.target.closest('[data-card]') : null;
+  if (cardEl) {
+    selectCard(cardEl.getAttribute('data-card'));
+    return;
+  }
+
+  const aiEl = e.target.closest ? e.target.closest('[data-ai]') : null;
+  if (aiEl) {
+    if (suppressClick) { suppressClick = false; return; }
+    handleAi(aiEl.getAttribute('data-ai'));
+    return;
+  }
+
+  const choiceEl = e.target.closest ? e.target.closest('[data-choice]') : null;
+  if (choiceEl) {
+    const i = Number(choiceEl.getAttribute('data-choice'));
+    const act = sheetActions[i];
+    closeSheet();
+    if (act) executeAction(act);
+    return;
+  }
+
+  const cmdEl = e.target.closest ? e.target.closest('[data-cmd]') : null;
+  if (cmdEl) {
+    doCmd(cmdEl.getAttribute('data-cmd'));
+    return;
+  }
+
+  if (e.target === $('#overlay')) closeOverlay();
+  if (e.target === $('#sheet')) closeSheet();
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    if (!$('#sheet').hidden) closeSheet();
+    else if (!$('#overlay').hidden) closeOverlay();
+    return;
+  }
+  if ((e.key === 'Enter' || e.key === ' ') && document.activeElement && document.activeElement.matches && document.activeElement.matches('[data-ai]')) {
+    e.preventDefault();
+    handleAi(document.activeElement.getAttribute('data-ai'));
+  }
+});
+
+window.addEventListener('resize', () => {
+  if (!zoom.user) fitBoard('width');
+  else { clampPan(); applyZoom(); }
+});
+
+/* ================================================================== */
+/* 调试接口（只读 / 快进，供验收脚本使用）                              */
+/* ================================================================== */
+
+window.__brass = {
+  get state() { return state; },
+  legal: () => legalActions(state),
+  score: () => score(state),
+  autoPlayToRail(extra = 10) {
+    let guard = 0;
+    while (state.phase === 'action' && state.era !== ERA.RAIL && guard < 3000) {
+      const act = chooseGreedyAction(state);
+      if (!act) break;
+      try { state = applyAction(state, act); } catch (err) { break; }
+      guard += 1;
+    }
+    let extraGuard = 0;
+    while (state.phase === 'action' && state.era === ERA.RAIL && extraGuard < extra) {
+      const act = chooseGreedyAction(state);
+      if (!act) break;
+      try { state = applyAction(state, act); } catch (err) { break; }
+      extraGuard += 1;
+      guard += 1;
+    }
+    selectedCard = null;
+    fx = null;
+    pushLogRaw(`演示快进：${eraZh(state.era)} · 第 ${state.round} 轮 · ` + (state.phase === 'game-over' ? '终局' : '继续'), 'sys');
+    renderAll();
+    return { era: state.era, round: state.round, phase: state.phase, actions: guard };
+  },
+  autoPlayToEnd() {
+    let guard = 0;
+    while (state.phase === 'action' && guard < 3000) {
+      const act = chooseGreedyAction(state);
+      if (!act) break;
+      try { state = applyAction(state, act); } catch (err) { break; }
+      guard += 1;
+    }
+    selectedCard = null;
+    fx = null;
+    pushLogRaw('演示快进：已到终局', 'sys');
+    renderAll();
+    if (state.phase === 'game-over') setTimeout(openGameOver, 350);
+    return { era: state.era, round: state.round, phase: state.phase, actions: guard };
+  },
+  stepAI(n = 1) {
+    let done = 0;
+    while (done < n && state.phase === 'action') {
+      const act = chooseGreedyAction(state);
+      if (!act) break;
+      try { state = applyAction(state, act); } catch (err) { break; }
+      done += 1;
+    }
+    selectedCard = null;
+    fx = null;
+    renderAll();
+    return { era: state.era, round: state.round, phase: state.phase, done };
+  }
+};
+
+/* ================================================================== */
+/* 启动                                                                */
+/* ================================================================== */
+
+bindBoardGestures();
+newGame();
+requestAnimationFrame(() => {
+  fitBoard('width');
+  renderAll();
+});
+</script>
+</body>
+</html>

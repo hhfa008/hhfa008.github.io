@@ -111,6 +111,7 @@ input{width:100%;min-height:46px;border:1px solid var(--line);border-radius:10px
           <button class="btn" type="button" id="leaveBtn">离开</button>
           <button class="btn primary" type="button" id="startBtn" hidden>开始对局</button>
           <button class="btn" type="button" id="restartBtn" hidden>再来一局</button>
+          <button class="btn" type="button" id="roomCloseBtn" hidden>关闭房间</button>
         </div>
       </div>
       <div class="seats" id="seats"></div>
@@ -149,113 +150,197 @@ input{width:100%;min-height:46px;border:1px solid var(--line);border-radius:10px
   'use strict';
   var E = window.TicketToRideEngine;
   var $ = function (id) { return document.getElementById(id); };
+  var GAME = 'ticket-to-ride-premium';
   var COLOR_HEX = { red:'#b34336', blue:'#3c668c', green:'#4c7357', yellow:'#d0a83c', black:'#252b33', white:'#ece6d8', orange:'#c06e35', pink:'#b47c9a', wild:'#4d4a42', gray:'#b9af9f' };
-  var st = { session:null, playerId:null, roomId:null, view:null, poll:null, busy:false, keep:[] };
-  var KEY = 'hhfa-ttr-online-v1';
+  var S = { roomId:null, session:null, playerId:null, view:null, poll:null, busy:false, keep:[], seq:0, resultShown:false, inviteCode:'' };
+  var KEY = 'hhfa-ttr-online-v2';
   function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]})}
-  function save(){try{localStorage.setItem(KEY,JSON.stringify({session:st.session,playerId:st.playerId,roomId:st.roomId}))}catch(e){}}
+  function save(){try{localStorage.setItem(KEY,JSON.stringify({session:S.session,playerId:S.playerId,roomId:S.roomId}))}catch(e){}}
   function load(){try{return JSON.parse(localStorage.getItem(KEY)||'null')}catch(e){return null}}
   function clearSave(){try{localStorage.removeItem(KEY)}catch(e){}}
   function sound(n){try{if(window.Sfx)window.Sfx.play(n,{volume:.5})}catch(e){}}
   function setStatus(id,text,bad){var el=$(id);if(!el)return;el.textContent=text||'';el.style.color=bad?'#b34336':'#3f4650'}
+  function apiError(r){return (r.body&&r.body.error&&r.body.error.message)||('HTTP '+r.status)}
+
+  // Unified room API. Default is same-origin (online-server.mjs); ?api=...
+  // points the static page at a Cloudflare Worker and is remembered.
+  var API_BASE=(function(){try{var q=new URLSearchParams(location.search);if(q.has('api')){var v=String(q.get('api')||'').replace(/\/+$/,'');try{v?localStorage.setItem('games-online-api',v):localStorage.removeItem('games-online-api')}catch(e){}return v}var s=null;try{s=localStorage.getItem('games-online-api')}catch(e){}return String(s||window.GAMES_ONLINE_API||'').replace(/\/+$/,'')}catch(e){return ''}})();
+  function apiUrl(p){return API_BASE?API_BASE+p:p}
+  function inviteSuffix(){return API_BASE?'&api='+encodeURIComponent(API_BASE):''}
   async function api(method,route,body){
-    var res=await fetch(route,{method:method,headers:{'content-type':'application/json'},body:body?JSON.stringify(body):undefined});
-    var data=null;try{data=await res.json()}catch(e){}
-    if(!res.ok||!data||data.ok===false){var m=data&&data.error&&data.error.message?data.error.message:('HTTP '+res.status);throw new Error(m)}
-    return data;
+    var init={method:method,headers:{accept:'application/json'},cache:'no-store'};
+    if(body!==undefined){init.headers['content-type']='application/json';init.body=JSON.stringify(body)}
+    var res=null;try{res=await fetch(apiUrl(route),init)}catch(e){return {ok:false,status:0,body:null}}
+    var text='';try{text=await res.text()}catch(e){}
+    var data=null;try{data=text?JSON.parse(text):null}catch(e){}
+    return {ok:res.ok,status:res.status,body:data};
   }
+  function roomRoute(suffix){return '/api/rooms/'+encodeURIComponent(S.roomId)+(suffix||'')}
   function nick(id,fallback){var el=$(id);return (el&&el.value.trim())||fallback}
+
   async function createRoom(){
     var pid=nick('createName','铁路大亨');setStatus('createStatus','正在创建…');
-    try{var d=await api('POST','/api/rooms',{playerId:pid,password:$('createPass').value||undefined});enter(d,d.playerSession);sound('notify')}
-    catch(e){setStatus('createStatus',e.message,true)}
+    var body={playerId:pid,nickname:pid};var pass=$('createPass').value;if(pass)body.password=pass;
+    var r=await api('POST','/api/rooms',body);
+    if(!r.ok||!r.body){setStatus('createStatus','创建失败：'+apiError(r),true);return}
+    S.roomId=r.body.roomId;S.session=r.body.session;S.playerId=r.body.playerId||pid;save();
+    enter(r.body);sound('notify');setStatus('createStatus','');
   }
   async function joinRoom(){
-    var pid=nick('joinName','调度员');var code=$('joinCode').value.trim().toUpperCase();
-    if(!code){setStatus('joinStatus','请填房间码。',true);return}
-    setStatus('joinStatus','正在加入…');
-    try{var d=await api('POST','/api/rooms/'+encodeURIComponent(code)+'/join',{playerId:pid,password:$('joinPass').value||undefined});enter(d,d.playerSession);sound('notify')}
-    catch(e){setStatus('joinStatus',e.message,true)}
+    var raw=$('joinCode').value.trim();if(!raw){setStatus('joinStatus','请填房间码。',true);return}
+    var room=raw,invite='';
+    if(/^https?:\/\//.test(raw)){try{var u=new URL(raw);room=u.searchParams.get('room')||u.searchParams.get('roomId')||'';invite=u.searchParams.get('code')||u.searchParams.get('invite')||''}catch(e){}}
+    if(!room){setStatus('joinStatus','邀请链接里没有 room 参数。',true);return}
+    if(!invite&&S.inviteCode)invite=S.inviteCode;
+    var pid=nick('joinName','调度员');setStatus('joinStatus','正在加入…');
+    var body={playerId:pid,nickname:pid};if(invite)body.inviteCode=invite;var pass=$('joinPass').value;if(pass)body.password=pass;
+    var r=await api('POST','/api/rooms/'+encodeURIComponent(room)+'/join',body);
+    if(!r.ok||!r.body){setStatus('joinStatus','加入失败：'+apiError(r),true);return}
+    S.roomId=r.body.roomId||room;S.session=r.body.session;S.playerId=r.body.playerId||pid;save();
+    enter(r.body);sound('notify');setStatus('joinStatus','');
   }
-  function enter(d,session){
-    st.session=session;st.playerId=d.playerId||(d.you&&d.you.playerId)||st.playerId;st.roomId=d.roomId;st.view=d;
-    save();$('lobby').classList.add('hidden');$('room').classList.remove('hidden');
-    try{history.replaceState({},'','?room='+encodeURIComponent(d.roomCode||d.roomId))}catch(e){}
-    renderRoom();startPolling();
+  function enter(view){
+    if(!view)return;
+    S.view=view;S.roomId=view.roomId||S.roomId;
+    $('lobby').classList.add('hidden');$('room').classList.remove('hidden');
+    try{history.replaceState({},'','?room='+encodeURIComponent(S.roomId))}catch(e){}
+    applyView(view);startPolling();
   }
-  function startPolling(){stopPolling();st.poll=setInterval(poll,900);poll()}
-  function stopPolling(){if(st.poll){clearInterval(st.poll);st.poll=null}}
+  function startPolling(){stopPolling();S.poll=setInterval(poll,900);poll()}
+  function stopPolling(){if(S.poll){clearInterval(S.poll);S.poll=null}}
   async function poll(){
-    if(!st.roomId||!st.session)return;
-    try{var v=await api('GET','/api/rooms/'+encodeURIComponent(st.roomId)+'?session='+encodeURIComponent(st.session)+'&playerId='+encodeURIComponent(st.playerId));applyView(v)}
-    catch(e){if(/not found|invalid session|not a member/i.test(e.message)){clearSave();stopPolling();$('room').classList.add('hidden');$('lobby').classList.remove('hidden');setStatus('joinStatus','房间已关闭，请重新加入。',true)}}
+    if(!S.roomId||!S.session)return;
+    var r=await api('GET',roomRoute()+'?session='+encodeURIComponent(S.session)+'&playerId='+encodeURIComponent(S.playerId||''));
+    if(!r.ok){if(r.status===401||r.status===403||r.status===404){clearSave();stopPolling();leaveLocal();setStatus('joinStatus','房间已关闭或会话失效，请重新加入。',true)}return}
+    if(r.body)applyView(r.body);
   }
-  function applyView(v){st.view=v;renderRoom();if(v.started&&v.state){renderGame();if(v.state.phase==='ticketSelect'&&v.state.current===v.youIndex)showTicketPick(v)}if(v.state&&v.state.over&&v.result)showResult(v.result)}
+  function applyView(v){
+    if(!v)return;
+    S.view=v;S.roomId=v.roomId||S.roomId;
+    var over=!!(v.over||(v.state&&v.state.over));
+    if(!over)S.resultShown=false;
+    renderRoom();
+    if(v.started&&v.state){
+      renderGame();
+      if(v.state.phase==='ticketSelect'&&v.state.current===v.you)showTicketPick(v);
+    }
+    if(over&&v.result&&!S.resultShown){S.resultShown=true;setTimeout(showResult,120)}
+  }
+  function myTurn(){
+    var v=S.view;
+    return !!(v&&v.started&&v.state&&!v.over&&!v.state.over&&v.you!=null&&v.state.current===v.you);
+  }
+  function isHost(){return (S.view&&S.view.seats||[]).some(function(s){return s.isYou&&s.isHost})}
   function renderRoom(){
-    var v=st.view;if(!v)return;
-    $('roomCode').textContent=v.roomCode||v.roomId.slice(-6).toUpperCase();
-    $('seats').innerHTML=(v.seats||[]).map(function(s){return '<div class="seat'+(s.ai?' ai':'')+'"><b>'+esc(s.nickname)+'</b>'+(s.playerId===st.playerId?'你':(s.ai?'AI 补位':'玩家'))+'<span class="tag">'+(s.ai?'AI':s.takeover?'托管中':(v.currentPlayerIndex===s.index&&v.started?'行动中':'在线'))+'</span></div>'}).join('');
-    $('startBtn').hidden=!v.canStart;$('restartBtn').hidden=!v.canRestart;
+    var v=S.view;if(!v)return;
+    $('roomCode').textContent=v.code||String(S.roomId||'').slice(-6).toUpperCase();
+    var turn=v.state?v.state.current:null;
+    $('seats').innerHTML=(v.seats||[]).map(function(s){
+      var tag=s.ai?'AI':(turn===s.index&&v.started&&!v.over?'行动中':(s.connected?'在线':'离线'));
+      return '<div class="seat'+(s.ai?' ai':'')+'"><b>'+esc(s.name)+'</b>'+(s.isYou?'你':(s.ai?'AI 补位':'玩家'))+'<span class="tag">'+esc(tag)+'</span></div>';
+    }).join('');
+    $('startBtn').hidden=!(isHost()&&!v.started);
+    $('restartBtn').hidden=!v.canRestart;
+    $('roomCloseBtn').hidden=!isHost();
     $('game').classList.toggle('hidden',!v.started||!v.state);
-    $('roomStatus').textContent=v.lastAiError?('AI 提示：'+v.lastAiError):'';
-    $('roomHint').textContent=v.started?(v.state&&v.state.over?'对局结束。':(v.canMove?'轮到你行动。':(v.currentControlledByAI?'对方由 AI 行动中…':'等待对方行动…'))):'把房间码发给朋友；空位会由 AI 补足，一个人也能开局。';
+    var current=v.state?(v.seats||[])[v.state.current]:null;
+    var meta='状态版本 '+(v.stateVersion==null?0:v.stateVersion)+' · 历史 '+((v.history||[]).length)+' 条';
+    $('roomHint').textContent=(v.started?(v.over||(v.state&&v.state.over)?'对局结束。':(myTurn()?'轮到你行动。':(current&&current.ai?'对方由 AI 行动中…':'等待对方行动…'))):'把房间码发给朋友；空位会由 AI 补足，一个人也能开局。')+' '+meta;
   }
   function renderGame(){
-    var v=st.view,state=v.state,me=v.youIndex,mine=state.players[me];
+    var v=S.view,state=v.state,me=v.you,mine=state.players[me];
+    if(!mine)return;
+    var canAct=myTurn()&&(v.legalActions||[]).length>0;
     $('scorebar').innerHTML=state.players.map(function(p){return '<div class="scorecard'+(state.current===p.index&&!state.over?' active':'')+'"><b>'+esc(p.name)+'</b><span>车厢 '+p.trains+' · 手牌 '+p.handCount+' · 任务 '+p.ticketCount+'</span></div>'}).join('');
     var svg='';
     E.ROUTES.forEach(function(r){var a=E.CITIES[r.a],b=E.CITIES[r.b],owner=state.routes[r.id];var color=owner===0?'#3c668c':owner===1?'#b34336':(COLOR_HEX[r.color]||'#b9af9f');svg+='<g data-route="'+r.id+'"><line class="route-hit" x1="'+a.x+'" y1="'+a.y+'" x2="'+b.x+'" y2="'+b.y+'"></line><line class="route" x1="'+a.x+'" y1="'+a.y+'" x2="'+b.x+'" y2="'+b.y+'" stroke="'+color+'" stroke-width="'+(r.length>=5?4.4:r.length>=3?3.8:3.2)+'" stroke-dasharray="'+(r.color==='gray'&&owner===null?'4 3':'none')+'"></line><title>'+esc(E.CITIES[r.a].name+'–'+E.CITIES[r.b].name)+'</title></g>'});
     E.CITIES.forEach(function(c){svg+='<circle class="city" cx="'+c.x+'" cy="'+c.y+'" r="2.7"></circle><text class="city-label" x="'+(c.x+4)+'" y="'+(c.y-4)+'">'+esc(c.name)+'</text>'});
     $('map').innerHTML=svg;
-    $('market').innerHTML=state.market.map(function(card,i){return '<button class="train-card" type="button" data-market="'+i+'" data-color="'+card+'" '+(v.canMove?'':'disabled')+'><span class="swatch"></span><span class="lbl">'+(E.COLOR_NAMES[card]||'?')+'</span></button>'}).join('');
-    $('drawDeck').disabled=!v.canMove;$('drawTickets').disabled=!v.canMove;
-    $('drawHint').textContent=v.canMove?(state.drawsLeft>0?'本回合还可摸 '+state.drawsLeft+' 张。':'摸 2 张车厢卡，或占领路线 / 抽任务。'):'等待对方行动…';
+    $('market').innerHTML=state.market.map(function(card,i){return '<button class="train-card" type="button" data-market="'+i+'" data-color="'+card+'" '+(canAct?'':'disabled')+'><span class="swatch"></span><span class="lbl">'+(E.COLOR_NAMES[card]||'?')+'</span></button>'}).join('');
+    $('drawDeck').disabled=!canAct;$('drawTickets').disabled=!canAct;
+    $('drawHint').textContent=canAct?(state.drawsLeft>0?'本回合还可摸 '+state.drawsLeft+' 张。':'摸 2 张车厢卡，或占领路线 / 抽任务。'):'等待对方行动…';
     var h=[];E.COLORS.forEach(function(c){h.push({c:c,n:mine.hand?mine.hand[c]:0})});if(mine.wilds!=null)h.push({c:'wild',n:mine.wilds});
     h.sort(function(a,b){return b.n-a.n});
     $('hand').innerHTML=h.map(function(x){return '<div class="hand-chip"><b>'+x.n+'</b>'+E.COLOR_NAMES[x.c]+'</div>'}).join('');
-    $('tickets').innerHTML=(mine.cards||[]).map(function(ti){var t=E.TICKETS[ti];return '<div class="ticket-row">'+esc(E.CITIES[t.a].name+' → '+E.CITIES[t.b].name)+'<b>'+t.value+'</b></div>'}).join('')||'<p class="muted">还没有任务。</p>';
+    $('tickets').innerHTML=(mine.tickets||[]).map(function(ti){var t=E.TICKETS[ti];return '<div class="ticket-row">'+esc(E.CITIES[t.a].name+' → '+E.CITIES[t.b].name)+'<b>'+t.value+'</b></div>'}).join('')||'<p class="muted">还没有任务。</p>';
     $('log').innerHTML=(state.log||[]).slice(-14).map(function(x){return '<li>'+esc(x)+'</li>'}).join('')||'<li class="muted">等待第一步。</li>';
   }
   function showTicketPick(v){
-    st.keep=v.state.pendingTickets.map(function(_,i){return i});
+    if(!$('ticketOverlay').hidden)return;
+    S.keep=v.state.pendingTickets.map(function(_,i){return i});
     $('ticketPick').innerHTML=v.state.pendingTickets.map(function(ti,i){var t=E.TICKETS[ti];return '<label style="display:flex;gap:10px;align-items:center;padding:10px;border:1px solid rgba(36,45,58,.2);border-radius:10px;background:#fffdf7;min-height:44px"><input type="checkbox" data-ticket="'+i+'" checked><span>'+esc(E.CITIES[t.a].name+' → '+E.CITIES[t.b].name)+'</span><b style="margin-left:auto">+'+t.value+'</b></label>'}).join('');
-    $('ticketPick').querySelectorAll('input').forEach(function(inp){inp.addEventListener('change',function(){var i=Number(inp.getAttribute('data-ticket'));if(inp.checked){if(st.keep.indexOf(i)===-1)st.keep.push(i)}else st.keep=st.keep.filter(function(x){return x!==i})})});
+    $('ticketPick').querySelectorAll('input').forEach(function(inp){inp.addEventListener('change',function(){var i=Number(inp.getAttribute('data-ticket'));if(inp.checked){if(S.keep.indexOf(i)===-1)S.keep.push(i)}else S.keep=S.keep.filter(function(x){return x!==i})})});
     $('ticketOverlay').hidden=false;
   }
-  async function sendAction(move){
-    if(st.busy)return;st.busy=true;
-    try{var d=await api('POST','/api/rooms/'+encodeURIComponent(st.roomId)+'/actions',{session:st.session,playerId:st.playerId,move:move});applyView(d);sound('move');$('ticketOverlay').hidden=true}
-    catch(e){setStatus('roomStatus','动作被拒绝：'+e.message,true)}
-    st.busy=false;
+  async function sendAction(action){
+    if(S.busy)return;S.busy=true;
+    var r=await api('POST',roomRoute('/actions'),{session:S.session,playerId:S.playerId,action:action,idempotencyKey:'ttr-'+(++S.seq)});
+    if(!r.ok||!r.body)setStatus('roomStatus','动作被拒绝：'+apiError(r),true);
+    else{applyView(r.body);sound('move');$('ticketOverlay').hidden=true}
+    S.busy=false;
   }
-  function showResult(result){
+  function showResult(){
+    var v=S.view,result=v&&v.result;
     if(!result||!$('resultOverlay').hidden)return;
-    var meSeat=result.seats&&result.seats.find(function(s){return s.playerId===st.playerId});
-    var title=result.winner==null?'平局':(!meSeat?'对局结束':(result.winner===meSeat.index?'你赢了':'对手获胜'));
-    $('resultTitle').textContent=title;$('resultText').textContent=(result.scores||[]).map(function(s){return s.name+'：'+s.score+' 分'}).join(' · ')+'。';
+    var title=result.tied?'平局':(result.winnerSeat===v.you?'你赢了':'对手获胜');
+    $('resultTitle').textContent=title;
+    $('resultText').textContent=(v.seats||[]).map(function(s,i){
+      var d=result.detail?(i===0?result.detail.human:result.detail.ai):null;
+      return s.name+'：'+(result.scores&&result.scores[i]!=null?result.scores[i]:'-')+' 分'+
+        (d?'（路线 '+d.routePts+' · 任务 '+d.ticketPts+' · 最长 '+d.longest+'）':'');
+    }).join(' · ')+'。';
     $('resultOverlay').hidden=false;sound(title==='你赢了'?'win':title==='对手获胜'?'lose':'notify');
   }
-  async function copyInvite(){var url=location.origin+location.pathname+'?room='+encodeURIComponent(st.view.roomCode||st.roomId);try{await navigator.clipboard.writeText(url);setStatus('roomStatus','邀请链接已复制：'+url)}catch(e){setStatus('roomStatus','邀请链接：'+url)}}
-  async function start(){try{var d=await api('POST','/api/rooms/'+encodeURIComponent(st.roomId)+'/start',{session:st.session,playerId:st.playerId});applyView(d)}catch(e){setStatus('roomStatus',e.message,true)}}
-  async function restart(){try{var d=await api('POST','/api/rooms/'+encodeURIComponent(st.roomId)+'/restart',{session:st.session,playerId:st.playerId});$('resultOverlay').hidden=true;applyView(d)}catch(e){setStatus('roomStatus',e.message,true)}}
-  async function leave(){try{await api('POST','/api/rooms/'+encodeURIComponent(st.roomId)+'/leave',{session:st.session,playerId:st.playerId})}catch(e){}clearSave();stopPolling();st.roomId=null;st.view=null;$('room').classList.add('hidden');$('lobby').classList.remove('hidden')}
+  async function copyInvite(){
+    var token=null;
+    var r=await api('POST',roomRoute('/invite'),{session:S.session});
+    if(r.ok&&r.body)token=r.body.inviteToken||r.body.inviteCode;
+    if(!token&&S.view)token=S.view.inviteCode;
+    var url=location.origin+location.pathname+'?room='+encodeURIComponent(S.roomId)+(token?'&code='+encodeURIComponent(token):'')+inviteSuffix();
+    try{await navigator.clipboard.writeText(url);setStatus('roomStatus','邀请链接已复制：'+url)}catch(e){setStatus('roomStatus','邀请链接：'+url)}
+  }
+  async function start(){
+    var r=await api('POST',roomRoute('/start'),{session:S.session,playerId:S.playerId});
+    if(!r.ok||!r.body)setStatus('roomStatus',apiError(r),true);else applyView(r.body);
+  }
+  async function restart(){
+    var r=await api('POST',roomRoute('/restart'),{session:S.session,playerId:S.playerId});
+    if(!r.ok||!r.body)setStatus('roomStatus',apiError(r),true);
+    else{$('resultOverlay').hidden=true;S.resultShown=false;applyView(r.body)}
+  }
+  function leaveLocal(){
+    stopPolling();clearSave();S.roomId=null;S.session=null;S.playerId=null;S.view=null;S.resultShown=false;
+    $('room').classList.add('hidden');$('lobby').classList.remove('hidden');$('ticketOverlay').hidden=true;$('resultOverlay').hidden=true;
+  }
+  async function leave(){await api('POST',roomRoute('/leave'),{session:S.session,playerId:S.playerId});leaveLocal()}
+  async function closeRoom(){
+    var r=await api('DELETE',roomRoute()+'?session='+encodeURIComponent(S.session));
+    if(r.ok)leaveLocal();else setStatus('roomStatus','关闭失败：'+apiError(r),true);
+  }
   $('createBtn').addEventListener('click',createRoom);$('joinBtn').addEventListener('click',joinRoom);
-  $('copyBtn').addEventListener('click',copyInvite);$('leaveBtn').addEventListener('click',leave);
+  $('copyBtn').addEventListener('click',copyInvite);$('leaveBtn').addEventListener('click',leave);$('roomCloseBtn').addEventListener('click',closeRoom);
   $('startBtn').addEventListener('click',start);$('restartBtn').addEventListener('click',restart);
   $('againBtn').addEventListener('click',restart);$('closeBtn').addEventListener('click',function(){$('resultOverlay').hidden=true});
   $('drawDeck').addEventListener('click',function(){sendAction({type:'drawCard',source:'deck'})});
   $('drawTickets').addEventListener('click',function(){sendAction({type:'drawTickets'})});
-  $('keepTickets').addEventListener('click',function(){if(!st.keep.length){setStatus('roomStatus','至少保留 1 张任务。',true);return}sendAction({type:'keepTickets',keep:st.keep.slice().sort(function(a,b){return a-b})})});
-  $('market').addEventListener('click',function(e){var b=e.target.closest('[data-market]');if(b&&st.view&&st.view.canMove)sendAction({type:'drawCard',source:'market',marketIndex:Number(b.getAttribute('data-market'))})});
-  $('map').addEventListener('click',function(e){var g=e.target.closest('[data-route]');if(g&&st.view&&st.view.canMove)sendAction({type:'claimRoute',routeId:Number(g.getAttribute('data-route'))})});
+  $('keepTickets').addEventListener('click',function(){if(!S.keep.length){setStatus('roomStatus','至少保留 1 张任务。',true);return}sendAction({type:'keepTickets',keep:S.keep.slice().sort(function(a,b){return a-b})})});
+  $('market').addEventListener('click',function(e){var b=e.target.closest('[data-market]');if(b&&myTurn())sendAction({type:'drawCard',source:'market',marketIndex:Number(b.getAttribute('data-market'))})});
+  $('map').addEventListener('click',function(e){var g=e.target.closest('[data-route]');if(g&&myTurn())sendAction({type:'claimRoute',routeId:Number(g.getAttribute('data-route'))})});
   (async function boot(){
-    if(location.pathname.indexOf('/games/')!==0){ // static site: no room API
-    try{var lb=await api('GET','/api/leaderboard?limit=5');if(lb.entries&&lb.entries.length)$('leaderboard').innerHTML=lb.entries.map(function(x){return '<li><span>'+esc(x.winnerName||'平局')+'</span><b>'+(x.scores||[]).map(function(s){return s.score}).join(' : ')+'</b></li>'}).join('')}catch(e){}}
-    var saved=load();var q=new URLSearchParams(location.search);var room=q.get('room');
-    if(saved&&saved.roomId&&saved.session){st.roomId=saved.roomId;st.session=saved.session;st.playerId=saved.playerId;try{var d=await api('POST','/api/rooms/'+encodeURIComponent(st.roomId)+'/reconnect',{token:saved.session,playerId:saved.playerId});enter(d,saved.session);return}catch(e){clearSave()}}
-    if(room)$('joinCode').value=room;
+    if(!(location.pathname.indexOf('/games/')===0&&!API_BASE)){try{var lb=await api('GET','/api/leaderboard?game='+encodeURIComponent(GAME)+'&limit=5');if(lb.ok&&lb.body&&lb.body.entries&&lb.body.entries.length)$('leaderboard').innerHTML=lb.body.entries.map(function(x){return '<li><span>'+esc(x.name||'玩家')+(x.winner?' · 胜':'')+'</span><b>'+(x.score==null?'-':x.score)+'</b></li>'}).join('')}catch(e){}}
+    var q=new URLSearchParams(location.search);
+    var saved=load();
+    if(saved&&saved.roomId&&saved.session){
+      S.roomId=saved.roomId;S.session=saved.session;S.playerId=saved.playerId;
+      var r=await api('POST',roomRoute('/reconnect'),{session:S.session});
+      if(r.ok&&r.body){S.session=r.body.session||S.session;enter(r.body);return}
+      clearSave();S.roomId=null;S.session=null;S.playerId=null;
+    }
+    if(q.get('room'))$('joinCode').value=q.get('room');
+    S.inviteCode=q.get('code')||'';
   })();
 })();
 </script>
+<p style="text-align:center;margin:14px 0"><a href="../spectate.html" style="display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:44px;padding:0 14px;border-radius:12px;border:1px solid currentColor;color:inherit;font-size:13px;text-decoration:none">围观其他对局</a></p>
 </body>
 </html>

@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>汉诺塔规则：盘数可调、玩法、操作与计分</title>
+<meta name="description" content="汉诺塔完整规则与策略：盘数可调（默认 4 盘，?disks=4..13），三根柱子、移动最上盘、大盘不能压小盘、目标全部移到右柱；最少步数 2^n-1。本页提供玩法、操作、规则细节、计分、策略与常见问题详解。">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="author" content="Devin">
+<meta name="theme-color" content="#f3ead9">
+<link rel="canonical" href="https://hhfa008.github.io/games/hanoi/rules.html">
+<link rel="alternate" hreflang="zh-CN" href="https://hhfa008.github.io/games/hanoi/rules.html">
+<link rel="alternate" hreflang="x-default" href="https://hhfa008.github.io/games/hanoi/rules.html">
+<link rel="icon" href="/games/assets/icons/hanoi.svg" type="image/svg+xml">
+
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Devin">
+<meta property="og:title" content="汉诺塔规则：盘数可调、玩法、操作与计分">
+<meta property="og:description" content="汉诺塔完整规则与策略：盘数可调（默认 4 盘），三根柱子、移动最上盘、大盘不能压小盘、目标是将所有盘从左柱移到右柱。">
+<meta property="og:url" content="https://hhfa008.github.io/games/hanoi/rules.html">
+<meta property="og:image" content="https://hhfa008.github.io/games/assets/art/arcade/hanoi/og.webp">
+<meta property="og:image:type" content="image/webp">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="汉诺塔（盘数可调）真实可复核局面：8 盘局面中三根柱子分别有 4、2、2 枚盘，每根柱从上到下严格由小到大，未完成。">
+<meta property="og:locale" content="zh_CN">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="汉诺塔规则：盘数可调、玩法、操作与计分">
+<meta name="twitter:description" content="盘数可调（默认 4 盘，可用 ?disks=4..13 调整）；三根柱子、移动最上盘、大盘不能压小盘、目标是将所有盘从左柱移到右柱。">
+<meta name="twitter:image" content="https://hhfa008.github.io/games/assets/art/arcade/hanoi/og.webp">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "汉诺塔规则：盘数可调、玩法、操作与计分",
+  "description": "汉诺塔完整规则与策略：盘数可调（默认 4 盘），三根柱子、移动最上盘、大盘不能压小盘、目标是将所有盘从左柱移到右柱。",
+  "inLanguage": "zh-CN",
+  "author": { "@type": "Person", "name": "Devin", "url": "https://hhfa008.github.io/" },
+  "publisher": { "@type": "Person", "name": "Devin", "url": "https://hhfa008.github.io/" },
+  "datePublished": "2026-11-09",
+  "dateModified": "2026-11-09",
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://hhfa008.github.io/games/hanoi/rules.html"
+  },
+  "about": { "@type": "Thing", "name": "汉诺塔" }
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "汉诺塔的盘数可以调整吗？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "可以。默认是 4 盘，也可以在地址后加 ?disks=4..13 调整盘数，超范围的值会被夹到边界。盘数越多，最少步数呈指数增长。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "汉诺塔最少需要多少步？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "汉诺塔的最少步数遵循公式 2^n - 1，其中 n 是盘子数量。默认 4 盘最少需要 2^4 - 1 = 15 步；5 盘需要 31 步，13 盘需要 8191 步。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "汉诺塔可以重复移动同一枚盘子吗？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "可以。每次只能移动最上面的盘子，但可以通过中间柱子暂存盘子，因此同一枚盘子可以在柱子之间来回移动。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "汉诺塔中可以将大盘放在小盘上吗？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "不可以。大盘不能压在小盘之上，违反此规则的移动会被判为无效，不会改变盘面与步数。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "汉诺塔的盘子可以按任意顺序移动吗？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "不可以。每次只能移动某根柱子最上面的盘子，不能跳过上面的盘子直接移动下面的盘子。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "汉诺塔的计分方式是什么？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "以完成移动的步数为成绩，步数越少越好；理论上限是 2^n - 1。游戏在本地记录最佳步数，不显示云端排行榜。"
+      }
+    }
+  ]
+}
+</script>
+
+<style>
+:root{
+  --paper:#f3ead9;--paper-2:#fbf6ea;--ink:#2b2f36;--muted:#6d6459;--muted-2:#8a7f70;
+  --line:#dcccb3;--line-strong:#c9b697;--accent:#b98a5a;--accent-2:#8d6238;
+  --red:#c0392b;--dark:#2b2f36;--on-dark:#f3ead9;--on-dark-muted:#b9b2a5;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --serif:"Songti SC","STSong","SimSun","Noto Serif SC",serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.75 var(--sans);
+  padding-bottom:calc(28px + env(safe-area-inset-bottom));-webkit-font-smoothing:antialiased}
+.wrap{max-width:700px;margin:0 auto;padding:0 18px}
+a{color:var(--accent-2)}
+.site-header{background:var(--dark);color:var(--on-dark);padding:12px 0}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:700px;
+  margin:0 auto;padding:0 18px}
+.brand{display:flex;align-items:center;gap:9px;min-height:44px;font-weight:650;text-decoration:none;color:var(--on-dark)}
+.brand-mark{width:22px;height:22px;border-radius:6px;background:var(--accent);flex:none}
+.header-nav{display:flex;gap:14px;font-size:13px}
+.header-nav a{color:var(--on-dark-muted);text-decoration:none}
+.header-nav a:hover{color:var(--on-dark)}
+
+.hero{padding:30px 0 8px}
+.eyebrow{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--accent-2);margin:0 0 10px}
+h1{font-family:var(--serif);font-size:clamp(1.75rem,6.4vw,2.4rem);line-height:1.22;letter-spacing:-.01em;
+  margin:0 0 12px;font-weight:700}
+.lede{color:var(--muted);font-size:16.5px;margin:0}
+article{padding-top:10px}
+h2{font-family:var(--serif);font-size:1.32rem;line-height:1.35;margin:34px 0 12px;padding-top:6px;
+  border-top:1px solid var(--line);font-weight:700}
+h3{font-size:1.03rem;line-height:1.45;margin:22px 0 8px}
+p{margin:0 0 12px}
+ul{margin:0 0 14px;padding-left:1.3em}
+li{margin:0 0 7px}
+code{font-family:var(--mono);font-size:.9em;background:var(--paper-2);border:1px solid var(--line);
+  border-radius:5px;padding:1px 5px}
+.calc{margin:10px 0 14px;padding:12px 14px;background:var(--paper-2);border:1px solid var(--line);
+  border-left:4px solid var(--accent);border-radius:10px;font-family:var(--mono);font-size:15px;
+  line-height:1.65;overflow-wrap:anywhere}
+.calc strong{color:var(--red);font-weight:700}
+.example{margin:20px 0 6px;padding:16px;background:var(--paper-2);border:1px solid var(--line);border-radius:12px}
+.example h3{margin-top:0}
+.example p:last-child{margin-bottom:0}
+.verify{color:var(--muted);font-size:14px}
+.trick{margin:14px 0;padding:16px;background:var(--paper-2);border:1px solid var(--line);border-radius:12px}
+.trick h3{margin-top:0;color:var(--accent-2)}
+.faq h3{font-size:1rem;margin:18px 0 4px;color:var(--ink)}
+.faq p{color:var(--muted);margin-bottom:8px}
+.end{padding:16px;background:var(--dark);color:var(--on-dark);border-radius:12px;margin-top:26px}
+.end a{color:var(--on-dark)}
+.more{margin:22px 0 0;font-size:14px;color:var(--muted)}
+footer{margin:30px auto 0;padding:16px 18px 0;border-top:1px solid var(--line);max-width:700px;
+  color:var(--muted-2);font-size:13px;text-align:center}
+footer a{color:#7a5227;display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 6px}
+@media (max-width:420px){
+  .header-nav{gap:10px;font-size:12px}
+  body{font-size:15.5px}
+}
+.art-figure{margin:20px 0 24px;padding:0}
+.art-figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line);
+  background:var(--paper-2);box-shadow:0 10px 26px rgb(43 47 54 / .10)}
+.art-figure figcaption{margin-top:8px;font-size:13px;line-height:1.55;color:var(--muted)}
+code{overflow-wrap:anywhere}
+.eyebrow{font-size:12px}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true"></span>Devin</a>
+    <nav class="header-nav" aria-label="导航">
+      <a href="./">玩汉诺塔</a>
+      <a href="/games/">游戏大厅</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <header class="hero">
+    <p class="eyebrow">益智 · 逻辑推理</p>
+    <h1>汉诺塔规则：盘数可调、玩法、操作与计分</h1>
+    <p class="players"><strong>游戏人数：</strong>单人（1 人）。</p>
+    <p class="lede">盘数可调（默认 4 盘，可用 ?disks=4..13 调整）；三根柱子、移动最上盘、大盘不能压小盘。目标是将所有盘从左柱移到右柱。</p>
+  </header>
+
+  <figure class="art-figure">
+  <img src="../assets/art/arcade/hanoi/detail.webp" width="1200" height="800"
+    alt="汉诺塔（盘数可调）规则页配图：8 盘局面中三根柱子分别有 4、2、2 枚盘，每根柱从上到下严格由小到大，未完成。" loading="eager" decoding="async">
+  <figcaption>汉诺塔（盘数可调）的规则页配图。真实可复核的 8 盘局面：三根柱子分别有 4、2、2 枚盘，每根柱从上到下严格由小到大，未完成。 画面中的文字、数字与点阵由系统字体和代码绘制，材质由本地 FLUX 生成，局面由 <code>games/assets/art/arcade/engine/realism.mjs</code> 校验后才允许出图。</figcaption>
+</figure>
+
+  <article>
+    <p>汉诺塔（Tower of Hanoi）是经典的递归问题，也是逻辑思维训练的绝佳工具。游戏有三根柱子和若干大小不同的盘子，盘数默认 4 盘，也可以用地址参数 <code>?disks=4..13</code> 调整。目标是把所有盘子从左柱移动到右柱，过程中只能移动每根柱子最上面的盘子，且大盘不能压在小盘之上。看似简单的规则背后是指数增长的挑战：n 个盘子的最少步数是 2^n - 1。本文将解析玩法、操作、规则细节、计分方式、策略技巧与常见问题。</p>
+
+    <h2>一、玩法：从左柱到右柱的逻辑挑战</h2>
+    <p>游戏开始时，所有盘子按从大到小的顺序叠放在左柱上，最大的在底部，最小的在顶部。玩家通过一系列合法移动，把所有盘子搬到右柱。每一步只能移动一根柱子最上面的盘子，并且目标柱顶部要么为空，要么比要移动的盘子大。随着盘数增加，完成所需的步数呈指数增长：4 盘需要 15 步，5 盘需要 31 步，13 盘则需要 8191 步。</p>
+    <p>三根柱子通常记为 A、B、C（左、中、右）。把一个盘子从 A 移到 C，往往需要借助 B 作为中转；盘数越多，中转的层级越深。这个过程既考验规划能力，也要求对每一步的后果有清晰预判。</p>
+    <p>游戏的核心是把大问题拆成小问题：先把上面的 n-1 个盘子移到中转柱，再把最大的盘子移到目标柱，最后把 n-1 个盘子移到目标柱。理解这个递归结构，就能应对任意盘数。</p>
+
+    <h2>二、操作：移动规则与步骤详解</h2>
+    <p>每次只能移动最上面的盘子，这是游戏的核心限制。操作步骤可以分为：先选择源柱，只能取走它顶部的盘子；再选择目标柱，目标柱必须为空或顶部盘子更大；最后执行移动。非法移动不会改变盘面，也不会增加步数。</p>
+    <p>页面支持键盘与触屏：方向键或滑动用于在柱子之间切换源柱/目标柱，确认键执行移动；鼠标或触屏则可以直接选择。界面会实时显示三根柱子的盘面与累计步数。</p>
+    <p>如果当前局面走不下去，可以随时点击“新游戏”重置为初始叠放状态。最佳步数保存在本地，重新开始不会丢失。</p>
+
+    <h2>三、规则细节：不可逾越的边界</h2>
+    <p>规则只有两条约束：每次只能移动一根柱子最上面的盘子；大盘不能压在小盘之上。由此可以推出：不能跳过上面的盘子直接移动下面的盘子；空柱可以接收任意盘子；已经完成的柱面必须保持从下到上递减。违反任一约束的移动都会被拒绝。</p>
+    <p>当所有盘子都按顺序落在右柱时，游戏判胜。左柱和中柱可以参与中转，盘子在移动过程中可以反复经过不同柱子，规则并不限制移动次数，只要求每一步合法。</p>
+    <p>盘数可通过 <code>?disks=4..13</code> 调整，默认 4 盘。盘数越多，需要的记忆与规划越深，但规则本身完全一致。</p>
+
+    <h2>四、计分/胜负：步数决定成绩</h2>
+    <p>游戏以完成移动的步数为成绩，步数越少越好。对 n 个盘子，理论最少步数为 2^n - 1：4 盘为 15 步，5 盘为 31 步，13 盘为 8191 步。用最少步数完成即达到该盘数的最优解；多走的每一步都会增加成绩。</p>
+    <p>不同盘数的成绩分别比较，4 盘的 15 步和 5 盘的 31 步都属于各自的最优成绩。最佳步数保存在浏览器本地存储中，不会上传云端或显示排行榜。</p>
+    <p>胜负只有一个终点：所有盘子移动到右柱。只要中途没有非法移动，游戏不会提前结束，也不会因为步数多而判负。</p>
+
+    <h2>五、策略：从递归到优化</h2>
+    <p>最优策略就是递归：要把 n 个盘子从 A 移到 C，先把上面 n-1 个盘子从 A 移到 B，再把最大的盘子从 A 移到 C，最后把 n-1 个盘子从 B 移到 C。对 n-1 个盘子重复同样的过程，直到只剩一个盘子。</p>
+    <p>实际操作时，可以记住“最小盘永远最先动”的规律：在最优解中，最小盘每一步都在移动，且按固定方向在三根柱子之间循环。利用这一点可以减少犹豫，避免把大盘提前卡死。</p>
+    <p>盘数增加后，不要试图在脑中记住整条路径，而是按递归结构分段推进。每完成一个子目标（例如把上面 3 个盘子移到中转柱），就把它当作一个整体，专注于下一层目标。</p>
+
+    <h2>六、常见问题</h2>
+    <div class="faq">
+      <h3>汉诺塔的盘数可以调整吗？</h3>
+      <p>可以。默认是 4 盘，在地址后加 <code>?disks=4..13</code> 即可调整盘数，超范围的值会被夹到边界。盘数越多，最少步数呈指数增长。</p>
+
+      <h3>汉诺塔最少需要多少步？</h3>
+      <p>最少步数遵循公式 2^n - 1，其中 n 是盘子数量。默认 4 盘需要 15 步；5 盘需要 31 步；13 盘需要 8191 步。</p>
+
+      <h3>汉诺塔可以重复移动同一枚盘子吗？</h3>
+      <p>可以。每次只能移动最上面的盘子，但可以通过中间柱子暂存，因此同一枚盘子可以在柱子之间来回移动。</p>
+
+      <h3>汉诺塔中可以将大盘放在小盘上吗？</h3>
+      <p>不可以。大盘不能压在小盘之上，违反规则的移动会被判为无效，不会改变盘面与步数。</p>
+
+      <h3>汉诺塔的盘子可以按任意顺序移动吗？</h3>
+      <p>不可以。每次只能移动某根柱子最上面的盘子，不能跳过上面的盘子直接移动下面的盘子。</p>
+
+      <h3>汉诺塔的计分方式是什么？</h3>
+      <p>以完成移动的步数为成绩，步数越少越好；理论上限是 2^n - 1。最佳步数保存在本地，不显示云端排行榜。</p>
+    </div>
+
+    <div class="end">
+      <p>汉诺塔不仅是逻辑思维的训练场，也是耐心与策略的试金石。掌握递归结构、理解盘数参数、优化每一步，就能从 4 盘一路挑战到 13 盘。</p>
+      <p style="margin-bottom:0"><a href="./">回到汉诺塔游戏，试一手 →</a></p>
+    </div>
+  </article>
+
+  <p class="more"><a href="./">玩汉诺塔</a> · <a href="/games/">返回游戏大厅</a> · <a href="/">更多工具</a></p>
+</main>
+
+<footer>
+  <a href="https://hhfa008.github.io/">独立开发者作品 — 更多工具在这里</a>
+</footer>
+
+</body>
+</html>

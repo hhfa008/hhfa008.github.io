@@ -5,7 +5,7 @@
  */
 'use strict';
 
-var CACHE = 'dixit-premium-v1';
+var CACHE = 'dixit-premium-v2';
 var CORE = [
   './',
   './index.html',

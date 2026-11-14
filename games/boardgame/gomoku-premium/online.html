@@ -3,107 +3,603 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="五子棋联机房间：创建 / 邀请 / 加入，2 人房，空位 AI 补位，断线重连、超时托管与结果榜。">
+<meta name="description" content="五子棋联机房间：创建房间、邀请好友、2 人同局、空位 AI 补位、断线重连、超时托管与结果榜。">
 <meta name="color-scheme" content="dark light">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231a120b'/%3E%3Cpath d='M12 20h40M12 32h40M12 44h40M20 12v40M32 12v40M44 12v40' stroke='%23d9b06a' stroke-width='1.6' opacity='.65'/%3E%3Ccircle cx='32' cy='32' r='9' fill='%23101214' stroke='%23e7dcc8' stroke-width='1.5'/%3E%3C/svg%3E">
+<meta name="theme-color" content="#14100b">
 <title>五子棋 · 联机房间 Gomoku Online</title>
-<link rel="stylesheet" href="../app/online-lobby.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231a120b'/%3E%3Cpath d='M12 20h40M12 32h40M12 44h40M20 12v40M32 12v40M44 12v40' stroke='%23d9b06a' stroke-width='1.6' opacity='.65'/%3E%3Ccircle cx='32' cy='32' r='9' fill='%23101214' stroke='%23e7dcc8' stroke-width='1.5'/%3E%3C/svg%3E">
 <link rel="canonical" href="https://hhfa008.github.io/games/boardgame/gomoku-premium/online.html">
 <style>
-/* safe-area: keep the original bottom padding, clear the iOS home indicator */
-body{padding-bottom:env(safe-area-inset-bottom)}
+:root{--bg:#100c08;--panel:rgba(38,29,20,.88);--panel2:rgba(52,40,28,.72);--ink:#f3e7d2;--dim:#b9a184;--gold:#d9b06a;--gold2:#f2d69a;--line:rgba(217,176,106,.26);--ok:#93d3a7;--danger:#ef8c78;--serif:"Songti SC","STSong","Noto Serif SC",serif;--sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;min-height:100dvh;background:radial-gradient(900px 620px at 8% -10%,rgba(96,66,34,.34),transparent 60%),radial-gradient(760px 520px at 100% 2%,rgba(217,176,106,.12),transparent 60%),linear-gradient(160deg,#100c08,#1d1710 58%,#0b0805);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.6;overflow-x:hidden;padding-bottom:env(safe-area-inset-bottom)}
+a{color:var(--gold2)}
+button,input,select{font:inherit}
+:focus-visible{outline:2px solid var(--gold2);outline-offset:3px;border-radius:8px}
+.topbar{max-width:1080px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:max(16px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) 10px max(14px,env(safe-area-inset-left))}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.crest{width:50px;height:50px;flex:none;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 34% 26%,#fff4d8,#e8c98f 42%,#c89a5a 72%,#8d6130);color:#2a1808;font-family:var(--serif);font-weight:700;font-size:25px;border:2px solid rgba(120,54,28,.55);box-shadow:0 10px 26px rgba(0,0,0,.4)}
+.brand h1{margin:0;font-family:var(--serif);font-weight:700;font-size:clamp(21px,3vw,28px);letter-spacing:.1em;line-height:1.1}
+.brand p{margin:3px 0 0;font-size:12px;letter-spacing:.16em;color:var(--dim)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:44px;min-width:44px;padding:0 15px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);color:#ddc9aa;text-decoration:none;font-size:13.5px;cursor:pointer;transition:border-color .15s,color .15s}
+.btn:hover{border-color:var(--gold);color:var(--ink)}
+.btn.primary{background:linear-gradient(145deg,var(--gold2),var(--gold));color:#2a1808;border-color:transparent;font-weight:700}
+.btn.ghost{background:transparent}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.shell{max-width:1080px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:16px;align-items:start;padding:4px max(14px,env(safe-area-inset-right)) max(42px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left))}
+.panel{border:1px solid var(--line);border-radius:18px;background:linear-gradient(160deg,var(--panel),rgba(21,15,9,.9));box-shadow:0 20px 50px rgba(0,0,0,.35);padding:clamp(14px,2.4vw,22px);min-width:0}
+.panel h2{margin:0 0 4px;font-family:var(--serif);font-weight:700;font-size:clamp(21px,3vw,27px);letter-spacing:.06em}
+.panel h3{margin:16px 0 8px;font-size:12px;letter-spacing:.14em;color:var(--dim);text-transform:uppercase}
+.lede{margin:0 0 14px;color:var(--dim);font-size:13px;line-height:1.7}
+.section{border-top:1px solid rgba(217,176,106,.12);padding-top:14px;margin-top:14px}
+.section:first-of-type{border-top:0;padding-top:0;margin-top:0}
+.field{display:grid;gap:5px;margin-bottom:10px;min-width:0}
+.field label{font-size:12px;color:var(--dim);letter-spacing:.05em}
+.field input,.field select{width:100%;min-height:44px;padding:0 11px;border-radius:10px;border:1px solid var(--line);background:rgba(12,8,5,.66);color:var(--ink);font-size:16px;appearance:none}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.form-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:6px}
+.form-actions .btn{flex:1 1 140px}
+.status{min-height:20px;margin:10px 0 0;font-size:12.5px;color:var(--dim);line-height:1.6;white-space:pre-line}
+.status.error{color:var(--danger)}.status.ok{color:var(--ok)}
+.room-code{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0 12px}
+.room-code b{font-family:var(--mono);font-size:clamp(20px,4vw,28px);letter-spacing:.18em;color:var(--gold2)}
+.seats{display:grid;gap:8px;margin:8px 0 12px}
+.seat{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--line);border-radius:11px;padding:9px 11px;background:rgba(16,11,7,.55);font-size:13px;min-height:46px}
+.seat.you{border-color:var(--gold);box-shadow:inset 0 0 0 1px var(--gold)}
+.seat span{min-width:0;overflow-wrap:anywhere}
+.seat .tag{font-size:11.5px;letter-spacing:.1em;color:var(--dim);border:1px solid var(--line);border-radius:999px;padding:2px 8px;white-space:nowrap}
+.seat .tag.ai{color:var(--gold2)}
+.seat .tag.you{color:#2a1808;background:var(--gold2);border-color:transparent}
+.invite-box{border:1px dashed rgba(217,176,106,.4);border-radius:10px;padding:9px 11px;margin:8px 0 12px;font-family:var(--mono);font-size:12px;color:#e6d2b4;overflow-wrap:anywhere;line-height:1.6}
+.move-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:7px;margin:8px 0 12px}
+.move-grid button{min-height:40px;border-radius:9px;border:1px solid var(--line);background:rgba(16,11,7,.55);color:#f0dcb8;font-family:var(--mono);font-size:12.5px;cursor:pointer}
+.move-grid button:hover{border-color:var(--gold);color:var(--ink)}
+.board-list{display:grid;gap:7px;margin:6px 0 0;padding:0;list-style:none;max-height:300px;overflow-y:auto;overscroll-behavior:contain}
+.board-list li{border:1px solid rgba(217,176,106,.14);border-radius:10px;padding:8px 10px;font-size:12.5px;color:#d8c4a6;line-height:1.55;background:rgba(16,11,7,.45)}
+.board-list b{color:var(--gold2);font-weight:600}
+.empty-note{margin:6px 0;font-size:12.5px;color:#8d7660}
+.foot{max-width:1080px;margin:0 auto;padding:0 max(14px,env(safe-area-inset-right)) max(26px,env(safe-area-inset-bottom));color:#8d7660;font-size:12px;display:flex;gap:14px;flex-wrap:wrap;justify-content:space-between}
+@media (max-width:860px){.shell{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:420px){
+  .form-row{grid-template-columns:1fr}
+  .crest{width:45px;height:45px;font-size:22px}
+  #createSection{display:flex;flex-direction:column}
+  #createSection>*{order:2}
+  #createSection>h3{order:0}
+  #createSection>.form-row:has(#createBtn){order:1;margin-bottom:10px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
-<script>window.ONLINE_GAME = { id: 'gomoku', cn: '五子棋', en: 'Gomoku', maxPlayers: 2, accent: '#d9b06a', art: '../../assets/art/premium/gomoku/walnut-wood.webp', gameHref: 'index.html' };</script>
 <header class="topbar">
   <div class="brand">
-    <div class="logo">五</div>
-    <div>
-      <h1>五子棋 <span>GOMOKU</span></h1>
-      <p>十五路木盘 · 2 人联机</p>
-    </div>
+    <div class="crest" aria-hidden="true">五</div>
+    <div><h1>五子棋 · 联机</h1><p>ROOM · 2 人同局 · AI 补位</p></div>
   </div>
-  <div class="top-actions">
-    <a class="btn ghost" href="index.html">人机棋盘</a>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <a class="btn" href="index.html">返回棋盘</a>
     <a class="btn ghost" href="rules.html">规则</a>
   </div>
 </header>
+
 <main class="shell">
-  <div class="grid">
+  <section class="panel">
+    <h2>创建或加入房间</h2>
+    <p class="lede">房间为 2 个座位：房主执黑先行，客人执白。没人加入时，空位由 AI 补位；对局中断线可重连，超时座位自动托管。落子由服务器 engine.js 判定，自由规则、不设禁手。</p>
+
+    <div class="section" id="createSection">
+      <h3>创建房间</h3>
+      <div class="form-row">
+        <div class="field"><label for="createName">你的名字</label><input id="createName" maxlength="24" autocomplete="nickname" placeholder="例如：执黑者"></div>
+        <div class="field"><label for="createPassword">房间密码（可选）</label><input id="createPassword" type="password" maxlength="64" autocomplete="new-password" placeholder="留空表示无密码"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label for="createVisibility">可见性</label><select id="createVisibility"><option value="public">公开房间</option><option value="private">私密房间</option></select></div>
+        <div class="field"><label>&nbsp;</label><button class="btn primary" id="createBtn" type="button">创建 2 人房</button></div>
+      </div>
+      <p class="status" id="createStatus"></p>
+    </div>
+
+    <div class="section" id="joinSection">
+      <h3>加入房间</h3>
+      <div class="form-row">
+        <div class="field"><label for="joinCode">房间码 / 房间 ID</label><input id="joinCode" maxlength="80" autocapitalize="characters" placeholder="6 位房间码或房间 ID"></div>
+        <div class="field"><label for="joinName">你的名字</label><input id="joinName" maxlength="24" autocomplete="nickname" placeholder="例如：执白者"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label for="joinInvite">邀请 token（可选）</label><input id="joinInvite" maxlength="96" placeholder="invite token"></div>
+        <div class="field"><label for="joinPassword">房间密码（可选）</label><input id="joinPassword" type="password" maxlength="64" placeholder="私密房密码"></div>
+      </div>
+      <div class="form-actions"><button class="btn primary" id="joinBtn" type="button">加入房间</button></div>
+      <p class="status" id="joinStatus"></p>
+    </div>
+
+    <div class="section" id="reconnectSection" hidden>
+      <h3>上次房间</h3>
+      <p class="status" id="reconnectText">检测到上次未结束的房间。</p>
+      <div class="form-actions">
+        <button class="btn" id="reconnectBtn" type="button">重连上次房间</button>
+        <button class="btn ghost" id="forgetBtn" type="button">清除记录</button>
+      </div>
+    </div>
+
+    <div class="section room-panel" id="roomPanel" hidden>
+      <h3>当前房间</h3>
+      <div class="room-code"><span>房间码</span><b id="roomCode">—</b><span class="tag" id="roomStatus">等待中</span></div>
+      <div class="seats" id="seats"></div>
+      <div class="invite-box" id="inviteBox" hidden>邀请 token：<span id="inviteToken">—</span><div id="inviteLink"></div></div>
+      <div class="form-actions">
+        <button class="btn primary" id="startBtn" type="button">开始对局</button>
+        <a class="btn" id="enterBtn" href="index.html">进入棋盘</a>
+        <button class="btn ghost" id="inviteBtn" type="button">刷新邀请</button>
+        <button class="btn" id="restartBtn" type="button" hidden>再来一局</button>
+        <button class="btn ghost" id="leaveBtn" type="button">离开房间</button>
+        <button class="btn ghost" id="closeBtn" type="button">关闭房间</button>
+      </div>
+      <div id="moveSection" hidden>
+        <h3>轮到你</h3>
+        <p class="status" id="moveNote">进入棋盘后点击交叉点落子。</p>
+      </div>
+      <h3>对局记录</h3>
+      <ul class="board-list" id="history"><li class="empty-note">还没有着法。</li></ul>
+      <p class="status" id="roomStatusText"></p>
+    </div>
+  </section>
+
+  <aside style="display:grid;gap:16px;min-width:0">
     <section class="panel">
-      <h2>联机房间</h2>
-      <p class="lede">创建房间后把房间码或单次邀请码发给朋友。单人开局时空位由 AI 补位；对手离开后座位由 AI 接管，断线可重连，超时自动托管。落子由服务器 engine.js 判定，自由规则、不设禁手。</p>
-      <div id="lobbySection">
-        <div class="section">
-          <h3>创建房间</h3>
-          <div class="form-row">
-            <div class="field"><label for="hostName">你的昵称</label><input id="hostName" maxlength="24" autocomplete="nickname" placeholder="例如 执黑者"></div>
-            <div class="field"><label for="maxPlayers">人数</label><select id="maxPlayers"></select></div>
-          </div>
-          <div class="form-row">
-            <div class="field"><label for="hostPassword">房间密码（可选）</label><input id="hostPassword" type="password" maxlength="64" autocomplete="new-password" placeholder="留空表示无密码"></div>
-            <div class="field" style="align-content:end"><label style="display:flex;gap:8px;align-items:center;min-height:44px"><input id="privateRoom" type="checkbox" aria-label="私密房（必须凭邀请）" style="width:44px;height:44px;min-height:44px;min-width:44px;margin:0;flex:none"> 私密房（必须凭邀请）</label></div>
-          </div>
-          <div class="form-actions"><button class="btn primary" id="createBtn" type="button">创建 2 人房</button></div>
-        </div>
-        <div class="section">
-          <h3>加入房间</h3>
-          <div class="form-row">
-            <div class="field"><label for="joinCode">房间码</label><input id="joinCode" maxlength="12" autocomplete="off" placeholder="例如 AB3K9Q"></div>
-            <div class="field"><label for="joinName">昵称</label><input id="joinName" maxlength="24" autocomplete="nickname" placeholder="你的昵称"></div>
-          </div>
-          <div class="form-row">
-            <div class="field"><label for="joinPassword">密码（可选）</label><input id="joinPassword" type="password" maxlength="64" autocomplete="current-password" placeholder="有密码时填写"></div>
-            <div class="field"><label for="joinInvite">邀请码（可选）</label><input id="joinInvite" maxlength="96" autocomplete="off" placeholder="房主分享的单次邀请码"></div>
-          </div>
-          <div class="form-actions"><button class="btn" id="joinBtn" type="button">加入房间</button></div>
-        </div>
-      </div>
-      <div id="roomSection" hidden>
-        <div class="room-meta"><span class="room-code" id="roomCode" aria-label="房间码">——</span></div>
-        <div class="room-meta" id="roomMeta"></div>
-        <div class="seats" id="seatList" aria-label="座位"></div>
-        <div id="inviteBox" hidden>
-          <div class="field"><label for="inviteToken">单次邀请码（发给朋友）</label><input id="inviteToken" readonly autocomplete="off"></div>
-          <div class="form-actions"><button class="btn ghost" id="copyInvite" type="button">复制邀请码</button></div>
-        </div>
-        <div class="room-actions">
-          <button class="btn primary" id="startBtn" type="button" hidden>开始对局</button>
-          <button class="btn" id="inviteBtn" type="button" hidden>生成新邀请码</button>
-          <button class="btn ghost" id="leaveBtn" type="button">离开房间</button>
-          <button class="btn ghost" id="newRoomBtn" type="button">回到大厅</button>
-        </div>
-      </div>
-      <p class="status" id="status" role="status" aria-live="polite"></p>
+      <h2>结果榜</h2>
+      <p class="lede">最近的联机结算记录；刷新页面即可更新。</p>
+      <ul class="board-list" id="leaderboard"><li class="empty-note">还没有结算记录。</li></ul>
     </section>
-    <aside class="aside">
-      <div class="aside-card">
-        <h3>联机规则</h3>
-        <ul>
-          <li>2 人房；邀请码单次使用。</li>
-          <li>黑先，自由规则，五连即胜。</li>
-          <li>单人开局空位由 AI 补位；对手离开后 AI 接管。</li>
-          <li>超时未操作由 AI 托管，终局进入榜单。</li>
-        </ul>
-        <a class="btn" href="rules.html">查看完整规则</a>
-      </div>
-      <div class="aside-card">
-        <h3>最近对局</h3>
-        <div class="leaderboard" id="leaderboard"></div>
-      </div>
-    </aside>
-  </div>
+    <section class="panel">
+      <h2>联机说明</h2>
+      <ul class="board-list" id="notes">
+        <li><b>2 人房</b>：房主执黑先行，客人执白，五连即胜。</li>
+        <li><b>AI 补位</b>：房主可直接开始，空位由 AI 接手。</li>
+        <li><b>重连</b>：同一浏览器会记住房间与会话；断线后回到本页重连。</li>
+        <li><b>托管</b>：约 15 秒无操作，座位转为 AI；重连后收回。</li>
+      </ul>
+    </section>
+  </aside>
 </main>
-<footer class="footer">
-  <span>五子棋 · Gomoku · 本地权威房间，无外部请求</span>
-  <a href="index.html">返回棋盘</a>
+<footer class="foot">
+  <span>五子棋 · 联机房间 · 无外部请求</span>
+  <span><a href="index.html">棋盘</a> · <a href="../spectate.html">围观</a> · <a href="../index.html">桌游大厅</a></span>
 </footer>
-<script src="../app/online-lobby.js"></script>
+
 <script>
 (function () {
-  var sel = document.getElementById('maxPlayers');
-  if (sel) sel.value = '2';
+  'use strict';
+  var GAME = 'gomoku-premium';
+  var LAST_KEY = 'gomoku-online-last-v2';
+  var NAME_KEY = 'gomoku-online-name';
+  var COLS = 'ABCDEFGHIJKLMNO';
+  var $ = function (id) { return document.getElementById(id); };
+  var params = new URLSearchParams(location.search);
+
+  var state = {
+    roomId: params.get('room') || '',
+    session: params.get('session') || '',
+    playerId: params.get('player') || params.get('playerId') || '',
+    nickname: '',
+    invite: params.get('code') || '',
+    view: null,
+    timer: null,
+    lastVersion: -1
+  };
+
+  function esc(v) {
+    return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+    });
+  }
+  function newPlayerId() {
+    return 'gmk-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
+  }
+  function storageGet(key) { try { return localStorage.getItem(key) || ''; } catch (e) { return ''; } }
+  function storageSet(key, value) { try { localStorage.setItem(key, value); } catch (e) {} }
+  function storageDel(key) { try { localStorage.removeItem(key); } catch (e) {} }
+  function errText(r) { return (r && r.body && r.body.error && r.body.error.message) || ('HTTP ' + (r && r.status)); }
+  function seatLabel(index) { return index === 0 ? '黑棋' : '白棋'; }
+  function turnSeat(view) {
+    var current = view && view.state && view.state.current;
+    return current === 2 ? 1 : 0;
+  }
+
+  function remember() {
+    var last = {
+      roomId: state.roomId, session: state.session, playerId: state.playerId,
+      nickname: state.nickname, invite: state.invite
+    };
+    storageSet(LAST_KEY, JSON.stringify(last));
+    try {
+      var url = location.pathname + '?room=' + encodeURIComponent(state.roomId) +
+        '&session=' + encodeURIComponent(state.session) +
+        '&player=' + encodeURIComponent(state.playerId);
+      history.replaceState(null, '', url);
+    } catch (e) {}
+  }
+  function forget() {
+    state.roomId = ''; state.session = ''; state.playerId = ''; state.invite = ''; state.view = null;
+    storageDel(LAST_KEY);
+  }
+  function restore() {
+    try {
+      var last = JSON.parse(storageGet(LAST_KEY) || '{}');
+      if (!state.roomId && last.roomId) state.roomId = last.roomId;
+      if (!state.session && last.session) state.session = last.session;
+      if (!state.playerId && last.playerId) state.playerId = last.playerId;
+      if (!state.invite && last.invite) state.invite = last.invite;
+    } catch (e) {}
+  }
+
+  function api(method, route, body) {
+    return fetch(route, {
+      method: method,
+      headers: { 'content-type': 'application/json' },
+      body: body == null ? undefined : JSON.stringify(body)
+    }).then(function (res) {
+      return res.text().then(function (text) {
+        var data = null;
+        try { data = JSON.parse(text); } catch (e) { data = null; }
+        return { status: res.status, body: data };
+      });
+    });
+  }
+  function roomRoute(suffix) {
+    return '/api/rooms/' + encodeURIComponent(state.roomId) + (suffix || '');
+  }
+
+  function saveNick(input) {
+    var value = ($(input).value || '').trim();
+    if (value) { state.nickname = value.slice(0, 24); storageSet(NAME_KEY, state.nickname); }
+    return state.nickname || '棋手-' + Math.random().toString(36).slice(2, 5);
+  }
+
+  function showLobby() {
+    $('roomPanel').hidden = true;
+    $('createSection').hidden = false;
+    $('joinSection').hidden = false;
+  }
+  function showRoom() {
+    $('roomPanel').hidden = false;
+    $('createSection').hidden = true;
+    $('joinSection').hidden = true;
+    $('reconnectSection').hidden = true;
+  }
+
+  function isHost(view) {
+    return !!(view && (view.seats || []).some(function (s) { return s.isHost && s.isYou; }));
+  }
+
+  function renderSeats(view) {
+    var you = view.you;
+    $('seats').innerHTML = (view.seats || []).map(function (seat) {
+      var tags = [];
+      if (seat.isHost) tags.push('<span class="tag">房主</span>');
+      if (seat.isYou) tags.push('<span class="tag you">你</span>');
+      if (seat.ai) tags.push('<span class="tag ai">AI</span>');
+      else if (seat.connected === false) tags.push('<span class="tag">离线</span>');
+      var cls = 'seat' + (seat.index === you ? ' you' : '');
+      return '<div class="' + cls + '"><span><b>' + esc(seat.name || seatLabel(seat.index)) + '</b> · ' +
+        seatLabel(seat.index) + '</span><span style="display:flex;gap:5px">' + tags.join('') + '</span></div>';
+    }).join('');
+  }
+
+  function actionText(action) {
+    if (!action) return '';
+    if (action.type === 'pass') return '跳过';
+    if (typeof action.row === 'number' && typeof action.col === 'number') {
+      return COLS[action.col] + (action.row + 1);
+    }
+    return action.type || '';
+  }
+
+  function renderHistory(view) {
+    var entries = (view.history || []).slice(-16);
+    if (!entries.length) {
+      $('history').innerHTML = '<li class="empty-note">还没有着法。</li>';
+      return;
+    }
+    $('history').innerHTML = entries.map(function (entry) {
+      var who = entry.seat == null ? '' : ('座位 ' + (entry.seat + 1) + ' · ');
+      if (entry.type === 'start') return '<li><b>对局开始</b></li>';
+      if (entry.type === 'restart') return '<li><b>房主重开</b></li>';
+      if (entry.type === 'over') return '<li><b>对局结束</b>' + (entry.winnerSeat == null ? '' : ' · 座位 ' + (entry.winnerSeat + 1) + ' 获胜') + '</li>';
+      if (entry.type === 'human' || entry.type === 'ai') {
+        return '<li>' + esc(who) + (entry.type === 'ai' ? 'AI ' : '') + esc(actionText(entry.action)) + '</li>';
+      }
+      return '<li>' + esc(entry.type || '事件') + '</li>';
+    }).join('');
+  }
+
+  function renderStatus(view) {
+    var status = $('roomStatus');
+    status.textContent = view.started ? (view.over ? '已结束' : '进行中') : '等待中';
+    $('roomCode').textContent = view.code || state.roomId.slice(0, 8);
+    var host = isHost(view);
+    $('startBtn').hidden = !!view.started;
+    $('startBtn').disabled = !host;
+    $('inviteBtn').disabled = !host;
+    $('closeBtn').disabled = !host;
+    $('enterBtn').hidden = !view.started;
+    if (view.started) {
+      $('enterBtn').href = 'index.html?online=' + encodeURIComponent(state.roomId) +
+        '&session=' + encodeURIComponent(state.session) +
+        '&player=' + encodeURIComponent(state.playerId);
+    }
+    var showInvite = host && (state.invite || view.inviteCode);
+    $('inviteBox').hidden = !showInvite;
+    if (showInvite) {
+      var token = state.invite || view.inviteCode;
+      $('inviteToken').textContent = token;
+      $('inviteLink').textContent = location.origin + '/boardgame/' + GAME + '/online.html?room=' +
+        encodeURIComponent(state.roomId) + '&code=' + encodeURIComponent(token);
+    }
+    $('restartBtn').hidden = !view.over;
+    $('restartBtn').disabled = !view.canRestart;
+    $('leaveBtn').hidden = !view.started && host;
+
+    var mine = view.you != null && (view.legalActions || []).length > 0 && !view.over;
+    $('moveSection').hidden = !mine;
+    if (mine) $('moveNote').textContent = '轮到你，进入棋盘后点击交叉点落子（当前可落点 ' + view.legalActions.length + ' 处）。';
+
+    var text = $('roomStatusText');
+    text.className = 'status';
+    if (!view.started) {
+      text.textContent = host ? '等待对手加入，或直接开始由 AI 补位。' : '等待房主开始对局。';
+    } else if (view.over) {
+      var result = view.result || {};
+      var winner = result.winnerName || (result.winnerSeat == null ? '双方' : ('座位 ' + (result.winnerSeat + 1)));
+      text.textContent = winner + ' 获胜 · ' + (result.reason === 'five' ? '五子连珠' : '对局结束') +
+        ' · ' + (result.turns == null ? '' : result.turns + ' 手');
+      text.className = 'status ok';
+    } else if (view.you == null) {
+      text.textContent = '你已不在座位上，可离开房间。';
+    } else if (mine) {
+      text.textContent = '轮到你，进入棋盘落子。';
+      text.className = 'status ok';
+    } else {
+      text.textContent = '等待座位 ' + (turnSeat(view) + 1) + ' 行棋…';
+    }
+  }
+
+  function render(view) {
+    state.view = view;
+    if (view.inviteCode) state.invite = view.inviteCode;
+    showRoom();
+    renderSeats(view);
+    renderHistory(view);
+    renderStatus(view);
+    if (state.session) remember();
+  }
+
+  function applyResponse(r) {
+    if (!r || r.status >= 400) throw new Error(errText(r));
+    if (!r.body || !r.body.roomId) throw new Error('房间响应无效。');
+    if (r.body.session) state.session = r.body.session;
+    if (r.body.playerId) state.playerId = r.body.playerId;
+    state.lastVersion = r.body.stateVersion;
+    render(r.body);
+    return r.body;
+  }
+
+  function reconnectSession() {
+    return api('POST', roomRoute('/reconnect'), { session: state.session, playerId: state.playerId })
+      .then(function (r) {
+        if (r.status >= 400) throw new Error(errText(r));
+        return r;
+      });
+  }
+
+  function fetchRoom() {
+    if (!state.roomId || !state.session) return Promise.resolve(null);
+    return api('GET', roomRoute('') + '?session=' + encodeURIComponent(state.session) +
+      '&playerId=' + encodeURIComponent(state.playerId))
+      .then(function (r) {
+        if (r.status === 401) return reconnectSession();
+        if (r.status >= 400) throw new Error(errText(r));
+        return r;
+      })
+      .then(function (r) {
+        if (!r) return null;
+        if (r.body && r.body.stateVersion === state.lastVersion) {
+          renderSeats(r.body);
+          renderStatus(r.body);
+          return r.body;
+        }
+        return applyResponse(r);
+      })
+      .catch(function (e) {
+        stopPoll();
+        $('reconnectSection').hidden = false;
+        $('reconnectText').textContent = '上次房间无法连接：' + e.message;
+        showLobby();
+        return null;
+      });
+  }
+
+  function stopPoll() {
+    if (state.timer) { clearInterval(state.timer); state.timer = null; }
+  }
+  function poll() {
+    stopPoll();
+    fetchRoom();
+    state.timer = setInterval(fetchRoom, 900);
+  }
+
+  function sendAction(action) {
+    if (!state.session) return;
+    $('roomStatusText').textContent = '正在提交着法…';
+    api('POST', roomRoute('/actions'), { session: state.session, playerId: state.playerId, action: action })
+      .then(function (r) {
+        if (r.status >= 400) throw new Error(errText(r));
+        var view = applyResponse(r);
+        if (view && view.over) stopPoll();
+      })
+      .catch(function (e) {
+        $('roomStatusText').textContent = e.message;
+        $('roomStatusText').className = 'status error';
+      });
+  }
+
+  function createRoom() {
+    var nickname = saveNick('createName');
+    $('createStatus').textContent = '';
+    var payload = { playerId: newPlayerId(), nickname: nickname, visibility: $('createVisibility').value };
+    if ($('createPassword').value) payload.password = $('createPassword').value;
+    api('POST', '/api/rooms', payload).then(function (r) {
+      if (!r.body || !r.body.roomId) throw new Error(errText(r));
+      state.roomId = r.body.roomId;
+      state.session = r.body.session;
+      state.playerId = r.body.playerId;
+      state.nickname = nickname;
+      state.invite = r.body.inviteToken || '';
+      state.lastVersion = r.body.stateVersion;
+      render(r.body);
+      poll();
+    }).catch(function (e) { $('createStatus').textContent = e.message; $('createStatus').className = 'status error'; });
+  }
+
+  function normalizeJoinKey(key) {
+    if (!key) return '';
+    if (/^https?:\/\//i.test(key)) {
+      try {
+        var link = new URL(key);
+        var room = link.searchParams.get('room') || '';
+        var code = link.searchParams.get('code') || '';
+        if (code && !$('joinInvite').value) $('joinInvite').value = code;
+        return room;
+      } catch (e) { return key; }
+    }
+    return key;
+  }
+
+  function joinRoom() {
+    var nickname = saveNick('joinName');
+    var key = normalizeJoinKey(($('joinCode').value || '').trim());
+    if (!key) { $('joinStatus').textContent = '请填写房间码 / 房间 ID。'; $('joinStatus').className = 'status error'; return; }
+    var payload = { playerId: newPlayerId(), nickname: nickname };
+    if ($('joinInvite').value) payload.inviteCode = $('joinInvite').value.trim();
+    if ($('joinPassword').value) payload.password = $('joinPassword').value;
+    $('joinStatus').textContent = '';
+    api('POST', '/api/rooms/' + encodeURIComponent(key) + '/join', payload).then(function (r) {
+      if (!r.body || !r.body.session) throw new Error(errText(r));
+      state.roomId = r.body.roomId;
+      state.session = r.body.session;
+      state.playerId = r.body.playerId;
+      state.nickname = nickname;
+      state.lastVersion = r.body.stateVersion;
+      render(r.body);
+      poll();
+    }).catch(function (e) { $('joinStatus').textContent = e.message; $('joinStatus').className = 'status error'; });
+  }
+
+  function startMatch() {
+    api('POST', roomRoute('/start'), { session: state.session, playerId: state.playerId }).then(function (r) {
+      if (r.status >= 400) throw new Error(errText(r));
+      var view = applyResponse(r);
+      if (view && view.over) stopPoll();
+    }).catch(function (e) { $('roomStatusText').textContent = e.message; $('roomStatusText').className = 'status error'; });
+  }
+
+  function restartMatch() {
+    api('POST', roomRoute('/restart'), { session: state.session, playerId: state.playerId }).then(function (r) {
+      if (r.status >= 400) throw new Error(errText(r));
+      state.lastVersion = -1;
+      applyResponse(r);
+      poll();
+    }).catch(function (e) { $('roomStatusText').textContent = e.message; $('roomStatusText').className = 'status error'; });
+  }
+
+  function refreshInvite() {
+    api('POST', roomRoute('/invite'), { session: state.session, playerId: state.playerId }).then(function (r) {
+      if (r.status >= 400) throw new Error(errText(r));
+      state.invite = r.body.inviteToken || r.body.inviteCode || '';
+      if (state.view) renderStatus(state.view);
+      var link = $('inviteLink').textContent;
+      if (link && navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(link).then(function () {
+          $('roomStatusText').textContent = '邀请链接已复制。';
+          $('roomStatusText').className = 'status ok';
+        }).catch(function () {});
+      }
+    }).catch(function (e) { $('roomStatusText').textContent = e.message; $('roomStatusText').className = 'status error'; });
+  }
+
+  function leaveRoom() {
+    api('POST', roomRoute('/leave'), { session: state.session, playerId: state.playerId })
+      .catch(function () {})
+      .then(function () {
+        stopPoll();
+        forget();
+        showLobby();
+        $('roomStatusText').textContent = '';
+      });
+  }
+
+  function closeRoom() {
+    api('DELETE', roomRoute('') + '?session=' + encodeURIComponent(state.session) +
+      '&playerId=' + encodeURIComponent(state.playerId))
+      .then(function (r) {
+        if (r.status >= 400) throw new Error(errText(r));
+        stopPoll();
+        forget();
+        showLobby();
+      })
+      .catch(function (e) { $('roomStatusText').textContent = e.message; $('roomStatusText').className = 'status error'; });
+  }
+
+  function manualReconnect() {
+    $('reconnectText').textContent = '正在重连…';
+    reconnectSession().then(function (r) {
+      state.lastVersion = r.body && r.body.stateVersion;
+      if (r.body) render(r.body);
+      poll();
+    }).catch(function (e) {
+      $('reconnectText').textContent = '重连失败：' + e.message;
+    });
+  }
+
+  function loadLeaderboard() {
+    api('GET', '/api/leaderboard?game=' + encodeURIComponent(GAME)).then(function (r) {
+      var entries = (r.body && r.body.entries) || [];
+      $('leaderboard').innerHTML = entries.length ? entries.slice(0, 10).map(function (e) {
+        return '<li><b>' + esc(e.name) + '</b>' + (e.ai ? ' · AI' : '') + ' · ' +
+          (e.winner ? '胜' : (e.score == null ? '—' : e.score + ' 子')) + '</li>';
+      }).join('') : '<li class="empty-note">还没有结算记录。</li>';
+    }).catch(function () {});
+  }
+
+  $('createBtn').addEventListener('click', createRoom);
+  $('joinBtn').addEventListener('click', joinRoom);
+  $('startBtn').addEventListener('click', startMatch);
+  $('restartBtn').addEventListener('click', restartMatch);
+  $('inviteBtn').addEventListener('click', refreshInvite);
+  $('leaveBtn').addEventListener('click', leaveRoom);
+  $('closeBtn').addEventListener('click', closeRoom);
+  $('reconnectBtn').addEventListener('click', manualReconnect);
+  $('forgetBtn').addEventListener('click', function () {
+    stopPoll();
+    forget();
+    $('reconnectSection').hidden = true;
+    showLobby();
+  });
+
+  try { $('createName').value = storageGet(NAME_KEY) || ''; $('joinName').value = storageGet(NAME_KEY) || ''; } catch (e) {}
+  restore();
+  if (state.roomId && state.session) {
+    state.nickname = storageGet(NAME_KEY) || '';
+    showRoom();
+    poll();
+  } else {
+    showLobby();
+  }
+  loadLeaderboard();
+  setInterval(loadLeaderboard, 5000);
+  window.__gomokuOnline = { sendAction: sendAction, state: state };
 })();
 </script>
 </body>

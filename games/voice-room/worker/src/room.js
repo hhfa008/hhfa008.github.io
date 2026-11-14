@@ -1,4 +1,5 @@
 import '../../../shared/rules.js';
+import { handlePremiumRequest, handlePremiumAlarm } from './premium-room.js';
 
 const RULES = globalThis.GameRules;
 const gomoku = RULES.gomoku;
@@ -332,6 +333,51 @@ export class RoomDO {
     }
   }
 
+  // Shared password hashing for both the voice-room WS flow and premium rooms.
+  async makePasswordAuth(password) {
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const hash = await passwordDigest(salt, password);
+    return {
+      algo: 'sha256',
+      salt: bytesToBase64Url(salt),
+      hash: bytesToBase64Url(hash),
+      length: String(password).length,
+    };
+  }
+
+  // Shared password check with the same per-IP lockout as the WS join path.
+  // Returns {ok:true} or {ok:false, code, message, status}.
+  async verifyPasswordWithRate(ip, password, auth) {
+    const now = Date.now();
+    const rateKey = 'rate:' + ip;
+    const rate = await this.state.storage.get(rateKey);
+    if (rate && rate.until && rate.until > now) {
+      return {
+        ok: false,
+        code: 'rate_limited',
+        message: '密码错误次数过多，请稍后再试',
+        status: 429,
+        retryAfter: Math.ceil((rate.until - now) / 1000),
+      };
+    }
+    if (!auth || !auth.hash) return { ok: true };
+    if (!password) {
+      return { ok: false, code: 'need_password', message: '该房间需要密码', status: 403 };
+    }
+    if (!(await this.verifyPassword(password, auth))) {
+      const fails = ((rate && rate.fails) || 0) + 1;
+      const next = { fails, until: 0 };
+      if (fails >= MAX_PASSWORD_FAILS) {
+        next.fails = 0;
+        next.until = now + PASSWORD_LOCK_MS;
+      }
+      await this.state.storage.put(rateKey, next);
+      return { ok: false, code: 'bad_password', message: '密码错误', status: 403 };
+    }
+    await this.state.storage.delete(rateKey);
+    return { ok: true };
+  }
+
   // Password check happens over plain HTTP *before* any WebSocket is opened.
   // Never log or echo the password.
   async handleJoin(request, room) {
@@ -362,17 +408,6 @@ export class RoomDO {
       return jsonResponse({ ok: false, code: 'bad_password_format' });
     }
 
-    // A connection that already burnt five guesses waits out the lock.
-    const rateKey = 'rate:' + ip;
-    const rate = await this.state.storage.get(rateKey);
-    if (rate && rate.until && rate.until > now) {
-      return jsonResponse({
-        ok: false,
-        code: 'rate_limited',
-        retryAfter: Math.ceil((rate.until - now) / 1000),
-      });
-    }
-
     if (create && password && !auth) {
       // Only an empty room can be claimed with a password; never overwrite an
       // existing room's lock or let a late joiner change it.
@@ -380,33 +415,23 @@ export class RoomDO {
       if (roster.length > 0) {
         return jsonResponse({ ok: false, code: 'room_exists' });
       }
-      const salt = crypto.getRandomValues(new Uint8Array(16));
-      const hash = await passwordDigest(salt, password);
-      meta.auth = {
-        algo: 'sha256',
-        salt: bytesToBase64Url(salt),
-        hash: bytesToBase64Url(hash),
-        length: password.length,
-      };
+      meta.auth = await this.makePasswordAuth(password);
       await this.state.storage.put('meta', meta);
     } else if (auth) {
       if (create) return jsonResponse({ ok: false, code: 'room_exists' });
-      if (!password) return jsonResponse({ ok: false, code: 'need_password' });
-      if (!(await this.verifyPassword(password, auth))) {
-        const fails = ((rate && rate.fails) || 0) + 1;
-        const next = { fails, until: 0 };
-        if (fails >= MAX_PASSWORD_FAILS) {
-          next.fails = 0;
-          next.until = now + PASSWORD_LOCK_MS;
-        }
-        await this.state.storage.put(rateKey, next);
-        return jsonResponse({ ok: false, code: 'bad_password' });
+      const check = await this.verifyPasswordWithRate(ip, password, auth);
+      if (!check.ok) {
+        return jsonResponse({
+          ok: false,
+          code: check.code,
+          message: check.message,
+          retryAfter: check.retryAfter,
+        }, check.status || 409);
       }
-      await this.state.storage.delete(rateKey);
     } else {
       // Passwordless room: nothing to verify. A supplied password is ignored
       // so it never becomes part of the room's state.
-      if (create) await this.state.storage.put('meta', meta);
+      if (create && !meta.auth) await this.state.storage.put('meta', meta);
     }
 
     if (!meta.createdAt) {
@@ -538,6 +563,14 @@ export class RoomDO {
       return new Response('room mismatch', { status: 403 });
     }
     this.roomCode = room;
+
+    // Generic premium-room API (Kot / Azul / Codenames). Serialise requests so
+    // two polls cannot interleave a turn and its AI follow-up.
+    if (url.pathname.indexOf('/premium/') === 0) {
+      const run = () => handlePremiumRequest(this, request, url);
+      this._premiumQueue = (this._premiumQueue || Promise.resolve()).then(run, run);
+      return this._premiumQueue;
+    }
 
     if (url.pathname === '/join') {
       return this.handleJoin(request, room);
@@ -898,6 +931,12 @@ export class RoomDO {
   async alarm() {
     await this.init();
     this.alarmAt = null;
+    // Premium rooms own their own two-hour TTL and AI cadence. Serialise with
+    // in-flight HTTP work so an alarm tick cannot interleave a human action.
+    const runPremiumAlarm = () => handlePremiumAlarm(this);
+    this._premiumQueue = (this._premiumQueue || Promise.resolve())
+      .then(runPremiumAlarm, runPremiumAlarm);
+    if (await this._premiumQueue) return;
     if (!this.roomCode) {
       await this.state.storage.deleteAll();
       return;

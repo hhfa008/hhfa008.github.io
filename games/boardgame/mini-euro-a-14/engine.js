@@ -1,3 +1,98 @@
+var Cards = (function(){var module={exports:{}};var exports=module.exports;
+/* 卡牌游戏公共原语（UMD，零依赖）。
+ *
+ *   Cards.shuffle(arr, rng)               // Fisher–Yates；rng 需可复现（mulberry32 等）
+ *   Cards.makeDeck(suits, maxRank)        // [{r,s}]，r=1..maxRank，s=0..suits-1
+ *   Cards.draw(deck)                      // 从牌堆顶取一张（不可变：返回 {card, deck}）
+ *   Cards.nextTurn(current, players)      // 0..players-1 轮转
+ *   Cards.winnerByEmptyHand(hands)        // 谁先清空；平局返回 'tie'，未结束 null
+ *   Cards.winnerByScore(scores)           // 最高分；并列 'tie'
+ *
+ * 目标：洗牌/牌堆/回合/胜负判定只写一份，卡牌类页面与引擎共用，
+ * 随机性由种子驱动，复盘可复现。
+ */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.Cards = factory();
+})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+  'use strict';
+
+  function shuffle(arr, rng) {
+    var a = arr.slice();
+    var random = typeof rng === 'function' ? rng : Math.random;
+    for (var i = a.length - 1; i > 0; i -= 1) {
+      var j = Math.floor(random() * (i + 1));
+      var t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+
+  // 原地洗牌：仅用于内部状态（如单机引擎的牌池），不入存档、不跨座位共享。
+  function shuffleInPlace(arr, rng) {
+    var random = typeof rng === 'function' ? rng : Math.random;
+    for (var i = arr.length - 1; i > 0; i -= 1) {
+      var j = Math.floor(random() * (i + 1));
+      var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+    }
+    return arr;
+  }
+
+  function makeDeck(suits, maxRank) {
+    if (!(suits >= 1) || !(maxRank >= 1)) throw new Error('makeDeck: suits/maxRank must be >= 1');
+    var deck = [];
+    for (var s = 0; s < suits; s += 1) {
+      for (var r = 1; r <= maxRank; r += 1) deck.push({ r: r, s: s });
+    }
+    return deck;
+  }
+
+  // 牌堆顶 = 数组末尾；不修改入参，返回新牌堆，便于存档/复盘。
+  function draw(deck) {
+    if (!deck.length) return { card: null, deck: deck.slice() };
+    var next = deck.slice();
+    var card = next.pop();
+    return { card: card, deck: next };
+  }
+
+  function nextTurn(current, players) {
+    if (!(players >= 1)) return 0;
+    return ((Number(current) || 0) + 1) % players;
+  }
+
+  function winnerByEmptyHand(hands) {
+    var empty = [];
+    for (var i = 0; i < hands.length; i += 1) {
+      if (Array.isArray(hands[i]) && hands[i].length === 0) empty.push(i);
+    }
+    if (!empty.length) return null;
+    return empty.length === 1 ? empty[0] : 'tie';
+  }
+
+  function winnerByScore(scores) {
+    if (!scores || !scores.length) return null;
+    var best = -Infinity;
+    var winners = [];
+    scores.forEach(function (v, i) {
+      var n = Number(v) || 0;
+      if (n > best) { best = n; winners = [i]; }
+      else if (n === best) winners.push(i);
+    });
+    return winners.length === 1 ? winners[0] : 'tie';
+  }
+
+  return {
+    shuffle: shuffle,
+    shuffleInPlace: shuffleInPlace,
+    makeDeck: makeDeck,
+    draw: draw,
+    nextTurn: nextTurn,
+    winnerByEmptyHand: winnerByEmptyHand,
+    winnerByScore: winnerByScore,
+    version: '1.0.0'
+  };
+});
+
+return module.exports;})();
 /*
  * 原创极简德式桌游引擎 — UMD
  * 浏览器：<script src="engine.js"></script> 后使用 globalThis.MiniEuroEngine
@@ -148,14 +243,6 @@
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   }
-  function shuffle(arr, rng) {
-    var out = arr.slice();
-    for (var i = out.length - 1; i > 0; i--) {
-      var j = Math.floor(rng() * (i + 1));
-      var tmp = out[i]; out[i] = out[j]; out[j] = tmp;
-    }
-    return out;
-  }
   function log(st, msg) {
     st.log.push(String(msg));
     while (st.log.length > 40) st.log.shift();
@@ -200,7 +287,7 @@
   }
 
   function drawOrders(st, rng) {
-    var deck = shuffle(CONFIG.orders.map(function (o, i) {
+    var deck = Cards.shuffle(CONFIG.orders.map(function (o, i) {
       return { name: o.name, need: o.need.slice(), points: o.points, coins: o.coins || 0, id: i };
     }), rng);
     return deck;
@@ -243,7 +330,7 @@
       log(st, '共 ' + CONFIG.rounds + ' 轮，每轮每个工位只能派一名工人。');
     } else if (MODE === 'auction') {
       st.players.forEach(function (p) { p.coins = CONFIG.startCoins; });
-      st.lots = shuffle(CONFIG.lots.map(function (l) { return { name: l.name, points: l.points }; }), rng);
+      st.lots = Cards.shuffle(CONFIG.lots.map(function (l) { return { name: l.name, points: l.points }; }), rng);
       st.lotIndex = 0;
       st.currentLot = st.lots[0];
       st.round = 1;

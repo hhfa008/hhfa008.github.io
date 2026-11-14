@@ -3,7 +3,19 @@
  * 提供：三语切换（data-i / data-ph / data-aria）、安全 localStorage、最高分、
  * 键盘与滑动输入、rAF 循环、数字格式化。
  *
- * 约束：无外部依赖、不发网络请求、不读取任何用户数据。
+ * 约束：无外部依赖、不读取任何用户数据。页面唯一的额外请求是本站共享的
+ * /games/shared/sfx.js 与 /games/shared/arcade/music.js（音频层，由本文件
+ * 自动加载；页面不需要再加 <script>，100 款 arcade 页面因此零改动接入）。
+ *
+ * 音频层（2026-11-11）：
+ *   - 包装 ArcadeKit.create 得到的 CORE，从 act()/newGame() 的真实返回值
+ *     （changed / gained / status）判断 move / capture / deal / win / lose /
+ *     error，而不是"每次点击都响"。
+ *   - 结算遮罩出现时，用页面自己的 I18N overlayWin/overlayLose 文案校验，
+ *     作为 win/lose 的第二信号（反应类只信遮罩：其 status() 只表示结束）。
+ *   - 首次用户手势之前不发声、不放 BGM（autoplay 安全）；toggle 按钮由
+ *     sfx.js / music.js 自动接线，音量与静音各自持久化。
+ *
  * 页面用法：
  *   <script src="/games/shared/arcade/arcade.js"></script>
  *   <script>
@@ -16,6 +28,8 @@
   if (root) root.Arcade = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
+
+  var G = typeof globalThis !== 'undefined' ? globalThis : {};
 
   var LANG_KEY = 'arcade.lang';
   var LANGS = { en: 'en', zh: 'zh-CN', id: 'id' };
@@ -221,9 +235,383 @@
 
   function randInt(rng, n) { return Math.floor((rng || Math.random)() * n); }
 
+  /* ------------------------------------------------------------ audio layer */
+
+  var SFX_SRC = '/games/shared/sfx.js';
+  var MUSIC_SRC = '/games/shared/arcade/music.js';
+  var audio = {
+    ready: false, armed: false, family: 'numbers', kit: '',
+    lastInputAt: 0, lastInputRepeat: false, lastByName: {},
+    lastPlayed: ''
+  };
+
+  function audioNow() { return Date.now(); }
+
+  function detectKit() {
+    var kit = '';
+    if (typeof document !== 'undefined' && document.querySelectorAll) {
+      var scripts = document.querySelectorAll('script[src*="/kits/"]');
+      // Some pages load tick.js after the game kit; tick is the shared timer,
+      // not the family, so take the first non-tick kit script.
+      for (var i = 0; i < scripts.length; i++) {
+        var src = scripts[i].src || '';
+        var m = /kits\/([a-z0-9-]+)\.js/.exec(src);
+        if (m && m[1] !== 'tick') { kit = m[1]; break; }
+      }
+    }
+    var family = 'numbers';
+    if (kit === 'memory-pairs') family = 'memory';
+    else if (kit === 'reaction') family = 'reaction';
+    else if (kit === 'pong') family = 'pong';
+    else if (kit === 'lights-out' || kit === 'minesweeper' || kit === 'tictactoe' ||
+             kit === 'hanoi' || kit === 'snake') family = 'board';
+    return { kit: kit, family: family };
+  }
+
+  function playSound(name, gap) {
+    if (!audio.armed || !G.Sfx || typeof G.Sfx.play !== 'function') return false;
+    var t = audioNow();
+    gap = gap || 120;
+    var last = audio.lastByName[name] || 0;
+    if (t - last < gap) return false;
+    audio.lastByName[name] = t;
+    audio.lastPlayed = name;
+    try { return G.Sfx.play(name); } catch (e) { return false; }
+  }
+
+  function musicAccent(kind) {
+    if (!audio.armed || !G.Music || typeof G.Music.accent !== 'function') return;
+    try { G.Music.accent(kind); } catch (e) {}
+  }
+
+  // Win/lose stings duck the BGM (-12 dB) so the verdict reads clearly.
+  function musicDuck() {
+    if (!audio.armed || !G.Music || typeof G.Music.duck !== 'function') return;
+    try { G.Music.duck(); } catch (e) {}
+  }
+
+  function statusOf(core, st) {
+    try { return core.status && st ? core.status(st) : null; } catch (e) { return null; }
+  }
+
+  function recentInput() {
+    return audioNow() - audio.lastInputAt < 700;
+  }
+
+  function classify(core, kit, family, action, res, prevStatus) {
+    if (!res || !res.state) return;
+    var status = statusOf(core, res.state);
+
+    // Reaction/aim/whack report status 'won' for any finished round; their
+    // real win/lose verdict only exists in the overlay text, so let the
+    // overlay observer decide instead of guessing here.
+    if (family !== 'reaction') {
+      if (status === 'won' && prevStatus !== 'won') {
+        playSound('win', 900); musicDuck(); musicAccent('win'); return;
+      }
+      if (status === 'lost' && prevStatus !== 'lost') {
+        playSound('lose', 900); musicDuck(); musicAccent('lose'); return;
+      }
+      if (status === 'draw' && prevStatus !== 'draw') {
+        playSound('notify', 400); return;
+      }
+    }
+
+    if (!res.changed) {
+      if (action === 'tick' || action === 'hint') return;
+      if (recentInput()) playSound('error', 300);
+      return;
+    }
+
+    if (res.gained > 0) { playSound('capture', 130); return; }
+    if (action === 'tick') return;
+
+    if (kit === 'minesweeper' && action && action.type === 'flag') {
+      playSound('notify', 250); return;
+    }
+    if (family === 'memory') { playSound('deal', 160); return; }
+    if (family === 'pong') {
+      // A held arrow key repeats; keep the paddle quiet instead of buzzing.
+      if (!audio.lastInputRepeat) playSound('move', 180);
+      return;
+    }
+    if (family === 'reaction') {
+      if (action === 'miss') playSound('error', 300);
+      return;
+    }
+    playSound('move', 110);
+  }
+
+  function wrapCore(core, kit, family) {
+    if (!core || core.__arcadeAudioWrapped) return core;
+    var origAct = core.act;
+    var origNew = core.newGame;
+    if (typeof origAct === 'function') {
+      core.act = function (st, action) {
+        var prev = statusOf(core, st);
+        var res = origAct.apply(core, arguments);
+        try { classify(core, kit, family, action, res, prev); } catch (e) {}
+        return res;
+      };
+    }
+    if (typeof origNew === 'function') {
+      core.newGame = function () {
+        var st = origNew.apply(core, arguments);
+        if (audio.armed) playSound('deal', 400);
+        return st;
+      };
+    }
+    core.__arcadeAudioWrapped = true;
+    return core;
+  }
+
+  // Kit modules assign root.ArcadeKit = api. Define an accessor before the kit
+  // script runs so create() can be wrapped without touching any page. If a
+  // harness already installed its own accessor (arcade/tests/terminal-cli.mjs
+  // does), chain to it instead of replacing it — both wrappers must run.
+  function ensureKitWrapped(mod) {
+    if (!mod || typeof mod.create !== 'function' || mod.__arcadeAudioWrappedCreate) return mod;
+    var origCreate = mod.create;
+    mod.create = function () {
+      var core = origCreate.apply(mod, arguments);
+      var found = detectKit();
+      audio.kit = found.kit;
+      audio.family = found.family;
+      return wrapCore(core, found.kit, found.family);
+    };
+    mod.__arcadeAudioWrappedCreate = true;
+    return mod;
+  }
+
+  function installKitHook() {
+    if (typeof document === 'undefined' || !G || G.__arcadeKitHooked) return;
+    try {
+      var desc = Object.getOwnPropertyDescriptor(G, 'ArcadeKit');
+      var baseGet = desc && desc.get ? desc.get : null;
+      var baseSet = desc && desc.set ? desc.set : null;
+      var value = desc && !desc.get && !desc.set ? desc.value : undefined;
+
+      function read() {
+        if (baseGet) { try { return baseGet.call(G); } catch (e) { return value; } }
+        return value;
+      }
+
+      Object.defineProperty(G, 'ArcadeKit', {
+        configurable: true,
+        enumerable: true,
+        get: function () { return ensureKitWrapped(read()); },
+        set: function (mod) {
+          if (baseSet) {
+            try { baseSet.call(G, mod); } catch (e) { value = mod; }
+          } else {
+            value = mod;
+          }
+          ensureKitWrapped(read());
+        }
+      });
+      G.__arcadeKitHooked = true;
+    } catch (e) {
+      // Accessor unsupported: the game still works, only audio semantics degrade.
+    }
+  }
+
+  function overlayVerdict(text) {
+    var dict = G.I18N;
+    if (!dict || typeof dict !== 'object') return null;
+    for (var lang in dict) {
+      var d = dict[lang];
+      if (!d || typeof d !== 'object') continue;
+      if (d.overlayWin && text === d.overlayWin) return 'win';
+      if (d.overlayLose && text === d.overlayLose) return 'lose';
+      if (d.overlayDraw && text === d.overlayDraw) return 'draw';
+    }
+    return null;
+  }
+
+  function watchOverlay() {
+    if (typeof MutationObserver === 'undefined' || !document.getElementById) return;
+    var ov = document.getElementById('overlay');
+    if (!ov || ov.__arcadeAudioWatched) return;
+    ov.__arcadeAudioWatched = true;
+    var wasHidden = !!ov.hidden;
+    var title = document.getElementById('overlay-title');
+    function check() {
+      if (wasHidden && !ov.hidden) {
+        var verdict = overlayVerdict(title ? title.textContent : '');
+        if (verdict === 'win') { playSound('win', 900); musicDuck(); musicAccent('win'); }
+        else if (verdict === 'lose') { playSound('lose', 900); musicDuck(); musicAccent('lose'); }
+        else if (verdict === 'draw') { playSound('notify', 400); }
+      }
+      wasHidden = !!ov.hidden;
+    }
+    var mo = new MutationObserver(check);
+    mo.observe(ov, {
+      attributes: true, attributeFilter: ['hidden'],
+      childList: true, subtree: true, characterData: true
+    });
+    if (title) mo.observe(title, { childList: true, characterData: true, subtree: true });
+  }
+
+  function injectAudioStyle() {
+    if (!document.getElementById) return;
+    if (document.getElementById('arcade-audio-style')) return;
+    var style = document.createElement('style');
+    style.id = 'arcade-audio-style';
+    style.textContent =
+      '.audio-toggles{display:flex;align-items:center;gap:6px;margin-left:auto;flex:none}' +
+      '@media (max-width:390px){.audio-toggles{order:0}}';
+    (document.head || document.documentElement).appendChild(style);
+  }
+
+  function injectToggles() {
+    if (!document.createElement || !document.querySelector) return;
+    if (document.querySelector('.audio-toggles')) return;
+    injectAudioStyle();
+    var box = document.createElement('div');
+    box.className = 'audio-toggles';
+    var sfxBtn = document.createElement('button');
+    sfxBtn.type = 'button';
+    sfxBtn.className = 'sfx-toggle';
+    sfxBtn.hidden = true;
+    sfxBtn.setAttribute('aria-label', '静音 / Mute');
+    var musicBtn = document.createElement('button');
+    musicBtn.type = 'button';
+    musicBtn.className = 'music-toggle';
+    musicBtn.hidden = true;
+    musicBtn.setAttribute('aria-label', '关闭音乐 / Mute music');
+    box.appendChild(sfxBtn);
+    box.appendChild(musicBtn);
+    var top = document.querySelector('.game-top');
+    if (top) top.appendChild(box);
+    else {
+      var header = document.querySelector('.header-inner');
+      if (header) header.appendChild(box);
+    }
+    if (G.Sfx && G.Sfx.syncButtons) { try { G.Sfx.syncButtons(); } catch (e) {} }
+    if (G.Music && G.Music.syncButtons) { try { G.Music.syncButtons(); } catch (e) {} }
+  }
+
+  // A toggle only appears once its audio script has loaded; a failed request
+  // leaves no bare, unstyled button in the score row.
+  function revealToggle(sel) {
+    if (!document.querySelector) return;
+    var btn = document.querySelector(sel);
+    if (btn) btn.hidden = false;
+  }
+
+  function loadScript(src, onload) {
+    if (typeof document === 'undefined' || !document.createElement) return;
+    var s = document.createElement('script');
+    s.src = src;
+    s.async = true;
+    s.onload = function () { try { if (onload) onload(); } catch (e) {} };
+    (document.head || document.documentElement).appendChild(s);
+  }
+
+  function armAudio() {
+    if (audio.armed) return;
+    audio.armed = true;
+    var found = detectKit();
+    if (found.kit) { audio.kit = found.kit; audio.family = found.family; }
+    if (G.Music && !G.Music.isMuted()) {
+      try { G.Music.start(audio.family); } catch (e) {}
+    }
+  }
+
+  function onGesture(e) {
+    audio.lastInputAt = audioNow();
+    audio.lastInputRepeat = !!(e && e.repeat);
+    armAudio();
+  }
+
+  function onButtonClick(e) {
+    var t = e && e.target;
+    if (!t) return;
+    var el = t.closest ? t.closest('button, a, [role="button"]') : null;
+    if (!el) return;
+    if (el.classList && (el.classList.contains('sfx-toggle') || el.classList.contains('music-toggle'))) {
+      if (el.classList.contains('music-toggle')) {
+        // The toggle's own handler runs on the target first; if it unmuted,
+        // a never-started page still needs start() inside this gesture.
+        audio.lastInputAt = audioNow();
+        if (G.Music && !G.Music.isMuted()) {
+          try { G.Music.start(audio.family); } catch (err) {}
+        }
+      }
+      return;
+    }
+    if (el.closest && (el.closest('#board') || el.closest('#overlay'))) return;
+    var id = el.id || '';
+    var key = el.getAttribute ? (el.getAttribute('data-i') || '') : '';
+    if (id === 'btn-hint' || key === 'hint') { playSound('notify', 300); return; }
+    if (id === 'btn-new' || id === 'btn-overlay' || key === 'newGame' || key === 'playAgain') {
+      playSound('deal', 400); return;
+    }
+    playSound('click', 90);
+  }
+
+  function installAudio() {
+    if (typeof document === 'undefined') return;
+    if (audio.ready) return;
+    audio.ready = true;
+    installKitHook();
+    document.addEventListener('pointerdown', onGesture, true);
+    document.addEventListener('keydown', onGesture, true);
+    document.addEventListener('touchstart', onGesture, { capture: true, passive: true });
+    document.addEventListener('click', onGesture, true);
+    // Bubble phase: the toggle's own handler (sfx.js / music.js, bound on the
+    // button) has already flipped the state by the time this runs.
+    document.addEventListener('click', onButtonClick, false);
+    loadScript(SFX_SRC, function () {
+      injectToggles();
+      if (G.Sfx && G.Sfx.syncButtons) { try { G.Sfx.syncButtons(); } catch (e) {} }
+      revealToggle('.sfx-toggle');
+    });
+    loadScript(MUSIC_SRC, function () {
+      injectToggles();
+      if (G.Music && G.Music.syncButtons) { try { G.Music.syncButtons(); } catch (e) {} }
+      revealToggle('.music-toggle');
+      if (audio.armed && G.Music && !G.Music.isMuted()) {
+        try { G.Music.start(audio.family); } catch (e) {}
+      }
+    });
+    ready(function () {
+      injectToggles();
+      watchOverlay();
+    });
+  }
+
+  installAudio();
+
   function ready(fn) {
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn);
     else fn();
+  }
+
+  // URL boot params: one canonical page absorbs size/speed variants
+  // (e.g. /games/tictactoe/?n=8) instead of shipping one directory per value.
+  var queryCache = null;
+  function params() {
+    if (queryCache) return queryCache;
+    queryCache = {};
+    var search = (typeof location !== 'undefined' && location.search) || '';
+    search.replace(/^\?/, '').split('&').forEach(function (pair) {
+      if (!pair) return;
+      var eq = pair.indexOf('=');
+      var key = decodeURIComponent(eq < 0 ? pair : pair.slice(0, eq));
+      var value = eq < 0 ? '1' : decodeURIComponent(pair.slice(eq + 1));
+      if (key) queryCache[key] = value;
+    });
+    return queryCache;
+  }
+  function paramNumber(name, fallback, min, max) {
+    var value = Number(params()[name]);
+    if (!isFinite(value)) return fallback;
+    return Math.max(min, Math.min(max, value));
+  }
+  function paramFlag(name) {
+    var value = String(params()[name] || '').toLowerCase();
+    return value === '1' || value === 'true' || value === 'yes';
   }
 
   return {
@@ -233,6 +621,17 @@
     storageGet: storageGet, storageSet: storageSet,
     best: best, setBest: setBest,
     onKeys: onKeys, onSwipe: onSwipe, KEYMAP: KEYMAP,
-    loop: loop, fmt: fmt, clamp: clamp, randInt: randInt, ready: ready
+    loop: loop, fmt: fmt, clamp: clamp, randInt: randInt, ready: ready,
+    params: params, paramNumber: paramNumber, paramFlag: paramFlag,
+    audioStats: function () {
+      return {
+        armed: audio.armed,
+        family: audio.family,
+        kit: audio.kit,
+        lastPlayed: audio.lastPlayed,
+        sfx: G.Sfx && typeof G.Sfx.stats === 'function' ? G.Sfx.stats() : null,
+        music: G.Music && typeof G.Music.stats === 'function' ? G.Music.stats() : null
+      };
+    }
   };
 });

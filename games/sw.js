@@ -31,7 +31,8 @@
 // v21 introduced the shell/lazy/runtime split. After changing the group schema
 // (or any PRECACHE_* logic) you MUST re-run the generator: this worker refuses
 // to install a manifest whose version does not match.
-var CACHE_VERSION = 'v24';
+// v30 adds the CC0 arcade BGM files to the lazy group.
+var CACHE_VERSION = 'v30';
 var CACHE_PREFIX = 'hhfa-games-';
 var CACHE_NAME = CACHE_PREFIX + CACHE_VERSION;
 

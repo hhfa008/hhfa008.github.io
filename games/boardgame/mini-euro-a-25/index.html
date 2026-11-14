@@ -99,9 +99,18 @@ h1{font-family:var(--serif);font-size:clamp(1.9rem,7vw,2.7rem);line-height:1.08;
 .loglist li::before{content:"";position:absolute;left:0;top:.6em;width:4px;height:4px;border-radius:50%;background:var(--line)}
 .loglist li:first-child{color:var(--ink)}
 .foot{margin-top:16px;text-align:center;font-size:12px;color:var(--muted);line-height:1.7}
+.tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px}
+.tools button{min-height:44px;min-width:44px;padding:0 12px;border-radius:11px;border:1px solid var(--line2);
+  background:#241c14;color:var(--ink);font:inherit;font-size:12.5px;font-weight:700;cursor:pointer}
+.tools .streak{margin-left:auto;font-size:12px;color:var(--muted)}
+.scene{margin:8px 0 0;font-size:12px;line-height:1.5;color:var(--muted)}
 .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#3a2e20;border:1px solid var(--accent);
   color:var(--ink);padding:9px 14px;border-radius:10px;font-size:12.5px;z-index:50;max-width:calc(100vw - 32px)}
-@media(max-width:360px){.actions,.orders,.recipes,.spots{grid-template-columns:1fr}.worth{font-size:26px}}
+@media(max-width:360px){.actions,.orders,.recipes,.spots{grid-template-columns:1fr}.worth{font-size:26px}
+  /* 320 档首屏优先棋盘：压缩 hero/面板 chrome，避免棋盘被推到首屏外 */
+  .hero{padding:6px 0 4px}.kicker{margin:0 0 2px}h1{font-size:1.5rem}
+  .lede{font-size:13px;margin:4px 0 0}.tags{margin-top:6px}.panel{padding:10px;margin-top:8px}
+}
 /* mini-quality: reduced-motion */
 @media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; scroll-behavior:auto !important; } }
 </style>
@@ -122,6 +131,14 @@ h1{font-family:var(--serif);font-size:clamp(1.9rem,7vw,2.7rem);line-height:1.08;
 
   <section class="scores" id="scores" aria-label="比分"></section>
   <div class="status" id="status" aria-live="polite"><span class="dot"></span><span id="statusText">准备开局…</span></div>
+  <div class="tools" aria-label="模式与音景">
+    <button id="freeBtn" type="button">自由模式</button>
+    <button id="dailyBtn" type="button">每日挑战</button>
+    <button id="resumeBtn" type="button" hidden>继续上一局</button>
+    <button id="bgmBtn" type="button" aria-pressed="true">音景 开</button>
+    <span class="streak" id="streak">连胜 0</span>
+  </div>
+  <p class="scene" id="sceneLog" aria-live="polite">战报：准备开始。</p>
 
   <section class="panel"><h2>局面</h2><div class="board" id="board"></div></section>
   <section class="panel"><h2>可选行动</h2><div class="actions" id="actions"></div></section>
@@ -130,13 +147,572 @@ h1{font-family:var(--serif);font-size:clamp(1.9rem,7vw,2.7rem);line-height:1.08;
 </main>
 <script src="engine.js"></script>
 <script>
+/* 统一进度/留存模块（UMD）。
+ *
+ *   window.GameProgress / require('./progress.js')
+ *
+ * 目标：给 453 个入口页一条共同的留存回路——
+ *   - 每日挑战：同一天同一游戏得到同一个种子（可复现、可比较）
+ *   - 连胜：当天完成每日挑战记一次，断天归零
+ *   - 最好成绩：本地历史最好分
+ * 依赖 Store（games/shared/store.js）；没有 Store 时退回 localStorage。
+ * 只做数据与规则，不碰 DOM。
+ */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory(root);
+  else root.GameProgress = factory(root);
+})(typeof globalThis !== 'undefined' ? globalThis : this, function (root) {
+  'use strict';
+
+  var NS = 'gp.v1.';
+
+  function storage() {
+    if (root && root.Store && typeof root.Store.get === 'function') return root.Store;
+    if (root && root.localStorage) {
+      return {
+        get: function (k, d) { try { var v = root.localStorage.getItem(k); return v == null ? d : v; } catch (e) { return d; } },
+        set: function (k, v) { try { root.localStorage.setItem(k, v); return true; } catch (e) { return false; } }
+      };
+    }
+    var mem = {};
+    return {
+      get: function (k, d) { return Object.prototype.hasOwnProperty.call(mem, k) ? mem[k] : d; },
+      set: function (k, v) { mem[k] = v; return true; }
+    };
+  }
+
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+
+  // Local calendar day (not UTC): daily reset follows the player's clock.
+  function dayKey(date) {
+    var d = date || new Date();
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  }
+
+  function hash(s) {
+    var h = 2166136261 >>> 0;
+    for (var i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 16777619) >>> 0;
+    }
+    return h >>> 0;
+  }
+
+  // Same slug + same day -> same seed, so players see the same challenge.
+  function dailySeed(slug, date) {
+    return hash(String(slug) + '|' + dayKey(date)) % 1000000 + 1;
+  }
+
+  function key(slug, name) { return NS + slug + '.' + name; }
+
+  function stats(slug) {
+    var s = storage();
+    return {
+      best: Number(s.get(key(slug, 'best'), 0)) || 0,
+      streak: Number(s.get(key(slug, 'streak'), 0)) || 0,
+      lastDay: String(s.get(key(slug, 'lastDay'), '') || ''),
+      dailyDone: String(s.get(key(slug, 'dailyDone'), '') || ''),
+      runs: Number(s.get(key(slug, 'runs'), 0)) || 0
+    };
+  }
+
+  /**
+   * record({slug, mode:'daily'|'free', score, won, date})
+   * - best: max(score)
+   * - runs: +1
+   * - daily: only once per day; counts streak (+1 if lastDay is yesterday,
+   *   else 1). Free runs never touch streak.
+   * 返回更新后的 stats 与本次是否计入每日。
+   */
+  function record(entry) {
+    var s = storage();
+    var slug = String(entry.slug || '');
+    if (!slug) throw new Error('record: slug required');
+    var cur = stats(slug);
+    var score = Number(entry.score) || 0;
+    var now = entry.date || new Date();
+    var today = dayKey(now);
+    var countedDaily = false;
+
+    if (score > cur.best) { cur.best = score; s.set(key(slug, 'best'), cur.best); }
+    cur.runs += 1;
+    s.set(key(slug, 'runs'), cur.runs);
+
+    if (entry.mode === 'daily' && cur.dailyDone !== today) {
+      var yesterday = dayKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1));
+      cur.streak = cur.lastDay === yesterday ? cur.streak + 1 : 1;
+      cur.lastDay = today;
+      cur.dailyDone = today;
+      countedDaily = true;
+      s.set(key(slug, 'streak'), cur.streak);
+      s.set(key(slug, 'lastDay'), today);
+      s.set(key(slug, 'dailyDone'), today);
+    } else if (entry.mode === 'daily' && cur.dailyDone === today && entry.force) {
+      countedDaily = false; // idempotent by default; force only records the run
+    }
+
+    return { stats: cur, countedDaily: countedDaily, today: today };
+  }
+
+  function dailyState(slug, date) {
+    var today = dayKey(date);
+    var cur = stats(slug);
+    return { today: today, done: cur.dailyDone === today, streak: cur.streak, seed: dailySeed(slug, date) };
+  }
+
+  return {
+    dayKey: dayKey,
+    dailySeed: dailySeed,
+    stats: stats,
+    record: record,
+    dailyState: dailyState,
+    keyPrefix: NS
+  };
+});
+</script>
+<script>
+var Scene = (function(){var module={exports:{}};var exports=module.exports;
+/* 场景 / 人物 / 事件运行时（UMD，零依赖）。
+ *
+ *   var scene = Scene.create({ id, ambience, cast: [{id, name, role, emotion, stats}] })
+ *   scene.updateCast(id, patch)         // 角色状态（情绪/血量/资源）
+ *   scene.on(type, fn)                  // 订阅事件（返回取消函数）
+ *   scene.emit(type, payload)           // 回合/行动/命中/结算/失败…
+ *   scene.events(limit)                 // 最近事件（叙事日志的数据源）
+ *   scene.snapshot() / Scene.restore()  // 存档：可 JSON 序列化
+ *
+ * 设计目标：场景（环境+音景）、人物（角色与状态）、事件（触发与叙事）
+ * 成为所有游戏共用的三层，而不是每页各自散着写。
+ */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.Scene = factory();
+})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+  'use strict';
+
+  var MAX_EVENTS = 80;
+
+  function create(cfg) {
+    var conf = cfg || {};
+    var cast = {};
+    (conf.cast || []).forEach(function (member) {
+      if (!member || !member.id) return;
+      cast[member.id] = {
+        id: member.id,
+        name: member.name || member.id,
+        role: member.role || 'neutral',
+        emotion: member.emotion || 'neutral',
+        stats: Object.assign({}, member.stats || {})
+      };
+    });
+    var listeners = {};
+    var events = [];
+    var log = [];
+
+    function emit(type, payload) {
+      var event = { type: String(type), at: events.length, payload: payload || null };
+      events.push(event);
+      if (events.length > MAX_EVENTS) events.shift();
+      log.push(event);
+      if (log.length > MAX_EVENTS) log.shift();
+      (listeners[type] || []).slice().forEach(function (fn) {
+        try { fn(event); } catch (e) { /* listeners must not break the game */ }
+      });
+      (listeners['*'] || []).slice().forEach(function (fn) {
+        try { fn(event); } catch (e) { /* ignore */ }
+      });
+      return event;
+    }
+
+    function on(type, fn) {
+      if (typeof fn !== 'function') throw new Error('on: listener required');
+      var key = String(type);
+      (listeners[key] = listeners[key] || []).push(fn);
+      return function off() {
+        listeners[key] = (listeners[key] || []).filter(function (f) { return f !== fn; });
+      };
+    }
+
+    function updateCast(id, patch) {
+      var member = cast[id];
+      if (!member) throw new Error('unknown cast id: ' + id);
+      Object.keys(patch || {}).forEach(function (k) {
+        if (k === 'stats') member.stats = Object.assign({}, member.stats, patch.stats || {});
+        else if (k !== 'id') member[k] = patch[k];
+      });
+      return member;
+    }
+
+    function snapshot() {
+      return {
+        id: conf.id || 'scene',
+        ambience: conf.ambience || 'table',
+        cast: Object.keys(cast).map(function (k) { return cast[k]; }),
+        events: events.slice()
+      };
+    }
+
+    return {
+      id: conf.id || 'scene',
+      ambience: conf.ambience || 'table',
+      cast: cast,
+      updateCast: updateCast,
+      on: on,
+      emit: emit,
+      events: function (limit) { return events.slice(-(limit || 20)); },
+      snapshot: snapshot
+    };
+  }
+
+  function restore(snapshot) {
+    if (!snapshot || !snapshot.id) throw new Error('restore: invalid snapshot');
+    var scene = create({ id: snapshot.id, ambience: snapshot.ambience, cast: snapshot.cast || [] });
+    (snapshot.events || []).forEach(function (event) {
+      scene.emit(event.type, event.payload);
+    });
+    return scene;
+  }
+
+  return { create: create, restore: restore, version: '1.0.0', MAX_EVENTS: MAX_EVENTS };
+});
+
+return module.exports;})();
+var Replay = (function(){var module={exports:{}};var exports=module.exports;
+/* 存档 / 复盘 / 观战数据（UMD，零依赖）。
+ *
+ *   var replay = Replay.create({ game, version, seed, params })
+ *   replay.add(action)                  // 玩家动作（可 JSON 化）
+ *   replay.toJSON()                     // {game,version,seed,params,actions,createdAt}
+ *   Replay.fromJSON(text|obj)           // 版本不符抛错，不静默错读
+ *   Replay.spectator(view, hiddenKeys)  // 观战视图脱敏（隐藏手牌/身份/答案）
+ *   Replay.saveLocal(key, replay) / Replay.loadLocal(key)
+ *
+ * 复盘前提：游戏必须“种子确定 + 动作可重放”。引擎按 seed 初始化，
+ * 重放同一 actions 序列必须得到同一结果（由各游戏测试保证）。
+ */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory(root);
+  else root.Replay = factory(root);
+})(typeof globalThis !== 'undefined' ? globalThis : this, function (root) {
+  'use strict';
+
+  var CURRENT_VERSION = 1;
+
+  function create(cfg) {
+    var conf = cfg || {};
+    if (!conf.game) throw new Error('create: game required');
+    var actions = [];
+    var createdAt = conf.createdAt || new Date().toISOString();
+    return {
+      game: conf.game,
+      version: conf.version || CURRENT_VERSION,
+      seed: conf.seed == null ? null : conf.seed,
+      params: Object.assign({}, conf.params || {}),
+      add: function (action) {
+        actions.push(JSON.parse(JSON.stringify(action)));
+        return actions.length;
+      },
+      actions: function () { return actions.slice(); },
+      toJSON: function () {
+        return {
+          game: conf.game,
+          version: conf.version || CURRENT_VERSION,
+          seed: conf.seed == null ? null : conf.seed,
+          params: Object.assign({}, conf.params || {}),
+          actions: actions.slice(),
+          createdAt: createdAt
+        };
+      }
+    };
+  }
+
+  function fromJSON(input) {
+    var data = typeof input === 'string' ? JSON.parse(input) : input;
+    if (!data || !data.game) throw new Error('fromJSON: missing game');
+    if (Number(data.version) !== CURRENT_VERSION) {
+      throw new Error('fromJSON: unsupported version ' + data.version + ' (expected ' + CURRENT_VERSION + ')');
+    }
+    if (!Array.isArray(data.actions)) throw new Error('fromJSON: actions must be an array');
+    var replay = create({
+      game: data.game,
+      version: Number(data.version),
+      seed: data.seed,
+      params: data.params,
+      createdAt: data.createdAt
+    });
+    data.actions.forEach(function (action) { replay.add(action); });
+    return replay;
+  }
+
+  // 观战：只读视图 + 隐藏字段脱敏（递归删 key），永不改原对象。
+  function spectator(view, hiddenKeys) {
+    var hidden = {};
+    (hiddenKeys || []).forEach(function (k) { hidden[k] = true; });
+    function walk(value) {
+      if (Array.isArray(value)) return value.map(walk);
+      if (value && typeof value === 'object') {
+        var out = {};
+        Object.keys(value).forEach(function (k) {
+          if (hidden[k]) return;
+          out[k] = walk(value[k]);
+        });
+        return out;
+      }
+      return value;
+    }
+    return walk(view);
+  }
+
+  function saveLocal(key, replay) {
+    try {
+      var text = JSON.stringify(replay && replay.toJSON ? replay.toJSON() : replay);
+      root.localStorage.setItem(key, text);
+      return true;
+    } catch (e) { return false; }
+  }
+
+  function loadLocal(key) {
+    try {
+      var text = root.localStorage.getItem(key);
+      if (!text) return null;
+      return fromJSON(text);
+    } catch (e) { return null; }
+  }
+
+  return {
+    create: create,
+    fromJSON: fromJSON,
+    spectator: spectator,
+    saveLocal: saveLocal,
+    loadLocal: loadLocal,
+    version: CURRENT_VERSION
+  };
+});
+
+return module.exports;})();
+var Bgm = (function(){var module={exports:{}};var exports=module.exports;
+/* 程序化 BGM（场景化环境音乐），零音频文件、零外部请求。
+ *
+ *   Bgm.play('table' | 'dungeon' | 'market' | 'garden' | 'night')
+ *   Bgm.stop() / Bgm.setVolume(0..1) / Bgm.mute(bool) / Bgm.isMuted()
+ *   Bgm.current() / Bgm.scenes() / Bgm.version
+ *
+ * 设计：
+ *  - 每个场景是一条缓慢的和弦铺底（2–3 个振荡器 + 低通 + 慢 LFO），
+ *    用 WebAudio 合成，不加载任何资源；与 shared/sfx.js 同一套“脚本即音频”的思路。
+ *  - 首次播放必须在用户手势内（浏览器自动播放策略）；此前的调用会被忽略并返回 false。
+ *  - 音量/静音持久化到 localStorage（hhfa-bgm-*）。
+ *  - Node 环境没有 AudioContext：API 可用但全部为静默 no-op（测试友好）。
+ */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory(root);
+  else root.Bgm = factory(root);
+})(typeof globalThis !== 'undefined' ? globalThis : this, function (root) {
+  'use strict';
+
+  var SCENES = {
+    table: { root: 196.0, chord: [0, 7, 12, 16], wave: 'sine', lfo: 0.07, gain: 0.05 },
+    dungeon: { root: 110.0, chord: [0, 3, 7, 10], wave: 'triangle', lfo: 0.05, gain: 0.06 },
+    market: { root: 220.0, chord: [0, 4, 7, 11], wave: 'sine', lfo: 0.11, gain: 0.045 },
+    garden: { root: 174.6, chord: [0, 5, 9, 12], wave: 'sine', lfo: 0.06, gain: 0.045 },
+    night: { root: 146.8, chord: [0, 7, 10, 14], wave: 'triangle', lfo: 0.04, gain: 0.05 }
+  };
+  var VOLUME_KEY = 'hhfa-bgm-volume';
+  var MUTE_KEY = 'hhfa-bgm-muted';
+
+  function storageGet(k) { try { return root.localStorage ? root.localStorage.getItem(k) : null; } catch (e) { return null; } }
+  function storageSet(k, v) { try { if (root.localStorage) root.localStorage.setItem(k, v); } catch (e) { /* ignore */ } }
+
+  var volume = Number(storageGet(VOLUME_KEY));
+  if (!(volume >= 0 && volume <= 1)) volume = 0.6;
+  var muted = storageGet(MUTE_KEY) === '1';
+  var ctx = null;
+  var nodes = [];
+  var timer = null;
+  var current = null;
+
+  function AudioCtor() {
+    return root.AudioContext || root.webkitAudioContext || null;
+  }
+
+  function ensureCtx() {
+    if (ctx) return ctx;
+    var C = AudioCtor();
+    if (!C) return null;
+    try { ctx = new C(); } catch (e) { ctx = null; }
+    return ctx;
+  }
+
+  function clearNodes() {
+    nodes.forEach(function (n) {
+      try { n.stop ? n.stop() : n.disconnect(); } catch (e) { /* ignore */ }
+      try { n.disconnect && n.disconnect(); } catch (e) { /* ignore */ }
+    });
+    nodes = [];
+    if (timer) { clearInterval(timer); timer = null; }
+  }
+
+  function scheduleScene(scene) {
+    if (!ctx) return;
+    var cfg = SCENES[scene] || SCENES.table;
+    var now = ctx.currentTime;
+    var master = ctx.createGain();
+    master.gain.value = muted ? 0 : volume * cfg.gain;
+    master.connect(ctx.destination);
+    nodes.push(master);
+
+    cfg.chord.forEach(function (semi, i) {
+      var osc = ctx.createOscillator();
+      osc.type = cfg.wave;
+      osc.frequency.value = cfg.root * Math.pow(2, semi / 12);
+      var g = ctx.createGain();
+      g.gain.value = 0.33;
+      var lfo = ctx.createOscillator();
+      lfo.frequency.value = cfg.lfo * (1 + i * 0.13);
+      var lfoGain = ctx.createGain();
+      lfoGain.gain.value = 0.18;
+      lfo.connect(lfoGain);
+      lfoGain.connect(g.gain);
+      osc.connect(g);
+      g.connect(master);
+      osc.start(now);
+      lfo.start(now);
+      nodes.push(osc, lfo, g, lfoGain);
+    });
+  }
+
+  function fadeMaster(to, seconds) {
+    var master = nodes.filter(function (n) { return n.gain && n.context; })[0];
+    if (!master || !ctx) return;
+    try {
+      master.gain.cancelScheduledValues(ctx.currentTime);
+      master.gain.setValueAtTime(master.gain.value, ctx.currentTime);
+      master.gain.linearRampToValueAtTime(to, ctx.currentTime + (seconds || 0.8));
+    } catch (e) { /* ignore */ }
+  }
+
+  function play(scene) {
+    var name = SCENES[scene] ? scene : 'table';
+    if (!AudioCtor()) { current = name; return false; }
+    if (!ensureCtx()) { current = name; return false; }
+    if (ctx.state === 'suspended') { try { ctx.resume(); } catch (e) { /* ignore */ } }
+    clearNodes();
+    current = name;
+    scheduleScene(name);
+    if (timer) clearInterval(timer);
+    // Rebuild the chord每 12 秒，形成缓慢的呼吸而不是一条死板长音。
+    timer = setInterval(function () {
+      if (!ctx || !current) return;
+      clearNodes();
+      scheduleScene(current);
+    }, 12000);
+    return true;
+  }
+
+  function stop() {
+    clearNodes();
+    current = null;
+    return true;
+  }
+
+  function setVolume(v) {
+    volume = Math.max(0, Math.min(1, Number(v) || 0));
+    storageSet(VOLUME_KEY, String(volume));
+    return volume;
+  }
+
+  function mute(on) {
+    muted = Boolean(on);
+    storageSet(MUTE_KEY, muted ? '1' : '0');
+    fadeMaster(muted ? 0 : volume * (SCENES[current] || SCENES.table).gain, 0.4);
+    return muted;
+  }
+
+  function scenes() { return Object.keys(SCENES); }
+  function isMuted() { return muted; }
+  function currentScene() { return current; }
+  function getVolume() { return volume; }
+
+  return {
+    play: play,
+    stop: stop,
+    setVolume: setVolume,
+    getVolume: getVolume,
+    mute: mute,
+    isMuted: isMuted,
+    current: currentScene,
+    scenes: scenes,
+    version: '1.0.0'
+  };
+});
+
+return module.exports;})();
+</script>
+<script>
 (function () {
   'use strict';
   var E = window.MiniEuroEngine;
   var CFG = E.config;
-  var state = E.createGame((Date.now ? (Date.now() % 100000) : 1) + 17);
+  var SLUG = "mini-euro-a-25";
+  var mode = "free";
+  var currentSeed = Date.now() % 1000000000;
+  var settled = false;
+  var bgmOn = false;
+  var scene = Scene.create({
+    id: SLUG,
+    ambience: "market",
+    cast: [{ id: "you", name: "你", role: "player" }, { id: "ai", name: "AI 商人", role: "ai" }]
+  });
+  var replay = Replay.create({ game: SLUG, seed: currentSeed, params: { mode: mode } });
+  var state = E.createGame(currentSeed);
   var busy = false;
   var aiTimer = null;
+
+  function newSeed() {
+    currentSeed = mode === "daily" ? GameProgress.dailySeed(SLUG) : (Date.now() % 1000000000);
+    return currentSeed;
+  }
+  function saveReplay() {
+    try { Replay.saveLocal("replay." + SLUG, replay); } catch (e) { /* storage optional */ }
+  }
+  function refreshStreak() {
+    var el = $("streak");
+    if (!el) return;
+    var st = GameProgress.dailyState(SLUG);
+    el.textContent = (mode === "daily" ? "每日 · " + (st.done ? "今日已完成" : "今日未完成") : "自由模式") + " · 连胜 " + st.streak;
+  }
+  function describe(event) {
+    if (!event) return "战报：准备开始。";
+    var p = event.payload || {};
+    if (event.type === "move") return "战报：你执行了行动「" + p.key + "」。";
+    if (event.type === "settle") {
+      var verdict = p.score > p.ai ? "你赢了" : (p.score === p.ai ? "平局" : "AI 赢了");
+      return "战报：最终 " + p.score + " : " + p.ai + " · " + verdict + "。";
+    }
+    return "战报：准备开始。";
+  }
+  function paintLog() {
+    var el = $("sceneLog");
+    if (el) el.textContent = describe(scene.events(1)[0]);
+  }
+  function finish(current) {
+    if (settled) return;
+    settled = true;
+    var score = Number(current.players[0] && current.players[0].score) || 0;
+    var ai = Number(current.players[1] && current.players[1].score) || 0;
+    scene.updateCast("you", { emotion: score > ai ? "happy" : (score === ai ? "neutral" : "sad") });
+    scene.emit("settle", { score: score, ai: ai, mode: mode });
+    try { localStorage.removeItem("replay." + SLUG); } catch (e) { /* ignore */ }
+    try { GameProgress.record({ slug: SLUG, mode: mode, score: score }); } catch (e) { /* storage optional */ }
+    refreshStreak();
+    paintLog();
+  }
+  function startBgm() {
+    if (bgmOn) return;
+    bgmOn = true;
+    try { Bgm.play(scene.ambience); } catch (e) { /* audio optional */ }
+  }
+  document.addEventListener("pointerdown", startBgm, { once: true });
 
   function $(id) { return document.getElementById(id); }
   function esc(s) {
@@ -274,6 +850,7 @@ h1{font-family:var(--serif);font-size:clamp(1.9rem,7vw,2.7rem);line-height:1.08;
     return html;
   }
   function render() {
+    if (state.over) finish(state);
     $('scores').innerHTML = scoreCards();
     var st = $('status');
     st.className = 'status' + (busy || (state.turn === 1 && !state.over) ? ' thinking' : '');
@@ -285,10 +862,17 @@ h1{font-family:var(--serif);font-size:clamp(1.9rem,7vw,2.7rem);line-height:1.08;
     var logs = state.log.slice(-10).reverse();
     $('log').innerHTML = logs.map(function (line) { return '<li>' + esc(line) + '</li>'; }).join('');
   }
-  function newGame() {
+  function newGame(nextMode) {
+    if (nextMode) mode = nextMode;
+    if (nextMode) { var rb = $('resumeBtn'); if (rb) rb.hidden = true; }
     if (aiTimer) { clearTimeout(aiTimer); aiTimer = null; }
     busy = false;
-    state = E.createGame((Date.now() % 100000) + Math.floor(Math.random() * 997));
+    settled = false;
+    state = E.createGame(newSeed());
+    replay = Replay.create({ game: SLUG, seed: currentSeed, params: { mode: mode } });
+    try { localStorage.removeItem('replay.' + SLUG); } catch (e) { /* ignore */ }
+    refreshStreak();
+    paintLog();
     render();
   }
   function scheduleAi() {
@@ -319,6 +903,10 @@ h1{font-family:var(--serif);font-size:clamp(1.9rem,7vw,2.7rem);line-height:1.08;
     busy = true;
     try {
       state = E.applyMove(state, move);
+      replay.add({ key: move.key });
+      saveReplay();
+      scene.emit('move', { key: move.key });
+      paintLog();
     } catch (err) {
       console.error(err);
     }
@@ -326,6 +914,52 @@ h1{font-family:var(--serif);font-size:clamp(1.9rem,7vw,2.7rem);line-height:1.08;
     render();
     if (!state.over && state.turn === 1) scheduleAi();
   });
+  $('freeBtn').addEventListener('click', function () { newGame('free'); });
+  $('dailyBtn').addEventListener('click', function () { newGame('daily'); });
+  $('bgmBtn').addEventListener('click', function () {
+    startBgm();
+    var muted = Bgm.mute(!Bgm.isMuted());
+    var btn = $('bgmBtn');
+    btn.textContent = muted ? '音景 关' : '音景 开';
+    btn.setAttribute('aria-pressed', muted ? 'false' : 'true');
+  });
+  (function resumePrompt() {
+    var saved = null;
+    try { saved = Replay.loadLocal('replay.' + SLUG); } catch (e) { /* storage optional */ }
+    var btn = $('resumeBtn');
+    if (!btn || !saved || !saved.actions().length) return;
+    btn.hidden = false;
+    btn.addEventListener('click', function () {
+      mode = (saved.params && saved.params.mode) || 'free';
+      currentSeed = saved.seed;
+      settled = false;
+      if (aiTimer) { clearTimeout(aiTimer); aiTimer = null; }
+      state = E.createGame(currentSeed);
+      var acts = saved.actions();
+      for (var i = 0; i < acts.length; i += 1) {
+        if (state.over || state.turn !== 0) break;
+        var key = acts[i] && acts[i].key;
+        var legal = E.getLegalMoves(state);
+        var move = null;
+        for (var j = 0; j < legal.length; j += 1) if (legal[j].key === key) move = legal[j];
+        if (!move) break;
+        state = E.applyMove(state, move);
+        while (!state.over && state.turn === 1) {
+          var ai = E.aiMove(state);
+          if (!ai) break;
+          state = E.applyMove(state, ai);
+        }
+      }
+      replay = saved;
+      btn.hidden = true;
+      refreshStreak();
+      paintLog();
+      render();
+      if (!state.over && state.turn === 1) scheduleAi();
+    });
+  })();
+  refreshStreak();
+  paintLog();
   render();
 })();
 </script>

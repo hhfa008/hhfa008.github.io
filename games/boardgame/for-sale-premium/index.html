@@ -19,6 +19,7 @@
 <link rel="preload" as="image" href="../../assets/art/premium/for-sale/house-token.webp">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f2a1c'/%3E%3Cpath d='M12 32 32 14l20 18v20H12z' fill='%23f2e4c8'/%3E%3Cpath d='M24 52V36h16v16' fill='%23945d34'/%3E%3C/svg%3E">
 <title>房地产拍卖 FOR SALE · 精品桌游</title>
+<link rel="stylesheet" href="../../shared/poker-ui.css">
 <style>
 :root {
   --font-serif: "Iowan Old Style", "Palatino Linotype", "Songti SC", "Noto Serif SC", Georgia, serif;
@@ -208,7 +209,7 @@ button { cursor: pointer; }
       <div id="auctionZone">
         <div class="auction-zone">
           <div class="lot">
-            <div class="prop-card" id="lotCard">
+            <div class="pui pui-card pui-card--custom prop-card" id="lotCard">
               <div class="corner" id="lotCorner">—</div><div class="corner r" id="lotCornerR">—</div>
               <div class="face">
                 <div class="pv" id="lotValue">—</div>
@@ -297,6 +298,7 @@ button { cursor: pointer; }
 
 <script src="../../shared/shuffle.js"></script>
 <script src="../../shared/sfx.js"></script>
+<script src="../../shared/poker-ui.js"></script>
 <script src="data.js"></script>
 <script src="engine.js"></script>
 <script>
@@ -333,25 +335,61 @@ button { cursor: pointer; }
   }
   function cash(p) { return p.money + p.checks.reduce(function (a, b) { return a + b; }, 0); }
 
+  function coinIcon() {
+    var UI = window.PokerUI;
+    if (UI && UI.createChipStack) {
+      var stack = UI.createChipStack({ value: 1, denominations: [1], max: 1, label: '金币' });
+      if (stack) {
+        var chip = stack.querySelector ? stack.querySelector('.pui-chip') : null;
+        if (chip) chip.classList.add('coin-icon');
+        stack.setAttribute('aria-hidden', 'true');
+        return stack;
+      }
+    }
+    return el('span', 'coin-icon');
+  }
+
   function propCard(value, opts) {
     opts = opts || {};
-    var card = el(opts.small ? 'div' : 'button', 'prop-card' + (opts.small ? ' small' : '') + (opts.selected ? ' sel' : ''));
-    if (!opts.small) {
-      card.type = 'button';
-      card.setAttribute('aria-label', '房产 ' + value);
-      if (opts.disabled) card.disabled = true;
-      if (opts.onClick) card.addEventListener('click', opts.onClick);
-    }
-    card.innerHTML = '<div class="corner">' + value + '</div><div class="corner r">' + value + '</div>' +
+    var cls = 'prop-card' + (opts.small ? ' small' : '') + (opts.selected ? ' sel' : '');
+    var faceHtml = '<div class="corner">' + value + '</div><div class="corner r">' + value + '</div>' +
       '<div class="face"><div class="pv">' + value + '</div>' +
       '<svg class="house" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M8 30 32 10l24 20v24H8z"/><path d="M24 54V34h16v20"/><path d="M32 18v8M28 22h8"/></svg>' +
       '<div class="plabel">房产</div></div>';
+    var card = window.PokerUI && window.PokerUI.createCard
+      ? window.PokerUI.createCard(null, {
+        face: 'custom',
+        faceHtml: faceHtml,
+        className: cls,
+        tag: opts.small ? 'div' : 'button',
+        ariaLabel: '房产 ' + value,
+        disabled: !opts.small && !!opts.disabled,
+        onClick: opts.small ? null : opts.onClick
+      })
+      : null;
+    if (!card) {
+      card = el(opts.small ? 'div' : 'button', cls);
+      if (!opts.small) {
+        card.type = 'button';
+        card.setAttribute('aria-label', '房产 ' + value);
+        if (opts.disabled) card.disabled = true;
+        if (opts.onClick) card.addEventListener('click', opts.onClick);
+      }
+      card.innerHTML = faceHtml;
+    }
     return card;
   }
   function chequeCard(value, opts) {
     opts = opts || {};
-    var d = el('div', 'cheque' + (opts.small ? ' small' : ''));
-    d.innerHTML = '<div class="cv">$' + value + '</div><div class="clabel">支票</div>';
+    var cls = 'cheque' + (opts.small ? ' small' : '');
+    var faceHtml = '<div class="cv">$' + value + '</div><div class="clabel">支票</div>';
+    var d = window.PokerUI && window.PokerUI.createCard
+      ? window.PokerUI.createCard(null, { face: 'custom', faceHtml: faceHtml, className: cls, tag: 'div', ariaLabel: '支票 $' + value })
+      : null;
+    if (!d) {
+      d = el('div', cls);
+      d.innerHTML = faceHtml;
+    }
     return d;
   }
 
@@ -378,7 +416,7 @@ button { cursor: pointer; }
       box.appendChild(el('div', 'pname', p.name));
       box.appendChild(el('div', 'psub', p.isAI ? 'AI' : '你'));
       var money = el('div', 'pmoney');
-      money.appendChild(el('span', 'coin-icon'));
+      money.appendChild(coinIcon());
       money.appendChild(el('span', null, String(p.money)));
       box.appendChild(money);
       var badges = el('div', 'badges');

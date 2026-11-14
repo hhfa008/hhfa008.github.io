@@ -5,7 +5,7 @@
  */
 'use strict';
 
-var CACHE = 'coup-premium-v1';
+var CACHE = 'coup-premium-v2';
 var CORE = [
   './',
   './index.html',

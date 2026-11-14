@@ -155,21 +155,13 @@
       <p class="sub">你是房主。房间码与邀请链接只保存在本机内存中，不上传任何个人信息。</p>
       <label for="hostName">你的昵称 / 标识</label>
       <input id="hostName" maxlength="24" autocomplete="off" placeholder="例如：铁幕书记官">
-      <label for="hostSeats">席位数量</label>
-      <select id="hostSeats">
-        <option value="2">2 人</option>
-        <option value="3">3 人</option>
-        <option value="4" selected>4 人</option>
-        <option value="5">5 人</option>
-        <option value="6">6 人</option>
-      </select>
       <label for="hostPassword">房间密码（可选，4–64 字符）</label>
       <input id="hostPassword" type="password" maxlength="64" autocomplete="new-password" placeholder="留空则公开房间">
       <div class="actions">
         <button class="btn primary" id="createBtn" type="button">创建并进入</button>
       </div>
       <div class="error" id="createError" role="status" aria-live="polite"></div>
-      <p class="note">房间使用共享房间状态机：邀请 token 单次有效，密码连续错误会锁定 60 秒。</p>
+      <p class="note">牌桌人数按实际加入的玩家自动决定（2–6 人），空位由 AI 补足；邀请 token 单次有效。</p>
     </section>
 
     <section class="panel">
@@ -211,7 +203,7 @@
       '&session=' + encodeURIComponent(token) + '&player=' + encodeURIComponent(playerId);
   }
 
-  var invitePrefill = query('invite');
+  var invitePrefill = query('code') || query('invite');
   var roomPrefill = query('room');
   if (roomPrefill) $('joinCode').value = roomPrefill;
   if (invitePrefill) {
@@ -230,9 +222,9 @@
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        playerId: name,
-        maxPlayers: Number($('hostSeats').value),
-        password: password,
+        playerId: randomId('coup'),
+        nickname: name,
+        password: password || undefined,
         visibility: password ? 'private' : 'public'
       })
     }).then(function (res) { return res.json().then(function (data) { return { status: res.status, data: data }; }); })
@@ -244,10 +236,10 @@
         }
         var data = out.data;
         sessionStorage.setItem('coup-room', JSON.stringify({
-          roomId: data.roomId, roomCode: data.roomCode, session: data.playerSession,
-          playerId: name, inviteToken: data.inviteToken
+          roomId: data.roomId, code: data.code, session: data.session,
+          playerId: data.playerId, inviteCode: data.inviteToken || data.inviteCode
         }));
-        enter(data.roomId, data.playerSession, name);
+        enter(data.roomId, data.session, data.playerId);
       })
       .catch(function () { $('createBtn').disabled = false; fail($('createError'), '无法连接房间服务器，请从联机服务启动本页。'); });
   });
@@ -255,6 +247,7 @@
   $('joinBtn').addEventListener('click', function () {
     var code = ($('joinCode').value || '').trim();
     var name = ($('joinName').value || '').trim();
+    var playerId = randomId('coup');
     if (!code) { fail($('joinError'), '请填写房间码。'); $('joinCode').focus(); return; }
     if (!name) { fail($('joinError'), '请填写昵称。'); $('joinName').focus(); return; }
     $('joinBtn').disabled = true;
@@ -263,9 +256,10 @@
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        playerId: name,
-        password: $('joinPassword').value || null,
-        inviteToken: $('inviteToken').value || null
+        playerId: playerId,
+        nickname: name,
+        password: $('joinPassword').value || undefined,
+        inviteCode: $('inviteToken').value || undefined
       })
     }).then(function (res) { return res.json().then(function (data) { return { status: res.status, data: data }; }); })
       .then(function (out) {
@@ -275,11 +269,12 @@
           return;
         }
         var data = out.data;
-        enter(data.roomId, data.playerSession, name);
+        enter(data.roomId, data.session, playerId);
       })
       .catch(function () { $('joinBtn').disabled = false; fail($('joinError'), '无法连接房间服务器，请从联机服务启动本页。'); });
   });
 }());
 </script>
+<p style="text-align:center;margin:14px 0"><a href="../spectate.html" style="display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:44px;padding:0 14px;border-radius:12px;border:1px solid currentColor;color:inherit;font-size:13px;text-decoration:none">围观其他对局</a></p>
 </body>
 </html>

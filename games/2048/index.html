@@ -71,8 +71,8 @@
 <style>
 #board {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  grid-template-rows: repeat(4, 1fr);
+  grid-template-columns: repeat(var(--n, 4), 1fr);
+  grid-template-rows: repeat(var(--n, 4), 1fr);
   gap: 8px;
   aspect-ratio: 1;
   width: 100%;
@@ -83,15 +83,26 @@
 /* Tile faces are colour-mapped by .tile-<value> in every variant, so the
  * generated UI must add that class (see .ui.js). Empty tiles stay transparent
  * on the dark game panel; valued tiles get their own face below. */
+ .size-tag{display:inline-block;margin:6px 0 0;padding:3px 9px;border:1px solid var(--line);border-radius:999px;font-size:12px;color:var(--muted)}
 .tile {
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: clamp(18px, 4vw, 32px);
+  font-size: clamp(12px, calc(min(92vw, 390px) / var(--n, 4) / 2.6), 32px);
   background-color: transparent;
   color: var(--tile-2048-ink);
+}
+
+@keyframes tile-pop {
+  0% { transform: scale(.72); }
+  60% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+.tile.tile-new, .tile.tile-merge { animation: tile-pop 160ms ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  .tile.tile-new, .tile.tile-merge { animation: none; }
 }
 
 .tile.tile-2 { background-color: var(--tile-2048-2-bg); color: var(--tile-2048-ink); }
@@ -124,6 +135,7 @@
   <section class="hero" aria-labelledby="page-title">
     <p class="eyebrow" data-i="eyebrow"></p>
     <h1 id="page-title" data-i="title"></h1>
+    <span class="size-tag" id="size-tag" hidden></span>
     <p class="lede" data-i="tagline"></p>
   </section>
 
@@ -172,11 +184,29 @@
   <a href="https://hhfa008.github.io/" data-i="moreLink"></a>
 </footer>
 
+<script src="/games/shared/store.js"></script>
+<script src="/games/shared/shuffle.js"></script>
+<script src="/games/shared/progress.js"></script>
+<script src="/games/shared/game-shell.js"></script>
 <script src="/games/shared/arcade/arcade.js"></script>
 <script src="/games/shared/arcade/kits/slide2048.js"></script>
 <script src="/games/shared/arcade/board-art.js"></script>
 <script>
-var CORE = ArcadeKit.create({"n":4});
+var BOOT = { "n": 4 };
+(function () {
+  try {
+    var v = parseInt(new URLSearchParams(location.search).get("n"), 10);
+    if (v >= 3 && v <= 12) BOOT.n = v;
+  } catch (e) { /* no URLSearchParams */ }
+  document.documentElement.style.setProperty("--n", BOOT.n);
+})();
+var CORE = ArcadeKit.create(BOOT);
+(function () {
+  if (BOOT.n === 4) return;
+  var tag = document.getElementById("size-tag");
+  if (tag) { tag.hidden = false; tag.textContent = BOOT.n + "×" + BOOT.n; }
+  document.title += " · " + BOOT.n + "×" + BOOT.n;
+})();
 var I18N = {
   en: { eyebrow:'Classic', title:'2048', tagline:'Join the tiles, get to 2048!', score:'Score', best:'Best', extraLabel:'Moves',
         boardAria:'Game board', playAgain:'Play again', newGame:'New game', hint:'Hint',
@@ -210,6 +240,7 @@ var I18N = {
   };
   var S = null;
   var best = Arcade.best(BEST_KEY, 0);
+  var prevBoard = null;
 
   function showOverlay(kind) {
     if (kind === 'won') {
@@ -228,15 +259,19 @@ var I18N = {
     E.best.textContent = best;
     E.extra.textContent = S.moves;
     E.board.innerHTML = '';
-    for (var i = 0; i < 16; i++) {
+    for (var i = 0; i < S.board.length; i++) {
       var tile = document.createElement('div');
       tile.className = 'tile';
       if (S.board[i]) {
         tile.classList.add('tile-' + S.board[i]);
         tile.textContent = S.board[i];
+        if (prevBoard && prevBoard[i] !== S.board[i]) {
+          tile.classList.add(prevBoard[i] ? 'tile-merge' : 'tile-new');
+        }
       }
       E.board.appendChild(tile);
     }
+    prevBoard = S.board.slice();
     var status = CORE.status(S);
     if (status === 'won' && !S.won) {
       S.won = true;
@@ -244,6 +279,7 @@ var I18N = {
       setTimeout(function () { E.overlay.hidden = true; }, 1400);
     } else if (status === 'lost' && E.overlay.hidden) {
       showOverlay('lost');
+      GameShell.finish(S.score);
     }
     ArcadeBoardArt.decorate(E.board, '2048');
   }
@@ -261,12 +297,22 @@ var I18N = {
   }
 
   function newGame() {
-    S = CORE.newGame(Math.random);
+    S = CORE.newGame(GameShell.seed());
+    prevBoard = null;
     best = Arcade.best(BEST_KEY, 0);
     E.overlay.hidden = true;
-    E.feedback.textContent = '';
+    E.feedback.textContent = "";
+    GameShell.reset();
     render();
   }
+
+  GameShell.init({
+    slug: "2048",
+    defaultSize: 4,
+    sizes: [3,4,5,6,7,8,9,10,11,12].map(function (n) {
+      return { value: String(n), label: n + "\u00d7" + n, href: n === 4 ? "/games/2048/" : "/games/2048/?n=" + n };
+    })
+  });
 
   E.btnNew.addEventListener('click', newGame);
   E.btnOverlay.addEventListener('click', newGame);

@@ -27,11 +27,11 @@ h2{font-size:14px;color:#a9bad3;margin:12px 0 8px}
 .card.playable{background:#1d4ed8;border-color:#2563eb;box-shadow:0 2px 10px rgba(37,99,235,.35)}
 .card:disabled{opacity:.6}
 .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-.action,#newgame{min-height:52px;padding:0 18px;border-radius:14px;border:1px solid #3b4d6b;background:#1d2b44;color:#e2e8f0;font-size:16px;font-weight:600}
+.action,#newgame,#resume{min-height:52px;padding:0 18px;border-radius:14px;border:1px solid #3b4d6b;background:#1d2b44;color:#e2e8f0;font-size:16px;font-weight:600}
 .action{background:#155e75;border-color:#0e7490}
 footer{display:flex;gap:10px;margin-top:18px}
 footer a{min-height:52px;flex:1;display:flex;align-items:center;justify-content:center;border-radius:14px;border:1px solid #3b4d6b;background:#1d2b44;color:#e2e8f0;text-decoration:none;font-size:16px}
-#newgame{flex:1}
+#newgame,#resume{flex:1}
 button:active{transform:scale(.98)}
 /* mini-quality: safe-area */
 main { --mini-safe-bottom: 30px; padding-bottom: calc(var(--mini-safe-bottom) + env(safe-area-inset-bottom, 0px)); }
@@ -48,15 +48,408 @@ main { --mini-safe-bottom: 30px; padding-bottom: calc(var(--mini-safe-bottom) + 
 <section class="piles" id="piles"></section>
 <section class="log" id="log"></section>
 <section><h2>你的手牌</h2><div class="hand" id="hand"></div><div class="actions" id="actions"></div></section>
-<footer><button id="newgame">重新发牌</button><a href="rules.html">规则说明</a></footer>
+<footer><button id="newgame">重新发牌</button><button id="resume" hidden>继续上一局</button><a href="rules.html">规则说明</a></footer>
 </main>
 <script src="engine.js"></script>
 <script>
+var Scene = (function(){var module={exports:{}};var exports=module.exports;
+/* 场景 / 人物 / 事件运行时（UMD，零依赖）。
+ *
+ *   var scene = Scene.create({ id, ambience, cast: [{id, name, role, emotion, stats}] })
+ *   scene.updateCast(id, patch)         // 角色状态（情绪/血量/资源）
+ *   scene.on(type, fn)                  // 订阅事件（返回取消函数）
+ *   scene.emit(type, payload)           // 回合/行动/命中/结算/失败…
+ *   scene.events(limit)                 // 最近事件（叙事日志的数据源）
+ *   scene.snapshot() / Scene.restore()  // 存档：可 JSON 序列化
+ *
+ * 设计目标：场景（环境+音景）、人物（角色与状态）、事件（触发与叙事）
+ * 成为所有游戏共用的三层，而不是每页各自散着写。
+ */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.Scene = factory();
+})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+  'use strict';
+
+  var MAX_EVENTS = 80;
+
+  function create(cfg) {
+    var conf = cfg || {};
+    var cast = {};
+    (conf.cast || []).forEach(function (member) {
+      if (!member || !member.id) return;
+      cast[member.id] = {
+        id: member.id,
+        name: member.name || member.id,
+        role: member.role || 'neutral',
+        emotion: member.emotion || 'neutral',
+        stats: Object.assign({}, member.stats || {})
+      };
+    });
+    var listeners = {};
+    var events = [];
+    var log = [];
+
+    function emit(type, payload) {
+      var event = { type: String(type), at: events.length, payload: payload || null };
+      events.push(event);
+      if (events.length > MAX_EVENTS) events.shift();
+      log.push(event);
+      if (log.length > MAX_EVENTS) log.shift();
+      (listeners[type] || []).slice().forEach(function (fn) {
+        try { fn(event); } catch (e) { /* listeners must not break the game */ }
+      });
+      (listeners['*'] || []).slice().forEach(function (fn) {
+        try { fn(event); } catch (e) { /* ignore */ }
+      });
+      return event;
+    }
+
+    function on(type, fn) {
+      if (typeof fn !== 'function') throw new Error('on: listener required');
+      var key = String(type);
+      (listeners[key] = listeners[key] || []).push(fn);
+      return function off() {
+        listeners[key] = (listeners[key] || []).filter(function (f) { return f !== fn; });
+      };
+    }
+
+    function updateCast(id, patch) {
+      var member = cast[id];
+      if (!member) throw new Error('unknown cast id: ' + id);
+      Object.keys(patch || {}).forEach(function (k) {
+        if (k === 'stats') member.stats = Object.assign({}, member.stats, patch.stats || {});
+        else if (k !== 'id') member[k] = patch[k];
+      });
+      return member;
+    }
+
+    function snapshot() {
+      return {
+        id: conf.id || 'scene',
+        ambience: conf.ambience || 'table',
+        cast: Object.keys(cast).map(function (k) { return cast[k]; }),
+        events: events.slice()
+      };
+    }
+
+    return {
+      id: conf.id || 'scene',
+      ambience: conf.ambience || 'table',
+      cast: cast,
+      updateCast: updateCast,
+      on: on,
+      emit: emit,
+      events: function (limit) { return events.slice(-(limit || 20)); },
+      snapshot: snapshot
+    };
+  }
+
+  function restore(snapshot) {
+    if (!snapshot || !snapshot.id) throw new Error('restore: invalid snapshot');
+    var scene = create({ id: snapshot.id, ambience: snapshot.ambience, cast: snapshot.cast || [] });
+    (snapshot.events || []).forEach(function (event) {
+      scene.emit(event.type, event.payload);
+    });
+    return scene;
+  }
+
+  return { create: create, restore: restore, version: '1.0.0', MAX_EVENTS: MAX_EVENTS };
+});
+
+return module.exports;})();
+var Replay = (function(){var module={exports:{}};var exports=module.exports;
+/* 存档 / 复盘 / 观战数据（UMD，零依赖）。
+ *
+ *   var replay = Replay.create({ game, version, seed, params })
+ *   replay.add(action)                  // 玩家动作（可 JSON 化）
+ *   replay.toJSON()                     // {game,version,seed,params,actions,createdAt}
+ *   Replay.fromJSON(text|obj)           // 版本不符抛错，不静默错读
+ *   Replay.spectator(view, hiddenKeys)  // 观战视图脱敏（隐藏手牌/身份/答案）
+ *   Replay.saveLocal(key, replay) / Replay.loadLocal(key)
+ *
+ * 复盘前提：游戏必须“种子确定 + 动作可重放”。引擎按 seed 初始化，
+ * 重放同一 actions 序列必须得到同一结果（由各游戏测试保证）。
+ */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory(root);
+  else root.Replay = factory(root);
+})(typeof globalThis !== 'undefined' ? globalThis : this, function (root) {
+  'use strict';
+
+  var CURRENT_VERSION = 1;
+
+  function create(cfg) {
+    var conf = cfg || {};
+    if (!conf.game) throw new Error('create: game required');
+    var actions = [];
+    var createdAt = conf.createdAt || new Date().toISOString();
+    return {
+      game: conf.game,
+      version: conf.version || CURRENT_VERSION,
+      seed: conf.seed == null ? null : conf.seed,
+      params: Object.assign({}, conf.params || {}),
+      add: function (action) {
+        actions.push(JSON.parse(JSON.stringify(action)));
+        return actions.length;
+      },
+      actions: function () { return actions.slice(); },
+      toJSON: function () {
+        return {
+          game: conf.game,
+          version: conf.version || CURRENT_VERSION,
+          seed: conf.seed == null ? null : conf.seed,
+          params: Object.assign({}, conf.params || {}),
+          actions: actions.slice(),
+          createdAt: createdAt
+        };
+      }
+    };
+  }
+
+  function fromJSON(input) {
+    var data = typeof input === 'string' ? JSON.parse(input) : input;
+    if (!data || !data.game) throw new Error('fromJSON: missing game');
+    if (Number(data.version) !== CURRENT_VERSION) {
+      throw new Error('fromJSON: unsupported version ' + data.version + ' (expected ' + CURRENT_VERSION + ')');
+    }
+    if (!Array.isArray(data.actions)) throw new Error('fromJSON: actions must be an array');
+    var replay = create({
+      game: data.game,
+      version: Number(data.version),
+      seed: data.seed,
+      params: data.params,
+      createdAt: data.createdAt
+    });
+    data.actions.forEach(function (action) { replay.add(action); });
+    return replay;
+  }
+
+  // 观战：只读视图 + 隐藏字段脱敏（递归删 key），永不改原对象。
+  function spectator(view, hiddenKeys) {
+    var hidden = {};
+    (hiddenKeys || []).forEach(function (k) { hidden[k] = true; });
+    function walk(value) {
+      if (Array.isArray(value)) return value.map(walk);
+      if (value && typeof value === 'object') {
+        var out = {};
+        Object.keys(value).forEach(function (k) {
+          if (hidden[k]) return;
+          out[k] = walk(value[k]);
+        });
+        return out;
+      }
+      return value;
+    }
+    return walk(view);
+  }
+
+  function saveLocal(key, replay) {
+    try {
+      var text = JSON.stringify(replay && replay.toJSON ? replay.toJSON() : replay);
+      root.localStorage.setItem(key, text);
+      return true;
+    } catch (e) { return false; }
+  }
+
+  function loadLocal(key) {
+    try {
+      var text = root.localStorage.getItem(key);
+      if (!text) return null;
+      return fromJSON(text);
+    } catch (e) { return null; }
+  }
+
+  return {
+    create: create,
+    fromJSON: fromJSON,
+    spectator: spectator,
+    saveLocal: saveLocal,
+    loadLocal: loadLocal,
+    version: CURRENT_VERSION
+  };
+});
+
+return module.exports;})();
+var Bgm = (function(){var module={exports:{}};var exports=module.exports;
+/* 程序化 BGM（场景化环境音乐），零音频文件、零外部请求。
+ *
+ *   Bgm.play('table' | 'dungeon' | 'market' | 'garden' | 'night')
+ *   Bgm.stop() / Bgm.setVolume(0..1) / Bgm.mute(bool) / Bgm.isMuted()
+ *   Bgm.current() / Bgm.scenes() / Bgm.version
+ *
+ * 设计：
+ *  - 每个场景是一条缓慢的和弦铺底（2–3 个振荡器 + 低通 + 慢 LFO），
+ *    用 WebAudio 合成，不加载任何资源；与 shared/sfx.js 同一套“脚本即音频”的思路。
+ *  - 首次播放必须在用户手势内（浏览器自动播放策略）；此前的调用会被忽略并返回 false。
+ *  - 音量/静音持久化到 localStorage（hhfa-bgm-*）。
+ *  - Node 环境没有 AudioContext：API 可用但全部为静默 no-op（测试友好）。
+ */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory(root);
+  else root.Bgm = factory(root);
+})(typeof globalThis !== 'undefined' ? globalThis : this, function (root) {
+  'use strict';
+
+  var SCENES = {
+    table: { root: 196.0, chord: [0, 7, 12, 16], wave: 'sine', lfo: 0.07, gain: 0.05 },
+    dungeon: { root: 110.0, chord: [0, 3, 7, 10], wave: 'triangle', lfo: 0.05, gain: 0.06 },
+    market: { root: 220.0, chord: [0, 4, 7, 11], wave: 'sine', lfo: 0.11, gain: 0.045 },
+    garden: { root: 174.6, chord: [0, 5, 9, 12], wave: 'sine', lfo: 0.06, gain: 0.045 },
+    night: { root: 146.8, chord: [0, 7, 10, 14], wave: 'triangle', lfo: 0.04, gain: 0.05 }
+  };
+  var VOLUME_KEY = 'hhfa-bgm-volume';
+  var MUTE_KEY = 'hhfa-bgm-muted';
+
+  function storageGet(k) { try { return root.localStorage ? root.localStorage.getItem(k) : null; } catch (e) { return null; } }
+  function storageSet(k, v) { try { if (root.localStorage) root.localStorage.setItem(k, v); } catch (e) { /* ignore */ } }
+
+  var volume = Number(storageGet(VOLUME_KEY));
+  if (!(volume >= 0 && volume <= 1)) volume = 0.6;
+  var muted = storageGet(MUTE_KEY) === '1';
+  var ctx = null;
+  var nodes = [];
+  var timer = null;
+  var current = null;
+
+  function AudioCtor() {
+    return root.AudioContext || root.webkitAudioContext || null;
+  }
+
+  function ensureCtx() {
+    if (ctx) return ctx;
+    var C = AudioCtor();
+    if (!C) return null;
+    try { ctx = new C(); } catch (e) { ctx = null; }
+    return ctx;
+  }
+
+  function clearNodes() {
+    nodes.forEach(function (n) {
+      try { n.stop ? n.stop() : n.disconnect(); } catch (e) { /* ignore */ }
+      try { n.disconnect && n.disconnect(); } catch (e) { /* ignore */ }
+    });
+    nodes = [];
+    if (timer) { clearInterval(timer); timer = null; }
+  }
+
+  function scheduleScene(scene) {
+    if (!ctx) return;
+    var cfg = SCENES[scene] || SCENES.table;
+    var now = ctx.currentTime;
+    var master = ctx.createGain();
+    master.gain.value = muted ? 0 : volume * cfg.gain;
+    master.connect(ctx.destination);
+    nodes.push(master);
+
+    cfg.chord.forEach(function (semi, i) {
+      var osc = ctx.createOscillator();
+      osc.type = cfg.wave;
+      osc.frequency.value = cfg.root * Math.pow(2, semi / 12);
+      var g = ctx.createGain();
+      g.gain.value = 0.33;
+      var lfo = ctx.createOscillator();
+      lfo.frequency.value = cfg.lfo * (1 + i * 0.13);
+      var lfoGain = ctx.createGain();
+      lfoGain.gain.value = 0.18;
+      lfo.connect(lfoGain);
+      lfoGain.connect(g.gain);
+      osc.connect(g);
+      g.connect(master);
+      osc.start(now);
+      lfo.start(now);
+      nodes.push(osc, lfo, g, lfoGain);
+    });
+  }
+
+  function fadeMaster(to, seconds) {
+    var master = nodes.filter(function (n) { return n.gain && n.context; })[0];
+    if (!master || !ctx) return;
+    try {
+      master.gain.cancelScheduledValues(ctx.currentTime);
+      master.gain.setValueAtTime(master.gain.value, ctx.currentTime);
+      master.gain.linearRampToValueAtTime(to, ctx.currentTime + (seconds || 0.8));
+    } catch (e) { /* ignore */ }
+  }
+
+  function play(scene) {
+    var name = SCENES[scene] ? scene : 'table';
+    if (!AudioCtor()) { current = name; return false; }
+    if (!ensureCtx()) { current = name; return false; }
+    if (ctx.state === 'suspended') { try { ctx.resume(); } catch (e) { /* ignore */ } }
+    clearNodes();
+    current = name;
+    scheduleScene(name);
+    if (timer) clearInterval(timer);
+    // Rebuild the chord每 12 秒，形成缓慢的呼吸而不是一条死板长音。
+    timer = setInterval(function () {
+      if (!ctx || !current) return;
+      clearNodes();
+      scheduleScene(current);
+    }, 12000);
+    return true;
+  }
+
+  function stop() {
+    clearNodes();
+    current = null;
+    return true;
+  }
+
+  function setVolume(v) {
+    volume = Math.max(0, Math.min(1, Number(v) || 0));
+    storageSet(VOLUME_KEY, String(volume));
+    return volume;
+  }
+
+  function mute(on) {
+    muted = Boolean(on);
+    storageSet(MUTE_KEY, muted ? '1' : '0');
+    fadeMaster(muted ? 0 : volume * (SCENES[current] || SCENES.table).gain, 0.4);
+    return muted;
+  }
+
+  function scenes() { return Object.keys(SCENES); }
+  function isMuted() { return muted; }
+  function currentScene() { return current; }
+  function getVolume() { return volume; }
+
+  return {
+    play: play,
+    stop: stop,
+    setVolume: setVolume,
+    getVolume: getVolume,
+    mute: mute,
+    isMuted: isMuted,
+    current: currentScene,
+    scenes: scenes,
+    version: '1.0.0'
+  };
+});
+
+return module.exports;})();
+</script>
+<script>
 (function(){
+  var SLUG = "mini-card-a-08";
   var g, busy = false;
+  var finished = false;
+  var currentSeed = 0;
+  var scene = Scene.create({ id: SLUG, ambience: "table", cast: [{ id: "you", name: "你", role: "player" }, { id: "ai", name: "对手", role: "ai" }] });
+  var replay = null;
+  var bgmOn = false;
+  document.addEventListener("pointerdown", function () { if (bgmOn) return; bgmOn = true; try { Bgm.play("table"); } catch (e) { /* optional */ } }, { once: true });
   function el(id){return document.getElementById(id);}
   function seed(){return (Date.now()%2147483647)||1;}
+  function finishIfOver(){
+    if (finished || g.phase !== "over") return;
+    finished = true;
+    scene.updateCast("you", { emotion: g.winner === 0 ? "happy" : "sad" });
+    scene.emit("settle", { winner: g.winner });
+    try { localStorage.removeItem("replay." + SLUG); } catch (e) { /* ignore */ }
+  }
   function render(){
+    finishIfOver();
     var v = MiniCardEngine.view(g);
     el('status').textContent = v.status;
     el('sub').textContent = v.sub || '';
@@ -83,6 +476,9 @@ main { --mini-safe-bottom: 30px; padding-bottom: calc(var(--mini-safe-bottom) + 
     if(busy) return;
     var r = MiniCardEngine.play(g, mv);
     if(!r.ok){ render(); return; }
+    replay.add(mv);
+    try { Replay.saveLocal("replay." + SLUG, replay); } catch (e) { /* optional */ }
+    scene.emit("action", { type: mv && mv.type });
     render();
     if(g.phase === 'playing' && g.turn === 1){ busy = true; render(); setTimeout(aiStep, 300); }
   }
@@ -96,9 +492,47 @@ main { --mini-safe-bottom: 30px; padding-bottom: calc(var(--mini-safe-bottom) + 
     if(g.phase === 'playing' && g.turn === 1){ setTimeout(aiStep, 300); }
     else { busy = false; render(); }
   }
-  el('newgame').onclick = function(){ g = MiniCardEngine.createGame({seed: seed()}); busy = false; render(); };
-  g = MiniCardEngine.createGame({seed: seed()});
-  render();
+  function newGame(){
+    finished = false;
+    currentSeed = seed();
+    g = MiniCardEngine.createGame({seed: currentSeed});
+    replay = Replay.create({ game: SLUG, seed: currentSeed, params: {} });
+    busy = false;
+    render();
+  }
+  function resumeFrom(saved){
+    finished = false;
+    currentSeed = saved.seed;
+    g = MiniCardEngine.createGame({seed: currentSeed});
+    var acts = saved.actions();
+    for (var i = 0; i < acts.length; i += 1) {
+      while (g.phase === "playing" && g.turn === 1) {
+        var ai = MiniCardEngine.aiMove(g);
+        if (!ai) break;
+        if (!MiniCardEngine.play(g, ai).ok) break;
+      }
+      if (g.phase === "over") break;
+      MiniCardEngine.play(g, acts[i]);
+    }
+    while (g.phase === "playing" && g.turn === 1) {
+      var tail = MiniCardEngine.aiMove(g);
+      if (!tail) break;
+      if (!MiniCardEngine.play(g, tail).ok) break;
+    }
+    replay = saved;
+    busy = false;
+    render();
+  }
+  el('newgame').onclick = newGame;
+  (function resumePrompt(){
+    var saved = null;
+    try { saved = Replay.loadLocal("replay." + SLUG); } catch (e) { /* optional */ }
+    var btn = el('resume');
+    if (!btn || !saved || !saved.actions().length) return;
+    btn.hidden = false;
+    btn.onclick = function(){ resumeFrom(saved); };
+  })();
+  newGame();
 })();
 </script>
 </body>

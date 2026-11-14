@@ -919,20 +919,22 @@
     if (!online) return;
     online.view = data;
     online.state = data.state || null;
-    online.canAct = !!data.canAct;
     online.legalActions = data.legalActions || [];
-    if (data.you) mySeat = data.you.playerIndex;
-    $('roomCode').textContent = data.roomCode || '—';
-    $('onlineStatus').textContent = data.status === 'finished' ? '本局结束' : data.started ? '对局进行中' : '等待开始';
-    $('copyInviteBtn').hidden = !data.inviteToken;
-    $('startOnlineBtn').hidden = !data.canStart;
+    online.canAct = online.legalActions.length > 0;
+    mySeat = data.you == null ? 0 : data.you;
+    var mySeatInfo = data.seats && data.seats[mySeat] ? data.seats[mySeat] : null;
+    var isHost = !!(mySeatInfo && mySeatInfo.isHost);
+    $('roomCode').textContent = data.code || '—';
+    $('onlineStatus').textContent = data.over ? '本局结束' : data.started ? '对局进行中' : '等待开始';
+    $('copyInviteBtn').hidden = !data.inviteCode;
+    $('startOnlineBtn').hidden = !isHost || !!data.started;
     $('restartOnlineBtn').hidden = !data.canRestart;
-    $('closeOnlineBtn').hidden = !data.isHost;
+    $('closeOnlineBtn').hidden = !isHost;
     $('againBtn').hidden = !data.canRestart;
-    if (data.status === 'finished' && data.result) {
+    if (data.over && data.result) {
       online.result = data.result;
     }
-    onlineBusy = !!data.currentControlledByAI;
+    onlineBusy = false;
     render();
   }
   function onlineAction(action) {
@@ -942,7 +944,7 @@
     return fetch(onlineRoute('/actions'), {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ session: online.token, playerId: online.playerId, type: 'action', action: action })
+      body: JSON.stringify({ session: online.token, playerId: online.playerId, action: action })
     }).then(function (res) { return res.json().then(function (data) { return { status: res.status, data: data }; }); })
       .then(function (out) {
         onlineBusy = false;
@@ -1524,9 +1526,9 @@
     $('leaveOnlineBtn').addEventListener('click', onlineLeave);
     $('closeOnlineBtn').addEventListener('click', onlineClose);
     $('copyInviteBtn').addEventListener('click', function () {
-      if (!online || !online.view || !online.view.inviteToken) return;
+      if (!online || !online.view || !online.view.inviteCode) return;
       var link = location.origin + '/boardgame/coup-premium/online.html?room=' + encodeURIComponent(online.roomId) +
-        '&invite=' + encodeURIComponent(online.view.inviteToken);
+        '&code=' + encodeURIComponent(online.view.inviteCode);
       var done = function () { toast('邀请链接已复制'); };
       if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(link).then(done).catch(function () { toast(link); });
       else toast(link);
@@ -1568,7 +1570,6 @@
       return state ? JSON.parse(JSON.stringify(state)) : null;
     },
     legalActions: function () { return currentLegalActions(); },
-    legalMoves: function () { return currentLegalActions(); },
     playAction: function (action) { return perform(action); },
     playMove: function (action) { return perform(action); },
     applyAction: function (action) { return perform(action); },
@@ -1619,7 +1620,8 @@
     online: function () {
       return online ? {
         roomId: online.roomId, playerId: online.playerId, canAct: online.canAct,
-        status: online.view ? online.view.status : null, roomCode: online.view ? online.view.roomCode : null
+        status: online.view ? (online.view.over ? 'finished' : (online.view.started ? 'playing' : 'waiting')) : null,
+        code: online.view ? online.view.code : null
       } : null;
     },
     audioUnlocked: function () { return !!(window.Sfx && window.Sfx.stats && window.Sfx.stats().unlocked); },

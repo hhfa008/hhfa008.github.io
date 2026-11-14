@@ -93,9 +93,6 @@ input::placeholder{color:#71806c}
     <p class="hint">2 人房间 · 空位自动由 AI 补上 · 服务端权威判合法动作 · 邀请单次有效 · 支持密码房。</p>
     <div class="row">
       <div class="field"><label for="playerName">你的名字</label><input id="playerName" value="探险家" maxlength="20" autocomplete="nickname" aria-label="你的名字"></div>
-      <div class="field"><label for="aiLevel">AI 难度</label><select id="aiLevel"><option value="easy">简单</option><option value="normal" selected>普通</option><option value="hard">困难</option></select></div>
-    </div>
-    <div class="row" style="margin-top:8px">
       <div class="field"><label for="password">房间密码（可选）</label><input id="password" type="password" placeholder="4–64 位，留空为公开房" maxlength="64"></div>
       <div class="field"><label for="visibility">可见性</label><select id="visibility"><option value="public">公开</option><option value="private">私密</option></select></div>
     </div>
@@ -104,17 +101,17 @@ input::placeholder{color:#71806c}
       <button class="btn" id="refreshLobbyBtn" type="button">刷新结果榜</button>
     </div>
     <div class="row" style="margin-top:8px">
-      <div class="field" style="flex:2 1 220px"><label for="joinCode">房间号 / 邀请码</label><input id="joinCode" placeholder="6 位房间号或邀请 token"></div>
+      <div class="field" style="flex:2 1 220px"><label for="joinCode">房间号 / 邀请码</label><input id="joinCode" placeholder="房间 ID、6 位房间号或邀请 token"></div>
       <div class="field"><label for="joinPassword">密码（如有）</label><input id="joinPassword" type="password" placeholder="可选"></div>
     </div>
     <div class="row" style="margin-top:8px"><button class="btn" id="joinBtn" type="button">加入房间</button><button class="btn ghost" id="reconnectBtn" type="button">用上次会话重连</button></div>
-    <p class="hint" id="lobbyMsg">提示：也可以直接打开带 ?room=&amp;session=&amp;player= 的邀请链接。</p>
+    <p class="hint" id="lobbyMsg">提示：也可以直接打开带 ?room=&amp;code= 的邀请链接。</p>
   </section>
 
   <section class="panel" id="roomPanel" hidden>
-    <div class="game-head"><h2>房间 <span class="badge" id="roomCode">—</span></h2><span class="badge" id="roomStatus">等待</span></div>
+    <div class="game-head"><h2>房间 <span class="badge" id="roomCode">—</span></h2><span class="badge" id="roomStatus">等待</span><span class="badge" id="roomVersion">v0</span></div>
     <div class="seats" id="seats"></div>
-    <p class="hint" id="inviteText">邀请 token：—</p>
+    <p class="hint" id="inviteText">邀请码：—</p>
     <div class="row">
       <button class="btn primary" id="startBtn" type="button" hidden>开始对局</button>
       <button class="btn" id="copyInviteBtn" type="button">复制邀请链接</button>
@@ -162,19 +159,21 @@ input::placeholder{color:#71806c}
   var view = null;
   var session = null;
   var playerId = null;
+  var roomId = null;
   var selected = null;
   var busy = false;
   var pollTimer = null;
   var toastTimer = null;
   var lastRoundCount = 0;
   var $ = function(id){ return document.getElementById(id); };
-  var clone = function(v){ return JSON.parse(JSON.stringify(v)); };
+  var clone = function(v){ return v == null ? v : JSON.parse(JSON.stringify(v)); };
 
   function toast(text){
     var el = $('toast'); el.textContent = text; el.classList.add('show');
     clearTimeout(toastTimer); toastTimer = setTimeout(function(){ el.classList.remove('show'); }, 2600);
   }
   function name(){ return ($('playerName').value || '探险家').trim().slice(0,20) || '探险家'; }
+  function errText(res){ return (res.body && res.body.error && res.body.error.message) || ('请求失败 (' + res.status + ')'); }
   function api(method, route, body){
     return fetch(route, {
       method: method,
@@ -183,30 +182,62 @@ input::placeholder{color:#71806c}
     }).then(function(res){
       return res.text().then(function(text){
         var data = null; try { data = JSON.parse(text); } catch (err) {}
-        if (!res.ok) {
-          var msg = data && data.error && data.error.message ? data.error.message : ('HTTP ' + res.status);
-          var err = new Error(msg); err.code = data && data.error && data.error.code; err.status = res.status; throw err;
-        }
-        return data;
+        return { ok: res.ok, status: res.status, body: data, text: text };
       });
     });
   }
+  function roomRoute(suffix){
+    return '/api/rooms/' + encodeURIComponent(roomId) + (suffix || '');
+  }
+  function stateOf(){ return view && view.state ? view.state : null; }
+  function mySeat(){ return view && view.you != null ? view.you : null; }
+  function legalActions(){ return view && Array.isArray(view.legalActions) ? view.legalActions : []; }
+  function findAction(pred){ return legalActions().filter(pred)[0] || null; }
+  function isMyTurn(){
+    var s = stateOf();
+    return !!(view && view.you != null && s && !s.over && s.current === view.you && legalActions().length > 0);
+  }
+
+  function saveLocal(){
+    try {
+      if (roomId && session) sessionStorage.setItem('lc-room', JSON.stringify({ roomId: roomId, session: session, playerId: playerId }));
+      else sessionStorage.removeItem('lc-room');
+    } catch (err) {}
+  }
+  function loadLocal(){
+    try { return JSON.parse(sessionStorage.getItem('lc-room') || 'null'); } catch (err) { return null; }
+  }
+
   function applyView(next){
     if (!next || !next.roomId) return;
     view = next;
-    if (next.playerSession) session = next.playerSession;
+    roomId = next.roomId || roomId;
+    if (next.session) session = next.session;
     if (next.playerId) playerId = next.playerId;
+    saveLocal();
     $('roomPanel').hidden = false;
     $('lobby').hidden = true;
-    $('roomCode').textContent = next.roomCode || next.roomId;
-    $('roomStatus').textContent = next.status || 'waiting';
+    var over = !!(next.over || (next.state && next.state.over));
+    $('roomCode').textContent = next.code || next.roomId;
+    $('roomStatus').textContent = !next.started ? '等待开始' : (over ? '已结束' : '对局中');
+    $('roomVersion').textContent = 'v' + (next.stateVersion == null ? 0 : next.stateVersion);
+    var currentSeat = next.state ? next.state.current : null;
     $('seats').innerHTML = (next.seats || []).map(function(s){
-      return '<div class="seat"><b>' + (s.nickname || s.label) + '</b><small>' + (s.ai ? 'AI 补位' : (s.takeover ? '超时托管中' : '玩家')) + (s.current ? ' · 当前回合' : '') + '</small></div>';
+      var tags = [s.ai ? 'AI' : (s.connected === false ? '离线' : '玩家')];
+      if (s.isHost) tags.push('房主');
+      if (s.isYou) tags.push('你');
+      if (currentSeat === s.index) tags.push('当前回合');
+      return '<div class="seat"><b>' + (s.name || ('座位 ' + (s.index + 1))) + '</b><small>' + tags.join(' · ') + '</small></div>';
     }).join('');
-    var canStart = next.canStart && next.isHost;
-    $('startBtn').hidden = !canStart;
-    $('inviteText').textContent = next.inviteToken ? ('邀请 token：' + next.inviteToken) : (next.isHost ? '邀请 token 将在此显示' : '等待房主邀请');
-    $('closeRoomBtn').style.display = next.isHost ? '' : 'none';
+    var me = view.you != null ? (next.seats || [])[view.you] : null;
+    var isHost = !!(me && me.isHost);
+    $('startBtn').hidden = !(isHost && !next.started);
+    $('copyInviteBtn').hidden = !isHost;
+    $('inviteText').textContent = isHost
+      ? ('邀请码：' + (next.inviteCode || '—') + '（复制会生成新的单次邀请）')
+      : (next.inviteCode ? ('邀请码：' + next.inviteCode) : '等待房主邀请');
+    $('closeRoomBtn').style.display = isHost ? '' : 'none';
+    $('leaveBtn').style.display = view.you != null ? '' : 'none';
     if (next.started && next.state) {
       $('gamePanel').hidden = false;
       renderGame(next);
@@ -214,154 +245,230 @@ input::placeholder{color:#71806c}
     } else {
       $('gamePanel').hidden = true;
     }
-    if (next.status === 'finished' && next.state && next.state.over) renderResult(next);
+    if (over) renderResult(next);
+    else $('resultPanel').hidden = true;
+  }
+
+  function partialScore(player){
+    try { return E.scorePlayer({ hand: [], exp: player.exp || {}, roundScores: player.roundScores || [], totalScore: player.totalScore || 0 }).total; }
+    catch (err) { return 0; }
   }
   function renderGame(v){
     var s = v.state;
-    var you = v.you ? v.you.playerIndex : 0;
+    var you = v.you != null ? v.you : 0;
     var me = s.players[you];
     var rival = s.players[1 - you];
-    var myTurn = v.canMove && s.current === you && !s.over;
+    if (!me || !rival) return;
+    var myTurn = isMyTurn();
     $('roundNo').textContent = s.round;
-    $('turnBadge').textContent = s.over ? '结束' : (myTurn ? '轮到你' : (s.current === 1 - you ? '对手行动' : '等待'));
+    $('turnBadge').textContent = s.over ? '结束' : (myTurn ? '轮到你' : ((v.seats[s.current] && v.seats[s.current].name || '对手') + ' 行动'));
     $('phaseBadge').textContent = s.over ? '三局结束' : (s.phase === 'draw' ? '再抽一张' : '先打一张');
     $('deckCount').textContent = s.deckCount;
-    $('deckBtn').disabled = !myTurn || s.phase !== 'draw' || s.deckCount <= 0;
+    $('deckBtn').disabled = !findAction(function(m){ return m.type === 'draw' && m.source === 'deck'; });
     $('rivalHand').textContent = '手牌 ' + rival.handCount;
     $('ownHandCount').textContent = '手牌 ' + me.hand.length;
     $('scoreline').innerHTML = [rival, me].map(function(p, idx){
       var i = idx === 0 ? 1 - you : you;
-      return '<div class="sc' + (s.current === i && !s.over ? ' active' : '') + '"><div><b>' + p.totalScore + '</b><span> 累计</span></div><div><span>' + (p.name || '') + '</span><br><span>本局 ' + E.scorePlayer({hand:[],exp:p.exp,wagers:0,roundScores:[]}).total + '</span></div></div>';
+      return '<div class="sc' + (s.current === i && !s.over ? ' active' : '') + '"><div><b>' + p.totalScore + '</b><span> 累计</span></div><div><span>' + (p.name || '') + '</span><br><span>本局 ' + partialScore(p) + '</span></div></div>';
     }).join('');
-    renderBoard('rivalBoard', rival, false, myTurn, you);
-    renderBoard('ownBoard', me, true, myTurn, you);
+    $('rivalBoard').innerHTML = boardMarkup(rival, false);
+    $('ownBoard').innerHTML = boardMarkup(me, true);
     renderHand(me, myTurn);
     renderDraw(s, myTurn);
     $('actionHint').textContent = s.over ? '已结束' : (myTurn ? (s.phase === 'play' ? '选牌后点探险列或弃牌堆' : '从牌堆或弃牌堆抽牌') : '等待对手');
-    $('log').innerHTML = s.log.slice(-12).reverse().map(function(row){ return '<li>R' + row.round + ' · ' + row.text + '</li>'; }).join('');
-    if (s.roundResults.length > lastRoundCount) {
+    $('log').innerHTML = (s.log || []).slice(-12).reverse().map(function(row){
+      return '<li>R' + row.round + ' · ' + row.text + '</li>';
+    }).join('');
+    if ((s.roundResults || []).length > lastRoundCount) {
       var last = s.roundResults[s.roundResults.length - 1];
       if (!s.over) toast('第 ' + last.round + ' 局结算：' + last.scores[0].total + ' : ' + last.scores[1].total);
-      lastRoundCount = s.roundResults.length;
+      lastRoundCount = (s.roundResults || []).length;
     }
     if (s.over) renderResult(v);
     else $('resultPanel').hidden = true;
   }
-  function boardMarkup(player, interactive, myTurn, you){
+
+  function boardMarkup(player, interactive){
+    var s = stateOf();
+    if (!s) return '';
     return E.COLORS.map(function(color){
-      var exp = player.exp[color.key];
-      var pile = view.state.discards[color.key] || [];
+      var exp = (player.exp && player.exp[color.key]) || { wagers: [], nums: [] };
+      var pile = (s.discards && s.discards[color.key]) || [];
       var top = pile.length ? pile[pile.length - 1] : null;
       var mini = '';
-      exp.wagers.forEach(function(){ mini += '<span class="mini w">✦</span>'; });
-      exp.nums.forEach(function(c){ mini += '<span class="mini">' + c.value + '</span>'; });
-      var canExp = interactive && myTurn && view.state.phase === 'play' && selected != null && player.hand[selected] &&
-        E.canPlayCard(exp, player.hand[selected]);
-      var canPile = interactive && !myTurn ? false : interactive && sPlayPhase();
-      var topMini = top ? (top.kind === 'wager' ? '<span class="mini w">✦</span>' : '<span class="mini">' + top.value + '</span>') : '<span class="mini back">·</span>';
-      return '<div class="lane c-' + color.key + '"><div class="lane-h"><span><i class="dot"></i>' + color.zh + '</span><span>' + (exp.nums.length || exp.wagers.length ? exp.nums.length + exp.wagers.length + '张' : '—') + '</span></div>' +
-        '<button type="button" class="act' + (canExp ? ' legal' : '') + '" data-act="exp" data-color="' + color.key + '" ' + (interactive && myTurn ? '' : 'disabled ') + 'aria-label="' + color.zh + '探险列">' + (mini || '<span style="font-size:12px;color:var(--faint)">空</span>') + '</button>' +
-        '<button type="button" class="act" data-act="pile" data-color="' + color.key + '" ' + (interactive && myTurn ? '' : 'disabled ') + 'aria-label="' + color.zh + '弃牌堆 ' + pile.length + ' 张">' + topMini + '<span style="font-size:12px;color:var(--faint)"> ' + pile.length + '</span></button></div>';
+      (exp.wagers || []).forEach(function(){ mini += '<span class="mini w">✦</span>'; });
+      (exp.nums || []).forEach(function(card){ mini += '<span class="mini">' + card.value + '</span>'; });
+      var playMove = interactive && selected != null ? findAction(function(m){
+        return m.type === 'play' && m.handIndex === selected && m.color === color.key;
+      }) : null;
+      var discardMove = interactive && selected != null ? findAction(function(m){
+        return m.type === 'discard' && m.handIndex === selected && m.color === color.key;
+      }) : null;
+      var topMini = top
+        ? (top.kind === 'wager' ? '<span class="mini w">✦</span>' : '<span class="mini">' + top.value + '</span>')
+        : '<span class="mini back">·</span>';
+      return '<div class="lane c-' + color.key + '"><div class="lane-h"><span><i class="dot"></i>' + color.zh + '</span><span>' + ((exp.nums || []).length || (exp.wagers || []).length ? (exp.nums.length + exp.wagers.length) + '张' : '—') + '</span></div>' +
+        '<button type="button" class="act' + (playMove ? ' legal' : '') + '" data-act="exp" data-color="' + color.key + '" ' + (playMove ? '' : 'disabled ') + 'aria-label="' + color.zh + '探险列">' + (mini || '<span style="font-size:12px;color:var(--faint)">空</span>') + '</button>' +
+        '<button type="button" class="act' + (discardMove ? ' legal' : '') + '" data-act="pile" data-color="' + color.key + '" ' + (discardMove ? '' : 'disabled ') + 'aria-label="' + color.zh + '弃牌堆 ' + pile.length + ' 张">' + topMini + '<span style="font-size:12px;color:var(--faint)"> ' + pile.length + '</span></button></div>';
     }).join('');
   }
-  function sPlayPhase(){ return view && view.state && view.state.phase === 'play'; }
-  function renderBoard(id, player, interactive, myTurn, you){ $(id).innerHTML = boardMarkup(player, interactive, myTurn, you); }
+
   function renderHand(player, myTurn){
-    $('hand').innerHTML = player.hand.map(function(card, index){
+    var canPlay = myTurn && stateOf() && stateOf().phase === 'play';
+    $('hand').innerHTML = (player.hand || []).map(function(card, index){
       var selectedNow = index === selected;
-      return '<button type="button" class="card' + (selectedNow ? ' selected' : '') + '" data-hand="' + index + '" ' + (myTurn && sPlayPhase() ? '' : 'disabled ') + 'aria-label="' + E.cardLabel(card) + '">' +
-        (card.kind === 'wager' ? '<span class="seal"></span><small>' + E.COLOR_BY_KEY[card.color].zh + '赌注</small>' : '<b>' + card.value + '</b><small>' + E.COLOR_BY_KEY[card.color].zh + '</small>') + '</button>';
+      return '<button type="button" class="card' + (selectedNow ? ' selected' : '') + '" data-hand="' + index + '" ' + (canPlay ? '' : 'disabled ') + 'aria-label="' + E.cardLabel(card) + '">' +
+        (card.kind === 'wager'
+          ? '<span class="seal"></span><small>' + E.COLOR_BY_KEY[card.color].zh + '赌注</small>'
+          : '<b>' + card.value + '</b><small>' + E.COLOR_BY_KEY[card.color].zh + '</small>') + '</button>';
     }).join('');
   }
+
   function renderDraw(s, myTurn){
     var show = myTurn && s.phase === 'draw' && !s.over;
     $('drawDock').hidden = !show;
     if (!show) { $('drawDock').innerHTML = ''; return; }
-    var html = '<button type="button" class="btn" data-draw="deck">牌堆 ' + s.deckCount + '</button>';
-    E.COLORS.forEach(function(c){
-      var pile = s.discards[c.key] || [];
+    var deckMove = findAction(function(m){ return m.type === 'draw' && m.source === 'deck'; });
+    var html = '<button type="button" class="btn" data-draw="deck" ' + (deckMove ? '' : 'disabled ') + '>牌堆 ' + s.deckCount + '</button>';
+    E.COLORS.forEach(function(color){
+      var pile = (s.discards && s.discards[color.key]) || [];
       var top = pile.length ? pile[pile.length - 1] : null;
-      var block = !top || top.id === s.pendingDiscard;
-      html += '<button type="button" class="btn" data-draw="' + c.key + '" ' + (block ? 'disabled ' : '') + '>' + c.zh + ' ' + (top ? (top.kind === 'wager' ? '✦' : top.value) : '—') + '</button>';
+      var move = findAction(function(m){ return m.type === 'draw' && m.source === 'discard' && m.color === color.key; });
+      html += '<button type="button" class="btn" data-draw="' + color.key + '" ' + (move ? '' : 'disabled ') + '>' + color.zh + ' ' + (top ? (top.kind === 'wager' ? '✦' : top.value) : '—') + '</button>';
     });
     $('drawDock').innerHTML = html;
   }
+
   function renderResult(v){
-    var r = v.state.result;
+    var r = v.result || null;
     if (!r) return;
+    var detail = r.detail || (v.state && v.state.result) || null;
     $('resultPanel').hidden = false;
     $('gamePanel').hidden = false;
-    $('resultBig').textContent = r.tied ? '共享胜利' : (v.you && r.winner === v.you.playerIndex ? '你赢得远征' : '对手赢得远征');
-    $('resultDetail').textContent = r.scores.map(function(s){ return s.name + '：' + s.roundScores.join(' / ') + ' = ' + s.total + ' 分'; }).join('；');
-    $('restartBtn').hidden = !(v.isHost && v.canRestart);
+    $('resultBig').textContent = r.tied ? '共享胜利' : ((r.winnerSeat === v.you) ? '你赢得远征' : ((r.winnerName || '对手') + ' 赢得远征'));
+    var rows = detail && Array.isArray(detail.scores) ? detail.scores : [];
+    $('resultDetail').textContent = rows.length
+      ? rows.map(function(row){ return row.name + '：' + (row.roundScores || []).join(' / ') + ' = ' + row.total + ' 分'; }).join('；')
+      : (Array.isArray(r.scores) ? r.scores.join(' : ') : '—');
+    $('restartBtn').hidden = !v.canRestart;
   }
 
   function createRoom(){
     if (busy) return Promise.resolve(null); busy = true;
-    return api('POST','/api/rooms',{ playerId:name(), password:$('password').value || null, visibility:$('visibility').value, maxPlayers:2, aiLevel:$('aiLevel').value })
-      .then(function(v){ applyView(v); $('lobbyMsg').textContent = '房间已创建，邀请好友或直接开始与 AI 对局。'; return v; })
-      .catch(function(err){ toast('创建失败：' + err.message); return null; })
+    var who = name();
+    $('playerName').value = who;
+    return api('POST', '/api/rooms', {
+      playerId: who,
+      nickname: who,
+      password: $('password').value || null,
+      visibility: $('visibility').value
+    }).then(function(res){
+      if (res.status !== 201 || !res.body) { toast('创建失败：' + errText(res)); return null; }
+      playerId = who; session = res.body.session; roomId = res.body.roomId;
+      applyView(res.body);
+      $('lobbyMsg').textContent = '房间已创建，邀请好友或直接开始与 AI 对局。';
+      return res.body;
+    }).catch(function(err){ toast('创建失败：' + (err && err.message || err)); return null; })
+      .finally(function(){ busy = false; });
+  }
+
+  function joinRoomWith(targetRoom, inviteCode, who){
+    if (busy) return Promise.resolve(null); busy = true;
+    var body = { playerId: who, nickname: who };
+    if (inviteCode) body.inviteCode = inviteCode;
+    if ($('joinPassword').value) body.password = $('joinPassword').value;
+    return api('POST', '/api/rooms/' + encodeURIComponent(targetRoom) + '/join', body)
+      .then(function(res){
+        if (res.status !== 200 || !res.body) { toast('加入失败：' + errText(res)); return null; }
+        playerId = who; session = res.body.session; roomId = res.body.roomId || targetRoom;
+        applyView(res.body);
+        toast('已加入房间');
+        return res.body;
+      }).catch(function(err){ toast('加入失败：' + (err && err.message || err)); return null; })
       .finally(function(){ busy = false; });
   }
   function joinRoom(){
     var code = ($('joinCode').value || '').trim();
     if (!code) { toast('请填写房间号或邀请码'); return Promise.resolve(null); }
-    if (busy) return Promise.resolve(null); busy = true;
-    var route = '/api/rooms/' + encodeURIComponent(code) + '/join';
-    return api('POST', route, { playerId:name(), inviteCode:code, password:$('joinPassword').value || $('password').value || null })
-      .then(function(v){ applyView(v); toast('已加入房间'); return v; })
-      .catch(function(err){ toast('加入失败：' + err.message); return null; })
-      .finally(function(){ busy = false; });
+    return joinRoomWith(code, code, name());
   }
   function startMatch(){
     if (!view) return Promise.resolve(null);
-    return api('POST','/api/rooms/' + encodeURIComponent(view.roomId) + '/start',{ session:session, playerId:playerId })
-      .then(function(v){ applyView(v); return v; }).catch(function(err){ toast('开始失败：' + err.message); return null; });
+    return api('POST', roomRoute('/start'), { session: session })
+      .then(function(res){ if (res.status !== 200) { toast('开始失败：' + errText(res)); return null; } applyView(res.body); return res.body; })
+      .catch(function(err){ toast('开始失败：' + (err && err.message || err)); return null; });
   }
   function reconnect(){
-    if (!view || !session) {
-      var last = null; try { last = JSON.parse(sessionStorage.getItem('lc-room') || 'null'); } catch (e) {}
-      if (last && last.roomId && last.session) {
-        return api('POST','/api/rooms/' + encodeURIComponent(last.roomId) + '/reconnect',{ token:last.session, playerId:last.playerId })
-          .then(function(v){ applyView(v); toast('已重连'); return v; })
-          .catch(function(err){ toast('重连失败：' + err.message); return null; });
-      }
-      toast('没有可用的房间会话'); return Promise.resolve(null);
+    var saved = loadLocal();
+    if (!view && saved && saved.roomId && saved.session) {
+      roomId = saved.roomId; session = saved.session; playerId = saved.playerId;
     }
-    return api('POST','/api/rooms/' + encodeURIComponent(view.roomId) + '/reconnect',{ token:session, playerId:playerId })
-      .then(function(v){ applyView(v); toast('已重连'); return v; })
-      .catch(function(err){ toast('重连失败：' + err.message); return null; });
+    if (!roomId || !session) { toast('没有可用的房间会话'); return Promise.resolve(null); }
+    return api('POST', roomRoute('/reconnect'), { session: session })
+      .then(function(res){
+        if (res.status !== 200) { toast('重连失败：' + errText(res)); return null; }
+        playerId = res.body.playerId || playerId;
+        applyView(res.body);
+        toast('已重连');
+        return res.body;
+      })
+      .catch(function(err){ toast('重连失败：' + (err && err.message || err)); return null; });
+  }
+  function invite(){
+    if (!view) return Promise.resolve(null);
+    return api('POST', roomRoute('/invite'), { session: session })
+      .then(function(res){
+        if (res.status !== 200 || !res.body) { toast('邀请生成失败：' + errText(res)); return null; }
+        if (view) view.inviteCode = res.body.inviteCode;
+        $('inviteText').textContent = '邀请码：' + res.body.inviteCode;
+        return res.body;
+      })
+      .catch(function(err){ toast('邀请生成失败：' + (err && err.message || err)); return null; });
   }
   function leave(){
     if (!view) return Promise.resolve(null);
-    return api('POST','/api/rooms/' + encodeURIComponent(view.roomId) + '/leave',{ session:session, playerId:playerId })
-      .then(function(){ toast('已离座，座位转为 AI'); clearSession(); return null; })
-      .catch(function(err){ toast('离座失败：' + err.message); return null; });
+    return api('POST', roomRoute('/leave'), { session: session })
+      .then(function(res){
+        if (res.status !== 200) { toast('离座失败：' + errText(res)); return null; }
+        toast('已离座，座位转为 AI');
+        clearSession();
+        return res.body;
+      })
+      .catch(function(err){ toast('离座失败：' + (err && err.message || err)); return null; });
   }
   function closeRoom(){
-    if (!view || !view.isHost) { toast('只有房主可以关闭房间'); return Promise.resolve(null); }
-    return api('DELETE','/api/rooms/' + encodeURIComponent(view.roomId) + '?session=' + encodeURIComponent(session) + '&playerId=' + encodeURIComponent(playerId))
-      .then(function(){ toast('房间已关闭'); clearSession(); return null; })
-      .catch(function(err){ toast('关闭失败：' + err.message); return null; });
+    if (!view) return Promise.resolve(null);
+    return api('DELETE', roomRoute('') + '?session=' + encodeURIComponent(session || ''))
+      .then(function(res){
+        if (res.status !== 200) { toast('关闭失败：' + errText(res)); return null; }
+        toast('房间已关闭');
+        clearSession();
+        return res.body;
+      })
+      .catch(function(err){ toast('关闭失败：' + (err && err.message || err)); return null; });
   }
   function restart(){
     if (!view) return Promise.resolve(null);
-    return api('POST','/api/rooms/' + encodeURIComponent(view.roomId) + '/restart',{ session:session, playerId:playerId })
-      .then(function(v){ applyView(v); toast('重赛开始'); return v; })
-      .catch(function(err){ toast('重赛失败：' + err.message); return null; });
+    return api('POST', roomRoute('/restart'), { session: session })
+      .then(function(res){ if (res.status !== 200) { toast('重赛失败：' + errText(res)); return null; } applyView(res.body); toast('重赛开始'); return res.body; })
+      .catch(function(err){ toast('重赛失败：' + (err && err.message || err)); return null; });
   }
   function clearSession(){
-    view = null; session = null; playerId = null; selected = null;
+    view = null; session = null; playerId = null; roomId = null; selected = null;
     try { sessionStorage.removeItem('lc-room'); } catch (err) {}
     stopPolling();
     $('roomPanel').hidden = true; $('gamePanel').hidden = true; $('resultPanel').hidden = true; $('lobby').hidden = false;
     $('lobbyMsg').textContent = '已离开房间。';
   }
   function refresh(){
-    if (!view) return Promise.resolve(null);
-    return api('GET','/api/rooms/' + encodeURIComponent(view.roomId) + '?session=' + encodeURIComponent(session) + '&playerId=' + encodeURIComponent(playerId))
-      .then(function(v){ applyView(v); return v; })
-      .catch(function(err){ if (err.status === 404) { toast('房间已关闭'); clearSession(); } return null; });
+    if (!roomId || !session) return Promise.resolve(null);
+    return api('GET', roomRoute('') + '?session=' + encodeURIComponent(session))
+      .then(function(res){
+        if (res.status === 404) { toast('房间已关闭'); clearSession(); return null; }
+        if (res.status === 200) applyView(res.body);
+        return res.body;
+      })
+      .catch(function(){ return null; });
   }
   function startPolling(){
     stopPolling();
@@ -369,26 +476,31 @@ input::placeholder{color:#71806c}
   }
   function stopPolling(){ if (pollTimer) clearInterval(pollTimer); pollTimer = null; }
   function loadLeaderboard(){
-    if (location.pathname.indexOf('/games/') === 0) return; // static site: no room API
-    return api('GET','/api/leaderboard').then(function(data){
-      var rows = data.entries || [];
+    if (location.pathname.indexOf('/games/') === 0) return Promise.resolve([]);
+    return api('GET', '/api/leaderboard?game=lost-cities-premium').then(function(res){
+      var rows = (res.body && res.body.entries) || [];
       $('leaderboard').innerHTML = rows.length ? rows.map(function(row){
-        var who = row.winnerName || (row.tied ? '共享胜利' : (row.scores[0] ? row.scores[0].name : '—'));
-        return '<li><span>' + who + ' · ' + (row.roomCode || '') + '</span><span>第 ' + (row.rounds || 3) + ' 局 · <b>' + row.finishedAt.slice(0,10) + '</b></span></li>';
+        return '<li><span>' + (row.name || '—') + ' · ' + (row.winner ? '胜' : '负') + '</span><span>' + (row.score == null ? '—' : row.score) + ' 分 · <b>' + new Date(row.at || Date.now()).toISOString().slice(0,10) + '</b></span></li>';
       }).join('') : '<li><span>暂无结果</span><span>—</span></li>';
       return rows;
     }).catch(function(){ return []; });
   }
 
-  function playMove(move){
+  function playAction(action){
     if (!view || !session || busy) return Promise.resolve(null);
-    if (!view.canMove) { toast(view.state && view.state.current === (view.you && view.you.playerIndex) ? 'AI 托管中，暂时不能操作' : '还没轮到你'); return Promise.resolve(null); }
+    if (!action) { toast('该动作当前不可用'); return Promise.resolve(null); }
     busy = true;
-    return api('POST','/api/rooms/' + encodeURIComponent(view.roomId) + '/actions',{ session:session, playerId:playerId, type:'move', move:move })
-      .then(function(v){ applyView(v); selected = null; return v; })
-      .catch(function(err){ toast('动作失败：' + err.message); return refresh(); })
+    return api('POST', roomRoute('/actions'), { session: session, action: action })
+      .then(function(res){
+        selected = null;
+        if (res.status !== 200) { toast('动作失败：' + errText(res)); return refresh(); }
+        applyView(res.body);
+        return res.body;
+      })
+      .catch(function(err){ toast('动作失败：' + (err && err.message || err)); return refresh(); })
       .finally(function(){ busy = false; });
   }
+  function playMove(move){ return playAction(move); }
 
   document.addEventListener('click', function(event){
     var card = event.target.closest('.card');
@@ -401,35 +513,37 @@ input::placeholder{color:#71806c}
     var act = event.target.closest('[data-act]');
     if (act && !act.disabled && view) {
       var color = act.getAttribute('data-color');
-      if (view.state.phase === 'draw') {
-        playMove({type:'draw',source:'discard',color:color});
-      } else if (selected != null) {
-        var local = view.state.players[view.you.playerIndex];
-        var c = local.hand[selected];
-        if (!c) return;
-        if (act.getAttribute('data-act') === 'exp' && c.color === color) playMove({type:'play',handIndex:selected,cardId:c.id});
-        else if (act.getAttribute('data-act') === 'pile') playMove({type:'discard',handIndex:selected,cardId:c.id});
-        else toast('只能放入同色探险列');
-      } else toast('先选择一张手牌');
+      if (act.getAttribute('data-act') === 'exp') {
+        playAction(findAction(function(m){ return m.type === 'play' && m.handIndex === selected && m.color === color; }));
+      } else {
+        playAction(findAction(function(m){ return m.type === 'discard' && m.handIndex === selected && m.color === color; }));
+      }
       return;
     }
     var draw = event.target.closest('[data-draw]');
-    if (draw && !draw.disabled && view && view.state.phase === 'draw') {
-      if (draw.getAttribute('data-draw') === 'deck') playMove({type:'draw',source:'deck'});
-      else playMove({type:'draw',source:'discard',color:draw.getAttribute('data-draw')});
+    if (draw && !draw.disabled && view) {
+      var kind = draw.getAttribute('data-draw');
+      playAction(kind === 'deck'
+        ? findAction(function(m){ return m.type === 'draw' && m.source === 'deck'; })
+        : findAction(function(m){ return m.type === 'draw' && m.source === 'discard' && m.color === kind; }));
     }
   });
-  $('deckBtn').addEventListener('click', function(){ if (view && view.state.phase === 'draw') playMove({type:'draw',source:'deck'}); else toast('先打出一张牌'); });
+  $('deckBtn').addEventListener('click', function(){
+    playAction(findAction(function(m){ return m.type === 'draw' && m.source === 'deck'; }));
+  });
   $('createBtn').addEventListener('click', createRoom);
   $('joinBtn').addEventListener('click', joinRoom);
   $('refreshLobbyBtn').addEventListener('click', loadLeaderboard);
   $('startBtn').addEventListener('click', startMatch);
   $('copyInviteBtn').addEventListener('click', function(){
     if (!view) return toast('先进入房间');
-    var url = location.origin + location.pathname + '?room=' + encodeURIComponent(view.roomId) + '&invite=' + encodeURIComponent(view.inviteToken || view.inviteCode || '');
-    var done = function(){ toast('邀请链接已复制'); };
-    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done, function(){ toast(url); });
-    else toast(url);
+    var share = function(code){
+      var url = location.origin + location.pathname + '?room=' + encodeURIComponent(roomId) + '&code=' + encodeURIComponent(code || '');
+      var text = '失落之城邀请：' + url;
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function(){ toast('邀请链接已复制'); }, function(){ toast(url); });
+      else toast(url);
+    };
+    invite().then(function(data){ if (data) share(data.inviteCode); });
   });
   $('reconnectBtn').addEventListener('click', reconnect);
   $('reconnectRoomBtn').addEventListener('click', reconnect);
@@ -438,16 +552,15 @@ input::placeholder{color:#71806c}
   $('restartBtn').addEventListener('click', restart);
   $('backRoomBtn').addEventListener('click', function(){ $('resultPanel').hidden = true; });
 
-  // Expose test API without replacing the page's normal behaviour.
   window.__lostcitiesOnline = Object.freeze({
     createRoom: createRoom, joinRoom: joinRoom, start: startMatch, reconnect: reconnect,
-    restart: restart, leave: leave, closeRoom: closeRoom, poll: refresh,
-    playMove: playMove,
-    getState: function(){ return view && view.state ? clone(view.state) : null; },
-    getView: function(){ return clone(view); },
-    legalMoves: function(){ return view ? clone(view.legalMoves || []) : []; },
+    invite: invite, restart: restart, leave: leave, closeRoom: closeRoom, poll: refresh,
+    playMove: playMove, sendAction: playAction,
+    getState: function(){ var s = stateOf(); return s ? clone(s) : null; },
+    getView: function(){ return view ? clone(view) : null; },
+    legalMoves: function(){ return clone(legalActions()); },
     isBusy: function(){ return !!busy; },
-    winner: function(){ return view && view.state && view.state.result ? view.state.result.winner : null; },
+    winner: function(){ return view && view.result ? view.result.winnerSeat : null; },
     refreshLeaderboard: loadLeaderboard
   });
 
@@ -457,33 +570,32 @@ input::placeholder{color:#71806c}
       var q = new URLSearchParams(location.search);
       var room = q.get('room');
       var token = q.get('session') || q.get('token');
-      var invite = q.get('invite');
-      var who = q.get('player');
+      var inviteCode = q.get('code') || q.get('invite');
+      var who = q.get('player') || q.get('playerId') || name();
+      $('playerName').value = who;
       if (room && token) {
-        playerId = who || name(); session = token;
-        $('playerName').value = playerId;
-        api('GET','/api/rooms/' + encodeURIComponent(room) + '?session=' + encodeURIComponent(token) + '&playerId=' + encodeURIComponent(playerId))
-          .then(applyView).catch(function(){ toast('房间恢复失败，请输入房间号重连'); });
-      } else if (room && invite) {
-        joinRoomWith(room, invite, who || name());
+        playerId = who; session = token; roomId = room;
+        api('POST', '/api/rooms/' + encodeURIComponent(room) + '/reconnect', { session: token })
+          .then(function(res){
+            if (res.status !== 200) { toast('房间恢复失败，请输入房间号重连'); return; }
+            playerId = res.body.playerId || who;
+            applyView(res.body);
+          });
+      } else if (room && inviteCode) {
+        playerId = who;
+        joinRoomWith(room, inviteCode, who);
       } else if (room) {
         $('joinCode').value = room;
         $('lobbyMsg').textContent = '房间号已填入，点击“加入房间”。';
       }
-      if (session && view) { try { sessionStorage.setItem('lc-room', JSON.stringify({roomId:view.roomId,session:session,playerId:playerId})); } catch (e) {} }
     } catch (err) {}
   })();
-  function joinRoomWith(room, invite, who){
-    playerId = who;
-    return api('POST','/api/rooms/' + encodeURIComponent(room) + '/join',{ playerId:who, inviteCode:invite })
-      .then(function(v){ applyView(v); toast('已通过邀请加入'); return v; })
-      .catch(function(err){ toast('邀请加入失败：' + err.message); return null; });
-  }
 
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     navigator.serviceWorker.register('sw.js').catch(function(){});
   }
 })();
 </script>
+<p style="text-align:center;margin:14px 0"><a href="../spectate.html" style="display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:44px;padding:0 14px;border-radius:12px;border:1px solid currentColor;color:inherit;font-size:13px;text-decoration:none">围观其他对局</a></p>
 </body>
 </html>

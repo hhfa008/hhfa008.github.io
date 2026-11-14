@@ -1,0 +1,2427 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>电力公司 · Power Grid（德国电网 · 人机对战）</title>
+<meta name="description" content="电力公司 Power Grid 中文单机版：竞拍电厂、购买煤油垃圾铀、建设德国电网、供电收钱。30 城 53 线的可缩放地图，与 AI 对手对战，离线可玩、手机优先。">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="theme-color" content="#061019">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23081019'/%3E%3Cpath d='M18 3L7 18h6l-2 11 13-17h-7z' fill='%23e7b96b'/%3E%3C/svg%3E">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "电力公司",
+  "alternateName": "Power Grid",
+  "applicationCategory": "Game",
+  "genre": "Board game",
+  "gamePlatform": "Web browser",
+  "operatingSystem": "Any",
+  "isAccessibleForFree": true,
+  "inLanguage": "zh-CN",
+  "numberOfPlayers": { "@type": "QuantitativeValue", "minValue": 2, "maxValue": 6 },
+  "description": "竞拍电厂、购买资源、建设德国电网、供电收钱。30 城 53 线可缩放地图，与 AI 对战的中文单机版。"
+}
+</script>
+<style>
+:root{
+  --bg:#060f17;--bg-2:#081722;--bg-3:#050b12;
+  --panel:rgba(12,31,44,.92);--panel-2:#102838;--panel-3:#0a1e2b;--panel-4:#122f41;
+  --ink:#eef6fa;--soft:#b8cbd6;--dim:#89a2b1;--dim-2:#667e8d;
+  --gold:#e7b96b;--gold-2:#ffdda0;--gold-3:#b98a3e;
+  --line:rgba(231,185,107,.22);--line-2:rgba(231,185,107,.11);
+  --teal:#5ac8c1;--teal-2:#8fe3dd;--ok:#86d3a2;--danger:#e27a6a;--focus:#ffdda0;
+  --shadow:0 22px 60px rgba(0,0,0,.46);--shadow-soft:0 8px 26px rgba(0,0,0,.3);
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --serif:"Songti SC","Noto Serif SC","Iowan Old Style",Georgia,serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --p0:#e7a94f;--p1:#5ac8c1;--p2:#e0789b;--p3:#82c76c;--p4:#a98bea;--p5:#e68152;
+  --noise:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='96' height='96' filter='url(%23n)' opacity='.22'/%3E%3C/svg%3E");
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;min-width:0;background:var(--bg);color:var(--ink);
+  font:14px/1.5 var(--sans);-webkit-font-smoothing:antialiased;
+  padding-bottom:calc(26px + env(safe-area-inset-bottom));
+}
+body::before{
+  content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(1100px 620px at 12% -8%,rgba(36,92,116,.34),transparent 64%),
+    radial-gradient(900px 700px at 92% 4%,rgba(104,78,32,.22),transparent 60%),
+    radial-gradient(900px 700px at 50% 108%,rgba(20,58,75,.28),transparent 62%),
+    linear-gradient(180deg,var(--bg-2),var(--bg) 48%,var(--bg-3));
+}
+body::after{
+  content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.34;
+  background-image:linear-gradient(rgba(120,180,200,.055) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(120,180,200,.055) 1px,transparent 1px);
+  background-size:48px 48px;
+  mask-image:radial-gradient(circle at 50% 30%,#000 0 60%,transparent 100%);
+}
+button{font:inherit;color:inherit}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+::selection{background:rgba(231,185,107,.3);color:#fff}
+h1,h2,h3,p{margin:0}
+.svg-sprite{position:absolute;width:0;height:0;overflow:hidden}
+.res-ico{width:25px;height:25px;display:block;filter:drop-shadow(0 1px 1px rgba(0,0,0,.55))}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+/* ---------- shell ---------- */
+.shell{max-width:1240px;margin:0 auto;padding:0 14px}
+.topbar{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:10px 2px 8px;min-height:58px;
+}
+.brand{display:flex;align-items:center;gap:10px;min-width:0;margin-right:auto}
+.brand-mark{
+  width:38px;height:38px;flex:none;border-radius:11px;display:grid;place-items:center;
+  background:linear-gradient(145deg,#1b465a,#0a1d2a);
+  border:1px solid rgba(231,185,107,.36);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 4px 14px rgba(0,0,0,.36);
+}
+.brand-mark svg{width:23px;height:23px;display:block}
+.brand h1{font-family:var(--serif);font-size:21px;line-height:1.05;letter-spacing:.01em;white-space:nowrap}
+.brand h1 span{
+  display:block;font-family:var(--mono);font-size:10px;font-weight:700;
+  letter-spacing:.22em;color:var(--gold);margin-top:3px;text-transform:uppercase;
+}
+.top-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.chip{
+  display:inline-flex;align-items:center;gap:5px;min-height:32px;padding:0 10px;
+  border:1px solid var(--line);border-radius:999px;background:rgba(10,30,43,.8);
+  color:var(--soft);font-size:12px;font-weight:600;white-space:nowrap;
+}
+.chip b{color:var(--gold-2);font-family:var(--mono);font-size:13px}
+.chip.live::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--teal);box-shadow:0 0 0 3px rgba(90,200,193,.16)}
+.chip.live.you::before{background:var(--gold);box-shadow:0 0 0 3px rgba(231,185,107,.18)}
+.top-actions{display:flex;gap:6px}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  min-height:44px;min-width:44px;padding:0 14px;border-radius:11px;
+  border:1px solid rgba(160,190,205,.34);background:linear-gradient(180deg,#143243,#0c2230);
+  color:var(--ink);font-size:13px;font-weight:650;letter-spacing:.01em;
+  cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+  transition:border-color .15s,background .15s,transform .1s,opacity .15s;
+}
+.btn:hover{border-color:rgba(231,185,107,.5);background:linear-gradient(180deg,#194052,#0e2939)}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.38;cursor:not-allowed;transform:none}
+.btn.primary{
+  border-color:rgba(231,185,107,.72);
+  background:linear-gradient(180deg,#f5d493,#dba74c 55%,#b78131);
+  color:#1b1508;text-shadow:0 1px 0 rgba(255,255,255,.26);
+  box-shadow:0 6px 18px rgba(201,149,61,.28),inset 0 1px 0 rgba(255,255,255,.5);
+}
+.btn.primary:hover{background:linear-gradient(180deg,#ffe3ae,#e7b45c 55%,#c08a36)}
+.btn.ghost{background:rgba(9,26,37,.6)}
+.btn.danger{border-color:rgba(226,122,106,.48);color:#ffc5ba;background:rgba(70,28,24,.26)}
+.btn.small{min-height:40px;padding:0 11px;font-size:12px}
+.btn.icon{padding:0;width:44px}
+.btn .kbd{font-family:var(--mono);font-size:11px;color:var(--dim);font-weight:500}
+
+/* ---------- app grid ---------- */
+.app{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;padding:0 0 8px}
+.panel{
+  min-width:0;border:1px solid var(--line);border-radius:16px;
+  background:linear-gradient(160deg,rgba(14,38,53,.94),rgba(8,23,34,.94));
+  box-shadow:var(--shadow-soft),inset 0 1px 0 rgba(255,255,255,.045);
+  padding:10px;
+}
+.panel-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:0 2px 8px}
+.panel-head h2{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--dim);font-weight:700;text-transform:uppercase}
+.panel-head span{font-size:12px;color:var(--dim);min-width:0;text-align:right}
+.panel-head b{color:var(--gold-2);font-family:var(--mono)}
+
+/* ---------- phase bar ---------- */
+.phasebar{
+  display:flex;align-items:center;gap:10px;margin-bottom:8px;padding:8px 11px;
+  border:1px solid var(--line);border-radius:12px;
+  background:linear-gradient(100deg,rgba(25,62,80,.88),rgba(10,29,42,.82));
+  position:relative;overflow:visible;
+}
+.phasebar::before{
+  content:"";width:4px;align-self:stretch;border-radius:99px;
+  background:linear-gradient(180deg,var(--gold-2),var(--gold-3));flex:none;
+}
+.phase-main{display:flex;align-items:center;gap:9px;min-width:0;flex:1}
+.phase-ico{width:28px;height:28px;flex:none;display:grid;place-items:center;border-radius:8px;
+  background:rgba(231,185,107,.12);border:1px solid var(--line);color:var(--gold-2)}
+.phase-ico svg{width:16px;height:16px;display:block}
+.phase-copy{min-width:0}
+.phase-copy b{display:block;font-size:14px;line-height:1.2;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.phase-copy span{display:block;font-size:12px;color:var(--dim);line-height:1.35;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.phasebar[data-phase="bureaucracy"]::before{background:linear-gradient(180deg,#9ae2b4,#4ca876)}
+.phasebar[data-phase="build"]::before{background:linear-gradient(180deg,#94d8ff,#3d8fbe)}
+.phasebar[data-phase="resources"]::before{background:linear-gradient(180deg,#9ff0e8,#3a9b94)}
+.phasebar[data-phase="game-over"]::before{background:linear-gradient(180deg,#ffd0a0,#b9763e)}
+.phase-steps{display:flex;align-items:center;gap:5px;flex:none}
+.phase-steps span{
+  font-size:11px;font-weight:700;color:var(--dim-2);padding:4px 7px;border-radius:7px;white-space:nowrap;
+  border:1px solid transparent;
+}
+.phase-steps span.done{color:var(--teal);border-color:rgba(90,200,193,.22);background:rgba(90,200,193,.07)}
+.phase-steps span.active{color:#231a08;background:linear-gradient(180deg,var(--gold-2),var(--gold));border-color:rgba(255,221,160,.7)}
+.phase-count{display:none;font-family:var(--mono);font-size:12px;color:var(--gold-2);flex:none}
+
+/* ---------- map ---------- */
+.board{position:relative}
+.map-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 1px 7px;min-width:0}
+.map-title{min-width:0}
+.map-title h2{font-family:var(--serif);font-size:17px;letter-spacing:.02em;white-space:nowrap}
+.map-title p{font-size:12px;color:var(--dim);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.map-tools{display:flex;align-items:center;gap:5px;flex:none;min-width:0}
+.zoom-group{display:flex;align-items:center;gap:5px}
+.tool-sep{width:1px;height:24px;background:var(--line);margin:0 2px;flex:none}
+.map-tools .btn{background:rgba(8,26,37,.9)}
+.region-tools{display:flex;align-items:center;gap:3px}
+.region-tools .btn{min-height:36px;min-width:38px;padding:0 8px;font-size:12px;border-radius:9px}
+.region-tools .btn[aria-pressed="true"],#costBtn[aria-pressed="true"]{border-color:var(--gold);color:var(--gold-2);background:rgba(231,185,107,.14)}
+.map-viewport{
+  position:relative;height:clamp(300px,46vh,440px);border-radius:13px;overflow:hidden;
+  border:1px solid rgba(120,180,200,.2);
+  background:
+    radial-gradient(70% 60% at 50% 42%,rgba(32,87,104,.32),transparent 70%),
+    radial-gradient(46% 40% at 50% 55%,rgba(231,185,107,.055),transparent 72%),
+    #06131d;
+  box-shadow:inset 0 0 60px rgba(0,0,0,.44);
+  touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab;
+}
+.map-viewport.dragging{cursor:grabbing}
+.map-viewport svg{width:100%;height:100%;display:block;position:relative;z-index:1}
+.map-viewport::after{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;background-image:var(--noise),radial-gradient(circle at 50% 44%,transparent 52%,rgba(0,0,0,.32) 100%);background-size:96px 96px,100% 100%;opacity:.55;mix-blend-mode:overlay}
+.map-legend{
+  display:flex;align-items:center;gap:9px;flex-wrap:wrap;
+  margin:5px 2px 0;padding:0;font-size:11px;color:var(--dim);
+}
+.map-legend span{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.map-legend i{width:8px;height:8px;border-radius:50%;display:block;border:1px solid rgba(255,255,255,.5)}
+.map-tip{
+  display:flex;align-items:center;gap:5px;margin:0 2px 6px;font-size:12px;color:var(--dim);
+  line-height:1.4;min-width:0;
+}
+.map-tip b{color:var(--gold-2);font-weight:650}
+.map-tip .sep{color:var(--dim-2)}
+.edge{stroke:rgba(132,190,210,.26);stroke-width:1.5;stroke-linecap:round}
+.edge.owned{stroke-width:2.4;opacity:.86}
+.edge-cost-bg{fill:rgba(5,16,24,.9);stroke:rgba(231,185,107,.2);stroke-width:.7}
+.edge-cost{
+  font:700 14px var(--mono);fill:#a8c6d4;text-anchor:middle;
+  paint-order:stroke;stroke:#05111a;stroke-width:2px;stroke-linejoin:round;
+  pointer-events:none;
+}
+.city{cursor:pointer}
+.city:focus{outline:none}
+.city .city-halo{fill:transparent;stroke:transparent;stroke-width:2}
+.city .city-outline{fill:none;stroke:transparent;stroke-width:2}
+.city .city-dot{transition:filter .15s}
+.city .city-shine{pointer-events:none}
+.city:hover .city-dot{filter:brightness(1.16)}
+.city .city-plate{fill:rgba(4,15,23,.82);stroke:rgba(120,170,190,.16);stroke-width:.7}
+.city .city-label{
+  font:600 18px var(--sans);fill:#e7f2f8;
+  paint-order:stroke;stroke:#05111a;stroke-width:4.5px;stroke-linejoin:round;
+  pointer-events:none;
+}
+.city .city-sub{
+  font:600 10.5px var(--mono);fill:#8ea9b9;letter-spacing:.01em;
+  paint-order:stroke;stroke:#05111a;stroke-width:3px;stroke-linejoin:round;
+  pointer-events:none;
+}
+.city .city-count{font:700 11px var(--mono);fill:#071019;text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.city .city-fee{
+  font:700 12px var(--mono);fill:#231a08;text-anchor:middle;pointer-events:none;
+}
+.city.legal .city-halo{fill:rgba(231,185,107,.13);stroke:rgba(231,185,107,.92);stroke-dasharray:4 3;animation:haloPulse 1.8s ease-in-out infinite}
+.city.legal .city-outline{stroke:rgba(255,221,160,.8)}
+.city.legal .city-label{fill:#ffe9bd}
+.city.selected .city-outline{stroke:var(--gold-2);stroke-width:3}
+.city.selected .city-label{fill:#fff6df}
+.city.mine .city-label{fill:#ffe6ae}
+@keyframes haloPulse{0%,100%{opacity:.5}50%{opacity:1}}
+.city-detail{
+  display:flex;align-items:center;gap:10px;margin-top:8px;padding:9px 11px;
+  border:1px solid var(--line);border-radius:12px;
+  background:linear-gradient(100deg,rgba(20,52,68,.9),rgba(9,25,36,.92));
+}
+.cd-copy{min-width:0;flex:1}
+.cd-copy b{font-size:14px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.cd-copy b small{font-size:11px;font-weight:600;color:var(--gold-2);border:1px solid var(--line);border-radius:6px;padding:1px 6px;background:rgba(231,185,107,.08)}
+.cd-copy p{font-size:12px;color:var(--dim);margin-top:2px;line-height:1.45}
+.cd-copy p strong{color:var(--soft);font-family:var(--mono);font-weight:700}
+.cd-actions{display:flex;align-items:center;gap:6px;flex:none;flex-wrap:wrap;justify-content:flex-end}
+
+/* ---------- players ---------- */
+.players-grid{display:flex;gap:8px;overflow-x:auto;overscroll-behavior-x:contain;padding:1px 1px 3px;scrollbar-width:thin}
+.player-card{
+  flex:0 0 176px;min-width:0;border:1px solid rgba(160,200,215,.2);border-radius:12px;
+  padding:8px 10px;background:linear-gradient(160deg,rgba(13,37,52,.94),rgba(7,21,31,.94));
+  position:relative;transition:border-color .18s,background .18s,box-shadow .18s;
+}
+.player-card.current{border-color:var(--pc,var(--gold));box-shadow:0 0 0 1px color-mix(in srgb,var(--pc,var(--gold)) 42%,transparent),0 0 22px rgba(231,185,107,.13);background:linear-gradient(160deg,rgba(22,54,70,.96),rgba(8,24,35,.96))}
+.player-card.you{border-color:color-mix(in srgb,var(--pc,var(--gold)) 58%,transparent)}
+.pc-head{display:flex;align-items:center;gap:6px;min-width:0}
+.pc-dot{width:10px;height:10px;border-radius:50%;background:var(--pc);box-shadow:0 0 0 2px rgba(255,255,255,.13);flex:none}
+.pc-name{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pc-tag{font-size:10px;font-weight:700;color:#1a1407;background:var(--gold);border-radius:5px;padding:1px 5px;flex:none}
+.pc-order{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--dim);flex:none}
+.pc-money{display:flex;align-items:baseline;gap:4px;margin-top:3px}
+.pc-money b{font-family:var(--mono);font-size:25px;line-height:1;color:var(--gold-2);letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.pc-stats{display:flex;flex-wrap:wrap;gap:3px 10px;margin-top:4px;font-size:12px;color:var(--soft)}
+.pc-stats b{color:var(--ink);font-family:var(--mono);font-weight:700}
+.pc-stats .ok{color:var(--teal-2)}
+.pc-supplied{font-size:12px;color:var(--ok);margin-top:2px}
+.pc-plants{display:flex;flex-wrap:wrap;gap:3px;margin-top:5px}
+.plant-chip{
+  display:inline-flex;align-items:center;gap:4px;padding:2px 5px;border-radius:6px;
+  border:1px solid color-mix(in srgb,var(--fc) 48%,transparent);
+  background:
+    linear-gradient(145deg,rgba(255,255,255,.1),transparent 45%),
+    color-mix(in srgb,var(--fc) 13%,rgba(7,20,30,.7));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.13),0 1px 2px rgba(0,0,0,.28);
+  font-size:10px;color:var(--soft);white-space:nowrap;
+}
+.plant-chip b{font-family:var(--mono);font-size:11px;color:var(--fc)}
+.plant-chip em{font-style:normal;color:var(--teal-2);font-weight:700}
+.plant-chip i{font-style:normal;color:var(--dim)}
+.empty-note{font-size:12px;color:var(--dim);padding:5px 2px 3px;line-height:1.5}
+
+/* ---------- markets ---------- */
+.market-label{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;letter-spacing:.08em;color:var(--dim);margin:2px 1px 5px;text-transform:uppercase}
+.market-label::after{content:"";height:1px;flex:1;background:var(--line-2)}
+.market-label.live-lab{color:var(--gold)}
+.market-row{display:flex;gap:6px;overflow-x:auto;padding:1px 1px 5px;scrollbar-width:thin;overscroll-behavior-x:contain}
+.market-row + .market-label{margin-top:5px}
+.plant-card{
+  flex:0 0 82px;min-width:0;min-height:105px;padding:6px 7px;border-radius:10px;text-align:left;
+  border:1px solid rgba(176,206,218,.38);
+  background:
+    radial-gradient(circle, rgba(255,255,255,.62) 0 1px, rgba(0,0,0,.55) 1.4px, transparent 2.3px) 4px 4px/6px 6px no-repeat,
+    radial-gradient(circle, rgba(255,255,255,.62) 0 1px, rgba(0,0,0,.55) 1.4px, transparent 2.3px) calc(100% - 4px) 4px/6px 6px no-repeat,
+    radial-gradient(circle, rgba(255,255,255,.5) 0 1px, rgba(0,0,0,.55) 1.4px, transparent 2.3px) 4px calc(100% - 4px)/6px 6px no-repeat,
+    radial-gradient(circle, rgba(255,255,255,.5) 0 1px, rgba(0,0,0,.55) 1.4px, transparent 2.3px) calc(100% - 4px) calc(100% - 4px)/6px 6px no-repeat,
+    linear-gradient(90deg, transparent, rgba(231,185,107,.48), transparent) 7px 4px/calc(100% - 14px) 1.5px no-repeat,
+    linear-gradient(148deg, rgba(255,255,255,.16), rgba(255,255,255,0) 38%),
+    repeating-linear-gradient(102deg, rgba(255,255,255,.035) 0 1px, transparent 1px 3px),
+    var(--noise),
+    radial-gradient(125% 105% at 18% 0%, #2b4b59 0%, #17313f 44%, #0a1c27 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.22),inset 0 -2px 7px rgba(0,0,0,.5),0 3px 9px rgba(0,0,0,.4);
+  display:flex;flex-direction:column;gap:3px;position:relative;cursor:default;
+  transition:border-color .15s,filter .15s,transform .15s,box-shadow .15s;
+}
+.plant-card::before{content:"";position:absolute;inset:3px;border-radius:7px;border:1px solid rgba(255,255,255,.08);pointer-events:none}
+.plant-card.selectable{cursor:pointer}
+.plant-card.selectable:hover{border-color:rgba(231,185,107,.65);transform:translateY(-1px);box-shadow:inset 0 1px 0 rgba(255,255,255,.25),inset 0 -2px 7px rgba(0,0,0,.5),0 4px 14px rgba(0,0,0,.48),0 0 18px rgba(231,185,107,.14)}
+.plant-card.selected{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset,0 0 22px rgba(231,185,107,.25),inset 0 1px 0 rgba(255,255,255,.28)}
+.plant-card.future{opacity:.66;filter:saturate(.7)}
+.plant-card.live{border-color:rgba(255,221,160,.78);box-shadow:0 0 0 1px rgba(255,221,160,.3) inset,0 0 18px rgba(231,185,107,.16)}
+.plant-card.live::after{content:"竞价";position:absolute;right:5px;bottom:5px;font-size:9px;font-weight:800;color:#201805;background:var(--gold);border-radius:4px;padding:1px 4px}
+.plant-top{display:flex;align-items:flex-start;justify-content:space-between;gap:3px;min-width:0}
+.plant-bid{
+  flex:none;font:800 11px var(--mono);color:#22180a;line-height:1.1;
+  background:linear-gradient(180deg,var(--gold-2),var(--gold));border-radius:4px;padding:2px 4px;
+  box-shadow:0 0 0 1px rgba(255,255,255,.18) inset;
+}
+.plant-num{font-family:var(--mono);font-size:20px;font-weight:800;line-height:1;color:var(--gold-2);letter-spacing:-.02em;text-shadow:0 1px 0 rgba(255,255,255,.16),0 -1px 1px rgba(0,0,0,.55)}
+.plant-cap{font-size:11px;font-weight:700;color:var(--teal-2);line-height:1.2}
+.plant-fuel{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--soft);line-height:1.25}
+.fuel-swatch{width:7px;height:7px;border-radius:2px;background:var(--fc);flex:none;box-shadow:0 0 0 1px rgba(255,255,255,.14)}
+.plant-price{margin-top:auto;font-size:10px;color:var(--dim);line-height:1.2}
+.plant-price b{color:var(--gold-2);font-family:var(--mono);font-size:11px}
+
+/* ---------- resource market ---------- */
+.res-row{display:grid;grid-template-columns:58px minmax(0,1fr) 34px;align-items:center;gap:5px;padding:4px 0;border-top:1px solid rgba(120,160,175,.1)}
+.res-row:first-of-type{border-top:0}
+.res-label{display:flex;align-items:center;gap:5px;min-width:0}
+.res-badge,.buy-badge{
+  display:grid;place-items:center;flex:none;border-radius:7px;
+  background:
+    radial-gradient(circle at 32% 24%, rgba(255,255,255,.2), rgba(4,14,21,.93) 64%),
+    linear-gradient(160deg,#263f4c,#091923);
+  border:1px solid rgba(190,215,225,.24);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.2),inset 0 -2px 3px rgba(0,0,0,.5),0 2px 4px rgba(0,0,0,.4);
+}
+.res-badge{width:27px;height:27px}
+.res-badge .res-ico{width:23px;height:23px}
+.buy-badge{width:32px;height:32px}
+.buy-badge .res-ico{width:27px;height:27px}
+.res-label b{font-size:12px;display:block;line-height:1.1}
+.res-label small{font-size:10px;color:var(--dim);display:block;line-height:1.2;white-space:nowrap}
+.res-label small.hot{color:var(--gold-2);font-weight:700}
+.res-slots{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));align-items:stretch;gap:2px;min-width:0;padding:1px 0 2px}
+.slot{
+  min-width:0;min-height:36px;border-radius:5px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:1px;
+  border:1px solid rgba(120,160,175,.16);background:rgba(6,20,30,.66);
+  font-family:var(--mono);line-height:1;transition:background .2s,border-color .2s;
+}
+.slot b{font-size:11px;color:var(--dim);font-weight:700}
+.slot span{font-size:11px;color:var(--soft);font-weight:700}
+.slot.empty{opacity:.38}
+.slot.current{border-color:var(--gold);background:rgba(231,185,107,.16);box-shadow:0 0 0 1px rgba(231,185,107,.32) inset}
+.slot.current b{color:var(--gold-2)}
+.slot.current span{color:#fff2d2}
+.slot.flash{animation:slotFlash .9s ease-out}
+@keyframes slotFlash{0%{background:rgba(255,240,190,.72);transform:scale(1.12)}100%{background:rgba(231,185,107,.16);transform:scale(1)}}
+.res-meta{text-align:right;min-width:0}
+.res-meta b{display:block;font-family:var(--mono);font-size:12px;color:var(--soft)}
+.res-meta small{display:block;font-size:9px;color:var(--dim);white-space:nowrap}
+
+/* ---------- action panel ---------- */
+.action{padding:10px 11px;scroll-margin-top:8px}
+.action-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px}
+.action-head h2{font-size:15px;line-height:1.25;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.action-head p{font-size:12px;color:var(--dim);line-height:1.4;margin-top:2px}
+.action-head .badge{font-size:10px;font-weight:800;color:#1b1508;background:var(--gold);border-radius:5px;padding:2px 6px;white-space:nowrap}
+.action-money{font-family:var(--mono);font-size:12px;color:var(--dim);white-space:nowrap;text-align:right;flex:none}
+.action-money b{display:block;font-size:17px;color:var(--gold-2);line-height:1.1}
+.act-note{font-size:12px;color:var(--dim);line-height:1.5;margin:4px 0 7px}
+.act-note.warn{color:#f0b3a8}
+.act-note.good{color:var(--ok)}
+.pick-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin-bottom:8px}
+.pick-card{
+  position:relative;min-height:62px;padding:5px 6px;border-radius:9px;border:1px solid rgba(176,206,218,.34);
+  background:
+    linear-gradient(90deg, transparent, rgba(231,185,107,.4), transparent) 5px 3px/calc(100% - 10px) 1px no-repeat,
+    linear-gradient(145deg, rgba(255,255,255,.14), rgba(255,255,255,0) 42%),
+    repeating-linear-gradient(102deg, rgba(255,255,255,.03) 0 1px, transparent 1px 3px),
+    var(--noise),
+    radial-gradient(125% 110% at 18% 0%, #2a4b59 0%, #142e3c 48%, #091b26 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.18),inset 0 -2px 5px rgba(0,0,0,.42),0 2px 6px rgba(0,0,0,.32);
+  display:flex;flex-direction:column;gap:1px;align-items:flex-start;text-align:left;cursor:pointer;
+  transition:border-color .15s,filter .15s;
+}
+.pick-card:hover{border-color:rgba(231,185,107,.6);filter:brightness(1.08)}
+.pick-card[aria-pressed="true"]{border-color:var(--gold);box-shadow:0 0 0 1px rgba(231,185,107,.35) inset,0 0 16px rgba(231,185,107,.2),inset 0 1px 0 rgba(255,255,255,.24)}
+.pick-card:disabled{opacity:.42;cursor:not-allowed}
+.pick-card b{font-family:var(--mono);font-size:17px;line-height:1;color:var(--gold-2)}
+.pick-bid{
+  position:absolute;right:4px;top:4px;font:800 10px var(--mono);font-style:normal;
+  color:#22180a;background:linear-gradient(180deg,var(--gold-2),var(--gold));
+  border-radius:4px;padding:1px 4px;line-height:1.2;
+}
+.pick-card span{font-size:10px;color:var(--teal-2);font-weight:700;line-height:1.2}
+.pick-card small{font-size:10px;color:var(--dim);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.bid-box{border:1px solid var(--line);border-radius:11px;padding:8px 9px;background:rgba(6,20,30,.44);margin-bottom:8px}
+.bid-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:6px}
+.bid-top span{font-size:12px;color:var(--dim)}
+.bid-top b{font-family:var(--mono);font-size:22px;color:var(--gold-2);line-height:1}
+.bid-plant{display:flex;align-items:center;gap:7px;min-width:0}
+.bid-plant .plant-num{font-size:18px}
+.bid-plant small{font-size:11px;color:var(--soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slider-row{display:flex;align-items:center;gap:6px;min-width:0}
+.slider-row input[type="range"]{flex:1;min-width:0;height:44px;accent-color:var(--gold);background:transparent}
+.slider-val{font-family:var(--mono);font-size:14px;color:var(--gold-2);min-width:52px;text-align:right;font-weight:700}
+.stepper{display:flex;gap:5px;flex-wrap:wrap;margin:6px 0 8px}
+.stepper .btn{min-width:52px;min-height:44px;padding:0 10px}
+.qty-stepper{align-items:center;gap:6px}
+.qty-label{font-size:12px;color:var(--dim)}
+.qty-val{font-family:var(--mono);font-size:17px;color:var(--gold-2);min-width:24px;text-align:center}
+.btn-row{display:flex;gap:6px;flex-wrap:wrap}
+.btn-row .grow{flex:1;min-width:140px}
+.offer-flow{display:flex;flex-direction:column}
+.bid-flow,.supply-flow{display:flex;flex-direction:column}
+.buy-list{display:flex;flex-direction:column;gap:5px;margin-bottom:7px}
+.buy-row{
+  display:flex;align-items:center;gap:8px;min-height:48px;padding:4px 8px;border-radius:9px;
+  border:1px solid rgba(140,175,190,.2);background:rgba(6,20,30,.42);width:100%;text-align:left;cursor:pointer;
+  transition:border-color .15s,background .15s;
+}
+.buy-row:hover:not(:disabled){border-color:rgba(231,185,107,.5);background:rgba(231,185,107,.07)}
+.buy-row:disabled{opacity:.4;cursor:not-allowed}
+
+.buy-main{min-width:0;flex:1}
+.buy-main b{display:block;font-size:12.5px;line-height:1.2}
+.buy-main small{display:block;font-size:11px;color:var(--dim);line-height:1.3}
+.buy-side{flex:none;text-align:right;font-size:11px;color:var(--dim);line-height:1.35;font-family:var(--mono)}
+.buy-side b{display:block;color:var(--gold-2);font-size:13px}
+.build-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:5px;max-height:170px;overflow-y:auto;padding:1px;margin-bottom:8px;scrollbar-width:thin}
+.build-btn{min-height:44px;padding:5px 8px;border-radius:8px;border:1px solid rgba(140,175,190,.24);background:rgba(8,25,36,.72);text-align:left;cursor:pointer;transition:border-color .15s,background .15s}
+.build-btn:hover{border-color:var(--gold);background:rgba(231,185,107,.08)}
+.build-btn span{display:block;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.build-btn b{display:block;font-family:var(--mono);font-size:12px;color:var(--gold-2);line-height:1.25}
+.build-btn small{display:block;font-size:10px;color:var(--dim);line-height:1.2}
+.supply-preview{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0 8px;font-size:12px;color:var(--dim)}
+.supply-preview b{font-family:var(--mono);color:var(--gold-2);font-size:16px}
+.supply-preview .tagline{border:1px solid var(--line);border-radius:7px;padding:3px 7px;background:rgba(231,185,107,.06);color:var(--soft);font-size:11px}
+.thinking{display:flex;align-items:center;gap:10px;padding:12px 4px 10px}
+.spinner{width:26px;height:26px;border-radius:50%;flex:none;border:2px solid rgba(90,200,193,.22);border-top-color:var(--teal);animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.thinking b{display:block;font-size:13px}
+.thinking span{display:block;font-size:12px;color:var(--dim);margin-top:1px}
+.thinking .btn-row{margin-left:auto;flex:none}
+.hint-small{font-size:12px;color:var(--dim-2);line-height:1.45;margin-top:6px}
+
+/* ---------- log ---------- */
+.log-list{list-style:none;margin:0;padding:0;max-height:240px;overflow-y:auto;scrollbar-width:thin}
+.log-list li{display:flex;gap:7px;padding:4px 2px;border-top:1px solid rgba(120,160,175,.08);font-size:12px;line-height:1.45;color:var(--soft)}
+.log-list li:first-child{border-top:0}
+.log-r{font-family:var(--mono);font-size:10px;color:var(--dim-2);flex:none;padding-top:1px;min-width:21px}
+.log-list li.round{color:var(--gold-2);font-weight:700}
+.log-list li.sys{color:var(--dim)}
+.log-list li.supplied{color:var(--ok)}
+.log-list li.auction-won{color:var(--gold-2)}
+.log-list li.city-built{color:#a9d8f5}
+
+/* ---------- toast / modal ---------- */
+.toast{
+  position:fixed;left:50%;top:calc(62px + env(safe-area-inset-top));transform:translate(-50%,-14px);
+  z-index:90;min-width:210px;max-width:min(92vw,460px);padding:9px 14px;border-radius:12px;
+  border:1px solid rgba(231,185,107,.48);background:rgba(8,25,36,.97);
+  box-shadow:0 18px 44px rgba(0,0,0,.5);text-align:center;
+  opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;
+}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.toast b{display:block;font-size:14px;color:var(--gold-2);line-height:1.3}
+.toast span{display:block;font-size:11px;color:var(--soft);margin-top:2px;line-height:1.3}
+.toast.good{border-color:rgba(134,211,162,.56)}
+.toast.good b{color:var(--ok)}
+.toast.step{border-color:rgba(90,200,193,.56)}
+.toast.step b{color:var(--teal-2)}
+.modal{position:fixed;inset:0;z-index:100;display:grid;place-items:center;padding:14px;background:rgba(2,8,13,.76);backdrop-filter:blur(7px)}
+.modal-card{
+  width:100%;max-width:560px;max-height:90vh;overflow-y:auto;scrollbar-width:thin;
+  border:1px solid rgba(231,185,107,.34);border-radius:18px;
+  background:linear-gradient(165deg,#102b3b,#071924 62%,#06121b);
+  box-shadow:0 30px 90px rgba(0,0,0,.66),inset 0 1px 0 rgba(255,255,255,.08);
+  padding:16px;
+}
+.modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px}
+.modal-head h2{font-family:var(--serif);font-size:21px;line-height:1.2}
+.modal-head p{font-size:12px;color:var(--dim);margin-top:3px}
+.modal-close{flex:none}
+.field{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid var(--line-2)}
+.field label{font-size:13px;color:var(--soft)}
+.field select,.field input{
+  min-height:44px;min-width:120px;max-width:56%;padding:0 10px;border-radius:10px;
+  border:1px solid rgba(160,190,205,.34);background:#071c29;color:var(--ink);font-size:16px;
+}
+.field input[type="number"]{font-family:var(--mono)}
+.modal-note{font-size:12px;color:var(--dim);line-height:1.55;margin:10px 0 12px;padding:8px 10px;border-radius:9px;border:1px solid var(--line-2);background:rgba(231,185,107,.045)}
+.rules-body{font-size:13px;line-height:1.65;color:var(--soft)}
+.rules-body h3{font-size:13px;color:var(--gold-2);margin:12px 0 3px;font-family:var(--mono);letter-spacing:.06em}
+.rules-body h3:first-child{margin-top:0}
+.rules-body p{margin:0;color:var(--dim)}
+.rules-body strong{color:var(--ink);font-weight:650}
+.rules-body ul{margin:2px 0 0;padding-left:18px;color:var(--dim)}
+.rules-body li{margin:2px 0}
+.result-banner{display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:linear-gradient(100deg,rgba(231,185,107,.15),rgba(231,185,107,.04))}
+.result-banner .trophy{
+  width:46px;height:46px;border-radius:12px;display:grid;place-items:center;flex:none;
+  background:radial-gradient(circle at 35% 26%,rgba(255,244,200,.24),transparent 56%),linear-gradient(150deg,#2b2210,#0b1a22);
+  border:1px solid rgba(231,185,107,.56);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.2),inset 0 -2px 6px rgba(0,0,0,.5),0 0 20px rgba(231,185,107,.2);
+}
+.result-banner .trophy svg{width:42px;height:42px;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))}
+.result-banner b{display:block;font-size:16px;color:var(--gold-2);line-height:1.25}
+.result-banner span{display:block;font-size:12px;color:var(--dim);margin-top:1px}
+.rank-list{display:flex;flex-direction:column;gap:5px;margin:10px 0 12px}
+.rank-row{display:grid;grid-template-columns:30px 8px minmax(0,1fr) repeat(3,54px);align-items:center;gap:7px;padding:7px 8px;border-radius:9px;border:1px solid rgba(140,175,190,.16);background:rgba(6,20,30,.45)}
+.rank-row.winner{border-color:rgba(231,185,107,.54);background:rgba(231,185,107,.08)}
+.rank-no{
+  position:relative;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;
+  font-family:var(--mono);font-size:12px;font-weight:800;color:#2c1d05;text-align:center;line-height:1;
+  background:radial-gradient(circle at 32% 26%,#fff8d3 0 10%,#efcf7c 32%,#bd882e 68%,#71480d 100%);
+  border:1px solid #f4df9d;
+  box-shadow:inset 0 1px 1px rgba(255,255,255,.85),inset 0 -2px 3px rgba(0,0,0,.5),0 2px 4px rgba(0,0,0,.45);
+  text-shadow:0 1px 0 rgba(255,255,255,.4),0 -1px 1px rgba(0,0,0,.5);
+}
+.rank-no::after{
+  content:"";position:absolute;left:50%;bottom:-5px;width:11px;height:7px;transform:translateX(-50%);
+  background:linear-gradient(90deg,#7f252e,#c45058 45%,#8a2a33);
+  clip-path:polygon(0 0,100% 0,78% 100%,50% 68%,22% 100%);
+  box-shadow:0 1px 2px rgba(0,0,0,.4);
+}
+.rank-row:nth-child(2) .rank-no{background:radial-gradient(circle at 32% 26%,#fff 0 10%,#dfe9ee 32%,#95a6b0 68%,#4f5e68 100%);border-color:#eef7fb;color:#22303a}
+.rank-row:nth-child(3) .rank-no{background:radial-gradient(circle at 32% 26%,#ffe4c7 0 10%,#d69a62 32%,#95582b 68%,#4e2a10 100%);border-color:#efc79b;color:#2f1a08}
+.rank-row:nth-child(n+4) .rank-no{background:radial-gradient(circle at 32% 26%,#f2f7f9 0 10%,#b7c5cc 34%,#71828c 70%,#3c4a52 100%);border-color:#d9e6eb;color:#1d2931}
+.rank-row.winner .rank-no{background:radial-gradient(circle at 32% 26%,#fffbe0 0 10%,#f4d47f 32%,#c08a2e 68%,#7a4d0b 100%);border-color:#ffe7a6;box-shadow:inset 0 1px 1px rgba(255,255,255,.9),inset 0 -2px 3px rgba(0,0,0,.45),0 2px 5px rgba(0,0,0,.45),0 0 14px rgba(255,215,120,.55)}
+.rank-dot{width:8px;height:8px;border-radius:50%;background:var(--pc)}
+.rank-name{min-width:0;font-size:12.5px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rank-name small{display:block;font-size:10px;color:var(--dim);font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rank-stat{text-align:right;font-family:var(--mono);line-height:1.15}
+.rank-stat b{display:block;font-size:13px;color:var(--ink)}
+.rank-stat small{display:block;font-size:9px;color:var(--dim)}
+.result-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+
+/* ---------- responsive ---------- */
+@media (min-width:900px){
+  .shell{padding:0 18px}
+  .app{
+    grid-template-columns:minmax(0,1fr) 392px;
+    grid-template-areas:"board players" "board action" "board market" "board resources" "board log";
+    align-items:start;gap:12px;
+  }
+  .board{grid-area:board;padding:11px}
+  .players{grid-area:players}
+  .action{grid-area:action}
+  .market{grid-area:market}
+  .resources{grid-area:resources}
+  .log{grid-area:log}
+  .map-viewport{height:clamp(520px,calc(100vh - 232px),810px)}
+  .players-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible;padding:0}
+  .player-card{flex:auto;min-width:0}
+  .toast{top:calc(58px + env(safe-area-inset-top))}
+}
+@media (max-width:899px){
+  .region-tools{display:none}
+  .phase-steps{display:none}
+  .phase-count{display:inline-flex}
+  .brand h1{font-size:18px}
+  .brand h1 span{font-size:9px;letter-spacing:.18em}
+  .top-meta .chip.step-chip{display:none}
+  .map-viewport{height:clamp(280px,42vh,400px)}
+  .offer-flow .btn-row{order:-1;margin-bottom:6px}
+  .bid-flow .btn-row,.supply-flow .btn-row{order:-1;margin-bottom:6px}
+}
+@media (max-width:600px){
+  .shell{padding:0 10px}
+  .topbar{padding:7px 1px 6px;min-height:52px;gap:6px;flex-wrap:nowrap}
+  .brand{flex:1;min-width:0}
+  .brand-mark{width:34px;height:34px;border-radius:10px}
+  .brand-mark svg{width:20px;height:20px}
+  .brand h1{font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .brand h1 span{font-size:8px;letter-spacing:.13em;margin-top:2px}
+  .top-meta{order:2;width:auto;flex:none;justify-content:flex-end;gap:3px}
+  .top-meta .chip{display:none}
+  .top-meta #chipTurn{display:inline-flex;min-height:30px;padding:0 8px;font-size:12px}
+  .chip{min-height:28px;padding:0 8px;font-size:12px}
+  .chip b{font-size:12px}
+  .top-actions{order:3;margin-left:0;flex:none}
+  .top-actions .btn{min-height:44px;padding:0 10px;font-size:12px}
+  .panel{padding:8px;border-radius:13px}
+  .phasebar{padding:7px 9px;gap:7px;margin-bottom:7px}
+  .phase-copy b{font-size:13px}
+  .phase-copy span{font-size:12px}
+  .phase-ico{width:25px;height:25px}
+  .map-top{gap:5px;margin-bottom:6px}
+  .map-title h2{font-size:15px}
+  .map-title p{font-size:12px}
+  .map-tools .btn{min-height:44px;min-width:44px;padding:0 9px;font-size:12px}
+  .map-viewport{height:clamp(270px,38vh,370px);border-radius:11px}
+  .map-legend{font-size:12px;gap:8px;margin-top:4px}
+  .map-tip{font-size:12px;gap:4px;margin-bottom:5px}
+  .panel-head{margin-bottom:6px}
+  .players-grid{gap:6px}
+  .player-card{flex-basis:162px;padding:6px 8px}
+  .pc-head{gap:5px}
+  .pc-money{margin-top:1px}
+  .pc-money b{font-size:21px}
+  .pc-stats{gap:2px 8px;font-size:12px;margin-top:2px}
+  .pc-plants{margin-top:3px}
+  .pc-plants .empty-note{display:none}
+  .player-card .empty-note{display:none}
+  .action{padding:8px 10px}
+  .action-head{margin-bottom:6px}
+  .action-head h2{font-size:13px;gap:5px}
+  .action-head p{display:none}
+  .action-money b{font-size:15px}
+  .pick-row{gap:4px;margin-bottom:6px}
+  .pick-card{min-height:52px;padding:4px 5px}
+  .pick-card b{font-size:15px}
+  .pick-card span,.pick-card small{font-size:9px}
+  .bid-box{padding:6px 8px;margin-bottom:6px}
+  .bid-top{margin-bottom:3px}
+  .bid-top b{font-size:18px}
+  .stepper{margin:4px 0 2px}
+  .stepper .btn{min-width:46px;min-height:44px;padding:0 8px}
+  .plant-card{flex-basis:78px;min-height:101px;padding:5px 6px}
+  .plant-num{font-size:18px}
+  .plant-cap{font-size:10px}
+  .plant-fuel{font-size:9px}
+  .plant-price{font-size:9px}
+  .plant-price b{font-size:10px}
+  .res-row{grid-template-columns:52px minmax(0,1fr) 30px;gap:4px}
+  .res-badge{width:23px;height:23px}
+  .res-badge .res-ico{width:19px;height:19px}
+  .buy-badge{width:30px;height:30px}
+  .buy-badge .res-ico{width:25px;height:25px}
+  .res-label b{font-size:11px}
+  .res-label small{font-size:9px}
+  .slot{min-height:34px}
+  .slot b,.slot span{font-size:11px}
+  .res-meta b{font-size:11px}
+  .res-meta small{font-size:8px}
+  .build-grid{grid-template-columns:repeat(auto-fill,minmax(112px,1fr));max-height:150px}
+  .modal-card{padding:14px;border-radius:16px}
+  .rank-row{grid-template-columns:30px 8px minmax(0,1fr) repeat(3,46px);gap:5px;padding:6px 7px}
+  .log-list{max-height:200px}
+}
+@media (max-width:360px){
+  .brand h1{font-size:16px}
+  .top-actions .btn{padding:0 8px}
+  .map-title p{display:none}
+  .map-tools .btn{min-width:44px;padding:0 7px}
+  .player-card{flex-basis:138px;padding:5px 7px}
+  .pc-name{font-size:12px}
+  .pc-order{font-size:10px}
+  .pc-money b{font-size:19px}
+  .pc-stats{font-size:12px;gap:2px 6px}
+  .pick-row{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .res-row{grid-template-columns:48px minmax(0,1fr)}
+  .res-meta{display:none}
+  .slot{min-height:32px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+}
+</style>
+</head>
+<body>
+<svg class="svg-sprite" aria-hidden="true" focusable="false" width="0" height="0">
+  <defs>
+    <linearGradient id="g-coal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#93a1ac"/><stop offset=".28" stop-color="#46525b"/>
+      <stop offset=".62" stop-color="#151b20"/><stop offset=".84" stop-color="#2b343b"/>
+      <stop offset="1" stop-color="#0b0f12"/>
+    </linearGradient>
+    <linearGradient id="g-oil" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#4b2f15"/><stop offset=".18" stop-color="#c88c47"/>
+      <stop offset=".38" stop-color="#f1c17b"/><stop offset=".58" stop-color="#9b5f26"/>
+      <stop offset=".8" stop-color="#e0ad65"/><stop offset="1" stop-color="#3a2410"/>
+    </linearGradient>
+    <linearGradient id="g-oil-top" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f7d59b"/><stop offset=".5" stop-color="#bc7f3a"/>
+      <stop offset="1" stop-color="#5a3a19"/>
+    </linearGradient>
+    <linearGradient id="g-trash" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#b6c9b4"/><stop offset=".3" stop-color="#6f8b72"/>
+      <stop offset=".62" stop-color="#36503d"/><stop offset="1" stop-color="#1b2b21"/>
+    </linearGradient>
+    <linearGradient id="g-can" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#eef7ee"/><stop offset=".45" stop-color="#abc3ae"/>
+      <stop offset="1" stop-color="#5e7764"/>
+    </linearGradient>
+    <linearGradient id="g-uranium" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#bffff0"/><stop offset=".3" stop-color="#62e3c4"/>
+      <stop offset=".55" stop-color="#1e8b75"/><stop offset=".78" stop-color="#9df8df"/>
+      <stop offset="1" stop-color="#155e50"/>
+    </linearGradient>
+    <radialGradient id="g-radio" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#7dffe0" stop-opacity=".6"/>
+      <stop offset=".55" stop-color="#4be0c0" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#4be0c0" stop-opacity="0"/>
+    </radialGradient>
+    <symbol id="ico-coal" viewBox="0 0 32 32">
+      <path d="M5.2 19.6 8.6 9.2 17.8 4.8 27.2 10.5 29 20.2 22.2 28 12.1 27.2Z" fill="url(#g-coal)" stroke="#080d11" stroke-width="1.1"/>
+      <path d="M8.6 9.2 17.8 4.8 21.2 12.2 13.1 16.2Z" fill="#8c9aa4" opacity=".72"/>
+      <path d="M21.2 12.2 27.2 10.5 29 20.2 22.2 20.3Z" fill="#222b32" opacity=".85"/>
+      <path d="M13.1 16.2 22.2 20.3 21.2 26.4 12.1 27.2 9.1 20.8Z" fill="#303a42"/>
+      <path d="M10.5 12.2 14.7 8.7M18.7 9.1 20.5 11.2" stroke="#d8e4ea" stroke-width="1" opacity=".55"/>
+      <path d="M6.5 19.2 8.8 10.8" stroke="#000" stroke-width="1.2" opacity=".45"/>
+    </symbol>
+    <symbol id="ico-oil" viewBox="0 0 32 32">
+      <ellipse cx="16" cy="7.2" rx="9" ry="3.1" fill="#5a3a19"/>
+      <path d="M7 7.2v17.5c0 2 4 3.3 9 3.3s9-1.3 9-3.3V7.2Z" fill="url(#g-oil)" stroke="#3a2410" stroke-width="1"/>
+      <ellipse cx="16" cy="7.2" rx="9" ry="3.1" fill="url(#g-oil-top)" stroke="#6b4a24" stroke-width="1"/>
+      <rect x="7.4" y="12" width="17.2" height="1.8" fill="#3a2410" opacity=".75"/>
+      <rect x="7.4" y="19.6" width="17.2" height="1.8" fill="#3a2410" opacity=".75"/>
+      <path d="M10.4 9.2v14.4" stroke="#ffe1ab" stroke-width="1.3" opacity=".6"/>
+      <ellipse cx="16" cy="7.2" rx="5.4" ry="1.6" fill="#2c1b0c" opacity=".85"/>
+      <path d="M22.9 9.5v12.9" stroke="#2a190b" stroke-width="1.4" opacity=".55"/>
+    </symbol>
+    <symbol id="ico-garbage" viewBox="0 0 32 32">
+      <path d="M7.2 13.6 10 27c.5 1.6 2.2 2.1 6 2.1s5.5-.5 6-2.1l2.8-13.4Z" fill="url(#g-trash)" stroke="#1c2b21" stroke-width="1"/>
+      <path d="M5.8 11.5h20.4l-1.4 4.1H7.2Z" fill="#93aa99" stroke="#3a4f40" stroke-width=".8"/>
+      <path d="M13.1 16.8 12 26.1M18.9 16.8 20 26.1" stroke="#2e4435" stroke-width="1.1" opacity=".75"/>
+      <path d="M14.2 5.1c1-2.2 5.1-2.2 6.3.8l1.1 6.6h-8.4Z" fill="url(#g-can)" stroke="#6f8875" stroke-width=".9"/>
+      <ellipse cx="17.4" cy="6.4" rx="2.9" ry="1.3" fill="#e8f2e9" opacity=".8"/>
+      <path d="M15.4 9.2 14.9 12" stroke="#f4fbf4" stroke-width="1" opacity=".65"/>
+    </symbol>
+    <symbol id="ico-uranium" viewBox="0 0 32 32">
+      <circle cx="16" cy="17" r="13.2" fill="url(#g-radio)"/>
+      <rect x="12.6" y="8.4" width="6.8" height="18.2" rx="2.2" fill="url(#g-uranium)" stroke="#155e50" stroke-width="1"/>
+      <rect x="11" y="26.1" width="10" height="3.1" rx="1.5" fill="#6f7d84" stroke="#2b363c" stroke-width=".8"/>
+      <ellipse cx="16" cy="8.4" rx="3.4" ry="1.5" fill="#d8fff4" stroke="#7cf0d4" stroke-width=".6"/>
+      <path d="M14.5 10.6v13.6" stroke="#eafff8" stroke-width=".9" opacity=".8"/>
+      <circle cx="22.8" cy="9.4" r="1.4" fill="#baffee" opacity=".9"/>
+    </symbol>
+  </defs>
+</svg>
+<div class="shell">
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M13.4 1.8 4.6 13.4h5.1L8 22.2l9.6-12.3h-5.3z" fill="#e7b96b"/><path d="M4 19h16" stroke="#5ac8c1" stroke-width="1.2" stroke-linecap="round" opacity=".55"/></svg>
+      </span>
+      <h1>电力公司<span>Power Grid · Germany</span></h1>
+    </div>
+    <div class="top-meta">
+      <span class="chip">第 <b id="chipRound">1</b> 轮</span>
+      <span class="chip step-chip">阶段 <b id="chipStep">1</b></span>
+      <span class="chip live" id="chipTurn">竞拍电厂</span>
+    </div>
+    <div class="top-actions">
+      <button type="button" class="btn ghost" data-act="rules">规则</button>
+      <button type="button" class="btn" data-act="new">新局</button>
+    </div>
+  </header>
+
+  <main class="app">
+    <section class="panel board" aria-label="德国电网地图">
+      <div class="phasebar" id="phaseBar" data-phase="auction"></div>
+      <div class="map-top">
+        <div class="map-title">
+          <h2>德国电网</h2>
+          <p id="mapStats">30 城 · 53 线</p>
+        </div>
+        <div class="map-tools">
+          <span class="zoom-group">
+            <button type="button" class="btn icon" data-act="zoom-out" aria-label="缩小地图">−</button>
+            <button type="button" class="btn icon" data-act="zoom-in" aria-label="放大地图">＋</button>
+            <button type="button" class="btn small" data-act="zoom-reset">全图</button>
+          </span>
+          <span class="tool-sep" aria-hidden="true"></span>
+          <button type="button" class="btn small" data-act="toggle-costs" id="costBtn" aria-pressed="true">连接费</button>
+          <span class="region-tools" id="regionTools">
+            <button type="button" class="btn" data-act="zoom-region" data-region="all" aria-pressed="true">全图</button>
+            <button type="button" class="btn" data-act="zoom-region" data-region="north">北</button>
+            <button type="button" class="btn" data-act="zoom-region" data-region="east">东</button>
+            <button type="button" class="btn" data-act="zoom-region" data-region="west">西</button>
+            <button type="button" class="btn" data-act="zoom-region" data-region="center">中</button>
+            <button type="button" class="btn" data-act="zoom-region" data-region="south">南</button>
+          </span>
+        </div>
+      </div>
+      <div class="map-tip"><b>拖动</b>平移<span class="sep">·</span><b>双指/滚轮</b>缩放<span class="sep">·</span>点城市看费用</div>
+      <div class="map-viewport" id="mapViewport">
+        <svg id="mapSvg" viewBox="0 0 700 820" role="img" aria-label="德国 30 座城市与 53 条连接线路的地图">
+          <defs>
+            <pattern id="gridPat" width="50" height="50" patternUnits="userSpaceOnUse">
+              <path d="M50 0H0V50" fill="none" stroke="rgba(120,180,200,.09)" stroke-width="1"/>
+            </pattern>
+            <radialGradient id="mapGlow" cx="50%" cy="45%" r="62%">
+              <stop offset="0%" stop-color="#1c4a5c" stop-opacity=".38"/>
+              <stop offset="65%" stop-color="#0b2230" stop-opacity=".12"/>
+              <stop offset="100%" stop-color="#05101a" stop-opacity="0"/>
+            </radialGradient>
+            <radialGradient id="cityEmpty" cx="34%" cy="27%" r="80%">
+              <stop offset="0" stop-color="#fbfdfe"/><stop offset=".4" stop-color="#d9e7ec"/>
+              <stop offset=".76" stop-color="#9db2bd"/><stop offset="1" stop-color="#5f7480"/>
+            </radialGradient>
+            <radialGradient id="cityP0" cx="34%" cy="27%" r="82%">
+              <stop offset="0" stop-color="#ffe7b6"/><stop offset=".4" stop-color="#e7a94f"/>
+              <stop offset=".76" stop-color="#a16a20"/><stop offset="1" stop-color="#4f300b"/>
+            </radialGradient>
+            <radialGradient id="cityP1" cx="34%" cy="27%" r="82%">
+              <stop offset="0" stop-color="#c3fffa"/><stop offset=".4" stop-color="#5ac8c1"/>
+              <stop offset=".76" stop-color="#267e78"/><stop offset="1" stop-color="#0d3b38"/>
+            </radialGradient>
+            <radialGradient id="cityP2" cx="34%" cy="27%" r="82%">
+              <stop offset="0" stop-color="#ffd6e2"/><stop offset=".4" stop-color="#e0789b"/>
+              <stop offset=".76" stop-color="#9a3f5c"/><stop offset="1" stop-color="#4b1a2a"/>
+            </radialGradient>
+            <radialGradient id="cityP3" cx="34%" cy="27%" r="82%">
+              <stop offset="0" stop-color="#dcffd0"/><stop offset=".4" stop-color="#82c76c"/>
+              <stop offset=".76" stop-color="#4a8636"/><stop offset="1" stop-color="#22421a"/>
+            </radialGradient>
+            <radialGradient id="cityP4" cx="34%" cy="27%" r="82%">
+              <stop offset="0" stop-color="#eadfff"/><stop offset=".4" stop-color="#a98bea"/>
+              <stop offset=".76" stop-color="#6a4cae"/><stop offset="1" stop-color="#2f1f55"/>
+            </radialGradient>
+            <radialGradient id="cityP5" cx="34%" cy="27%" r="82%">
+              <stop offset="0" stop-color="#ffdcc6"/><stop offset=".4" stop-color="#e68152"/>
+              <stop offset=".76" stop-color="#9c4a27"/><stop offset="1" stop-color="#4d2110"/>
+            </radialGradient>
+            <filter id="pieceShadow" x="-70%" y="-70%" width="240%" height="240%">
+              <feDropShadow dx="0" dy="2.4" stdDeviation="2" flood-color="#000" flood-opacity=".55"/>
+            </filter>
+          </defs>
+          <rect width="700" height="820" fill="#06131d"/>
+          <rect width="700" height="820" fill="url(#gridPat)"/>
+          <rect width="700" height="820" fill="url(#mapGlow)"/>
+          <g id="mapScene"></g>
+        </svg>
+      </div>
+      <div class="map-legend" id="mapLegend"></div>
+      <div class="city-detail" id="cityDetail" hidden></div>
+    </section>
+
+    <section class="panel players" aria-label="玩家面板">
+      <div class="panel-head"><h2>玩家</h2><span id="playerNote">现金 · 电厂 · 城市 · 可供电</span></div>
+      <div class="players-grid" id="playersGrid"></div>
+    </section>
+
+    <section class="panel action" id="actionPanel" aria-label="当前操作" aria-live="polite"></section>
+
+    <section class="panel market" aria-label="电厂市场">
+      <div class="panel-head"><h2>电厂市场</h2><span id="marketNote">起拍价 = 牌面编号</span></div>
+      <div id="marketBody"></div>
+    </section>
+
+    <section class="panel resources" aria-label="资源市场">
+      <div class="panel-head"><h2>资源市场</h2><span>从最低价有货的格子取货</span></div>
+      <div id="resBody"></div>
+    </section>
+
+    <section class="panel log" aria-label="战报">
+      <div class="panel-head"><h2>战报</h2><span id="logNote">第 1 轮</span></div>
+      <ol class="log-list" id="logList"></ol>
+    </section>
+  </main>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="sr-only" id="live" aria-live="polite"></div>
+
+<!-- 新局 -->
+<div class="modal" id="newModal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="newTitle">
+    <div class="modal-head">
+      <div><h2 id="newTitle">开新局</h2><p>你控制 P1，其余席位由 AI 接手。</p></div>
+      <button type="button" class="btn icon modal-close" data-act="close-modal" data-modal="newModal" aria-label="关闭">×</button>
+    </div>
+    <div class="field">
+      <label for="newPlayers">玩家人数</label>
+      <select id="newPlayers">
+        <option value="2">2 人</option>
+        <option value="3">3 人</option>
+        <option value="4">4 人</option>
+        <option value="5">5 人</option>
+        <option value="6">6 人</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="newSeed">随机种子</label>
+      <input id="newSeed" type="number" inputmode="numeric" min="1" max="99999999" step="1">
+    </div>
+    <p class="modal-note" id="newNote"></p>
+    <div class="result-actions">
+      <button type="button" class="btn" data-act="random-seed">随机种子</button>
+      <button type="button" class="btn primary" data-act="start-new">开始新局</button>
+    </div>
+  </div>
+</div>
+
+<!-- 规则 -->
+<div class="modal" id="rulesModal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="rulesTitle">
+    <div class="modal-head">
+      <div><h2 id="rulesTitle">规则速览</h2><p>新版德国图 · 2–6 人 · 五阶段一轮</p></div>
+      <button type="button" class="btn icon modal-close" data-act="close-modal" data-modal="rulesModal" aria-label="关闭">×</button>
+    </div>
+    <div class="rules-body">
+      <h3>一轮流程</h3>
+      <p>竞拍电厂 → 购买资源 → 建设电网 → 官僚阶段（供电收钱、补资源、更新市场）→ 下一轮。</p>
+      <h3>竞拍电厂</h3>
+      <ul>
+        <li>起拍价等于牌面编号；加价必须更高，且不超过现金。</li>
+        <li>“跳过”只退出当前这一场；“离场”退出本轮所有竞拍。</li>
+        <li>每人每轮最多买 1 张；超过持有上限（3–6 人 3 张，2 人 4 张）要立刻弃一张。</li>
+        <li>第一轮每人必须挂牌（买不起任何电厂时除外）。</li>
+      </ul>
+      <h3>购买资源</h3>
+      <ul>
+        <li>逆顺位购买；每次从该资源最低价且有货的格子取 1 个，取空后现价上移。</li>
+        <li>只能买自己电厂能存放的类型；每张电厂最多存 2 × 燃料数。</li>
+      </ul>
+      <h3>建设电网</h3>
+      <ul>
+        <li>逆顺位建造；首座城市只付槽位费 10，之后付槽位费 + 最便宜连接费。</li>
+        <li>槽位费按该城已有房子数：空城 10，已有 1 栋 15，已有 2 栋 20。</li>
+        <li>Step 1/2/3 每城最多 1/2/3 栋；第 7 座城市触发 Step 2（6 人局为 6 座）。</li>
+      </ul>
+      <h3>官僚阶段</h3>
+      <ul>
+        <li>选择本轮供电城市数；不能超过城市数，也不能超过燃料可支撑的电厂容量。</li>
+        <li>收入：0 城 10，1 城 22，2 城 33，3 城 44，4 城 54……20 城 150。</li>
+        <li>运行的电厂一次性消耗全部燃料；不运行的电厂不耗燃料。</li>
+      </ul>
+      <h3>终局</h3>
+      <p>建网结束后，任意玩家城市数达到阈值立即终局（新版 2 人 18 城）。比较<strong>能供电的城市数</strong>，再比现金、再比建房数。</p>
+      <h3>本页操作</h3>
+      <ul>
+        <li>地图：拖动平移、双指或滚轮缩放；数字是边上连接费。建网阶段金色光圈 = 合法目标。</li>
+        <li>点城市查看槽位费、接入费与总价；也可在操作面板按费用直接建。</li>
+        <li>你只操作 P1；其他席位自动行动。AI 行动等待时可点“立即执行”。</li>
+      </ul>
+      <p class="hint-small">地图为 30 城、53 线的抽象拓扑，连接费为合理估值，非官方逐边数据。完整规则见 rules.md。</p>
+    </div>
+  </div>
+</div>
+
+<!-- 结算 -->
+<div class="modal" id="resultModal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="resultTitle">
+    <div class="modal-head">
+      <div><h2 id="resultTitle">终局结算</h2><p id="resultSub"></p></div>
+      <button type="button" class="btn icon modal-close" data-act="close-modal" data-modal="resultModal" aria-label="关闭">×</button>
+    </div>
+    <div id="resultBody"></div>
+    <div class="result-actions">
+      <button type="button" class="btn" data-act="close-modal" data-modal="resultModal">查看棋盘</button>
+      <button type="button" class="btn primary" data-act="restart">再来一局</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+const PG = await import('./engine.js');
+
+/* ------------------------------------------------------------------ */
+/* constants                                                           */
+/* ------------------------------------------------------------------ */
+const PLAYER_COLORS = ['#e7a94f', '#5ac8c1', '#e0789b', '#82c76c', '#a98bea', '#e68152'];
+const PHASE_ORDER = ['auction', 'resources', 'build', 'bureaucracy'];
+const PHASE_INFO = {
+  auction: { name: '竞拍电厂', short: '竞拍', hint: '按顺位挂牌竞价，最高价成交' },
+  resources: { name: '购买资源', short: '资源', hint: '逆序购买，从最低价有货的格子取' },
+  build: { name: '建设电网', short: '建网', hint: '逆序建城，连接费看边上的数字' },
+  bureaucracy: { name: '官僚阶段', short: '官僚', hint: '供电收钱，然后补资源、更新市场' },
+  'game-over': { name: '终局', short: '终局', hint: '比较能供电的城市数' }
+};
+const FUEL = {
+  coal: { cn: '煤', color: '#a8b6c2' },
+  oil: { cn: '油', color: '#d9a25a' },
+  garbage: { cn: '垃圾', color: '#82bf8e' },
+  uranium: { cn: '铀', color: '#c58be6' },
+  hybrid: { cn: '煤/油', color: '#c0a67c' },
+  eco: { cn: '环保', color: '#68c9a4' },
+  fusion: { cn: '聚变', color: '#71c7e8' }
+};
+const RES_INFO = {
+  coal: { cn: '煤', color: '#a8b6c2', max: 8 },
+  oil: { cn: '油', color: '#d9a25a', max: 8 },
+  garbage: { cn: '垃圾', color: '#82bf8e', max: 8 },
+  uranium: { cn: '铀', color: '#c58be6', max: 16 }
+};
+const RES_ICON = { coal: 'ico-coal', oil: 'ico-oil', garbage: 'ico-garbage', uranium: 'ico-uranium' };
+function resourceIcon(kind) {
+  return `<svg class="res-ico" viewBox="0 0 32 32" aria-hidden="true"><use href="#${RES_ICON[kind]}"></use></svg>`;
+}
+const REGION_CN = { north: '北部', east: '东部', west: '西部', center: '中部', south: '南部' };
+const CITY_ZH = {
+  kiel: '基尔', hamburg: '汉堡', bremen: '不来梅', hannover: '汉诺威', berlin: '柏林',
+  magdeburg: '马格德堡', leipzig: '莱比锡', dresden: '德累斯顿', erfurt: '埃尔福特',
+  muenster: '明斯特', bielefeld: '比勒费尔德', dortmund: '多特蒙德', essen: '埃森',
+  koeln: '科隆', aachen: '亚琛', kassel: '卡塞尔', frankfurt: '法兰克福',
+  wiesbaden: '威斯巴登', mainz: '美因茨', wuerzburg: '维尔茨堡', nuernberg: '纽伦堡',
+  regensburg: '雷根斯堡', augsburg: '奥格斯堡', muenchen: '慕尼黑', passau: '帕绍',
+  stuttgart: '斯图加特', karlsruhe: '卡尔斯鲁厄', mannheim: '曼海姆',
+  saarbruecken: '萨尔布吕肯', freiburg: '弗赖堡'
+};
+const CITY_POS = {
+  kiel: [372, 64, 16, 5, 'start'],
+  hamburg: [356, 134, 16, 5, 'start'],
+  bremen: [282, 168, -15, 5, 'end'],
+  hannover: [330, 238, 16, 5, 'start'],
+  berlin: [520, 198, 16, 5, 'start'],
+  magdeburg: [438, 248, 16, 5, 'start'],
+  leipzig: [470, 318, -15, -4, 'end'],
+  dresden: [570, 342, 16, 5, 'start'],
+  erfurt: [420, 392, 16, 5, 'start'],
+  muenster: [196, 248, -15, 5, 'end'],
+  bielefeld: [254, 286, 16, 5, 'start'],
+  dortmund: [206, 328, 16, 5, 'start'],
+  essen: [150, 332, -15, 5, 'end'],
+  koeln: [162, 392, -15, 5, 'end'],
+  aachen: [82, 402, -15, 5, 'end'],
+  kassel: [326, 348, 16, 5, 'start'],
+  frankfurt: [258, 478, -15, -14, 'end'],
+  wiesbaden: [202, 494, -14, 18, 'end'],
+  mainz: [238, 522, 20, -6, 'start'],
+  wuerzburg: [330, 506, 34, -4, 'start'],
+  nuernberg: [402, 566, 16, 5, 'start'],
+  regensburg: [472, 616, 16, 5, 'start'],
+  augsburg: [408, 684, -15, 5, 'end'],
+  muenchen: [466, 724, 16, 5, 'start'],
+  passau: [566, 684, -15, 5, 'end'],
+  stuttgart: [286, 612, 16, 5, 'start'],
+  karlsruhe: [214, 592, -15, 5, 'end'],
+  mannheim: [240, 544, 34, 26, 'start'],
+  saarbruecken: [108, 548, -14, 5, 'end'],
+  freiburg: [184, 690, -15, 5, 'end']
+};
+const MAP_W = 700;
+const MAP_H = 820;
+const CITY_SLOT = [10, 15, 20];
+
+/* ------------------------------------------------------------------ */
+/* app state                                                           */
+/* ------------------------------------------------------------------ */
+const UI = {
+  state: null,
+  human: 0,
+  playerCount: 2,
+  seed: 5,
+  aiFast: false,
+  selectedCity: null,
+  selectedPlant: null,
+  offerBid: null,
+  bidAmount: null,
+  supplyCount: null,
+  view: { k: 1, cx: 350, cy: 410 },
+  region: 'all',
+  showCosts: true,
+  log: [],
+  roundEvents: [],
+  turnBought: 0,
+  turnBuilt: 0,
+  buyQty: 1,
+  toastTimer: 0,
+  aiTimer: null,
+  aiGen: 0,
+  resultShown: false,
+  booted: false
+};
+
+const $ = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+const pad2 = (n) => String(n).padStart(2, '0');
+const esc = (s) => String(s == null ? '' : s)
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+function playerName(i) {
+  if (i === undefined || i === null) return '';
+  return i === UI.human ? `P${i + 1} 你` : `P${i + 1} AI`;
+}
+function playerShort(i) { return `P${i + 1}`; }
+function colorFor(i) { return PLAYER_COLORS[i % PLAYER_COLORS.length]; }
+function cityById(id) {
+  return UI.state.map.cities.find((c) => c.id === id) || { id, name: id, region: '' };
+}
+function cityName(id) { return CITY_ZH[id] || cityById(id).name; }
+function cityEn(id) { return cityById(id).name; }
+function resTotal(player, kind) {
+  let n = 0;
+  for (const plant of player.plants) n += plant[kind] || 0;
+  return n;
+}
+function maxBuyable(st, player, kind) {
+  const slots = st.resourceMarket[kind].slice();
+  let free = PG.freeStorage(player, kind);
+  let money = player.money;
+  let n = 0;
+  while (free > 0) {
+    const idx = slots.findIndex((v) => v > 0);
+    if (idx < 0) break;
+    const price = idx + 1;
+    if (price > money) break;
+    slots[idx] -= 1;
+    money -= price;
+    free -= 1;
+    n += 1;
+  }
+  return n;
+}
+function storageCap(plant) { return plant.fuel * 2; }
+function storageLine(plant) {
+  if (plant.type === 'eco' || plant.type === 'fusion') return '免燃料';
+  if (plant.type === 'hybrid') return `煤${plant.coal} 油${plant.oil}/${storageCap(plant)}`;
+  return `${FUEL[plant.type].cn}${plant[plant.type]}/${storageCap(plant)}`;
+}
+function fuelNeedText(plant) {
+  if (plant.fuel === 0) return '免燃料';
+  if (plant.type === 'hybrid') return `需 ${plant.fuel} 煤/油`;
+  return `需 ${plant.fuel} ${FUEL[plant.type].cn}`;
+}
+function plantChip(plant) {
+  const fc = FUEL[plant.type].color;
+  return `<span class="plant-chip" style="--fc:${fc}" title="电厂 ${pad2(plant.number)} · 供 ${plant.capacity} 城 · ${fuelNeedText(plant)} · 现存 ${storageLine(plant)}"><b>${pad2(plant.number)}</b><em>供${plant.capacity}</em><i>${storageLine(plant)}</i></span>`;
+}
+function currentPlayer() { return PG.currentPlayer(UI.state); }
+function isHumanTurn() { return currentPlayer() === UI.human; }
+function phaseInfo(phase) { return PHASE_INFO[phase] || PHASE_INFO.auction; }
+function liveText(t) { $('#live').textContent = t; }
+
+/* ------------------------------------------------------------------ */
+/* game lifecycle                                                      */
+/* ------------------------------------------------------------------ */
+function createGame(opts) {
+  const n = opts.playerCount || 2;
+  UI.playerCount = n;
+  UI.seed = opts.seed == null ? 5 : opts.seed;
+  UI.state = PG.createGame({
+    seed: UI.seed,
+    playerCount: n,
+    names: Array.from({ length: n }, (_, i) => `P${i + 1}`)
+  });
+  UI.selectedCity = null;
+  UI.selectedPlant = null;
+  UI.offerBid = null;
+  UI.bidAmount = null;
+  UI.supplyCount = null;
+  UI.view = { k: 1, cx: 350, cy: 410 };
+  UI.region = 'all';
+  UI.showCosts = true;
+  UI.log = [];
+  UI.roundEvents = [];
+  UI.turnBought = 0;
+  UI.turnBuilt = 0;
+  UI.buyQty = 1;
+  UI.resultShown = false;
+  const first = PG.currentPlayer(UI.state);
+  pushLog('round', `第 1 轮 · 竞拍电厂。先手 ${playerName(first)}。`);
+  pushLog('sys', '点电厂挂牌；第一轮每位玩家都必须挂一张（买不起时除外）。');
+  closeAllModals();
+  renderAll();
+  scheduleAI();
+}
+
+function randomSeed() {
+  return 1 + Math.floor(Math.random() * 99999999);
+}
+
+function restartGame() {
+  createGame({ playerCount: UI.playerCount, seed: randomSeed() });
+}
+
+/* ------------------------------------------------------------------ */
+/* actions                                                             */
+/* ------------------------------------------------------------------ */
+function act(action) {
+  if (!UI.state || UI.state.phase === 'game-over') return;
+  const before = UI.state;
+  const prevPhase = before.phase;
+  const prevStep = before.step;
+  const prevRound = before.round;
+  const prevPlayer = currentPlayer();
+  let next;
+  try {
+    next = PG.applyAction(before, action);
+  } catch (err) {
+    showToast('操作无效', String(err.message || err).replace('PowerGrid illegal: ', ''), '');
+    renderAction();
+    return;
+  }
+  UI.state = next;
+  if (prevPhase !== next.phase || prevPlayer !== currentPlayer()) {
+    UI.turnBought = 0;
+    UI.turnBuilt = 0;
+    UI.buyQty = 1;
+    UI.selectedPlant = null;
+    UI.offerBid = null;
+    UI.bidAmount = null;
+    UI.supplyCount = null;
+  }
+  if (prevPhase !== next.phase) {
+    if (next.phase !== 'game-over') {
+      const pi = phaseInfo(next.phase);
+      showToast(`${pi.name}`, pi.hint, next.phase === 'bureaucracy' ? 'good' : 'step');
+    }
+  }
+  if (next.step > prevStep) {
+    showToast(`进入 Step ${next.step}`, `每城可放 ${PG.cityCapacity(next)} 栋，槽位费 10/15/20`, 'step');
+    pushLog('round', `阶段推进：进入 Step ${next.step}（每城 ${PG.cityCapacity(next)} 栋）。`);
+  }
+  ingestEvents(next.lastEvents);
+  if (next.round > prevRound) {
+    const summary = UI.roundEvents.map((ev) => {
+      return `${playerShort(ev.player)} 供 ${ev.cities} 城 +E${ev.payment}`;
+    }).join(' · ');
+    pushLog('round', `第 ${prevRound} 轮结束${summary ? `：${summary}` : ''}。`);
+    UI.roundEvents = [];
+    pushLog('round', `第 ${next.round} 轮 · 竞拍电厂。`);
+    showToast(`第 ${next.round} 轮开始`, summary || '竞拍电厂阶段', 'step');
+  }
+  if (action.type === 'buildCity') {
+    UI.turnBuilt += 1;
+    UI.selectedCity = null;
+  }
+  if (action.type === 'buyResource') UI.turnBought += 1;
+  if (action.type === 'supplyCities') {
+    const ev = next.lastEvents.find((e) => e.type === 'supplied' && e.player === UI.human);
+    if (ev) {
+      showToast(`供电 ${ev.cities} 城`, `收入 +E${ev.payment} · 运行电厂 ${ev.plants.map(pad2).join('、') || '无'}`, 'good');
+    }
+  }
+  if (next.phase === 'game-over') {
+    scheduleAI();
+    renderAll();
+    showResult();
+    return;
+  }
+  renderAll();
+  scheduleAI();
+}
+
+function buyMany(kind, qty) {
+  const target = Math.max(1, Number(qty) || 1);
+  for (let i = 0; i < target; i += 1) {
+    const st = UI.state;
+    if (!st || st.phase !== 'resources' || currentPlayer() !== UI.human) break;
+    const legal = PG.legalActions(st, UI.human);
+    if (!legal.some((a) => a.type === 'buyResource' && a.resource === kind)) break;
+    act({ type: 'buyResource', resource: kind });
+  }
+}
+
+function ingestEvents(events) {  for (const ev of events) {
+    const text = eventText(ev);
+    if (text) pushLog(ev.type, text);
+    if (ev.type === 'supplied') UI.roundEvents.push(ev);
+  }
+  const buy = events.find((e) => e.type === 'resource-bought');
+  if (buy) {
+    setTimeout(() => {
+      const el = document.querySelector(`[data-res-slot="${buy.resource}-${buy.price}"]`);
+      if (el) {
+        el.classList.add('flash');
+        setTimeout(() => el.classList.remove('flash'), 950);
+      }
+    }, 40);
+  }
+}
+
+function eventText(ev) {
+  switch (ev.type) {
+    case 'auction-opened': return `${playerName(ev.player)} 挂牌电厂 ${pad2(ev.plant)}，开价 E${ev.bid}。`;
+    case 'auction-bid': return `${playerName(ev.player)} 加价到 E${ev.amount}。`;
+    case 'auction-pass': return `${playerName(ev.player)} 跳过这场竞价。`;
+    case 'auction-decline': return `${playerName(ev.player)} 退出本轮竞拍。`;
+    case 'auction-won': return `${playerName(ev.player)} 以 E${ev.price} 买下电厂 ${pad2(ev.plant)}。`;
+    case 'plant-discarded': return `${playerName(ev.player)} 弃掉电厂 ${pad2(ev.plant)}。`;
+    case 'resource-bought': return `${playerName(ev.player)} 买入${RES_INFO[ev.resource].cn}，花费 E${ev.price}。`;
+    case 'city-built': return `${playerName(ev.player)} 在 ${cityName(ev.city)} 建城，花费 E${ev.cost}。`;
+    case 'supplied': return `${playerName(ev.player)} 供电 ${ev.cities} 城，收入 +E${ev.payment}（电厂 ${ev.plants.map(pad2).join('、') || '无'}）。`;
+    case 'resupply': return `资源市场补充完成（Step ${ev.step}）。`;
+    case 'minimum-rule': return `最低编号规则：电厂 ${pad2(ev.plant)} 移出市场（最大城市数 ${ev.cities}）。`;
+    case 'step3-card-drawn': return `抽到 Step 3 标记牌，阶段即将推进。`;
+    case 'phase': return ev.phase === 'resources' ? '进入购买资源阶段。' : ev.phase === 'build' ? '进入建设电网阶段。' : ev.phase === 'bureaucracy' ? '进入官僚阶段。' : '';
+    case 'game-over': return `终局：${ev.reason === 'cities' ? '有玩家达到城市阈值' : ev.reason === 'round-limit' ? '达到轮数上限' : '游戏结束'}。`;
+    default: return '';
+  }
+}
+
+function pushLog(kind, text) {
+  UI.log.unshift({ kind, text, round: UI.state ? UI.state.round : 1 });
+  if (UI.log.length > 60) UI.log.pop();
+}
+
+/* ------------------------------------------------------------------ */
+/* AI                                                                  */
+/* ------------------------------------------------------------------ */
+function scheduleAI() {
+  clearTimeout(UI.aiTimer);
+  const st = UI.state;
+  if (!st || st.phase === 'game-over') return;
+  const p = PG.currentPlayer(st);
+  if (p === null || p === UI.human) return;
+  const gen = ++UI.aiGen;
+  UI.aiTimer = setTimeout(() => {
+    if (gen !== UI.aiGen) return;
+    runAI();
+  }, UI.aiFast ? 130 : 620);
+}
+
+function runAI() {
+  const st = UI.state;
+  if (!st || st.phase === 'game-over') return;
+  const p = PG.currentPlayer(st);
+  if (p === null || p === UI.human) return;
+  const list = PG.legalActions(st, p);
+  const action = PG.chooseGreedyAction(st, list);
+  if (!action) return;
+  act(action);
+}
+
+/* ------------------------------------------------------------------ */
+/* rendering                                                           */
+/* ------------------------------------------------------------------ */
+function renderAll() {
+  if (!UI.state) return;
+  renderChrome();
+  renderPhaseBar();
+  renderMap();
+  renderCityDetail();
+  renderPlayers();
+  renderMarket();
+  renderResources();
+  renderAction();
+  renderLog();
+}
+
+function renderChrome() {
+  const st = UI.state;
+  $('#chipRound').textContent = st.round;
+  $('#chipStep').textContent = st.step;
+  const turn = $('#chipTurn');
+  const p = currentPlayer();
+  if (st.phase === 'game-over') {
+    turn.textContent = '终局';
+    turn.classList.remove('you');
+  } else if (p === UI.human) {
+    turn.textContent = '你的回合';
+    turn.classList.add('you');
+  } else {
+    turn.textContent = `${playerShort(p)} 行动中`;
+    turn.classList.remove('you');
+  }
+  $('#mapStats').textContent = `${st.map.cities.length} 城 · ${st.map.edges.length} 线`;
+  $('#costBtn').setAttribute('aria-pressed', UI.showCosts ? 'true' : 'false');
+  $('#logNote').textContent = st.phase === 'game-over' ? '已终局' : `第 ${st.round} 轮`;
+  $$('#regionTools .btn').forEach((b) => b.setAttribute('aria-pressed', b.dataset.region === UI.region ? 'true' : 'false'));
+}
+
+function renderPhaseBar() {
+  const st = UI.state;
+  const phase = st.phase;
+  const idx = PHASE_ORDER.indexOf(phase);
+  const current = currentPlayer();
+  const steps = PHASE_ORDER.map((ph, i) => {
+    const cls = i < idx ? 'done' : i === idx ? 'active' : '';
+    return `<span class="${cls}">${PHASE_INFO[ph].short}</span>`;
+  }).join('');
+  let sub = phaseInfo(phase).hint;
+  if (phase === 'auction') {
+    const a = st.auction;
+    if (a && a.mode === 'bid') sub = `${playerShort(a.highBidder)} 最高 E${a.currentBid} · 电厂 ${pad2(a.plant)}`;
+    else if (a && a.mode === 'discard') sub = `${playerShort(a.discardPlayer)} 需弃一张电厂`;
+    else if (current === UI.human) sub = '轮到你挂牌 · 选实际市场电厂';
+    else if (current !== null) sub = `${playerShort(current)} 正在选择要挂牌的电厂`;
+  } else if (phase === 'resources') {
+    sub = `逆序购买 · 轮到 ${current === null ? '-' : playerShort(current)}${current === UI.human ? '（你）' : ''}`;
+  } else if (phase === 'build') {
+    sub = `逆序建城 · 轮到 ${current === null ? '-' : playerShort(current)}${current === UI.human ? '（你）' : ''}`;
+  } else if (phase === 'bureaucracy') {
+    sub = `供电收钱 · 轮到 ${current === null ? '-' : playerShort(current)}${current === UI.human ? '（你）' : ''}`;
+  } else if (phase === 'game-over') {
+    sub = '终局结算 · 比较能供电的城市数';
+  }
+  const icon = '<svg viewBox="0 0 24 24" fill="none"><path d="M13.4 2 5 13.2h5L8.6 22l9.8-12.3h-5.3z" fill="currentColor"/></svg>';
+  $('#phaseBar').dataset.phase = phase;
+  $('#phaseBar').innerHTML = `
+    <div class="phase-main">
+      <span class="phase-ico" aria-hidden="true">${icon}</span>
+      <div class="phase-copy">
+        <b>${phaseInfo(phase).name} · 第 ${st.round} 轮</b>
+        <span>${esc(sub)}</span>
+      </div>
+    </div>
+    <div class="phase-steps" aria-hidden="true">${steps}</div>
+    <span class="phase-count">${phase === 'game-over' ? '终局' : `阶段 ${Math.max(1, idx + 1)}/4`}</span>`;
+}
+
+function ownersByCity() {
+  const owners = {};
+  for (const city of UI.state.map.cities) owners[city.id] = [];
+  for (const p of UI.state.players) {
+    for (const id of p.cities) {
+      if (!owners[id]) owners[id] = [];
+      owners[id].push(p.index);
+    }
+  }
+  return owners;
+}
+
+function renderMap() {
+  const st = UI.state;
+  const owners = ownersByCity();
+  const legalMap = new Map();
+  if (st.phase === 'build' && isHumanTurn()) {
+    for (const item of PG.legalBuildCities(st, UI.human)) legalMap.set(item.city, item.cost);
+  }
+  const path = [];
+  for (const edge of st.map.edges) {
+    const pa = CITY_POS[edge.a] || [350, 410];
+    const pb = CITY_POS[edge.b] || [350, 410];
+    const shared = (owners[edge.a] || []).filter((x) => (owners[edge.b] || []).includes(x));
+    const cls = shared.length ? 'edge owned' : 'edge';
+    const stroke = shared.length ? colorFor(shared[0]) : '';
+    const style = stroke ? ` style="stroke:${stroke}"` : '';
+    path.push(`<line class="${cls}" x1="${pa[0]}" y1="${pa[1]}" x2="${pb[0]}" y2="${pb[1]}"${style}/>`);
+    if (UI.showCosts) {
+      const mx = (pa[0] + pb[0]) / 2;
+      const my = (pa[1] + pb[1]) / 2;
+      const label = String(edge.cost);
+      const w = label.length * 8 + 8;
+      path.push(`<rect class="edge-cost-bg" x="${(mx - w / 2).toFixed(1)}" y="${(my - 7.5).toFixed(1)}" width="${w}" height="15" rx="4"/>`);
+      path.push(`<text class="edge-cost" x="${mx.toFixed(1)}" y="${(my + 4.6).toFixed(1)}">${label}</text>`);
+    }
+  }
+
+  const cityNodes = [];
+  for (const city of st.map.cities) {
+    const pos = CITY_POS[city.id] || [350, 410, 16, 5, 'start'];
+    const [x, y, dx, dy, anchor] = pos;
+    const own = owners[city.id] || [];
+    const isLegal = legalMap.has(city.id);
+    const isSelected = UI.selectedCity === city.id;
+    const mine = own.includes(UI.human);
+    let dot;
+    let arcs = '';
+    if (own.length === 0) {
+      dot = '<circle class="city-dot" r="12" fill="url(#cityEmpty)" stroke="rgba(247,252,255,.88)" stroke-width="1.4" filter="url(#pieceShadow)"/>';
+    } else if (own.length === 1) {
+      dot = `<circle class="city-dot" r="12" fill="url(#cityP${own[0]})" stroke="rgba(255,255,255,.82)" stroke-width="1.4" filter="url(#pieceShadow)"/>`;
+    } else {
+      dot = '<circle class="city-dot" r="11.5" fill="#0a1820" stroke="#eaf5fa" stroke-width="1.7" filter="url(#pieceShadow)"/>';
+      const r = 12.9;
+      const circ = 2 * Math.PI * r;
+      const seg = circ / own.length;
+      arcs = own.map((pi, i) => `<circle r="${r}" fill="none" stroke="${colorFor(pi)}" stroke-width="5.4" stroke-dasharray="${(seg - 1.8).toFixed(2)} ${(circ - seg + 1.8).toFixed(2)}" stroke-dashoffset="${(-i * seg).toFixed(2)}" transform="rotate(-90)"/>`).join('');
+    }
+    const shine = '<circle class="city-shine" cx="-3.7" cy="-4.2" r="3.3" fill="rgba(255,255,255,.5)"/>';
+    const count = own.length > 1 ? `<text class="city-count" x="0" y="0">${own.length}</text>` : '';
+    const feeTag = isLegal && (UI.view.k >= 1.15 || isSelected)
+      ? `<g class="city-fee-tag"><rect x="-15" y="24" width="30" height="15" rx="4" fill="#e7b96b"/><text class="city-fee" x="0" y="35">${legalMap.get(city.id)}</text></g>`
+      : '';
+    const zh = cityName(city.id);
+    const en = city.name;
+    const plateW = Math.max(zh.length * 18, en.length * 5.6) + 10;
+    const plateX = anchor === 'end' ? dx - plateW + 5 : dx - 5;
+    cityNodes.push(`
+      <g class="city ${isLegal ? 'legal' : ''} ${isSelected ? 'selected' : ''} ${mine ? 'mine' : ''}" data-city="${city.id}" tabindex="0" role="button"
+         aria-label="${esc(zh)} ${esc(en)}，${own.length ? `已占 ${own.length} 栋` : '空城'}${isLegal ? `，可建，费用 ${legalMap.get(city.id)}` : ''}"
+         transform="translate(${x} ${y})">
+        <circle class="city-halo" r="21"/>
+        <circle class="city-outline" r="15"/>
+        ${dot}
+        ${arcs}
+        ${shine}
+        ${count}
+        ${feeTag}
+        <rect class="city-plate" x="${plateX.toFixed(1)}" y="${dy - 16}" width="${plateW.toFixed(1)}" height="30" rx="4"/>
+        <text class="city-label" x="${dx}" y="${dy}" text-anchor="${anchor}">${esc(zh)}</text>
+        <text class="city-sub" x="${dx}" y="${dy + 11.5}" text-anchor="${anchor}">${esc(en)}</text>
+      </g>`);
+  }
+  $('#mapScene').innerHTML = path.join('') + cityNodes.join('');
+  applyViewBox();
+  renderMapLegend();
+}
+
+function renderMapLegend() {
+  const players = UI.state.players.map((p) => `<span><i style="background:${colorFor(p.index)}"></i>${playerShort(p.index)}${p.index === UI.human ? ' 你' : ''}</span>`).join('');
+  $('#mapLegend').innerHTML = `<span><i style="background:#0a2030;border-color:#d3e9f4"></i>空城</span>${players}<span>数字 = 连接费</span>`;
+}
+
+function applyViewBox() {
+  const k = clamp(UI.view.k || 1, 1, 4);
+  UI.view.k = k;
+  const w = MAP_W / k;
+  const h = MAP_H / k;
+  UI.view.cx = clamp(UI.view.cx, w / 2, MAP_W - w / 2);
+  UI.view.cy = clamp(UI.view.cy, h / 2, MAP_H - h / 2);
+  if (k <= 1.0001) {
+    UI.view.cx = MAP_W / 2;
+    UI.view.cy = MAP_H / 2;
+  }
+  const svg = $('#mapSvg');
+  svg.setAttribute('viewBox', `${(UI.view.cx - w / 2).toFixed(2)} ${(UI.view.cy - h / 2).toFixed(2)} ${w.toFixed(2)} ${h.toFixed(2)}`);
+}
+
+function zoomBy(factor) {
+  UI.view.k = clamp(UI.view.k * factor, 1, 4);
+  if (UI.view.k <= 1.001) UI.region = 'all';
+  applyViewBox();
+  renderChrome();
+}
+
+function setRegion(region) {
+  UI.region = region;
+  if (region === 'all') {
+    UI.view = { k: 1, cx: MAP_W / 2, cy: MAP_H / 2 };
+    applyViewBox();
+    renderChrome();
+    return;
+  }
+  const pts = UI.state.map.cities
+    .filter((c) => c.region === region)
+    .map((c) => CITY_POS[c.id])
+    .filter(Boolean);
+  if (!pts.length) return;
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const p of pts) {
+    minX = Math.min(minX, p[0]); maxX = Math.max(maxX, p[0]);
+    minY = Math.min(minY, p[1]); maxY = Math.max(maxY, p[1]);
+  }
+  const pad = 56;
+  const k = clamp(Math.min(MAP_W / (maxX - minX + pad * 2), MAP_H / (maxY - minY + pad * 2)), 1, 3.4);
+  UI.view = { k, cx: (minX + maxX) / 2, cy: (minY + maxY) / 2 };
+  applyViewBox();
+  renderChrome();
+}
+
+function renderCityDetail() {
+  const box = $('#cityDetail');
+  if (!UI.selectedCity) {
+    box.hidden = true;
+    box.innerHTML = '';
+    return;
+  }
+  const st = UI.state;
+  const city = cityById(UI.selectedCity);
+  const occ = PG.cityOccupancy(st, city.id);
+  const cap = PG.cityCapacity(st);
+  const slot = CITY_SLOT[Math.min(occ, 2)];
+  const me = st.players[UI.human];
+  const mine = me.cities.includes(city.id);
+  const distances = me.cities.length ? PG.shortestConnectionCosts(st, me.cities) : null;
+  const conn = distances ? distances[city.id] : 0;
+  const total = PG.buildCost(st, UI.human, city.id);
+  const legal = st.phase === 'build' && isHumanTurn()
+    ? PG.legalBuildCities(st, UI.human).find((x) => x.city === city.id)
+    : null;
+  const feeValid = Number.isFinite(total);
+  let status;
+  if (mine) status = '你已在此建城。';
+  else if (occ >= cap) status = `城市已满：Step ${st.step} 每城最多 ${cap} 栋。`;
+  else if (!feeValid) status = '当前网络不可达。';
+  else status = `空位 ${cap - occ} · 槽位费 <strong>E${slot}</strong> · 接入费 <strong>${me.cities.length ? `E${conn}` : 'E0（首城）'}</strong> · 总价 <strong>E${total}</strong>`;
+  const canBuild = !!legal;
+  const btn = canBuild
+    ? `<button type="button" class="btn primary" data-act="build-map" data-city="${city.id}">建造 E${legal.cost}</button>`
+    : '';
+  box.hidden = false;
+  box.innerHTML = `
+    <div class="cd-copy">
+      <b>${esc(cityName(city.id))} <small>${esc(cityEn(city.id))} · ${REGION_CN[city.region] || city.region}</small> ${mine ? '<small>你的城市</small>' : ''}</b>
+      <p>${status}</p>
+    </div>
+    <div class="cd-actions">
+      ${btn}
+      <button type="button" class="btn icon ghost" data-act="clear-city" aria-label="关闭城市信息">×</button>
+    </div>`;
+}
+
+function renderPlayers() {
+  const st = UI.state;
+  const html = st.players.map((p) => {
+    const cur = currentPlayer() === p.index && st.phase !== 'game-over';
+    const order = st.turnOrder.indexOf(p.index) + 1;
+    const powered = PG.maxPowered(p);
+    const resBits = PG.RESOURCE_KINDS.map((k) => resTotal(p, k)).filter((n) => n > 0);
+    const plants = p.plants.length
+      ? p.plants.map(plantChip).join('')
+      : '<span class="empty-note" style="padding:0">尚无电厂</span>';
+    return `
+      <article class="player-card ${cur ? 'current' : ''} ${p.index === UI.human ? 'you' : ''}" style="--pc:${colorFor(p.index)}">
+        <div class="pc-head">
+          <span class="pc-dot"></span>
+          <span class="pc-name">${playerShort(p.index)}</span>
+          ${p.index === UI.human ? '<span class="pc-tag">你</span>' : ''}
+          <span class="pc-order">顺位 ${order}</span>
+        </div>
+        <div class="pc-money"><b>E${p.money}</b></div>
+        <div class="pc-stats">
+          <span>城市 <b>${p.cities.length}</b></span>
+          <span>电厂 <b>${p.plants.length}</b></span>
+          <span>可供电 <b class="ok">${powered}</b></span>
+        </div>
+        ${p.poweredLast ? `<div class="pc-supplied">最近供电 ${p.poweredLast} 城</div>` : ''}
+        ${resBits.length ? `<div class="pc-stats"><span>库存 ${resBits.reduce((a, b) => a + b, 0)} 个</span></div>` : ''}
+        <div class="pc-plants">${plants}</div>
+      </article>`;
+  }).join('');
+  $('#playersGrid').innerHTML = html;
+  $('#playerNote').textContent = `${st.playerCount} 人 · ${st.playerCount > 2 ? '左右滑动看全部 · ' : ''}顺位决定行动顺序`;
+}
+
+function plantCardHtml(plant, opts = {}) {
+  const fc = FUEL[plant.type].color;
+  const classes = ['plant-card'];
+  if (opts.future) classes.push('future');
+  if (opts.live) classes.push('live');
+  if (opts.selectable) classes.push('selectable');
+  if (opts.selected) classes.push('selected');
+  const tag = opts.future
+    ? `<div class="plant-price">Step 3 前锁定</div>`
+    : `<div class="plant-price">起拍 <b>E${plant.number}</b></div>`;
+  const body = `
+    <div class="plant-top"><div class="plant-num">${pad2(plant.number)}</div><div class="plant-bid">E${plant.number}</div></div>
+    <div class="plant-cap">供 ${plant.capacity} 城</div>
+    <div class="plant-fuel"><span class="fuel-swatch" style="--fc:${fc}"></span>${fuelNeedText(plant)}</div>
+    ${tag}`;
+  if (opts.selectable) {
+    return `<button type="button" class="${classes.join(' ')}" data-act="offer-pick" data-plant="${plant.number}" ${opts.disabled ? 'disabled' : ''} aria-pressed="${opts.selected ? 'true' : 'false'}" aria-label="电厂 ${pad2(plant.number)}，供 ${plant.capacity} 城，${fuelNeedText(plant)}，起拍 E${plant.number}">${body}</button>`;
+  }
+  return `<article class="${classes.join(' ')}" aria-label="电厂 ${pad2(plant.number)}">${body}</article>`;
+}
+
+function renderMarket() {
+  const st = UI.state;
+  const actual = PG.actualMarket(st);
+  const future = PG.futureMarket(st);
+  const a = st.auction;
+  const chooser = st.phase === 'auction' && a && a.mode === 'choose' && a.chooser === UI.human;
+  const money = st.players[UI.human].money;
+  const livePlant = st.phase === 'auction' && a ? a.plant : null;
+  const actualHtml = actual.map((plant) => plantCardHtml(plant, {
+    live: livePlant === plant.number,
+    selectable: chooser,
+    selected: UI.selectedPlant === plant.number,
+    disabled: chooser && plant.number > money
+  })).join('');
+  const futureHtml = future.length
+    ? future.map((plant) => plantCardHtml(plant, { future: true })).join('')
+    : '<p class="empty-note">Step 3：没有未来市场，6 张牌全部可竞拍。</p>';
+  $('#marketBody').innerHTML = `
+    <div class="market-label live-lab">实际市场 · 可竞拍 ${actual.length} 张</div>
+    <div class="market-row">${actualHtml}</div>
+    <div class="market-label">未来市场 · 暂不可竞拍 ${future.length} 张</div>
+    <div class="market-row">${futureHtml}</div>`;
+  $('#marketNote').textContent = st.step === 3 ? 'Step 3 · 6 张全部可竞拍' : '起拍价 = 牌面编号';
+}
+
+function renderResources() {
+  const st = UI.state;
+  const rows = PG.RESOURCE_KINDS.map((kind) => {
+    const info = RES_INFO[kind];
+    const slots = st.resourceMarket[kind];
+    const cheapest = PG.cheapestResourcePrice(st, kind);
+    const total = slots.reduce((a, b) => a + b, 0);
+    const cells = slots.map((count, i) => {
+      const price = i + 1;
+      const cls = [
+        'slot',
+        count === 0 ? 'empty' : '',
+        price === cheapest ? 'current' : ''
+      ].filter(Boolean).join(' ');
+      return `<span class="${cls}" data-res-slot="${kind}-${price}" title="${info.cn}：价格 ${price}，剩余 ${count}"><b>${price}</b><span>${count}</span></span>`;
+    }).join('');
+    return `
+      <div class="res-row" style="--rc:${info.color}">
+        <div class="res-label">
+          <span class="res-badge">${resourceIcon(kind)}</span>
+          <div><b>${info.cn}</b><small class="${cheapest ? 'hot' : ''}">${cheapest ? `现价 E${cheapest}` : '售罄'}</small></div>
+        </div>
+        <div class="res-slots" aria-label="${info.cn}价格带">${cells}</div>
+        <div class="res-meta"><b>${total}</b><small>在售</small></div>
+      </div>`;
+  }).join('');
+  $('#resBody').innerHTML = rows;
+}
+
+function currentLegal() {
+  if (!UI.state || !isHumanTurn()) return [];
+  return PG.legalActions(UI.state, UI.human);
+}
+
+function renderAction() {
+  const st = UI.state;
+  const panel = $('#actionPanel');
+  const p = currentPlayer();
+  const me = st.players[UI.human];
+  if (st.phase === 'game-over') {
+    panel.innerHTML = `
+      <div class="action-head"><div><h2>终局 <span class="badge">结算</span></h2><p>按能供电的城市数排名；平局比现金、再比建房数。</p></div></div>
+      <div class="btn-row"><button type="button" class="btn primary grow" data-act="show-result">查看完整结算</button></div>`;
+    return;
+  }
+  if (p !== UI.human) {
+    panel.innerHTML = `
+      <div class="action-head"><div><h2>${playerName(p)} 行动中</h2><p>${phaseInfo(st.phase).name} · 你可以先查看地图与市场</p></div></div>
+      <div class="thinking"><span class="spinner" aria-hidden="true"></span><div><b>${playerShort(p)} 正在${phaseInfo(st.phase).name}</b><span>AI 思考中，约一秒后自动执行</span></div></div>
+      <div class="btn-row">
+        <button type="button" class="btn grow" data-act="ai-now">立即执行</button>
+        <button type="button" class="btn" data-act="ai-speed" aria-pressed="${UI.aiFast ? 'true' : 'false'}">AI 速度：${UI.aiFast ? '快速' : '正常'}</button>
+      </div>`;
+    return;
+  }
+
+  if (st.phase === 'auction') {
+    panel.innerHTML = renderAuctionAction(st, me);
+    return;
+  }
+  if (st.phase === 'resources') {
+    panel.innerHTML = renderResourceAction(st, me);
+    return;
+  }
+  if (st.phase === 'build') {
+    panel.innerHTML = renderBuildAction(st, me);
+    return;
+  }
+  if (st.phase === 'bureaucracy') {
+    panel.innerHTML = renderBureaucracyAction(st, me);
+  }
+}
+
+function renderAuctionAction(st, me) {
+  const a = st.auction;
+  if (!a) return '';
+  if (a.mode === 'discard') {
+    const list = me.plants.map((plant) => `
+      <button type="button" class="buy-row" data-act="discard" data-plant="${plant.number}">
+        <span class="buy-badge"><b style="font-family:var(--mono);font-size:12px;color:var(--gold-2)">${pad2(plant.number)}</b></span>
+        <span class="buy-main"><b>电厂 ${pad2(plant.number)} · 供 ${plant.capacity} 城</b><small>${fuelNeedText(plant)} · 现存 ${storageLine(plant)}</small></span>
+        <span class="buy-side">弃掉</span>
+      </button>`).join('');
+    return `
+      <div class="action-head"><div><h2>电厂超过持有上限 <span class="badge">必须弃牌</span></h2><p>2 人上限 4 张，3–6 人上限 3 张。选择一张弃掉，资源会尽量转移到其他电厂。</p></div>
+        <div class="action-money">现金<b>E${me.money}</b></div></div>
+      <div class="buy-list">${list}</div>`;
+  }
+  if (a.mode === 'bid') {
+    const plant = st.market.find((x) => x.number === a.plant);
+    const min = a.currentBid + 1;
+    const max = me.money;
+    const canBid = max >= min;
+    if (!Number.isInteger(UI.bidAmount) || UI.bidAmount < min || UI.bidAmount > max) UI.bidAmount = canBid ? min : max;
+    const active = a.activeBidders.map(playerShort).join('、');
+    return `
+      <div class="action-head">
+        <div><h2>竞价中 <span class="badge">轮到你了</span></h2><p>最高价必须再高一档；跳过只退出当前这一场。</p></div>
+        <div class="action-money">现金<b>E${me.money}</b></div>
+      </div>
+      <div class="bid-box">
+        <div class="bid-top">
+          <div class="bid-plant"><span class="plant-num">${pad2(plant.number)}</span><small>供 ${plant.capacity} 城 · ${fuelNeedText(plant)}</small></div>
+          <div><span>当前最高</span> <b>E${a.currentBid}</b></div>
+        </div>
+        <div class="act-note" style="margin:0">最高出价 ${playerName(a.highBidder)} · 仍在竞价：${active}</div>
+      </div>
+      ${canBid ? `
+      <div class="bid-flow">
+      <div class="slider-row">
+        <span class="hint-small" style="margin:0">加价</span>
+        <input id="bidRange" type="range" min="${min}" max="${max}" step="1" value="${UI.bidAmount}" aria-label="加价金额">
+        <span class="slider-val" id="bidVal">E${UI.bidAmount}</span>
+      </div>
+      <div class="btn-row">
+        <button type="button" class="btn primary grow" id="bidBtn" data-act="bid">加价到 E${UI.bidAmount}</button>
+        <button type="button" class="btn grow" data-act="pass">跳过本场</button>
+      </div>
+      <div class="stepper">
+        <button type="button" class="btn" data-act="bid-delta" data-delta="1">+1</button>
+        <button type="button" class="btn" data-act="bid-delta" data-delta="5">+5</button>
+        <button type="button" class="btn" data-act="bid-delta" data-delta="10">+10</button>
+        <button type="button" class="btn" data-act="bid-delta" data-delta="0">最低 E${min}</button>
+      </div>
+      </div>` : '<div class="act-note warn">现金不足，无法再加价，只能跳过。</div>'}
+      ${!canBid ? '<div class="btn-row"><button type="button" class="btn primary grow" data-act="pass">跳过本场</button></div>' : ''}
+      <p class="hint-small">跳过 = 离开当前这场竞价；本轮稍后仍可参与下一张牌。</p>`;
+  }
+  // choose
+  const market = PG.actualMarket(st);
+  if (!UI.selectedPlant || !market.some((x) => x.number === UI.selectedPlant) || UI.selectedPlant > me.money) {
+    const first = market.find((x) => x.number <= me.money);
+    UI.selectedPlant = first ? first.number : null;
+    UI.offerBid = first ? first.number : null;
+  }
+  const selected = market.find((x) => x.number === UI.selectedPlant);
+  if (selected) {
+    const min = selected.number;
+    const max = me.money;
+    if (!Number.isInteger(UI.offerBid) || UI.offerBid < min || UI.offerBid > max) UI.offerBid = min;
+  }
+  const picks = market.map((plant) => {
+    const disabled = plant.number > me.money;
+    return `
+      <button type="button" class="pick-card" data-act="offer-pick" data-plant="${plant.number}"
+        aria-pressed="${UI.selectedPlant === plant.number ? 'true' : 'false'}" ${disabled ? 'disabled' : ''}>
+        <b>${pad2(plant.number)}</b>
+        <em class="pick-bid">E${plant.number}</em>
+        <span>供 ${plant.capacity} 城</span>
+        <small>${fuelNeedText(plant)}</small>
+      </button>`;
+  }).join('');
+  const canDecline = currentLegal().some((x) => x.type === 'auctionDecline');
+  const offerReady = selected && Number.isInteger(UI.offerBid) && UI.offerBid >= selected.number && UI.offerBid <= me.money;
+  return `
+    <div class="action-head">
+      <div><h2>轮到你挂牌 <span class="badge">第 ${st.round} 轮</span></h2><p>选一张实际市场电厂，开价不能低于牌面编号，也不能超过现金。</p></div>
+      <div class="action-money">现金<b>E${me.money}</b></div>
+    </div>
+    <div class="pick-row">${picks}</div>
+    <div class="offer-flow">
+    ${selected ? `
+      <div class="bid-box">
+        <div class="bid-top">
+          <div class="bid-plant"><span class="plant-num">${pad2(selected.number)}</span><small>供 ${selected.capacity} 城 · ${fuelNeedText(selected)} · 最低 E${selected.number}</small></div>
+          <div><span>你的开价</span> <b>E${UI.offerBid}</b></div>
+        </div>
+        <div class="slider-row">
+          <input id="offerRange" type="range" min="${selected.number}" max="${me.money}" step="1" value="${UI.offerBid}" aria-label="开价金额">
+          <span class="slider-val" id="offerVal">E${UI.offerBid}</span>
+        </div>
+      </div>` : '<div class="act-note warn">现金不足，买不起任何实际市场电厂，本轮只能离场。</div>'}
+    <div class="btn-row">
+      ${offerReady ? `<button type="button" class="btn primary grow" id="offerBtn" data-act="offer">挂牌 ${pad2(selected.number)} · E${UI.offerBid}</button>` : ''}
+      ${canDecline ? '<button type="button" class="btn grow" data-act="decline">离场（本轮弃权）</button>' : ''}
+    </div>
+    ${selected ? `
+    <div class="stepper">
+      <button type="button" class="btn" data-act="offer-delta" data-delta="1">+1</button>
+      <button type="button" class="btn" data-act="offer-delta" data-delta="5">+5</button>
+      <button type="button" class="btn" data-act="offer-delta" data-delta="10">+10</button>
+      <button type="button" class="btn" data-act="offer-delta" data-delta="0">起拍 E${selected.number}</button>
+    </div>` : ''}
+    </div>
+    <p class="hint-small">第一轮必须挂牌；挂牌后其他玩家可加价，最高价成交。${canDecline ? '离场会退出本轮所有竞拍。' : ''}</p>`;
+}
+
+function renderResourceAction(st, me) {
+  const legal = currentLegal();
+  const can = (kind) => legal.some((x) => x.type === 'buyResource' && x.resource === kind);
+  const maxAll = Math.max(1, ...PG.RESOURCE_KINDS.map((k) => maxBuyable(st, me, k)));
+  UI.buyQty = clamp(Number(UI.buyQty) || 1, 1, maxAll);
+  const qty = UI.buyQty;
+  const rows = PG.RESOURCE_KINDS.map((kind) => {
+    const info = RES_INFO[kind];
+    const price = PG.cheapestResourcePrice(st, kind);
+    const free = PG.freeStorage(me, kind);
+    const held = resTotal(me, kind);
+    const maxN = maxBuyable(st, me, kind);
+    const ok = maxN > 0 && can(kind);
+    const buyN = Math.max(1, Math.min(qty, maxN || 1));
+    const reason = maxN <= 0 ? (price === null ? '售罄' : free <= 0 ? '无存储空间' : '现金不足') : '可购买';
+    return {
+      ok,
+      html: `
+      <button type="button" class="buy-row" data-act="buy" data-resource="${kind}" ${ok ? '' : 'disabled'}>
+        <span class="buy-badge">${resourceIcon(kind)}</span>
+        <span class="buy-main"><b>买入 ${buyN} 个${info.cn}</b><small>${reason} · 可买 ${maxN} · 持有 ${held} · 可存 ${free}</small></span>
+        <span class="buy-side"><b>${price === null ? '—' : `E${price}`}</b>现价</span>
+      </button>`
+    };
+  }).sort((a, b) => Number(b.ok) - Number(a.ok)).map((row) => row.html).join('');
+  const anyBuy = PG.RESOURCE_KINDS.some((k) => can(k));
+  return `
+    <div class="action-head">
+      <div><h2>购买资源 <span class="badge">逆序</span></h2><p>从最低价有货的格子取；买空后现价上涨。按数量步进可一次买多个。</p></div>
+      <div class="action-money">现金<b>E${me.money}</b><span>本轮已买 ${UI.turnBought}</span></div>
+    </div>
+    <div class="stepper qty-stepper">
+      <span class="qty-label">购买数量</span>
+      <button type="button" class="btn" data-act="buy-qty" data-delta="-1" aria-label="减少购买数量">−</button>
+      <b class="qty-val">${qty}</b>
+      <button type="button" class="btn" data-act="buy-qty" data-delta="1" aria-label="增加购买数量">+</button>
+      <button type="button" class="btn" data-act="buy-qty" data-delta="0">最大 ${maxAll}</button>
+    </div>
+    <div class="buy-list">${rows}</div>
+    ${!anyBuy ? `<div class="act-note warn">${me.plants.length ? '现金或存储空间不足，结束购买继续。' : '你还没有电厂，暂时无法储存资源；直接结束购买。'}</div>` : ''}
+    <div class="btn-row">
+      <button type="button" class="btn primary grow" data-act="end-res">结束购买${anyBuy ? '（也可以继续买）' : ''}</button>
+    </div>
+    <p class="hint-small">每次点击按当前“购买数量”逐格取货；库存显示在玩家面板的电厂牌上。</p>`;
+}
+
+function renderBuildAction(st, me) {
+  const legal = PG.legalBuildCities(st, UI.human);
+  const first = me.cities.length === 0;
+  const list = legal.length
+    ? legal.slice(0, 24).map((b) => {
+      const city = cityById(b.city);
+      const occ = PG.cityOccupancy(st, b.city);
+      const dist = PG.shortestConnectionCosts(st, me.cities);
+      const conn = me.cities.length ? dist[b.city] : 0;
+      return `<button type="button" class="build-btn" data-act="build" data-city="${b.city}">
+        <span>${esc(cityName(b.city))}</span>
+        <b>E${b.cost}</b>
+        <small>${esc(cityEn(b.city))} · 槽位 ${CITY_SLOT[Math.min(occ, 2)]}${first ? ' · 首城' : ` · 接入 ${Number.isFinite(conn) ? `E${conn}` : '—'}`}</small>
+      </button>`;
+    }).join('')
+    : '<p class="empty-note">没有可建城市：现金不足，或所有城市都已满位。</p>';
+  return `
+    <div class="action-head">
+      <div><h2>建设电网 <span class="badge">逆序</span></h2><p>点地图上的金色光圈城市，或从下方按费用直接建造。可以连续建多座。</p></div>
+      <div class="action-money">现金<b>E${me.money}</b><span>城市 ${me.cities.length} · 本轮 +${UI.turnBuilt}</span></div>
+    </div>
+    <div class="build-grid">${list}</div>
+    <div class="btn-row">
+      <button type="button" class="btn primary grow" data-act="end-build">结束建设</button>
+    </div>
+    <p class="hint-small">首座城市只付 10；之后总价 = 槽位费（空城 10 / 一栋 15 / 两栋 20）+ 从你网络出发的最便宜连接费。Step ${st.step} 每城最多 ${PG.cityCapacity(st)} 栋。</p>`;
+}
+
+function renderBureaucracyAction(st, me) {
+  const max = PG.maxPowered(me);
+  if (UI.supplyCount == null || UI.supplyCount > max || UI.supplyCount < 0) UI.supplyCount = max;
+  const count = UI.supplyCount;
+  const pay = PG.paymentForCities(count);
+  const plan = PG.planSupply(me, count);
+  const plants = plan && plan.plants.length ? plan.plants.map((x) => pad2(x.number)).join('、') : '无';
+  const fuel = plan && plan.plants.length
+    ? plan.plants.map((x) => `${pad2(x.number)} 耗${x.fuel ? ` ${x.fuel}${x.type === 'hybrid' ? '煤/油' : FUEL[x.type].cn}` : ' 0'}`).join(' · ')
+    : '不运行电厂';
+  return `
+    <div class="action-head">
+      <div><h2>官僚阶段 · 供电 <span class="badge">收钱</span></h2><p>本轮选择供电城市数，收入按城市数查表；不供电也拿 10。</p></div>
+      <div class="action-money">现金<b>E${me.money}</b><span>城市 ${me.cities.length} · 可供电 ${max}</span></div>
+    </div>
+    <div class="supply-flow">
+    <div class="slider-row">
+      <span class="hint-small" style="margin:0">供电</span>
+      <input id="supplyRange" type="range" min="0" max="${max}" step="1" value="${count}" aria-label="供电城市数">
+      <span class="slider-val" id="supplyVal">${count} 城</span>
+    </div>
+    <div class="stepper">
+      <button type="button" class="btn" data-act="supply-delta" data-delta="-1">−1</button>
+      <button type="button" class="btn" data-act="supply-delta" data-delta="1">+1</button>
+      <button type="button" class="btn" data-act="supply-delta" data-delta="0">全部 ${max} 城</button>
+      <button type="button" class="btn" data-act="supply-delta" data-delta="-999">0 城</button>
+    </div>
+    <div class="supply-preview">
+      <span>收入 <b id="supplyPay">+E${pay}</b></span>
+      <span class="tagline" id="supplyPlan">运行电厂：${plants}</span>
+    </div>
+    <div class="btn-row">
+      <button type="button" class="btn primary grow" id="supplyBtn" data-act="supply">供电 ${count} 城 · 收入 +E${pay}</button>
+    </div>
+    </div>
+    <p class="hint-small" id="supplyFuel">${fuel}。运行的电厂会一次性消耗全部燃料；未运行的不消耗。</p>`;
+}
+
+function renderLog() {
+  const st = UI.state;
+  const html = UI.log.slice(0, 40).map((entry) => `<li class="${entry.kind}"><span class="log-r">R${entry.round}</span><span>${esc(entry.text)}</span></li>`).join('');
+  $('#logList').innerHTML = html || '<li class="sys"><span class="log-r">R1</span><span>暂无记录。</span></li>';
+  $('#logNote').textContent = st.phase === 'game-over' ? '终局' : `第 ${st.round} 轮 · 共 ${UI.log.length} 条`;
+}
+
+/* ------------------------------------------------------------------ */
+/* toast / modals                                                      */
+/* ------------------------------------------------------------------ */
+function showToast(title, sub, kind) {
+  const el = $('#toast');
+  el.innerHTML = `<b>${esc(title)}</b>${sub ? `<span>${esc(sub)}</span>` : ''}`;
+  el.className = `toast show ${kind || ''}`;
+  liveText(`${title}。${sub || ''}`);
+  clearTimeout(UI.toastTimer);
+  UI.toastTimer = setTimeout(() => { el.className = 'toast'; }, 1900);
+}
+
+function openModal(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.hidden = false;
+}
+function closeModal(id) {
+  const el = document.getElementById(id);
+  if (el) el.hidden = true;
+}
+function closeAllModals() {
+  $$('.modal').forEach((m) => { m.hidden = true; });
+}
+
+function openNewModal() {
+  const sel = $('#newPlayers');
+  sel.value = String(UI.playerCount);
+  $('#newSeed').value = String(UI.seed);
+  updateNewNote();
+  openModal('newModal');
+}
+
+function updateNewNote() {
+  const n = Number($('#newPlayers').value) || 2;
+  const step2 = { 2: 7, 3: 7, 4: 7, 5: 7, 6: 6 }[n] || 7;
+  const end = { 2: 18, 3: 17, 4: 17, 5: 15, 6: 14 }[n] || 18;
+  const limit = n === 2 ? 4 : 3;
+  $('#newNote').innerHTML = `新版规则：Step 2 触发 <strong>${step2}</strong> 城，终局 <strong>${end}</strong> 城，电厂持有上限 <strong>${limit}</strong> 张。你控制 P1，其余席位由 AI 接手。`;
+}
+
+function startFromModal() {
+  const n = clamp(Number($('#newPlayers').value) || 2, 2, 6);
+  let seed = Number($('#newSeed').value);
+  if (!Number.isFinite(seed) || seed <= 0) seed = randomSeed();
+  closeAllModals();
+  createGame({ playerCount: n, seed: Math.floor(seed) });
+}
+
+function showResult() {
+  const st = UI.state;
+  const sc = PG.score(st);
+  const ranking = sc.ranking || [];
+  const winner = ranking[0];
+  const winners = ranking.filter((p) => winner && p.poweredCities === winner.poweredCities && p.money === winner.money && p.cities === winner.cities);
+  const humanWon = winners.some((p) => p.index === UI.human);
+  const reason = st.endReason === 'cities' ? '有玩家达到终局城市阈值' : st.endReason === 'round-limit' ? '达到轮数上限' : '游戏结束';
+  $('#resultSub').textContent = `${reason} · 第 ${st.round} 轮 · Step ${st.step}`;
+  const rows = ranking.map((p, i) => {
+    const isWin = winners.some((w) => w.index === p.index);
+    return `
+      <div class="rank-row ${isWin ? 'winner' : ''}" style="--pc:${colorFor(p.index)}">
+        <span class="rank-no">${i + 1}</span>
+        <span class="rank-dot"></span>
+        <span class="rank-name">${playerName(p.index)}<small>电厂 ${p.plants.map(pad2).join('、') || '无'}</small></span>
+        <span class="rank-stat"><b>${p.poweredCities}</b><small>可供</small></span>
+        <span class="rank-stat"><b>E${p.money}</b><small>现金</small></span>
+        <span class="rank-stat"><b>${p.cities}</b><small>城市</small></span>
+      </div>`;
+  }).join('');
+  const title = humanWon ? '你赢了' : `${playerName(winner ? winner.index : 0)} 获胜`;
+  const trophy = `<svg viewBox="0 0 64 64" aria-hidden="true">
+    <defs>
+      <linearGradient id="tgGold" x1="0" y1="0" x2=".9" y2="1">
+        <stop offset="0" stop-color="#fff7d2"/><stop offset=".22" stop-color="#f6d98f"/>
+        <stop offset=".46" stop-color="#c58e2e"/><stop offset=".68" stop-color="#8f5c12"/>
+        <stop offset=".86" stop-color="#f1cd74"/><stop offset="1" stop-color="#6b4309"/>
+      </linearGradient>
+      <linearGradient id="tgEdge" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#6b4309"/><stop offset=".3" stop-color="#e7b96b"/>
+        <stop offset=".55" stop-color="#fff0bd"/><stop offset=".8" stop-color="#b47c24"/>
+        <stop offset="1" stop-color="#5e3a08"/>
+      </linearGradient>
+      <linearGradient id="tgRib" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#6d1e27"/><stop offset=".35" stop-color="#c24a55"/>
+        <stop offset=".62" stop-color="#8e2c36"/><stop offset="1" stop-color="#4f141b"/>
+      </linearGradient>
+      <radialGradient id="tgGlow">
+        <stop offset="0" stop-color="#ffd98a" stop-opacity=".5"/>
+        <stop offset=".55" stop-color="#e7b96b" stop-opacity=".12"/>
+        <stop offset="1" stop-color="#e7b96b" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+    <circle cx="32" cy="33" r="30" fill="url(#tgGlow)"/>
+    <path d="M26 43 18 60l8-3 4 4 2-18z" fill="url(#tgRib)" stroke="#4b1219" stroke-width=".7"/>
+    <path d="M38 43 46 60l-8-3-4 4-2-18z" fill="url(#tgRib)" stroke="#4b1219" stroke-width=".7"/>
+    <path d="M20 9h24v7.5c0 9.8-5.2 16.5-12 16.5S20 26.3 20 16.5z" fill="url(#tgGold)" stroke="#6b4309" stroke-width="1.1"/>
+    <path d="M20 9h24v3.5H20z" fill="url(#tgEdge)"/>
+    <path d="M23.5 12.5c0 7 2.7 12.2 6.3 14.4-1.2-4.3-1.8-9.2-1.9-14.4z" fill="#fff4c8" opacity=".34"/>
+    <path d="M20 12H11v5.2c0 6.7 4.7 11.2 10.4 11.2" fill="none" stroke="url(#tgEdge)" stroke-width="3.1" stroke-linecap="round"/>
+    <path d="M44 12h9v5.2c0 6.7-4.7 11.2-10.4 11.2" fill="none" stroke="url(#tgEdge)" stroke-width="3.1" stroke-linecap="round"/>
+    <path d="M29.6 33.5h4.8v9.2h-4.8z" fill="url(#tgEdge)" stroke="#5e3a08" stroke-width=".6"/>
+    <path d="M22.5 42.7h19l-2.2 5.1H24.7z" fill="url(#tgGold)" stroke="#6b4309" stroke-width=".8"/>
+    <path d="M17.5 47.8h29v4.6h-29z" fill="url(#tgEdge)" stroke="#5e3a08" stroke-width=".7"/>
+    <path d="M22 13.6h1.2M26 13.6h1.2M30 13.6h1.2" stroke="#fff9dc" stroke-width="1" opacity=".5"/>
+    <path d="M32 15.2l1.5 3.2 3.5.4-2.6 2.4.7 3.5-3.1-1.7-3.1 1.7.7-3.5-2.6-2.4 3.5-.4z" fill="#7a4d0c" opacity=".55"/>
+    <path d="M32 14.4l1.4 3 3.3.3-2.5 2.3.7 3.3-2.9-1.6-2.9 1.6.7-3.3-2.5-2.3 3.3-.3z" fill="#fff1bc" opacity=".88"/>
+  </svg>`;
+  $('#resultBody').innerHTML = `
+    <div class="result-banner"><span class="trophy">${trophy}</span><div><b>${esc(title)}</b><span>胜利判定：能供电的城市数 → 现金 → 建房数</span></div></div>
+    <div class="rank-list">${rows}</div>
+    <p class="hint-small">终局不发电、不收钱；终局比较的是“能供电”的城市数，不是建房数。${winners.length > 1 ? '本局出现完全并列，已标出全部胜者。' : ''}</p>`;
+  UI.resultShown = true;
+  openModal('resultModal');
+}
+
+/* ------------------------------------------------------------------ */
+/* map gesture                                                         */
+/* ------------------------------------------------------------------ */
+function clientToSvg(clientX, clientY) {
+  const svg = $('#mapSvg');
+  const pt = svg.createSVGPoint();
+  pt.x = clientX; pt.y = clientY;
+  const ctm = svg.getScreenCTM();
+  if (!ctm) return { x: UI.view.cx, y: UI.view.cy };
+  const p = pt.matrixTransform(ctm.inverse());
+  return { x: p.x, y: p.y };
+}
+
+function setupMapGestures() {
+  const vp = $('#mapViewport');
+  const svg = $('#mapSvg');
+  const pointers = new Map();
+  let gesture = null;
+  let moved = false;
+  let suppressClick = false;
+
+  const updatePan = () => {
+    const rect = vp.getBoundingClientRect();
+    const dx = gesture.lastX - gesture.x;
+    const dy = gesture.lastY - gesture.y;
+    const w = MAP_W / UI.view.k;
+    const h = MAP_H / UI.view.k;
+    UI.view.cx -= dx * (w / Math.max(1, rect.width));
+    UI.view.cy -= dy * (h / Math.max(1, rect.height));
+    applyViewBox();
+    gesture.x = gesture.lastX;
+    gesture.y = gesture.lastY;
+    if (Math.abs(dx) + Math.abs(dy) > 2) moved = true;
+  };
+
+  vp.addEventListener('pointerdown', (e) => {
+    vp.setPointerCapture(e.pointerId);
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    vp.classList.add('dragging');
+    moved = false;
+    if (pointers.size === 1) {
+      gesture = { mode: 'pan', x: e.clientX, y: e.clientY, lastX: e.clientX, lastY: e.clientY };
+    } else if (pointers.size === 2) {
+      const arr = Array.from(pointers.values());
+      const dist = Math.hypot(arr[0].x - arr[1].x, arr[0].y - arr[1].y);
+      const mx = (arr[0].x + arr[1].x) / 2;
+      const my = (arr[0].y + arr[1].y) / 2;
+      const anchor = clientToSvg(mx, my);
+      gesture = {
+        mode: 'pinch', dist: Math.max(1, dist), k: UI.view.k,
+        cx: UI.view.cx, cy: UI.view.cy, anchor,
+        f: (anchor.x - (UI.view.cx - MAP_W / UI.view.k / 2)) / (MAP_W / UI.view.k),
+        g: (anchor.y - (UI.view.cy - MAP_H / UI.view.k / 2)) / (MAP_H / UI.view.k)
+      };
+    }
+  });
+
+  vp.addEventListener('pointermove', (e) => {
+    if (!pointers.has(e.pointerId)) return;
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (!gesture) return;
+    if (gesture.mode === 'pan' && pointers.size === 1) {
+      gesture.lastX = e.clientX;
+      gesture.lastY = e.clientY;
+      updatePan();
+    } else if (gesture.mode === 'pinch' && pointers.size === 2) {
+      const arr = Array.from(pointers.values());
+      const dist = Math.hypot(arr[0].x - arr[1].x, arr[0].y - arr[1].y);
+      const k = clamp(gesture.k * (dist / gesture.dist), 1, 4);
+      const w = MAP_W / k;
+      const h = MAP_H / k;
+      UI.view.k = k;
+      UI.view.cx = gesture.anchor.x - (gesture.f - 0.5) * w;
+      UI.view.cy = gesture.anchor.y - (gesture.g - 0.5) * h;
+      applyViewBox();
+      moved = true;
+    }
+  });
+
+  const endPointer = (e) => {
+    pointers.delete(e.pointerId);
+    if (pointers.size === 1) {
+      const rest = Array.from(pointers.values())[0];
+      gesture = { mode: 'pan', x: rest.x, y: rest.y, lastX: rest.x, lastY: rest.y };
+    } else if (pointers.size === 0) {
+      gesture = null;
+      vp.classList.remove('dragging');
+      suppressClick = moved;
+      if (suppressClick) setTimeout(() => { suppressClick = false; }, 40);
+      if (!moved) renderChrome();
+    }
+  };
+  vp.addEventListener('pointerup', endPointer);
+  vp.addEventListener('pointercancel', endPointer);
+  vp.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  vp.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const k2 = clamp(UI.view.k * Math.pow(1.0016, -e.deltaY), 1, 4);
+    if (Math.abs(k2 - UI.view.k) < 0.0005) return;
+    const anchor = clientToSvg(e.clientX, e.clientY);
+    const wOld = MAP_W / UI.view.k;
+    const hOld = MAP_H / UI.view.k;
+    const f = (anchor.x - (UI.view.cx - wOld / 2)) / wOld;
+    const g = (anchor.y - (UI.view.cy - hOld / 2)) / hOld;
+    const wNew = MAP_W / k2;
+    const hNew = MAP_H / k2;
+    UI.view.k = k2;
+    UI.view.cx = anchor.x - (f - 0.5) * wNew;
+    UI.view.cy = anchor.y - (g - 0.5) * hNew;
+    applyViewBox();
+    if (k2 <= 1.001) UI.region = 'all';
+    renderChrome();
+  }, { passive: false });
+
+  svg.addEventListener('click', (e) => {
+    if (suppressClick) return;
+    const g = e.target.closest('.city');
+    if (!g) return;
+    selectCity(g.dataset.city);
+  });
+  svg.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const g = e.target.closest('.city');
+    if (!g) return;
+    e.preventDefault();
+    selectCity(g.dataset.city);
+  });
+}
+
+function selectCity(id) {
+  UI.selectedCity = id;
+  renderMap();
+  renderCityDetail();
+  renderChrome();
+  const c = cityById(id);
+  liveText(`${cityName(id)} ${cityEn(id)}，${PG.cityOccupancy(UI.state, id)} 栋已建`);
+}
+
+/* ------------------------------------------------------------------ */
+/* events                                                              */
+/* ------------------------------------------------------------------ */
+function stepValue(current, delta, min, max, zeroMode) {
+  if (delta === -999) return 0;
+  if (delta === 0) return zeroMode === 'max' ? max : min;
+  return clamp(current + delta, min, max);
+}
+
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('[data-act]');
+  if (!t || t.disabled) return;
+  const actName = t.dataset.act;
+  const st = UI.state;
+  if (!st) return;
+
+  switch (actName) {
+    case 'new': openNewModal(); return;
+    case 'rules': openModal('rulesModal'); return;
+    case 'close-modal': closeModal(t.dataset.modal || t.closest('.modal').id); return;
+    case 'random-seed': $('#newSeed').value = String(randomSeed()); return;
+    case 'start-new': startFromModal(); return;
+    case 'restart': closeAllModals(); restartGame(); return;
+    case 'show-result': showResult(); return;
+    case 'ai-now': clearTimeout(UI.aiTimer); UI.aiGen += 1; runAI(); return;
+    case 'ai-speed':
+      UI.aiFast = !UI.aiFast;
+      clearTimeout(UI.aiTimer);
+      UI.aiGen += 1;
+      renderAction();
+      scheduleAI();
+      return;
+    case 'zoom-in': zoomBy(1.45); return;
+    case 'zoom-out': zoomBy(1 / 1.45); return;
+    case 'zoom-reset': setRegion('all'); return;
+    case 'zoom-region': setRegion(t.dataset.region); return;
+    case 'toggle-costs':
+      UI.showCosts = !UI.showCosts;
+      renderChrome();
+      renderMap();
+      return;
+    case 'offer-pick': {
+      if (!isHumanTurn() || st.phase !== 'auction' || st.auction.mode !== 'choose') return;
+      const n = Number(t.dataset.plant);
+      UI.selectedPlant = n;
+      UI.offerBid = n;
+      renderMarket();
+      renderAction();
+      return;
+    }
+    case 'offer-delta': {
+      const plant = st.market.find((x) => x.number === UI.selectedPlant);
+      if (!plant) return;
+      UI.offerBid = stepValue(Number(UI.offerBid) || plant.number, Number(t.dataset.delta), plant.number, st.players[UI.human].money);
+      renderAction();
+      return;
+    }
+    case 'offer':
+      if (!UI.selectedPlant) return;
+      act({ type: 'auctionOffer', plant: UI.selectedPlant, bid: UI.offerBid });
+      return;
+    case 'decline': act({ type: 'auctionDecline' }); return;
+    case 'bid-delta': {
+      const a = st.auction;
+      if (!a) return;
+      const min = a.currentBid + 1;
+      const max = st.players[UI.human].money;
+      UI.bidAmount = stepValue(Number(UI.bidAmount) || min, Number(t.dataset.delta), min, max);
+      renderAction();
+      return;
+    }
+    case 'bid':
+      if (!Number.isInteger(UI.bidAmount)) return;
+      act({ type: 'auctionBid', amount: UI.bidAmount });
+      return;
+    case 'pass': act({ type: 'auctionPass' }); return;
+    case 'discard': act({ type: 'discardPlant', plant: Number(t.dataset.plant) }); return;
+    case 'buy': buyMany(t.dataset.resource, UI.buyQty); return;
+    case 'buy-qty': {
+      const maxAll = Math.max(1, ...PG.RESOURCE_KINDS.map((k) => maxBuyable(st, st.players[UI.human], k)));
+      const delta = Number(t.dataset.delta);
+      UI.buyQty = delta === 0 ? maxAll : clamp((Number(UI.buyQty) || 1) + delta, 1, maxAll);
+      renderAction();
+      return;
+    }
+    case 'end-res': act({ type: 'endResourcePurchase' }); return;
+    case 'build': act({ type: 'buildCity', city: t.dataset.city }); return;
+    case 'build-map': {
+      const city = t.dataset.city;
+      if (!city) return;
+      act({ type: 'buildCity', city });
+      return;
+    }
+    case 'end-build': act({ type: 'endBuild' }); return;
+    case 'supply-delta': {
+      const max = PG.maxPowered(st.players[UI.human]);
+      UI.supplyCount = stepValue(Number(UI.supplyCount) || 0, Number(t.dataset.delta), 0, max, 'max');
+      renderAction();
+      return;
+    }
+    case 'supply': {
+      const count = clamp(Number(UI.supplyCount) || 0, 0, PG.maxPowered(st.players[UI.human]));
+      act({ type: 'supplyCities', count });
+      return;
+    }
+    case 'clear-city':
+      UI.selectedCity = null;
+      renderMap();
+      renderCityDetail();
+      return;
+    default: return;
+  }
+});
+
+document.addEventListener('input', (e) => {
+  const t = e.target;
+  const st = UI.state;
+  if (!st || !t.id) return;
+  if (t.id === 'offerRange') {
+    UI.offerBid = Number(t.value);
+    const v = $('#offerVal');
+    const btn = $('#offerBtn');
+    if (v) v.textContent = `E${UI.offerBid}`;
+    if (btn) btn.textContent = `挂牌 ${pad2(Number(UI.selectedPlant))} · E${UI.offerBid}`;
+  } else if (t.id === 'bidRange') {
+    UI.bidAmount = Number(t.value);
+    const v = $('#bidVal');
+    const btn = $('#bidBtn');
+    if (v) v.textContent = `E${UI.bidAmount}`;
+    if (btn) btn.textContent = `加价到 E${UI.bidAmount}`;
+  } else if (t.id === 'supplyRange') {
+    UI.supplyCount = Number(t.value);
+    updateSupplyPreview();
+  }
+});
+
+document.addEventListener('change', (e) => {
+  if (e.target.id === 'newPlayers') updateNewNote();
+});
+
+function updateSupplyPreview() {
+  const st = UI.state;
+  if (!st) return;
+  const me = st.players[UI.human];
+  const count = clamp(Number(UI.supplyCount) || 0, 0, PG.maxPowered(me));
+  const pay = PG.paymentForCities(count);
+  const plan = PG.planSupply(me, count);
+  const plants = plan && plan.plants.length ? plan.plants.map((x) => pad2(x.number)).join('、') : '无';
+  const fuel = plan && plan.plants.length
+    ? plan.plants.map((x) => `${pad2(x.number)} 耗${x.fuel ? ` ${x.fuel}${x.type === 'hybrid' ? '煤/油' : FUEL[x.type].cn}` : ' 0'}`).join(' · ')
+    : '不运行电厂';
+  const val = $('#supplyVal');
+  const payEl = $('#supplyPay');
+  const planEl = $('#supplyPlan');
+  const btn = $('#supplyBtn');
+  const fuelEl = $('#supplyFuel');
+  if (val) val.textContent = `${count} 城`;
+  if (payEl) payEl.textContent = `+E${pay}`;
+  if (planEl) planEl.textContent = `运行电厂：${plants}`;
+  if (btn) btn.textContent = `供电 ${count} 城 · 收入 +E${pay}`;
+  if (fuelEl) fuelEl.textContent = `${fuel}。运行的电厂会一次性消耗全部燃料；未运行的不消耗。`;
+}
+
+/* modal backdrop close */
+document.addEventListener('click', (e) => {
+  if (e.target.classList && e.target.classList.contains('modal')) {
+    e.target.hidden = true;
+  }
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeAllModals();
+});
+
+/* ------------------------------------------------------------------ */
+/* boot                                                                */
+/* ------------------------------------------------------------------ */
+setupMapGestures();
+createGame({ playerCount: 2, seed: 5 });
+UI.booted = true;
+
+/* debug handle for local verification */
+window.__pg = {
+  get state() { return UI.state; },
+  get ui() { return UI; },
+  legal() { return currentLegal(); },
+  greedy() { return PG.chooseGreedyAction(UI.state, currentLegal()); },
+  finish() {
+    clearTimeout(UI.aiTimer);
+    UI.aiGen += 1;
+    const r = PG.autoPlay(UI.state, { allowIncomplete: false });
+    UI.state = r.state;
+    UI.log = [];
+    pushLog('sys', '调试：本局已自动推进到终局。');
+    renderAll();
+    showResult();
+    return { actions: r.actions, score: PG.score(UI.state) };
+  },
+  act,
+  newGame: createGame,
+  render: renderAll,
+  score() { return PG.score(UI.state); }
+};
+</script>
+</body>
+</html>

@@ -945,13 +945,18 @@ html[data-theme="light"] .dock { background: linear-gradient(180deg, rgba(247,23
   function realState() { return online ? null : state; }
   function myIndex() {
     if (!online) return 0;
-    return online.view && online.view.you ? online.view.you.playerIndex : 0;
+    return online.view && online.view.you != null ? online.view.you : 0;
+  }
+  function onlineIsHost() {
+    return !!(online && online.view && online.view.seats && online.view.seats.some(function (seat) {
+      return seat.isYou && seat.isHost;
+    }));
   }
   function canAct() {
     var s = currentState();
     if (!s || s.over || busy) return false;
     if (online) {
-      if (online.requesting || !online.view || !online.view.canMove) return false;
+      if (online.requesting || !online.view || !online.view.legalActions || !online.view.legalActions.length) return false;
       return s.current === myIndex();
     }
     return s.current === 0;
@@ -1112,9 +1117,10 @@ html[data-theme="light"] .dock { background: linear-gradient(180deg, rgba(247,23
     if (!online) { chip.hidden = true; return; }
     chip.hidden = false;
     if (online.view) {
-      $('roomCode').textContent = online.view.roomCode || online.roomId.slice(0, 6);
-      var seat = online.view.you ? (online.view.you.playerIndex + 1) : '—';
-      $('roomSeat').textContent = '座位 ' + seat + ' / ' + (online.view.seats ? online.view.seats.length : 2) + ' · ' + (online.view.status || '');
+      $('roomCode').textContent = online.view.code || online.roomId.slice(0, 6);
+      var seat = online.view.you != null ? (online.view.you + 1) : '—';
+      var phase = online.view.over ? '已结束' : (online.view.started ? '进行中' : '等待开始');
+      $('roomSeat').textContent = '座位 ' + seat + ' / ' + (online.view.seats ? online.view.seats.length : 2) + ' · ' + phase;
     }
   }
 
@@ -1448,8 +1454,8 @@ html[data-theme="light"] .dock { background: linear-gradient(180deg, rgba(247,23
       ' · 奖励代币 ' + bonusPoints(my) + ' : ' + bonusPoints(rival);
     var again = $('againBtn');
     if (online) {
-      again.textContent = online.view && online.view.isHost ? '房主重开' : '等待房主重开';
-      again.disabled = !(online.view && online.view.isHost);
+      again.textContent = onlineIsHost() ? '房主重开' : '等待房主重开';
+      again.disabled = !onlineIsHost();
       $('roomBtn').hidden = false;
     } else {
       again.textContent = '再来一局';
@@ -1665,8 +1671,7 @@ html[data-theme="light"] .dock { background: linear-gradient(180deg, rgba(247,23
     return onlineApi('POST', route, {
       session: online.session,
       playerId: online.playerId,
-      type: 'move',
-      move: move
+      action: move
     }).then(function (view) {
       online.requesting = false;
       busy = false;
@@ -1876,7 +1881,7 @@ html[data-theme="light"] .dock { background: linear-gradient(180deg, rgba(247,23
     if (act === 'closeResult') { hideResult(); return; }
     if (act === 'again') {
       if (online) {
-        if (!online.view || !online.view.isHost) { toast('等待房主重开。'); return; }
+        if (!onlineIsHost()) { toast('等待房主重开。'); return; }
         onlineApi('POST', '/api/rooms/' + encodeURIComponent(online.roomId) + '/restart', {
           session: online.session, playerId: online.playerId
         }).then(function (view) {
@@ -1940,7 +1945,7 @@ html[data-theme="light"] .dock { background: linear-gradient(180deg, rgba(247,23
       return true;
     },
     legalMoves: function (opts) {
-      if (online) return (online.view && online.view.legalMoves) ? online.view.legalMoves.slice() : [];
+      if (online) return (online.view && online.view.legalActions) ? online.view.legalActions.slice() : [];
       return state ? E.getLegalMoves(state, opts || {}) : [];
     },
     legalActions: function (opts) { return this.legalMoves(opts); },

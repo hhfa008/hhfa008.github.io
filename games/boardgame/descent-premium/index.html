@@ -1,0 +1,2535 @@
+<!doctype html>
+<!--
+  《深入绝境：黑暗之旅》第二版 · 精品单机版
+  · 规则完全由 engine.js 驱动：createGame / legalActions / applyAction / result。
+  · 板图 13×9，石板、砖墙、碎石、出口符文与水晶体全部用 CSS / 内联 SVG 绘制。
+  · 英雄与怪物使用内联 SVG 剪影 + 职业/种族辨识色，零外部图片、零外部依赖、零追踪。
+  · 手牌尺寸、格子尺寸均走 CSS 变量；手机 390 / 320 宽度不横向滚动。
+-->
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="深入绝境：黑暗之旅精品单机版。四名英雄闯入遗物地窖，在城主与怪物的围攻中摧毁仪式水晶并全员撤离。纯前端、本地绘制、零外部请求。">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0c0b09">
+<meta property="og:title" content="深入绝境 · 遗物地窖 · 精品桌游">
+<meta property="og:description" content="四名英雄，一座地窖，一枚正在苏醒的仪式水晶。骰子战斗、城主威胁与 15 回合倒计时，纯前端单机桌游。">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23100d09'/%3E%3Cpath d='M32 7 12 15v15c0 12 8 22 20 27 12-5 20-15 20-27V15L32 7z' fill='%23231c12' stroke='%23d8b06a' stroke-width='2'/%3E%3Cpath d='M32 17 22 32l10 15 10-15-10-15z' fill='%237fcbb8'/%3E%3C/svg%3E">
+<title>深入绝境 · 遗物地窖 · 精品桌游</title>
+<link rel="canonical" href="https://hhfa008.github.io/games/boardgame/descent-premium/">
+<style>
+/* ------------------------------------------------------------------ *
+ * 设计令牌                                                            *
+ * ------------------------------------------------------------------ */
+:root {
+  --font-display: "Palatino Linotype", "Iowan Old Style", "Songti SC", "Noto Serif SC", Georgia, serif;
+  --font-sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+
+  --bg: #0b0a08;
+  --bg-2: #13110d;
+  --panel: rgba(26, 23, 17, .9);
+  --panel-2: rgba(38, 33, 24, .72);
+  --panel-3: rgba(14, 12, 9, .72);
+  --ink: #f2e7d2;
+  --ink-soft: #d8c9ad;
+  --ink-dim: #a2947c;
+  --gold: #d8b06a;
+  --gold-2: #f2dca6;
+  --gold-dim: rgba(216, 176, 106, .22);
+  --line: rgba(216, 176, 106, .24);
+  --line-soft: rgba(216, 176, 106, .12);
+  --danger: #e0664f;
+  --danger-2: #ff9b7d;
+  --hp: #c9483e;
+  --hp-2: #e27a53;
+  --stamina: #69b3c4;
+  --threat: #b877dd;
+  --exit: #5cc8a9;
+  --focus: #ffe7b0;
+  --shadow: 0 26px 62px rgba(0, 0, 0, .55);
+  --shadow-soft: 0 12px 28px rgba(0, 0, 0, .34);
+  --radius: 15px;
+  --cell: clamp(18px, calc((100vw - 60px) / 13), 44px);
+  --gap: 1px;
+
+  --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.34'/%3E%3C/svg%3E");
+  --crack: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='52' height='52'%3E%3Cg fill='none' stroke='%23000' stroke-opacity='.4' stroke-width='.7'%3E%3Cpath d='M5 4l6 9 2 11M31 3l-5 10 4 8M16 34l8 4 7-2M42 25l5 12-3 9M2 39l10-3'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  background:
+    radial-gradient(900px 620px at 12% -12%, rgba(111, 74, 32, .22), transparent 62%),
+    radial-gradient(760px 560px at 92% -6%, rgba(76, 96, 82, .14), transparent 60%),
+    radial-gradient(1200px 900px at 50% 120%, rgba(0, 0, 0, .72), transparent 68%),
+    linear-gradient(160deg, var(--bg), var(--bg-2) 58%, #080705);
+  -webkit-font-smoothing: antialiased;
+}
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: var(--noise);
+  background-size: 140px 140px;
+  opacity: .05;
+}
+button, a, [tabindex] { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+button { font: inherit; cursor: pointer; }
+button:disabled { cursor: not-allowed; }
+a { color: var(--gold-2); text-underline-offset: 3px; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 8px; }
+h1, h2, h3, p { margin: 0; }
+
+.shell {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding:
+    max(8px, env(safe-area-inset-top))
+    max(8px, env(safe-area-inset-right))
+    max(20px, env(safe-area-inset-bottom))
+    max(8px, env(safe-area-inset-left));
+}
+
+/* ------------------------------------------------------------------ *
+ * 顶栏                                                               *
+ * ------------------------------------------------------------------ */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 2px 10px;
+}
+.brand { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.brand-mark {
+  width: 42px;
+  height: 42px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background:
+    radial-gradient(circle at 30% 18%, rgba(255, 240, 200, .18), transparent 55%),
+    linear-gradient(150deg, #33291b, #17130d 72%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12), 0 6px 16px rgba(0, 0, 0, .35);
+}
+.brand-mark svg { width: 26px; height: 26px; }
+.brand-copy { min-width: 0; }
+.brand h1 {
+  font-family: var(--font-display);
+  font-size: clamp(19px, 4.6vw, 27px);
+  line-height: 1.05;
+  letter-spacing: .14em;
+  font-weight: 700;
+  color: var(--ink);
+  text-shadow: 0 2px 16px rgba(0, 0, 0, .5);
+  white-space: nowrap;
+}
+.brand h1 span { color: var(--gold-2); }
+.brand-sub {
+  margin-top: 3px;
+  font-size: 12px;
+  line-height: 1.2;
+  letter-spacing: .2em;
+  color: var(--ink-dim);
+  white-space: nowrap;
+}
+.top-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+
+.btn {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 8px 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 11px;
+  border: 1px solid var(--line);
+  background: linear-gradient(170deg, var(--panel-2), var(--panel-3));
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .02em;
+  transition: border-color .16s ease, transform .16s ease, background .16s ease, color .16s ease;
+}
+.btn:hover:not(:disabled) { border-color: var(--gold); color: var(--ink); transform: translateY(-1px); }
+.btn:active:not(:disabled) { transform: translateY(0); }
+.btn svg { width: 17px; height: 17px; flex: none; }
+.btn.primary {
+  background: linear-gradient(165deg, #d9b46d, #a87a38);
+  border-color: rgba(255, 236, 190, .6);
+  color: #241a09;
+  font-weight: 700;
+  box-shadow: 0 8px 20px rgba(138, 96, 38, .3), inset 0 1px 0 rgba(255, 255, 255, .36);
+}
+.btn.primary:hover:not(:disabled) { color: #1b1306; filter: brightness(1.05); }
+.btn.ghost { background: rgba(20, 17, 12, .62); }
+.btn.danger { border-color: rgba(224, 102, 79, .45); color: #ffc5b5; background: linear-gradient(170deg, rgba(92, 32, 26, .6), rgba(40, 16, 12, .8)); }
+.btn:disabled { opacity: .38; }
+
+/* ------------------------------------------------------------------ *
+ * 布局                                                               *
+ * ------------------------------------------------------------------ */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 336px;
+  gap: 12px;
+  align-items: start;
+}
+@media (max-width: 1000px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+}
+.board-card {
+  position: relative;
+  min-width: 0;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background:
+    radial-gradient(540px 240px at 0% 0%, rgba(190, 130, 58, .12), transparent 70%),
+    radial-gradient(460px 220px at 100% 0%, rgba(86, 148, 126, .09), transparent 72%),
+    linear-gradient(178deg, rgba(31, 27, 20, .96), rgba(13, 12, 9, .97));
+  box-shadow: var(--shadow);
+  padding: 8px 8px 0;
+}
+.board-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background-image: var(--noise);
+  background-size: 140px 140px;
+  opacity: .04;
+}
+
+/* 盘面顶栏 */
+.board-topline {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  padding: 3px 2px 8px;
+  border-bottom: 1px solid var(--line-soft);
+  margin-bottom: 6px;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 26px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line-soft);
+  background: rgba(10, 9, 6, .5);
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.chip svg { width: 14px; height: 14px; flex: none; }
+.chip b { color: var(--gold-2); font-weight: 700; }
+.chip.round b { font-family: var(--font-display); font-size: 14px; }
+.chip.phase { border-color: rgba(216, 176, 106, .4); color: var(--gold-2); }
+.chip.phase::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 8px var(--gold);
+  flex: none;
+}
+.chip.phase.overlord { border-color: rgba(184, 119, 221, .48); color: #d7a9f2; }
+.chip.phase.overlord::before { background: var(--threat); box-shadow: 0 0 9px var(--threat); }
+.chip.threat { border-color: rgba(184, 119, 221, .34); }
+.chip.threat b { color: #ddb4f3; }
+.chip.obj { border-color: rgba(92, 200, 169, .3); }
+.chip.obj b { color: #8fe0ca; }
+.board-spacer { flex: 1 1 auto; min-width: 0; }
+.board-title {
+  font-family: var(--font-display);
+  font-size: 12px;
+  letter-spacing: .18em;
+  color: var(--ink-dim);
+  white-space: nowrap;
+}
+
+/* 棋盘外框 */
+.board-frame {
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 6px;
+  border-radius: 12px;
+  border: 1px solid rgba(216, 176, 106, .22);
+  background:
+    linear-gradient(155deg, #4a3f2e, #2a2419 42%, #17130e 78%),
+    var(--noise);
+  background-size: auto, 90px 90px;
+  box-shadow:
+    0 18px 38px rgba(0, 0, 0, .55),
+    inset 0 1px 0 rgba(255, 240, 200, .18),
+    inset 0 0 0 1px rgba(0, 0, 0, .62);
+}
+.board-frame::before,
+.board-frame::after {
+  content: "";
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  background: radial-gradient(circle at 35% 30%, #e8cf97, #7a5a26 62%, #2c1f0d);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .8);
+  pointer-events: none;
+}
+.board-frame::before { left: 3px; top: 3px; }
+.board-frame::after { right: 3px; bottom: 3px; }
+
+.board {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(13, var(--cell));
+  grid-template-rows: repeat(9, var(--cell));
+  gap: var(--gap);
+  width: max-content;
+  max-width: 100%;
+  padding: 2px;
+  border-radius: 7px;
+  background: #080706;
+  box-shadow: inset 0 0 22px rgba(0, 0, 0, .9);
+}
+.board::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  z-index: 1;
+  border-radius: 6px;
+  pointer-events: none;
+  background:
+    radial-gradient(200px 150px at 8% 12%, rgba(255, 186, 96, .1), transparent 72%),
+    radial-gradient(190px 160px at 88% 56%, rgba(106, 240, 212, .09), transparent 72%),
+    radial-gradient(125% 108% at 50% 46%, transparent 52%, rgba(0, 0, 0, .38) 100%);
+}
+
+/* 地格 */
+.cell {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 0;
+  border-radius: 2px;
+  background-color: hsl(34 13% calc(19% + var(--v, 2) * 1.15%));
+  background-image:
+    var(--crack),
+    var(--noise),
+    radial-gradient(120% 80% at 24% 16%, rgba(255, 244, 218, .09), transparent 58%),
+    linear-gradient(145deg, rgba(255, 255, 255, .035), rgba(0, 0, 0, .2));
+  background-size: 52px 52px, 74px 74px, auto, auto;
+  background-position:
+    calc(var(--v, 0) * 9px) calc(var(--v, 0) * 6px),
+    0 0, 0 0, 0 0;
+  background-blend-mode: normal, overlay, normal, normal;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .06),
+    inset 0 -1px 0 rgba(0, 0, 0, .46),
+    inset 1px 0 0 rgba(255, 255, 255, .025),
+    inset -1px 0 0 rgba(0, 0, 0, .32);
+}
+.cell.floor::after {
+  content: "";
+  position: absolute;
+  inset: 22% 18% 20% 22%;
+  border-radius: 40% 55% 45% 50%;
+  background: radial-gradient(circle at 40% 35%, rgba(255, 240, 210, .08), transparent 70%);
+  opacity: var(--wear, .5);
+  transform: rotate(calc(var(--v, 0) * 19deg));
+  pointer-events: none;
+}
+.cell.wall {
+  border-radius: 2px;
+  background-color: #3d362a;
+  background-image:
+    var(--noise),
+    repeating-linear-gradient(0deg, transparent 0 6px, rgba(0, 0, 0, .48) 6px 7px),
+    repeating-linear-gradient(90deg, transparent 0 12px, rgba(0, 0, 0, .32) 12px 13px),
+    linear-gradient(160deg, #5b5240, #373024 56%, #241f17);
+  background-size: 60px 60px, auto, auto, auto;
+  background-blend-mode: overlay, normal, normal, normal;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 242, 210, .22),
+    inset 0 -2px 3px rgba(0, 0, 0, .66),
+    inset 0 0 0 1px rgba(0, 0, 0, .32);
+}
+.cell.wall::after {
+  content: "";
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  top: 46%;
+  height: 1px;
+  background: rgba(255, 236, 198, .1);
+  box-shadow: 0 3px 0 rgba(0, 0, 0, .36);
+  pointer-events: none;
+}
+.cell.exit {
+  background-color: #1e3730;
+  background-image:
+    var(--noise),
+    radial-gradient(circle at 50% 50%, rgba(110, 235, 178, .42), rgba(30, 92, 70, .3) 55%, transparent 76%),
+    linear-gradient(150deg, #26473a, #12211d);
+  background-size: 70px 70px, auto, auto;
+  box-shadow: inset 0 0 0 1px rgba(128, 240, 190, .42), inset 0 0 14px rgba(72, 210, 156, .3);
+}
+.exit-rune {
+  position: relative;
+  width: 68%;
+  height: 68%;
+  border-radius: 50%;
+  border: 1px solid rgba(150, 245, 198, .68);
+  box-shadow: 0 0 8px rgba(110, 235, 178, .46), inset 0 0 8px rgba(110, 235, 178, .34);
+  pointer-events: none;
+}
+.exit-rune::before,
+.exit-rune::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  background: rgba(178, 252, 215, .78);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.exit-rune::before { width: 1px; height: 72%; }
+.exit-rune::after { width: 72%; height: 1px; }
+.cell.spawn::before {
+  content: "";
+  position: absolute;
+  width: 46%;
+  height: 46%;
+  border-radius: 50%;
+  border: 1px dashed rgba(184, 119, 221, .5);
+  box-shadow: 0 0 10px rgba(150, 84, 200, .22);
+  pointer-events: none;
+}
+.cell.objective {
+  background-image:
+    var(--noise),
+    radial-gradient(circle at 50% 52%, rgba(105, 230, 210, .48), transparent 66%),
+    linear-gradient(145deg, rgba(255, 255, 255, .05), rgba(0, 0, 0, .18));
+  box-shadow: inset 0 0 0 1px rgba(242, 220, 166, .5), inset 0 0 16px rgba(84, 220, 198, .28), 0 0 12px rgba(84, 220, 198, .16);
+}
+.cell.objective::before {
+  content: "";
+  position: absolute;
+  inset: 7%;
+  border-radius: 50%;
+  border: 1px solid rgba(242, 220, 166, .5);
+  box-shadow: 0 0 10px rgba(255, 226, 160, .3);
+  animation: objPulse 2.6s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes objPulse {
+  0%, 100% { opacity: .45; transform: scale(.94); }
+  50% { opacity: .9; transform: scale(1.02); }
+}
+.crystal { width: 78%; height: 78%; pointer-events: none; filter: drop-shadow(0 0 6px rgba(150, 245, 225, .8)); }
+.crystal svg { width: 100%; height: 100%; display: block; }
+.crystal.destroyed { opacity: .48; filter: grayscale(.5); }
+.obstacle { width: 90%; height: 90%; pointer-events: none; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .8)); }
+.obstacle svg { width: 100%; height: 100%; display: block; }
+
+/* 可行动提示 */
+.cell.can-move {
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(255, 214, 138, .28), inset 0 0 10px rgba(255, 196, 96, .1);
+  background-color: hsl(34 22% calc(22% + var(--v, 2) * 1.1%));
+}
+.move-rune {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 24%;
+  height: 24%;
+  min-width: 4px;
+  min-height: 4px;
+  transform: translate(-50%, -50%) rotate(45deg);
+  border: 1px solid rgba(255, 222, 150, .92);
+  background: rgba(255, 204, 104, .3);
+  box-shadow: 0 0 7px rgba(255, 196, 96, .7);
+  animation: runePulse 2.2s ease-in-out infinite;
+  animation-delay: calc(var(--v, 0) * -.45s);
+  pointer-events: none;
+}
+@keyframes runePulse {
+  0%, 100% { opacity: .58; transform: translate(-50%, -50%) rotate(45deg) scale(.82); }
+  50% { opacity: 1; transform: translate(-50%, -50%) rotate(45deg) scale(1.08); }
+}
+.cell.can-attack {
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1.5px rgba(224, 102, 79, .88), inset 0 0 13px rgba(224, 102, 79, .35);
+}
+.attack-ring {
+  position: absolute;
+  inset: 10%;
+  border: 1px dashed rgba(255, 150, 124, .9);
+  border-radius: 50%;
+  animation: targetPulse 1.5s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes targetPulse {
+  0%, 100% { transform: scale(.9); opacity: .6; }
+  50% { transform: scale(1.06); opacity: 1; }
+}
+.cell.can-interact { cursor: pointer; box-shadow: inset 0 0 0 1.5px rgba(242, 220, 166, .8), inset 0 0 14px rgba(216, 176, 106, .32); }
+.interact-rune {
+  position: absolute;
+  inset: 26%;
+  border: 1px solid rgba(255, 231, 176, .9);
+  transform: rotate(45deg);
+  box-shadow: 0 0 9px rgba(255, 224, 160, .55);
+  animation: runePulse 1.8s ease-in-out infinite;
+  pointer-events: none;
+}
+.cell.path-hint { box-shadow: inset 0 0 0 1px rgba(126, 234, 207, .34), inset 0 0 10px rgba(84, 202, 173, .18); }
+.cell.active-hero { box-shadow: inset 0 0 0 2px rgba(242, 220, 166, .92), inset 0 0 16px rgba(216, 176, 106, .36); }
+.cell.active-monster { box-shadow: inset 0 0 0 2px rgba(190, 126, 232, .8), inset 0 0 16px rgba(150, 84, 200, .35); }
+.cell.hit { animation: cellHit .52s ease-out; }
+@keyframes cellHit {
+  0% { box-shadow: inset 0 0 0 2px rgba(255, 130, 100, .95), inset 0 0 24px rgba(224, 70, 50, .8); }
+  100% { box-shadow: inset 0 0 0 0 rgba(255, 130, 100, 0); }
+}
+
+/* 棋子 */
+.piece {
+  position: absolute;
+  left: 4%;
+  top: 4%;
+  width: 92%;
+  height: 86%;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .75));
+}
+.piece-art { display: block; width: 88%; height: 88%; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .55)); }
+.piece-art svg { display: block; width: 100%; height: 100%; }
+.piece.hero {
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 34% 24%, rgba(255, 250, 232, .42), transparent 42%),
+    radial-gradient(circle at 50% 68%, var(--pc), var(--pc2) 78%);
+  border: 1.5px solid rgba(255, 242, 214, .72);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .65), inset 0 -2px 4px rgba(0, 0, 0, .5);
+}
+.piece.monster {
+  border-radius: 26% 26% 34% 34%;
+  background:
+    radial-gradient(circle at 35% 22%, rgba(255, 246, 226, .18), transparent 44%),
+    radial-gradient(circle at 50% 64%, var(--pc), var(--pc2) 78%);
+  border: 1.5px solid rgba(20, 16, 12, .85);
+  box-shadow: inset 0 0 0 1px rgba(255, 220, 200, .18), 0 0 0 1px rgba(0, 0, 0, .55);
+}
+.piece.monster .piece-art { color: #ffeede; }
+.piece.hero .piece-art { color: #fff8e8; }
+.piece.elite {
+  width: 100%;
+  height: 92%;
+  left: 0;
+  top: 2%;
+  border-radius: 24% 24% 30% 30%;
+  box-shadow: 0 0 0 1px #f0b483, 0 0 12px rgba(214, 112, 66, .65), inset 0 0 0 1px rgba(255, 225, 200, .25);
+}
+/* 职业 / 种族辨识色 */
+.h-warrior { --pc: #cf5845; --pc2: #5e1a13; }
+.h-scout { --pc: #74b65f; --pc2: #23431d; }
+.h-mage { --pc: #8775dc; --pc2: #2e2266; }
+.h-healer { --pc: #e0c46a; --pc2: #6b4f16; }
+.m-goblin { --pc: #91b248; --pc2: #2b3c0b; }
+.m-skeleton { --pc: #c4d2d5; --pc2: #3b474b; }
+.m-ogre { --pc: #cd7441; --pc2: #481a0c; }
+.h-warrior .piece-art { color: #fff3df; }
+.h-scout .piece-art { color: #f2ffe9; }
+.h-mage .piece-art { color: #f4edff; }
+.h-healer .piece-art { color: #fffbe8; }
+.m-goblin .piece-art { color: #f1ffd8; }
+.m-skeleton .piece-art { color: #fffef4; }
+.m-ogre .piece-art { color: #ffe9d6; }
+.piece.striking { animation: pieceStrike .44s ease-out; }
+@keyframes pieceStrike {
+  0% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(255, 210, 140, 0)); }
+  38% { transform: scale(1.24); filter: drop-shadow(0 0 7px rgba(255, 214, 150, .95)); }
+  100% { transform: scale(1); }
+}
+.piece-hp {
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  bottom: 4%;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(18, 8, 6, .9);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .5);
+  overflow: visible;
+}
+.piece-hp i {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #8f2d24, #e06a46);
+  transition: width .35s ease;
+}
+.piece.hero .piece-hp i { background: linear-gradient(90deg, #2f7d63, #7fe0b8); }
+.cond-dots { position: absolute; right: -1px; top: -1px; display: flex; gap: 1px; }
+.cond-dot { width: 5px; height: 5px; border-radius: 50%; border: 1px solid rgba(0, 0, 0, .6); }
+.cond-dot.poison { background: #c58ee8; box-shadow: 0 0 4px rgba(197, 142, 232, .85); }
+.cond-dot.bleed { background: #d84a3a; box-shadow: 0 0 4px rgba(216, 74, 58, .8); }
+.cond-dot.stun { background: #9fb9e0; box-shadow: 0 0 4px rgba(159, 185, 224, .8); }
+.buff-mark {
+  position: absolute;
+  left: -2px;
+  top: -3px;
+  width: 6px;
+  height: 8px;
+  border-radius: 50% 50% 45% 45%;
+  background: linear-gradient(180deg, #ffd27a, #c2412d);
+  box-shadow: 0 0 5px rgba(255, 150, 70, .8);
+}
+
+/* 图例 / 提示 / 操作 */
+.board-legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 6px 4px;
+  font-size: 12px;
+  color: var(--ink-dim);
+}
+.legend-item { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.legend-swatch { width: 11px; height: 11px; border-radius: 3px; border: 1px solid rgba(0, 0, 0, .5); flex: none; }
+.legend-swatch.exit { background: radial-gradient(circle, #7fe0c5, #1d4a3d); border-color: rgba(120, 226, 199, .6); }
+.legend-swatch.wall { background: repeating-linear-gradient(0deg, #4a4232 0 3px, #2a251b 3px 4px); }
+.legend-swatch.obstacle { background: linear-gradient(145deg, #6c6150, #2c271f); }
+.legend-swatch.objective { background: radial-gradient(circle, #b8fff0, #2f7d70); border-color: rgba(126, 231, 214, .7); }
+.legend-swatch.spawn { background: rgba(184, 119, 221, .2); border: 1px dashed rgba(216, 160, 250, .95); border-radius: 50%; }
+.legend-swatch.move { background: rgba(255, 204, 104, .34); border-color: rgba(255, 222, 150, .95); transform: rotate(45deg) scale(.8); }
+.legend-swatch.attack { background: rgba(224, 102, 79, .34); border-color: rgba(255, 150, 124, .9); border-radius: 50%; }
+
+.hint-bar {
+  position: relative;
+  margin: 0 2px 6px;
+  padding: 8px 10px;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border-radius: 10px;
+  border: 1px solid var(--line-soft);
+  background: linear-gradient(180deg, rgba(35, 30, 21, .56), rgba(15, 13, 9, .62));
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.hint-bar svg { width: 15px; height: 15px; flex: none; color: var(--gold); }
+.hint-bar b { color: var(--gold-2); font-weight: 700; }
+.hint-bar .hint-warn { color: #ffb39e; }
+.hint-bar.overlord { border-color: rgba(184, 119, 221, .3); background: linear-gradient(180deg, rgba(50, 30, 66, .5), rgba(20, 13, 26, .6)); }
+
+.action-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  padding: 8px 4px 10px;
+  border-top: 1px solid var(--line-soft);
+  margin-top: 2px;
+}
+.action-status {
+  flex: 1 1 130px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--ink-soft);
+  line-height: 1.4;
+}
+.action-status b { color: var(--gold-2); }
+.action-status .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 8px var(--gold);
+  flex: none;
+}
+.action-status .dot.monster { background: var(--threat); box-shadow: 0 0 8px var(--threat); }
+.action-buttons { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+.action-buttons .btn { padding: 7px 11px; font-size: 12px; white-space: nowrap; }
+.cond-row { display: flex; gap: 6px; flex-wrap: wrap; width: 100%; }
+.cond-row .btn { min-height: 44px; font-size: 12px; padding: 6px 10px; }
+
+/* 骰子战斗面板 */
+.dice-panel {
+  position: relative;
+  margin: 0 2px 8px;
+  padding: 9px 10px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(224, 158, 94, .4);
+  background:
+    radial-gradient(300px 110px at 12% 0%, rgba(224, 102, 79, .16), transparent 70%),
+    linear-gradient(175deg, rgba(48, 34, 22, .86), rgba(20, 14, 9, .92));
+  box-shadow: inset 0 1px 0 rgba(255, 224, 180, .12), var(--shadow-soft);
+  animation: panelIn .28s ease-out;
+}
+@keyframes panelIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: none; } }
+.dice-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.dice-title { font-size: 12px; color: var(--ink-soft); line-height: 1.4; }
+.dice-title b { color: var(--ink); font-family: var(--font-display); letter-spacing: .04em; }
+.dice-dmg {
+  flex: none;
+  min-width: 46px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 150, 124, .6);
+  background: rgba(122, 36, 26, .62);
+  color: #ffd2c2;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 700;
+  text-align: center;
+  box-shadow: 0 0 14px rgba(224, 70, 50, .28);
+}
+.dice-dmg.blocked { border-color: rgba(160, 190, 180, .42); background: rgba(40, 60, 54, .5); color: #c9ded7; box-shadow: none; }
+.dice-row { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-top: 7px; }
+.dice-cell { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.die {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 245, 220, .35);
+  background:
+    radial-gradient(circle at 32% 22%, rgba(255, 255, 255, .4), transparent 46%),
+    linear-gradient(150deg, var(--a), var(--b));
+  box-shadow: 0 3px 8px rgba(0, 0, 0, .5), inset 0 0 0 1px rgba(0, 0, 0, .2), inset 0 -3px 5px rgba(0, 0, 0, .3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #fff9ea;
+  animation: dieRoll .5s cubic-bezier(.2, 1.4, .5, 1) both;
+}
+.die.atk-blue { --a: #5c9ede; --b: #163e6c; }
+.die.atk-yellow { --a: #ddbc58; --b: #6f4f12; }
+.die.atk-red { --a: #d75a48; --b: #651d13; }
+.die.atk-green { --a: #74b65f; --b: #224b1a; }
+.die.def-brown { --a: #a17a4d; --b: #422d18; }
+.die.def-gray { --a: #a2abb0; --b: #3c4449; }
+.die.def-black { --a: #767c8a; --b: #171a21; }
+@keyframes dieRoll {
+  0% { transform: translateY(-9px) rotate(-14deg) scale(.7); opacity: 0; }
+  70% { transform: translateY(1px) rotate(3deg) scale(1.03); opacity: 1; }
+  100% { transform: none; opacity: 1; }
+}
+.die b { font-size: 15px; line-height: 1; font-weight: 800; font-synthesis: none; }
+.die small { font-size: 12px; line-height: 1.1; opacity: .86; }
+.die .surge-mark {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: linear-gradient(160deg, #ffe39b, #c9932e);
+  color: #2a1c05;
+  font-size: 12px;
+  font-weight: 800;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .55);
+}
+.dice-label { font-size: 12px; color: var(--ink-dim); line-height: 1.1; white-space: nowrap; }
+.dice-vs { align-self: center; font-family: var(--font-display); font-size: 12px; color: var(--ink-dim); padding: 0 1px; }
+.dice-math { margin-top: 6px; font-size: 12px; line-height: 1.55; color: var(--ink-soft); }
+.dice-math b { color: #ffd0a0; }
+.dice-math .ok { color: #95e0c4; }
+.dice-math .cond { color: #b9e58e; }
+.dice-legend {
+  display: flex;
+  align-items: center;
+  gap: 4px 9px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--ink-dim);
+}
+.dice-legend span { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.dice-legend i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+.dice-legend .lg-atk { background: #c9503f; }
+.dice-legend .lg-def { background: #a17a4d; }
+.dice-legend .lg-sg { background: #f2dca6; transform: rotate(45deg); }
+.dice-sub { margin-top: 3px; font-size: 12px; line-height: 1.5; color: var(--ink-dim); }
+
+/* ------------------------------------------------------------------ *
+ * 右侧信息                                                        *
+ * ------------------------------------------------------------------ */
+.side { display: grid; gap: 10px; min-width: 0; }
+.panel {
+  position: relative;
+  border-radius: var(--radius);
+  border: 1px solid var(--line-soft);
+  background:
+    radial-gradient(260px 120px at 8% 0%, rgba(190, 140, 70, .08), transparent 70%),
+    linear-gradient(178deg, rgba(30, 26, 19, .9), rgba(14, 12, 9, .93));
+  box-shadow: var(--shadow-soft);
+  padding: 11px 12px 12px;
+}
+.panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background-image: var(--noise);
+  background-size: 120px 120px;
+  opacity: .035;
+}
+.panel-head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.panel h2 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: .09em;
+  color: var(--gold-2);
+}
+.panel h2::before { content: ""; width: 14px; height: 1px; background: var(--gold); flex: none; }
+.panel-note { font-size: 12px; color: var(--ink-dim); white-space: nowrap; }
+
+.hero-list { display: grid; gap: 7px; }
+.hero-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr);
+  gap: 9px;
+  align-items: center;
+  min-width: 0;
+  padding: 8px;
+  border-radius: 11px;
+  border: 1px solid var(--line-soft);
+  background: linear-gradient(170deg, rgba(41, 35, 25, .5), rgba(14, 12, 9, .58));
+  transition: border-color .2s ease, background .2s ease;
+}
+.hero-card.active {
+  border-color: rgba(242, 220, 166, .62);
+  background:
+    radial-gradient(180px 80px at 0% 0%, rgba(216, 176, 106, .16), transparent 70%),
+    linear-gradient(170deg, rgba(57, 47, 30, .72), rgba(18, 15, 10, .66));
+  box-shadow: inset 0 0 0 1px rgba(242, 220, 166, .12);
+}
+.hero-card.dead { opacity: .5; filter: saturate(.4); }
+.hero-sigil {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 240, 210, .55);
+  background:
+    radial-gradient(circle at 34% 24%, rgba(255, 250, 235, .42), transparent 44%),
+    radial-gradient(circle at 50% 68%, var(--pc), var(--pc2) 80%);
+  box-shadow:
+    0 0 0 2px var(--pc2),
+    0 0 0 1px rgba(0, 0, 0, .65),
+    inset 0 -3px 5px rgba(0, 0, 0, .4);
+  color: #fff8e8;
+}
+.hero-sigil svg { width: 34px; height: 34px; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .6)); }
+.hero-sigil.monster-sigil { border-radius: 30%; border-color: rgba(0, 0, 0, .6); color: #ffeede; }
+.hero-main { min-width: 0; }
+.hero-line { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-width: 0; }
+.hero-name {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .03em;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow-wrap: break-word;
+}
+.hero-tag { font-size: 12px; color: var(--ink-dim); white-space: nowrap; }
+.hero-stat { font-size: 12px; line-height: 1.45; color: var(--ink-soft); }
+.hero-stat .v { color: var(--gold-2); font-weight: 700; }
+.bar {
+  position: relative;
+  height: 8px;
+  margin: 4px 0 3px;
+  border-radius: 999px;
+  background: #160e0a;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .8), 0 0 0 1px rgba(255, 255, 255, .05);
+}
+.bar i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #7d241c, var(--hp-2));
+  box-shadow: 0 0 7px rgba(224, 90, 60, .25);
+  transition: width .3s ease;
+}
+.bar.hp.low i { background: linear-gradient(90deg, #5e1712, #ef5b45); }
+.hero-sub { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; font-size: 12px; color: var(--ink-dim); }
+.hero-sub .v { color: var(--gold-2); font-weight: 700; }
+.hero-actions-label { white-space: nowrap; }
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--line-soft);
+  background: rgba(255, 255, 255, .04);
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.badge.poison { color: #d9b3f2; border-color: rgba(168, 110, 210, .52); background: rgba(74, 40, 102, .42); }
+.badge.bleed { color: #ffad9c; border-color: rgba(216, 74, 58, .5); background: rgba(96, 26, 20, .46); }
+.badge.stun { color: #b9c9ea; border-color: rgba(110, 140, 190, .5); background: rgba(36, 50, 82, .46); }
+.badge.fury { color: #ffd08a; border-color: rgba(220, 150, 60, .5); background: rgba(100, 54, 14, .44); }
+.badge svg { width: 13px; height: 13px; flex: none; }
+.action-pips { display: inline-flex; gap: 3px; align-items: center; }
+.action-pip {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 6px rgba(216, 176, 106, .5);
+}
+.action-pip.spent { background: #3b352a; box-shadow: none; }
+.hero-actions-label { font-size: 12px; color: var(--ink-dim); }
+
+.overlord-head { display: flex; align-items: center; gap: 12px; }
+.threat-orb {
+  position: relative;
+  width: 58px;
+  height: 58px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid rgba(184, 119, 221, .5);
+  background:
+    radial-gradient(circle at 36% 28%, rgba(255, 255, 255, .22), transparent 44%),
+    radial-gradient(circle at 50% 62%, rgba(148, 78, 196, .9), rgba(44, 19, 64, .95) 76%);
+  box-shadow: 0 0 18px rgba(132, 66, 180, .35), inset 0 0 14px rgba(30, 8, 45, .8);
+  color: #f3e3ff;
+  font-family: var(--font-display);
+  font-size: 27px;
+  font-weight: 700;
+  line-height: 1;
+}
+.threat-orb::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  border: 1px dashed rgba(230, 200, 255, .25);
+  pointer-events: none;
+}
+.threat-meta { min-width: 0; }
+.threat-meta .label { font-size: 12px; color: #d7b6e8; letter-spacing: .12em; }
+.threat-meta .sub { margin-top: 2px; font-size: 12px; color: var(--ink-dim); line-height: 1.5; }
+.overlord-cards { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 8px; }
+.card-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 7px;
+  border-radius: 7px;
+  border: 1px solid rgba(184, 119, 221, .28);
+  background: rgba(52, 30, 70, .35);
+  color: #e0c6f2;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.card-chip b { color: #f0d8ff; }
+.monster-list { display: grid; gap: 5px; margin-top: 8px; }
+.monster-row {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  gap: 7px;
+  align-items: center;
+  padding: 5px 6px;
+  border-radius: 8px;
+  border: 1px solid var(--line-soft);
+  background: rgba(10, 9, 6, .38);
+}
+.monster-row.active { border-color: rgba(184, 119, 221, .55); background: rgba(63, 36, 82, .34); }
+.monster-row.dead { opacity: .4; }
+.monster-mini {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 30%;
+  background: radial-gradient(circle at 50% 62%, var(--pc), var(--pc2) 80%);
+  border: 1px solid rgba(255, 232, 210, .3);
+  color: #ffeede;
+}
+.monster-mini svg { width: 19px; height: 19px; }
+.monster-name { font-size: 12px; color: var(--ink-soft); line-height: 1.3; white-space: nowrap; overflow-wrap: break-word; }
+.monster-name b { color: var(--ink); }
+.monster-hp { width: 74px; height: 6px; border-radius: 999px; background: #190e0b; box-shadow: inset 0 1px 2px rgba(0, 0, 0, .7); }
+.monster-hp i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #7f2b20, #d46849); }
+.empty-note { padding: 8px 2px; font-size: 12px; color: var(--ink-dim); line-height: 1.6; }
+
+.objective-block { display: grid; gap: 6px; }
+.obj-head { display: flex; align-items: center; gap: 8px; }
+.obj-icon {
+  width: 38px;
+  height: 38px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  border: 1px solid rgba(126, 231, 214, .32);
+  background: radial-gradient(circle, rgba(77, 183, 166, .3), rgba(14, 30, 26, .7));
+}
+.obj-icon svg { width: 26px; height: 26px; }
+.obj-title { font-family: var(--font-display); font-size: 14px; color: var(--ink); letter-spacing: .04em; }
+.obj-sub { font-size: 12px; color: var(--ink-dim); line-height: 1.5; }
+.segments { display: flex; gap: 4px; margin-top: 2px; }
+.segment {
+  flex: 1 1 0;
+  height: 8px;
+  border-radius: 999px;
+  background: #14201d;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .7), 0 0 0 1px rgba(92, 200, 169, .16);
+}
+.segment.on { background: linear-gradient(90deg, #2f8c76, #7fe0c5); box-shadow: 0 0 8px rgba(92, 200, 169, .36); }
+.obj-foot { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--ink-dim); }
+.obj-foot b { color: #8fe0ca; }
+.extract { display: flex; gap: 4px; flex-wrap: wrap; }
+.extract-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--line-soft);
+  font-size: 12px;
+  color: var(--ink-soft);
+  background: rgba(255, 255, 255, .03);
+}
+.extract-chip.ok { color: #95e0c4; border-color: rgba(92, 200, 169, .36); }
+.extract-chip.out { color: #ffb0a0; border-color: rgba(224, 102, 79, .3); }
+
+.log-panel .panel-head { margin-bottom: 6px; }
+.log {
+  max-height: 192px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(216, 176, 106, .34) transparent;
+  padding-right: 2px;
+}
+.log-entry {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 6px;
+  padding: 4px 0;
+  border-bottom: 1px dashed var(--line-soft);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+.log-entry:last-child { border-bottom: 0; }
+.log-round { color: var(--ink-dim); font-family: var(--font-display); font-size: 12px; padding-top: 1px; }
+.log-entry.hero .log-body { color: #e9d9b9; }
+.log-entry.monster .log-body { color: #d8b8e9; }
+.log-entry.bad .log-body { color: #ffb5a5; }
+.log-entry.good .log-body { color: #a8e6cd; }
+.log-body b { color: var(--gold-2); font-weight: 700; }
+.log-body .dmg { color: #ffad8f; font-weight: 700; }
+
+/* ------------------------------------------------------------------ *
+ * 页脚 / 弹层 / 提示                                                  *
+ * ------------------------------------------------------------------ */
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 14px 4px 0;
+  font-size: 12px;
+  color: var(--ink-dim);
+}
+.foot span { line-height: 1.5; }
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(14px, env(safe-area-inset-top)) 12px max(14px, env(safe-area-inset-bottom));
+  background:
+    radial-gradient(700px 520px at 50% 0%, rgba(150, 100, 40, .16), transparent 70%),
+    rgba(5, 4, 3, .82);
+  -webkit-backdrop-filter: blur(7px);
+  backdrop-filter: blur(7px);
+  overflow-y: auto;
+}
+.overlay-card {
+  position: relative;
+  width: min(520px, 100%);
+  max-height: calc(100dvh - 28px);
+  overflow-y: auto;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background:
+    radial-gradient(340px 200px at 20% 0%, rgba(196, 140, 64, .14), transparent 70%),
+    linear-gradient(178deg, #241f16, #100e0a 70%);
+  box-shadow: 0 40px 90px rgba(0, 0, 0, .7), inset 0 1px 0 rgba(255, 240, 210, .14);
+  padding: 20px 20px 18px;
+}
+.overlay-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background-image: var(--noise);
+  background-size: 140px 140px;
+  opacity: .04;
+}
+.crest {
+  width: 54px;
+  height: 54px;
+  margin: 0 auto 8px;
+  display: grid;
+  place-items: center;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, .5));
+}
+.crest svg { width: 100%; height: 100%; }
+.eyebrow {
+  text-align: center;
+  font-size: 12px;
+  letter-spacing: .26em;
+  color: var(--gold);
+}
+.overlay h1 {
+  text-align: center;
+  margin-top: 4px;
+  font-family: var(--font-display);
+  font-size: clamp(28px, 9vw, 42px);
+  letter-spacing: .12em;
+  line-height: 1.1;
+  color: var(--ink);
+  text-shadow: 0 3px 24px rgba(0, 0, 0, .6);
+}
+.overlay h1 span { color: var(--gold-2); }
+.lede {
+  margin: 7px auto 0;
+  max-width: 34em;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--ink-soft);
+}
+.rule-line {
+  height: 1px;
+  margin: 15px 0 13px;
+  background: linear-gradient(90deg, transparent, var(--line), transparent);
+}
+.picker-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  letter-spacing: .1em;
+  color: var(--ink-dim);
+  margin-bottom: 7px;
+}
+.picker-label b { color: var(--gold-2); font-family: var(--font-display); font-size: 13px; letter-spacing: .04em; }
+.picker-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+.pick {
+  position: relative;
+  min-height: 64px;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  padding: 7px 9px;
+  padding-right: 15px;
+  text-align: left;
+  border-radius: 11px;
+  border: 1px solid var(--line-soft);
+  background: linear-gradient(170deg, rgba(44, 38, 27, .5), rgba(14, 12, 9, .58));
+  color: var(--ink-soft);
+  transition: border-color .16s ease, background .16s ease, transform .16s ease;
+}
+.pick:hover { border-color: var(--gold-dim); transform: translateY(-1px); }
+.pick.on {
+  border-color: rgba(242, 220, 166, .68);
+  background:
+    radial-gradient(150px 70px at 0% 0%, rgba(216, 176, 106, .18), transparent 70%),
+    linear-gradient(170deg, rgba(62, 51, 32, .68), rgba(18, 15, 10, .66));
+  box-shadow: inset 0 0 0 1px rgba(242, 220, 166, .14);
+}
+.pick.on::after {
+  content: "";
+  position: absolute;
+  right: 7px;
+  top: 7px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--gold-2);
+  box-shadow: 0 0 7px rgba(242, 220, 166, .9);
+}
+.pick-sigil {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 240, 214, .5);
+  background: radial-gradient(circle at 34% 24%, rgba(255, 250, 236, .4), transparent 44%), radial-gradient(circle at 50% 68%, var(--pc), var(--pc2) 80%);
+  box-shadow: 0 0 0 2px var(--pc2), inset 0 -2px 4px rgba(0, 0, 0, .35);
+  color: #fff8e8;
+}
+.pick-sigil svg { width: 28px; height: 28px; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .55)); }
+.pick-name { display: block; min-width: 0; font-size: 13px; font-weight: 700; color: var(--ink); font-family: var(--font-display); letter-spacing: .03em; line-height: 1.25; white-space: nowrap; }
+.pick-sub { display: block; margin-top: 2px; font-size: 12px; color: var(--ink-dim); line-height: 1.35; white-space: nowrap; }
+.start-meta {
+  margin: 13px 0 10px;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--ink-dim);
+}
+.start-btn { width: 100%; min-height: 50px; font-size: 15px; letter-spacing: .12em; }
+.overlay-links { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 8px; }
+.text-link {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-dim);
+  font-size: 12px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.text-link:hover { color: var(--gold-2); }
+
+/* 结算 / 规则 */
+.end-card { width: min(460px, 100%); }
+.end-badge {
+  width: 62px;
+  height: 62px;
+  margin: 0 auto 6px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: radial-gradient(circle at 50% 60%, rgba(216, 176, 106, .28), rgba(20, 16, 10, .8));
+}
+.end-badge svg { width: 34px; height: 34px; }
+.end-title { text-align: center; font-family: var(--font-display); font-size: clamp(24px, 7vw, 32px); letter-spacing: .08em; }
+.end-title.hero { color: #9fe8cf; }
+.end-title.overlord { color: #e4a6f7; }
+.end-reason { margin-top: 5px; text-align: center; font-size: 13px; color: var(--ink-soft); line-height: 1.6; }
+.end-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin: 14px 0; }
+.end-stat {
+  padding: 7px 9px;
+  border-radius: 9px;
+  border: 1px solid var(--line-soft);
+  background: rgba(255, 255, 255, .035);
+  font-size: 12px;
+  color: var(--ink-dim);
+  line-height: 1.5;
+}
+.end-stat b { display: block; font-family: var(--font-display); font-size: 17px; color: var(--gold-2); letter-spacing: .02em; }
+.end-actions { display: flex; gap: 7px; flex-wrap: wrap; }
+.end-actions .btn { flex: 1 1 132px; }
+.rules-card h2 { text-align: center; font-family: var(--font-display); font-size: 22px; letter-spacing: .12em; color: var(--gold-2); margin-bottom: 4px; }
+.rules-card .rules-lead { text-align: center; font-size: 12px; color: var(--ink-dim); margin-bottom: 10px; }
+.rules-list { display: grid; gap: 7px; }
+.rule-item {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: 9px;
+  border: 1px solid var(--line-soft);
+  background: rgba(255, 255, 255, .028);
+  font-size: 12px;
+  line-height: 1.58;
+  color: var(--ink-soft);
+}
+.rule-item .ri { display: grid; place-items: center; color: var(--gold); }
+.rule-item .ri svg { width: 20px; height: 20px; }
+.rule-item b { color: var(--gold-2); }
+.rules-card .modal-close { width: 100%; margin-top: 12px; }
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: 80;
+  transform: translate(-50%, 14px);
+  opacity: 0;
+  pointer-events: none;
+  max-width: min(440px, calc(100vw - 24px));
+  padding: 9px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(24, 20, 14, .96);
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.45;
+  text-align: center;
+  box-shadow: var(--shadow-soft);
+  transition: opacity .2s ease, transform .2s ease;
+}
+.toast.on { opacity: 1; transform: translate(-50%, 0); }
+
+/* ------------------------------------------------------------------ *
+ * 手机适配                                                            *
+ * ------------------------------------------------------------------ */
+@media (max-width: 560px) {
+  .shell { padding-left: 6px; padding-right: 6px; }
+  .topbar { padding-bottom: 8px; gap: 6px; }
+  .brand { gap: 7px; }
+  .brand-mark { width: 38px; height: 38px; border-radius: 10px; }
+  .brand-mark svg { width: 23px; height: 23px; }
+  .brand h1 { font-size: 20px; letter-spacing: .1em; }
+  .brand-sub { display: none; }
+  .top-actions .btn { padding: 7px 10px; }
+  .board-card { padding: 6px 6px 0; border-radius: 13px; }
+  .board-topline { gap: 4px; padding-bottom: 6px; margin-bottom: 5px; }
+  .chip { min-height: 25px; padding: 2px 6px; gap: 4px; font-size: 12px; }
+  .chip svg { width: 13px; height: 13px; }
+  .board-title { display: none; }
+  .board-legend { gap: 7px; padding: 5px 2px; }
+  .hint-bar { margin-bottom: 5px; padding: 7px 8px; }
+  .action-bar { padding: 7px 2px 8px; gap: 6px; }
+  .action-status { flex-basis: 100%; }
+  .action-buttons { width: 100%; margin-left: 0; }
+  .action-buttons .btn { flex: 1 1 0; min-width: 44px; padding: 7px 8px; }
+  .dice-panel { margin-bottom: 6px; }
+  .side { gap: 8px; }
+  .panel { padding: 9px 10px 10px; }
+  .hero-card { grid-template-columns: 44px minmax(0, 1fr); padding: 7px; gap: 7px; }
+  .hero-sigil { width: 44px; height: 44px; }
+  .hero-sigil svg { width: 32px; height: 32px; }
+  .log { max-height: 168px; }
+  .overlay-card { padding: 16px 14px 14px; }
+  .pick { min-height: 62px; padding: 6px 7px; gap: 6px; grid-template-columns: 32px minmax(0, 1fr); }
+  .pick-sigil { width: 32px; height: 32px; }
+  .pick-sigil svg { width: 25px; height: 25px; }
+  .pick-name { font-size: 12px; }
+}
+@media (max-width: 370px) {
+  .brand h1 { font-size: 18px; letter-spacing: .06em; }
+  .top-actions .btn { padding: 6px 9px; font-size: 12px; }
+  .chip.round b { font-size: 13px; }
+  .board-legend { font-size: 12px; gap: 6px; }
+  .legend-item { gap: 3px; }
+  .hint-bar { font-size: 12px; }
+  .overlay-card { padding: 14px 12px 12px; }
+  .rule-line { margin: 8px 0 7px; }
+  .start-meta { margin: 8px 0 6px; }
+  .picker-grid { gap: 5px; }
+  .pick { grid-template-columns: 30px minmax(0, 1fr); min-height: 58px; padding: 5px 6px; }
+  .pick-sigil { width: 30px; height: 30px; }
+  .pick-sigil svg { width: 24px; height: 24px; }
+  .pick-sub { font-size: 12px; }
+  .die { width: 33px; height: 33px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32" fill="none">
+          <path d="M16 2.6 4 7.2v7.6c0 6.4 4.6 12 12 14.6 7.4-2.6 12-8.2 12-14.6V7.2L16 2.6z" fill="#1c1710" stroke="#d8b06a" stroke-width="1.5"/>
+          <path d="M16 8.6 10 17l6 7 6-7-6-8.4z" fill="#3f8f7e" opacity=".9"/>
+          <path d="M16 8.6 13 17l3 7 3-7-3-8.4z" fill="#9ff0db" opacity=".9"/>
+          <path d="M16 3.4v4M9 6.6l2 3M23 6.6l-2 3" stroke="#d8b06a" stroke-width="1.1" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="brand-copy">
+        <h1>深入<span>绝境</span></h1>
+        <div class="brand-sub">DESCENT · RELIC VAULT</div>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button class="btn ghost" id="resetBtn" type="button" title="重新选择队伍并开始新对局">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>
+        <span>重开</span>
+      </button>
+      <button class="btn ghost" id="rulesBtn" type="button" title="查看规则">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16.5H6.5A2.5 2.5 0 0 0 4 22V5.5z"/><path d="M8 7h8M8 11h6"/></svg>
+        <span>规则</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="board-card" aria-label="遗物地窖棋盘">
+      <div class="board-topline">
+        <span class="chip phase" id="phaseChip">英雄阶段</span>
+        <span class="chip round">第 <b id="roundNum">1</b>/<span id="maxRounds">15</span> 回合</span>
+        <span class="chip threat" title="城主威胁点">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 3a7 7 0 0 0-7 7v4l-2 4h5l1 3h6l1-3h5l-2-4v-4a7 7 0 0 0-7-7z"/><circle cx="9" cy="10" r="1.4" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="1.4" fill="currentColor" stroke="none"/><path d="M10 15h4"/></svg>
+          威胁 <b id="threatNum">2</b>
+        </span>
+        <span class="chip obj" title="仪式水晶进度">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2 6 9l6 13 6-13-6-7z"/><path d="M6 9h12M12 2v20"/></svg>
+          水晶 <b id="objChip">0/2</b>
+        </span>
+        <span class="board-spacer"></span>
+        <span class="board-title">遗物地窖</span>
+      </div>
+
+      <div class="board-frame">
+        <div class="board" id="board" role="grid" aria-label="地城棋盘，13 列 9 行"></div>
+      </div>
+
+      <div class="board-legend" aria-label="图例">
+        <span class="legend-item"><span class="legend-swatch wall"></span>石墙</span>
+        <span class="legend-item"><span class="legend-swatch obstacle"></span>碎石</span>
+        <span class="legend-item"><span class="legend-swatch exit"></span>出口</span>
+        <span class="legend-item"><span class="legend-swatch objective"></span>水晶</span>
+        <span class="legend-item"><span class="legend-swatch spawn"></span>召唤点</span>
+        <span class="legend-item"><span class="legend-swatch move"></span>可移动</span>
+        <span class="legend-item"><span class="legend-swatch attack"></span>可攻击</span>
+      </div>
+
+      <div class="hint-bar" id="hintBar" role="status" aria-live="polite">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/><circle cx="12" cy="12" r="3.4"/></svg>
+        <span id="hintText">准备进入遗物地窖…</span>
+      </div>
+
+      <div class="dice-panel" id="dicePanel" hidden aria-live="polite"></div>
+
+      <div class="action-bar" id="actionBar" aria-label="行动操作"></div>
+    </section>
+
+    <aside class="side">
+      <section class="panel" aria-labelledby="heroesTitle">
+        <div class="panel-head">
+          <h2 id="heroesTitle">英雄小队</h2>
+          <span class="panel-note" id="heroesNote">2 / 4</span>
+        </div>
+        <div class="hero-list" id="heroList"></div>
+      </section>
+
+      <section class="panel" aria-labelledby="overlordTitle">
+        <div class="panel-head">
+          <h2 id="overlordTitle">城主</h2>
+          <span class="panel-note" id="overlordNote">自动行动</span>
+        </div>
+        <div class="overlord-head">
+          <div class="threat-orb" id="threatOrb" aria-label="威胁点">2</div>
+          <div class="threat-meta">
+            <div class="label">威胁点</div>
+            <div class="sub" id="threatSub">每进入城主阶段 +1 + 存活英雄数</div>
+          </div>
+        </div>
+        <div class="overlord-cards">
+          <span class="card-chip">狂暴 <b>2</b></span>
+          <span class="card-chip">暗影箭 <b>2</b></span>
+          <span class="card-chip">召唤 <b>3</b></span>
+        </div>
+        <div class="monster-list" id="monsterList"></div>
+      </section>
+
+      <section class="panel" aria-labelledby="objTitle">
+        <div class="panel-head">
+          <h2 id="objTitle">任务目标</h2>
+          <span class="panel-note" id="objNote">遗物地窖</span>
+        </div>
+        <div class="objective-block">
+          <div class="obj-head">
+            <div class="obj-icon" id="objIcon" aria-hidden="true"></div>
+            <div>
+              <div class="obj-title">仪式水晶</div>
+              <div class="obj-sub" id="objSub">站上水晶格互动 2 次，再全员撤离出口。</div>
+            </div>
+          </div>
+          <div class="segments" id="objSegments" aria-label="水晶破坏进度"></div>
+          <div class="obj-foot"><span>破坏进度 <b id="objProgress">0 / 2</b></span><span id="objState">完好</span></div>
+          <div class="extract" id="extractList"></div>
+        </div>
+      </section>
+
+      <section class="panel log-panel" aria-labelledby="logTitle">
+        <div class="panel-head">
+          <h2 id="logTitle">行动日志</h2>
+          <span class="panel-note" id="logNote">引擎 0 条</span>
+        </div>
+        <div class="log" id="log" aria-live="polite"></div>
+      </section>
+    </aside>
+  </main>
+
+  <footer class="foot">
+    <span>遗物地窖 · 15 回合 · 城主由 AI 自动行动</span>
+    <span>纯前端 · 零外部请求 · 本地绘制</span>
+  </footer>
+</div>
+
+<!-- 开局：选择队伍 -->
+<div class="overlay" id="startOverlay" role="dialog" aria-modal="true" aria-labelledby="startTitle">
+  <div class="overlay-card">
+    <div class="crest" aria-hidden="true">
+      <svg viewBox="0 0 64 64" fill="none">
+        <path d="M32 4 10 13v14c0 12 9 23 22 29 13-6 22-17 22-29V13L32 4z" fill="#16120c" stroke="#d8b06a" stroke-width="1.6"/>
+        <path d="M32 15 19 33l13 15 13-15-13-18z" fill="#2f7d6e"/>
+        <path d="M32 15 25 33l7 15 7-15-7-18z" fill="#9ff0db"/>
+        <path d="M32 5v8M17 11l4 6M47 11l-4 6M12 26h6M46 26h6" stroke="#d8b06a" stroke-width="1.2" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <p class="eyebrow">DARK DESCENT · RELIC VAULT</p>
+    <h1 id="startTitle">深入<span>绝境</span></h1>
+    <p class="lede">仪式水晶正在地窖深处苏醒。挑选你的英雄，穿过石墙与碎石，在 15 个回合内摧毁水晶并全员撤离。</p>
+    <div class="rule-line"></div>
+    <div class="picker-label"><span>选择英雄 · 可多选</span><b id="partyCount">2 / 4</b></div>
+    <div class="picker-grid" id="partyPicker"></div>
+    <div class="start-meta">每名英雄每回合 2 个行动 · 城主自动行动<br>点击金色微光移动，点击红环怪物攻击</div>
+    <button class="btn primary start-btn" id="startBtn" type="button">开始冒险 · 2 名英雄</button>
+    <div class="overlay-links">
+      <button class="text-link" id="startRulesBtn" type="button">先看规则</button>
+      <button class="text-link" id="resumeBtn" type="button" hidden>继续当前对局</button>
+    </div>
+  </div>
+</div>
+
+<!-- 结算 -->
+<div class="overlay" id="endOverlay" hidden role="dialog" aria-modal="true" aria-labelledby="endTitle">
+  <div class="overlay-card end-card">
+    <div class="end-badge" id="endBadge" aria-hidden="true"></div>
+    <h2 class="end-title" id="endTitle">英雄胜利</h2>
+    <p class="end-reason" id="endReason"></p>
+    <div class="end-stats" id="endStats"></div>
+    <div class="end-actions">
+      <button class="btn primary" id="againBtn" type="button">再来一局</button>
+      <button class="btn" id="changePartyBtn" type="button">更换队伍</button>
+    </div>
+  </div>
+</div>
+
+<!-- 规则 -->
+<div class="overlay" id="rulesOverlay" hidden role="dialog" aria-modal="true" aria-labelledby="rulesTitle">
+  <div class="overlay-card rules-card">
+    <h2 id="rulesTitle">地窖规则</h2>
+    <p class="rules-lead">英雄合作，对抗自动行动的城主</p>
+    <div class="rules-list">
+      <div class="rule-item"><span class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2 6 9l6 13 6-13-6-7z"/><path d="M6 9h12"/></svg></span><div><b>胜利条件</b>：一名英雄站上水晶格互动 2 次摧毁水晶，然后所有存活英雄站到左上角 2×2 出口区。</div></div>
+      <div class="rule-item"><span class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg></span><div><b>行动</b>：每名英雄每次激活有 2 个行动。一次移动无论几格都只花 1 个行动；攻击、互动、休整各花 1 个。</div></div>
+      <div class="rule-item"><span class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 20 20 4M13 4h7v7"/><path d="M5 5l14 14" opacity=".35"/></svg></span><div><b>战斗</b>：武器骰加总伤害，目标掷 1 颗防御骰。surge 可抵消护盾，剩余换成额外伤害。</div></div>
+      <div class="rule-item"><span class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 3c3 4 5 6.4 5 9a5 5 0 0 1-10 0c0-2.6 2-5 5-9z"/><path d="M9.5 11.5c.4 1.4 1.3 2.2 2.5 2.2"/></svg></span><div><b>状态</b>：中毒 3 次激活、流血 2 次激活，每次激活开始受 1 点直接伤害；眩晕会让本次激活少 1 个行动。休整可清除其中 1 个。</div></div>
+      <div class="rule-item"><span class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 3a7 7 0 0 0-7 7v4l-2 4h5l1 3h6l1-3h5l-2-4v-4a7 7 0 0 0-7-7z"/><circle cx="9.5" cy="10" r="1" fill="currentColor"/><circle cx="14.5" cy="10" r="1" fill="currentColor"/></svg></span><div><b>城主</b>：进入城主阶段获得 <b>1 + 存活英雄数</b> 威胁。可花 3 威胁召唤哥布林，或花 2 威胁打出狂暴 / 暗影箭。</div></div>
+      <div class="rule-item"><span class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 19h16M6 19V9l6-4 6 4v10"/><path d="M10 19v-5h4v5"/></svg></span><div><b>出口</b>：左上角 2×2 青绿色符文区。水晶未摧毁前站在出口不会获胜。</div></div>
+    </div>
+    <button class="btn modal-close" id="rulesCloseBtn" type="button">知道了</button>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- 共享 UMD 洗牌器：必须先用 classic script 载入，engine.js 通过 shuffle-adapter.js 读取 -->
+<script src="../../shared/shuffle.js"></script>
+<script type="module">
+import {
+  createGame,
+  legalActions,
+  applyAction,
+  chooseOverlordAIAction,
+  currentActor,
+  result,
+  HERO_ARCHETYPES,
+  MONSTER_TYPES,
+  CONDITION_NAMES,
+  SUMMON_COST,
+  aliveHeroes,
+  aliveMonsters,
+  isExitCell
+} from './engine.js';
+
+const $ = (id) => document.getElementById(id);
+const HERO_ORDER = ['warrior', 'scout', 'mage', 'healer'];
+const HERO_COLOR = {
+  warrior: ['#c9503f', '#6e2119'],
+  scout: ['#6da95a', '#274a24'],
+  mage: ['#7a68c9', '#33246b'],
+  healer: ['#d8b960', '#6e531c']
+};
+const MONSTER_COLOR = {
+  goblin: ['#7f9e3f', '#31420f'],
+  skeleton: ['#b9c6c9', '#4a585c'],
+  ogre: ['#c06a3d', '#5a2413']
+};
+const STATUS_ORDER = ['poison', 'bleed', 'stun'];
+
+/* ------------------------------------------------------------------ *
+ * 内联 SVG 剪影                                                       *
+ * ------------------------------------------------------------------ */
+const SVG = {
+  warrior: `<svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+    <path d="M24.2 26.2 22.4 24 28.6 8.6l2.2-.8-.7 2.3-5.9 16.1z" fill="currentColor"/>
+    <path d="M21.4 22.6 25.6 25.8" stroke="#1d150c" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M11.2 13.2h9.6l1.8 12.6H9.4l1.8-12.6z" fill="currentColor"/>
+    <path d="M16 3.6c2.9 0 5 2.1 5 4.9 0 2.6-2.1 4.7-5 4.7s-5-2.1-5-4.7c0-2.8 2.1-4.9 5-4.9z" fill="currentColor"/>
+    <path d="M12.4 8.2h7.2M16 3.8v3.4" stroke="#1d150c" stroke-width="1.2" stroke-linecap="round"/>
+    <path d="M5.2 13.4 11.6 12v8.6c0 3.4-2.2 5.8-3.2 6.6-1-.8-3.2-3.2-3.2-6.6V13.4z" fill="currentColor"/>
+    <path d="M8.4 15.4v7.2M6.2 18.2h4.4" stroke="#1d150c" stroke-width="1.3" stroke-linecap="round"/>
+  </svg>`,
+  scout: `<svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+    <path d="M23.2 5.2c4.6 5.4 4.6 16.2 0 21.6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M23.2 5.2v21.6" stroke="#1d150c" stroke-width="1.2"/>
+    <path d="M17.2 16h11.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+    <path d="M27.4 14.4 30 16l-2.6 1.6" fill="currentColor"/>
+    <path d="M15.6 3.6c-4.8 0-7.8 3.8-7.8 8.8 0 3.8 1.8 6.7 4.2 8.6h7.2c2.4-1.9 4.2-4.8 4.2-8.6 0-5-3-8.8-7.8-8.8z" fill="currentColor"/>
+    <path d="M11.4 11.4c.9-1.9 2.5-3 4.2-3s3.3 1.1 4.2 3c-1.4.9-2.8 1.4-4.2 1.4s-2.8-.5-4.2-1.4z" fill="#1d150c" opacity=".62"/>
+    <path d="M8.4 27.2c.3-5.4 3.3-8.8 7.2-8.8s6.9 3.4 7.2 8.8H8.4z" fill="currentColor"/>
+    <path d="M12 22.4 16 26l4-3.6" stroke="#1d150c" stroke-width="1.1" stroke-linecap="round"/>
+  </svg>`,
+  mage: `<svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M16 2.8 9.1 14.8h13.8L16 2.8z" fill="currentColor"/><path d="M6.8 15.6c2.9-1 5.9-1.5 9.2-1.5s6.3.5 9.2 1.5c-1.5 1.4-4.5 2.2-9.2 2.2s-7.7-.8-9.2-2.2z" fill="currentColor"/><path d="M10.4 17.2c.3 4.1 2.2 8.4 5.6 10.4 3.4-2 5.3-6.3 5.6-10.4H10.4z" fill="currentColor"/><path d="M21.3 27.2V10.4" stroke="#1d150c" stroke-width="1.5" stroke-linecap="round"/><circle cx="21.3" cy="8.8" r="2.5" fill="#1d150c" opacity=".64"/><circle cx="21.3" cy="8.8" r="1.1" fill="currentColor"/><path d="M12.2 10.2h7.6" stroke="#1d150c" stroke-width="1.2" stroke-linecap="round"/></svg>`,
+  healer: `<svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M16 4.2c-3.9 0-6.8 3-6.8 7 0 3.1 1.4 5.6 3.2 7.2h7.2c1.8-1.6 3.2-4.1 3.2-7.2 0-4-2.9-7-6.8-7z" fill="currentColor"/><path d="M8 27.6c.3-5.5 3.6-9.2 8-9.2s7.7 3.7 8 9.2H8z" fill="currentColor"/><path d="M16 2.1v2.2M12.6 3.4l.8 1.8M19.4 3.4l-.8 1.8" stroke="#1d150c" stroke-width="1.1" stroke-linecap="round"/><path d="M23.1 27.2V12.8" stroke="#1d150c" stroke-width="1.4" stroke-linecap="round"/><circle cx="23.1" cy="11.7" r="2.4" fill="#1d150c" opacity=".66"/><path d="M21.3 9.7v4M21.3 11.7h3.6" stroke="currentColor" stroke-width=".9" stroke-linecap="round"/><path d="M12.6 14.1c1.2.8 2.3 1.2 3.4 1.2s2.2-.4 3.4-1.2" stroke="#1d150c" stroke-width="1.1" stroke-linecap="round"/></svg>`,
+  goblin: `<svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M10.2 9.1 3.4 5.3l2.8 8.2M21.8 9.1l6.8-3.8-2.8 8.2" fill="currentColor"/><path d="M16 5.4c-4.4 0-7.2 3.1-7.2 7.4 0 4.6 3 8.2 7.2 8.2s7.2-3.6 7.2-8.2c0-4.3-2.8-7.4-7.2-7.4z" fill="currentColor"/><path d="M10.4 27.1c.2-4.4 2.4-7 5.6-7s5.4 2.6 5.6 7h-11.2z" fill="currentColor"/><path d="M24.1 16.2 27.6 27l-2.6-1.2-1.8 2.1-2.1-10.6" fill="currentColor"/><path d="M11.6 11.4c.7-.8 1.8-1.3 3-1.3M20.4 11.4c-.7-.8-1.8-1.3-3-1.3" stroke="#1d150c" stroke-width="1.2" stroke-linecap="round"/><circle cx="12.6" cy="12.7" r="1" fill="#1d150c"/><circle cx="19.4" cy="12.7" r="1" fill="#1d150c"/><path d="M13.6 16.6c1.5 1 3.3 1 4.8 0" stroke="#1d150c" stroke-width="1.2" stroke-linecap="round"/></svg>`,
+  skeleton: `<svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M16 3.6c-4.9 0-8 3.3-8 7.7 0 2.7 1.2 4.9 3 6.2v3.3h10v-3.3c1.8-1.3 3-3.5 3-6.2 0-4.4-3.1-7.7-8-7.7z" fill="currentColor"/><path d="M9.3 27.1c.3-4.1 3-6.8 6.7-6.8s6.4 2.7 6.7 6.8H9.3z" fill="currentColor"/><path d="M10.6 23.4c1.2.7 2.3 1 3.4 1s2.2-.3 3.4-1M12.6 25.9v3M16 25.9v3M19.4 25.9v3" stroke="#1d150c" stroke-width="1.2" stroke-linecap="round"/><circle cx="12.5" cy="11.2" r="1.7" fill="#1d150c"/><circle cx="19.5" cy="11.2" r="1.7" fill="#1d150c"/><path d="M15.2 15h1.6l-1 2.1h-1.2l.6-2.1z" fill="#1d150c"/><path d="M26 9.4c-4.5 2.4-6.8 6.1-6.8 11.1 0 2.6.7 4.9 2 6.9M26 9.4l1.2 1.2M26 9.4l-.4-2.3M8 27.6 6.2 30" stroke="#1d150c" stroke-width="1.4" stroke-linecap="round"/></svg>`,
+  ogre: `<svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M11.2 8.2 7.8 2.9 5.4 8.6M20.8 8.2l3.4-5.3 2.4 5.7" fill="currentColor"/><path d="M16 5.6c-5.6 0-9.2 3.9-9.2 9.2v8.8c0 2.3 1.8 4.1 4.1 4.1h10.2c2.3 0 4.1-1.8 4.1-4.1v-8.8c0-5.3-3.6-9.2-9.2-9.2z" fill="currentColor"/><path d="M8.3 14.2c1.4-.9 2.8-1.3 4.2-1.3M23.7 14.2c-1.4-.9-2.8-1.3-4.2-1.3" stroke="#1d150c" stroke-width="1.3" stroke-linecap="round"/><circle cx="11.8" cy="16.2" r="1.3" fill="#1d150c"/><circle cx="20.2" cy="16.2" r="1.3" fill="#1d150c"/><path d="M12.4 21.4c1.7-1.2 3.7-1.8 6-1.8s4.3.6 6 1.8" stroke="#1d150c" stroke-width="1.5" stroke-linecap="round"/><path d="M25.2 15.4 30 27.4l-3.4-1.4-1.2 3.4-4.2-13.6" fill="currentColor"/></svg>`,
+  crystal: `<svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><defs><linearGradient id="cg" x1="8" y1="4" x2="24" y2="29" gradientUnits="userSpaceOnUse"><stop stop-color="#d7fff5"/><stop offset=".45" stop-color="#7fe0c9"/><stop offset="1" stop-color="#2f8f7c"/></linearGradient></defs><path d="M16 2.5 7 12l9 17.5L25 12 16 2.5z" fill="url(#cg)" stroke="#baffef" stroke-width=".7"/><path d="M16 2.5 12.2 12l3.8 17.5L19.8 12 16 2.5z" fill="#eafffa" opacity=".55"/><path d="M7 12h18" stroke="#d7fff5" stroke-width=".8" opacity=".8"/><path d="M9.8 8.3 16 5.2l6.2 3.1" stroke="#f2fffc" stroke-width=".8" opacity=".7"/></svg>`,
+  shards: `<svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M9 21 5 28l6-2 2-5-4 0zM16 18l-3 9 6-3 1-6-4 0zM23 22l-2 5 6 1-1-6-3 0z" fill="#5f7f76" stroke="#2a3f3a" stroke-width=".7"/><path d="M12 10l3 5 4-6-3-4-4 5z" fill="#6e9b90" opacity=".55"/></svg>`,
+  rubble: `<svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M3 28 7 19l5 3 3-7 6 5 4-4 4 12H3z" fill="#5d5546" stroke="#1b1711" stroke-width=".9"/><path d="M7 19l3-6 4 4-3 5-4-3zM18 20l3-8 4 6-2 5-5-3z" fill="#837867" opacity=".75" stroke="#211c15" stroke-width=".7"/><path d="M11 13 9 7M21 12l1-6M28 15l3-5" stroke="#2a241b" stroke-width="1.4" stroke-linecap="round"/><path d="M5 28h23" stroke="#0e0c08" stroke-width="1.2"/></svg>`,
+  skull: `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3a7 7 0 0 0-7 7v4l-2 4h5l1 3h6l1-3h5l-2-4v-4a7 7 0 0 0-7-7z" stroke="currentColor" stroke-width="1.5"/><circle cx="9" cy="10" r="1.4" fill="currentColor"/><circle cx="15" cy="10" r="1.4" fill="currentColor"/><path d="M10 15h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`,
+  hand: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V10M12 10V4.5a1.5 1.5 0 0 1 3 0V11M15 11V6.5a1.5 1.5 0 0 1 3 0V14c0 3.5-2.4 6-6 6-2.4 0-4.2-1-5.5-3L5 13.5A1.6 1.6 0 0 1 7.4 11L9 13"/></svg>`,
+  rest: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 17.5 12 4l8 13.5"/><path d="M7 14h10M8.5 17.5h7M6 21h12"/></svg>`,
+  hourglass: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M6 3h12M6 21h12M7 3c0 5 5 6 5 9s-5 4-5 9M17 3c0 5-5 6-5 9s5 4 5 9"/><path d="M9.5 7h5M9.5 17h5" opacity=".5"/></svg>`,
+  crown: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="m4 8 4 3 4-6 4 6 4-3-2 11H6L4 8z"/><path d="M7 16h10"/></svg>`,
+  poison: `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3c3 4 5 6.5 5 9.5a5 5 0 0 1-10 0C7 9.5 9 7 12 3z" stroke="currentColor" stroke-width="1.6"/><circle cx="10.3" cy="13" r="1" fill="currentColor"/><circle cx="14" cy="15" r=".8" fill="currentColor"/></svg>`,
+  bleed: `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 4c1.5 2 2.5 3.3 2.5 4.8A2.5 2.5 0 0 1 8 11.3a2.5 2.5 0 0 1-2.5-2.5C5.5 7.3 6.5 6 8 4zM16 8c1.5 2 2.5 3.3 2.5 4.8a2.5 2.5 0 0 1-5 0c0-1.5 1-2.8 2.5-4.8zM12 16c1.3 1.7 2 2.8 2 4a2 2 0 0 1-4 0c0-1.2.7-2.3 2-4z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>`,
+  stun: `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 12a3 3 0 1 1 3-3 5 5 0 1 1-5 5 7 7 0 1 1 7 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`
+};
+
+/* ------------------------------------------------------------------ *
+ * 状态                                                                *
+ * ------------------------------------------------------------------ */
+let state = null;
+let selectedKeys = ['warrior', 'scout'];
+let legal = { moves: new Map(), attacks: new Map(), interact: false, rests: [], actions: [] };
+let lastCombat = null;
+let lastFlash = null;
+let aiTimer = null;
+let fastAI = false;
+let started = false;
+let rulesPausedAI = false;
+let toastTimer = null;
+let pathPreview = [];
+
+const PHASE_LABEL = { heroes: '英雄阶段', overlord: '城主阶段', ended: '对局结束' };
+const END_REASON = {
+  'all-heroes-defeated': '所有英雄倒下，地窖吞没了最后的火光。',
+  'objective-destroyed-and-extracted': '仪式水晶被摧毁，所有存活英雄从出口撤离。',
+  'round-limit': '15 个回合过去，仪式完成，地窖的大门永久关闭。'
+};
+const WINNER_LABEL = { heroes: '英雄胜利', overlord: '城主胜利' };
+
+/* ------------------------------------------------------------------ *
+ * 工具                                                                *
+ * ------------------------------------------------------------------ */
+function esc(value) {
+  return String(value == null ? '' : value).replace(/[&<>"']/g, (ch) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[ch]));
+}
+function keyOf(x, y) { return x + ',' + y; }
+function inCell(list, x, y) {
+  return (list || []).some((cell) => cell[0] === x && cell[1] === y);
+}
+function figureName(id) {
+  if (!state) return id;
+  const hero = state.heroes.find((h) => h.id === id);
+  if (hero) return hero.displayName;
+  const monster = state.monsters.find((m) => m.id === id);
+  if (monster) return monster.name;
+  return id === state.objective.id ? state.objective.name : id;
+}
+function figureById(id) {
+  if (!state) return null;
+  return state.heroes.find((h) => h.id === id) || state.monsters.find((m) => m.id === id) || null;
+}
+function figureClass(fig) {
+  return fig.side === 'hero' ? 'h-' + fig.key : 'm-' + fig.kind;
+}
+function figureColor(fig) {
+  return fig.side === 'hero' ? HERO_COLOR[fig.key] : MONSTER_COLOR[fig.kind];
+}
+function activeHero() {
+  if (!state || state.phase !== 'heroes') return null;
+  return state.heroes.find((h) => h.id === state.activeHeroId) || null;
+}
+function toast(text) {
+  const el = $('toast');
+  el.textContent = text;
+  el.classList.add('on');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('on'), 2200);
+}
+function setOverlay(id, on) {
+  const el = $(id);
+  if (!el) return;
+  el.hidden = !on;
+  el.setAttribute('aria-hidden', on ? 'false' : 'true');
+}
+function fmtPct(value, max) {
+  if (!max) return 0;
+  return Math.max(0, Math.min(100, Math.round((value / max) * 100)));
+}
+
+/* ------------------------------------------------------------------ *
+ * 合法行动                                                            *
+ * ------------------------------------------------------------------ */
+function refreshLegal() {
+  legal = { moves: new Map(), attacks: new Map(), interact: false, rests: [], actions: [] };
+  if (!state || state.over || state.phase !== 'heroes') return legal;
+  const hero = activeHero();
+  if (!hero || hero.actionsLeft <= 0) return legal;
+  const actions = legalActions(state, state.activeHeroId);
+  legal.actions = actions;
+  actions.forEach((action) => {
+    if (action.type === 'move') {
+      const dest = action.path[action.path.length - 1];
+      legal.moves.set(keyOf(dest[0], dest[1]), action);
+    } else if (action.type === 'attack') {
+      legal.attacks.set(action.target, action);
+    } else if (action.type === 'interact') {
+      legal.interact = true;
+    } else if (action.type === 'rest') {
+      legal.rests.push(action);
+    }
+  });
+  return legal;
+}
+
+/* ------------------------------------------------------------------ *
+ * 棋子 / 地形                                                         *
+ * ------------------------------------------------------------------ */
+function pieceMarkup(fig, isActiveMonster) {
+  const isHero = fig.side === 'hero';
+  const icon = isHero ? SVG[fig.key] : SVG[fig.kind];
+  const cls = ['piece', isHero ? 'hero' : 'monster', figureClass(fig)];
+  if (fig.elite) cls.push('elite');
+  if (lastFlash && lastFlash.attacker === fig.id) cls.push('striking');
+  const pct = fmtPct(fig.health, fig.maxHealth);
+  const dots = (fig.conditions || []).map((c) => `<span class="cond-dot ${c.type}" title="${esc(CONDITION_NAMES[c.type] || c.type)}"></span>`).join('');
+  const fury = fig.buff && fig.buff.damage ? `<span class="buff-mark" title="狂暴 +${fig.buff.damage} 伤害"></span>` : '';
+  return `<span class="${cls.join(' ')}" aria-label="${esc(fig.name)}，生命 ${fig.health}/${fig.maxHealth}">
+    <span class="piece-art">${icon}</span>
+    <span class="piece-hp"><i style="width:${pct}%"></i></span>
+    <span class="cond-dots">${dots}</span>${fury}
+  </span>`;
+}
+
+function terrainMarkup(ch, x, y) {
+  if (ch === '#') return '';
+  if (ch === 'X') return `<span class="obstacle">${SVG.rubble}</span>`;
+  if (x === state.objective.x && y === state.objective.y) {
+    return `<span class="crystal ${state.objective.destroyed ? 'destroyed' : ''}">${state.objective.destroyed ? SVG.shards : SVG.crystal}</span>`;
+  }
+  if (isExitCell(state, x, y)) return '<span class="exit-rune" aria-hidden="true"></span>';
+  return '';
+}
+
+/* ------------------------------------------------------------------ *
+ * 渲染：棋盘                                                          *
+ * ------------------------------------------------------------------ */
+function renderBoard() {
+  const board = $('board');
+  const frag = document.createDocumentFragment();
+  const figures = new Map();
+  state.heroes.forEach((h) => { if (h.alive) figures.set(keyOf(h.x, h.y), h); });
+  state.monsters.forEach((m) => { if (m.alive) figures.set(keyOf(m.x, m.y), m); });
+
+  const hero = activeHero();
+  const activeMonsterId = state.phase === 'overlord' ? state.activeMonsterId : null;
+
+  for (let y = 0; y < state.board.height; y++) {
+    const row = state.board.layout[y] || '';
+    for (let x = 0; x < state.board.width; x++) {
+      const ch = row[x] || '#';
+      const cellKey = keyOf(x, y);
+      const fig = figures.get(cellKey);
+      const cls = ['cell'];
+      if (ch === '#') cls.push('wall');
+      else {
+        cls.push('floor');
+        if (isExitCell(state, x, y)) cls.push('exit');
+        if (x === state.objective.x && y === state.objective.y) cls.push('objective');
+        if (inCell(state.board.spawnCells, x, y)) cls.push('spawn');
+      }
+      const moveAction = legal.moves.get(cellKey);
+      const attackAction = fig && fig.side === 'monster' ? legal.attacks.get(fig.id) : null;
+      const canInteract = legal.interact && x === state.objective.x && y === state.objective.y;
+      if (moveAction) cls.push('can-move');
+      if (attackAction) cls.push('can-attack');
+      if (canInteract) cls.push('can-interact');
+      if (hero && hero.x === x && hero.y === y) cls.push('active-hero');
+      if (activeMonsterId && fig && fig.id === activeMonsterId) cls.push('active-monster');
+      if (lastFlash && lastFlash.target === (fig && fig.id) && lastFlash.target) cls.push('hit');
+
+      const v = (x * 7 + y * 13) % 5;
+      const wear = (((x + 2) * 13 + (y + 1) * 7) % 100) / 100;
+      const labelParts = [];
+      if (ch === '#') labelParts.push('石墙');
+      else if (ch === 'X') labelParts.push('碎石障碍');
+      else if (isExitCell(state, x, y)) labelParts.push('出口');
+      else if (x === state.objective.x && y === state.objective.y) labelParts.push(state.objective.destroyed ? '已摧毁的水晶' : '仪式水晶');
+      else labelParts.push('地面');
+      if (inCell(state.board.spawnCells, x, y)) labelParts.push('城主召唤点');
+      if (fig) labelParts.push(fig.name);
+      if (moveAction) labelParts.push('可移动，' + moveAction.steps + ' 步' + (moveAction.fatigue ? '，疲劳 +' + moveAction.fatigue : ''));
+      if (attackAction) labelParts.push('可攻击');
+
+      const actionable = !!(moveAction || attackAction || canInteract);
+      const fx = [];
+      if (moveAction) fx.push('<span class="move-rune" aria-hidden="true"></span>');
+      if (attackAction) fx.push('<span class="attack-ring" aria-hidden="true"></span>');
+      if (canInteract) fx.push('<span class="interact-rune" aria-hidden="true"></span>');
+
+      const cell = document.createElement('div');
+      cell.className = cls.join(' ');
+      cell.dataset.x = String(x);
+      cell.dataset.y = String(y);
+      cell.setAttribute('role', 'gridcell');
+      cell.setAttribute('aria-label', labelParts.join('，'));
+      cell.style.setProperty('--v', String(v));
+      cell.style.setProperty('--wear', wear.toFixed(2));
+      if (moveAction) {
+        cell.title = `移动 ${moveAction.steps} 步` + (moveAction.fatigue ? ` · 疲劳 +${moveAction.fatigue}` : '');
+        cell.dataset.move = '1';
+        cell.tabIndex = 0;
+      }
+      if (attackAction) {
+        cell.title = `攻击 ${fig.name}`;
+        cell.dataset.attack = fig.id;
+        cell.tabIndex = 0;
+      }
+      if (canInteract) {
+        cell.title = '破坏仪式水晶';
+        cell.dataset.interact = '1';
+        cell.tabIndex = 0;
+      }
+      cell.innerHTML = terrainMarkup(ch, x, y) + fx.join('') + (fig ? pieceMarkup(fig, activeMonsterId === fig.id) : '');
+      frag.appendChild(cell);
+    }
+  }
+  board.innerHTML = '';
+  board.appendChild(frag);
+}
+
+/* ------------------------------------------------------------------ *
+ * 渲染：顶栏 / 信息面板                                               *
+ * ------------------------------------------------------------------ */
+function renderTopline() {
+  if (!state) return;
+  const chip = $('phaseChip');
+  const attacker = state.phase === 'overlord' && state.activeMonsterId
+    ? state.monsters.find((m) => m.id === state.activeMonsterId)
+    : null;
+  chip.textContent = state.phase === 'heroes'
+    ? (activeHero() ? `${activeHero().name} 行动` : '英雄阶段')
+    : state.phase === 'overlord'
+      ? (attacker ? `城主 · ${attacker.name}` : '城主阶段')
+      : '对局结束';
+  chip.classList.toggle('overlord', state.phase === 'overlord');
+  $('roundNum').textContent = String(state.round);
+  $('maxRounds').textContent = String(state.maxRounds);
+  $('threatNum').textContent = String(state.overlord.threat);
+  $('objChip').textContent = `${state.objective.progress}/${state.objective.required}`;
+}
+
+function renderHeroes() {
+  const host = $('heroList');
+  host.innerHTML = '';
+  $('heroesNote').textContent = `${state.heroes.length} / 4`;
+  state.heroes.forEach((hero) => {
+    const active = hero.id === state.activeHeroId && state.phase === 'heroes' && !state.over;
+    const [pc, pc2] = HERO_COLOR[hero.key];
+    const card = document.createElement('div');
+    card.className = 'hero-card' + (active ? ' active' : '') + (hero.alive ? '' : ' dead');
+    card.style.setProperty('--pc', pc);
+    card.style.setProperty('--pc2', pc2);
+    card.innerHTML = `
+      <div class="hero-sigil" style="--pc:${pc};--pc2:${pc2}" aria-hidden="true">${SVG[hero.key]}</div>
+      <div class="hero-main">
+        <div class="hero-line">
+          <span class="hero-name">${esc(hero.displayName)}</span>
+          <span class="hero-tag">${hero.alive ? (active ? '行动中' : '待命') : '已倒下'}</span>
+        </div>
+        <div class="bar hp${hero.health <= Math.ceil(hero.maxHealth / 2) ? ' low' : ''}" role="img" aria-label="生命 ${hero.health}/${hero.maxHealth}"><i style="width:${fmtPct(hero.health, hero.maxHealth)}%"></i></div>
+        <div class="hero-stat">生命 <span class="v">${hero.health}/${hero.maxHealth}</span> · 疲劳 <span class="v">${hero.fatigue}</span> · 耐力 <span class="v">${hero.stamina}</span> · 速度 ${hero.speed}</div>
+        <div class="hero-sub">
+          ${active ? `<span class="hero-actions-label" title="每回合 2 个行动；眩晕会减少 1 个">行动 <span class="v">${hero.actionsLeft} / 2</span></span>` : ''}
+          ${hero.conditions.length ? hero.conditions.map((c) => `<span class="badge ${c.type}">${SVG[c.type] || ''}${esc(CONDITION_NAMES[c.type] || c.type)} ${c.turns}</span>`).join('') : '<span class="badge">无状态</span>'}
+          ${hero.weapon ? `<span class="badge">${esc(hero.weapon.name)} · 射程 ${hero.weapon.range}</span>` : ''}
+        </div>
+      </div>`;
+    host.appendChild(card);
+  });
+}
+
+function renderOverlord() {
+  $('threatOrb').textContent = String(state.overlord.threat);
+  $('threatOrb').setAttribute('aria-label', '城主威胁点 ' + state.overlord.threat);
+  const gain = 1 + aliveHeroes(state).length;
+  $('threatSub').textContent = `下场 +${gain} · 存活英雄 ${aliveHeroes(state).length} 名`;
+  $('overlordNote').textContent = state.phase === 'overlord' ? '行动中' : '自动行动';
+
+  const host = $('monsterList');
+  host.innerHTML = '';
+  if (!state.monsters.length) {
+    host.innerHTML = '<div class="empty-note">场上暂无怪物。城主仍可消耗威胁召唤哥布林。</div>';
+    return;
+  }
+  state.monsters.forEach((monster) => {
+    const [pc, pc2] = MONSTER_COLOR[monster.kind];
+    const row = document.createElement('div');
+    const active = state.phase === 'overlord' && state.activeMonsterId === monster.id;
+    row.className = 'monster-row' + (active ? ' active' : '') + (monster.alive ? '' : ' dead');
+    row.innerHTML = `
+      <span class="monster-mini" style="--pc:${pc};--pc2:${pc2}" aria-hidden="true">${SVG[monster.kind]}</span>
+      <span class="monster-name"><b>${esc(monster.name)}</b>${monster.buff && monster.buff.damage ? ` <span class="badge fury">狂暴 ${monster.buff.damage}/2</span>` : ''}
+        <span class="monster-hp" role="img" aria-label="生命 ${monster.health}/${monster.maxHealth}"><i style="width:${fmtPct(monster.health, monster.maxHealth)}%"></i></span>
+      </span>
+      <span class="hero-tag">${monster.alive ? `HP ${monster.health}/${monster.maxHealth}` : '倒下'}</span>`;
+    host.appendChild(row);
+  });
+}
+
+function renderObjective() {
+  const o = state.objective;
+  $('objIcon').innerHTML = o.destroyed ? SVG.shards : SVG.crystal;
+  $('objNote').textContent = o.destroyed ? '已完成' : '遗物地窖';
+  $('objProgress').textContent = `${o.progress} / ${o.required}`;
+  $('objState').textContent = o.destroyed ? '已摧毁' : '完好';
+  $('objSub').textContent = o.destroyed
+    ? '水晶已经碎裂。所有存活英雄撤到左上角出口即可获胜。'
+    : '站上水晶格互动 2 次，再全员撤离出口。';
+  const seg = $('objSegments');
+  seg.innerHTML = '';
+  for (let i = 0; i < o.required; i++) {
+    const s = document.createElement('span');
+    s.className = 'segment' + (i < o.progress ? ' on' : '');
+    seg.appendChild(s);
+  }
+  const ext = $('extractList');
+  ext.innerHTML = '';
+  state.heroes.forEach((hero) => {
+    if (!hero.alive) return;
+    const atExit = isExitCell(state, hero.x, hero.y);
+    const chip = document.createElement('span');
+    chip.className = 'extract-chip' + (atExit ? ' ok' : '');
+    chip.textContent = `${hero.name} ${atExit ? '已撤离' : '未撤离'}`;
+    ext.appendChild(chip);
+  });
+  if (!state.heroes.some((h) => h.alive)) ext.innerHTML = '<span class="extract-chip out">全员倒下</span>';
+}
+
+/* ------------------------------------------------------------------ *
+ * 渲染：提示 / 操作 / 日志                                            *
+ * ------------------------------------------------------------------ */
+function renderHint() {
+  const box = $('hintBar');
+  const text = $('hintText');
+  box.classList.toggle('overlord', state.phase === 'overlord');
+  if (state.over) {
+    text.textContent = '对局结束。' + (state.winner === 'heroes' ? '英雄们带着胜利走出地窖。' : '城主守住了仪式水晶。');
+    return;
+  }
+  if (state.phase === 'overlord') {
+    const m = state.activeMonsterId ? figureById(state.activeMonsterId) : null;
+    text.innerHTML = m
+      ? `<b>城主阶段</b> · ${esc(m.name)} 正在行动，怪物由城主 AI 控制。`
+      : '<b>城主阶段</b> · 城主正在结算威胁与召唤。';
+    return;
+  }
+  const hero = activeHero();
+  if (!hero) { text.textContent = '等待下一名英雄激活…'; return; }
+  const targets = aliveMonsters(state).filter((m) => legal.attacks.has(m.id));
+  const parts = [];
+  if (hero.actionsLeft <= 0) parts.push('行动已用完，正在推进…');
+  else if (legal.interact) parts.push(`<b>${esc(hero.name)}</b> 正站在水晶格上，可点击「互动」破坏水晶。`);
+  else if (targets.length) parts.push(`<b>${esc(hero.name)}</b> · 点击红环怪物攻击（${targets.map((m) => esc(m.name)).join('、')}）。`);
+  else if (legal.moves.size) parts.push(`<b>${esc(hero.name)}</b> · 点击金色微光移动（${legal.moves.size} 个落脚点）。`);
+  else parts.push(`<b>${esc(hero.name)}</b> · 没有可行路线，可休整或结束行动。`);
+  if (hero.actionsLeft > 0) parts.push(`剩余 <b>${hero.actionsLeft}</b> 个行动。`);
+  if (hero.conditions.length) parts.push(`状态：${hero.conditions.map((c) => esc(CONDITION_NAMES[c.type] || c.type)).join('、')}。`);
+  text.innerHTML = parts.join(' ');
+}
+
+function renderActions() {
+  const host = $('actionBar');
+  host.innerHTML = '';
+  if (!state) return;
+  if (state.over) {
+    host.innerHTML = '<div class="action-status"><span class="dot"></span><span>对局已经结束。</span></div><div class="action-buttons"><button class="btn primary" id="barAgain" type="button">再来一局</button><button class="btn" id="barChange" type="button">更换队伍</button></div>';
+    $('barAgain').addEventListener('click', () => newGame());
+    $('barChange').addEventListener('click', () => { showStart(); });
+    return;
+  }
+  if (state.phase === 'overlord') {
+    const m = state.activeMonsterId ? figureById(state.activeMonsterId) : null;
+    host.innerHTML = `<div class="action-status"><span class="dot monster"></span><span>城主阶段${m ? ' · ' + esc(m.name) : ''} 行动中…</span></div>
+      <div class="action-buttons"><button class="btn ghost" id="speedBtn" type="button" aria-pressed="${fastAI ? 'true' : 'false'}">${fastAI ? '正常速度' : '加速城主'}</button></div>`;
+    $('speedBtn').addEventListener('click', () => { fastAI = !fastAI; renderActions(); if (state.phase === 'overlord') scheduleAI(80); });
+    return;
+  }
+  const hero = activeHero();
+  if (!hero) {
+    host.innerHTML = '<div class="action-status"><span class="dot"></span><span>正在推进回合…</span></div>';
+    return;
+  }
+  const actions = document.createElement('div');
+  actions.className = 'action-status';
+  actions.innerHTML = `<span class="dot"></span><span><b>${esc(hero.name)}</b> · 剩余 <b>${hero.actionsLeft}</b> 行动</span>`;
+  host.appendChild(actions);
+
+  const buttons = document.createElement('div');
+  buttons.className = 'action-buttons';
+
+  const interactBtn = document.createElement('button');
+  interactBtn.type = 'button';
+  interactBtn.className = 'btn' + (legal.interact ? ' primary' : '');
+  interactBtn.disabled = !legal.interact;
+  interactBtn.innerHTML = `${SVG.hand}<span>互动</span>`;
+  interactBtn.title = legal.interact ? '破坏仪式水晶' : '需要站在水晶格上';
+  interactBtn.addEventListener('click', () => {
+    if (!legal.interact) { toast('需要先站到水晶格上。'); return; }
+    doAction({ type: 'interact', target: state.objective.id });
+  });
+  buttons.appendChild(interactBtn);
+
+  const restBtn = document.createElement('button');
+  restBtn.type = 'button';
+  restBtn.className = 'btn';
+  restBtn.innerHTML = `${SVG.rest}<span>休整</span>`;
+  restBtn.title = '疲劳清零';
+  restBtn.addEventListener('click', () => doAction({ type: 'rest' }));
+  buttons.appendChild(restBtn);
+
+  const endBtn = document.createElement('button');
+  endBtn.type = 'button';
+  endBtn.className = 'btn';
+  endBtn.innerHTML = `${SVG.hourglass}<span>结束行动</span>`;
+  endBtn.title = '放弃剩余行动';
+  endBtn.addEventListener('click', () => doAction({ type: 'endActivation' }));
+  buttons.appendChild(endBtn);
+
+  host.appendChild(buttons);
+
+  if (hero.conditions.length) {
+    const row = document.createElement('div');
+    row.className = 'cond-row';
+    hero.conditions.forEach((c) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'btn ghost';
+      b.textContent = `休整 · 解除${CONDITION_NAMES[c.type] || c.type}`;
+      b.addEventListener('click', () => doAction({ type: 'rest', clearCondition: c.type }));
+      row.appendChild(b);
+    });
+    host.appendChild(row);
+  }
+}
+
+function logEntryClass(entry) {
+  if (entry.type === 'defeat' || entry.type === 'condition-tick') return 'bad';
+  if (entry.type === 'game-over') return entry.winner === 'heroes' ? 'good' : 'bad';
+  if (entry.type === 'interact' && entry.destroyed) return 'good';
+  if (entry.type === 'summon' || entry.type === 'overlord-card' || entry.type === 'overlord-phase' || entry.type === 'threat-gain') return 'monster';
+  if (entry.side === 'hero' || entry.attackerSide === 'hero' || entry.targetSide === 'hero') return 'hero';
+  if (entry.side === 'monster' || entry.attackerSide === 'monster' || entry.targetSide === 'monster') return 'monster';
+  return '';
+}
+
+function logText(entry) {
+  switch (entry.type) {
+    case 'game-start':
+      return `冒险开始 · ${entry.heroes.map((h) => esc(h.name)).join('、')} 进入${esc(state.board.name)}。`;
+    case 'activation-start':
+      return `<b>${esc(figureName(entry.actor))}</b> 开始激活，获得 ${entry.actionsLeft} 个行动${entry.conditions && entry.conditions.length ? '，状态：' + entry.conditions.map((c) => CONDITION_NAMES[c] || c).join('、') : ''}。`;
+    case 'activation-end':
+      return `${esc(figureName(entry.actor))} 结束激活。`;
+    case 'end-activation':
+      return `${esc(figureName(entry.actor))} 放弃剩余行动，结束激活。`;
+    case 'condition-tick': {
+      const conds = (entry.conditions || []).map((c) => CONDITION_NAMES[c] || c).join('、');
+      return `${esc(figureName(entry.figure))} 受到 <span class="dmg">${entry.damage}</span> 点状态伤害（${esc(conds)}）。`;
+    }
+    case 'threat-gain':
+      return `城主威胁 +${entry.amount}${entry.reason === 'hero-defeated' ? '（英雄倒下）' : ''}，当前 <b>${entry.total}</b>。`;
+    case 'move':
+      return `${esc(figureName(entry.actor))} 移动 ${entry.steps} 格${entry.fatigueSpent ? `，疲劳 +${entry.fatigueSpent}` : ''}${entry.forcedMarchDamage ? `，强行军受 <span class="dmg">${entry.forcedMarchDamage}</span> 伤害` : ''}。`;
+    case 'attack': {
+      const dmg = entry.attackFaces.reduce((s, f) => s + f.dmg, 0);
+      const cond = entry.conditionsApplied && entry.conditionsApplied.length
+        ? ` 附加 ${entry.conditionsApplied.map((c) => CONDITION_NAMES[c] || c).join('、')}。`
+        : '';
+      return `<b>${esc(figureName(entry.attacker))}</b> 攻击 ${esc(figureName(entry.target))}：攻击骰 ${dmg} 伤 / ${entry.surges} surge，护盾 ${entry.shields}，造成 <span class="dmg">${entry.damage}</span> 伤害（${entry.healthBefore}→${entry.healthAfter}）。${cond}`;
+    }
+    case 'defeat':
+      return `<b>${esc(figureName(entry.figure))}</b> 倒下${entry.side === 'hero' ? '，城主 +2 威胁' : ''}。`;
+    case 'interact':
+      return `破坏仪式水晶：进度 <b>${entry.progress}/${entry.required}</b>${entry.destroyed ? ' · 水晶已被摧毁！' : '。'}`;
+    case 'rest':
+      return `${esc(figureName(entry.actor))} 休整，疲劳清零${entry.clearedCondition ? '，解除' + (CONDITION_NAMES[entry.clearedCondition] || entry.clearedCondition) : ''}。`;
+    case 'overlord-phase':
+      return `城主阶段：威胁 +${entry.threatGain}（当前 <b>${entry.threat}</b>），${entry.queue.length} 只怪物进入激活队列。`;
+    case 'monster-phase-done':
+      return '所有怪物行动完毕。';
+    case 'round-start':
+      return `第 <b>${entry.round}</b> 回合开始。`;
+    case 'end-overlord-phase':
+      return `城主结束阶段，第 ${entry.round + 1} 回合即将开始。`;
+    case 'summon':
+      return `城主花费 ${SUMMON_COST} 威胁，在 (${entry.cell[0]},${entry.cell[1]}) 召唤${esc(MONSTER_TYPES[entry.kind] ? MONSTER_TYPES[entry.kind].name : '怪物')}。`;
+    case 'overlord-card':
+      if (entry.card === 'fury') return `城主打出「狂暴」：${esc(figureName(entry.target))} 下一次攻击 +1 伤害（${entry.buffDamage}/2）。`;
+      if (entry.card === 'shadow_bolt') return `城主打出「暗影箭」：${esc(figureName(entry.target))} 受 1 点伤害并中毒${entry.targetDefeated ? '，倒下了' : ''}。`;
+      return '城主打出一张卡牌。';
+    case 'game-over':
+      return entry.winner === 'heroes'
+        ? '仪式水晶被摧毁，英雄全员撤离，英雄胜利。'
+        : '城主获胜，地窖沉入黑暗。';
+    default:
+      return entry.type;
+  }
+}
+
+function renderLog() {
+  const host = $('log');
+  host.innerHTML = '';
+  $('logNote').textContent = `引擎 ${state.log.length} 条`;
+  const entries = state.log.slice(-30).reverse();
+  entries.forEach((entry) => {
+    const row = document.createElement('div');
+    row.className = 'log-entry ' + logEntryClass(entry);
+    row.innerHTML = `<span class="log-round">R${entry.round}</span><div class="log-body">${logText(entry)}</div>`;
+    host.appendChild(row);
+  });
+  host.scrollTop = 0;
+}
+
+/* ------------------------------------------------------------------ *
+ * 战斗反馈                                                            *
+ * ------------------------------------------------------------------ */
+function combatFromEntry(entry) {
+  if (!entry || entry.type !== 'attack') return null;
+  const target = figureById(entry.target);
+  return {
+    entry: entry,
+    defenseColor: target ? target.defense : 'brown'
+  };
+}
+
+function renderCombat(combat) {
+  const panel = $('dicePanel');
+  if (!combat) { panel.hidden = true; panel.innerHTML = ''; return; }
+  const e = combat.entry;
+  const attacker = figureName(e.attacker);
+  const target = figureName(e.target);
+  const blocked = e.damage <= 0;
+  const dice = e.attackFaces.map((face, i) => {
+    const color = e.dice[i] || 'blue';
+    return `<span class="dice-cell"><span class="die atk-${esc(color)}" style="animation-delay:${i * 55}ms" title="${esc(color)} 攻击骰：${face.dmg} 伤${face.surge ? '，' + face.surge + ' surge' : ''}"><b>${face.dmg}</b><small>伤</small>${face.surge ? `<span class="surge-mark">${face.surge}</span>` : ''}</span><span class="dice-label">${esc(diceColorName(color))}</span></span>`;
+  }).join('');
+  const def = e.defenseFaces.map((face) => `<span class="dice-cell"><span class="die def-${esc(combat.defenseColor)}" style="animation-delay:${(e.attackFaces.length + 1) * 55}ms" title="防御骰：${face.shield} 护盾"><b>${face.shield}</b><small>盾</small></span><span class="dice-label">${esc(diceColorName(combat.defenseColor))}</span></span>`).join('');
+  const conds = e.conditionsApplied && e.conditionsApplied.length
+    ? ` · 附加：${e.conditionsApplied.map((c) => esc(CONDITION_NAMES[c] || c)).join('、')}`
+    : '';
+  const bonus = e.bonusDamage ? ` + 狂暴 ${e.bonusDamage}` : '';
+  const baseDamage = e.attackFaces.reduce((s, f) => s + f.dmg, 0);
+  const effectiveShields = Math.max(0, e.shields - e.surgePlan.pierce);
+  panel.innerHTML = `
+    <div class="dice-head">
+      <div class="dice-title"><b>${esc(attacker)}</b> 攻击 <b>${esc(target)}</b> · ${e.healthBefore} → ${e.healthAfter}</div>
+      <div class="dice-dmg${blocked ? ' blocked' : ''}">${blocked ? '格挡' : '-' + e.damage}</div>
+    </div>
+    <div class="dice-row">${dice}<span class="dice-vs">VS</span>${def}</div>
+    <div class="dice-legend">
+      <span><i class="lg-atk"></i>攻击骰 → 伤害</span>
+      <span><i class="lg-def"></i>防御骰 → 护盾</span>
+      <span><i class="lg-sg"></i>surge → 破盾 / 加伤</span>
+    </div>
+    <div class="dice-math">伤害 = 攻击 ${baseDamage}${bonus} + surge ${e.surges} − 有效护盾 ${effectiveShields} = <b>${e.damage} 伤害</b>${e.targetDefeated ? ' · <b>目标倒下</b>' : ''}</div>
+    <div class="dice-sub">surge 分配：抵盾 ${e.surgePlan.pierce} / 换伤 ${e.surgePlan.damage} · 目标生命 ${e.healthBefore} → ${e.healthAfter}${conds}</div>`;
+  panel.hidden = false;
+}
+function diceColorName(color) {
+  return ({ blue: '蓝骰', yellow: '黄骰', red: '红骰', green: '绿骰', brown: '棕盾', gray: '灰盾', black: '黑盾' })[color] || color;
+}
+
+/* ------------------------------------------------------------------ *
+ * 动作执行                                                            *
+ * ------------------------------------------------------------------ */
+function doAction(action) {
+  if (!state || state.over) return;
+  const prev = state;
+  let next;
+  try {
+    next = applyAction(state, action);
+  } catch (err) {
+    toast('无法执行：' + err.message);
+    return;
+  }
+  const entries = next.log.slice(prev.log.length);
+  const attackEntry = entries.find((entry) => entry.type === 'attack');
+  state = next;
+  if (attackEntry) {
+    lastCombat = combatFromEntry(attackEntry);
+    lastFlash = { attacker: attackEntry.attacker, target: attackEntry.target };
+  } else {
+    lastFlash = null;
+  }
+  if (entries.some((entry) => entry.type === 'move')) {
+    const move = entries.find((entry) => entry.type === 'move');
+    lastFlash = { attacker: move.actor, target: null };
+  }
+  render();
+  if (lastCombat) renderCombat(lastCombat);
+  if (state.over) {
+    clearTimeout(aiTimer);
+    aiTimer = null;
+    setTimeout(showEnd, 550);
+    return;
+  }
+  if (state.phase === 'overlord') scheduleAI();
+}
+
+function scheduleAI(delay) {
+  clearTimeout(aiTimer);
+  if (!state || state.over || state.phase !== 'overlord') return;
+  aiTimer = setTimeout(stepAI, delay == null ? (fastAI ? 110 : 540) : delay);
+}
+function stepAI() {
+  aiTimer = null;
+  if (!state || state.over || state.phase !== 'overlord') return;
+  let actions;
+  try { actions = legalActions(state, 'overlord'); } catch (err) { return; }
+  if (!actions.length) return;
+  let action;
+  try { action = chooseOverlordAIAction(state, actions); } catch (err) {
+    toast('城主 AI 选择失败，自动结束阶段。');
+    const fallback = actions.find((a) => a.type === 'endOverlord' || a.type === 'endMonsterActivation');
+    if (fallback) doAction(fallback);
+    return;
+  }
+  doAction(action);
+}
+
+/* ------------------------------------------------------------------ *
+ * 总渲染                                                              *
+ * ------------------------------------------------------------------ */
+function render() {
+  if (!state) return;
+  refreshLegal();
+  renderTopline();
+  renderBoard();
+  renderHeroes();
+  renderOverlord();
+  renderObjective();
+  renderActions();
+  renderHint();
+  renderLog();
+}
+
+/* ------------------------------------------------------------------ *
+ * 新局 / 结算                                                         *
+ * ------------------------------------------------------------------ */
+function orderedParty(keys) {
+  return HERO_ORDER.filter((k) => keys.indexOf(k) !== -1);
+}
+
+function updatePicker() {
+  const host = $('partyPicker');
+  host.innerHTML = '';
+  HERO_ORDER.forEach((key) => {
+    const meta = HERO_ARCHETYPES[key];
+    const [pc, pc2] = HERO_COLOR[key];
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'pick' + (selectedKeys.indexOf(key) !== -1 ? ' on' : '');
+    btn.dataset.hero = key;
+    btn.setAttribute('aria-pressed', selectedKeys.indexOf(key) !== -1 ? 'true' : 'false');
+    btn.style.setProperty('--pc', pc);
+    btn.style.setProperty('--pc2', pc2);
+    btn.innerHTML = `<span class="pick-sigil" aria-hidden="true">${SVG[key]}</span>
+      <span><span class="pick-name">${esc(meta.title)} · ${esc(meta.name)}</span>
+      <span class="pick-sub">生命${meta.health} · 速度${meta.speed}</span></span>`;
+    btn.title = `${meta.title}·${meta.name}：生命 ${meta.health}，速度 ${meta.speed}，耐力 ${meta.stamina}，${meta.weapon.name}（射程 ${meta.weapon.range}）`;
+    btn.addEventListener('click', () => {
+      const i = selectedKeys.indexOf(key);
+      if (i === -1) {
+        if (selectedKeys.length >= 4) return;
+        selectedKeys.push(key);
+      } else {
+        if (selectedKeys.length <= 1) { toast('至少保留 1 名英雄。'); return; }
+        selectedKeys.splice(i, 1);
+      }
+      updatePicker();
+    });
+    host.appendChild(btn);
+  });
+  $('partyCount').textContent = `${selectedKeys.length} / 4`;
+  $('startBtn').textContent = `开始冒险 · ${selectedKeys.length} 名英雄`;
+}
+
+function showStart() {
+  clearTimeout(aiTimer);
+  aiTimer = null;
+  rulesPausedAI = false;
+  setOverlay('endOverlay', false);
+  setOverlay('rulesOverlay', false);
+  setOverlay('startOverlay', true);
+  $('resumeBtn').hidden = !started || !state || state.over;
+  updatePicker();
+}
+
+function openRules() {
+  if (state && !state.over && state.phase === 'overlord' && $('startOverlay').hidden) {
+    rulesPausedAI = true;
+  }
+  clearTimeout(aiTimer);
+  aiTimer = null;
+  setOverlay('rulesOverlay', true);
+}
+
+function closeRules() {
+  setOverlay('rulesOverlay', false);
+  if (rulesPausedAI) {
+    rulesPausedAI = false;
+    if (state && !state.over && state.phase === 'overlord' &&
+        $('startOverlay').hidden && $('endOverlay').hidden) {
+      scheduleAI();
+    }
+  }
+}
+
+function resumeGame() {
+  rulesPausedAI = false;
+  setOverlay('startOverlay', false);
+  if (state && !state.over && state.phase === 'overlord') scheduleAI();
+}
+
+function newGame() {
+  clearTimeout(aiTimer);
+  aiTimer = null;
+  started = true;
+  rulesPausedAI = false;
+  const party = orderedParty(selectedKeys.length ? selectedKeys : ['warrior', 'scout']);
+  const seed = 'descent-' + Date.now().toString(36);
+  state = createGame({ heroes: party, seed: seed });
+  lastCombat = null;
+  lastFlash = null;
+  $('dicePanel').hidden = true;
+  $('dicePanel').innerHTML = '';
+  $('resumeBtn').hidden = true;
+  setOverlay('startOverlay', false);
+  setOverlay('endOverlay', false);
+  setOverlay('rulesOverlay', false);
+  render();
+  window.__DESCENT__ = {
+    get state() { return state; },
+    legal: (actor) => legalActions(state, actor || currentActor(state)),
+    apply: (action) => doAction(action),
+    newGame: newGame,
+    render: render,
+    log: () => state.log.slice()
+  };
+  window.__DESCENT_READY__ = true;
+}
+
+function showEnd() {
+  if (!state || !state.over) return;
+  const r = result(state);
+  const heroWin = state.winner === 'heroes';
+  $('endBadge').innerHTML = heroWin ? SVG.crown : SVG.skull;
+  const title = $('endTitle');
+  title.textContent = WINNER_LABEL[state.winner] || '对局结束';
+  title.className = 'end-title ' + (heroWin ? 'hero' : 'overlord');
+  $('endReason').textContent = END_REASON[state.endReason] || '对局结束。';
+  const stats = [
+    ['回合', `${r.round} / ${r.maxRounds}`],
+    ['水晶进度', `${r.objective.progress} / ${r.objective.required}`],
+    ['存活英雄', `${r.heroes.filter((h) => h.alive).length} / ${r.heroes.length}`],
+    ['存活怪物', String(r.monstersAlive)],
+    ['城主威胁', String(r.threat)],
+    ['行动总数', String(r.actions)]
+  ];
+  $('endStats').innerHTML = stats.map(([label, value]) => `<div class="end-stat">${esc(label)}<b>${esc(value)}</b></div>`).join('');
+  setOverlay('endOverlay', true);
+}
+
+/* ------------------------------------------------------------------ *
+ * 事件                                                                *
+ * ------------------------------------------------------------------ */
+function cellFromEvent(event) {
+  const cell = event.target.closest ? event.target.closest('.cell') : null;
+  return cell || null;
+}
+
+$('board').addEventListener('click', (event) => {
+  if (!state || state.over) return;
+  if (state.phase !== 'heroes') { toast('城主阶段，等待怪物行动结束。'); return; }
+  const cell = cellFromEvent(event);
+  if (!cell) return;
+  const x = Number(cell.dataset.x);
+  const y = Number(cell.dataset.y);
+  const occupant = state.heroes.concat(state.monsters).find((f) => f.alive && f.x === x && f.y === y) || null;
+  if (occupant && occupant.side === 'monster' && legal.attacks.has(occupant.id)) {
+    doAction(legal.attacks.get(occupant.id));
+    return;
+  }
+  const move = legal.moves.get(keyOf(x, y));
+  if (move) { doAction(move); return; }
+  if (legal.interact && x === state.objective.x && y === state.objective.y) {
+    doAction({ type: 'interact', target: state.objective.id });
+    return;
+  }
+  if (occupant && occupant.side === 'hero') {
+    toast(`${occupant.displayName} · 生命 ${occupant.health}/${occupant.maxHealth} · 疲劳 ${occupant.fatigue}/${occupant.stamina}`);
+    return;
+  }
+  if (occupant && occupant.side === 'monster') {
+    toast(`${occupant.name} 不在射程或视线内。`);
+    return;
+  }
+  if (x === state.objective.x && y === state.objective.y) {
+    toast('先让一名英雄站上水晶格，才能互动破坏。');
+    return;
+  }
+  toast('这一格暂时无法到达。');
+});
+
+$('board').addEventListener('keydown', (event) => {
+  if (event.key !== 'Enter' && event.key !== ' ') return;
+  const cell = cellFromEvent(event);
+  if (!cell) return;
+  if (cell.dataset.move || cell.dataset.attack || cell.dataset.interact) {
+    event.preventDefault();
+    cell.click();
+  }
+});
+
+$('board').addEventListener('pointerover', (event) => {
+  if (!event || event.pointerType !== 'mouse') return;
+  const cell = cellFromEvent(event);
+  clearPathPreview();
+  if (!cell) return;
+  const move = legal.moves.get(keyOf(Number(cell.dataset.x), Number(cell.dataset.y)));
+  if (!move) return;
+  move.path.forEach(([x, y]) => {
+    const el = $('board').querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
+    if (el) { el.classList.add('path-hint'); pathPreview.push(el); }
+  });
+});
+$('board').addEventListener('pointerleave', clearPathPreview);
+function clearPathPreview() {
+  pathPreview.forEach((el) => el.classList.remove('path-hint'));
+  pathPreview = [];
+}
+
+$('resetBtn').addEventListener('click', showStart);
+$('startBtn').addEventListener('click', newGame);
+$('rulesBtn').addEventListener('click', openRules);
+$('startRulesBtn').addEventListener('click', openRules);
+$('resumeBtn').addEventListener('click', resumeGame);
+$('rulesCloseBtn').addEventListener('click', closeRules);
+$('rulesOverlay').addEventListener('click', (event) => { if (event.target === $('rulesOverlay')) closeRules(); });
+$('againBtn').addEventListener('click', newGame);
+$('changePartyBtn').addEventListener('click', showStart);
+$('endOverlay').addEventListener('click', (event) => { if (event.target === $('endOverlay')) return; });
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    if (!$('rulesOverlay').hidden) closeRules();
+  }
+  if (event.key === 'Enter' && !$('startOverlay').hidden && document.activeElement === document.body) {
+    newGame();
+  }
+});
+
+/* ------------------------------------------------------------------ *
+ * 启动                                                                *
+ * ------------------------------------------------------------------ */
+updatePicker();
+state = createGame({ heroes: orderedParty(selectedKeys), seed: 'descent-preview' });
+refreshLegal();
+renderTopline();
+renderBoard();
+renderHeroes();
+renderOverlord();
+renderObjective();
+renderActions();
+renderHint();
+renderLog();
+window.__DESCENT__ = {
+  get state() { return state; },
+  legal: (actor) => legalActions(state, actor || currentActor(state)),
+  apply: (action) => doAction(action),
+  newGame: newGame,
+  render: render,
+  log: () => state.log.slice()
+};
+window.__DESCENT_READY__ = true;
+</script>
+</body>
+</html>

@@ -81,21 +81,6 @@ main{max-width:1120px;margin:0 auto;padding:6px clamp(14px,4vw,28px) 40px}
 .nobles{display:flex;flex-wrap:wrap;gap:8px}
 .noble{width:96px;border-radius:11px;padding:8px;background:linear-gradient(145deg,#fbf4e3,#dccba8);border:1px solid #c2ac82;color:#302416;display:flex;flex-direction:column;gap:4px;font-size:12px}
 .noble b{font-family:var(--serif);font-size:20px;line-height:1}
-.draft-tile{width:96px;min-height:112px;border-radius:10px;padding:5px;background:var(--art-tile),linear-gradient(145deg,#efe3c8,#d9c499);background-size:cover,auto;background-blend-mode:multiply,normal;border:1px solid #b9a276;color:#2a2114;font-size:12px;font-weight:700;box-shadow:0 4px 9px rgba(0,0,0,.28)}
-.draft-tile .no{font-family:var(--mono);font-size:12px;color:#6b5324}
-.half{display:flex;align-items:center;justify-content:space-between;gap:4px;border-radius:6px;padding:3px 5px;margin-top:4px;font-size:12px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.55)}
-.kingdom{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:3px;background:#0f0c08;padding:4px;border-radius:9px}
-.cell{aspect-ratio:1;border-radius:4px;display:grid;place-items:center;font-size:12px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6);min-width:0;background:#2a241b}
-.cell.castle{background:linear-gradient(145deg,#d9c492,#8d6a33);color:#241a0c}
-.cell.empty{background:#211b13;border:1px dashed #3c3225}
-.cell.placeable{outline:2px solid var(--gold-2);outline-offset:-2px}
-.terrain-wheat{background:linear-gradient(145deg,#e0b64e,#a77c18)}
-.terrain-forest{background:linear-gradient(145deg,#4a8a5e,#1d4a2d)}
-.terrain-water{background:linear-gradient(145deg,#5b9bc8,#245273)}
-.terrain-grass{background:linear-gradient(145deg,#8fbe61,#4c742e)}
-.terrain-swamp{background:linear-gradient(145deg,#a1845a,#5a472b)}
-.terrain-mine{background:linear-gradient(145deg,#787884,#34343c)}
 .move{min-height:46px;padding:9px 13px;border-radius:11px;border:1px solid var(--line);background:#241d14;color:var(--ink);font-size:13px;font-weight:650;cursor:pointer;text-align:left;line-height:1.35;max-width:100%}
 .move:hover{border-color:var(--gold);color:var(--gold-2)}
 .move:disabled{opacity:.45;cursor:not-allowed}
@@ -107,9 +92,8 @@ main{max-width:1120px;margin:0 auto;padding:6px clamp(14px,4vw,28px) 40px}
 [hidden]{display:none!important}
 @media (max-width:520px){
   .seats{grid-template-columns:1fr}
-  .kingdom{grid-template-columns:1fr}
-  .card{width:104px}
   .brand p{display:none}
+  .card{width:104px}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 </style>
@@ -139,9 +123,10 @@ main{max-width:1120px;margin:0 auto;padding:6px clamp(14px,4vw,28px) 40px}
     </div>
     <p class="hint">房间为 2 个座位；对手未到场时由 AI 补位。创建后可把房间码或邀请链接发给朋友。</p>
     <div class="row" style="margin-top:12px">
-      <div class="field"><label for="codeInput">房间码</label><input id="codeInput" autocapitalize="characters" placeholder="例如 ABC234"></div>
+      <div class="field"><label for="codeInput">房间码 / 邀请码</label><input id="codeInput" autocapitalize="characters" placeholder="例如 ABC234"></div>
       <div class="field"><label for="passInput">密码（可选）</label><input id="passInput" type="password" placeholder="房间密码"></div>
       <button class="btn" id="joinBtn" type="button">加入房间</button>
+      <button class="btn ghost" id="reconnectBtn" type="button">重连</button>
     </div>
     <p class="err" id="lobbyErr" role="alert"></p>
   </section>
@@ -151,9 +136,13 @@ main{max-width:1120px;margin:0 auto;padding:6px clamp(14px,4vw,28px) 40px}
       <div class="roombar">
         <span class="code" id="roomCode">------</span>
         <span class="status" id="roomStatus">等待开始</span>
+        <span class="status" id="roomVersion">v0</span>
         <button class="btn ghost" id="copyBtn" type="button">复制邀请</button>
         <button class="btn ghost" id="start2Btn" type="button" hidden>开始对局</button>
         <button class="btn ghost" id="restartBtn" type="button" hidden>再来一局</button>
+        <button class="btn ghost" id="reconnectRoomBtn" type="button">重连</button>
+        <button class="btn ghost" id="leaveBtn" type="button">离座（转 AI）</button>
+        <button class="btn ghost" id="closeBtn" type="button">关闭房间</button>
       </div>
       <div class="seats" id="seats"></div>
       <p class="status" id="turnStatus" aria-live="polite"></p>
@@ -166,197 +155,326 @@ main{max-width:1120px;margin:0 auto;padding:6px clamp(14px,4vw,28px) 40px}
     </div>
   </section>
 </main>
+<p style="text-align:center;margin:14px 0"><a href="../spectate.html" style="display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:44px;padding:0 14px;border-radius:12px;border:1px solid currentColor;color:inherit;font-size:13px;text-decoration:none">围观其他对局</a></p>
 <div class="toast" id="toast" hidden></div>
 <script src="data.js"></script>
 <script src="engine.js"></script>
 <script>
 (function(){
   'use strict';
-  var GAME='splendor';
-  var D=window.SplendorData || null;
-  var E=window.SplendorEngine;
-  var view=null, session=null, playerId=null, roomId=null, pollTimer=null, busy=false;
-  var $=function(id){return document.getElementById(id);};
-  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
-  function toast(msg){var el=$('toast');el.textContent=msg;el.hidden=false;setTimeout(function(){el.hidden=true;},1800);}
-  function saved(key){try{return localStorage.getItem('bg-online-'+GAME+'-'+key);}catch(e){return null;}}
-  function save(key,val){try{if(val==null)localStorage.removeItem('bg-online-'+GAME+'-'+key);else localStorage.setItem('bg-online-'+GAME+'-'+key,val);}catch(e){}}
-  function randomName(){var n=['青玉','琥珀','朱砂','鎏金','墨玉','霜白'];return n[Math.floor(Math.random()*n.length)]+'玩家';}
-  function api(method,route,body){
-    return fetch(route,{method:method,headers:{'content-type':'application/json'},body:body?JSON.stringify(body):undefined})
-      .then(function(r){return r.text().then(function(t){var d=null;try{d=JSON.parse(t);}catch(e){}return {status:r.status,body:d,text:t};});});
+  var D = window.SplendorData || null;
+  var view = null, session = null, playerId = null, roomId = null, pollTimer = null, busy = false;
+  var $ = function(id){ return document.getElementById(id); };
+  var clone = function(v){ return v == null ? v : JSON.parse(JSON.stringify(v)); };
+  function esc(v){ return String(v == null ? '' : v).replace(/[&<>"']/g, function(c){ return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]; }); }
+  function toast(msg){ var el = $('toast'); el.textContent = msg; el.hidden = false; setTimeout(function(){ el.hidden = true; }, 1800); }
+  function saved(key){ try { return localStorage.getItem('bg-online-splendor-' + key); } catch (e) { return null; } }
+  function save(key, val){ try { if (val == null) localStorage.removeItem('bg-online-splendor-' + key); else localStorage.setItem('bg-online-splendor-' + key, val); } catch (e) {} }
+  function randomName(){ var n = ['青玉','琥珀','朱砂','鎏金','墨玉','霜白']; return n[Math.floor(Math.random() * n.length)] + '玩家'; }
+  function api(method, route, body){
+    return fetch(route, { method: method, headers: { 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined })
+      .then(function(r){ return r.text().then(function(t){ var d = null; try { d = JSON.parse(t); } catch (e) {} return { status: r.status, ok: r.ok, body: d, text: t }; }); });
   }
-  function errText(res){return (res.body&&res.body.error&&res.body.error.message)||('请求失败 ('+res.status+')');}
+  function errText(res){ return (res.body && res.body.error && res.body.error.message) || ('请求失败 (' + res.status + ')'); }
+  function roomRoute(suffix){ return '/api/rooms/' + encodeURIComponent(roomId) + (suffix || ''); }
+  function stateOf(){ return view && view.state ? view.state : null; }
+  function legalActions(){ return view && Array.isArray(view.legalActions) ? view.legalActions : []; }
+  function mySeat(){ return view && view.you != null ? view.you : null; }
+  function isMyTurn(){
+    var s = stateOf();
+    return !!(view && view.you != null && s && !s.over && s.current === view.you && legalActions().length > 0);
+  }
   function setSession(resp){
-    if(!resp||!resp.body)return;
-    if(resp.body.playerSession)session=resp.body.playerSession;
-    if(resp.body.roomId)roomId=resp.body.roomId;
-    save('session',session);save('room',roomId);save('player',playerId);
+    if (!resp) return;
+    if (resp.session) session = resp.session;
+    if (resp.roomId) roomId = resp.roomId;
+    save('session', session); save('room', roomId); save('player', playerId);
   }
-  function showRoom(){ $('lobby').hidden=true; $('room').hidden=false; }
-  function showLobby(){ $('lobby').hidden=false; $('room').hidden=true; }
+  function showRoom(){ $('lobby').hidden = true; $('room').hidden = false; }
+  function showLobby(){ $('lobby').hidden = false; $('room').hidden = true; }
+
   function createRoom(){
-    playerId=(playerId||$('nameInput').value.trim()||randomName());
-    $('nameInput').value=playerId;
-    api('POST','/api/rooms',{playerId:playerId,nickname:playerId,maxPlayers:2}).then(function(res){
-      if(res.status!==201)return ($('lobbyErr').textContent=errText(res));
-      setSession(res);showRoom();apply(res.body);startPolling();
-      toast('房间已创建');
-    }).catch(function(e){$('lobbyErr').textContent=String(e);});
+    playerId = (playerId || $('nameInput').value.trim() || randomName());
+    $('nameInput').value = playerId;
+    return api('POST', '/api/rooms', { playerId: playerId, nickname: playerId })
+      .then(function(res){
+        if (res.status !== 201 || !res.body) { $('lobbyErr').textContent = errText(res); return null; }
+        setSession(res.body); showRoom(); apply(res.body); startPolling();
+        toast('房间已创建');
+        return res.body;
+      }).catch(function(e){ $('lobbyErr').textContent = String(e); return null; });
   }
   function joinRoom(){
-    playerId=(playerId||$('nameInput').value.trim()||randomName());
-    $('nameInput').value=playerId;
-    var code=$('codeInput').value.trim().toUpperCase();
-    if(!code)return ($('lobbyErr').textContent='请输入房间码');
-    var body={playerId:playerId,nickname:playerId};
-    if($('passInput').value)body.password=$('passInput').value;
-    var route=/^room_/.test(code)?'/api/rooms/'+encodeURIComponent(code)+'/join':'/api/rooms/'+encodeURIComponent(code)+'/join';
-    api('POST',route,body).then(function(res){
-      if(res.status!==200)return ($('lobbyErr').textContent=errText(res));
-      setSession(res);showRoom();apply(res.body);startPolling();
-    }).catch(function(e){$('lobbyErr').textContent=String(e);});
+    playerId = (playerId || $('nameInput').value.trim() || randomName());
+    $('nameInput').value = playerId;
+    var code = $('codeInput').value.trim();
+    if (!code) { $('lobbyErr').textContent = '请输入房间码或邀请码'; return Promise.resolve(null); }
+    var body = { playerId: playerId, nickname: playerId };
+    if ($('passInput').value) body.password = $('passInput').value;
+    if (!/^room_/.test(code)) body.inviteCode = code;
+    return api('POST', '/api/rooms/' + encodeURIComponent(code) + '/join', body)
+      .then(function(res){
+        if (res.status !== 200 || !res.body) { $('lobbyErr').textContent = errText(res); return null; }
+        setSession(res.body); showRoom(); apply(res.body); startPolling();
+        return res.body;
+      }).catch(function(e){ $('lobbyErr').textContent = String(e); return null; });
   }
   function startGame(){
-    if(!roomId||!session)return;
-    api('POST','/api/rooms/'+encodeURIComponent(roomId)+'/start',{session:session,playerId:playerId}).then(function(res){
-      if(res.status!==200)return toast(errText(res));
-      apply(res.body);
-    });
+    if (!roomId || !session) return Promise.resolve(null);
+    return api('POST', roomRoute('/start'), { session: session })
+      .then(function(res){ if (res.status !== 200) { toast(errText(res)); return null; } setSession(res.body); apply(res.body); startPolling(); return res.body; })
+      .catch(function(e){ toast(String(e)); return null; });
   }
   function restartGame(){
-    api('POST','/api/rooms/'+encodeURIComponent(roomId)+'/restart',{session:session,playerId:playerId}).then(function(res){
-      if(res.status!==200)return toast(errText(res));
-      apply(res.body);
-    });
+    if (!roomId || !session) return Promise.resolve(null);
+    return api('POST', roomRoute('/restart'), { session: session })
+      .then(function(res){ if (res.status !== 200) { toast(errText(res)); return null; } apply(res.body); return res.body; })
+      .catch(function(e){ toast(String(e)); return null; });
   }
-  function sendMove(move){
-    if(busy)return;busy=true;
-    api('POST','/api/rooms/'+encodeURIComponent(roomId)+'/actions',{session:session,playerId:playerId,type:'move',move:move}).then(function(res){
-      busy=false;
-      if(res.status!==200)return toast(errText(res));
-      apply(res.body);
-    }).catch(function(e){busy=false;toast(String(e));});
+  function invite(){
+    if (!roomId || !session) return Promise.resolve(null);
+    return api('POST', roomRoute('/invite'), { session: session })
+      .then(function(res){
+        if (res.status !== 200 || !res.body) { toast(errText(res)); return null; }
+        if (view) view.inviteCode = res.body.inviteCode;
+        toast('邀请链接已生成');
+        return res.body;
+      }).catch(function(e){ toast(String(e)); return null; });
+  }
+  function sendAction(action){
+    if (busy || !roomId || !session) return Promise.resolve(null);
+    if (!action) { toast('该动作当前不可用'); return Promise.resolve(null); }
+    busy = true;
+    return api('POST', roomRoute('/actions'), { session: session, action: action })
+      .then(function(res){
+        busy = false;
+        if (res.status !== 200) { toast(errText(res)); return refresh(); }
+        apply(res.body);
+        return res.body;
+      }).catch(function(e){ busy = false; toast(String(e)); return null; });
+  }
+  function sendMove(move){ return sendAction(move); }
+  function reconnect(){
+    if (!session || !roomId) { session = saved('session'); roomId = saved('room'); playerId = saved('player'); }
+    if (!session || !roomId) { toast('没有可重连的房间会话'); return Promise.resolve(null); }
+    return api('POST', roomRoute('/reconnect'), { session: session })
+      .then(function(res){
+        if (res.status !== 200) { session = null; roomId = null; save('session', null); save('room', null); toast('重连失败'); return null; }
+        playerId = res.body.playerId || playerId;
+        showRoom(); apply(res.body); startPolling();
+        toast('已重连');
+        return res.body;
+      }).catch(function(e){ toast(String(e)); return null; });
+  }
+  function leave(){
+    if (!roomId || !session) return Promise.resolve(null);
+    return api('POST', roomRoute('/leave'), { session: session })
+      .then(function(res){
+        if (res.status !== 200) { toast(errText(res)); return null; }
+        toast('已离座，座位转为 AI');
+        clearSession();
+        return res.body;
+      }).catch(function(e){ toast(String(e)); return null; });
+  }
+  function closeRoom(){
+    if (!roomId || !session) return Promise.resolve(null);
+    return api('DELETE', roomRoute('') + '?session=' + encodeURIComponent(session))
+      .then(function(res){
+        if (res.status !== 200) { toast(errText(res)); return null; }
+        toast('房间已关闭');
+        clearSession();
+        return res.body;
+      }).catch(function(e){ toast(String(e)); return null; });
   }
   function refresh(){
-    if(!roomId||!session)return;
-    api('GET','/api/rooms/'+encodeURIComponent(roomId)+'?session='+encodeURIComponent(session)+'&playerId='+encodeURIComponent(playerId)).then(function(res){
-      if(res.status===404){stopPolling();session=null;roomId=null;save('session',null);save('room',null);showLobby();toast('房间已关闭');return;}
-      if(res.status===200)apply(res.body);
-    }).catch(function(){});
+    if (!roomId || !session) return Promise.resolve(null);
+    return api('GET', roomRoute('') + '?session=' + encodeURIComponent(session))
+      .then(function(res){
+        if (res.status === 404) { stopPolling(); session = null; roomId = null; save('session', null); save('room', null); showLobby(); toast('房间已关闭'); return null; }
+        if (res.status === 200) apply(res.body);
+        return res.body;
+      }).catch(function(){ return null; });
   }
-  function startPolling(){stopPolling();pollTimer=setInterval(refresh,1000);}
-  function stopPolling(){if(pollTimer){clearInterval(pollTimer);pollTimer=null;}}
+  function startPolling(){ stopPolling(); pollTimer = setInterval(refresh, 1000); }
+  function stopPolling(){ if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
+  function clearSession(){
+    session = null; roomId = null; view = null;
+    save('session', null); save('room', null);
+    stopPolling(); showLobby();
+  }
+
   function apply(v){
-    if(!v)return;view=v;
-    $('roomCode').textContent=v.roomCode||v.roomId||'------';
-    $('roomStatus').textContent=v.status==='playing'?'对局中':v.status==='finished'?'已结束':(v.seats&&v.seats.filter(function(s){return !s.ai;}).length>=2?'可以开始':'等待对手');
-    $('startBtn').hidden=!v.canStart;
-    $('start2Btn').hidden=!v.canStart;
-    $('inviteBtn').hidden=!v.isHost;
-    $('restartBtn').hidden=!v.canRestart;
-    var seats=(v.seats||[]).map(function(s,i){
-      return '<div class="seat'+(v.currentPlayerIndex===s.index?' active':'')+'">'+
-        '<div class="name">'+esc(s.nickname)+' <span class="badge">'+(s.playerId?'玩家':'AI')+(s.takeover?' · 托管':'')+'</span></div>'+
-        '<div class="meta">'+(s.controlledByAI?'AI 控制':'手动操作')+(v.you&&v.you.playerIndex===s.index?' · 你':'')+'</div></div>';
+    if (!v) return;
+    view = v;
+    roomId = v.roomId || roomId;
+    $('roomCode').textContent = v.code || v.roomId || '------';
+    var over = !!(v.over || (v.state && v.state.over));
+    $('roomStatus').textContent = !v.started ? '等待开始' : (over ? '已结束' : '对局中');
+    $('roomVersion').textContent = 'v' + (v.stateVersion == null ? 0 : v.stateVersion);
+    var me = v.you != null ? (v.seats || [])[v.you] : null;
+    var isHost = !!(me && me.isHost);
+    $('startBtn').hidden = !(isHost && !v.started);
+    $('start2Btn').hidden = !(isHost && !v.started);
+    $('inviteBtn').hidden = !isHost;
+    $('copyBtn').hidden = !isHost;
+    $('closeBtn').hidden = !isHost;
+    $('leaveBtn').hidden = v.you == null;
+    $('restartBtn').hidden = !v.canRestart;
+    var current = v.state ? v.state.current : null;
+    $('seats').innerHTML = (v.seats || []).map(function(s){
+      var tags = [s.ai ? 'AI' : '玩家'];
+      if (s.isHost) tags.push('房主');
+      if (s.isYou) tags.push('你');
+      if (s.connected === false) tags.push('离线');
+      return '<div class="seat' + (current === s.index && !over ? ' active' : '') + '">' +
+        '<div class="name">' + esc(s.name || ('座位 ' + (s.index + 1))) + ' <span class="badge">' + tags.join(' · ') + '</span></div>' +
+        '<div class="meta">' + (s.ai ? 'AI 控制' : '手动操作') + '</div></div>';
     }).join('');
-    $('seats').innerHTML=seats;
-    $('turnStatus').textContent=v.started?(v.state&&v.state.over?'对局结束':(v.currentControlledByAI?'AI 正在行动…':'轮到 '+((v.seats[v.currentPlayerIndex]||{}).nickname||'玩家'))):'等待房主开始；空位将由 AI 补足。';
-    $('board').innerHTML=renderBoard(v);
+    $('turnStatus').textContent = !v.started
+      ? '等待房主开始；空位将由 AI 补足。'
+      : (over ? '对局结束' : (isMyTurn() ? '轮到你了' : ('轮到 ' + (((v.seats || [])[v.state.current] || {}).name || '玩家'))));
+    $('board').innerHTML = renderBoard(v);
     renderMoves(v);
     renderResult(v);
   }
+
   function renderMoves(v){
-    var box=$('moves'),hint=$('movesHint');
-    if(!v.started){box.innerHTML='';hint.textContent='等待开始';return;}
-    if(v.state&&v.state.over){box.innerHTML='';hint.textContent='对局已结束';return;}
-    if(!v.canMove){box.innerHTML='';hint.textContent='等待对手行动';return;}
-    hint.textContent='轮到你了';
-    box.innerHTML=(v.legalMoves||[]).map(function(m,i){return '<button class="move" type="button" data-i="'+i+'">'+esc(moveLabel(m,v.state))+'</button>';}).join('');
-    Array.prototype.forEach.call(box.querySelectorAll('.move'),function(btn){
-      btn.addEventListener('click',function(){var m=(view.legalMoves||[])[Number(btn.getAttribute('data-i'))];if(m)sendMove(m);});
-    });
+    var box = $('moves'), hint = $('movesHint');
+    if (!v.started) { box.innerHTML = ''; hint.textContent = '等待开始'; return; }
+    if (v.state && v.state.over) { box.innerHTML = ''; hint.textContent = '对局已结束'; return; }
+    if (!isMyTurn()) { box.innerHTML = ''; hint.textContent = '等待对手行动'; return; }
+    hint.textContent = '轮到你了';
+    box.innerHTML = legalActions().map(function(m, i){ return '<button class="move" type="button" data-i="' + i + '">' + esc(moveLabel(m)) + '</button>'; }).join('');
   }
   function renderResult(v){
-    var el=$('result');
-    if(!(v.state&&v.state.over)){el.hidden=true;el.innerHTML='';return;}
-    var rows=(v.result&&v.result.scores)||(v.state.result&&v.state.result.scores)||[];
-    var winner=v.result?v.result.winner:(v.state.result?v.state.result.winner:null);
-    el.hidden=false;
-    el.innerHTML='<h3>'+(winner==null?'平局':esc((rows[winner]&&rows[winner].name)||'胜者')+' 获胜')+'</h3>'+
-      rows.map(function(r){return '<div class="score"><span>'+esc(r.name||('玩家 '+(r.index+1)))+'</span><b>'+esc(r.total==null?r.prestige==null?r.score:r.prestige:r.total)+'</b></div>';}).join('')+
-      '<p class="hint">结果已记入本地榜单。房主可再来一局。</p>';
+    var el = $('result');
+    if (!(v.state && v.state.over)) { el.hidden = true; el.innerHTML = ''; return; }
+    var detail = v.result && v.result.detail ? v.result.detail : v.state.result;
+    var rows = (detail && detail.scores) || [];
+    var winner = v.result ? v.result.winnerSeat : (detail ? detail.winner : null);
+    el.hidden = false;
+    el.innerHTML = '<h3>' + (winner == null ? '平局' : esc((rows[winner] && rows[winner].name) || '胜者') + ' 获胜') + '</h3>' +
+      rows.map(function(r){ return '<div class="score"><span>' + esc(r.name || ('玩家 ' + (r.index + 1))) + '</span><b>' + esc(r.prestige == null ? r.total : r.prestige) + '</b></div>'; }).join('') +
+      '<p class="hint">结果已记入结果榜。房主可再来一局。</p>';
   }
   function copyInvite(){
-    if(!view)return;
-    var link=location.origin+location.pathname+'?room='+encodeURIComponent(view.roomCode||view.roomId);
-    var text='房间 '+view.roomCode+' · '+link;
-    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(function(){toast('邀请已复制');});}
-    else{toast(text);}
+    if (!view) return;
+    var share = function(code){
+      var link = location.origin + location.pathname + '?room=' + encodeURIComponent(roomId) + '&code=' + encodeURIComponent(code || '');
+      var text = '璀璨宝石邀请：' + link;
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function(){ toast('邀请已复制'); }, function(){ toast(text); });
+      else toast(text);
+    };
+    invite().then(function(data){ if (data) share(data.inviteCode); });
   }
-  
-  function colorMeta(k){return (D&&D.COLOR_BY_KEY&&D.COLOR_BY_KEY[k])||{label:k,face:'#888',ink:'#fff'};}
-  function pip(k,n){var c=colorMeta(k);return '<span class="pip" style="background:'+c.face+';color:'+c.ink+'">'+n+'</span>';}
-  function findCard(s,id){
-    for(var t=1;t<=3;t++){var row=s.faceUp[t]||[];for(var i=0;i<row.length;i++)if(row[i]&&row[i].id===id)return row[i];}
-    var me=(s.players||[]).filter(function(p){return view&&view.you&&p.index===view.you.playerIndex;})[0];
-    if(me)for(var j=0;j<(me.reserved||[]).length;j++)if(me.reserved[j]&&me.reserved[j].id===id)return me.reserved[j];
+
+  function colorMeta(k){ return (D && D.COLOR_BY_KEY && D.COLOR_BY_KEY[k]) || { label: k, face: '#888', ink: '#fff' }; }
+  function pip(k, n){ var c = colorMeta(k); return '<span class="pip" style="background:' + c.face + ';color:' + c.ink + '">' + n + '</span>'; }
+  function findCard(s, id){
+    for (var t = 1; t <= 3; t += 1) {
+      var row = s.faceUp[t] || [];
+      for (var i = 0; i < row.length; i += 1) if (row[i] && row[i].id === id) return row[i];
+    }
+    var me = s.players.filter(function(p){ return view && view.you != null && p.index === view.you; })[0];
+    if (me) for (var j = 0; j < (me.reserved || []).length; j += 1) if (me.reserved[j] && me.reserved[j].id === id) return me.reserved[j];
     return null;
   }
-  function cardHtml(c,t){
-    var cost=(D?D.COLORS:[]).map(function(col){var n=c.cost&&c.cost[col.key];return n?pip(col.key,n):'';}).join('');
-    var bonus=(D&&D.COLOR_BY_KEY[c.bonus])?D.COLOR_BY_KEY[c.bonus].label:c.bonus;
-    return '<div class="card"><div class="tier">'+t+' 级</div>'+(c.points?'<div class="points">'+c.points+'</div>':'')+
-      '<div class="bonus">'+esc(bonus)+'</div><div class="cost">'+cost+'</div></div>';
+  function cardHtml(c, t){
+    var cost = (D ? D.COLORS : []).map(function(col){ var n = c.cost && c.cost[col.key]; return n ? pip(col.key, n) : ''; }).join('');
+    var bonus = (D && D.COLOR_BY_KEY[c.bonus]) ? D.COLOR_BY_KEY[c.bonus].label : c.bonus;
+    return '<div class="card"><div class="tier">' + t + ' 级</div>' + (c.points ? '<div class="points">' + c.points + '</div>' : '') +
+      '<div class="bonus">' + esc(bonus) + '</div><div class="cost">' + cost + '</div></div>';
   }
   function moveLabel(m){
-    if(m.type==='take3')return '拿取 3 色各 1 枚：'+(m.colors||[]).map(function(k){return colorMeta(k).label;}).join('、');
-    if(m.type==='take2')return '拿取 2 枚同色：'+colorMeta(m.color).label;
-    if(m.type==='buy'){var card=findCard(view.state,m.cardId);return '购买'+(card?'「'+card.name+'」':(' #'+m.cardId))+(card?'（'+card.points+' 分）':'');}
-    if(m.type==='reserve')return m.source==='deck'?('盲抽预留 '+m.tier+' 级发展卡'):('预留 '+(findCard(view.state,m.cardId)||{}).name);
+    if (m.type === 'take3') return '拿取 3 色各 1 枚：' + (m.colors || []).map(function(k){ return colorMeta(k).label; }).join('、');
+    if (m.type === 'take2') return '拿取 2 枚同色：' + colorMeta(m.color).label;
+    if (m.type === 'buy') {
+      var card = findCard(stateOf(), m.cardId);
+      return '购买' + (card ? '「' + card.name + '」' : (' #' + m.cardId)) + (card ? '（' + card.points + ' 分）' : '');
+    }
+    if (m.type === 'reserve') return m.source === 'deck' ? ('盲抽预留 ' + m.tier + ' 级发展卡') : ('预留 ' + ((findCard(stateOf(), m.cardId) || {}).name || ''));
     return JSON.stringify(m);
   }
   function renderBoard(v){
-    var s=v.state;if(!s)return '';
-    var gems='<div class="section"><h3>宝石银行 <span>黄金 '+s.gems.gold+'</span></h3><div class="gems">'+
-      (D?D.COLORS:[]).map(function(c){return '<div class="token" style="background:'+c.face+';color:'+c.ink+';border-color:'+c.edge+'">'+esc(c.label)+'<small>'+s.gems[c.key]+'</small></div>';}).join('')+'</div></div>';
-    var players=(s.players||[]).map(function(p){
-      var tokens=(D?D.COLORS:[]).map(function(c){return pip(c.key,p.tokens[c.key]||0);}).join('');
-      var bonuses=(D?D.COLORS:[]).map(function(c){var n=(p.bonuses&&p.bonuses[c.key])||0;return n?pip(c.key,n):'';}).join('');
-      var res=(p.reserved||[]).map(function(c){return c.hidden?'<span class="pip" style="background:#4a4032;color:#c9bfae">?</span>':'<span class="pip" style="background:#7a6a4a;color:#fff">'+esc(c.points||0)+'</span>';}).join('');
-      return '<div class="section"><h3>'+esc(p.name)+' <span>'+p.prestige+' 声望 · '+p.cards.length+' 卡 · '+p.nobles+' 贵族</span></h3>'+
-        '<div class="hint">筹码 '+tokens+'</div><div class="hint" style="margin-top:5px">永久加成 '+(bonuses||'暂无')+'</div>'+
-        '<div class="hint" style="margin-top:5px">预留 '+(res||'无')+'</div></div>';
+    var s = v.state;
+    if (!s) return '';
+    var gems = '<div class="section"><h3>宝石银行 <span>黄金 ' + s.gems.gold + '</span></h3><div class="gems">' +
+      (D ? D.COLORS : []).map(function(c){ return '<div class="token" style="background:' + c.face + ';color:' + c.ink + ';border-color:' + c.edge + '">' + esc(c.label) + '<small>' + s.gems[c.key] + '</small></div>'; }).join('') + '</div></div>';
+    var players = (s.players || []).map(function(p){
+      var tokens = (D ? D.COLORS : []).map(function(c){ return pip(c.key, p.tokens[c.key] || 0); }).join('');
+      var bonuses = (D ? D.COLORS : []).map(function(c){ var n = (p.bonuses && p.bonuses[c.key]) || 0; return n ? pip(c.key, n) : ''; }).join('');
+      var res = (p.reserved || []).map(function(c){ return '<span class="pip" style="background:#7a6a4a;color:#fff">' + esc(c.points || 0) + '</span>'; }).join('');
+      var hiddenRes = (p.reservedCount || 0) > (p.reserved || []).length
+        ? '<span class="pip" style="background:#4a4032;color:#c9bfae">?' + (p.reservedCount || 0) + '</span>'
+        : '';
+      return '<div class="section"><h3>' + esc(p.name) + ' <span>' + p.prestige + ' 声望 · ' + p.cards.length + ' 卡 · ' + p.nobles + ' 贵族</span></h3>' +
+        '<div class="hint">筹码 ' + tokens + '</div><div class="hint" style="margin-top:5px">永久加成 ' + (bonuses || '暂无') + '</div>' +
+        '<div class="hint" style="margin-top:5px">预留 ' + (res + hiddenRes || '无') + '</div></div>';
     }).join('');
-    var tiers=[3,2,1].map(function(t){
-      var cards=(s.faceUp[t]||[]).map(function(c){return c?cardHtml(c,t):'';}).join('');
-      return '<div class="section"><h3>'+t+' 级发展卡 <span>牌堆 '+s.deckCounts[t]+'</span></h3><div class="cards">'+cards+'</div></div>';
+    var tiers = [3, 2, 1].map(function(t){
+      var cards = (s.faceUp[t] || []).map(function(c){ return c ? cardHtml(c, t) : ''; }).join('');
+      return '<div class="section"><h3>' + t + ' 级发展卡 <span>牌堆 ' + s.deckCounts[t] + '</span></h3><div class="cards">' + cards + '</div></div>';
     }).join('');
-    var nobles='<div class="section"><h3>贵族 <span>达标 +3 声望</span></h3><div class="nobles">'+
-      (s.nobles||[]).map(function(n){return '<div class="noble"><b>'+n.points+'</b><div>'+esc(n.name)+'</div><div class="cost">'+
-        Object.keys(n.need||{}).map(function(k){return n.need[k]?pip(k,n.need[k]):'';}).join('')+'</div></div>';}).join('')+'</div></div>';
-    return gems+players+tiers+nobles;
+    var nobles = '<div class="section"><h3>贵族 <span>达标 +3 声望</span></h3><div class="nobles">' +
+      (s.nobles || []).map(function(n){ return '<div class="noble"><b>' + n.points + '</b><div>' + esc(n.name) + '</div><div class="cost">' +
+        Object.keys(n.need || {}).map(function(k){ return n.need[k] ? pip(k, n.need[k]) : ''; }).join('') + '</div></div>'; }).join('') + '</div></div>';
+    return gems + players + tiers + nobles;
   }
-  function boot(){
-    playerId=saved('player')||('');session=saved('session');roomId=saved('room');
-    $('nameInput').value=playerId||randomName();
-    $('createBtn').addEventListener('click',createRoom);
-    $('joinBtn').addEventListener('click',joinRoom);
-    $('startBtn').addEventListener('click',startGame);
-    $('start2Btn').addEventListener('click',startGame);
-    $('restartBtn').addEventListener('click',restartGame);
-    $('inviteBtn').addEventListener('click',copyInvite);
-    $('copyBtn').addEventListener('click',copyInvite);
-    var q=new URLSearchParams(location.search);
-    if(q.get('room')){$('codeInput').value=q.get('room');}
-    if(session&&roomId){
-      api('POST','/api/rooms/'+encodeURIComponent(roomId)+'/reconnect',{token:session,playerId:playerId}).then(function(res){
-        if(res.status===200){showRoom();apply(res.body);startPolling();}
-        else{session=null;roomId=null;save('session',null);save('room',null);}
-      }).catch(function(){});
+
+  $('createBtn').addEventListener('click', createRoom);
+  $('joinBtn').addEventListener('click', joinRoom);
+  $('startBtn').addEventListener('click', startGame);
+  $('start2Btn').addEventListener('click', startGame);
+  $('restartBtn').addEventListener('click', restartGame);
+  $('inviteBtn').addEventListener('click', copyInvite);
+  $('copyBtn').addEventListener('click', copyInvite);
+  $('reconnectBtn').addEventListener('click', reconnect);
+  $('reconnectRoomBtn').addEventListener('click', reconnect);
+  $('leaveBtn').addEventListener('click', leave);
+  $('closeBtn').addEventListener('click', closeRoom);
+  $('moves').addEventListener('click', function(event){
+    var btn = event.target.closest('.move');
+    if (!btn) return;
+    var move = legalActions()[Number(btn.getAttribute('data-i'))];
+    if (move) sendAction(move);
+  });
+
+  window.__splendorOnline = Object.freeze({
+    createRoom: createRoom, joinRoom: joinRoom, start: startGame, reconnect: reconnect,
+    invite: invite, restart: restartGame, leave: leave, closeRoom: closeRoom, poll: refresh,
+    sendAction: sendAction, sendMove: sendMove,
+    getState: function(){ var s = stateOf(); return s ? clone(s) : null; },
+    getView: function(){ return view ? clone(view) : null; },
+    legalActions: function(){ return clone(legalActions()); },
+    isBusy: function(){ return !!busy; }
+  });
+
+  (function boot(){
+    playerId = saved('player') || '';
+    $('nameInput').value = playerId || randomName();
+    var q = new URLSearchParams(location.search);
+    var room = q.get('room');
+    var token = q.get('session') || q.get('token');
+    var code = q.get('code') || q.get('invite');
+    var who = q.get('player') || q.get('playerId');
+    if (who) { playerId = who; $('nameInput').value = who; }
+    if (room && token) {
+      roomId = room; session = token;
+      reconnect();
+    } else if (room && code) {
+      $('codeInput').value = code;
+      playerId = who || playerId || randomName();
+      api('POST', '/api/rooms/' + encodeURIComponent(room) + '/join', { playerId: playerId, nickname: playerId, inviteCode: code })
+        .then(function(res){
+          if (res.status !== 200) { showLobby(); $('lobbyErr').textContent = errText(res); return; }
+          setSession(res.body); showRoom(); apply(res.body); startPolling();
+        });
+    } else if (room) {
+      $('codeInput').value = room;
+    } else if (session && roomId) {
+      reconnect();
     }
-  }
-  boot();
+  })();
 })();
 </script>
 </body>

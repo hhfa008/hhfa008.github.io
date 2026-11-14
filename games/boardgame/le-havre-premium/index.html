@@ -1,0 +1,2641 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>勒阿弗尔 · 港都情浓 Le Havre（人机桌游）</title>
+<meta name="description" content="勒阿弗尔 Le Havre 港都情浓中文单机桌游：19 世纪港口城市，供给、取货、使用建筑、建造、船只、贷款、收获与喂养。35 栋建筑、17 种货物、手机优先、离线可玩。">
+<meta name="theme-color" content="#08141a">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b1c22'/%3E%3Ccircle cx='16' cy='16' r='11' fill='%23c69643'/%3E%3Cpath d='M9 18h14l-2 4h-10z' fill='%2354380f'/%3E%3Cpath d='M16 18V9l5 4h-5' fill='%23f3e2b4'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#061116;--bg2:#081a20;--panel:#0e232a;--panel2:#143139;--panel3:#0a1b21;
+  --ink:#f2e6ce;--sand:#e0c08a;--cream:#f6ecd8;--muted:#a9bcb8;--dim:#7e958f;
+  --gold:#d8b061;--gold2:#f2d58f;--gold3:#8d6427;--brass:#b8863b;
+  --copper:#b76a45;--sea:#235e66;--sea2:#143c44;--brick:#9a4b34;--wood:#8a5a2f;--stone:#8e8878;
+  --human:#e3b96b;--ai:#6fb0a6;
+  --line:rgba(216,176,97,.24);--line2:rgba(216,176,97,.12);
+  --ok:#9ccf92;--warn:#f0b184;--bad:#e7978b;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --serif:"Songti SC","Noto Serif SC",Georgia,"Times New Roman",serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%;max-width:100%;overflow-x:clip}
+body{margin:0;min-height:100vh;max-width:100%;overflow-x:clip;color:var(--ink);font:14px/1.5 var(--sans);-webkit-font-smoothing:antialiased;
+  background:
+    radial-gradient(1200px 720px at 82% -12%,rgba(208,150,60,.15),transparent 62%),
+    radial-gradient(1000px 640px at -6% 8%,rgba(42,104,114,.20),transparent 60%),
+    repeating-linear-gradient(180deg,rgba(255,255,255,.012) 0 2px,transparent 2px 6px),
+    linear-gradient(160deg,#08161c 0%,#050f14 56%,#040a0e 100%);
+  background-attachment:fixed}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(900px 380px at 50% 112%,rgba(40,120,130,.20),transparent 70%),
+    repeating-radial-gradient(circle at 50% 118%,transparent 0 22px,rgba(130,200,200,.028) 22px 23px),
+    radial-gradient(120% 90% at 50% 0,transparent 55%,rgba(0,0,0,.4) 100%);
+  opacity:.9}
+h1,h2,h3,p,ul,ol,figure{margin:0}
+button{font:inherit;color:inherit}
+a{color:inherit}
+.sprite{position:absolute;width:0;height:0;overflow:hidden}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.shell{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:0 10px 30px}
+.gi{width:22px;height:22px;display:block;flex:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.34))}
+.ship-art{display:block;width:100%;height:100%}
+
+/* ---------- header ---------- */
+.site-head{position:sticky;top:0;z-index:50;border-bottom:1px solid var(--line2);
+  background:linear-gradient(180deg,rgba(7,19,24,.98),rgba(8,21,26,.93));backdrop-filter:blur(12px);
+  box-shadow:0 8px 26px rgba(0,0,0,.3)}
+.head-inner{max-width:1400px;margin:0 auto;padding:7px 10px;display:flex;flex-wrap:wrap;align-items:center;gap:7px 12px}
+.brand{display:flex;align-items:center;gap:9px;min-width:0;flex:1 1 auto}
+.brand-mark{width:36px;height:36px;flex:none;border-radius:50%;position:relative;
+  background:radial-gradient(circle at 34% 28%,#f7dfa2,#d2a24a 44%,#8b5f1e 78%,#54380f);
+  box-shadow:0 2px 8px rgba(0,0,0,.45),inset 0 1px 2px rgba(255,255,255,.6),inset 0 -2px 4px rgba(80,45,8,.6);
+  border:1px solid #5c3d12}
+.brand-mark svg{position:absolute;inset:5px}
+.brand-txt{min-width:0}
+.brand h1{font-family:var(--serif);font-size:19px;line-height:1.05;letter-spacing:.05em;color:var(--cream);white-space:nowrap}
+.brand p{font-size:12px;line-height:1.2;color:var(--muted);letter-spacing:.07em;white-space:nowrap;margin-top:1px}
+.roundbox{display:flex;gap:5px;flex-wrap:wrap}
+.rb{display:flex;align-items:baseline;gap:3px;min-height:44px;padding:3px 8px;border-radius:9px;
+  background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.015));
+  border:1px solid var(--line2);box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.rb .k{font-size:12px;color:var(--muted);font-weight:600}
+.rb b{font-family:var(--mono);font-size:18px;line-height:1;color:var(--gold2);font-variant-numeric:tabular-nums}
+.rb i{font-family:var(--mono);font-size:12px;font-style:normal;color:var(--dim)}
+.rb.phase{background:linear-gradient(180deg,rgba(216,176,97,.14),rgba(216,176,97,.04));border-color:var(--line)}
+.rb.phase b{font-family:var(--sans);font-size:13px;color:var(--cream)}
+.head-btns{display:flex;gap:5px;flex:none}
+.mini{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;padding:0 10px;border-radius:9px;
+  border:1px solid rgba(216,176,97,.30);background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.015));
+  color:var(--ink);font-size:12px;font-weight:650;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;white-space:nowrap}
+.mini:hover{background:rgba(216,176,97,.13);border-color:rgba(216,176,97,.5)}
+.mini[aria-pressed="true"]{background:linear-gradient(180deg,rgba(216,176,97,.26),rgba(216,176,97,.10));border-color:var(--gold);color:var(--gold2)}
+.mini:focus-visible,.btn:focus-visible,.offer:focus-visible,.bcard:focus-visible,.pcard:focus-visible,.ship-card:focus-visible,.opt:focus-visible,.pick:focus-visible,.qty:focus-visible{outline:2px solid var(--gold2);outline-offset:2px}
+
+/* ---------- status ---------- */
+.statusline{display:flex;align-items:center;gap:7px;flex-wrap:wrap;min-height:34px;margin:6px 2px 0;font-size:12.5px;color:var(--muted);line-height:1.4}
+.turn-dot{width:9px;height:9px;border-radius:50%;flex:none;background:var(--human);box-shadow:0 0 0 2px rgba(255,255,255,.10),0 0 10px rgba(227,185,107,.5)}
+.turn-dot.ai{background:var(--ai);box-shadow:0 0 0 2px rgba(255,255,255,.10),0 0 10px rgba(111,176,166,.5)}
+.turn-dot.wait{background:var(--dim);box-shadow:none}
+#hint{flex:1 1 230px;min-width:0;color:var(--ink)}
+#hint b{color:var(--gold2)}
+#hint.warn{color:var(--warn)}
+#hint.good{color:var(--ok)}
+.chips{display:flex;gap:4px;flex-wrap:wrap;margin-left:auto}
+.chip{display:inline-flex;align-items:center;gap:3px;padding:1px 6px;border-radius:999px;font-size:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.035);color:var(--muted);white-space:nowrap}
+.chip.gold{border-color:var(--line);background:rgba(216,176,97,.10);color:var(--gold2)}
+.chip.bad{border-color:rgba(231,151,139,.3);background:rgba(231,151,139,.09);color:#f0b8ae}
+
+/* ---------- resource strip ---------- */
+.res-strip{display:flex;gap:5px;overflow-x:auto;overscroll-behavior-x:contain;padding:6px 2px 7px;scrollbar-width:thin;scroll-snap-type:x proximity}
+.res-strip::-webkit-scrollbar{height:4px}
+.res-strip::-webkit-scrollbar-thumb{background:rgba(216,176,97,.28);border-radius:2px}
+.res-tile{flex:0 0 54px;scroll-snap-align:start;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-height:62px;border-radius:9px;position:relative;
+  background:linear-gradient(180deg,rgba(255,255,255,.055),transparent 42%),linear-gradient(165deg,#193740,#0b2027);
+  border:1px solid rgba(255,255,255,.07);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.07),inset 0 -2px 5px rgba(0,0,0,.45),0 2px 5px rgba(0,0,0,.2)}
+.res-tile .gi{width:27px;height:27px}
+.res-val{font:700 14px/1 var(--mono);color:var(--ink);font-variant-numeric:tabular-nums}
+.res-name{font-size:12px;line-height:1.1;color:var(--muted);white-space:nowrap}
+.res-tile.zero{opacity:.52}
+.res-tile.coin{background:linear-gradient(180deg,rgba(255,255,255,.09),transparent 42%),linear-gradient(165deg,#4a3718,#1c160b);border-color:rgba(216,176,97,.28)}
+.res-tile.coin .res-val{color:var(--gold2)}
+.res-tile.loan{background:linear-gradient(180deg,rgba(255,255,255,.05),transparent 42%),linear-gradient(165deg,#3a2220,#180f0f);border-color:rgba(183,106,69,.28)}
+.res-tile.loan .res-val{color:#f0b49a}
+.res-div{flex:0 0 1px;align-self:stretch;background:linear-gradient(180deg,transparent,var(--line),transparent);margin:4px 2px}
+.res-tile.flash{animation:resFlash .7s ease}
+@keyframes resFlash{0%{box-shadow:0 0 0 2px rgba(242,213,143,.75),0 0 18px rgba(242,213,143,.55)}100%{}}
+
+/* ---------- dock ---------- */
+.dock{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:56px;margin:1px 0 8px;padding:7px 10px;border-radius:12px;
+  border:1px solid var(--line);background:linear-gradient(180deg,rgba(216,176,97,.11),rgba(216,176,97,.025)),linear-gradient(180deg,rgba(20,49,57,.85),rgba(9,24,30,.9));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 6px 18px rgba(0,0,0,.22)}
+.dock-msg{flex:1 1 210px;min-width:0;font-size:13px;line-height:1.4;color:var(--muted)}
+.dock-msg b{color:var(--cream)}
+.dock-msg .sub{display:block;font-size:12px;color:var(--dim);margin-top:1px}
+.dock-actions{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:44px;padding:0 13px;border-radius:9px;cursor:pointer;
+  border:1px solid rgba(216,176,97,.32);background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.018));
+  color:var(--ink);font-size:13px;font-weight:650;touch-action:manipulation;-webkit-tap-highlight-color:transparent;white-space:nowrap}
+.btn:hover{background:rgba(216,176,97,.14);border-color:rgba(216,176,97,.55)}
+.btn.primary{background:linear-gradient(180deg,#f0d38d,#c69744 52%,#a4762c);border-color:#f4dda2;color:#2b1d07;
+  box-shadow:0 4px 14px rgba(184,134,59,.30),inset 0 1px 0 rgba(255,255,255,.6),inset 0 -2px 3px rgba(90,55,10,.45);text-shadow:0 1px 0 rgba(255,255,255,.3)}
+.btn.primary:hover{background:linear-gradient(180deg,#f8e2a8,#d2a34e 52%,#b0802f)}
+.btn.danger{border-color:rgba(183,106,69,.42);background:rgba(120,52,36,.22);color:#f1c0ae}
+.btn:disabled,.btn[aria-disabled="true"]{opacity:.45;cursor:not-allowed;filter:saturate(.5)}
+.btn.small{min-height:44px;padding:0 9px;font-size:12px}
+
+/* ---------- layout ---------- */
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 336px;gap:10px;align-items:start}
+.side{display:grid;gap:8px;min-width:0}
+.panel{min-width:0;border-radius:13px;border:1px solid var(--line2);padding:8px 9px 9px;
+  background:linear-gradient(165deg,rgba(21,49,57,.96),rgba(9,25,31,.97));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 14px 34px rgba(0,0,0,.25)}
+.panel-head{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin:0 0 7px;padding-bottom:5px;border-bottom:1px solid var(--line2)}
+.panel-head h2{font-family:var(--serif);font-size:15px;line-height:1.2;letter-spacing:.03em;color:var(--sand)}
+.panel-head p{font-size:12px;line-height:1.25;color:var(--dim);text-align:right}
+.panel-title{display:flex;align-items:baseline;gap:6px}
+.panel-title span{font-family:var(--mono);font-size:12px;color:var(--dim)}
+
+/* ---------- offers ---------- */
+.offer-wrap{margin-bottom:7px;padding:7px 8px 8px;border-radius:11px;border:1px solid rgba(255,255,255,.06);
+  background:linear-gradient(165deg,rgba(255,255,255,.028),rgba(0,0,0,.10))}
+.offer-head{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--dim);margin-bottom:4px;min-width:0}
+.offer-head b{font-family:var(--serif);font-size:13px;color:var(--sand);letter-spacing:.03em;white-space:nowrap}
+.offer-head .sub{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.supply{margin-left:auto;display:flex;gap:3px;flex:none;align-items:center}
+.supply i{width:15px;height:6px;border-radius:2px;background:rgba(255,255,255,.10);display:block}
+.supply i.on{background:linear-gradient(90deg,#c89a4a,#f4dc9e);box-shadow:0 0 6px rgba(242,213,143,.35)}
+.supply i.int{box-shadow:inset 0 0 0 1px rgba(226,169,94,.9)}
+.offers{display:flex;gap:5px;overflow-x:auto;overscroll-behavior-x:contain;padding:1px 0 2px;scrollbar-width:none}
+.offers::-webkit-scrollbar{display:none}
+.offer{flex:1 0 46px;min-width:46px;min-height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;padding:3px 2px;border-radius:9px;cursor:pointer;
+  border:1px solid rgba(255,255,255,.09);background:linear-gradient(180deg,rgba(255,255,255,.05),transparent 44%),linear-gradient(165deg,#18343d,#0b2027);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 2px 5px rgba(0,0,0,.2);touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.offer .gi{width:24px;height:24px}
+.offer .cnt{font:700 12.5px/1 var(--mono);color:var(--gold2);font-variant-numeric:tabular-nums}
+.offer .lbl{font-size:12px;line-height:1.1;color:var(--muted);margin-top:1px;white-space:nowrap}
+.offer.can-take{border-color:rgba(230,195,119,.72);box-shadow:0 0 0 1px rgba(230,195,119,.22),0 0 16px rgba(216,176,97,.18)}
+.offer.can-take .lbl{color:var(--gold2)}
+.offer.empty{opacity:.4}
+.offer:hover{border-color:rgba(216,176,97,.55)}
+
+/* ---------- proposals ---------- */
+.proposal-wrap{margin:0 0 8px}
+.proposal-head{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--dim);margin-bottom:4px}
+.proposal-head b{font-family:var(--serif);font-size:13px;color:var(--sand)}
+.proposal-head span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.proposal-rail{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.pcard{position:relative;display:grid;grid-template-columns:38px minmax(0,1fr);align-items:center;gap:5px 7px;min-height:64px;padding:6px 7px;border-radius:10px;text-align:left;cursor:pointer;overflow:hidden;
+  border:1px solid rgba(216,176,97,.28);background:linear-gradient(160deg,#2b2418,#151c1d 70%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 4px 12px rgba(0,0,0,.22);touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.pcard .b-art{width:38px;height:38px}
+.pcard b{display:flex;align-items:baseline;justify-content:space-between;gap:3px;font-family:var(--serif);font-size:12.5px;line-height:1.2;color:var(--sand);overflow:hidden}
+.pcard b span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pcard b em{flex:none;font-style:normal;font-family:var(--mono);font-size:12px;color:var(--dim)}
+.pcard small{display:block;font-size:12px;line-height:1.25;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pcard .pribbon{position:absolute;top:0;right:0;font-size:12px;line-height:1.5;padding:0 5px;color:#2b1d07;background:linear-gradient(180deg,#f0d38d,#b9873a);border-bottom-left-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+.pcard.can-build{border-color:rgba(156,207,146,.55);box-shadow:0 0 0 1px rgba(156,207,146,.14),0 0 14px rgba(156,207,146,.12)}
+.pcard.can-buy{border-color:rgba(216,176,97,.55)}
+.pcard:hover{border-color:var(--gold);transform:translateY(-1px)}
+.pcard .pmeta{display:flex;gap:4px;flex-wrap:wrap;margin-top:2px}
+.pempty{grid-column:1/-1;padding:12px;text-align:center;font-size:12px;color:var(--dim);border:1px dashed rgba(255,255,255,.12);border-radius:9px}
+
+/* ---------- building grid ---------- */
+.bgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(162px,1fr));gap:7px}
+.bcard{position:relative;display:grid;grid-template-columns:46px minmax(0,1fr);grid-auto-rows:min-content;gap:4px 7px;text-align:left;padding:7px 7px 8px 9px;border-radius:10px;cursor:pointer;overflow:hidden;isolation:isolate;min-height:110px;color:var(--ink);
+  border:1px solid rgba(255,255,255,.085);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.055),0 3px 9px rgba(0,0,0,.22);
+  transition:border-color .15s,transform .15s,box-shadow .15s;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.bcard::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--catc);box-shadow:0 0 9px var(--catc);opacity:.9}
+.bcard::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(120deg,rgba(255,255,255,.055),transparent 32%);opacity:.7}
+.bcard:hover{border-color:rgba(216,176,97,.5);transform:translateY(-1px);box-shadow:0 7px 18px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.08)}
+.bcard.cat-C{--catc:#c99a5a;background:repeating-linear-gradient(94deg,rgba(216,164,101,.045) 0 1px,transparent 1px 7px),linear-gradient(160deg,#20333a,#0d2027 62%,#0a171c)}
+.bcard.cat-I{--catc:#c4705a;background:repeating-linear-gradient(0deg,rgba(196,112,90,.065) 0 2px,transparent 2px 7px),linear-gradient(160deg,#26343a,#0e2027 62%,#0a171c)}
+.bcard.cat-E{--catc:#7fb4a8;background:repeating-linear-gradient(135deg,rgba(160,180,170,.045) 0 2px,transparent 2px 9px),linear-gradient(160deg,#22343a,#0d2027 62%,#0a171c)}
+.bcard.cat-P{--catc:#d8c08a;background:linear-gradient(150deg,rgba(216,192,138,.09),transparent 52%),linear-gradient(160deg,#29363a,#0e2027 62%,#0a171c)}
+.bcard.cat-N{--catc:#6f9aa8;background:repeating-linear-gradient(175deg,rgba(111,154,168,.06) 0 3px,transparent 3px 11px),linear-gradient(160deg,#16343d,#0a1c23 62%,#08151a)}
+.b-art{width:46px;height:46px;border-radius:7px;overflow:hidden;flex:none;position:relative;z-index:1;
+  border:1px solid rgba(255,255,255,.09);background:linear-gradient(160deg,#0b1d23,#071217);
+  box-shadow:inset 0 0 9px rgba(0,0,0,.55),0 1px 2px rgba(0,0,0,.35)}
+.b-art svg{display:block;width:100%;height:100%}
+.b-main{min-width:0;position:relative;z-index:1}
+.b-name{display:flex;align-items:baseline;gap:4px;justify-content:space-between;min-width:0}
+.b-name b{font-family:var(--serif);font-size:13px;line-height:1.2;font-weight:700;color:var(--sand);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.b-name .v{font-family:var(--mono);font-size:12px;color:var(--dim);white-space:nowrap}
+.b-sub{display:flex;flex-wrap:wrap;gap:2px 5px;font-size:12px;line-height:1.2;color:var(--dim);margin-top:1px}
+.b-cost{display:flex;flex-wrap:wrap;gap:3px;align-items:center;min-height:15px;margin-top:2px;font-size:12px;color:var(--muted)}
+.b-cost .cc{display:inline-flex;align-items:center;gap:1px;padding:0 3px;border-radius:4px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.05);line-height:1.35;white-space:nowrap}
+.b-cost .cc .gi{width:13px;height:13px}
+.b-cost .none{color:var(--dim)}
+.b-text{grid-column:1/-1;font-size:12px;line-height:1.4;color:var(--muted);padding-top:3px;margin-top:1px;border-top:1px dashed rgba(255,255,255,.07);position:relative;z-index:1}
+.b-tags{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:3px;position:relative;z-index:1}
+.tag{display:inline-flex;align-items:center;gap:2px;font-size:12px;line-height:1.45;padding:0 5px;border-radius:999px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.045);color:var(--muted);white-space:nowrap}
+.tag.usable{border-color:rgba(230,195,119,.6);background:rgba(216,176,97,.16);color:var(--gold2);box-shadow:0 0 8px rgba(216,176,97,.16)}
+.tag.build{border-color:rgba(156,207,146,.42);background:rgba(102,160,94,.14);color:#b8dda9}
+.tag.buy{border-color:rgba(216,176,97,.45);background:rgba(216,176,97,.12);color:var(--gold2)}
+.tag.occ{border-color:rgba(196,112,90,.45);background:rgba(150,60,45,.16);color:#f0b0a0}
+.tag.deck{opacity:.85;border-style:dashed}
+.tag.owner{border-color:rgba(111,176,166,.4);background:rgba(70,130,122,.14);color:#a9d8d0}
+.tag.poor{opacity:.65;border-style:dashed}
+.b-worker{position:absolute;right:6px;bottom:5px;width:23px;height:23px;z-index:3;filter:drop-shadow(0 2px 2px rgba(0,0,0,.5))}
+.b-worker svg{width:100%;height:100%}
+.bcard.is-deck{opacity:.72;filter:saturate(.6)}
+.bcard.is-deck:hover{opacity:.92;filter:saturate(.85)}
+.bcard.is-occupied .b-art{filter:sepia(.4) brightness(.62) saturate(.8)}
+.bcard.is-occupied .b-text{opacity:.75}
+.bcard.is-usable{border-color:rgba(230,195,119,.58);box-shadow:0 0 0 1px rgba(230,195,119,.16),0 0 18px rgba(216,176,97,.13),inset 0 1px 0 rgba(255,255,255,.07)}
+.bcard.can-build:not(.is-usable){border-color:rgba(156,207,146,.38)}
+.bcard.can-buy{border-color:rgba(216,176,97,.38)}
+.bcard.slot-active{animation:slotPulse 1.6s ease-in-out infinite}
+@keyframes slotPulse{0%,100%{box-shadow:0 0 0 1px rgba(230,195,119,.18),0 0 12px rgba(216,176,97,.10)}50%{box-shadow:0 0 0 2px rgba(230,195,119,.42),0 0 22px rgba(216,176,97,.24)}}
+.b-slot{position:absolute;right:6px;top:5px;font-family:var(--mono);font-size:12px;color:rgba(255,255,255,.22);z-index:1}
+
+/* ---------- side ---------- */
+.pc-list{display:grid;gap:6px}
+.pc{padding:7px 8px 8px;border-radius:11px;border:1px solid rgba(255,255,255,.08);background:linear-gradient(165deg,#16323a,#0d2027);min-width:0;position:relative;overflow:hidden}
+.pc.active{border-color:rgba(230,195,119,.58);box-shadow:0 0 0 1px rgba(230,195,119,.18),0 0 18px rgba(216,176,97,.10)}
+.pc.ai.active{border-color:rgba(111,176,166,.58);box-shadow:0 0 0 1px rgba(111,176,166,.16),0 0 18px rgba(111,176,166,.10)}
+.pc-head{display:flex;align-items:center;gap:6px;min-width:0}
+.pc-dot{width:9px;height:9px;border-radius:50%;flex:none;background:var(--human);box-shadow:0 0 0 2px rgba(255,255,255,.12)}
+.pc.ai .pc-dot{background:var(--ai)}
+.pc-name{font-size:13px;font-weight:700;white-space:nowrap}
+.pc-tag{font-size:12px;line-height:1.45;padding:0 5px;border-radius:999px;border:1px solid var(--line);background:rgba(216,176,97,.13);color:var(--gold2);white-space:nowrap}
+.pc-tag.teal{border-color:rgba(111,176,166,.38);background:rgba(111,176,166,.12);color:#b2ded7}
+.pc-score{margin-left:auto;font-family:var(--mono);font-size:17px;line-height:1;color:var(--gold2);white-space:nowrap}
+.pc-score small{font-family:var(--sans);font-size:12px;color:var(--dim);margin-left:1px}
+.pc-stats{display:flex;flex-wrap:wrap;gap:2px 8px;margin-top:3px;font-size:12px;color:var(--muted)}
+.pc-stats b{font-family:var(--mono);font-size:12.5px;color:var(--ink);font-weight:700}
+.pc-res{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px}
+.pc-res .rr{display:inline-flex;align-items:center;gap:1px;font-size:12px;line-height:1.5;padding:0 4px 0 2px;border-radius:5px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);color:var(--muted)}
+.pc-res .gi{width:15px;height:15px}
+.pc-res .rr b{font-family:var(--mono);font-size:12px;color:var(--cream)}
+.pc-sub{font-size:12px;line-height:1.4;color:var(--dim);margin-top:3px;min-width:0;overflow-wrap:anywhere}
+.pc-bldgs{display:flex;flex-wrap:wrap;gap:2px;margin-top:3px}
+.pc-bldg{font-size:12px;line-height:1.4;padding:0 4px;border-radius:4px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.055);color:var(--muted);white-space:nowrap}
+
+.ship-market{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+.ship-card{position:relative;display:flex;flex-direction:column;gap:1px;min-height:78px;padding:5px 6px 6px;border-radius:9px;text-align:left;cursor:pointer;overflow:hidden;
+  border:1px solid rgba(255,255,255,.08);background:linear-gradient(160deg,#173842,#0a2028);box-shadow:inset 0 1px 0 rgba(255,255,255,.05);touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.ship-card:hover{border-color:rgba(216,176,97,.5)}
+.ship-card.can-buy{border-color:rgba(230,195,119,.55);box-shadow:0 0 0 1px rgba(230,195,119,.15),0 0 12px rgba(216,176,97,.1)}
+.ship-card .ship-art{width:100%;height:34px}
+.ship-name{display:flex;align-items:baseline;gap:4px;font-size:12px;font-weight:650;color:var(--sand)}
+.ship-name em{font-family:var(--mono);font-size:12px;font-style:normal;color:var(--dim);margin-left:auto}
+.ship-meta{font-size:12px;line-height:1.25;color:var(--muted)}
+.ship-price{font-size:12px;line-height:1.25;color:var(--gold2)}
+.my-ships{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}
+.myship{display:flex;align-items:center;gap:4px;min-height:44px;padding:2px 6px 2px 3px;border-radius:7px;cursor:pointer;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.035);font-size:12px;color:var(--muted);touch-action:manipulation}
+.myship:hover{border-color:rgba(216,176,97,.45)}
+.myship .ship-art{width:40px;height:26px}
+.myship b{font-family:var(--mono);font-size:12px;color:var(--cream)}
+.myship small{display:block;font-size:12px;line-height:1.15;color:var(--dim)}
+.loan-box{display:flex;align-items:center;gap:7px;margin-top:6px;padding:6px 7px;border-radius:9px;border:1px solid rgba(196,112,90,.24);background:linear-gradient(180deg,rgba(120,50,35,.15),rgba(60,24,18,.10));min-height:46px}
+.loan-box .gi{width:27px;height:27px}
+.loan-meta{min-width:0;flex:1}
+.loan-meta b{display:block;font-size:12.5px;color:#f0c0ae}
+.loan-meta span{display:block;font-size:12px;color:var(--dim);line-height:1.3}
+.subhead{display:flex;align-items:center;gap:5px;margin:6px 0 3px;font-size:12px;color:var(--dim)}
+.subhead::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line2),transparent)}
+.log{max-height:236px;overflow:auto;overscroll-behavior:contain;padding-right:2px;scrollbar-width:thin}
+.log::-webkit-scrollbar{width:4px}
+.log::-webkit-scrollbar-thumb{background:rgba(216,176,97,.25);border-radius:2px}
+.log-item{display:flex;gap:6px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.045);font-size:12px;line-height:1.4;color:var(--muted);min-width:0}
+.log-item:last-child{border-bottom:0}
+.log-r{flex:none;font-family:var(--mono);font-size:12px;color:var(--dim);min-width:25px}
+.log-t{min-width:0}
+.log-t b{color:var(--sand);font-weight:650}
+.log-empty{font-size:12px;color:var(--dim);padding:8px 0;text-align:center}
+
+/* ---------- overlays ---------- */
+.overlay{position:fixed;inset:0;z-index:80;display:flex;align-items:flex-end;justify-content:center;padding:8px;background:rgba(2,8,11,.74);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+.overlay.center{align-items:center}
+.sheet{width:min(700px,100%);max-height:calc(100vh - 16px);display:flex;flex-direction:column;border-radius:16px;overflow:hidden;
+  border:1px solid rgba(216,176,97,.35);background:linear-gradient(180deg,rgba(26,54,62,.995),rgba(8,24,30,.995));
+  box-shadow:0 26px 80px rgba(0,0,0,.62),inset 0 1px 0 rgba(255,255,255,.08)}
+.sheet.narrow{width:min(560px,100%)}
+.sheet-head{display:flex;align-items:flex-start;gap:8px;padding:11px 13px 9px;border-bottom:1px solid var(--line2);background:linear-gradient(180deg,rgba(216,176,97,.09),transparent)}
+.sheet-head .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;color:var(--gold);text-transform:uppercase}
+.sheet-head h2{font-family:var(--serif);font-size:19px;line-height:1.2;margin-top:1px;color:var(--cream)}
+.sheet-head p{font-size:12px;line-height:1.35;color:var(--muted);margin-top:2px}
+.icon-btn{flex:none;display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;padding:0 9px;border-radius:9px;cursor:pointer;
+  border:1px solid rgba(216,176,97,.28);background:rgba(255,255,255,.04);color:var(--muted);font-size:12px}
+.icon-btn:hover{color:var(--ink);border-color:var(--gold)}
+.sheet-body{padding:10px 13px 14px;overflow:auto;overscroll-behavior:contain;min-height:0}
+.sheet-foot{display:flex;gap:6px;padding:9px 13px calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--line2);background:rgba(5,17,22,.6);flex-wrap:wrap}
+.sheet-foot .btn{flex:1 1 130px}
+.sheet-hero{display:flex;gap:10px;align-items:stretch;margin-bottom:8px}
+.hero-art{flex:0 0 132px;min-height:92px;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,.1);background:linear-gradient(160deg,#0b1d23,#071217);box-shadow:inset 0 0 16px rgba(0,0,0,.5)}
+.hero-art svg{display:block;width:100%;height:100%}
+.hero-art .gi{width:88px;height:88px}
+.hero-stats{flex:1 1 auto;min-width:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
+.stat{padding:4px 6px;border-radius:7px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);min-width:0}
+.stat span{display:block;font-size:12px;line-height:1.2;color:var(--dim)}
+.stat b{display:block;font-size:12.5px;line-height:1.3;color:var(--ink);font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.effect-box{padding:7px 9px;border-radius:9px;border:1px solid rgba(216,176,97,.2);background:linear-gradient(180deg,rgba(216,176,97,.08),rgba(216,176,97,.02));font-size:12.5px;line-height:1.5;color:var(--cream);margin-bottom:8px}
+.effect-box b{display:block;font-size:12px;color:var(--gold2);margin-bottom:1px}
+.sheet-section{margin-top:9px}
+.sheet-section h3{display:flex;align-items:baseline;gap:6px;font-size:12px;letter-spacing:.06em;color:var(--gold);font-weight:700;margin:0 0 4px;text-transform:uppercase}
+.sheet-section h3 span{font-size:12px;letter-spacing:0;color:var(--dim);text-transform:none;font-weight:400}
+.opt{display:flex;align-items:center;gap:8px;width:100%;min-height:46px;margin-bottom:4px;padding:6px 9px;border-radius:8px;cursor:pointer;text-align:left;
+  border:1px solid rgba(255,255,255,.09);background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.015));touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.opt:hover{border-color:rgba(216,176,97,.55);background:rgba(216,176,97,.10)}
+.opt-main{min-width:0;flex:1}
+.opt-main b{display:block;font-size:12.5px;line-height:1.35;color:var(--ink);font-weight:650}
+.opt-main small{display:block;font-size:12px;line-height:1.35;color:var(--dim)}
+.opt-go{flex:none;font-size:12px;color:var(--gold2);border:1px solid rgba(216,176,97,.32);border-radius:6px;padding:3px 7px;background:rgba(216,176,97,.09);white-space:nowrap}
+.opt.buy .opt-go{color:#b8dda9;border-color:rgba(156,207,146,.35);background:rgba(102,160,94,.12)}
+.opt.sell .opt-go{color:#f0b0a0;border-color:rgba(196,112,90,.35);background:rgba(150,60,45,.12)}
+.note{font-size:12px;line-height:1.5;color:var(--dim);padding:6px 8px;border-radius:7px;background:rgba(255,255,255,.025);border:1px dashed rgba(255,255,255,.09);margin-top:8px}
+.goods-picker{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:5px}
+.pick{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-height:54px;padding:3px;border-radius:8px;cursor:pointer;
+  border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.035);color:var(--muted);font-size:12px;touch-action:manipulation}
+.pick .gi{width:24px;height:24px}
+.pick.on{border-color:var(--gold);background:rgba(216,176,97,.16);color:var(--gold2);box-shadow:0 0 12px rgba(216,176,97,.14)}
+.pick-foot{display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap}
+.pick-foot span{font-size:12px;color:var(--muted)}
+.pick-foot .btn{margin-left:auto}
+.harvest-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:8px 0}
+.hcard{padding:7px 8px;border-radius:9px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.035);min-width:0}
+.hcard h4{display:flex;align-items:center;gap:5px;font-size:12.5px;color:var(--sand);margin:0 0 3px}
+.hcard .hdot{width:8px;height:8px;border-radius:50%;background:var(--human)}
+.hcard.ai .hdot{background:var(--ai)}
+.hcard ul{list-style:none;margin:0;padding:0;font-size:12px;line-height:1.5;color:var(--muted)}
+.hcard li{display:flex;justify-content:space-between;gap:6px;border-bottom:1px dashed rgba(255,255,255,.055);padding:1px 0}
+.hcard li:last-child{border-bottom:0}
+.hcard li b{color:var(--ink);font-family:var(--mono);font-size:12px}
+.hcard .paid{color:var(--ok)}
+.hcard .wait{color:var(--warn)}
+.harvest-note{font-size:12px;color:var(--dim);line-height:1.5;margin-top:4px}
+.medal-wrap{display:flex;justify-content:center;margin:-2px 0 2px}
+.medal{width:min(190px,48vw);height:auto;filter:drop-shadow(0 10px 18px rgba(0,0,0,.45))}
+
+/* result */
+.result-sheet{width:min(620px,100%);background:
+  radial-gradient(600px 260px at 50% 0,rgba(255,255,255,.35),transparent 62%),
+  linear-gradient(180deg,#f3e5c6,#e2cba2 62%,#d4b785);color:#2c2316;border:2px solid #b8863b;
+  box-shadow:0 26px 80px rgba(0,0,0,.65),inset 0 0 0 2px rgba(255,248,224,.5),inset 0 0 60px rgba(120,80,30,.18)}
+.result-sheet .sheet-head{border-bottom:1px solid rgba(90,60,20,.25);background:linear-gradient(180deg,rgba(255,255,255,.22),transparent)}
+.result-sheet .eyebrow{color:#8a5d1c}
+.result-sheet h2{color:#3a2a13;font-size:23px;text-align:center}
+.result-sheet .sheet-head p{color:#6d5633;text-align:center}
+.result-sheet .sheet-body{padding:4px 14px 12px}
+.result-sheet .icon-btn{border-color:rgba(90,60,20,.3);background:rgba(255,255,255,.28);color:#5b431f}
+.result-sheet .sheet-foot{border-top:1px solid rgba(90,60,20,.22);background:rgba(255,255,255,.14)}
+.result-sheet .btn{background:linear-gradient(180deg,#fff6de,#ecd3a0);border-color:#a77a35;color:#3a2a13;box-shadow:inset 0 1px 0 rgba(255,255,255,.7)}
+.result-sheet .btn.primary{background:linear-gradient(180deg,#f3d793,#c99a48);border-color:#8a5f1c;color:#2b1d07}
+.score-table{width:100%;border-collapse:collapse;margin-top:3px;font-size:12px}
+.score-table th,.score-table td{padding:5px 4px;text-align:right;border-bottom:1px solid rgba(90,60,20,.18);white-space:nowrap}
+.score-table th{font-size:12px;color:#755c36;font-weight:600}
+.score-table th:first-child,.score-table td:first-child{text-align:left;white-space:nowrap}
+.score-table td b{font-family:var(--mono)}
+.score-table tr.win td{background:rgba(255,244,206,.5)}
+.score-table td.total{font-weight:700;color:#5b3b10;font-family:var(--mono);font-size:13px}
+.result-note{font-size:12px;line-height:1.5;color:#6d5633;margin-top:8px;padding-top:6px;border-top:1px solid rgba(90,60,20,.16)}
+.bonus-note{font-size:12px;line-height:1.5;color:#755c36;margin-top:4px}
+.result-medal-row{display:flex;align-items:center;justify-content:center;gap:10px;margin:2px 0 4px}
+.result-title{font-family:var(--serif);font-size:24px;line-height:1.1;color:#3a2a13;text-align:center}
+.result-sub{font-size:12px;color:#755c36;text-align:center;margin-top:1px}
+
+/* toasts */
+.toasts{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:70;display:flex;flex-direction:column;gap:5px;align-items:center;pointer-events:none;width:min(92vw,540px)}
+.toast{padding:7px 12px;border-radius:9px;border:1px solid var(--line);background:rgba(10,29,36,.97);color:var(--cream);font-size:12.5px;line-height:1.4;box-shadow:0 10px 30px rgba(0,0,0,.55);animation:toastIn .18s ease}
+.toast.good{border-color:rgba(156,207,146,.35);color:#cbe9c2}
+.toast.bad{border-color:rgba(231,151,139,.4);color:#f2c0b6}
+@keyframes toastIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.pulse{animation:pulse 1.15s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.45}50%{opacity:1}}
+
+/* rules */
+.rules h3{font-family:var(--serif);font-size:14px;color:var(--sand);margin:10px 0 3px}
+.rules p,.rules li{font-size:12.5px;line-height:1.6;color:var(--muted)}
+.rules ul{padding-left:17px;margin:2px 0}
+.rules b{color:var(--cream)}
+.rules .kbd{font-family:var(--mono);font-size:12px;color:var(--gold2);background:rgba(216,176,97,.1);border:1px solid var(--line2);border-radius:4px;padding:0 3px}
+
+/* ---------- responsive ---------- */
+@media (max-width:1080px){
+  .layout{grid-template-columns:minmax(0,1fr)}
+  .side{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+  .side .panel:last-child{grid-column:1/-1}
+  .log{max-height:190px}
+}
+@media (max-width:639px){
+  .shell{padding:0 7px 26px}
+  .head-inner{padding:6px 7px;gap:5px 7px}
+  .brand{gap:7px}
+  .brand-mark{width:32px;height:32px}
+  .brand h1{font-size:17px}
+  .brand p{font-size:12px}
+  .head-btns{margin-left:auto}
+  .mini{padding:0 8px;font-size:12px}
+  .board-panel .panel-head p{display:none}
+  .board-panel .panel-head{align-items:center}
+  .panel-title{flex-wrap:nowrap;white-space:nowrap}
+  .roundbox{order:4;width:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+  .rb{justify-content:center;min-height:40px;padding:2px 4px}
+  .rb b{font-size:16px}
+  .statusline{margin-top:4px;gap:5px}
+  .res-tile{flex-basis:50px;min-height:59px}
+  .res-tile .gi{width:25px;height:25px}
+  .res-strip{-webkit-mask-image:linear-gradient(90deg,#000 0,#000 93%,transparent 100%);mask-image:linear-gradient(90deg,#000 0,#000 93%,transparent 100%)}
+  .dock{position:sticky;bottom:calc(6px + env(safe-area-inset-bottom));z-index:36;padding:6px 7px;gap:6px;
+    background:linear-gradient(180deg,rgba(24,54,62,.97),rgba(8,24,30,.97));box-shadow:0 12px 32px rgba(0,0,0,.5);
+    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+  .dock-msg{flex:1 1 150px;font-size:12.5px}
+  .dock-msg .sub{font-size:12px}
+  .dock-actions{margin-left:0;width:100%}
+  .dock-actions .btn{flex:1 1 100px;padding:0 8px}
+  .bgrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+  .bcard{grid-template-columns:40px minmax(0,1fr);gap:3px 6px;padding:6px 6px 7px 8px;min-height:104px}
+  .b-art{width:40px;height:40px}
+  .b-name b{font-size:12.5px}
+  .b-text{font-size:12px;line-height:1.35}
+  .proposal-rail{grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+  .pcard{grid-template-columns:1fr;gap:2px;padding:5px;min-height:62px}
+  .pcard .b-art{width:100%;height:30px}
+  .pcard .pmeta{display:none}
+  .pcard small{font-size:12px}
+  .side{grid-template-columns:minmax(0,1fr)}
+  .side .panel:last-child{grid-column:auto}
+  .sheet-hero{flex-direction:column;gap:6px}
+  .hero-art{flex:0 0 auto;width:100%;max-width:240px;height:140px;margin:0 auto}
+  .hero-art .gi{width:72px;height:72px}
+  .harvest-grid{grid-template-columns:minmax(0,1fr)}
+  .sheet-head h2{font-size:17px}
+  .result-sheet .sheet-head h2{font-size:20px}
+  .score-table th,.score-table td{padding:4px 2px;font-size:12px}
+  .score-table td.total{font-size:12px}
+  .log{max-height:170px}
+}
+@media (max-width:360px){
+  .brand h1{font-size:16px}
+  .brand p{display:none}
+  .head-btns .mini{padding:0 6px}
+  .bgrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
+  .bcard{grid-template-columns:34px minmax(0,1fr);gap:2px 5px;padding:5px 5px 6px 7px;min-height:100px}
+  .b-art{width:34px;height:34px;border-radius:6px}
+  .b-name b{font-size:12px}
+  .b-name .v{display:none}
+  .b-text{font-size:12px}
+  .tag{font-size:12px}
+  .offer{flex-basis:44px;min-width:44px}
+  .offer-head .sub{display:none}
+  .sheet-body{padding:8px 10px 12px}
+  .sheet-head{padding:9px 10px 8px}
+  .sheet-foot{padding:8px 10px calc(9px + env(safe-area-inset-bottom))}
+  .sheet-foot .btn{flex-basis:100%}
+  .hero-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+
+<svg class="sprite" aria-hidden="true" focusable="false">
+<defs>
+  <linearGradient id="lgWood" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e0b075"/><stop offset=".42" stop-color="#ab7a43"/><stop offset="1" stop-color="#63401f"/></linearGradient>
+  <linearGradient id="lgWood2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d4a266"/><stop offset=".55" stop-color="#8e5c2f"/><stop offset="1" stop-color="#5c381a"/></linearGradient>
+  <linearGradient id="lgWoodDark" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7d5228"/><stop offset="1" stop-color="#3d2410"/></linearGradient>
+  <radialGradient id="rgClay" cx="34%" cy="27%" r="78%"><stop offset="0" stop-color="#e2a37f"/><stop offset=".45" stop-color="#bd6c4b"/><stop offset="1" stop-color="#7e3e28"/></radialGradient>
+  <linearGradient id="lgIron" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eef4f3"/><stop offset=".3" stop-color="#afbdbc"/><stop offset=".62" stop-color="#6d7b7c"/><stop offset="1" stop-color="#3d494b"/></linearGradient>
+  <linearGradient id="lgSteel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6fbfb"/><stop offset=".32" stop-color="#c3d4d6"/><stop offset=".66" stop-color="#7b9298"/><stop offset="1" stop-color="#455c63"/></linearGradient>
+  <linearGradient id="lgFish" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#dcecef"/><stop offset=".35" stop-color="#93b6c0"/><stop offset=".7" stop-color="#5c8795"/><stop offset="1" stop-color="#315a67"/></linearGradient>
+  <linearGradient id="lgHide" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d9b083"/><stop offset=".5" stop-color="#b58a5f"/><stop offset="1" stop-color="#8a603c"/></linearGradient>
+  <linearGradient id="lgLeather" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d3a269"/><stop offset=".5" stop-color="#a97443"/><stop offset="1" stop-color="#754821"/></linearGradient>
+  <linearGradient id="lgBrick" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c2795b"/><stop offset=".5" stop-color="#a24f36"/><stop offset="1" stop-color="#79331f"/></linearGradient>
+  <radialGradient id="rgBread" cx="36%" cy="26%" r="82%"><stop offset="0" stop-color="#f6d79c"/><stop offset=".5" stop-color="#d8a55e"/><stop offset="1" stop-color="#9a6126"/></radialGradient>
+  <linearGradient id="lgSmoked" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e7b575"/><stop offset=".45" stop-color="#c4833e"/><stop offset="1" stop-color="#7e4a1d"/></linearGradient>
+  <linearGradient id="lgGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f9e3a4"/><stop offset=".45" stop-color="#d9b061"/><stop offset="1" stop-color="#90651f"/></linearGradient>
+  <radialGradient id="rgCoin" cx="35%" cy="28%" r="76%"><stop offset="0" stop-color="#fff3c9"/><stop offset=".3" stop-color="#e9c168"/><stop offset=".66" stop-color="#b9862f"/><stop offset="1" stop-color="#6f4a13"/></radialGradient>
+  <radialGradient id="rgMeat" cx="38%" cy="30%" r="80%"><stop offset="0" stop-color="#d9766a"/><stop offset=".55" stop-color="#b14c45"/><stop offset="1" stop-color="#7c2f2a"/></radialGradient>
+  <linearGradient id="lgFlour" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#cfb78d"/><stop offset=".5" stop-color="#b59a6c"/><stop offset="1" stop-color="#8f7449"/></linearGradient>
+  <linearGradient id="lgSail" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbf3df"/><stop offset=".55" stop-color="#e3d3b1"/><stop offset="1" stop-color="#c0aa80"/></linearGradient>
+  <linearGradient id="lgSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#102730"/><stop offset=".6" stop-color="#163b45"/><stop offset="1" stop-color="#0a1b21"/></linearGradient>
+  <linearGradient id="lgRoof" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8a4c3a"/><stop offset="1" stop-color="#50261d"/></linearGradient>
+  <linearGradient id="lgSlate" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5f7077"/><stop offset="1" stop-color="#2e3b41"/></linearGradient>
+  <linearGradient id="lgStone" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b3ac99"/><stop offset=".55" stop-color="#8f8877"/><stop offset="1" stop-color="#666053"/></linearGradient>
+  <linearGradient id="lgPlaster" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d8c8a6"/><stop offset="1" stop-color="#a8926d"/></linearGradient>
+  <linearGradient id="lgBrickWall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a25a40"/><stop offset="1" stop-color="#682e1e"/></linearGradient>
+  <linearGradient id="lgParch" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f0e2c2"/><stop offset=".6" stop-color="#dcc59a"/><stop offset="1" stop-color="#bfa271"/></linearGradient>
+  <linearGradient id="lgRibbon" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b23f35"/><stop offset="1" stop-color="#6f1f1a"/></linearGradient>
+  <radialGradient id="rgFire" cx="50%" cy="64%" r="62%"><stop offset="0" stop-color="#fff0b8"/><stop offset=".35" stop-color="#ffb24e"/><stop offset=".7" stop-color="#d65c22"/><stop offset="1" stop-color="#7d2a10"/></radialGradient>
+  <radialGradient id="rgMedal" cx="36%" cy="28%" r="72%"><stop offset="0" stop-color="#fff2c0"/><stop offset=".32" stop-color="#e2b95f"/><stop offset=".68" stop-color="#b07f2b"/><stop offset="1" stop-color="#6d4a10"/></radialGradient>
+  <radialGradient id="rgSilver" cx="36%" cy="28%" r="72%"><stop offset="0" stop-color="#ffffff"/><stop offset=".34" stop-color="#d8e0e2"/><stop offset=".7" stop-color="#98a6ab"/><stop offset="1" stop-color="#5a676b"/></radialGradient>
+  <pattern id="ptBrick" width="12" height="7" patternUnits="userSpaceOnUse"><rect width="12" height="7" fill="#8c3f2c"/><path d="M0 .5h12M0 7h12M3 .5V7M9 3.5V7M0 3.5h3M12 3.5h-3" stroke="#c98d74" stroke-width=".75" opacity=".68"/><path d="M1 1.6h1.6M4.2 4.6h1.6M10.2 1.6h1.4" stroke="#e3b6a2" stroke-width=".5" opacity=".4"/></pattern>
+  <pattern id="ptStone" width="14" height="10" patternUnits="userSpaceOnUse"><rect width="14" height="10" fill="#8d8675"/><path d="M0 5h14M0 10h14M5 0v5M10 5v5" stroke="#625d51" stroke-width=".9" opacity=".75"/><path d="M0 4.6h14M0 9.6h14M4.6 0v5M9.6 5v5" stroke="#b7b09d" stroke-width=".5" opacity=".4"/></pattern>
+  <pattern id="ptPlank" width="10" height="6" patternUnits="userSpaceOnUse"><rect width="10" height="6" fill="#7a4b26"/><path d="M0 .5h10M0 3h10M0 5.5h10" stroke="#4e2e13" stroke-width=".7" opacity=".65"/><path d="M0 1.6h10M0 4.2h10" stroke="#b07c45" stroke-width=".4" opacity=".35"/></pattern>
+  <pattern id="ptWave" width="12" height="8" patternUnits="userSpaceOnUse"><rect width="12" height="8" fill="#173f47"/><path d="M0 5c2-1.6 4-1.6 6 0s4 1.6 6 0M-6 1c2-1.6 4-1.6 6 0s4 1.6 6 0" fill="none" stroke="#4d8d93" stroke-width=".7" opacity=".45"/></pattern>
+  <pattern id="ptBurlap" width="5" height="5" patternUnits="userSpaceOnUse"><rect width="5" height="5" fill="#b59a6c"/><path d="M0 1h5M0 3h5M1 0v5M3 0v5" stroke="#8d7449" stroke-width=".55" opacity=".5"/></pattern>
+  <pattern id="ptBrushed" width="3" height="8" patternUnits="userSpaceOnUse"><rect width="3" height="8" fill="#8d9fa2"/><path d="M.5 0v8M2 0v8" stroke="#c9d6d8" stroke-width=".35" opacity=".6"/></pattern>
+</defs>
+
+<symbol id="g-wood" viewBox="0 0 32 32">
+  <ellipse cx="15.5" cy="28" rx="12" ry="2.3" fill="#000" opacity=".3"/>
+  <rect x="3.2" y="17.8" width="21.5" height="7" rx="3.5" fill="url(#lgWood)" stroke="#47280f" stroke-width=".9"/>
+  <ellipse cx="24.7" cy="21.3" rx="3.5" ry="3.4" fill="#d9a465" stroke="#47280f" stroke-width=".8"/>
+  <ellipse cx="24.7" cy="21.3" rx="2" ry="1.9" fill="none" stroke="#8b5a2b" stroke-width=".6"/>
+  <rect x="6.8" y="10.2" width="19.6" height="6.6" rx="3.3" fill="url(#lgWood2)" stroke="#47280f" stroke-width=".9"/>
+  <ellipse cx="26.4" cy="13.5" rx="3.1" ry="3" fill="#e3b174" stroke="#47280f" stroke-width=".8"/>
+  <ellipse cx="26.4" cy="13.5" rx="1.7" ry="1.6" fill="none" stroke="#8b5a2b" stroke-width=".6"/>
+  <path d="M7 19.8h12.5M10 12.4h10.5" stroke="#5d3a1a" stroke-width=".7" opacity=".55"/>
+  <path d="M4.8 19c4.5-.8 9.5-.6 14.4.2" stroke="#f2d29a" stroke-width=".6" fill="none" opacity=".5"/>
+</symbol>
+<symbol id="g-clay" viewBox="0 0 32 32">
+  <ellipse cx="16" cy="28" rx="11.5" ry="2.2" fill="#000" opacity=".28"/>
+  <path d="M6.2 24.6c-2.6-4.2-1-10 4-12.5 2.2-5.6 9.7-6.6 13-2 4.3 1.7 5.1 7.6 2 10.8-.8 4-4.6 6.4-9.1 6.4-4.3 0-8.1-1-9.9-2.7z" fill="url(#rgClay)" stroke="#793f28" stroke-width="1"/>
+  <path d="M9.2 13.6c2.7-2.2 7.2-2.5 10-.7M8.3 17.6c3.5-1.5 8.8-1.7 12.2.4M10.3 21.8c3.2-1.2 7.5-1 10.1.6" fill="none" stroke="#87482f" stroke-width=".65" opacity=".6"/>
+  <path d="M9.8 12.8c2-2.5 5.7-3.4 8.6-2.4" fill="none" stroke="#efb397" stroke-width=".85" opacity=".65"/>
+  <path d="M22 12.2c1.6.8 2.8 2.3 3.3 4" fill="none" stroke="#f7c9b1" stroke-width=".7" opacity=".5"/>
+</symbol>
+<symbol id="g-iron" viewBox="0 0 32 32">
+  <ellipse cx="16" cy="27.6" rx="12" ry="2.2" fill="#000" opacity=".3"/>
+  <path d="M5.8 21.8l3.4-8.4h13.6l3.4 8.4-2.5 4.1H8.3z" fill="url(#lgIron)" stroke="#2e393b" stroke-width="1"/>
+  <path d="M9.2 13.4h13.6l1.2 2.9H8z" fill="#dbe5e3" opacity=".55"/>
+  <rect x="12.8" y="18.6" width="6.4" height="3.6" rx=".7" fill="#788787" stroke="#465253" stroke-width=".5"/>
+  <path d="M9.6 13.4 8 18.3h16l-1.5-4.9" fill="none" stroke="#f4f8f6" stroke-width=".6" opacity=".45"/>
+  <path d="M11 25.2h10" stroke="#2c3739" stroke-width=".7" opacity=".6"/>
+</symbol>
+<symbol id="g-grain" viewBox="0 0 32 32">
+  <ellipse cx="16" cy="28.4" rx="8" ry="1.8" fill="#000" opacity=".26"/>
+  <g stroke="#a97a31" stroke-width="1" fill="none"><path d="M16 28V7M12 28V11M20 28V11"/></g>
+  <g fill="url(#lgGold)" stroke="#8a5f1e" stroke-width=".5">
+    <ellipse cx="16" cy="6.6" rx="1.7" ry="2.5"/>
+    <ellipse cx="14.2" cy="10" rx="1.6" ry="2.4" transform="rotate(-28 14.2 10)"/>
+    <ellipse cx="17.8" cy="10" rx="1.6" ry="2.4" transform="rotate(28 17.8 10)"/>
+    <ellipse cx="12.2" cy="12" rx="1.5" ry="2.3" transform="rotate(-34 12.2 12)"/>
+    <ellipse cx="19.8" cy="12" rx="1.5" ry="2.3" transform="rotate(34 19.8 12)"/>
+    <ellipse cx="14.1" cy="15" rx="1.5" ry="2.2" transform="rotate(-30 14.1 15)"/>
+    <ellipse cx="17.9" cy="15" rx="1.5" ry="2.2" transform="rotate(30 17.9 15)"/>
+    <ellipse cx="11.2" cy="17" rx="1.4" ry="2.1" transform="rotate(-36 11.2 17)"/>
+    <ellipse cx="20.8" cy="17" rx="1.4" ry="2.1" transform="rotate(36 20.8 17)"/>
+  </g>
+  <path d="M11.5 22.5c3-2.4 6.4-3.6 9.2-3.2" fill="none" stroke="#e8c77a" stroke-width=".8" opacity=".7"/>
+  <path d="M12 24.6h8" stroke="#7d5a24" stroke-width="2" opacity=".75"/>
+  <path d="M12.4 24.1h7.2" stroke="#c9a45f" stroke-width=".6"/>
+  <path d="M16 27.4l-2.6 2.2M16 27.4l2.6 2.2" stroke="#a97a31" stroke-width=".9" fill="none"/>
+</symbol>
+<symbol id="g-fish" viewBox="0 0 32 32">
+  <ellipse cx="16" cy="27.6" rx="11" ry="2" fill="#000" opacity=".26"/>
+  <path d="M4.6 16.4c1-4.7 5.8-7.6 11.4-7.4 4.2.2 7.6 2.2 9.6 5l4.2-3.8c.6 3 .6 6.8 0 9.6l-4.2-3.8c-2 2.8-5.4 4.8-9.6 5-5.6.2-10.4-2.7-11.4-7.4z" fill="url(#lgFish)" stroke="#355663" stroke-width="1"/>
+  <path d="M15 11.6c1.5-2 4-2.8 6.2-2.1-1.2 1.6-2.9 2.6-4.7 2.9z" fill="#7da5b2" stroke="#355663" stroke-width=".6"/>
+  <path d="M14.4 21.4c1.5 2 4 2.8 6.2 2.1-1.2-1.6-2.9-2.6-4.7-2.9z" fill="#6f98a6" stroke="#355663" stroke-width=".6"/>
+  <circle cx="9.4" cy="15.5" r="1.15" fill="#152b33"/>
+  <circle cx="9.1" cy="15.2" r=".35" fill="#e8f4f5"/>
+  <g fill="none" stroke="#d8e9ec" stroke-width=".55" opacity=".55">
+    <path d="M13 12.6c2.4 2.2 2.4 5.6 0 7.8M16.5 12c2.6 2.4 2.6 6.4 0 8.8M20 12.3c2.4 2.2 2.4 6 0 8.2M23.2 13.4c1.7 1.7 1.7 4.5 0 6.2"/>
+  </g>
+  <path d="M8 18.4c3.7 2.2 8.2 2.9 12.4 1.8" stroke="#dff0f2" stroke-width=".55" opacity=".45" fill="none"/>
+</symbol>
+<symbol id="g-cattle" viewBox="0 0 32 32">
+  <ellipse cx="16" cy="28.6" rx="9" ry="1.8" fill="#000" opacity=".26"/>
+  <path d="M10.6 10.8C7.8 8.8 6.4 5.8 7.8 3.4c2.4.5 4.4 2.4 5.3 4.9M21.4 10.8c2.8-2 4.2-5 2.8-7.4-2.4.5-4.4 2.4-5.3 4.9" fill="#d9c39b" stroke="#6e5936" stroke-width=".8" stroke-linejoin="round"/>
+  <path d="M9.2 11.4c1.2-4 4-6.6 6.8-6.6s5.6 2.6 6.8 6.6l-1.2 7.4c-.8 4.2-3 6.6-5.6 6.6s-4.8-2.4-5.6-6.6z" fill="url(#lgHide)" stroke="#5c4527" stroke-width=".9"/>
+  <path d="M6 13.2c-2.2-.4-3.3-.1-3.8 1.1 1.1 1.7 2.6 2.4 4.5 2M26 13.2c2.2-.4 3.3-.1 3.8 1.1-1.1 1.7-2.6 2.4-4.5 2" fill="#c79b72" stroke="#5c4527" stroke-width=".8"/>
+  <ellipse cx="16" cy="21.4" rx="5.4" ry="4.4" fill="#d8ad84" stroke="#6d4d2c" stroke-width=".7"/>
+  <path d="M12.2 21.4c1.6-.9 6-.9 7.6 0" stroke="#8b5f3b" stroke-width=".6" fill="none"/>
+  <circle cx="12.6" cy="20.4" r=".65" fill="#4a2e1a"/><circle cx="19.4" cy="20.4" r=".65" fill="#4a2e1a"/>
+  <circle cx="12.4" cy="12.4" r="1.5" fill="#241a10"/><circle cx="19.6" cy="12.4" r="1.5" fill="#241a10"/>
+  <circle cx="11.95" cy="11.95" r=".45" fill="#f5ead6"/><circle cx="19.15" cy="11.95" r=".45" fill="#f5ead6"/>
+  <path d="M9.8 8.6c1.7-1.9 4-2.7 6.2-2.7" fill="none" stroke="#f1dcb8" stroke-width=".65" opacity=".55"/>
+  <path d="M12.4 25.2c1.2.6 2.4.9 3.6.9s2.4-.3 3.6-.9" fill="none" stroke="#a8764c" stroke-width=".7"/>
+</symbol>
+<symbol id="g-hide" viewBox="0 0 32 32">
+  <ellipse cx="16" cy="28.6" rx="10" ry="1.8" fill="#000" opacity=".25"/>
+  <path d="M7.6 7.2c3.2-1.6 5.4.6 8.4-.4 3-1 5-.2 7.6 1.4-.4 3.2 1.8 4.4 2.8 7.2-2.8 1.6-2.2 5-4.4 7.6-2.2 2.8-6 4.4-10.2 3.6-4.4-.8-7.2-4-7.6-8.4-.4-4.4 1.2-8.4 3.4-11z" fill="url(#lgHide)" stroke="#6f4a29" stroke-width="1"/>
+  <path d="M9.4 9c2.8-1.2 4.8.5 7.2-.2 2.2-.6 3.8-.1 5.6 1-.5 2.6 1.3 3.7 2.1 5.8-2.2 1.4-1.7 4-3.4 6.1-1.8 2.2-4.8 3.5-8 2.9-3.4-.6-5.6-3.2-6-6.8-.3-3.5 1-6.7 2.5-8.8z" fill="#c99c6d" opacity=".55"/>
+  <g stroke="#7c5431" stroke-width=".55" opacity=".55" fill="none"><path d="M11 10.6c1.4-1.4 3.2-2 5-2M9.4 13.6c1.8-1.8 4.2-2.6 6.6-2.6M8.6 17c2.2-2 5.2-2.8 8-2.8M9.8 21c2.4-1.8 5.4-2.4 8.2-2.2"/></g>
+  <path d="M12 8.4c2.4-1 4.6-.4 6.6-.6" stroke="#f0cfaa" stroke-width=".7" opacity=".55" fill="none"/>
+</symbol>
+<symbol id="g-coal" viewBox="0 0 32 32">
+  <ellipse cx="16" cy="28" rx="11" ry="2" fill="#000" opacity=".3"/>
+  <path d="M6.4 23.2 4 17.6l4.4-4.8 6.4 1.2 3.2 5.6-3.2 5.2H9z" fill="#1d2224" stroke="#0d1112" stroke-width=".85"/>
+  <path d="M16.8 22.6 15.2 17l4.4-4 6 2 1.2 5.6-3.6 4.4z" fill="#252b2d" stroke="#0d1112" stroke-width=".85"/>
+  <path d="M7 18.2l2.6-3.4 4.2.8 1.8 3.2-2.2 3.4-4.4-.4z" fill="#4b5356" opacity=".8"/>
+  <path d="M11.2 15.2 13 14l2.4.8-1 1.8z" fill="#7d878a" opacity=".65"/>
+  <path d="M18.4 15.4l2.8-1 3 1.4-.4 2.4-3.2.4z" fill="#555e61" opacity=".8"/>
+  <path d="M6 24.6h20" stroke="#0c1011" stroke-width=".7" opacity=".7"/>
+</symbol>
+<symbol id="g-charcoal" viewBox="0 0 32 32">
+  <ellipse cx="16" cy="28.2" rx="9" ry="1.8" fill="#000" opacity=".26"/>
+  <g stroke="#0c0d0d" stroke-width=".9">
+    <rect x="8.6" y="9" width="5.2" height="18" rx="1.4" fill="#2b2723" transform="rotate(-16 11.2 18)"/>
+    <rect x="13.4" y="7.6" width="5.4" height="19" rx="1.5" fill="#35302b" transform="rotate(-4 16.1 17)"/>
+    <rect x="18.2" y="9.4" width="5" height="17.4" rx="1.4" fill="#25221f" transform="rotate(11 20.7 18)"/>
+    <rect x="11.4" y="12" width="4.2" height="13.4" rx="1.2" fill="#3e3831" transform="rotate(-25 13.5 18.7)"/>
+  </g>
+  <g fill="#6e6458" opacity=".55"><circle cx="12" cy="12.4" r=".5"/><circle cx="14.4" cy="17.4" r=".45"/><circle cx="19.8" cy="13" r=".5"/><circle cx="10.6" cy="20" r=".4"/><circle cx="21.4" cy="20.4" r=".45"/></g>
+  <path d="M9.8 23.2h13.4" stroke="#a58252" stroke-width="1.7"/>
+  <path d="M10.2 22.8h12.6" stroke="#d0ab72" stroke-width=".55"/>
+  <path d="M11 25.4h11.6" stroke="#a58252" stroke-width="1.5" opacity=".8"/>
+</symbol>
+<symbol id="g-coke" viewBox="0 0 32 32">
+  <ellipse cx="16" cy="28.2" rx="10" ry="1.8" fill="#000" opacity=".28"/>
+  <path d="M5.4 21.4 9 13.6l6.6 1 2.8 5.4-3 5.6-7.4.4z" fill="#5b6163" stroke="#2a2e2f" stroke-width=".8"/>
+  <path d="M16.4 22.6 16 15l6-3 4.4 3.4v6l-4.8 3.2z" fill="#6a7072" stroke="#2a2e2f" stroke-width=".8"/>
+  <g fill="#262b2c"><circle cx="9.4" cy="17.4" r="1.15"/><circle cx="13.2" cy="19.6" r=".9"/><circle cx="11.4" cy="22.2" r=".75"/><circle cx="19.4" cy="18.6" r="1"/><circle cx="22" cy="21.4" r=".8"/><circle cx="18.6" cy="23.4" r=".7"/></g>
+  <g fill="#a7afae" opacity=".55"><path d="M7.4 15.4l2.2-1.2.8 1.4-2.2 1z"/><path d="M17.6 14.4l2.6-1.4.6 1.6-2.6 1.2z"/></g>
+</symbol>
+<symbol id="g-steel" viewBox="0 0 32 32">
+  <ellipse cx="16" cy="27.6" rx="12" ry="2.2" fill="#000" opacity=".3"/>
+  <path d="M5.8 21.8l3.4-8.4h13.6l3.4 8.4-2.5 4.1H8.3z" fill="url(#lgSteel)" stroke="#394b50" stroke-width="1"/>
+  <path d="M9.2 13.4h13.6l1.2 2.9H8z" fill="#f0f7f7" opacity=".6"/>
+  <circle cx="16" cy="20.6" r="2.4" fill="none" stroke="#4b6167" stroke-width=".9"/>
+  <path d="M14.6 20.6l1 1.2 2-2.2" fill="none" stroke="#4b6167" stroke-width=".8"/>
+  <path d="M9.6 13.4 8 18.3h16l-1.5-4.9" fill="none" stroke="#ffffff" stroke-width=".6" opacity=".55"/>
+  <path d="M11 25.2h10" stroke="#314348" stroke-width=".7" opacity=".6"/>
+</symbol>
+<symbol id="g-brick" viewBox="0 0 32 32">
+  <ellipse cx="16" cy="27.4" rx="11" ry="2" fill="#000" opacity=".26"/>
+  <path d="M5.6 11.8c0-1.1.9-2 2-2h16.8c1.1 0 2 .9 2 2v10.4c0 1.1-.9 2-2 2H7.6c-1.1 0-2-.9-2-2z" fill="url(#lgBrick)" stroke="#74341f" stroke-width="1"/>
+  <path d="M7 11.4h18v2.2H7z" fill="#d58f73" opacity=".35"/>
+  <path d="M9 21.8l2.4-2.2h3l-2.6 2.2z" fill="#b56246" opacity=".6"/>
+  <circle cx="16" cy="16.8" r="1.5" fill="none" stroke="#7e3a25" opacity=".45"/>
+  <path d="M7.4 20.2h17.2" stroke="#5f2818" stroke-width=".5" opacity=".35"/>
+</symbol>
+<symbol id="g-leather" viewBox="0 0 32 32">
+  <ellipse cx="16" cy="27.6" rx="10.4" ry="1.8" fill="#000" opacity=".26"/>
+  <path d="M6 20.4c0-2 1.6-3.6 3.6-3.6h13.2c2 0 3.6 1.6 3.6 3.6s-1.6 3.6-3.6 3.6H9.6C7.6 24 6 22.4 6 20.4z" fill="url(#lgLeather)" stroke="#5e3a1e" stroke-width=".9"/>
+  <ellipse cx="9.6" cy="20.4" rx="3.6" ry="3.6" fill="#c99a63" stroke="#5e3a1e" stroke-width=".8"/>
+  <ellipse cx="9.6" cy="20.4" rx="2" ry="2" fill="none" stroke="#8a5f35" stroke-width=".6"/>
+  <path d="M14 17.2h9M14 23.6h9" stroke="#6f4826" stroke-width=".6" stroke-dasharray="1.5 1.5" opacity=".7"/>
+  <path d="M13 15.9c3.8-1.6 7.8-1.4 11 .3" stroke="#f0ce9a" stroke-width=".6" opacity=".5" fill="none"/>
+</symbol>
+<symbol id="g-meat" viewBox="0 0 32 32">
+  <ellipse cx="16" cy="27.6" rx="10" ry="1.8" fill="#000" opacity=".26"/>
+  <path d="M8 11.4c3.8-3.8 10-4 13.8-.8 3.4 3 3.4 8.4.2 11.4-3.6 3.6-9.6 4-13.4.6-3.8-3.4-4-8.2-.6-11.2z" fill="url(#rgMeat)" stroke="#7c2f2a" stroke-width="1"/>
+  <path d="M9.2 12.2c2.8-2.6 7.2-3 10.4-.8" fill="none" stroke="#f09a8c" stroke-width=".8" opacity=".6"/>
+  <path d="M11.4 12.2c2.8 3 6.8 5.2 10.2 5.8" stroke="#efe0c2" stroke-width="2.8" stroke-linecap="round"/>
+  <path d="M11.4 12.2c2.8 3 6.8 5.2 10.2 5.8" stroke="#c9b48e" stroke-width=".8" stroke-linecap="round" opacity=".65"/>
+  <g fill="none" stroke="#f5b6aa" stroke-width=".55" opacity=".55"><path d="M10.4 16.4c2.6 2.4 6 3.8 9.4 4.4M12.8 19.6c1.8 1 3.8 1.6 5.8 1.8M9.8 14.2c2 2 4.8 3.4 7.6 4.2"/></g>
+</symbol>
+<symbol id="g-bread" viewBox="0 0 32 32">
+  <ellipse cx="16" cy="27.2" rx="11" ry="2" fill="#000" opacity=".26"/>
+  <ellipse cx="16" cy="18.4" rx="10.4" ry="7.4" fill="url(#rgBread)" stroke="#7a4a1c" stroke-width="1"/>
+  <path d="M8 14.6c1.5-3 4.2-4.6 7.2-4.8" fill="none" stroke="#f7dfae" stroke-width=".9" opacity=".6"/>
+  <g fill="none" stroke="#8f5a24" stroke-width="1.1" stroke-linecap="round"><path d="M10.6 13.8c2 2.2 2.6 4.2 2 6.4M15.4 12.4c2 2.6 2.6 4.8 2 7.2M20 13.2c1.8 2 2.4 4 1.8 6.2"/></g>
+  <g fill="#f8eccf" opacity=".75"><circle cx="12.2" cy="11.6" r=".45"/><circle cx="18.4" cy="10.8" r=".4"/><circle cx="22" cy="13.6" r=".4"/><circle cx="14.4" cy="9.8" r=".35"/></g>
+  <path d="M10 24c3.8 1.6 8 1.6 12 0" fill="none" stroke="#5f3813" stroke-width=".7" opacity=".45"/>
+</symbol>
+<symbol id="g-smokedFish" viewBox="0 0 32 32">
+  <ellipse cx="16" cy="29" rx="7" ry="1.6" fill="#000" opacity=".24"/>
+  <path d="M16 2.4v6" stroke="#b08a54" stroke-width="1"/>
+  <path d="M13.6 8.4h4.8" stroke="#8e6b3f" stroke-width="1.1" stroke-linecap="round"/>
+  <path d="M16 9c3.8 0 6.8 4 6.8 9.4 0 5.2-2.8 8.8-6.8 8.8s-6.8-3.6-6.8-8.8C9.2 13 12.2 9 16 9z" fill="url(#lgSmoked)" stroke="#6f4117" stroke-width="1"/>
+  <path d="M16 27l-3.8-5.4L16 17l3.8 4.6z" fill="#d79b51" stroke="#6f4117" stroke-width=".7"/>
+  <circle cx="13.4" cy="14.2" r=".8" fill="#3a2412"/>
+  <path d="M12.4 18.4c2.4 1.8 4.8 1.8 7.2 0M13 22.6c2 1.4 4 1.4 6 0" fill="none" stroke="#f0c78f" stroke-width=".55" opacity=".55"/>
+  <g fill="none" stroke="#b9c7c4" stroke-width=".7" opacity=".35"><path d="M4.4 12.4c2-1.4 2-3.4 0-4.8M27.6 14.4c-2-1.4-2-3.4 0-4.8M5.6 20.4c1.6-1.2 1.6-2.8 0-4"/></g>
+</symbol>
+<symbol id="g-flour" viewBox="0 0 32 32">
+  <ellipse cx="16" cy="28.2" rx="10" ry="1.8" fill="#000" opacity=".26"/>
+  <path d="M8.4 11.6h15.2l2.2 15.2c.1 1-.7 1.8-1.7 1.8H7.9c-1 0-1.8-.8-1.7-1.8z" fill="url(#ptBurlap)" stroke="#6b5433" stroke-width="1"/>
+  <path d="M9 11.4c2.2-2.6 4.6-3.8 7-3.8s4.8 1.2 7 3.8z" fill="#d9c9a6" stroke="#6b5433" stroke-width=".9"/>
+  <path d="M10.6 10.8c1.8-1.6 3.6-2.4 5.4-2.4s3.6.8 5.4 2.4" fill="none" stroke="#f4ead2" stroke-width="1.1"/>
+  <path d="M11.2 12.8h9.6" stroke="#8a6d45" stroke-width=".8" stroke-dasharray="2 1.5"/>
+  <g fill="#f6efdd"><ellipse cx="12" cy="7.4" rx="2.2" ry="1.1" opacity=".8"/><ellipse cx="20" cy="6.8" rx="1.8" ry=".9" opacity=".7"/><circle cx="9.4" cy="9" r=".6" opacity=".7"/><circle cx="22.8" cy="9.4" r=".5" opacity=".6"/></g>
+  <path d="M16 17c1.8 0 3.2 1.2 3.2 2.8S17.8 22.6 16 22.6s-3.2-1.2-3.2-2.8S14.2 17 16 17z" fill="none" stroke="#8a6d45" stroke-width="1"/>
+  <path d="M16 17.8v4.4M14.6 18.6h2.8M14.6 21.2h2.8" stroke="#8a6d45" stroke-width=".8"/>
+</symbol>
+<symbol id="g-francs" viewBox="0 0 32 32">
+  <ellipse cx="16" cy="28.4" rx="9.5" ry="1.8" fill="#000" opacity=".3"/>
+  <circle cx="16" cy="15.4" r="11.2" fill="url(#rgCoin)" stroke="#6b480f" stroke-width="1"/>
+  <circle cx="16" cy="15.4" r="9.4" fill="none" stroke="#8d641f" stroke-width=".7"/>
+  <circle cx="16" cy="15.4" r="10.5" fill="none" stroke="#f7e3a8" stroke-width="1.1" stroke-dasharray="1 1.4" opacity=".65"/>
+  <path d="M10.4 17.4h11l-1.6 2.8h-7.8z" fill="#9b6c1f" opacity=".85"/>
+  <path d="M16 17.2V11" stroke="#9b6c1f" stroke-width="1"/>
+  <path d="M16.4 11.2l4 3.2h-4z" fill="#a97a25"/>
+  <path d="M15.6 11.8 12 14.8h3.6z" fill="#a97a25"/>
+  <path d="M8.4 8.4c3-2.6 7.2-3.4 10.8-2.2" fill="none" stroke="#fff4cf" stroke-width=".9" opacity=".7"/>
+</symbol>
+<symbol id="g-loan" viewBox="0 0 32 32">
+  <g transform="rotate(-8 16 16)">
+    <rect x="4.5" y="9.5" width="23" height="13" rx="1.5" fill="url(#ptParch)" stroke="#8d764e" stroke-width="1"/>
+    <rect x="6.5" y="11.5" width="19" height="9" rx=".8" fill="none" stroke="#b39a6a" stroke-width=".7" stroke-dasharray="2 1.5"/>
+    <circle cx="16" cy="16" r="4.2" fill="#a63f2e" stroke="#6d2419" stroke-width=".8"/>
+    <path d="M14.4 14.4c1.2-1 2.8-.8 3.4.2" stroke="#e0a089" stroke-width=".7" fill="none"/>
+    <path d="M12 22.5l-2.5 4M20 22.5l2.5 4" stroke="#8f2f22" stroke-width="1.4"/>
+  </g>
+</symbol>
+<symbol id="g-worker" viewBox="0 0 32 32">
+  <ellipse cx="16" cy="28.5" rx="7" ry="1.8" fill="#000" opacity=".3"/>
+  <circle cx="16" cy="8.6" r="4.1" fill="url(#lgWood2)" stroke="#4a2c13" stroke-width=".8"/>
+  <path d="M10.4 27.6c0-8 2.2-12.2 5.6-12.2s5.6 4.2 5.6 12.2z" fill="url(#lgWood)" stroke="#4a2c13" stroke-width=".9"/>
+  <path d="M13 16.4c1.9-1.4 4.1-1.4 6 0" fill="none" stroke="#f0c88f" stroke-width=".7" opacity=".5"/>
+  <ellipse cx="16" cy="27.2" rx="5.6" ry="1.2" fill="#000" opacity=".15"/>
+</symbol>
+
+<symbol id="s-wood" viewBox="0 0 64 40">
+  <ellipse cx="32" cy="36.2" rx="27" ry="2.6" fill="#000" opacity=".28"/>
+  <path d="M8 26.4h44L45 35.4H17z" fill="url(#ptPlank)" stroke="#4a2e14" stroke-width="1"/>
+  <path d="M8.6 26.4h43.6l-1.2 2.6H9.8z" fill="#8a5a2f"/>
+  <path d="M10.8 30.4h40" stroke="#d7a465" stroke-width=".5" opacity=".45"/>
+  <path d="M32 6.4v20" stroke="#5a3a1c" stroke-width="1.9"/>
+  <path d="M32.8 7.8 18.6 24.4h14.2z" fill="url(#lgSail)" stroke="#a89068" stroke-width=".6"/>
+  <path d="M33.2 8.4 46.8 24.4H33.2z" fill="url(#lgSail)" stroke="#a89068" stroke-width=".6" opacity=".95"/>
+  <path d="M32.8 9.4v14.4M33.2 10v13.6M23 24.4h8M34 24.4h9" stroke="#b8a077" stroke-width=".45" opacity=".7"/>
+  <path d="M32 6.4 36.6 4v3.6z" fill="#b23f35" stroke="#6f1f1a" stroke-width=".4"/>
+  <path d="M31.2 7.2 10.4 26M32.8 7.2 53.6 26" stroke="#7a5b37" stroke-width=".45" opacity=".7"/>
+</symbol>
+<symbol id="s-iron" viewBox="0 0 64 40">
+  <ellipse cx="32" cy="36.2" rx="27" ry="2.6" fill="#000" opacity=".3"/>
+  <path d="M7 24.6h46l-5.2 10.8H12.6z" fill="url(#lgIron)" stroke="#333f42" stroke-width="1"/>
+  <path d="M8.4 24.6h43.2l-1.4 3.2H9.8z" fill="#cfdbda" opacity=".55"/>
+  <g fill="#49575a"><circle cx="14" cy="31" r=".65"/><circle cx="20" cy="31" r=".65"/><circle cx="26" cy="31" r=".65"/><circle cx="38" cy="31" r=".65"/><circle cx="44" cy="31" r=".65"/><circle cx="50" cy="31" r=".65"/></g>
+  <path d="M28 8v16.4" stroke="#4a3a2a" stroke-width="1.8"/>
+  <path d="M28.6 9 17 23.4h11.6z" fill="url(#lgSail)" stroke="#a89068" stroke-width=".6"/>
+  <path d="M29.2 9.2 40.4 23.4H29.2z" fill="url(#lgSail)" stroke="#a89068" stroke-width=".6" opacity=".9"/>
+  <rect x="42" y="12.4" width="6.2" height="12" rx="1" fill="#4e5c60" stroke="#2e3a3d" stroke-width=".8"/>
+  <rect x="41.4" y="11.4" width="7.4" height="2.2" rx=".7" fill="#7d8b8a"/>
+  <path d="M45.2 11.2c-1.2-3.4 1.8-5.2 1-8" fill="none" stroke="#aebbb9" stroke-width="1" opacity=".45"/>
+  <path d="M48.2 10.6c1-2.8-.6-4.6.2-7" fill="none" stroke="#aebbb9" stroke-width=".8" opacity=".35"/>
+</symbol>
+<symbol id="s-steel" viewBox="0 0 64 40">
+  <ellipse cx="32" cy="36.2" rx="27" ry="2.6" fill="#000" opacity=".3"/>
+  <path d="M6 25.6h48l-5 9.6H12z" fill="url(#lgSteel)" stroke="#3c4e54" stroke-width="1"/>
+  <path d="M7.4 25.6h45.2l-1.2 2.8H8.6z" fill="#eff7f7" opacity=".6"/>
+  <path d="M14 20.4h30v5.2H14z" fill="#8fa3a7" stroke="#41545a" stroke-width=".8"/>
+  <rect x="20" y="13.2" width="6.4" height="8" rx=".8" fill="#5a6f75" stroke="#314349" stroke-width=".7"/>
+  <rect x="30.6" y="10.6" width="6.8" height="10.6" rx=".9" fill="#647a80" stroke="#314349" stroke-width=".7"/>
+  <rect x="41.6" y="15" width="5.4" height="6.2" rx=".7" fill="#5a6f75" stroke="#314349" stroke-width=".7"/>
+  <g fill="#d9e4e4" opacity=".55"><circle cx="14.4" cy="29.4" r=".6"/><circle cx="22" cy="29.4" r=".6"/><circle cx="30" cy="29.4" r=".6"/><circle cx="38" cy="29.4" r=".6"/><circle cx="46" cy="29.4" r=".6"/></g>
+  <path d="M22.4 13.2c-.8-2.8 1.2-4 0-6M33.8 10.6c-.8-2.4 1-3.8 0-5.6" fill="none" stroke="#b9c6c6" stroke-width=".8" opacity=".4"/>
+  <path d="M56.6 20.6l3.4 3.4-3.4 3.4" fill="none" stroke="#5c7379" stroke-width="1.4" opacity=".6"/>
+</symbol>
+<symbol id="s-luxury" viewBox="0 0 64 40">
+  <ellipse cx="32" cy="36.2" rx="27" ry="2.6" fill="#000" opacity=".3"/>
+  <path d="M5 26h50l-4.4 9.4H10z" fill="#f2ead8" stroke="#8d7d5d" stroke-width="1"/>
+  <path d="M6.4 26h47.2l-1.2 2.6H7.8z" fill="#d8b061"/>
+  <path d="M12 18h36v8H12z" fill="#fbf4e4" stroke="#9a8a69" stroke-width=".9"/>
+  <path d="M16 11.4h28v6.6H16z" fill="#f7eeda" stroke="#9a8a69" stroke-width=".9"/>
+  <path d="M12 25.4h36M13 24.4h34" stroke="#b8863b" stroke-width=".6"/>
+  <rect x="20" y="7.8" width="5" height="10" rx="1" fill="#b23f35" stroke="#6f1f1a" stroke-width=".7"/>
+  <rect x="37" y="7.8" width="5" height="10" rx="1" fill="#b23f35" stroke="#6f1f1a" stroke-width=".7"/>
+  <rect x="19.4" y="6.8" width="6.2" height="1.8" rx=".6" fill="#2f3a3c"/>
+  <rect x="36.4" y="6.8" width="6.2" height="1.8" rx=".6" fill="#2f3a3c"/>
+  <g fill="#7aa6ae"><circle cx="18" cy="22" r=".75"/><circle cx="23" cy="22" r=".75"/><circle cx="28" cy="22" r=".75"/><circle cx="33" cy="22" r=".75"/><circle cx="38" cy="22" r=".75"/><circle cx="43" cy="22" r=".75"/></g>
+  <g fill="#d8b061"><circle cx="20" cy="16.2" r=".6"/><circle cx="26" cy="16.2" r=".6"/><circle cx="32" cy="16.2" r=".6"/><circle cx="38" cy="16.2" r=".6"/><circle cx="44" cy="16.2" r=".6"/></g>
+  <path d="M32 6.8V2.6M32 2.6l2.4 1.4-2.4 1.4" fill="none" stroke="#b8863b" stroke-width=".9"/>
+</symbol>
+
+<symbol id="f-scaffold" viewBox="0 0 96 64">
+  <rect width="96" height="64" fill="url(#lgSky)"/>
+  <ellipse cx="48" cy="58" rx="38" ry="4" fill="#000" opacity=".28"/>
+  <rect x="14" y="24" width="66" height="33" fill="url(#ptBrick)" stroke="#5b2c1c" stroke-width="1"/>
+  <rect x="16" y="27" width="24" height="26" fill="#0b1b20" opacity=".55"/>
+  <g stroke="#c99a5a" stroke-width="2.6"><path d="M15 21h64M15 34h64M15 47h64M24 19v40M48 19v40M72 19v40"/></g>
+  <g stroke="#8a5a2f" stroke-width="1.1" opacity=".8"><path d="M24 34 48 21M48 47 72 34M24 47l24-13M48 34l24-13"/></g>
+  <path d="M76 11v24h13" fill="none" stroke="#d8b061" stroke-width="2.4"/>
+  <path d="M89 35v9" stroke="#b9a67d" stroke-width="1"/>
+  <path d="M86 44h6l-3 4z" fill="#6f5b39"/>
+  <rect x="6" y="50" width="16" height="4" fill="#8a5a2f" stroke="#4e2e13"/>
+  <rect x="6" y="54" width="16" height="3" fill="#a9773f" stroke="#4e2e13"/>
+  <path d="M18 20l7 7v-5l-2-2z" fill="#d8c08a" opacity=".7"/>
+</symbol>
+<symbol id="f-timber" viewBox="0 0 96 64">
+  <rect width="96" height="64" fill="url(#lgSky)"/>
+  <ellipse cx="48" cy="58.6" rx="38" ry="3.6" fill="#000" opacity=".28"/>
+  <rect x="15" y="41" width="66" height="16" fill="url(#ptStone)" stroke="#5a554a" stroke-width="1"/>
+  <rect x="18" y="24" width="60" height="18" fill="url(#lgPlaster)" stroke="#7a6646" stroke-width="1"/>
+  <path d="M15 25 48 7l33 18z" fill="url(#lgRoof)" stroke="#4e241a" stroke-width="1"/>
+  <g stroke="#5b3719" stroke-width="2"><path d="M18 24v18M36 24v18M58 24v18M78 24v18M18 31h60M18 38h60"/></g>
+  <g stroke="#4e2e13" stroke-width="1.1" opacity=".75"><path d="M18 24l18 7M78 24l-20 7M36 31l-18 7M58 31l20 7"/></g>
+  <rect x="25" y="33" width="10" height="9" fill="#f2c46a" stroke="#6d4a22" stroke-width=".9"/>
+  <rect x="43" y="33" width="10" height="9" fill="#f2c46a" stroke="#6d4a22" stroke-width=".9"/>
+  <rect x="61" y="33" width="10" height="9" fill="#f2c46a" stroke="#6d4a22" stroke-width=".9"/>
+  <g stroke="#7a4a22" stroke-width=".7"><path d="M30 33v9M48 33v9M66 33v9M25 37.5h10M43 37.5h10M61 37.5h10"/></g>
+  <rect x="68" y="13" width="7" height="14" fill="#7d4a37" stroke="#4e241a" stroke-width=".8"/>
+  <path d="M71.5 13c-1.4-4 1.8-5.4 1-8.4" fill="none" stroke="#b8c4c0" stroke-width="1" opacity=".35"/>
+  <path d="M18 46h60v10H18z" fill="#0d1d22" opacity=".28"/>
+</symbol>
+<symbol id="f-brick" viewBox="0 0 96 64">
+  <rect width="96" height="64" fill="url(#lgSky)"/>
+  <ellipse cx="48" cy="58.6" rx="38" ry="3.6" fill="#000" opacity=".28"/>
+  <rect x="12" y="27" width="72" height="30" fill="url(#ptBrick)" stroke="#5b2c1c" stroke-width="1"/>
+  <path d="M12 27 24 15l12 12 12-12 12 12 12-12 12 12v3H12z" fill="#7e3a29" stroke="#4d2418" stroke-width=".9"/>
+  <rect x="68" y="6" width="9" height="22" fill="url(#ptBrick)" stroke="#4d2418" stroke-width=".9"/>
+  <rect x="67" y="5" width="11" height="3" fill="#c98d74"/>
+  <path d="M72.5 5c-2.4-3.4 1.6-4.8.6-7" fill="none" stroke="#b8c4c0" stroke-width="1.2" opacity=".3"/>
+  <g fill="#f2b45e" stroke="#8a4a1f" stroke-width=".7"><rect x="19" y="35" width="11" height="12"/><rect x="38" y="35" width="11" height="12"/><rect x="57" y="35" width="11" height="12"/></g>
+  <g stroke="#7a3b1f" stroke-width=".7"><path d="M24.5 35v12M43.5 35v12M62.5 35v12M19 41h11M38 41h11M57 41h11"/></g>
+  <path d="M12 47h72" stroke="#4d2418" stroke-width="1.2"/>
+  <path d="M12 55h72" stroke="#4d2418" stroke-width="1"/>
+  <rect x="71" y="47" width="12" height="8" fill="#31170f"/>
+</symbol>
+<symbol id="f-stone" viewBox="0 0 96 64">
+  <rect width="96" height="64" fill="url(#lgSky)"/>
+  <ellipse cx="48" cy="58.6" rx="38" ry="3.6" fill="#000" opacity=".28"/>
+  <rect x="14" y="22" width="68" height="35" fill="url(#ptStone)" stroke="#575247" stroke-width="1"/>
+  <path d="M12 23h72v5H12z" fill="#b7af9b" stroke="#6b6558" stroke-width=".8"/>
+  <path d="M14 22 48 10l34 12z" fill="url(#lgSlate)" stroke="#2c373c" stroke-width="1"/>
+  <g fill="#f0c46a" stroke="#5c4a2c" stroke-width=".8">
+    <path d="M22 34a5 5 0 0 1 10 0v12H22z"/><path d="M43 34a5 5 0 0 1 10 0v12H43z"/><path d="M64 34a5 5 0 0 1 10 0v12H64z"/>
+  </g>
+  <g stroke="#5c4a2c" stroke-width=".6"><path d="M27 34v12M48 34v12M69 34v12M22 42h10M43 42h10M64 42h10"/></g>
+  <rect x="18" y="50" width="60" height="5" fill="#b7af9b" stroke="#6b6558" stroke-width=".7"/>
+  <rect x="48" y="28" width="1.4" height="7" fill="#8a5a2f" opacity=".7"/>
+  <rect x="35" y="16" width="26" height="6" rx="1" fill="#9a7a3a" stroke="#5d4517" stroke-width=".8"/>
+  <path d="M35 18h26" stroke="#f0d58f" stroke-width=".7" opacity=".6"/>
+</symbol>
+<symbol id="f-civic" viewBox="0 0 96 64">
+  <rect width="96" height="64" fill="url(#lgSky)"/>
+  <ellipse cx="48" cy="59" rx="40" ry="3.4" fill="#000" opacity=".28"/>
+  <path d="M14 52h68v7H14z" fill="#b7af9b" stroke="#5d574b" stroke-width=".9"/>
+  <path d="M18 47h60v5H18z" fill="#cec4ab" stroke="#6b6456" stroke-width=".8"/>
+  <rect x="20" y="26" width="56" height="21" fill="url(#ptStone)" stroke="#5d574b" stroke-width="1"/>
+  <g fill="#e3d8bf" stroke="#6b6456" stroke-width=".8"><rect x="24" y="29" width="6" height="18"/><rect x="37" y="29" width="6" height="18"/><rect x="50" y="29" width="6" height="18"/><rect x="63" y="29" width="6" height="18"/></g>
+  <g fill="#6b6456" opacity=".45"><rect x="25.2" y="30" width="1.3" height="16"/><rect x="38.2" y="30" width="1.3" height="16"/><rect x="51.2" y="30" width="1.3" height="16"/><rect x="64.2" y="30" width="1.3" height="16"/></g>
+  <path d="M18 26 48 12l30 14z" fill="#d8c08a" stroke="#7a6331" stroke-width="1"/>
+  <path d="M22 25 48 14l26 11" fill="none" stroke="#f2e0ad" stroke-width=".8" opacity=".6"/>
+  <text x="48" y="24" text-anchor="middle" font-family="Georgia,serif" font-size="7" fill="#6d5221" letter-spacing=".6">PORT</text>
+  <circle cx="48" cy="33" r="4.4" fill="#f6e7bb" stroke="#8a6b2c" stroke-width="1"/>
+  <path d="M48 30.5v5M46.2 32h3.6" stroke="#6d5221" stroke-width=".8"/>
+  <path d="M20 22v-6l3-2 3 2v6" fill="#b23f35" stroke="#6f1f1a" stroke-width=".6"/>
+  <path d="M70 22v-6l3-2 3 2v6" fill="#b23f35" stroke="#6f1f1a" stroke-width=".6"/>
+</symbol>
+<symbol id="f-market" viewBox="0 0 96 64">
+  <rect width="96" height="64" fill="url(#lgSky)"/>
+  <ellipse cx="48" cy="58.6" rx="38" ry="3.4" fill="#000" opacity=".26"/>
+  <path d="M10 27h32l-3 8H13z" fill="#b23f35" stroke="#6f1f1a" stroke-width=".8"/>
+  <path d="M10 27h8l3 8H13zM26 27h8l-3 8h-8zM42 27h0" fill="#f2e3c6" opacity=".7"/>
+  <path d="M13 35h26v17H13z" fill="#8a5a2f" stroke="#4e2e13" stroke-width=".9"/>
+  <path d="M18 39h6v7h-6zM28 39h6v7h-6z" fill="#f2c46a" stroke="#6d4a22" stroke-width=".7"/>
+  <rect x="14" y="51" width="11" height="5" fill="#a9773f" stroke="#4e2e13" stroke-width=".7"/>
+  <rect x="27" y="51" width="9" height="4" fill="#8a5a2f" stroke="#4e2e13" stroke-width=".7"/>
+  <path d="M54 24h32l-3 8H57z" fill="#2f6f68" stroke="#1d4b46" stroke-width=".8"/>
+  <path d="M54 24h8l3 8h-8zM70 24h8l-3 8h-8z" fill="#e9dcc0" opacity=".7"/>
+  <path d="M57 32h25v20H57z" fill="#7a4b26" stroke="#4e2e13" stroke-width=".9"/>
+  <path d="M61 36h17v8H61z" fill="#f0c46a" stroke="#6d4a22" stroke-width=".7"/>
+  <path d="M69.5 36v8M61 40h17" stroke="#8a5a2f" stroke-width=".6"/>
+  <circle cx="72" cy="20" r="3.2" fill="#f5d486" stroke="#8a6b2c" stroke-width=".8"/>
+  <path d="M72 23v4" stroke="#8a6b2c" stroke-width=".7"/>
+  <path d="M72 15v2" stroke="#8a6b2c" stroke-width=".7"/>
+  <g fill="#b23f35"><circle cx="48" cy="54" r="2"/><circle cx="52" cy="55" r="1.6"/></g>
+</symbol>
+<symbol id="f-church" viewBox="0 0 96 64">
+  <rect width="96" height="64" fill="url(#lgSky)"/>
+  <ellipse cx="48" cy="58.6" rx="38" ry="3.4" fill="#000" opacity=".26"/>
+  <rect x="20" y="34" width="56" height="24" fill="url(#ptStone)" stroke="#575247" stroke-width="1"/>
+  <path d="M20 34 48 22l28 12z" fill="url(#lgSlate)" stroke="#2c373c" stroke-width="1"/>
+  <rect x="61" y="8" width="14" height="28" fill="url(#ptStone)" stroke="#575247" stroke-width="1"/>
+  <path d="M58 8h20l-10-7z" fill="url(#lgSlate)" stroke="#2c373c" stroke-width="1"/>
+  <path d="M68 1V-4" stroke="#d8b061" stroke-width="1.4"/>
+  <path d="M66-2.6h4" stroke="#d8b061" stroke-width="1.2"/>
+  <circle cx="68" cy="17" r="3.4" fill="#7fb4c4" stroke="#4e6b74" stroke-width=".8"/>
+  <path d="M68 13.8v6.4M64.8 17h6.4" stroke="#cfe6e8" stroke-width=".5" opacity=".6"/>
+  <path d="M48 28a7 7 0 0 1 7 7v9H41v-9a7 7 0 0 1 7-7z" fill="#6f9bb0" stroke="#41606d" stroke-width=".9"/>
+  <path d="M48 28v16M41 40h14M44 31l8 8M52 31l-8 8" stroke="#b8d6df" stroke-width=".5" opacity=".5"/>
+  <rect x="26" y="42" width="8" height="16" fill="#e3d8bf" stroke="#6b6456" stroke-width=".8"/>
+  <rect x="62" y="42" width="8" height="16" fill="#e3d8bf" stroke="#6b6456" stroke-width=".8"/>
+  <g stroke="#575247" stroke-width=".6" opacity=".5"><path d="M22 42h52M22 50h52M30 34v24M42 34v24M56 34v24M70 34v24"/></g>
+</symbol>
+<symbol id="f-windmill" viewBox="0 0 96 64">
+  <rect width="96" height="64" fill="url(#lgSky)"/>
+  <ellipse cx="48" cy="58.6" rx="38" ry="3.4" fill="#000" opacity=".26"/>
+  <path d="M36 58 40 24h16l4 34z" fill="url(#ptStone)" stroke="#575247" stroke-width="1"/>
+  <path d="M38 26h20l-2-5H40z" fill="#6b4a2c" stroke="#412b17" stroke-width=".8"/>
+  <path d="M42 58V40h7v18z" fill="#5a3a1c" stroke="#3a2510" stroke-width=".7"/>
+  <path d="M48 21V11" stroke="#7a5b37" stroke-width="3"/>
+  <g stroke="#8a6a3f" stroke-width="2.4" fill="none"><path d="M48 11 14 2M48 11l34-9M48 11 30 44M48 11l18 33"/></g>
+  <g fill="url(#lgSail)" stroke="#8a6a3f" stroke-width=".8" opacity=".9">
+    <path d="M14 2 42 10 20 20z"/><path d="M82 2 54 10 76 20z"/><path d="M30 44 44 16 52 46z"/><path d="M66 44 52 16 44 46z"/>
+  </g>
+  <rect x="70" y="50" width="8" height="7" fill="#b59a6c" stroke="#6b5433" stroke-width=".7"/>
+  <path d="M70 53h8" stroke="#8d7449" stroke-width=".6"/>
+  <path d="M52 55c3-2 6-2 9 0" stroke="#8d7449" stroke-width=".6" fill="none" opacity=".5"/>
+</symbol>
+<symbol id="f-bridge" viewBox="0 0 96 64">
+  <rect width="96" height="64" fill="url(#lgSky)"/>
+  <rect x="0" y="42" width="96" height="22" fill="url(#ptWave)"/>
+  <path d="M6 42h84v5H6z" fill="#8a8271" stroke="#5a554a" stroke-width=".8"/>
+  <path d="M16 42V28h64v14" fill="none" stroke="#a99f8b" stroke-width="4"/>
+  <path d="M14 28h68v5H14z" fill="#c2b79f" stroke="#6b6456" stroke-width=".8"/>
+  <path d="M22 42a12 12 0 0 1 24 0M50 42a12 12 0 0 1 24 0" fill="none" stroke="#6b6456" stroke-width="4"/>
+  <path d="M22 42a12 12 0 0 1 24 0M50 42a12 12 0 0 1 24 0" fill="none" stroke="#b7ad97" stroke-width="2"/>
+  <g fill="#f2c46a"><circle cx="18" cy="25" r="2.4"/><circle cx="78" cy="25" r="2.4"/></g>
+  <path d="M18 23v-3M78 23v-3" stroke="#8a6b2c" stroke-width=".8"/>
+  <g stroke="#5d574b" stroke-width=".5" opacity=".4"><path d="M24 28v14M34 28v14M44 28v14M56 28v14M66 28v14M76 28v14"/></g>
+  <path d="M8 50c8-2 16-2 24 0M50 53c8-2 16-2 24 0" stroke="#6fa2a8" stroke-width=".6" fill="none" opacity=".45"/>
+</symbol>
+<symbol id="f-forge" viewBox="0 0 96 64">
+  <rect width="96" height="64" fill="url(#lgSky)"/>
+  <ellipse cx="48" cy="58.6" rx="38" ry="3.4" fill="#000" opacity=".28"/>
+  <path d="M14 56V28h58v28z" fill="#4b2e1d" stroke="#2e1a0f" stroke-width="1"/>
+  <path d="M12 28 44 14l34 14z" fill="url(#lgSlate)" stroke="#2c373c" stroke-width="1"/>
+  <path d="M22 56V35h24v21z" fill="#1a100a"/>
+  <path d="M24 54c0-8 4-13 10-13s10 5 10 13z" fill="url(#rgFire)" opacity=".9"/>
+  <path d="M28 50c2-4 5-5 6-8 1 4 4 5 4 9 0 3-2 5-5 5s-5-2-5-6z" fill="#ffe3a0" opacity=".8"/>
+  <path d="M52 44h15l-2 6H54z" fill="#3e4b4e" stroke="#222c2e" stroke-width=".8"/>
+  <path d="M56 50h8l-1 4h-6z" fill="#2c3638"/>
+  <path d="M54 37h9v7h-9z" fill="#6d7b7d" stroke="#2e393b" stroke-width=".8"/>
+  <path d="M58 51v5" stroke="#4a2e13" stroke-width="2"/>
+  <rect x="70" y="10" width="8" height="28" fill="url(#ptBrick)" stroke="#4d2418" stroke-width=".8"/>
+  <path d="M74 10c-2-3 1.6-4.4.6-7" fill="none" stroke="#b8c4c0" stroke-width="1" opacity=".32"/>
+  <g fill="#c9a45f"><rect x="72" y="52" width="3" height="6"/><rect x="78" y="50" width="2.6" height="8"/></g>
+</symbol>
+<symbol id="f-fishery" viewBox="0 0 96 64">
+  <rect width="96" height="64" fill="url(#lgSky)"/>
+  <rect x="0" y="46" width="96" height="18" fill="url(#ptWave)"/>
+  <path d="M10 46V24h50v22z" fill="url(#lgWoodDark)" stroke="#3a2210" stroke-width="1"/>
+  <path d="M8 25 35 10l27 15z" fill="url(#lgRoof)" stroke="#4e241a" stroke-width="1"/>
+  <g stroke="#a9773f" stroke-width=".8" opacity=".5"><path d="M12 30h46M12 36h46M12 42h46"/></g>
+  <rect x="20" y="32" width="9" height="9" fill="#f2c46a" stroke="#6d4a22" stroke-width=".8"/>
+  <rect x="40" y="32" width="9" height="9" fill="#f2c46a" stroke="#6d4a22" stroke-width=".8"/>
+  <path d="M66 46V20M84 46V20M66 22h18M66 34h18" stroke="#7a5b37" stroke-width="1.6"/>
+  <path d="M66 24c6 4 12 4 18 0M66 36c6 4 12 4 18 0" fill="none" stroke="#d9c9a6" stroke-width=".8" opacity=".7"/>
+  <g fill="none" stroke="#cbb58d" stroke-width=".9"><path d="M69 25l4 9 4-9M80 25l-4 9-4-9"/></g>
+  <path d="M18 49h31l-4 8H23z" fill="url(#ptPlank)" stroke="#4a2e14" stroke-width=".8"/>
+  <path d="M33 49V39" stroke="#5a3a1c" stroke-width="1.2"/>
+  <path d="M24 38h18l-3 6H27z" fill="#d8ceb5" opacity=".8"/>
+  <path d="M6 54c10-2 18-2 28 0M58 56c8-2 16-2 24 0" stroke="#7fb0b4" stroke-width=".7" fill="none" opacity=".5"/>
+</symbol>
+<symbol id="f-barn" viewBox="0 0 96 64">
+  <rect width="96" height="64" fill="url(#lgSky)"/>
+  <ellipse cx="48" cy="58.6" rx="38" ry="3.4" fill="#000" opacity=".26"/>
+  <path d="M14 56V28h68v28z" fill="url(#lgWoodDark)" stroke="#3a2210" stroke-width="1"/>
+  <path d="M11 29 48 8l37 21z" fill="url(#lgRoof)" stroke="#4e241a" stroke-width="1"/>
+  <g stroke="#a9773f" stroke-width="1" opacity=".55"><path d="M16 32h64M16 40h64M16 48h64M24 29v27M40 29v27M56 29v27M72 29v27"/></g>
+  <path d="M36 56V34h24v22z" fill="#5c3518" stroke="#3a2210" stroke-width="1"/>
+  <path d="M36 56V34l12-6 12 6v22" fill="none" stroke="#d0a46a" stroke-width="1.2"/>
+  <path d="M42 31h12M48 31v25" stroke="#c99a5a" stroke-width="1.1"/>
+  <path d="M48 31v25M42 31l6 7 6-7" fill="none" stroke="#e3bb85" stroke-width=".7"/>
+  <path d="M22 52h8v4h-8zM66 52h8v4h-8z" fill="#b59a6c" stroke="#6b5433" stroke-width=".7"/>
+  <path d="M70 46c2-4 5-5 8-3-1 3-3 4-6 4" fill="#c9a45f" opacity=".8"/>
+  <path d="M4 56h88" stroke="#2e1a0f" stroke-width="1" opacity=".7"/>
+</symbol>
+<symbol id="f-kiln" viewBox="0 0 96 64">
+  <rect width="96" height="64" fill="url(#lgSky)"/>
+  <ellipse cx="48" cy="58.6" rx="36" ry="3.4" fill="#000" opacity=".28"/>
+  <path d="M26 56c0-18 9-32 22-32s22 14 22 32z" fill="url(#ptBrick)" stroke="#5b2c1c" stroke-width="1"/>
+  <path d="M22 56h52v3H22z" fill="#5b2c1c"/>
+  <path d="M39 56c0-8 4-13 9-13s9 5 9 13z" fill="#1a0f09"/>
+  <path d="M41 55c0-6 3-10 7-10s7 4 7 10z" fill="url(#rgFire)" opacity=".8"/>
+  <path d="M46 47c1 3 4 4 4 8 0 2-2 3-4 3s-4-1-4-3c0-3 3-4 4-8z" fill="#ffe0a0" opacity=".7"/>
+  <path d="M48 24c-2-6 3-8 1-14" fill="none" stroke="#b8c4c0" stroke-width="1.3" opacity=".3"/>
+  <path d="M56 18c1-5-2-7-.4-11" fill="none" stroke="#b8c4c0" stroke-width="1" opacity=".22"/>
+  <g stroke="#4d2418" stroke-width=".5" opacity=".4"><path d="M30 42h36M28 48h40M32 36h32"/></g>
+</symbol>
+<symbol id="f-warehouse" viewBox="0 0 96 64">
+  <rect width="96" height="64" fill="url(#lgSky)"/>
+  <ellipse cx="48" cy="58.6" rx="38" ry="3.4" fill="#000" opacity=".26"/>
+  <rect x="12" y="24" width="72" height="33" fill="url(#ptStone)" stroke="#575247" stroke-width="1"/>
+  <path d="M10 25 48 8l38 17z" fill="url(#lgSlate)" stroke="#2c373c" stroke-width="1"/>
+  <rect x="34" y="34" width="28" height="23" fill="url(#ptPlank)" stroke="#4a2e14" stroke-width="1"/>
+  <path d="M48 34v23M34 45h28" stroke="#c99a5a" stroke-width="1"/>
+  <path d="M34 57l14-11M62 57 48 46" stroke="#8a5a2f" stroke-width=".7" opacity=".6"/>
+  <path d="M48 24v-8h20" fill="none" stroke="#8a5a2f" stroke-width="1.4"/>
+  <path d="M68 16v6" stroke="#b9a67d" stroke-width=".8"/>
+  <path d="M65 22h6l-3 4z" fill="#6f5b39"/>
+  <g fill="#8a6a3f"><rect x="18" y="48" width="7" height="9" rx="1.5"/><rect x="21" y="50" width="7" height="7" rx="1.5" opacity=".7"/><rect x="72" y="47" width="8" height="10" rx="1.6"/></g>
+  <path d="M18 48v9M72 47v10" stroke="#4e3a20" stroke-width=".7"/>
+  <path d="M12 57h72" stroke="#2c373c" stroke-width=".8"/>
+</symbol>
+<symbol id="f-sawmill" viewBox="0 0 96 64">
+  <rect width="96" height="64" fill="url(#lgSky)"/>
+  <ellipse cx="48" cy="58.6" rx="38" ry="3.4" fill="#000" opacity=".26"/>
+  <path d="M18 56V30h50v26z" fill="url(#lgWoodDark)" stroke="#3a2210" stroke-width="1"/>
+  <path d="M16 31 43 16l27 15z" fill="url(#lgRoof)" stroke="#4e241a" stroke-width="1"/>
+  <path d="M70 56V22" stroke="#7a5b37" stroke-width="2.4"/>
+  <circle cx="70" cy="20" r="9" fill="#b7bfbd" stroke="#59625f" stroke-width="1.2"/>
+  <circle cx="70" cy="20" r="2" fill="#59625f"/>
+  <g stroke="#7d8784" stroke-width=".7"><path d="M70 11v4M70 25v4M61 20h4M75 20h4M64 14l3 3M73 23l3 3M76 14l-3 3M67 23l-3 3"/></g>
+  <g stroke="#8a5a2f" stroke-width=".8" opacity=".5"><path d="M22 36h42M22 44h42M22 52h42"/></g>
+  <g fill="url(#ptPlank)" stroke="#4a2e14" stroke-width=".8">
+    <rect x="6" y="46" width="28" height="6" rx="3" transform="rotate(-6 20 49)"/>
+    <rect x="4" y="52" width="30" height="6" rx="3" transform="rotate(-3 19 55)"/>
+    <rect x="10" y="40" width="24" height="5.5" rx="2.7" transform="rotate(-8 22 43)"/>
+  </g>
+  <g fill="none" stroke="#d9a465" stroke-width=".6" opacity=".5"><circle cx="8" cy="49" r="2"/><circle cx="31" cy="52" r="2"/><circle cx="32" cy="42" r="1.8"/></g>
+</symbol>
+<symbol id="f-bakery" viewBox="0 0 96 64">
+  <rect width="96" height="64" fill="url(#lgSky)"/>
+  <ellipse cx="48" cy="58.6" rx="38" ry="3.4" fill="#000" opacity=".26"/>
+  <rect x="14" y="28" width="62" height="29" fill="url(#ptBrick)" stroke="#5b2c1c" stroke-width="1"/>
+  <path d="M12 29 45 14l33 15z" fill="url(#lgRoof)" stroke="#4e241a" stroke-width="1"/>
+  <path d="M30 57V39c0-6 5-11 11-11s11 5 11 11v18z" fill="#1a0f09"/>
+  <path d="M33 57V40c0-4 3.4-8 8-8s8 4 8 8v17z" fill="url(#rgFire)" opacity=".75"/>
+  <path d="M35 56c0-6 2.8-10 6-10s6 4 6 10z" fill="#ffd98d" opacity=".65"/>
+  <path d="M52 44h18v5H52z" fill="#8a5a2f" stroke="#4e2e13" stroke-width=".7"/>
+  <path d="M57 38h6v6h-6z" fill="#d8a55e" stroke="#7a4a1c" stroke-width=".7"/>
+  <rect x="68" y="10" width="8" height="20" fill="url(#ptBrick)" stroke="#4d2418" stroke-width=".8"/>
+  <path d="M72 10c-1.4-3 1.6-4.4.6-7" fill="none" stroke="#b8c4c0" stroke-width="1" opacity=".3"/>
+  <path d="M24 34h6v7h-6z" fill="#f2c46a" stroke="#6d4a22" stroke-width=".7"/>
+  <g fill="#f8eccf" opacity=".7"><circle cx="40" cy="24" r=".5"/><circle cx="56" cy="26" r=".4"/></g>
+</symbol>
+<symbol id="f-gallery" viewBox="0 0 96 64">
+  <rect width="96" height="64" fill="url(#lgSky)"/>
+  <ellipse cx="48" cy="58.6" rx="38" ry="3.4" fill="#000" opacity=".26"/>
+  <rect x="14" y="26" width="68" height="31" fill="url(#ptStone)" stroke="#575247" stroke-width="1"/>
+  <path d="M12 27 48 12l36 15z" fill="url(#lgSlate)" stroke="#2c373c" stroke-width="1"/>
+  <g fill="#1b3a43" stroke="#6b6456" stroke-width=".8">
+    <path d="M20 42a6 6 0 0 1 12 0v13H20z"/><path d="M42 42a6 6 0 0 1 12 0v13H42z"/><path d="M64 42a6 6 0 0 1 12 0v13H64z"/>
+  </g>
+  <g fill="#f2c46a" opacity=".55"><rect x="23" y="42" width="6" height="13"/><rect x="45" y="42" width="6" height="13"/><rect x="67" y="42" width="6" height="13"/></g>
+  <path d="M14 32h68" stroke="#b7af9b" stroke-width="1"/>
+  <path d="M32 24v-9" stroke="#8a6b2c" stroke-width="1.2"/>
+  <path d="M26 15h12l-6-5z" fill="#b23f35" stroke="#6f1f1a" stroke-width=".6"/>
+  <circle cx="32" cy="26" r="2" fill="#d8c08a" stroke="#8a6b2c" stroke-width=".6"/>
+  <path d="M64 24v-9" stroke="#8a6b2c" stroke-width="1.2"/>
+  <path d="M58 15h12l-6-5z" fill="#2f6f68" stroke="#1d4b46" stroke-width=".6"/>
+  <circle cx="64" cy="26" r="2" fill="#d8c08a" stroke="#8a6b2c" stroke-width=".6"/>
+</symbol>
+<symbol id="f-mine" viewBox="0 0 96 64">
+  <rect width="96" height="64" fill="url(#lgSky)"/>
+  <ellipse cx="48" cy="58.6" rx="38" ry="3.4" fill="#000" opacity=".28"/>
+  <path d="M20 57 34 20h8L28 57zM76 57 62 20h-8l14 37z" fill="#6b4a2c" stroke="#3c2613" stroke-width="1"/>
+  <path d="M24 48h48M28 38h40M32 28h32" stroke="#8a5a2f" stroke-width="1.6"/>
+  <path d="M46 48 48 27M50 48 48 27" stroke="#c99a5a" stroke-width="1"/>
+  <circle cx="48" cy="19" r="9" fill="#5e6a6c" stroke="#2e393b" stroke-width="1.2"/>
+  <circle cx="48" cy="19" r="2.2" fill="#2e393b"/>
+  <g stroke="#8a9698" stroke-width=".7"><path d="M48 10v4M48 24v4M39 19h4M53 19h4M42 13l3 3M51 22l3 3M54 13l-3 3M45 22l-3 3"/></g>
+  <path d="M14 57c6-6 14-8 22-6-6 4-14 6-22 6z" fill="#1d2224" stroke="#0d1112" stroke-width=".8"/>
+  <path d="M16 55c5-3 10-4 15-3" stroke="#5b6468" stroke-width=".7" fill="none"/>
+  <path d="M6 59h84" stroke="#2c373c" stroke-width="1"/>
+</symbol>
+<symbol id="f-furnace" viewBox="0 0 96 64">
+  <rect width="96" height="64" fill="url(#lgSky)"/>
+  <ellipse cx="48" cy="58.6" rx="38" ry="3.4" fill="#000" opacity=".28"/>
+  <rect x="18" y="26" width="38" height="31" fill="url(#ptBrick)" stroke="#5b2c1c" stroke-width="1"/>
+  <path d="M18 26h38v5H18z" fill="#8d3f2b" stroke="#5b2c1c" stroke-width=".8"/>
+  <path d="M56 34h18v23H56z" fill="#3e4a4d" stroke="#222c2e" stroke-width="1"/>
+  <rect x="60" y="8" width="9" height="26" fill="url(#ptBrick)" stroke="#4d2418" stroke-width=".8"/>
+  <rect x="72" y="14" width="7" height="20" fill="url(#ptBrick)" stroke="#4d2418" stroke-width=".8"/>
+  <path d="M56 34h18v4H56z" fill="#8a9698" opacity=".5"/>
+  <path d="M24 44c0-6 3-11 7-11s7 5 7 11v13H24z" fill="#1a0f09"/>
+  <path d="M26 56c0-5 2.4-9 5-9s5 4 5 9z" fill="url(#rgFire)" opacity=".85"/>
+  <path d="M40 40h9v17h-9z" fill="#4e5c60" stroke="#2e393b" stroke-width=".7"/>
+  <path d="M62 8c-2-4 2-6 .6-9M75 14c-1.4-3 1.4-4.4.4-7" fill="none" stroke="#b8c4c0" stroke-width="1" opacity=".3"/>
+  <path d="M18 57h56" stroke="#222c2e" stroke-width="1"/>
+  <g fill="#c99a5a" opacity=".6"><circle cx="28" cy="31" r="1"/><circle cx="43" cy="31" r="1"/></g>
+</symbol>
+<symbol id="f-exchange" viewBox="0 0 96 64">
+  <rect width="96" height="64" fill="url(#lgSky)"/>
+  <ellipse cx="48" cy="58.6" rx="38" ry="3.4" fill="#000" opacity=".26"/>
+  <path d="M14 57h68v-4H14z" fill="#b7af9b" stroke="#5d574b" stroke-width=".8"/>
+  <rect x="18" y="25" width="60" height="28" fill="url(#ptStone)" stroke="#575247" stroke-width="1"/>
+  <g fill="#e3d8bf" stroke="#6b6456" stroke-width=".8"><rect x="22" y="28" width="6" height="25"/><rect x="35" y="28" width="6" height="25"/><rect x="55" y="28" width="6" height="25"/><rect x="68" y="28" width="6" height="25"/></g>
+  <path d="M17 26 48 12l31 14z" fill="url(#lgSlate)" stroke="#2c373c" stroke-width="1"/>
+  <rect x="41" y="34" width="14" height="10" rx="1" fill="#c9a45f" stroke="#6d4a22" stroke-width=".8"/>
+  <path d="M44 40c1.6-2.4 4.4-2.4 6 0M44 37h6" stroke="#5b3b10" stroke-width=".6" fill="none"/>
+  <path d="M48 44v6M44 50h8" stroke="#6d4a22" stroke-width="1"/>
+  <path d="M18 25h60" stroke="#b7af9b" stroke-width="1"/>
+  <g fill="#f2c46a"><circle cx="48" cy="19" r="1.8"/></g>
+</symbol>
+<symbol id="f-townhall" viewBox="0 0 96 64">
+  <rect width="96" height="64" fill="url(#lgSky)"/>
+  <ellipse cx="48" cy="58.6" rx="38" ry="3.4" fill="#000" opacity=".26"/>
+  <path d="M12 57h72v-3H12z" fill="#b7af9b" stroke="#5d574b" stroke-width=".8"/>
+  <rect x="16" y="30" width="64" height="24" fill="url(#ptStone)" stroke="#575247" stroke-width="1"/>
+  <g fill="#e3d8bf" stroke="#6b6456" stroke-width=".8"><rect x="20" y="33" width="5" height="21"/><rect x="32" y="33" width="5" height="21"/><rect x="44" y="33" width="5" height="21"/><rect x="56" y="33" width="5" height="21"/><rect x="68" y="33" width="5" height="21"/></g>
+  <path d="M15 31 48 15l33 16z" fill="#d8c08a" stroke="#7a6331" stroke-width="1"/>
+  <rect x="62" y="8" width="14" height="23" fill="url(#ptStone)" stroke="#575247" stroke-width="1"/>
+  <path d="M59 8h20l-10-7z" fill="url(#lgSlate)" stroke="#2c373c" stroke-width="1"/>
+  <circle cx="69" cy="17" r="4.6" fill="#f6e7bb" stroke="#8a6b2c" stroke-width="1"/>
+  <path d="M69 13.4v3.8M69 20.4v.6M66.6 17h-1M72.6 17h-1M69 17l2.2 1.6" stroke="#6d5221" stroke-width=".8"/>
+  <path d="M20 29v-6l3-2 3 2v6" fill="#b23f35" stroke="#6f1f1a" stroke-width=".6"/>
+  <path d="M44 26a4 4 0 0 1 8 0v8h-8z" fill="#f2c46a" stroke="#6d4a22" stroke-width=".7"/>
+  <g stroke="#575247" stroke-width=".5" opacity=".45"><path d="M18 36h60M18 44h60M22 30v24M70 30v24"/></g>
+</symbol>
+</svg>
+
+<header class="site-head">
+  <div class="head-inner">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 26 26"><path d="M4 17h18l-2.6 5H6.6z" fill="#5c3d10"/><path d="M13 17V6" stroke="#5c3d10" stroke-width="1.4"/><path d="M13.6 6.6 21 12h-7.4z" fill="#fdf1cf"/><path d="M12.4 8 7 12h5.4z" fill="#fdf1cf"/></svg>
+      </span>
+      <div class="brand-txt">
+        <h1>勒阿弗尔</h1>
+        <p>港都情浓 · Le Havre</p>
+      </div>
+    </div>
+    <div class="roundbox" aria-label="回合信息">
+      <div class="rb"><span class="k">回合</span><b id="roundNum">1</b><i>/<span id="maxRound">14</span></i></div>
+      <div class="rb"><span class="k">行动</span><b id="turnNum">1</b><i>/7</i></div>
+      <div class="rb phase"><span class="k">阶段</span><b id="phaseName">补给</b></div>
+    </div>
+    <div class="head-btns">
+      <button class="mini" id="rulesBtn" type="button">规则</button>
+      <button class="mini" id="demoBtn" type="button" aria-pressed="false">托管演示</button>
+      <button class="mini" id="restartBtn" type="button">重开</button>
+    </div>
+  </div>
+</header>
+
+<main class="shell">
+  <div class="statusline">
+    <span class="turn-dot" id="turnDot" aria-hidden="true"></span>
+    <p id="hint" role="status" aria-live="polite">正在搭建港口…</p>
+    <div class="chips" id="statusChips"></div>
+  </div>
+
+  <section class="res-strip" id="resStrip" aria-label="你的资源"></section>
+
+  <div class="dock" id="dock"></div>
+
+  <div class="layout">
+    <section class="panel board-panel" aria-labelledby="boardTitle">
+      <div class="panel-head">
+        <div class="panel-title"><h2 id="boardTitle">港口建筑区</h2><span>35 栋</span></div>
+        <p>按港口位置排列 · 点击查看费用与效果</p>
+      </div>
+      <div class="offer-wrap">
+        <div class="offer-head">
+          <b>供给区 · Offer</b><span class="sub">取走整堆 token</span>
+          <span class="supply" id="supplyTrack" aria-label="本回合补给进度"></span>
+        </div>
+        <div class="offers" id="offers" role="group" aria-label="Offer 空间"></div>
+      </div>
+      <div class="proposal-wrap">
+        <div class="proposal-head"><b>建筑提案区</b><span>仅提案区可建造；城镇建筑可购买</span></div>
+        <div class="proposal-rail" id="proposalRail"></div>
+      </div>
+      <div class="bgrid" id="bgrid" aria-label="35 栋港口建筑"></div>
+    </section>
+
+    <aside class="side">
+      <section class="panel" aria-labelledby="playersTitle">
+        <div class="panel-head"><h2 id="playersTitle">玩家面板</h2><p>法郎 · 资源 · 建筑 · 船只 · 预估</p></div>
+        <div class="pc-list" id="playerPanels"></div>
+      </section>
+      <section class="panel" aria-labelledby="shipsTitle">
+        <div class="panel-head"><h2 id="shipsTitle">船只与贷款</h2><p id="shipHead">船市与喂养减免</p></div>
+        <div id="shipPanel"></div>
+      </section>
+      <section class="panel" aria-labelledby="logTitle">
+        <div class="panel-head"><h2 id="logTitle">港口日志</h2><p>最近事件</p></div>
+        <ol class="log" id="log"></ol>
+      </section>
+    </aside>
+  </div>
+</main>
+
+<div class="overlay" id="sheetOverlay" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <div class="sheet-head">
+      <div style="min-width:0;flex:1">
+        <p class="eyebrow" id="sheetKicker">建筑</p>
+        <h2 id="sheetTitle">建筑</h2>
+        <p id="sheetSub"></p>
+      </div>
+      <button class="icon-btn" id="sheetClose" type="button">关闭</button>
+    </div>
+    <div class="sheet-body" id="sheetBody"></div>
+  </div>
+</div>
+
+<div class="overlay center" id="harvestOverlay" hidden>
+  <div class="sheet narrow" role="dialog" aria-modal="true" aria-labelledby="harvestTitle">
+    <div class="sheet-head">
+      <div style="min-width:0;flex:1">
+        <p class="eyebrow">收获 · 喂养</p>
+        <h2 id="harvestTitle">回合结算</h2>
+        <p id="harvestSub"></p>
+      </div>
+      <button class="icon-btn" id="harvestClose" type="button" aria-label="收起结算面板">收起</button>
+    </div>
+    <div class="sheet-body" id="harvestBody"></div>
+    <div class="sheet-foot"><button class="btn primary" id="feedBtn" type="button">支付食物</button></div>
+  </div>
+</div>
+
+<div class="overlay center" id="resultOverlay" hidden>
+  <div class="sheet result-sheet" role="dialog" aria-modal="true" aria-labelledby="resultTitle">
+    <div class="sheet-head">
+      <div style="min-width:0;flex:1">
+        <p class="eyebrow">最终结算 · 财富榜</p>
+        <h2 id="resultTitle">终局</h2>
+        <p id="resultSub">第 14 回合</p>
+      </div>
+      <button class="icon-btn" id="resultClose" type="button">查看港口</button>
+    </div>
+    <div class="sheet-body" id="resultBody"></div>
+    <div class="sheet-foot">
+      <button class="btn primary" id="playAgain" type="button">再来一局</button>
+      <button class="btn" id="resultWatch" type="button">查看港口</button>
+    </div>
+  </div>
+</div>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script type="module">
+import {
+  createGame, legalActions, applyAction, score, scorePlayer, currentPlayer,
+  feedObligation, chooseGreedyAction, hashState,
+  BUILDINGS, BUILDING_IDS, SHIP_TYPES, SHIP_TYPE_IDS, GOODS, GOOD_NAMES,
+  OFFER_SPACES, STANDARD_GOODS, ROUND_FOOD_SCHEDULE, TURNS_PER_ROUND,
+  SHIP_GOOD_VALUE, FOOD_VALUE
+} from './engine.js';
+
+/* ================================================================== */
+/* 常量                                                                */
+/* ================================================================== */
+
+const HUMAN = 0;
+const AI = 1;
+const DEFAULT_SEED = 20261111;
+const CAT_NAME = { C: '工匠', E: '经济', I: '工业', P: '公共', N: '非建筑' };
+const GOOD_META = [
+  { key: 'wood', name: '木材' }, { key: 'clay', name: '粘土' }, { key: 'iron', name: '铁' },
+  { key: 'grain', name: '谷物' }, { key: 'fish', name: '鱼' }, { key: 'cattle', name: '牛' },
+  { key: 'hide', name: '兽皮' }, { key: 'coal', name: '煤' }, { key: 'charcoal', name: '木炭' },
+  { key: 'coke', name: '焦炭' }, { key: 'steel', name: '钢' }, { key: 'brick', name: '砖' },
+  { key: 'leather', name: '皮革' }, { key: 'meat', name: '肉' }, { key: 'bread', name: '面包' },
+  { key: 'smokedFish', name: '熏鱼' }, { key: 'flour', name: '面粉' }
+];
+const GOOD_KEYS = GOOD_META.map((g) => g.key);
+const GOOD_SHORT = Object.fromEntries(GOOD_META.map((g) => [g.key, g.name]));
+const SHIP_ORDER = ['wood', 'iron', 'steel', 'luxury'];
+const ART = {
+  constructionFirm: 'scaffold', buildingFirmA: 'scaffold', buildingFirmB: 'scaffold',
+  marketplace: 'market', sawmill: 'sawmill', fishery: 'fishery', joinery: 'timber',
+  bakehouse: 'bakery', hardwareStore: 'timber', charcoalKiln: 'kiln', smokehouse: 'barn',
+  abattoir: 'barn', clayMound: 'mine', artsCenter: 'gallery', wharf: 'dock',
+  blackMarket: 'market', brickworks: 'brick', localCourt: 'civic', colliery: 'mine',
+  wharf2: 'dock', shippingLine: 'warehouse', groceryMarket: 'market', tannery: 'barn',
+  businessOffice: 'exchange', ironworks: 'furnace', steelMill: 'furnace',
+  storehouse: 'warehouse', cokery: 'kiln', dock: 'dock', bridge: 'bridge',
+  townHall: 'townhall', bank: 'exchange', church: 'church', mill: 'windmill',
+  blacksmith: 'forge'
+};
+const CAT_ART = { C: 'timber', E: 'exchange', I: 'brick', P: 'civic', N: 'dock' };
+const BUILDING_ORDER = new Map(BUILDING_IDS.map((id, i) => [id, i]));
+
+/* ================================================================== */
+/* DOM / SVG 小工具                                                    */
+/* ================================================================== */
+
+const byId = (id) => document.getElementById(id);
+const esc = (v) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+
+function sym(id, cls, vb, w, h) {
+  const viewBox = vb || '0 0 32 32';
+  const width = w || 32;
+  const height = h || 32;
+  return '<svg class="' + (cls || 'gi') + '" viewBox="' + viewBox + '" aria-hidden="true" focusable="false">' +
+    '<use href="#' + id + '" x="0" y="0" width="' + width + '" height="' + height + '"></use></svg>';
+}
+function goodIcon(key, cls) { return sym('g-' + key, cls || 'gi'); }
+function workerIcon(cls) { return sym('g-worker', cls || 'b-worker', '0 0 32 32', 32, 32); }
+function shipIcon(type, cls) { return sym('s-' + type, (cls || 'ship-art'), '0 0 64 40', 64, 40); }
+function facade(id, cls) {
+  const art = ART[id] || CAT_ART[(BUILDINGS[id] && BUILDINGS[id].category) || 'C'] || 'timber';
+  return '<span class="' + (cls || 'b-art') + '">' + sym('f-' + art, 'facade-svg', '0 0 96 64', 96, 64) + '</span>';
+}
+function goodName(key) { return GOOD_NAMES[key] || GOOD_SHORT[key] || key; }
+function offerName(space) { return space === 'francs' ? '法郎' : goodName(space); }
+function shipName(type) { return SHIP_TYPES[type] ? SHIP_TYPES[type].name : type; }
+function whoName(i) { return i === HUMAN ? '你' : (i === AI ? 'AI 港商' : '玩家' + (Number(i) + 1)); }
+function money(n) { return n + '₣'; }
+function plainCost(cost) {
+  if (!cost) return '不可建造';
+  const parts = [];
+  for (const k of ['wood', 'clay', 'iron', 'brick', 'steel']) if (cost[k]) parts.push(cost[k] + GOOD_SHORT[k]);
+  return parts.length ? parts.join(' ') : '免费';
+}
+function compactCost(cost) {
+  if (!cost) return '不可建造';
+  const short = { wood: '木', clay: '粘', iron: '铁', brick: '砖', steel: '钢' };
+  const parts = [];
+  for (const k of ['wood', 'clay', 'iron', 'brick', 'steel']) if (cost[k]) parts.push(cost[k] + short[k]);
+  return parts.length ? parts.join(' ') : '免费';
+}
+function costHtml(cost) {
+  if (!cost) return '<span class="none">不可建造</span>';
+  const parts = [];
+  for (const k of ['wood', 'clay', 'iron', 'brick', 'steel']) {
+    if (!cost[k]) continue;
+    parts.push('<span class="cc">' + goodIcon(k) + cost[k] + '</span>');
+  }
+  return parts.length ? parts.join('') : '<span class="none">免费</span>';
+}
+function gainsText(gains) {
+  if (!gains) return '';
+  const parts = [];
+  for (const k of GOOD_KEYS) if (gains[k]) parts.push(goodName(k) + '×' + gains[k]);
+  if (gains.francs) parts.push('法郎 +' + gains.francs);
+  return parts.join('、');
+}
+function tokensText(tokens) {
+  return (tokens || []).map((t) => (t.key === 'francs' ? '法郎' : goodName(t.key)) + '×' + t.n).join('、');
+}
+function buyCost(def) {
+  if (!def) return 0;
+  return def.buyCost === undefined || def.buyCost === null ? def.value : def.buyCost;
+}
+function roundFoodNow() {
+  const arr = ROUND_FOOD_SCHEDULE[state.playerCount] || ROUND_FOOD_SCHEDULE[2];
+  return arr[Math.min(state.round, arr.length) - 1] || 0;
+}
+function shipFoodOfPlayer(p) {
+  return p.ships.reduce((sum, s) => sum + (SHIP_TYPES[s.type] ? SHIP_TYPES[s.type].food : 0), 0);
+}
+function marketShip(type) {
+  const intro = state.shipMarket.introduced[type] || 0;
+  const bought = state.shipMarket.purchased[type] || 0;
+  if (bought >= intro) return null;
+  return { type, value: SHIP_TYPES[type].values[bought] };
+}
+function locationOf(id) {
+  const owner = state.owner[id];
+  if (owner === -1) return 'town';
+  if (owner !== undefined && owner >= 0) return 'owned';
+  if (state.proposals.includes(id)) return 'proposal';
+  return 'deck';
+}
+function locationLabel(id) {
+  const loc = locationOf(id);
+  const owner = state.owner[id];
+  if (loc === 'town') return '城镇';
+  if (loc === 'owned') return owner === HUMAN ? '你的' : 'AI 的';
+  if (loc === 'proposal') return '提案区';
+  return '未出现';
+}
+function isHumanTurn() {
+  return !!state && state.phase === 'turn' && state.currentPlayer === HUMAN && !demoMode;
+}
+function isFeeding() { return !!state && state.phase === 'feeding'; }
+
+/* ================================================================== */
+/* 状态                                                                */
+/* ================================================================== */
+
+let state = null;
+let seed = DEFAULT_SEED;
+let legal = [];
+let legalOffers = new Map();
+let legalBuildings = new Map();
+let legalBuildTargets = new Map();
+let legalBuyBuilding = new Map();
+let legalBuyShip = new Map();
+let legalSellBuilding = new Map();
+let legalSellShip = new Map();
+let legalRepay = false;
+let legalPass = null;
+let aiTimer = 0;
+let demoMode = false;
+let sheetKind = null;
+let sheetPayload = null;
+let sheetActions = [];
+let marketSize = 0;
+let marketPick = new Set();
+let toastTimer = 0;
+let flashKeys = new Set();
+let lastSupplyKey = '';
+let lastRoundSeen = 1;
+
+/* ================================================================== */
+/* 合法动作索引                                                        */
+/* ================================================================== */
+
+function computeLegal() {
+  legal = [];
+  legalOffers = new Map();
+  legalBuildings = new Map();
+  legalBuildTargets = new Map();
+  legalBuyBuilding = new Map();
+  legalBuyShip = new Map();
+  legalSellBuilding = new Map();
+  legalSellShip = new Map();
+  legalRepay = false;
+  legalPass = null;
+  if (!state || state.phase !== 'turn' || state.currentPlayer !== HUMAN || demoMode) return;
+  legal = legalActions(state);
+  for (const a of legal) {
+    if (a.type === 'takeOffer') legalOffers.set(a.space, a);
+    else if (a.type === 'useBuilding') {
+      if (!legalBuildings.has(a.building)) legalBuildings.set(a.building, []);
+      legalBuildings.get(a.building).push(a);
+      const targets = a.params && a.params.targets;
+      if (targets) {
+        for (const t of targets) {
+          if (!legalBuildTargets.has(t)) legalBuildTargets.set(t, []);
+          legalBuildTargets.get(t).push(a);
+        }
+      }
+    } else if (a.type === 'buyBuilding') legalBuyBuilding.set(a.building, a);
+    else if (a.type === 'buyShip') legalBuyShip.set(a.shipType, a);
+    else if (a.type === 'sellBuilding') legalSellBuilding.set(a.building, a);
+    else if (a.type === 'sellShip') legalSellShip.set(a.index, a);
+    else if (a.type === 'repayLoan') legalRepay = true;
+    else if (a.type === 'pass') legalPass = a;
+  }
+}
+
+/* ================================================================== */
+/* 渲染                                                                */
+/* ================================================================== */
+
+function render() {
+  if (!state) return;
+  computeLegal();
+  renderHeader();
+  renderStatus();
+  renderResources();
+  renderDock();
+  renderOffers();
+  renderProposals();
+  renderBoard();
+  renderPlayers();
+  renderShips();
+  renderLog();
+  flashKeys = new Set();
+  announceHumanSupply();
+}
+
+function renderHeader() {
+  byId('roundNum').textContent = String(state.round);
+  byId('maxRound').textContent = String(state.maxRound);
+  byId('turnNum').textContent = String(state.turnInRound);
+  byId('phaseName').textContent = state.phase === 'feeding' ? '收获·喂养' : (state.phase === 'gameover' ? '终局' : '行动');
+}
+
+function renderStatus() {
+  const hint = byId('hint');
+  const dot = byId('turnDot');
+  const chips = byId('statusChips');
+  let text = '';
+  let cls = '';
+  if (state.phase === 'gameover') {
+    const sc = score(state);
+    const win = sc.winners.includes(HUMAN);
+    text = sc.winners.length > 1 ? '对局结束：并列。' : (win ? '对局结束：你获胜。' : '对局结束：AI 港商获胜。');
+    cls = 'good';
+    dot.className = 'turn-dot wait';
+  } else if (demoMode) {
+    text = '托管演示中：双方按贪心策略自动对局。';
+    dot.className = 'turn-dot wait pulse';
+  } else if (state.phase === 'feeding') {
+    const cur = currentPlayer(state);
+    text = cur === HUMAN ? '收获与喂养：轮到你支付本轮食物。' : '收获与喂养：AI 港商正在结算。';
+    cls = cur === HUMAN ? 'warn' : '';
+    dot.className = 'turn-dot ' + (cur === HUMAN ? '' : 'ai pulse');
+  } else if (state.currentPlayer === AI) {
+    text = 'AI 港商正在安排工人与采购…';
+    dot.className = 'turn-dot ai pulse';
+  } else {
+    const n = legalOffers.size + legalBuildings.size + legalBuildTargets.size;
+    text = '你的主行动：点击 Offer 取货，或点击高亮建筑使用。';
+    if (legalPass) text = '当前没有可执行的主行动，可以跳过。';
+    dot.className = 'turn-dot';
+    cls = legalPass ? 'warn' : '';
+  }
+  hint.textContent = text;
+  hint.className = cls;
+
+  const parts = [];
+  parts.push('<span class="chip gold">先手 ' + whoName(state.firstPlayer) + '</span>');
+  parts.push('<span class="chip gold">预估 ' + scorePlayer(state, HUMAN).total + ' 分</span>');
+  if (state.phase !== 'gameover') {
+    parts.push('<span class="chip">本轮需求 <b>' + (state.phase === 'feeding' ? roundFoodNow() : feedObligation(state, HUMAN) + '') + '</b></span>');
+    if (shipFoodOfPlayer(state.players[HUMAN]) > 0) parts.push('<span class="chip">你的船只减免 ' + shipFoodOfPlayer(state.players[HUMAN]) + '</span>');
+  }
+  if (state.players[HUMAN].loans > 0) parts.push('<span class="chip bad">贷款 ' + state.players[HUMAN].loans + ' 笔 · −' + (state.players[HUMAN].loans * 7) + '₣</span>');
+  parts.push('<span class="chip">供给 ' + Math.min(state.supplyIndex, TURNS_PER_ROUND) + '/7</span>');
+  chips.innerHTML = parts.join('');
+}
+
+function renderResources() {
+  const p = state.players[HUMAN];
+  let html = '';
+  for (const g of GOOD_META) {
+    const n = p.goods[g.key] || 0;
+    html += '<div class="res-tile' + (n ? '' : ' zero') + (flashKeys.has(g.key) ? ' flash' : '') + '" title="' + esc(g.name + ' ' + n) + '">' +
+      goodIcon(g.key) + '<span class="res-val">' + n + '</span><span class="res-name">' + esc(g.name) + '</span></div>';
+  }
+  html += '<span class="res-div" aria-hidden="true"></span>';
+  html += '<div class="res-tile coin' + (flashKeys.has('francs') ? ' flash' : '') + '" title="法郎 ' + p.francs + '">' +
+    goodIcon('francs') + '<span class="res-val">' + p.francs + '</span><span class="res-name">法郎</span></div>';
+  html += '<div class="res-tile loan' + (flashKeys.has('loans') ? ' flash' : '') + '" title="贷款 ' + p.loans + ' 笔">' +
+    goodIcon('loan') + '<span class="res-val">' + p.loans + '</span><span class="res-name">贷款</span></div>';
+  byId('resStrip').innerHTML = html;
+}
+
+function renderDock() {
+  const dock = byId('dock');
+  let msg = '';
+  let sub = '';
+  let actions = '';
+  if (state.phase === 'gameover') {
+    msg = '<b>终局</b> · 第 ' + state.maxRound + ' 回合结束';
+    sub = '查看最终财富榜与建筑附加价值。';
+    actions = '<button class="btn primary" data-act="showResult" type="button">查看结算</button>';
+  } else if (demoMode) {
+    msg = '<b class="pulse">托管演示中</b> · 双方自动行动';
+    sub = '演示会连续执行，终局后弹出结算。';
+    actions = '<button class="btn" data-act="stopDemo" type="button">停止演示</button>';
+  } else if (state.phase === 'feeding') {
+    const cur = currentPlayer(state);
+    msg = '<b>收获 · 喂养</b> · 第 ' + state.round + ' 回合';
+    sub = '本轮需求 ' + roundFoodNow() + '；你的船只减免 ' + shipFoodOfPlayer(state.players[HUMAN]) + '。';
+    actions = cur === HUMAN
+      ? '<button class="btn primary" data-act="feed" type="button">支付食物 · 需求 ' + feedObligation(state, HUMAN) + '</button>'
+      : '<button class="btn" type="button" disabled>AI 结算中…</button>';
+  } else if (state.currentPlayer === AI) {
+    msg = '<b>AI 港商行动中</b> · 正在选择 Offer / 建筑 / 附加行动';
+    sub = '你可以先查看港口日志与建筑效果。';
+    actions = '<button class="btn" type="button" disabled>等待 AI</button>';
+  } else {
+    const optCount = legalBuyBuilding.size + legalBuyShip.size + legalSellBuilding.size + legalSellShip.size + (legalRepay ? 1 : 0);
+    msg = '<b>你的主行动</b> · 取 Offer 或使用建筑';
+    sub = '附加行动不结束回合；使用建筑会放置工人并结束本回合。';
+    actions = '<button class="btn" data-act="optional" type="button">附加行动' + (optCount ? ' · ' + optCount : '') + '</button>';
+    if (legalPass) actions += '<button class="btn primary" data-act="pass" type="button">跳过主行动</button>';
+  }
+  dock.innerHTML = '<div class="dock-msg">' + msg + '<span class="sub">' + sub + '</span></div>' +
+    '<div class="dock-actions">' + actions + '</div>';
+}
+
+function renderOffers() {
+  let html = '';
+  for (const space of OFFER_SPACES) {
+    const count = state.offers[space] || 0;
+    const can = legalOffers.has(space);
+    const icon = space === 'francs' ? 'francs' : space;
+    html += '<button class="offer' + (can ? ' can-take' : '') + (count ? '' : ' empty') + '" type="button" data-offer="' + space + '" ' +
+      'aria-label="' + esc(offerName(space) + ' Offer，' + count + ' 个' + (can ? '，可取走' : '')) + '">' +
+      goodIcon(icon) + '<span class="cnt">' + count + '</span><span class="lbl">' + esc(offerName(space)) + '</span></button>';
+  }
+  byId('offers').innerHTML = html;
+  let pips = '';
+  for (let i = 0; i < TURNS_PER_ROUND; i += 1) {
+    const tile = state.supplyTiles[i];
+    const on = i < state.supplyIndex;
+    const interest = tile && tile.interest;
+    pips += '<i class="' + (on ? 'on' : '') + (interest ? ' int' : '') + '" title="补给 ' + (i + 1) + (interest ? ' · 利息' : '') + '"></i>';
+  }
+  byId('supplyTrack').innerHTML = pips;
+}
+
+function renderProposals() {
+  const host = byId('proposalRail');
+  if (!state.proposals.length) {
+    host.innerHTML = '<div class="pempty">提案牌堆已空 · 城镇不再出现新建筑</div>';
+    return;
+  }
+  host.innerHTML = state.proposals.map((id) => {
+    const def = BUILDINGS[id];
+    if (!def) return '';
+    const canBuild = legalBuildTargets.has(id);
+    const canBuy = legalBuyBuilding.has(id);
+    return '<button class="pcard' + (canBuild ? ' can-build' : '') + (canBuy ? ' can-buy' : '') + '" type="button" data-building="' + id + '" ' +
+      'aria-label="' + esc(def.name + '，' + plainCost(def.cost) + '，价值 ' + def.value) + '">' +
+      facade(id) +
+      '<span style="min-width:0"><b><span>' + esc(def.name) + '</span><em>' + def.value + '₣</em></b><small>' + esc(compactCost(def.cost)) + '</small>' +
+      '<span class="pmeta">' + (canBuild ? '<span class="tag build">可建</span>' : '') +
+      (canBuy ? '<span class="tag buy">可买 ' + buyCost(def) + '₣</span>' : '') + '</span></span>' +
+      '<span class="pribbon">提案</span></button>';
+  }).join('');
+}
+
+function renderBoard() {
+  const p = state.players[HUMAN];
+  const ids = BUILDING_IDS.slice().sort((a, b) => {
+    const sa = BUILDINGS[a] ? BUILDINGS[a].sort : 0;
+    const sb = BUILDINGS[b] ? BUILDINGS[b].sort : 0;
+    return sa - sb || (BUILDING_ORDER.get(a) || 0) - (BUILDING_ORDER.get(b) || 0);
+  });
+  byId('bgrid').innerHTML = ids.map((id, i) => {
+    const def = BUILDINGS[id];
+    if (!def) return '';
+    const loc = locationOf(id);
+    const owner = state.owner[id];
+    const occupiedBy = state.occupancy[id];
+    const occupied = occupiedBy !== undefined;
+    const usable = legalBuildings.has(id);
+    const buildable = legalBuildTargets.has(id);
+    const buyable = legalBuyBuilding.has(id);
+    const price = buyCost(def);
+    const canEverBuy = !def.noBuy && (loc === 'proposal' || loc === 'town');
+    const poor = canEverBuy && isHumanTurn() && !buyable && p.francs < price;
+    const entry = def.entry || 0;
+    const youOwn = owner === HUMAN;
+    const tags = [];
+    tags.push('<span class="tag ' + (loc === 'deck' ? 'deck' : (youOwn ? 'owner' : '')) + '">' + locationLabel(id) + '</span>');
+    if (loc !== 'deck' && entry > 0 && !youOwn) tags.push('<span class="tag">门票 ' + entry + '₣</span>');
+    if (youOwn) tags.push('<span class="tag owner">免门票</span>');
+    if (occupied) tags.push('<span class="tag occ">已占用 · ' + whoName(occupiedBy) + '</span>');
+    if (usable) tags.push('<span class="tag usable">可用</span>');
+    if (buildable) tags.push('<span class="tag build">可建</span>');
+    if (buyable) tags.push('<span class="tag buy">可买 ' + price + '₣</span>');
+    else if (poor) tags.push('<span class="tag poor">需 ' + price + '₣</span>');
+    else if (canEverBuy && !isHumanTurn() && !def.noBuy) tags.push('<span class="tag">价 ' + price + '₣</span>');
+    const classes = 'bcard cat-' + def.category +
+      (loc === 'deck' ? ' is-deck' : '') + (occupied ? ' is-occupied' : '') +
+      (usable ? ' is-usable slot-active' : '') + (buildable ? ' can-build' : '') + (buyable ? ' can-buy' : '');
+    const aria = [def.name, CAT_NAME[def.category], locationLabel(id), plainCost(def.cost),
+      '价值' + def.value, entry ? '门票' + entry : '', occupied ? '已占用' : '', usable ? '可用' : '', buildable ? '可建造' : '', buyable ? '可购买' : '']
+      .filter(Boolean).join('，');
+    return '<button class="' + classes + '" type="button" data-building="' + id + '" aria-label="' + esc(aria) + '">' +
+      '<span class="b-slot">' + String(i + 1).padStart(2, '0') + '</span>' +
+      facade(id) +
+      '<span class="b-main">' +
+        '<span class="b-name"><b>' + esc(def.name) + '</b><span class="v">' + def.value + '₣</span></span>' +
+        '<span class="b-sub"><span>' + CAT_NAME[def.category] + '</span><span>' + locationLabel(id) + '</span></span>' +
+        '<span class="b-cost">' + costHtml(def.cost) + '</span>' +
+      '</span>' +
+      '<span class="b-text">' + esc(def.text) + '</span>' +
+      '<span class="b-tags">' + tags.join('') + '</span>' +
+      (occupied ? '<span class="b-worker" aria-hidden="true">' + workerIcon() + '</span>' : '') +
+      '</button>';
+  }).join('');
+}
+
+function renderPlayers() {
+  const cur = currentPlayer(state);
+  const rows = state.players.map((p, i) => {
+    const s = scorePlayer(state, i);
+    const active = cur === i && state.phase !== 'gameover';
+    const need = feedObligation(state, i);
+    const shipFood = shipFoodOfPlayer(p);
+    const goodsList = GOOD_META.filter((g) => (p.goods[g.key] || 0) > 0);
+    const shown = goodsList.slice(0, 8);
+    const rest = goodsList.length - shown.length;
+    const goodsHtml = (shown.map((g) =>
+      '<span class="rr" title="' + esc(g.name) + '">' + goodIcon(g.key) + '<b>' + p.goods[g.key] + '</b></span>').join('') +
+      (rest > 0 ? '<span class="rr">+' + rest + '</span>' : '')) || '<span class="rr">暂无货物</span>';
+    const bldgs = p.buildings.map((id) => '<span class="pc-bldg">' + esc(BUILDINGS[id] ? BUILDINGS[id].name : id) + '</span>').join('');
+    return '<div class="pc' + (i === AI ? ' ai' : '') + (active ? ' active' : '') + '">' +
+      '<div class="pc-head"><span class="pc-dot"></span><b class="pc-name">' + whoName(i) + '</b>' +
+      (state.firstPlayer === i ? '<span class="pc-tag">先手</span>' : '') +
+      (active ? '<span class="pc-tag teal">行动中</span>' : '') +
+      '<span class="pc-score">' + s.total + '<small>分</small></span></div>' +
+      '<div class="pc-stats"><span>现金 <b>' + p.francs + '</b>₣</span><span>货物 <b>' + s.goodsTokens + '</b></span>' +
+      '<span>建筑 <b>' + p.buildings.length + '</b></span><span>船 <b>' + p.ships.length + '</b></span>' +
+      '<span>贷款 <b>' + p.loans + '</b></span><span>喂养 <b>' + need + '</b></span></div>' +
+      '<div class="pc-res">' + goodsHtml + '</div>' +
+      (bldgs ? '<div class="pc-bldgs">' + bldgs + '</div>' : '') +
+      '<div class="pc-sub">预估：现金 ' + s.cash + ' · 建筑 ' + s.buildings + ' · 船 ' + s.ships +
+      ' · 附加 ' + s.bonuses + ' · 贷款 −' + s.loansPenalty + '（' + p.loans + ' 笔）' +
+      (shipFood ? ' · 船只减免 ' + shipFood : '') + '</div>' +
+      '</div>';
+  });
+  byId('playerPanels').innerHTML = rows.join('');
+}
+
+function renderShips() {
+  const p = state.players[HUMAN];
+  let html = '';
+  const market = SHIP_ORDER.map((type) => {
+    const ship = marketShip(type);
+    if (!ship) return '';
+    const price = ship.value + 4;
+    const can = legalBuyShip.has(type);
+    const def = SHIP_TYPES[type];
+    return '<button class="ship-card' + (can ? ' can-buy' : '') + '" type="button" data-ship-type="' + type + '" ' +
+      'aria-label="' + esc(def.name + '，价值 ' + ship.value + '，购买 ' + price + ' 法郎') + '">' +
+      shipIcon(type) +
+      '<span class="ship-name">' + def.name + '<em>' + ship.value + '₣</em></span>' +
+      '<span class="ship-meta">减免 ' + def.food + ' · 容量 ' + def.capacity + '</span>' +
+      '<span class="ship-price">购买 ' + price + '₣' + (can ? ' · 可买' : '') + '</span></button>';
+  }).join('');
+  html += '<div class="subhead">船市 · 可用船只</div><div class="ship-market">' + (market || '<div class="note">本回合没有新船。</div>') + '</div>';
+
+  html += '<div class="subhead">你的船只 · ' + p.ships.length + ' 艘 · 减免 ' + shipFoodOfPlayer(p) + '</div>';
+  if (!p.ships.length) {
+    html += '<div class="note">还没有船只。木船在船厂建造：2 木材 + 3 能量；也可在船市直接购买。</div>';
+  } else {
+    html += '<div class="my-ships">' + p.ships.map((s, idx) => {
+      const def = SHIP_TYPES[s.type];
+      return '<button class="myship" type="button" data-ship-index="' + idx + '" aria-label="' + esc(def.name + '，价值 ' + s.value + '，可出售') + '">' +
+        shipIcon(s.type) +
+        '<span><b>' + def.name + ' ' + s.value + '₣</b><small>减免 ' + def.food + ' · 容量 ' + def.capacity + '</small></span></button>';
+    }).join('') + '</div>';
+  }
+  const ai = state.players[AI];
+  if (ai.ships.length) html += '<div class="note">AI 港商有 ' + ai.ships.length + ' 艘船，喂养减免 ' + shipFoodOfPlayer(ai) + '。</div>';
+
+  html += '<div class="loan-box">' + goodIcon('loan') +
+    '<div class="loan-meta"><b>贷款 ' + p.loans + ' 笔 · 终局 −' + (p.loans * 7) + '₣</b>' +
+    '<span>每笔扣 7 分；归还 5₣/笔。利息板块触发时每位负债玩家付 1₣。</span></div>' +
+    (legalRepay ? '<button class="btn small" type="button" data-act="repay">归还 5₣</button>' : '') +
+    '</div>';
+  byId('shipPanel').innerHTML = html;
+  byId('shipHead').textContent = '船市 · 你的 ' + p.ships.length + ' 艘 · 贷款 ' + p.loans + ' 笔';
+}
+
+function eventText(ev) {
+  if (!ev) return '';
+  const who = whoName(ev.player);
+  switch (ev.kind) {
+    case 'supply':
+      return '第 ' + ev.round + ' 回合补给：' + esc(tokensText(ev.tokens)) + (ev.interest ? ' · 触发利息' : '');
+    case 'take-offer':
+      return '<b>' + who + '</b> 取走 Offer：' + esc(offerName(ev.space)) + ' ×' + ev.count;
+    case 'build':
+      return '<b>' + who + '</b> 建造 ' + esc(BUILDINGS[ev.building] ? BUILDINGS[ev.building].name : ev.building) +
+        (ev.via ? '（经 ' + esc(BUILDINGS[ev.via] ? BUILDINGS[ev.via].name : ev.via) + '）' : '');
+    case 'buy':
+      return '<b>' + who + '</b> 购买 ' + esc(BUILDINGS[ev.building] ? BUILDINGS[ev.building].name : ev.building) + ' · ' + ev.cost + '₣';
+    case 'buy-ship':
+      return '<b>' + who + '</b> 购买 ' + esc(shipName(ev.type)) + '（价值 ' + ev.value + '）· ' + ev.price + '₣';
+    case 'sell-ship':
+      return '<b>' + who + '</b> 出售 ' + esc(shipName(ev.type)) + ' · +' + ev.proceeds + '₣';
+    case 'sell-building':
+      return '<b>' + who + '</b> 出售 ' + esc(BUILDINGS[ev.building] ? BUILDINGS[ev.building].name : ev.building) + ' · +' + ev.proceeds + '₣';
+    case 'build-ship':
+      return '<b>' + who + '</b> 建造 ' + esc(shipName(ev.type)) + '（价值 ' + ev.value + '）';
+    case 'ship-arrival':
+      return '新船入港：' + esc(shipName(ev.type)) + ' · 价值 ' + ev.value;
+    case 'convert':
+      if (ev.goods) return '<b>' + who + '</b> 转换 ' + esc(gainsText(ev.goods.reduce ? ev.goods.reduce((m, k) => { m[k] = (m[k] || 0) + 1; return m; }, {}) : ev.goods)) + ' → ' + esc(goodName(ev.to) || ev.to);
+      return '<b>' + who + '</b> 转换 ' + esc(goodName(ev.from) || ev.from) + ' ×' + (ev.qty || 1) + ' → ' + esc(goodName(ev.to) || ev.to) +
+        (ev.subsidy ? ' · +' + ev.subsidy + '₣' : '');
+    case 'gain':
+      return '<b>' + who + '</b> 获得 ' + esc(gainsText(ev.gains));
+    case 'ship-goods':
+      return '<b>' + who + '</b> 航运 ' + ev.ships + ' 艘船，装货 ' + esc(gainsText(ev.gains)) + ' · +' + ev.francs + '₣';
+    case 'feed':
+      return '<b>' + who + '</b> 支付食物：需求 ' + ev.required + (ev.loansTaken ? ' · 借入 ' + ev.loansTaken + ' 笔贷款' : '') +
+        ' · 余额 ' + ev.francsAfter + '₣';
+    case 'loan':
+      return '<b>' + who + '</b> 借入贷款 ' + ev.loans + ' 笔' + (ev.total ? '（共 ' + ev.total + ' 笔）' : '') + (ev.reason === 'interest' ? ' · 用于付息' : ' · 喂养不足');
+    case 'interest':
+      return '<b>' + who + '</b> 支付利息 1₣';
+    case 'harvest':
+      return '<b>' + who + '</b> 收获：' + (ev.grain ? '谷物 +' + ev.grain : '') + (ev.grain && ev.cattle ? ' · ' : '') + (ev.cattle ? '牛 +' + ev.cattle : '');
+    case 'feeding-start':
+      return '第 ' + ev.round + ' 回合收获与喂养开始 · 需求 ' + ev.food;
+    case 'town-build':
+      return '城镇建造 ' + esc(BUILDINGS[ev.building] ? BUILDINGS[ev.building].name : ev.building);
+    case 'modernise':
+      return '<b>' + who + '</b> 船厂现代化（支付 1 砖）';
+    case 'loans-returned':
+      return '<b>' + who + '</b> 地方法院：贷款 ' + ev.before + ' → ' + ev.after;
+    case 'repay-loan':
+      return '<b>' + who + '</b> 归还贷款 · 余 ' + ev.loans + ' 笔';
+    case 'pass':
+      return '<b>' + who + '</b> 跳过主行动';
+    case 'turn-end':
+      return '<b>' + who + '</b> 结束行动（第 ' + ev.turn + '/7）';
+    case 'gameover':
+      return '第 ' + ev.round + ' 回合结束 · 对局终了';
+    default:
+      return esc(ev.kind || '');
+  }
+}
+
+function renderLog() {
+  const evs = state.events.slice(-90).reverse().slice(0, 22);
+  byId('log').innerHTML = evs.length
+    ? evs.map((ev) => '<li class="log-item"><span class="log-r">R' + (ev.round || state.round) + '</span><span class="log-t">' + eventText(ev) + '</span></li>').join('')
+    : '<li class="log-empty">还没有事件。供给阶段会在这里留下记录。</li>';
+}
+
+/* ================================================================== */
+/* 提示                                                                */
+/* ================================================================== */
+
+function clearToasts() {
+  byId('toasts').innerHTML = '';
+}
+function toast(html, cls) {
+  if (!html) return;
+  const host = byId('toasts');
+  const el = document.createElement('div');
+  el.className = 'toast' + (cls ? ' ' + cls : '');
+  el.innerHTML = html;
+  host.appendChild(el);
+  while (host.children.length > 3) host.removeChild(host.firstChild);
+  clearTimeout(toastTimer);
+  setTimeout(() => {
+    el.style.transition = 'opacity .22s ease, transform .22s ease';
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(4px)';
+    setTimeout(() => el.remove(), 240);
+  }, 2500);
+}
+
+/* ================================================================== */
+/* 提交动作 / AI / 演示                                                */
+/* ================================================================== */
+
+function snapshotPlayer(p) {
+  const goods = {};
+  for (const k of GOODS) goods[k] = p.goods[k] || 0;
+  return { francs: p.francs, loans: p.loans, goods };
+}
+function diffFlash(before, after) {
+  const set = new Set();
+  if (before.francs !== after.francs) set.add('francs');
+  if (before.loans !== after.loans) set.add('loans');
+  for (const k of GOODS) if ((before.goods[k] || 0) !== (after.goods[k] || 0)) set.add(k);
+  flashKeys = set;
+}
+function feeFor(id) {
+  const def = BUILDINGS[id];
+  if (!def) return 0;
+  const owner = state.owner[id];
+  if (owner === HUMAN) return 0;
+  return def.entry || 0;
+}
+function buildCostFor(targetId, mode) {
+  const def = BUILDINGS[targetId];
+  if (!def || !def.cost) return null;
+  const cost = Object.assign({}, def.cost);
+  if (mode === 'constructSawmill' && cost.wood) cost.wood -= 1;
+  return cost;
+}
+function describeActionToast(action) {
+  if (!action) return '';
+  switch (action.type) {
+    case 'takeOffer': return '取走 ' + esc(offerName(action.space)) + ' ×' + state.offers[action.space];
+    case 'useBuilding': {
+      const def = BUILDINGS[action.building];
+      return '使用 ' + esc(def ? def.name : action.building) + ' · ' + esc(describeUse(action));
+    }
+    case 'buyBuilding': return '购买 ' + esc(BUILDINGS[action.building] ? BUILDINGS[action.building].name : action.building);
+    case 'buyShip': return '购买 ' + esc(shipName(action.shipType));
+    case 'sellBuilding': return '出售 ' + esc(BUILDINGS[action.building] ? BUILDINGS[action.building].name : action.building);
+    case 'sellShip': return '出售船只';
+    case 'repayLoan': return '归还 1 笔贷款';
+    case 'feed': return '支付本轮食物';
+    case 'pass': return '跳过主行动';
+    default: return '行动完成';
+  }
+}
+function announceHumanSupply() {
+  if (!state || demoMode || state.phase !== 'turn' || state.currentPlayer !== HUMAN) return;
+  const ev = state.events.slice(-30).reverse().find((e) => e.kind === 'supply' && e.player === HUMAN);
+  if (!ev) return;
+  const key = ev.round + ':' + ev.turn;
+  if (key === lastSupplyKey) return;
+  lastSupplyKey = key;
+  toast('补给 · ' + esc(tokensText(ev.tokens)) + (ev.interest ? ' · <b>利息板块</b>' : ''), 'good');
+}
+
+function commit(action, opts = {}) {
+  if (!state || state.phase === 'gameover') return false;
+  const prevPhase = state.phase;
+  const actionText = describeActionToast(action);
+  const beforeHuman = snapshotPlayer(state.players[HUMAN]);
+  let next;
+  try {
+    next = applyAction(state, action);
+  } catch (e) {
+    toast('这个动作现在不可执行：' + esc(e.message), 'bad');
+    return false;
+  }
+  state = next;
+  diffFlash(beforeHuman, state.players[HUMAN]);
+  if (!opts.silent) toast(actionText, 'good');
+  closeSheet();
+
+  if (state.phase === 'gameover') {
+    hideHarvest();
+    render();
+    showResult();
+    return true;
+  }
+  if (state.phase === 'feeding') {
+    render();
+    if (!demoMode) showHarvest();
+    else hideHarvest();
+  } else {
+    hideHarvest();
+    render();
+    if (!opts.silent && prevPhase === 'feeding') toast('第 ' + state.round + ' 回合开始 · 先手 ' + whoName(state.firstPlayer), 'good');
+  }
+  if (!demoMode) scheduleAI();
+  return true;
+}
+
+function scheduleAI() {
+  clearTimeout(aiTimer);
+  if (!state || demoMode || state.phase === 'gameover') return;
+  const cur = currentPlayer(state);
+  if (state.phase === 'feeding') {
+    if (cur === AI) {
+      aiTimer = setTimeout(() => {
+        if (!state || demoMode || state.phase !== 'feeding' || currentPlayer(state) !== AI) return;
+        const acts = legalActions(state);
+        if (acts.length) commit(acts[0], { silent: true });
+      }, 900);
+    }
+    return;
+  }
+  if (cur === AI) {
+    aiTimer = setTimeout(() => {
+      if (!state || demoMode || state.phase !== 'turn' || state.currentPlayer !== AI) return;
+      const acts = legalActions(state);
+      if (!acts.length) return;
+      const action = chooseGreedyAction(state, acts) || acts[acts.length - 1];
+      commit(action, { silent: true });
+    }, 520);
+  }
+}
+
+function updateDemoBtn() {
+  const btn = byId('demoBtn');
+  btn.setAttribute('aria-pressed', demoMode ? 'true' : 'false');
+  btn.textContent = demoMode ? '停止演示' : '托管演示';
+}
+
+function startDemo() {
+  if (state && state.phase === 'gameover') {
+    newGame(((Number(seed) + 1) >>> 0) || DEFAULT_SEED, true);
+  }
+  demoMode = true;
+  closeSheet();
+  hideHarvest();
+  updateDemoBtn();
+  render();
+  toast('托管演示开始：双方自动行动', 'good');
+  clearTimeout(aiTimer);
+  aiTimer = setTimeout(demoTick, 120);
+}
+
+function stopDemo() {
+  demoMode = false;
+  clearTimeout(aiTimer);
+  updateDemoBtn();
+  render();
+  if (state && state.phase === 'feeding') showHarvest();
+  scheduleAI();
+}
+
+function demoTick() {
+  if (!demoMode) return;
+  if (!state || state.phase === 'gameover') {
+    demoMode = false;
+    updateDemoBtn();
+    render();
+    if (state) showResult();
+    return;
+  }
+  let action = null;
+  if (state.phase === 'feeding') {
+    const acts = legalActions(state);
+    action = acts[0] || null;
+  } else {
+    const acts = legalActions(state);
+    action = chooseGreedyAction(state, acts) || acts[acts.length - 1] || null;
+  }
+  if (!action) {
+    demoMode = false;
+    updateDemoBtn();
+    render();
+    return;
+  }
+  commit(action, { silent: true });
+  if (demoMode) aiTimer = setTimeout(demoTick, 72);
+}
+
+function doFeed() {
+  if (!state || state.phase !== 'feeding') return;
+  if (currentPlayer(state) !== HUMAN) {
+    toast('AI 港商正在结算，请稍候。', 'bad');
+    return;
+  }
+  commit({ type: 'feed', player: HUMAN });
+}
+
+/* ================================================================== */
+/* 动作描述                                                            */
+/* ================================================================== */
+
+function describeUse(action) {
+  const def = BUILDINGS[action.building];
+  if (!def) return '使用建筑';
+  const p = action.params || {};
+  switch (def.action) {
+    case 'construct1':
+    case 'construct2':
+    case 'constructSawmill':
+      return '建造 ' + (p.targets || []).map((id) => (BUILDINGS[id] ? BUILDINGS[id].name : id)).join(' + ');
+    case 'marketplace': return '集市取货：' + (p.goods || []).map(goodName).join('、');
+    case 'fishery': return '渔场产鱼';
+    case 'hardware': return '五金店取货';
+    case 'grocery': return '杂货市场取货';
+    case 'colliery': return '煤矿取煤';
+    case 'clayMound': return '粘土坑取粘土';
+    case 'artsCenter': return '艺术中心收租';
+    case 'blackMarket': return '黑市扫空 Offer';
+    case 'church': return '教堂换取面包与鱼';
+    case 'ironworks': return p.extra ? '铁厂额外产铁（共 4 铁）' : '铁厂产铁（3 铁）';
+    case 'charcoalKiln': return '烧炭 ' + p.qty + ' 木材 → 木炭';
+    case 'mill': return '磨粉 ' + p.qty + ' 谷物 → 面粉';
+    case 'brickworks': return '烧砖 ' + p.qty + ' 粘土 → 砖';
+    case 'smokehouse': return '熏鱼 ' + p.qty + ' 条';
+    case 'bakehouse': return (p.source === 'flour' ? '面粉' : '谷物') + ' ×' + p.qty + ' → 面包';
+    case 'abattoir': return '屠宰 ' + p.qty + ' 头牛 → 肉';
+    case 'tannery': return '制革 ' + p.qty + ' 张兽皮 → 皮革';
+    case 'cokery': return '炼焦 ' + p.qty + ' 煤 → 焦炭';
+    case 'steelMill': return '炼钢 ' + p.qty + ' 铁 → 钢';
+    case 'blacksmith': return '锻造 ' + p.qty + ' 铁 → 钢';
+    case 'joinery': return '木工 ' + p.qty + ' 木材 → 法郎';
+    case 'business': return p.mode === 'steel' ? '交易所：4 货物 → 钢' : '交易所：1 货物 → ' + goodName(p.good);
+    case 'shipping': return '航运 ' + p.ships + ' 艘船自动装货';
+    case 'wharf': return '船厂建造 ' + shipName(p.shipType);
+    case 'localCourt': return '地方法院归还贷款';
+    case 'bridge': return '大桥出售全部可卖货物';
+    default: return def.text;
+  }
+}
+
+function useDetail(action) {
+  const def = BUILDINGS[action.building];
+  if (!def) return '';
+  const p = action.params || {};
+  const fee = feeFor(action.building);
+  const feeTxt = fee > 0 ? '门票 ' + fee + '₣ · ' : '';
+  switch (def.action) {
+    case 'construct1':
+    case 'construct2':
+    case 'constructSawmill': {
+      const parts = (p.targets || []).map((id) => {
+        const cost = buildCostFor(id, def.action);
+        return (BUILDINGS[id] ? BUILDINGS[id].name : id) + '（' + plainCost(cost) + '）';
+      });
+      return feeTxt + parts.join(' + ') + (def.action === 'constructSawmill' ? ' · 锯木厂少付 1 木材' : '') + ' · 经 ' + def.name;
+    }
+    case 'marketplace':
+      return feeTxt + '需选 ' + (p.goods || []).length + ' 种不同标准货物 · 每栋自有工匠建筑 +1 种';
+    case 'brickworks': return feeTxt + '能量 ' + Math.ceil(p.qty / 2) + ' · 补助 ' + Math.floor(p.qty / 2) + '₣';
+    case 'smokehouse': return feeTxt + '能量 1 · 补助 ' + Math.floor(p.qty / 2) + '₣';
+    case 'bakehouse': return feeTxt + '能量 ' + Math.ceil(p.qty / 2) + ' · 得面包 ' + (p.source === 'flour' ? p.qty * 2 : p.qty) + ' 个';
+    case 'abattoir': return feeTxt + '得肉 ' + p.qty + ' · 兽皮 +' + Math.floor(p.qty / 2);
+    case 'tannery': return feeTxt + '补助 ' + p.qty + '₣';
+    case 'cokery': return feeTxt + '补助 ' + p.qty + '₣';
+    case 'steelMill': return feeTxt + '能量 ' + (p.qty * 5);
+    case 'blacksmith': return feeTxt + '能量 ' + (p.qty * 6);
+    case 'joinery': return feeTxt + '得 ' + (4 + p.qty) + '₣';
+    case 'shipping': {
+      const caps = state.players[HUMAN].ships
+        .filter((s) => SHIP_TYPES[s.type].capacity > 0)
+        .slice(0, p.ships)
+        .reduce((sum, s) => sum + SHIP_TYPES[s.type].capacity, 0);
+      return feeTxt + '每艘 3 能量 · 容量 ' + caps + ' · 按货物价值自动装货';
+    }
+    case 'wharf':
+      return feeTxt + '材料 ' + plainCost(SHIP_TYPES[p.shipType].cost) + ' + 3 能量' +
+        (p.shipType !== 'wood' && !state.wharfModernized[action.building] ? ' · 首艘非木船需 1 砖现代化' : '');
+    case 'business':
+      return feeTxt + (p.mode === 'steel' ? '自动选价值最低的 4 个货物' : '自动选价值最低的 1 个货物');
+    case 'bridge': return feeTxt + '升级货物 1₣/个 · 标准货物 3 个 1₣';
+    case 'localCourt': return feeTxt + '免费归还；恰好 2 笔时再得 2₣';
+    case 'church': return feeTxt + '需 5 面包 + 2 鱼 · 净得 +3 面包 +1 鱼';
+    case 'ironworks': return feeTxt + (p.extra ? '额外支付 6 能量' : '无需额外能量');
+    default: return feeTxt + def.text;
+  }
+}
+
+/* ================================================================== */
+/* 弹层                                                                */
+/* ================================================================== */
+
+function showSheet(kicker, title, sub, body) {
+  clearToasts();
+  byId('sheetKicker').textContent = kicker;
+  byId('sheetTitle').innerHTML = title;
+  byId('sheetSub').innerHTML = sub || '';
+  byId('sheetBody').innerHTML = body;
+  byId('sheetOverlay').hidden = false;
+}
+function closeSheet() {
+  byId('sheetOverlay').hidden = true;
+  sheetKind = null;
+  sheetPayload = null;
+  sheetActions = [];
+  marketSize = 0;
+  marketPick = new Set();
+}
+function artSvg(id) {
+  const art = ART[id] || CAT_ART[(BUILDINGS[id] && BUILDINGS[id].category) || 'C'] || 'timber';
+  return sym('f-' + art, 'facade-svg', '0 0 96 64', 96, 64);
+}
+function optionButton(idx, label, detail, go, cls) {
+  return '<button class="opt' + (cls ? ' ' + cls : '') + '" type="button" data-opt="' + idx + '">' +
+    '<span class="opt-main"><b>' + label + '</b>' + (detail ? '<small>' + detail + '</small>' : '') + '</span>' +
+    '<span class="opt-go">' + (go || '执行') + '</span></button>';
+}
+function noteBox(html) { return '<div class="note">' + html + '</div>'; }
+
+function openOfferSheet(space) {
+  sheetKind = 'offer';
+  sheetPayload = space;
+  sheetActions = [];
+  const count = state.offers[space] || 0;
+  const action = legalOffers.get(space);
+  const icon = space === 'francs' ? 'francs' : space;
+  let body = '<div class="sheet-hero"><div class="hero-art" style="display:flex;align-items:center;justify-content:center">' +
+    goodIcon(icon, 'gi') + '</div><div class="hero-stats">' +
+    '<div class="stat"><span>空间</span><b>' + esc(offerName(space)) + '</b></div>' +
+    '<div class="stat"><span>累计 token</span><b>' + count + ' 个</b></div>' +
+    '<div class="stat"><span>动作类型</span><b>主行动</b></div>' +
+    '<div class="stat"><span>后果</span><b>取走后结束回合</b></div></div></div>';
+  body += '<div class="effect-box"><b>取 Offer</b>取走该空间全部 ' + count + ' 个' + esc(offerName(space)) +
+    '。法郎直接加入现金，其余加入货物。取 Offer 后本回合主行动结束，工人不放置。</div>';
+  if (action) {
+    sheetActions.push(action);
+    body += '<div class="sheet-section"><h3>执行 <span>主行动</span></h3>' +
+      optionButton(0, '取走 ' + count + ' 个' + esc(offerName(space)), '本回合主行动将结束', '取走', 'buy') + '</div>';
+  } else {
+    body += noteBox('该空间目前不可取：可能是空空间，或还没有轮到你行动。');
+  }
+  showSheet('Offer 空间', esc(offerName(space)) + ' · Offer', '供给阶段把 token 放到对应空间；主行动可以把它们整堆取走。', body);
+}
+
+function marketPickerHtml(size) {
+  return '<div class="goods-picker" id="marketPicker">' +
+    STANDARD_GOODS.map((k) =>
+      '<button class="pick" type="button" data-pick="' + k + '" aria-pressed="false">' +
+      goodIcon(k) + '<span>' + GOOD_SHORT[k] + '</span></button>').join('') +
+    '</div><div class="pick-foot"><span id="marketCount">已选 0/' + size + '</span>' +
+    '<button class="btn primary" type="button" id="marketConfirm" disabled>取货并结束行动</button></div>';
+}
+
+function openBuildingSheet(id) {
+  const def = BUILDINGS[id];
+  if (!def) return;
+  sheetKind = 'building';
+  sheetPayload = id;
+  sheetActions = [];
+  marketSize = 0;
+  marketPick = new Set();
+  const loc = locationOf(id);
+  const owner = state.owner[id];
+  const occupiedBy = state.occupancy[id];
+  const acts = isHumanTurn() ? (legalBuildings.get(id) || []) : [];
+  const buildActs = isHumanTurn() ? (legalBuildTargets.get(id) || []) : [];
+  const buyAct = isHumanTurn() ? legalBuyBuilding.get(id) : null;
+  const sellAct = isHumanTurn() ? legalSellBuilding.get(id) : null;
+  const price = buyCost(def);
+  let body = '<div class="sheet-hero"><div class="hero-art">' + artSvg(id) + '</div><div class="hero-stats">' +
+    '<div class="stat"><span>类型</span><b>' + CAT_NAME[def.category] + '</b></div>' +
+    '<div class="stat"><span>价值</span><b>' + def.value + '₣</b></div>' +
+    '<div class="stat"><span>建造费用</span><b>' + plainCost(def.cost) + '</b></div>' +
+    '<div class="stat"><span>门票</span><b>' + (def.entry || 0) + '₣</b></div>' +
+    '<div class="stat"><span>归属</span><b>' + locationLabel(id) + (owner >= 0 && owner !== undefined ? ' · ' + whoName(owner) : '') + '</b></div>' +
+    '<div class="stat"><span>购买价</span><b>' + (def.noBuy ? '不可购买' : price + '₣') + '</b></div>' +
+    '</div></div>';
+  body += '<div class="effect-box"><b>行动效果</b>' + esc(def.text) + '</div>';
+
+  if (def.action && loc !== 'proposal' && loc !== 'deck') {
+    body += '<div class="sheet-section"><h3>使用建筑 <span>主行动 · 放置工人 · 结束回合</span></h3>';
+    if (!isHumanTurn()) {
+      body += noteBox(demoMode ? '托管演示中，暂不接受手动操作。' : (state.phase === 'feeding' ? '正在收获与喂养，先把食物付清。' : '现在是 AI 港商的回合。'));
+    } else if (occupiedBy !== undefined) {
+      body += noteBox('这栋建筑上已经有 <b>' + whoName(occupiedBy) + '</b> 的工人，本回合不能再进入。');
+    } else if (acts.length) {
+      if (def.action === 'marketplace') {
+        marketSize = acts[0].params.goods.length;
+        body += '<div style="font-size:12px;color:var(--muted);margin-bottom:4px">选择 ' + marketSize + ' 种不同的标准货物（每栋自有工匠建筑 +1 种）。</div>' + marketPickerHtml(marketSize);
+      } else {
+        for (const a of acts) {
+          sheetActions.push(a);
+          body += optionButton(sheetActions.length - 1, esc(describeUse(a)), esc(useDetail(a)), '执行');
+        }
+      }
+    } else {
+      body += noteBox('当前无法使用：可能是门票现金不足、没有合法参数，或该建筑本回合不可进入。');
+    }
+    body += '</div>';
+  }
+
+  if (loc === 'proposal') {
+    body += '<div class="sheet-section"><h3>建造 <span>只能建造提案区顶部</span></h3>';
+    if (buildActs.length) {
+      for (const a of buildActs) {
+        sheetActions.push(a);
+        body += optionButton(sheetActions.length - 1, esc(describeUse(a)), esc(useDetail(a)), '建造', 'buy');
+      }
+    } else {
+      body += noteBox('没有可用建造途径：需要一座未占用的建造公司 / 建筑公司，现金够门票，且材料足够。');
+    }
+    body += '</div>';
+  }
+
+  if ((loc === 'proposal' || loc === 'town') && !def.noBuy) {
+    body += '<div class="sheet-section"><h3>购买 <span>附加行动 · 不结束回合</span></h3>';
+    if (buyAct) {
+      sheetActions.push(buyAct);
+      body += optionButton(sheetActions.length - 1, '购买 ' + esc(def.name), price + ' 法郎 · 立即归你所有', '购买', 'buy');
+    } else if (!isHumanTurn()) {
+      body += noteBox('买价 ' + price + '₣。轮到你时可在主行动前购买。');
+    } else {
+      body += noteBox('现金不足：购买需要 ' + price + ' 法郎（当前 ' + state.players[HUMAN].francs + '₣）。');
+    }
+    body += '</div>';
+  }
+
+  if (owner === HUMAN) {
+    body += '<div class="sheet-section"><h3>出售 <span>附加行动 · 半价</span></h3>';
+    if (sellAct) {
+      sheetActions.push(sellAct);
+      body += optionButton(sheetActions.length - 1, '出售 ' + esc(def.name), '得 ' + Math.floor(def.value / 2) + ' 法郎 · 建筑回到城镇', '出售', 'sell');
+    } else {
+      body += noteBox('当前不能出售' + (isHumanTurn() ? '。' : '：轮到你时可在主行动前出售。'));
+    }
+    body += '</div>';
+  }
+
+  body += noteBox('建造会消耗提案区顶部的一张卡；建造公司 / 建筑公司需要未被占用。使用建筑的门票付给所有者或城镇。');
+  showSheet('建筑详情', esc(def.name), CAT_NAME[def.category] + ' · ' + locationLabel(id) + (def.extension ? ' · 一期扩展' : ''), body);
+}
+
+function openShipSheet(type) {
+  const ship = marketShip(type);
+  if (!ship) return;
+  const def = SHIP_TYPES[type];
+  sheetKind = 'ship';
+  sheetPayload = { type };
+  sheetActions = [];
+  const price = ship.value + 4;
+  const buy = isHumanTurn() ? legalBuyShip.get(type) : null;
+  let body = '<div class="sheet-hero"><div class="hero-art" style="padding:8px">' + shipIcon(type) + '</div><div class="hero-stats">' +
+    '<div class="stat"><span>类型</span><b>' + def.name + '</b></div>' +
+    '<div class="stat"><span>卡面价值</span><b>' + ship.value + '₣</b></div>' +
+    '<div class="stat"><span>喂养减免</span><b>' + def.food + '</b></div>' +
+    '<div class="stat"><span>运货容量</span><b>' + def.capacity + '</b></div>' +
+    '<div class="stat"><span>购买价</span><b>' + price + '₣</b></div>' +
+    '<div class="stat"><span>船厂造价</span><b>' + plainCost(def.cost) + ' + 3 能量</b></div></div></div>';
+  body += '<div class="effect-box"><b>船只作用</b>每回合喂养时减少 ' + def.food + ' 点食物需求；终局按卡面价值计分。' +
+    (def.capacity ? '航运公司可以按容量装货换法郎。' : '豪华邮轮不运货，但减免最高。') + '</div>';
+  body += '<div class="sheet-section"><h3>购买 <span>附加行动 · 不结束回合</span></h3>';
+  if (buy) {
+    sheetActions.push(buy);
+    body += optionButton(0, '购买 ' + def.name, price + ' 法郎 · 立即加入船队', '购买', 'buy');
+  } else if (!isHumanTurn()) {
+    body += noteBox('买价 ' + price + '₣。轮到你时可购买。');
+  } else {
+    body += noteBox('现金不足：购买需要 ' + price + ' 法郎（当前 ' + state.players[HUMAN].francs + '₣）。');
+  }
+  body += '</div>' + noteBox('也可以使用船厂建造这艘船：支付 ' + plainCost(def.cost) + ' 与 3 能量。首艘非木船还需要在船厂支付 1 砖现代化。');
+  showSheet('船市', def.name, '价值 ' + ship.value + '₣ · 减免 ' + def.food + ' · 容量 ' + def.capacity, body);
+}
+
+function openOwnedShipSheet(index) {
+  const p = state.players[HUMAN];
+  const ship = p.ships[index];
+  if (!ship) return;
+  const def = SHIP_TYPES[ship.type];
+  sheetKind = 'ownedShip';
+  sheetPayload = { index };
+  sheetActions = [];
+  const sell = isHumanTurn() ? legalSellShip.get(index) : null;
+  let body = '<div class="sheet-hero"><div class="hero-art" style="padding:8px">' + shipIcon(ship.type) + '</div><div class="hero-stats">' +
+    '<div class="stat"><span>船只</span><b>' + def.name + '</b></div>' +
+    '<div class="stat"><span>卡面价值</span><b>' + ship.value + '₣</b></div>' +
+    '<div class="stat"><span>喂养减免</span><b>' + def.food + '</b></div>' +
+    '<div class="stat"><span>运货容量</span><b>' + def.capacity + '</b></div>' +
+    '<div class="stat"><span>出售价</span><b>' + Math.floor(ship.value / 2) + '₣</b></div>' +
+    '<div class="stat"><span>终局计分</span><b>' + ship.value + '₣</b></div></div></div>';
+  body += '<div class="effect-box"><b>你的船</b>每回合减少 ' + def.food + ' 点喂养需求；终局按卡面价值 ' + ship.value + '₣ 计分。' +
+    '若拥有码头，每艘船再 +4 附加价值。</div>';
+  body += '<div class="sheet-section"><h3>出售 <span>附加行动 · 半价</span></h3>';
+  if (sell) {
+    sheetActions.push(sell);
+    body += optionButton(0, '出售 ' + def.name, '得 ' + Math.floor(ship.value / 2) + ' 法郎 · 该类型船卡回池', '出售', 'sell');
+  } else {
+    body += noteBox('当前不能出售：轮到你时可在主行动前出售。');
+  }
+  body += '</div>' + noteBox('出售会失去这艘船的喂养减免与终局价值，请确认后再执行。');
+  showSheet('你的船只', def.name + ' · 价值 ' + ship.value + '₣', '喂养减免 ' + def.food + ' · 容量 ' + def.capacity, body);
+}
+
+function openOptionalSheet() {
+  if (!isHumanTurn()) {
+    toast('附加行动只能在你的回合执行。', 'bad');
+    return;
+  }
+  const list = legal.filter((a) => ['buyBuilding', 'buyShip', 'repayLoan', 'sellBuilding', 'sellShip'].includes(a.type));
+  sheetKind = 'optional';
+  sheetPayload = null;
+  sheetActions = [];
+  let body = '';
+  if (!list.length) {
+    body = noteBox('当前没有可执行的附加行动。现金不足，或没有可买 / 可卖的对象。');
+  } else {
+    body += '<div class="effect-box"><b>附加行动</b>不消耗主行动，也不结束回合。可以在主行动之前连续执行多次；执行后仍由你继续行动。</div>';
+    const sections = [
+      ['buyBuilding', '购买建筑', '城镇或提案区建筑，立即归你所有'],
+      ['buyShip', '购买船只', '不需要船厂，立即加入船队'],
+      ['repayLoan', '归还贷款', '每笔 5 法郎'],
+      ['sellBuilding', '出售建筑', '半价，建筑回到城镇'],
+      ['sellShip', '出售船只', '半价，该类型船卡回池']
+    ];
+    for (const [type, title, sub] of sections) {
+      const acts = list.filter((a) => a.type === type);
+      if (!acts.length) continue;
+      body += '<div class="sheet-section"><h3>' + title + ' <span>' + sub + '</span></h3>';
+      for (const a of acts) {
+        sheetActions.push(a);
+        let label = title;
+        let detail = '';
+        let cls = '';
+        if (type === 'buyBuilding') {
+          const def = BUILDINGS[a.building];
+          label = '购买 ' + def.name;
+          detail = buyCost(def) + ' 法郎 · ' + CAT_NAME[def.category] + ' · 价值 ' + def.value + '₣';
+          cls = 'buy';
+        } else if (type === 'buyShip') {
+          const ship = marketShip(a.shipType);
+          const def = SHIP_TYPES[a.shipType];
+          label = '购买 ' + def.name;
+          detail = (ship ? ship.value + 4 : '?') + ' 法郎 · 价值 ' + (ship ? ship.value : '?') + '₣ · 减免 ' + def.food;
+          cls = 'buy';
+        } else if (type === 'repayLoan') {
+          label = '归还 1 笔贷款';
+          detail = '支付 5 法郎 · 当前 ' + state.players[HUMAN].loans + ' 笔';
+        } else if (type === 'sellBuilding') {
+          const def = BUILDINGS[a.building];
+          label = '出售 ' + def.name;
+          detail = '得 ' + Math.floor(def.value / 2) + ' 法郎 · 建筑回到城镇';
+          cls = 'sell';
+        } else if (type === 'sellShip') {
+          const ship = state.players[HUMAN].ships[a.index];
+          const def = SHIP_TYPES[ship.type];
+          label = '出售 ' + def.name + '（' + ship.value + '₣）';
+          detail = '得 ' + Math.floor(ship.value / 2) + ' 法郎 · 失去喂养减免 ' + def.food;
+          cls = 'sell';
+        }
+        body += optionButton(sheetActions.length - 1, esc(label), esc(detail), '执行', cls);
+      }
+      body += '</div>';
+    }
+  }
+  showSheet('附加行动', '主行动前的买卖', '购买 / 出售 / 归还贷款 · 不结束回合', body);
+}
+
+function openRulesSheet() {
+  const body = '<div class="rules">' +
+    '<h3>一回合的结构</h3>' +
+    '<p>每回合 7 个玩家行动。轮到你时自动进行<b>供给</b>：把船标记推进到下一块补给板，板上两个 token 进入 Offer 空间；若该板印有利息，所有负债玩家立即付 1 法郎。</p>' +
+    '<p>随后必须选择一个<b>主行动</b>：<b>取走某个 Offer 空间的全部 token</b>，或<b>把工人放到一栋未占用建筑上</b>并执行效果。使用建筑要付门票：城镇建筑付给城镇，别人的建筑付给该玩家，自己的建筑免费。工人会留到下次主行动前。</p>' +
+    '<p><b>附加行动</b>不消耗主行动：购买建筑 / 船只、出售建筑 / 船只（半价）、归还贷款（5 法郎/笔）。本作只允许在主行动前执行附加行动。</p>' +
+    '<h3>建造与购买</h3>' +
+    '<p>只能建造<b>提案区</b>顶部建筑，支付卡面材料。建造公司可连续建 2 栋；建筑公司 A / B 各建 1 栋。锯木厂让含木材的建造少付 1 木材。建造后建筑归你，提案区补牌。</p>' +
+    '<p>购买是附加行动，可买提案区或城镇建筑，价格通常等于卡面价值（少数建筑另标）。教堂不可购买；粘土坑、黑市不可建造。砖可代替粘土，钢可代替铁。</p>' +
+    '<h3>回合结束 · 收获与喂养</h3>' +
+    '<p>第 7 个主行动后收获：有 ≥1 谷物 +1 谷物；有 ≥2 牛 +1 牛。随后按先手顺序喂养：支付本轮食物需求（船只减免后），先吃鱼 → 面包 → 熏鱼 → 肉，再付法郎（1:1），仍不足则强制贷款（每笔 +4 法郎）。多付食物不找零。</p>' +
+    '<p>城镇每回合结束会建造一张提案，并翻开一张新船卡。新的一回合由新的先手开始。</p>' +
+    '<h3>船只与贷款</h3>' +
+    '<p>船只每回合减少喂养需求（木 2 / 铁 3 / 钢 4 / 豪华 5），终局按价值计分。船厂建造需材料 + 3 能量；首艘非木船需 1 砖现代化，两座船厂分别记录。船市可直接购买（价值 +4）。</p>' +
+    '<p>贷款每笔终局 −7 法郎。利息板触发时每位负债玩家付 1 法郎；付不出时先借一笔再付。</p>' +
+    '<h3>终局计分</h3>' +
+    '<p>总分 = 现金 + 自有建筑卡面价值 + 自有船只价值 + 建筑附加价值 − 7 × 未归还贷款。货物本身不计分；仓库 / 码头 / 市政厅 / 银行提供附加价值。平局并列获胜。</p>' +
+    '<p class="note" style="margin-top:8px">本页面是引擎一期规则的界面层。二期未实现特殊建筑、终局额外行动等条目，详见同目录 rules.md。</p>' +
+    '</div>';
+  showSheet('规则', '勒阿弗尔 · 港都情浓', '乌玫瑰山 2008 · 2 人标准局 · 14 回合', body);
+}
+
+/* ================================================================== */
+/* 集市选货                                                            */
+/* ================================================================== */
+
+function togglePick(key) {
+  if (!marketSize) return;
+  if (marketPick.has(key)) marketPick.delete(key);
+  else {
+    if (marketPick.size >= marketSize) {
+      toast('最多选择 ' + marketSize + ' 种货物。', 'bad');
+      return;
+    }
+    marketPick.add(key);
+  }
+  document.querySelectorAll('#marketPicker [data-pick]').forEach((el) => {
+    const on = marketPick.has(el.dataset.pick);
+    el.classList.toggle('on', on);
+    el.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+  const count = byId('marketCount');
+  if (count) count.textContent = '已选 ' + marketPick.size + '/' + marketSize;
+  const btn = byId('marketConfirm');
+  if (btn) btn.disabled = marketPick.size !== marketSize;
+}
+function confirmMarket() {
+  if (!marketSize || marketPick.size !== marketSize) return;
+  const goods = STANDARD_GOODS.filter((k) => marketPick.has(k));
+  commit({ type: 'useBuilding', building: 'marketplace', params: { goods } });
+}
+
+/* ================================================================== */
+/* 收获与终局                                                          */
+/* ================================================================== */
+
+function showHarvest() {
+  if (!state || state.phase !== 'feeding') {
+    byId('harvestOverlay').hidden = true;
+    return;
+  }
+  byId('harvestOverlay').hidden = false;
+  renderHarvest();
+}
+function hideHarvest() { byId('harvestOverlay').hidden = true; }
+
+function renderHarvest() {
+  if (!state || state.phase !== 'feeding') { hideHarvest(); return; }
+  const food = roundFoodNow();
+  byId('harvestTitle').textContent = '第 ' + state.round + ' 回合 · 收获与喂养';
+  byId('harvestSub').textContent = '本轮需求 ' + food + ' · 先收获，再按先手顺序支付食物';
+  const harvests = state.events.filter((e) => e.kind === 'harvest' && e.round === state.round);
+  const fed = new Set(state.events.filter((e) => e.kind === 'feed' && e.round === state.round).map((e) => e.player));
+  const cur = currentPlayer(state);
+  const cards = state.players.map((p, i) => {
+    const need = feedObligation(state, i);
+    let foodValue = 0;
+    for (const k of GOOD_KEYS) foodValue += (p.goods[k] || 0) * (FOOD_VALUE[k] || 0);
+    const hv = harvests.find((e) => e.player === i);
+    const isFed = fed.has(i);
+    return '<div class="hcard' + (i === AI ? ' ai' : '') + '"><h4><span class="hdot"></span>' + whoName(i) +
+      (cur === i ? ' · <span class="wait">正在支付</span>' : '') + (isFed ? ' · <span class="paid">已支付</span>' : '') + '</h4><ul>' +
+      '<li><span>回合需求</span><b>' + food + '</b></li>' +
+      '<li><span>船只减免</span><b>' + shipFoodOfPlayer(p) + '</b></li>' +
+      '<li><span>实际需求</span><b>' + need + '</b></li>' +
+      '<li><span>食物 token 价值</span><b>' + foodValue + '</b></li>' +
+      '<li><span>现金 / 贷款</span><b>' + p.francs + '₣ / ' + p.loans + '</b></li>' +
+      '<li><span>收获</span><b>' + (hv ? ([hv.grain ? '谷 +' + hv.grain : '', hv.cattle ? '牛 +' + hv.cattle : ''].filter(Boolean).join(' · ') || '无') : '无') + '</b></li>' +
+      '</ul></div>';
+  }).join('');
+  byId('harvestBody').innerHTML = '<div class="harvest-grid">' + cards + '</div>' +
+    '<div class="harvest-note">支付顺序：鱼 → 面包 → 熏鱼 → 肉 → 法郎（1:1）→ 强制贷款。多付的食物不找零；船只减免在需求之前扣除。</div>';
+  const btn = byId('feedBtn');
+  if (cur === HUMAN) {
+    btn.disabled = false;
+    btn.textContent = '支付食物 · 需求 ' + feedObligation(state, HUMAN);
+  } else {
+    btn.disabled = true;
+    btn.textContent = 'AI 港商结算中…';
+  }
+}
+
+function medalSvg(silver) {
+  return '<svg class="medal" viewBox="0 0 200 240" aria-hidden="true">' +
+    '<path d="M72 104 44 224l36-20 20 20-14-120z" fill="url(#lgRibbon)" stroke="#5d1a15" stroke-width="2"/>' +
+    '<path d="M128 104l28 120-36-20-20 20 14-120z" fill="#2f4d6b" stroke="#1c3148" stroke-width="2"/>' +
+    '<path d="M72 104 58 206l22-12 8 12z" fill="#f2d58f" opacity=".2"/>' +
+    '<circle cx="100" cy="94" r="72" fill="' + (silver ? 'url(#rgSilver)' : 'url(#rgMedal)') + '" stroke="#6d4a10" stroke-width="3"/>' +
+    '<circle cx="100" cy="94" r="63" fill="none" stroke="#7a5416" stroke-width="1.4" stroke-dasharray="3 3" opacity=".66"/>' +
+    '<circle cx="100" cy="94" r="58" fill="none" stroke="#fff4cf" stroke-width="1" opacity=".55"/>' +
+    '<g fill="#6d7d4a" opacity=".75"><path d="M43 129c9-15 21-26 36-32l-2 6c-12 6-21 16-27 29z"/>' +
+    '<path d="M157 129c-9-15-21-26-36-32l2 6c12 6 21 16 27 29z"/></g>' +
+    '<g fill="url(#lgGold)" stroke="#6d4a12" stroke-width=".6" opacity=".9">' +
+    '<path d="M45 118c-6-3-9-8-8-14 5 1 9 4 11 9z"/><path d="M41 130c-6-3-10-7-10-13 5 0 9 3 12 8z"/>' +
+    '<path d="M155 118c6-3 9-8 8-14-5 1-9 4-11 9z"/><path d="M159 130c6-3 10-7 10-13-5 0-9 3-12 8z"/></g>' +
+    '<g transform="translate(57 55) scale(1.35)" fill="#7a5416">' +
+    '<path d="M0 30h62l-6 12H8z"/>' +
+    '<path d="M30 30V2" stroke="#7a5416" stroke-width="3"/>' +
+    '<path d="M32 5 52 26H32z" fill="#9b6c1f"/>' +
+    '<path d="M28 8 10 26h18z" fill="#9b6c1f"/>' +
+    '<path d="M4 40c10-3 20-3 30 0M32 40c10-3 20-3 30 0" fill="none" stroke="#8a641f" stroke-width="1.5" opacity=".7"/>' +
+    '</g>' +
+    '<text x="100" y="145" text-anchor="middle" font-family="Georgia,serif" font-size="11.5" letter-spacing="2.6" fill="#6b4a12">LE HAVRE</text>' +
+    '<text x="100" y="157" text-anchor="middle" font-family="Songti SC,serif" font-size="9.5" letter-spacing="2" fill="#7a5416">港 都 情 浓</text>' +
+    '</svg>';
+}
+
+function showResult() {
+  if (!state) return;
+  clearToasts();
+  const sc = score(state);
+  const humanWin = sc.winners.includes(HUMAN);
+  const draw = sc.winners.length > 1;
+  byId('resultTitle').textContent = draw ? '并列获胜' : (humanWin ? '你赢了' : 'AI 港商获胜');
+  byId('resultSub').textContent = '第 ' + state.maxRound + ' 回合 · 最高财富 ' + sc.best + '₣ · 种子 ' + state.seed;
+  const rows = sc.players.map((p) => {
+    const win = sc.winners.includes(p.index);
+    return '<tr class="' + (win ? 'win' : '') + '"><td><b>' + whoName(p.index) + '</b>' + (win ? ' · 胜' : '') + '</td>' +
+      '<td>' + p.cash + '</td><td>' + p.buildings + '</td><td>' + p.ships + '</td><td>' + p.bonuses + '</td>' +
+      '<td>' + (p.loansPenalty ? '−' + p.loansPenalty : '0') + '</td><td class="total">' + p.total + '₣</td></tr>';
+  }).join('');
+  const bonusRows = sc.players.map((p) => {
+    const parts = Object.entries(p.bonusDetail || {}).map(([k, v]) => {
+      const name = { bank: '银行', townHall: '市政厅', dock: '码头', storehouse: '仓库' }[k] || k;
+      return name + ' +' + v;
+    });
+    return parts.length ? '<div class="bonus-note"><b>' + whoName(p.index) + '</b> 附加价值：' + parts.join(' · ') + '</div>' : '';
+  }).join('');
+  byId('resultBody').innerHTML =
+    '<div class="medal-wrap">' + medalSvg(!humanWin) + '</div>' +
+    '<table class="score-table" role="table" aria-label="终局计分"><thead><tr><th>玩家</th><th>现金</th><th>建筑</th><th>船只</th><th>附加</th><th>贷款</th><th>总分</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+    bonusRows +
+    '<div class="result-note">剩余货物本身不计分；仓库每 2 个货物 +1，码头每艘船 +4，市政厅按公共 / 工匠建筑加成，银行按工业 / 经济建筑加成。每笔未归还贷款 −7 法郎。</div>' +
+    '<div class="result-note" style="border-top:0;margin-top:2px;opacity:.75">对局校验 ' + hashState(state) + ' · 平局时所有最高分玩家并列获胜。</div>';
+  byId('resultOverlay').hidden = false;
+}
+
+function newGame(nextSeed, quiet) {
+  clearTimeout(aiTimer);
+  demoMode = false;
+  updateDemoBtn();
+  const n = Number(nextSeed);
+  if (Number.isFinite(n) && n > 0) seed = n >>> 0;
+  state = createGame({ seed: seed, playerCount: 2 });
+  sheetKind = null;
+  sheetPayload = null;
+  sheetActions = [];
+  marketPick = new Set();
+  marketSize = 0;
+  closeSheet();
+  hideHarvest();
+  byId('resultOverlay').hidden = true;
+  lastSupplyKey = '';
+  lastRoundSeen = 1;
+  render();
+  if (!quiet) toast('新局开始 · 种子 ' + seed, 'good');
+  scheduleAI();
+}
+
+/* ================================================================== */
+/* 事件委托                                                            */
+/* ================================================================== */
+
+function onActionClick(kind) {
+  switch (kind) {
+    case 'optional': openOptionalSheet(); break;
+    case 'pass': if (legalPass) commit(legalPass); break;
+    case 'repay': commit({ type: 'repayLoan' }); break;
+    case 'feed': doFeed(); break;
+    case 'showResult': showResult(); break;
+    case 'stopDemo': stopDemo(); break;
+    default: break;
+  }
+}
+
+function onOfferClick(space) {
+  if (!state) return;
+  if (!(state.offers[space] > 0)) { toast('这个 Offer 空间现在是空的。'); return; }
+  if (!isHumanTurn() && !demoMode) {
+    toast(state.phase === 'feeding' ? '正在收获与喂养，先付清食物。' : '现在是 AI 港商的回合。', 'bad');
+    return;
+  }
+  if (demoMode) { toast('托管演示中，先停止演示再手动操作。', 'bad'); return; }
+  openOfferSheet(space);
+}
+
+function onBuildingClick(id) {
+  if (!state) return;
+  openBuildingSheet(id);
+}
+
+function onShipTypeClick(type) {
+  if (!isHumanTurn() && !demoMode) {
+    toast(state.phase === 'feeding' ? '正在收获与喂养，先付清食物。' : '现在是 AI 港商的回合。', 'bad');
+    return;
+  }
+  if (demoMode) { toast('托管演示中，先停止演示再手动操作。', 'bad'); return; }
+  openShipSheet(type);
+}
+
+function onShipIndexClick(index) {
+  openOwnedShipSheet(Number(index));
+}
+
+function execOption(index) {
+  const action = sheetActions[index];
+  if (!action) return;
+  commit(action);
+}
+
+function onClick(event) {
+  const t = event.target;
+  const opt = t.closest('[data-opt]');
+  if (opt) { execOption(Number(opt.dataset.opt)); return; }
+  const pick = t.closest('[data-pick]');
+  if (pick) { togglePick(pick.dataset.pick); return; }
+  if (t.closest('#marketConfirm')) { confirmMarket(); return; }
+  const act = t.closest('[data-act]');
+  if (act) { onActionClick(act.dataset.act); return; }
+  const offer = t.closest('[data-offer]');
+  if (offer) { onOfferClick(offer.dataset.offer); return; }
+  const building = t.closest('[data-building]');
+  if (building) { onBuildingClick(building.dataset.building); return; }
+  const shipType = t.closest('[data-ship-type]');
+  if (shipType) { onShipTypeClick(shipType.dataset.shipType); return; }
+  const shipIndex = t.closest('[data-ship-index]');
+  if (shipIndex) { onShipIndexClick(shipIndex.dataset.shipIndex); return; }
+}
+
+function init() {
+  byId('rulesBtn').addEventListener('click', openRulesSheet);
+  byId('demoBtn').addEventListener('click', () => { if (demoMode) stopDemo(); else startDemo(); });
+  byId('restartBtn').addEventListener('click', () => {
+    const next = ((Number(seed) * 1664525 + 1013904223) >>> 0) || DEFAULT_SEED;
+    newGame(next, false);
+  });
+  byId('sheetClose').addEventListener('click', closeSheet);
+  byId('harvestClose').addEventListener('click', hideHarvest);
+  byId('resultClose').addEventListener('click', () => { byId('resultOverlay').hidden = true; });
+  byId('resultWatch').addEventListener('click', () => { byId('resultOverlay').hidden = true; });
+  byId('playAgain').addEventListener('click', () => {
+    newGame(((Number(seed) * 1103515245 + 12345) >>> 0) || DEFAULT_SEED, false);
+  });
+  byId('feedBtn').addEventListener('click', doFeed);
+  document.addEventListener('click', onClick);
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+    if (!byId('sheetOverlay').hidden) { closeSheet(); return; }
+    if (!byId('resultOverlay').hidden) { byId('resultOverlay').hidden = true; return; }
+    if (!byId('harvestOverlay').hidden) { hideHarvest(); return; }
+  });
+  for (const id of ['sheetOverlay', 'harvestOverlay', 'resultOverlay']) {
+    byId(id).addEventListener('click', (event) => {
+      if (event.target.id === id) byId(id).hidden = true;
+    });
+  }
+  window.__lh = {
+    getState: () => state,
+    legal: () => (state ? legalActions(state) : []),
+    apply: (a) => commit(a),
+    auto: startDemo,
+    stop: stopDemo,
+    newGame,
+    score: () => (state ? score(state) : null),
+    hash: () => (state ? hashState(state) : null)
+  };
+  newGame(DEFAULT_SEED, true);
+}
+
+init();
+</script>
+</body>
+</html>

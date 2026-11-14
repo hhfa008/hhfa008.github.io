@@ -17,6 +17,7 @@
 <link rel="preload" as="image" href="../../assets/art/premium/six-nimmt/card-back.webp">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23122019'/%3E%3Cpath d='M14 18h36v8H14zm0 12h36v8H14zm0 12h36v8H14z' fill='%23e7c281'/%3E%3Ccircle cx='50' cy='14' r='6' fill='%23c9563f'/%3E%3C/svg%3E">
 <title>6 NIMMT! 谁是牛头王 · 精品桌游</title>
+<link rel="stylesheet" href="../../shared/poker-ui.css">
 <style>
   :root{
     --art-felt:url("../../assets/art/premium/six-nimmt/felt-table.webp");
@@ -382,6 +383,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
 
 <script src="../../shared/shuffle.js"></script>
 <script src="../../shared/sfx.js"></script>
+<script src="../../shared/poker-ui.js"></script>
 <script src="data.js"></script>
 <script src="engine.js"></script>
 <script>
@@ -502,12 +504,23 @@ body{padding-bottom:env(safe-area-inset-bottom)}
       var slots = el('div', 'slots');
       for (var s = 0; s < 5; s++) {
         if (s < row.length) {
-          var card = el('div', 'slot filled' + (s === row.length - 1 ? ' last' : ''));
-          card.appendChild(el('span', 'num', String(row[s])));
-          card.appendChild(el('span', 'bh', String(E.bull(row[s]))));
+          var cls = 'slot filled' + (s === row.length - 1 ? ' last' : '');
+          var face = '<span class="num">' + String(row[s]) + '</span>' +
+            '<span class="bh">' + String(E.bull(row[s])) + '</span>';
+          var card = window.PokerUI && window.PokerUI.createCard
+            ? window.PokerUI.createCard(row[s], { face: 'custom', faceHtml: face, className: cls, tag: 'div', ariaLabel: row[s] + '，' + E.bull(row[s]) + ' 牛' })
+            : null;
+          if (!card) {
+            card = el('div', cls);
+            card.appendChild(el('span', 'num', String(row[s])));
+            card.appendChild(el('span', 'bh', String(E.bull(row[s]))));
+          }
           slots.appendChild(card);
         } else {
-          slots.appendChild(el('div', 'slot'));
+          var emptySlot = window.PokerUI && window.PokerUI.createSlot
+            ? window.PokerUI.createSlot({ className: 'slot', tag: 'div' })
+            : null;
+          slots.appendChild(emptySlot || el('div', 'slot'));
         }
       }
       rowEl.appendChild(slots);
@@ -553,9 +566,20 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     var me = view.players[0];
     if (view.myPick != null) {
       var picker = el('div', 'picker');
-      var pc = el('div', 'pcard');
-      pc.appendChild(el('span', 'n', String(view.myPick)));
-      pc.appendChild(el('span', 'b', bullText(view.myPick)));
+      var pc = window.PokerUI && window.PokerUI.createCard
+        ? window.PokerUI.createCard(view.myPick, {
+          face: 'custom',
+          faceHtml: '<span class="n">' + String(view.myPick) + '</span><span class="b">' + bullText(view.myPick) + '</span>',
+          className: 'pcard',
+          tag: 'div',
+          ariaLabel: String(view.myPick) + '，' + bullText(view.myPick)
+        })
+        : null;
+      if (!pc) {
+        pc = el('div', 'pcard');
+        pc.appendChild(el('span', 'n', String(view.myPick)));
+        pc.appendChild(el('span', 'b', bullText(view.myPick)));
+      }
       picker.appendChild(pc);
       var pt = el('div', 'ptext');
       pt.appendChild(el('b', null, '你已暗出 ' + view.myPick));
@@ -570,14 +594,29 @@ body{padding-bottom:env(safe-area-inset-bottom)}
     choice.appendChild(msg);
     var sorted = me.hand.slice().sort(function (a, b) { return a - b; });
     sorted.forEach(function (card) {
-      var b = el('button', 'hcard');
-      b.type = 'button';
-      b.setAttribute('aria-label', '出牌 ' + card + '，' + E.bull(card) + ' 个牛头');
-      b.appendChild(el('span', 'n', String(card)));
-      b.appendChild(el('span', 'b', E.bull(card) + ' 牛'));
+      var face = '<span class="n">' + String(card) + '</span><span class="b">' + E.bull(card) + ' 牛</span>';
+      var b = window.PokerUI && window.PokerUI.createCard
+        ? window.PokerUI.createCard(card, {
+          face: 'custom',
+          faceHtml: face,
+          className: 'hcard',
+          tag: 'button',
+          ariaLabel: '出牌 ' + card + '，' + E.bull(card) + ' 个牛头'
+        })
+        : null;
+      if (!b) {
+        b = el('button', 'hcard');
+        b.type = 'button';
+        b.setAttribute('aria-label', '出牌 ' + card + '，' + E.bull(card) + ' 个牛头');
+        b.appendChild(el('span', 'n', String(card)));
+        b.appendChild(el('span', 'b', E.bull(card) + ' 牛'));
+      }
       b.addEventListener('click', function () { pick(card); });
       hand.appendChild(b);
     });
+    if (window.PokerUI && window.PokerUI.layoutHand) {
+      window.PokerUI.layoutHand(hand, { mode: 'grid', gap: 7, watch: false });
+    }
     hint.textContent = '同时出牌：先想好哪一行最安全，再猜别人会把什么牌塞进来。';
   }
 
